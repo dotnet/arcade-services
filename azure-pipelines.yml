@@ -2,11 +2,13 @@ variables:
   Build.Repository.Clean: true
   _HelixType: build/product
   _HelixSource: pr/dotnet/arcade-services/$(Build.SourceBranch)
+  ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+    _TeamName: DotNetCore
+    _HelixSource: official/dotnet/arcade/$(Build.SourceBranch)
 
 # CI and PR triggers
 trigger:
 - master
-- switch-to-test-pool
 pr:
 - master
 
@@ -39,5 +41,21 @@ phases:
         ArtifactName: $(Agent.Os)_$(Agent.JobName)
       continueOnError: true
       condition: always()
+    - task: PublishTestResults@2
+      displayName: Publish Test Results
+      inputs:
+        testResultsFormat: 'xUnit'
+        testResultsFiles: '*.xml' 
+        searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults/$(_BuildConfig)'
+      continueOnError: true
+      condition: always()
+      
     variables:
       _HelixBuildConfig: $(_BuildConfig)
+- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+  - template: /eng/common/templates/phases/publish-build-assets.yml
+    parameters:
+      dependsOn:
+        - Windows_NT
+      queue:
+        name: Hosted VS2017
