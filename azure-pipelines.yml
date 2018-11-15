@@ -4,7 +4,7 @@ variables:
   _HelixSource: pr/dotnet/arcade-services/$(Build.SourceBranch)
   ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
     _TeamName: DotNetCore
-    _HelixSource: official/dotnet/arcade/$(Build.SourceBranch)
+    _HelixSource: official/dotnet/arcade-services/$(Build.SourceBranch)
 
 # CI and PR triggers
 trigger:
