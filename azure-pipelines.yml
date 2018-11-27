@@ -48,10 +48,32 @@ phases:
         testResultsFiles: '*.xml' 
         searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults/$(_BuildConfig)'
       continueOnError: true
-      condition: always()
-      
+      condition: always()      
+    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+      - task: NuGetToolInstaller@0
+        inputs:
+          versionSpec: 4.4.1
+      - task: NuGetCommand@2
+        displayName: Restore Packages
+        inputs:
+          command: restore
+          solution: "**/*.sln"
+      - task: MSBuild@1
+        displayName: Build Service Fabric Application
+        inputs:
+          vsVersion: 15.0
+          solution: src/Maestro/MaestroApplication/MaestroApplication.sfproj
+          platform: x64
+          configuration: $(_BuildConfig)
+          msbuildArguments: /t:Package /p:PackageLocation=$(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage
+      - task: PublishBuildArtifacts@1
+        inputs:
+          PathtoPublish: $(Build.ArtifactStagingDirectory)\ServiceFabric\
+          ArtifactName: Service Fabric Packages
+          ArtifactType: Container
     variables:
       _HelixBuildConfig: $(_BuildConfig)
+  
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
   - template: /eng/common/templates/phases/publish-build-assets.yml
     parameters:
