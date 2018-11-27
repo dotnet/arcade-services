@@ -9,6 +9,7 @@ variables:
 # CI and PR triggers
 trigger:
 - master
+- production
 pr:
 - master
 
