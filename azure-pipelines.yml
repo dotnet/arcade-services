@@ -65,15 +65,6 @@ phases:
       continueOnError: true
       condition: always()
 
-    - task: MSBuild@1
-      displayName: Build Service Fabric Application
-      inputs:
-        vsVersion: 15.0
-        solution: src/Maestro/MaestroApplication/MaestroApplication.sfproj
-        platform: x64
-        configuration: $(_BuildConfig)
-        msbuildArguments: /t:Package /p:PackageLocation=$(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage
-
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
       - task: ServiceFabricUpdateManifests@2
         inputs:

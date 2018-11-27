@@ -58,7 +58,10 @@
     <!-- Required target for arcade SDK -->
   </Target>
   <Target Name="Pack">
-    <!-- Required target for arcade SDK -->
+    <PropertyGroup>
+      <PackageLocation>$(Build_ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage</PackageLocation>
+    </PropertyGroup>
+    <CallTarget Targets="Package"/>
   </Target>
   <Target Name="IntegrationTest">
     <!-- Required target for arcade SDK -->
