@@ -57,4 +57,13 @@
   <Target Name="Test">
     <!-- Required target for arcade SDK -->
   </Target>
+  <Target Name="Pack">
+    <!-- Required target for arcade SDK -->
+  </Target>
+  <Target Name="IntegrationTest">
+    <!-- Required target for arcade SDK -->
+  </Target>
+  <Target Name="PerformanceTest">
+    <!-- Required target for arcade SDK -->
+  </Target>
 </Project>
