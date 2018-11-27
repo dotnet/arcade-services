@@ -27,6 +27,8 @@ phases:
           _BuildConfig: Debug
         release_configuration:
           _BuildConfig: Release
+    variables:
+      _HelixBuildConfig: $(_BuildConfig)
     steps:
     - task: NuGetToolInstaller@0
       inputs:
@@ -88,9 +90,6 @@ phases:
           PathtoPublish: $(Build.ArtifactStagingDirectory)\ServiceFabric\
           ArtifactName: Service Fabric Packages
           ArtifactType: Container
-
-    variables:
-      _HelixBuildConfig: $(_BuildConfig)
   
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
   - template: /eng/common/templates/phases/publish-build-assets.yml
