@@ -28,6 +28,15 @@ phases:
         release_configuration:
           _BuildConfig: Release
     steps:
+    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+      - task: NuGetToolInstaller@0
+        inputs:
+          versionSpec: 4.4.1
+      - task: NuGetCommand@2
+        displayName: Restore Packages
+        inputs:
+          command: restore
+          solution: "**/*.sln"
     - script: eng\common\cibuild.cmd
         -configuration $(_BuildConfig)
         -prepareMachine
@@ -49,16 +58,8 @@ phases:
         testResultsFiles: '*.xml' 
         searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults/$(_BuildConfig)'
       continueOnError: true
-      condition: always()      
+      condition: always()
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-      - task: NuGetToolInstaller@0
-        inputs:
-          versionSpec: 4.4.1
-      - task: NuGetCommand@2
-        displayName: Restore Packages
-        inputs:
-          command: restore
-          solution: "**/*.sln"
       - task: MSBuild@1
         displayName: Build Service Fabric Application
         inputs:
