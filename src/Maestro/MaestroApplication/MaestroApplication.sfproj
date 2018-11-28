@@ -4,6 +4,7 @@
   <PropertyGroup>
     <ImportDirectoryBuildProps>false</ImportDirectoryBuildProps>
     <ImportDirectoryBuildTargets>false</ImportDirectoryBuildTargets>
+    <PackageLocation>$(Build_ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage</PackageLocation>
   </PropertyGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>93f066a5-a2d8-4926-a255-81077aee5972</ProjectGuid>
@@ -57,11 +58,7 @@
   <Target Name="Test">
     <!-- Required target for arcade SDK -->
   </Target>
-  <Target Name="Pack">
-    <PropertyGroup>
-      <PackageLocation>$(Build_ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage</PackageLocation>
-    </PropertyGroup>
-    <CallTarget Targets="Package"/>
+  <Target Name="Pack" DependsOnTargets="Package">
   </Target>
   <Target Name="IntegrationTest">
     <!-- Required target for arcade SDK -->
