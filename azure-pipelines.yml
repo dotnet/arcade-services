@@ -9,6 +9,7 @@ variables:
 # CI and PR triggers
 trigger:
 - master
+- production
 pr:
 - master
 
@@ -26,13 +27,26 @@ phases:
           _BuildConfig: Debug
         release_configuration:
           _BuildConfig: Release
+    variables:
+      _HelixBuildConfig: $(_BuildConfig)
     steps:
+    - task: NuGetToolInstaller@0
+      inputs:
+        versionSpec: 4.4.1
+
+    - task: NuGetCommand@2
+      displayName: Restore Packages
+      inputs:
+        command: restore
+        solution: "**/*.sln"
+
     - script: eng\common\cibuild.cmd
         -configuration $(_BuildConfig)
         -prepareMachine
       name: Build
       displayName: Build
       condition: succeeded()
+
     - task: PublishBuildArtifacts@1
       displayName: Publish Logs to VSTS
       inputs:
@@ -41,6 +55,7 @@ phases:
         ArtifactName: $(Agent.Os)_$(Agent.JobName)
       continueOnError: true
       condition: always()
+
     - task: PublishTestResults@2
       displayName: Publish Test Results
       inputs:
@@ -49,9 +64,24 @@ phases:
         searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults/$(_BuildConfig)'
       continueOnError: true
       condition: always()
-      
-    variables:
-      _HelixBuildConfig: $(_BuildConfig)
+
+    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+      - task: ServiceFabricUpdateManifests@2
+        inputs:
+          applicationPackagePath: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage
+
+      - powershell: |
+          robocopy src/Maestro/MaestroApplication/PublishProfiles $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\PublishProfiles /S *.xml
+          robocopy src/Maestro/MaestroApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationParameters /S *.xml
+          exit 0
+        displayName: Copy Maestro Project Artifacts
+
+      - task: PublishBuildArtifacts@1
+        inputs:
+          PathtoPublish: $(Build.ArtifactStagingDirectory)\ServiceFabric\
+          ArtifactName: Service Fabric Packages
+          ArtifactType: Container
+  
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
   - template: /eng/common/templates/phases/publish-build-assets.yml
     parameters:
