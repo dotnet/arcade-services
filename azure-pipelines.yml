@@ -10,8 +10,11 @@ jobs:
 - template: /eng/common/templates/job/job.yml
   parameters:
     name: Windows_NT
-    enableTelemetry: true
+    enableMicrobuild: true
     enablePublishBuildArtifacts: true
+    enablePublishTestResults: true
+    enablePublishBuildAssets: true
+    enableTelemetry: true
     helixRepo: dotnet/arcade-minimalci-sample
     pool:
       ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
@@ -44,24 +47,6 @@ jobs:
       name: Build
       displayName: Build
       condition: succeeded()
-
-    - task: PublishBuildArtifacts@1
-      displayName: Publish Logs to VSTS
-      inputs:
-        PathtoPublish: '$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)'
-        PublishLocation: Container
-        ArtifactName: $(Agent.Os)_$(Agent.JobName)
-      continueOnError: true
-      condition: always()
-
-    - task: PublishTestResults@2
-      displayName: Publish Test Results
-      inputs:
-        testResultsFormat: 'xUnit'
-        testResultsFiles: '*.xml' 
-        searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults/$(_BuildConfig)'
-      continueOnError: true
-      condition: always()
 
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
       - task: ServiceFabricUpdateManifests@2
