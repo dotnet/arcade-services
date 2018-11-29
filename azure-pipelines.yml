@@ -85,11 +85,3 @@ phases:
           PathtoPublish: $(Build.ArtifactStagingDirectory)\ServiceFabric\
           ArtifactName: Service Fabric Packages
           ArtifactType: Container
-  
-- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-  - template: /eng/common/templates/phases/publish-build-assets.yml
-    parameters:
-      dependsOn:
-        - Windows_NT
-      queue:
-        name: Hosted VS2017
