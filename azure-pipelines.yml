@@ -15,7 +15,7 @@ jobs:
     enablePublishTestResults: true
     enablePublishBuildAssets: true
     enableTelemetry: true
-    helixRepo: dotnet/arcade-minimalci-sample
+    helixRepo: dotnet/arcade-services
     pool:
       ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
         name: dotnet-external-temp
