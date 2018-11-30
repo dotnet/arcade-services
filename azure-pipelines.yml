@@ -1,12 +1,3 @@
-variables:
-  Build.Repository.Clean: true
-  _HelixType: build/product
-  ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-    _TeamName: DotNetCore
-    _HelixSource: official/dotnet/arcade-services/$(Build.SourceBranch)
-  ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
-    _HelixSource: pr/dotnet/arcade-services/$(Build.SourceBranch)
-
 # CI and PR triggers
 trigger:
 - master
@@ -15,25 +6,31 @@ pr:
 - master
 
 # Three phases for each of the three OSes we want to run on
-phases:
-- template: /eng/common/templates/phases/base.yml
+jobs:
+- template: /eng/common/templates/job/job.yml
   parameters:
     name: Windows_NT
+    enableMicrobuild: true
+    enablePublishBuildArtifacts: true
+    enablePublishTestResults: true
+    enablePublishBuildAssets: true
     enableTelemetry: true
-    queue:
+    helixRepo: dotnet/arcade-services
+    pool:
       ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
         name: dotnet-external-temp
       ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
         name: dotnet-internal-temp
-      parallel: 99
+    strategy:
       matrix:
         debug_configuration:
           _BuildConfig: Debug
         release_configuration:
           _BuildConfig: Release
-    variables:
-      _HelixBuildConfig: $(_BuildConfig)
     steps:
+    - checkout: self
+      clean: true
+
     - task: NuGetToolInstaller@0
       inputs:
         versionSpec: 4.4.1
@@ -50,24 +47,6 @@ phases:
       name: Build
       displayName: Build
       condition: succeeded()
-
-    - task: PublishBuildArtifacts@1
-      displayName: Publish Logs to VSTS
-      inputs:
-        PathtoPublish: '$(Build.SourcesDirectory)/artifacts/log/$(_BuildConfig)'
-        PublishLocation: Container
-        ArtifactName: $(Agent.Os)_$(Agent.JobName)
-      continueOnError: true
-      condition: always()
-
-    - task: PublishTestResults@2
-      displayName: Publish Test Results
-      inputs:
-        testResultsFormat: 'xUnit'
-        testResultsFiles: '*.xml' 
-        searchFolder: '$(Build.SourcesDirectory)/artifacts/TestResults/$(_BuildConfig)'
-      continueOnError: true
-      condition: always()
 
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
       - task: ServiceFabricUpdateManifests@2
