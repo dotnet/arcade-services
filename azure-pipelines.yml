@@ -13,7 +13,7 @@ jobs:
     enableMicrobuild: true
     enablePublishBuildArtifacts: true
     enablePublishTestResults: true
-    enablePublishBuildAssets: true
+    enablePublishBuildAssets: false
     enableTelemetry: true
     helixRepo: dotnet/arcade-services
     pool:
@@ -68,10 +68,10 @@ jobs:
           ArtifactType: Container
           
       - task: PublishBuildArtifacts@1
-        displayName: Publish Darc Package Artifact
+        displayName: Publish Nuget Packages Artifact
         inputs:
-          PathtoPublish: $(Build.SourcesDirectory)\artifacts\packages\$(_BuildConfig)\Shipping\Microsoft.DotNet.Darc.1.0.0-dev.nupkg
-          ArtifactName: Darc
+          PathtoPublish: $(Build.SourcesDirectory)\artifacts\packages\$(_BuildConfig)\Shipping
+          ArtifactName: NuPkgs
           ArtifactType: Container
       
       - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data
