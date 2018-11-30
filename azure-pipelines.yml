@@ -60,7 +60,29 @@ jobs:
         displayName: Copy Maestro Project Artifacts
 
       - task: PublishBuildArtifacts@1
+        displayName: Publish Service Fabric Packages Artifact
         inputs:
           PathtoPublish: $(Build.ArtifactStagingDirectory)\ServiceFabric\
-          ArtifactName: Service Fabric Packages
+          ArtifactName: ServiceFabric
+          ArtifactType: Container
+          
+      - task: PublishBuildArtifacts@1
+        displayName: Publish Darc Package Artifact
+        inputs:
+          PathtoPublish: artifacts\packages\$(_BuildConfig)\Shipping\Microsoft.DotNet.Darc.1.0.0-dev.nupkg
+          ArtifactName: Darc
+          ArtifactType: Container
+      
+      - script: $(Build.SourcesDirectory)/.dotnet/dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data
+        workingDirectory: src/Maestro/Maestro.Data
+        displayName: Create Data Package
+        
+      - script: cp /y src\Maestro\update-database.ps1 $(Build.ArtifactStagingDirectory)\Maestro.Data\update-database.ps1
+        displayName: Create Data Package
+        
+      - task: PublishBuildArtifacts@1
+        displayName: Publish Maestro.Data Package Artifact
+        inputs:
+          PathtoPublish: $(Build.ArtifactStagingDirectory)\Maestro.Data
+          ArtifactName: Maestro.Data
           ArtifactType: Container
