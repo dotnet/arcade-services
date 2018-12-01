@@ -79,7 +79,7 @@ jobs:
         displayName: Create Data Package
         
       - script: cp /y $(Build.SourcesDirectory)\src\Maestro\update-database.ps1 $(Build.ArtifactStagingDirectory)\Maestro.Data\update-database.ps1
-        displayName: Create Data Package
+        displayName: Copy update-database.ps1 into data package
         
       - task: PublishBuildArtifacts@1
         displayName: Publish Maestro.Data Package Artifact
