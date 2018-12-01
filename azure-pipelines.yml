@@ -74,7 +74,7 @@ jobs:
           ArtifactName: NuPkgs
           ArtifactType: Container
       
-      - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data
+      - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp2.1
         workingDirectory: src/Maestro/Maestro.Data
         displayName: Create Data Package
         
