@@ -50,6 +50,8 @@ jobs:
       condition: succeeded()
 
     - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+    
+      ## Prepare service fabric artifact
       - task: ServiceFabricUpdateManifests@2
         inputs:
           applicationPackagePath: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage
@@ -61,29 +63,56 @@ jobs:
         displayName: Copy Maestro Project Artifacts
 
       - task: PublishBuildArtifacts@1
-        displayName: Publish Service Fabric Packages Artifact
+        displayName: Publish Service Fabric Artifact
         inputs:
           PathtoPublish: $(Build.ArtifactStagingDirectory)\ServiceFabric\
           ArtifactName: ServiceFabric
           ArtifactType: Container
-          
-      - task: PublishBuildArtifacts@1
-        displayName: Publish Nuget Packages Artifact
-        inputs:
-          PathtoPublish: $(Build.SourcesDirectory)\artifacts\packages\$(_BuildConfig)\Shipping
-          ArtifactName: NuPkgs
-          ArtifactType: Container
       
+      ## Prepare database update artifact
       - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp2.1
         workingDirectory: src/Maestro/Maestro.Data
         displayName: Create Data Package
         
-      - script: copy /y $(Build.SourcesDirectory)\src\Maestro\update-database.ps1 $(Build.ArtifactStagingDirectory)\Maestro.Data\update-database.ps1
-        displayName: Copy update-database.ps1 into data package
+      - task: CopyFiles@2
+        displayName: Copy update-database.ps1
+        inputs:
+          sourceFolder: $(Build.SourcesDirectory)\src\Maestro
+          contents: update-database.ps1 
+          targetFolder: $(Build.ArtifactStagingDirectory)\Maestro.Data\
         
       - task: PublishBuildArtifacts@1
-        displayName: Publish Maestro.Data Package Artifact
+        displayName: Publish Maestro.Data Artifact
         inputs:
           PathtoPublish: $(Build.ArtifactStagingDirectory)\Maestro.Data
           ArtifactName: Maestro.Data
+          ArtifactType: Container
+      
+      ## Prepare nuget package publish artifact
+      - task: CopyFiles@2
+        displayName: Prepare NuGet publish steps (Part 1, build files)
+        inputs:
+          sourceFolder: $(Build.SourcesDirectory)\artifacts\eng
+          contents: *
+          targetFolder: $(Build.ArtifactStagingDirectory)\nupkgs
+
+      - task: CopyFiles@2
+        displayName: Prepare NuGet publish steps (Part 2, package sources)
+        inputs:
+          sourceFolder: $(Build.SourcesDirectory)\
+          contents: Nuget.config
+          targetFolder: $(Build.ArtifactStagingDirectory)\nupkgs
+          
+      - task: CopyFiles@2
+        displayName: Prepare NuGet publish steps (Part 3, packages)
+        inputs:
+          sourceFolder: $(Build.SourcesDirectory)\artifacts\packages\$(_BuildConfig)\Shipping
+          contents: **
+          targetFolder: $(Build.ArtifactStagingDirectory)\nupkgs
+          
+      - task: PublishBuildArtifacts@1
+        displayName: Publish NuPkgs Artifact
+        inputs:
+          PathtoPublish: $(Build.ArtifactStagingDirectory)\nupkgs
+          ArtifactName: NuPkgs
           ArtifactType: Container
