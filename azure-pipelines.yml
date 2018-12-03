@@ -93,7 +93,7 @@ jobs:
         displayName: Prepare NuGet publish steps (Part 1, build files)
         inputs:
           sourceFolder: $(Build.SourcesDirectory)\artifacts\eng
-          contents: *
+          contents: '*'
           targetFolder: $(Build.ArtifactStagingDirectory)\nupkgs
 
       - task: CopyFiles@2
@@ -107,7 +107,7 @@ jobs:
         displayName: Prepare NuGet publish steps (Part 3, packages)
         inputs:
           sourceFolder: $(Build.SourcesDirectory)\artifacts\packages\$(_BuildConfig)\Shipping
-          contents: **
+          contents: '**'
           targetFolder: $(Build.ArtifactStagingDirectory)\nupkgs
           
       - task: PublishBuildArtifacts@1
