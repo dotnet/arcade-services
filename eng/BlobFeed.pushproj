@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk" DefaultTarget="PublishToFeed">
+  <PropertyGroup>
+    <TargetFramework>net461</TargetFramework>
+    <FeedTasksPackage>Microsoft.DotNet.Build.Tasks.Feed</FeedTasksPackage>
+    <FeedTasksTargets>$(RestorePackagesPath)/$(FeedTasksPackage.ToLower())/$(MicrosoftDotNetBuildTasksFeedVersion)/build/$(FeedTasksPackage).targets</FeedTasksTargets>
+
+    <PassIfExistingItemIdentical Condition=" '$(PassIfExistingItemIdentical)' == '' ">true</PassIfExistingItemIdentical>
+    <OverwriteCentralBlobFeed Condition=" '$(OverwriteCentralBlobFeed)' == '' ">false</OverwriteCentralBlobFeed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="$(FeedTasksPackage)" Version="$(MicrosoftDotNetBuildTasksFeedVersion)" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Package Condition=" '$(PackageRoot)' != '' " Include="$(PackageRoot)/**/*.nupkg">
+    </Package>
+    <Package Condition=" '$(Package)' != '' " Include="$(Package)">
+    </Package>
+  </ItemGroup>
+  
+  <Target Name="ValidateParameters">
+    <Error Condition=" '@(Package)' == '' " Text="No packages specified, one of PackageRoot or Package is required" />
+    <Error Condition=" '$(FeedUrl)' == '' " Text="FeedUrl is required" />
+    <Error Condition=" '$(AccountKey)' == '' " Text="AccountKey is required" />
+  </Target>
+  
+  <Target Name="PublishToFeed" DependsOnTargets="ValidateParameters">
+    <!-- <PushToBlobFeed
+      ExpectedFeedUrl="$(FeedUrl)"
+      AccountKey="$(AccountKey)"
+      ItemsToPush="@(Package)"
+      PassIfExistingItemIdentical="$(PassIfExistingItemIdentical)"
+      Overwrite="$(OverwriteCentralBlobFeed)" /> -->
+  </Target>
+
+  <Import Project="$(FeedTasksTargets)" Condition="Exists('$(FeedTasksTargets)')" />
+</Project>
