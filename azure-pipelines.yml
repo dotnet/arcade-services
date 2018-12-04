@@ -92,7 +92,7 @@ jobs:
       - task: CopyFiles@2
         displayName: Prepare NuGet publish steps (Part 1, build files)
         inputs:
-          sourceFolder: $(Build.SourcesDirectory)\artifacts\eng
+          sourceFolder: $(Build.SourcesDirectory)\eng
           contents: '*'
           targetFolder: $(Build.ArtifactStagingDirectory)\nupkgs
 
