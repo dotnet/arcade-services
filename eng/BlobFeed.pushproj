@@ -26,12 +26,12 @@
   </Target>
   
   <Target Name="PublishToFeed" DependsOnTargets="ValidateParameters">
-    <!-- <PushToBlobFeed
+    <PushToBlobFeed
       ExpectedFeedUrl="$(FeedUrl)"
       AccountKey="$(AccountKey)"
       ItemsToPush="@(Package)"
       PassIfExistingItemIdentical="$(PassIfExistingItemIdentical)"
-      Overwrite="$(OverwriteCentralBlobFeed)" /> -->
+      Overwrite="$(OverwriteCentralBlobFeed)" />
   </Target>
 
   <Import Project="$(FeedTasksTargets)" Condition="Exists('$(FeedTasksTargets)')" />
