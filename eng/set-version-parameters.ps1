@@ -16,7 +16,9 @@ $tag = git tag |
     Select-Object -First 1 -ExpandProperty tag
 
 if (-not $tag) {
-  $tag = "v1.1.0"
+  Write-Verbose "Defaulting to version 1.1.0"
+  Write-Host "##vso[task.setvariable variable=VersionPrefix]$versionPrefix"
+  exit 0
 }
 
 Write-Verbose "Got Previous Version Tag '$tag'"
