@@ -120,6 +120,6 @@ jobs:
           ArtifactName: NuPkgs
           ArtifactType: Container
 
-      - ${{ if and(and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')), eq(variables['Build.SourceBranchName', 'production')) }}:
+      - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
         - powershell: eng\create-tag.ps1 -AccessToken $(System.AccessToken)
 
