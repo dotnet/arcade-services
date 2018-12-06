@@ -15,6 +15,10 @@ $tag = git tag |
     Sort-Object distance |
     Select-Object -First 1 -ExpandProperty tag
 
+if (-not $tag) {
+  $tag = "v1.1.0"
+}
+
 Write-Verbose "Got Previous Version Tag '$tag'"
 if ($tag.StartsWith("refs/tags/"))
 {
