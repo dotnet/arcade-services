@@ -3,9 +3,6 @@
 
   <PropertyGroup>
     <TargetFrameworks>netcoreapp2.1;$(NetFxTfm)</TargetFrameworks>
-
-    <VersionPrefix>1.0.0</VersionPrefix>
-
     <Description>This package include tasks involving Maestro++ and the Build Asset Registry.</Description>
     <DevelopmentDependency>true</DevelopmentDependency>
     <PackageType>MSBuildSdk</PackageType>

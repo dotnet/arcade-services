@@ -1,4 +1,3 @@
-
 [CmdletBinding()]
 param(
   [Parameter(Mandatory=$true)]
@@ -6,6 +5,8 @@ param(
   [Parameter(Mandatory=$false)]
   $startupDll
 )
+
+$ErrorActionPreference = "Stop"
 
 function removeDllExtension {
   param($path)
