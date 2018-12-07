@@ -14,7 +14,7 @@ $tag = git tag |
 
 if (-not $tag) {
   Write-Verbose "Defaulting to version 1.1.0"
-  Write-Host "##vso[task.setvariable variable=VersionPrefix]$versionPrefix"
+  Write-Host "##vso[task.setvariable variable=VersionPrefix]1.1.0"
   exit 0
 }
 
