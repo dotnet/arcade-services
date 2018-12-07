@@ -1,8 +1,5 @@
 [cmdletbinding()]
-param(
-  $buildDirectory,
-  $packageOutputDirectory
-)
+param()
 
 $ErrorActionPreference = "Stop"
 $here = Split-Path -Parent $MyInvocation.MyCommand.Definition
