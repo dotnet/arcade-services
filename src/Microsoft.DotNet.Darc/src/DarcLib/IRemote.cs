@@ -104,8 +104,6 @@ namespace Microsoft.DotNet.DarcLib
             string keyword = null,
             string author = null);
 
-        Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl);
-
         /// <summary>
         /// Retrieve the common script files from a remote source.
         /// </summary>

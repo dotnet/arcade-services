@@ -20,7 +20,7 @@ using Octokit;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public class GitHubClient : IGitRepo
+    public class GitHubClient : RemoteRepoBase, IGitRepo
     {
         private const string GitHubApiUri = "https://api.github.com";
         private const string DarcLibVersion = "1.0.0";
@@ -62,28 +62,47 @@ namespace Microsoft.DotNet.DarcLib
 
         public Octokit.GitHubClient Client => _lazyClient.Value;
 
-        public async Task<string> GetFileContentsAsync(string filePath, string repoUri, string branch)
+        /// <summary>
+        ///     Retrieve the contents of a repository file as a string
+        /// </summary>
+        /// <param name="filePath">Path to file</param>
+        /// <param name="repoUri">Repository URI</param>
+        /// <param name="branch">Branch to get file contents from</param>
+        /// <returns>File contents or throws on file not found.</returns>
+        public Task<string> GetFileContentsAsync(string filePath, string repoUri, string branch)
+        {
+            (string owner, string repo) = ParseRepoUri(repoUri);
+            return GetFileContentsAsync(owner, repo, filePath, branch);
+        }
+
+        /// <summary>
+        ///     Retrieve the contents of a repository file as a string
+        /// </summary>
+        /// <param name="filePath">Path to file</param>
+        /// <param name="owner">Owner of repo</param>
+        /// <param name="repo">Repo name</param>
+        /// <param name="branch">Branch to get file contents from</param>
+        /// <returns>File contents or throws on file not found.</returns>
+        private async Task<string> GetFileContentsAsync(string owner, string repo, string filePath, string branch)
         {
             _logger.LogInformation(
-                $"Getting the contents of file '{filePath}' from repo '{repoUri}' in branch '{branch}'...");
-
-            string ownerAndRepo = GetOwnerAndRepoFromRepoUri(repoUri);
+                $"Getting the contents of file '{filePath}' from repo '{owner}/{repo}' in branch '{branch}'...");
 
             HttpResponseMessage response;
             try
             {
-                response = await this.ExecuteGitCommand(
+                response = await this.ExecuteRemoteGitCommand(
                     HttpMethod.Get,
-                    $"repos/{ownerAndRepo}/contents/{filePath}?ref={branch}",
+                    $"repos/{owner}/{repo}/contents/{filePath}?ref={branch}",
                     _logger);
             }
             catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)"))
             {
-                throw new DependencyFileNotFoundException(filePath, repoUri, branch, reqEx);
+                throw new DependencyFileNotFoundException(filePath, $"{owner}/{repo}", branch, reqEx);
             }
 
             _logger.LogInformation(
-                $"Getting the contents of file '{filePath}' from repo '{repoUri}' in branch '{branch}' succeeded!");
+                $"Getting the contents of file '{filePath}' from repo '{owner}/{repo}' in branch '{branch}' succeeded!");
 
             JObject responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
 
@@ -92,13 +111,20 @@ namespace Microsoft.DotNet.DarcLib
             return this.GetDecodedContent(content);
         }
 
+        /// <summary>
+        /// Create a new branch in a repository
+        /// </summary>
+        /// <param name="repoUri">Repo to create a branch in</param>
+        /// <param name="newBranch">New branch name</param>
+        /// <param name="baseBranch">Base of new branch</param>
+        /// <returns></returns>
         public async Task CreateBranchAsync(string repoUri, string newBranch, string baseBranch)
         {
             _logger.LogInformation(
                 $"Verifying if '{newBranch}' branch exist in repo '{repoUri}'. If not, we'll create it...");
 
-            string ownerAndRepo = GetOwnerAndRepoFromRepoUri(repoUri);
-            string latestSha = await GetLastCommitShaAsync(ownerAndRepo, baseBranch);
+            (string owner, string repo) = ParseRepoUri(repoUri);
+            string latestSha = await GetLastCommitShaAsync(owner, repo, baseBranch);
             string body;
 
             string gitRef = $"refs/heads/{newBranch}";
@@ -107,16 +133,16 @@ namespace Microsoft.DotNet.DarcLib
 
             try
             {
-                response = await this.ExecuteGitCommand(
+                response = await this.ExecuteRemoteGitCommand(
                     HttpMethod.Get,
-                    $"repos/{ownerAndRepo}/branches/{newBranch}",
+                    $"repos/{owner}/{repo}/branches/{newBranch}",
                     _logger);
 
                 githubRef.Force = true;
                 body = JsonConvert.SerializeObject(githubRef, _serializerSettings);
-                await this.ExecuteGitCommand(
+                await this.ExecuteRemoteGitCommand(
                     new HttpMethod("PATCH"),
-                    $"repos/{ownerAndRepo}/git/{gitRef}",
+                    $"repos/{owner}/{repo}/git/{gitRef}",
                     _logger,
                     body);
             }
@@ -125,9 +151,9 @@ namespace Microsoft.DotNet.DarcLib
                 _logger.LogInformation($"'{newBranch}' branch doesn't exist. Creating it...");
 
                 body = JsonConvert.SerializeObject(githubRef, _serializerSettings);
-                response = await this.ExecuteGitCommand(
+                response = await this.ExecuteRemoteGitCommand(
                     HttpMethod.Post,
-                    $"repos/{ownerAndRepo}/git/refs",
+                    $"repos/{owner}/{repo}/git/refs",
                     _logger,
                     body);
 
@@ -147,107 +173,14 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        /// We used to group commits in a tree object so there would be only one commit per 
-        /// change but this doesn't work for trees that end up being too big (around 20K files).
-        /// By using LibGit2Sharp we still group changes in one and we don't need to create a new
-        /// tree. Everything happens locally in the host executing the push.
+        ///     Search pull requests matching the specified criteria
         /// </summary>
-        /// <param name="filesToCommit">Collection of files to update.</param>
-        /// <param name="repoUri">The repository to push the files to.</param>
-        /// <param name="branch">The branch to push the files to.</param>
-        /// <param name="commitMessage">The commmit message.</param>
-        /// <returns></returns>
-        public async Task PushFilesAsync(
-            List<GitFile> filesToCommit,
-            string repoUri,
-            string branch,
-            string commitMessage)
-        {
-            string dotnetMaestro = "dotnet-maestro";
-            using (_logger.BeginScope("Pushing files to {branch}", branch))
-            {
-                (string owner, string repo) = ParseRepoUri(repoUri);
-
-                string tempRepoFolder = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-
-                try
-                {
-                    string repoPath = LibGit2Sharp.Repository.Clone(
-                        repoUri, 
-                        tempRepoFolder, 
-                        new LibGit2Sharp.CloneOptions
-                        {
-                            BranchName = branch,
-                            Checkout = true
-                        });
-
-                    using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoPath))
-                    {
-                        foreach (GitFile file in filesToCommit)
-                        {
-                            string filePath = Path.Combine(tempRepoFolder, file.FilePath);
-
-                            if (file.Operation == GitFileOperation.Add)
-                            {
-                                if (!File.Exists(filePath))
-                                {
-                                    string parentFolder = Directory.GetParent(filePath).FullName;
-
-                                    Directory.CreateDirectory(parentFolder);
-                                }
-
-                                using (FileStream stream = File.Create(filePath))
-                                {
-                                    byte[] contentBytes = this.GetContentBytes(file.Content);
-                                    await stream.WriteAsync(contentBytes, 0, contentBytes.Length);
-                                }
-                            }
-                            else
-                            {
-                                File.Delete(Path.Combine(tempRepoFolder, file.FilePath));
-                            }
-                        }
-
-                        LibGit2Sharp.Commands.Stage(localRepo, "*");
-
-                        LibGit2Sharp.Signature author = new LibGit2Sharp.Signature(dotnetMaestro, $"@{dotnetMaestro}", DateTime.Now);
-                        LibGit2Sharp.Signature commiter = author;
-                        localRepo.Commit(commitMessage, author, commiter, new LibGit2Sharp.CommitOptions
-                        {
-                            AllowEmptyCommit = false,
-                            PrettifyMessage = true
-                        });
-
-                        localRepo.Network.Push(localRepo.Branches[branch], new LibGit2Sharp.PushOptions
-                        {
-                            CredentialsProvider = (url, user, cred) =>
-                            new LibGit2Sharp.UsernamePasswordCredentials
-                            {
-                                Username = dotnetMaestro,
-                                Password = Client.Credentials.Password
-                            }
-                        });
-                    }
-                }
-                catch (LibGit2Sharp.EmptyCommitException)
-                {
-                    _logger.LogInformation("There was nothing to commit...");
-                }
-                catch (Exception exc)
-                {
-                    throw new DarcException($"Something went wrong when pushing the files to repo {repo} in branch {branch}", exc);
-                }
-                finally
-                {
-                    // Libgit2Sharp behaves similarly to git and marks files under the .git/objects hierarchy as read-only, 
-                    // thus if the read-only attribute is not unset an UnauthorizedAccessException is thrown.
-                    GitFileManager.NormalizeAttributes(tempRepoFolder);
-
-                    Directory.Delete(tempRepoFolder, true);
-                }
-            }
-        }
-
+        /// <param name="repoUri">URI of repo containing the pull request</param>
+        /// <param name="pullRequestBranch">Source branch for PR</param>
+        /// <param name="status">Current PR status</param>
+        /// <param name="keyword">Keyword</param>
+        /// <param name="author">Author</param>
+        /// <returns>List of pull requests matching the specified criteria</returns>
         public async Task<IEnumerable<int>> SearchPullRequestsAsync(
             string repoUri,
             string pullRequestBranch,
@@ -255,7 +188,7 @@ namespace Microsoft.DotNet.DarcLib
             string keyword = null,
             string author = null)
         {
-            string ownerAndRepo = GetOwnerAndRepoFromRepoUri(repoUri);
+            (string owner, string repo) = ParseRepoUri(repoUri);
             var query = new StringBuilder();
 
             if (!string.IsNullOrEmpty(keyword))
@@ -264,14 +197,14 @@ namespace Microsoft.DotNet.DarcLib
                 query.Append("+");
             }
 
-            query.Append($"repo:{ownerAndRepo}+head:{pullRequestBranch}+type:pr+is:{status.ToString().ToLower()}");
+            query.Append($"repo:{owner}/{repo}+head:{pullRequestBranch}+type:pr+is:{status.ToString().ToLower()}");
 
             if (!string.IsNullOrEmpty(author))
             {
                 query.Append($"+author:{author}");
             }
 
-            HttpResponseMessage response = await this.ExecuteGitCommand(
+            HttpResponseMessage response = await this.ExecuteRemoteGitCommand(
                 HttpMethod.Get,
                 $"search/issues?q={query}",
                 _logger);
@@ -284,11 +217,17 @@ namespace Microsoft.DotNet.DarcLib
             return prs;
         }
 
+        /// <summary>
+        /// Get the status of a pull request
+        /// </summary>
+        /// <param name="pullRequestUrl">URI of pull request</param>
+        /// <returns>Pull request status</returns>
         public async Task<PrStatus> GetPullRequestStatusAsync(string pullRequestUrl)
         {
-            string url = GetPrPartialAbsolutePath(pullRequestUrl);
+            (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
-            HttpResponseMessage response = await this.ExecuteGitCommand(HttpMethod.Get, url, _logger);
+            HttpResponseMessage response = await this.ExecuteRemoteGitCommand(HttpMethod.Get, 
+                $"repos/{owner}/{repo}/pulls/{id}", _logger);
 
             JObject responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
 
@@ -316,17 +255,11 @@ namespace Microsoft.DotNet.DarcLib
             return PrStatus.None;
         }
 
-        public async Task<string> GetPullRequestRepo(string pullRequestUrl)
-        {
-            string url = GetPrPartialAbsolutePath(pullRequestUrl);
-
-            HttpResponseMessage response = await this.ExecuteGitCommand(HttpMethod.Get, url, _logger);
-
-            JObject responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
-
-            return responseContent["base"]["repo"]["html_url"].ToString();
-        }
-
+        /// <summary>
+        ///     Retrieve information on a specific pull request
+        /// </summary>
+        /// <param name="pullRequestUrl">Uri of the pull request</param>
+        /// <returns>Information on the pull request.</returns>
         public async Task<PullRequest> GetPullRequestAsync(string pullRequestUrl)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
@@ -340,6 +273,12 @@ namespace Microsoft.DotNet.DarcLib
             };
         }
 
+        /// <summary>
+        ///     Create a new pull request for a repository
+        /// </summary>
+        /// <param name="repoUri">Repo to create the pull request for.</param>
+        /// <param name="pullRequest">Pull request data</param>
+        /// <returns></returns>
         public async Task<string> CreatePullRequestAsync(string repoUri, PullRequest pullRequest)
         {
             (string owner, string repo) = ParseRepoUri(repoUri);
@@ -353,6 +292,12 @@ namespace Microsoft.DotNet.DarcLib
             return createdPullRequest.Url;
         }
 
+        /// <summary>
+        ///     Update a pull request with new information
+        /// </summary>
+        /// <param name="pullRequestUri">Uri of pull request to update</param>
+        /// <param name="pullRequest">Pull request info to update</param>
+        /// <returns></returns>
         public async Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUri);
@@ -368,6 +313,12 @@ namespace Microsoft.DotNet.DarcLib
                 });
         }
 
+        /// <summary>
+        ///     Merge a pull request
+        /// </summary>
+        /// <param name="pullRequestUrl">Uri of pull request to merge</param>
+        /// <param name="parameters">Settings for merge</param>
+        /// <returns></returns>
         public async Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
@@ -387,7 +338,13 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
-        public async Task CreateOrUpdatePullRequestDarcCommentAsync(string pullRequestUrl, string message)
+        /// <summary>
+        ///     Create a new comment, or update the last comment with an updated message,
+        ///     if that comment was created by Darc.
+        /// </summary>
+        /// <param name="pullRequestUrl">Url of pull request</param>
+        /// <param name="message">Message to post</param>
+        public async Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
             IssueComment lastComment = (await Client.Issue.Comment.GetAllForIssue(owner, repo, id)).LastOrDefault();
@@ -401,7 +358,14 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
-        public async Task<List<GitFile>> GetFilesForCommitAsync(string repoUri, string commit, string path)
+        /// <summary>
+        ///     Retrieve a set of file under a specific path at a commit
+        /// </summary>
+        /// <param name="repoUri">Repository URI</param>
+        /// <param name="commit">Commit to get files at</param>
+        /// <param name="path">Path to retrieve files from</param>
+        /// <returns>Set of files under <paramref name="path"/> at <paramref name="commit"/></returns>
+        public async Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path)
         {
             path = path.Replace('\\', '/');
             path = path.TrimStart('/').TrimEnd('/');
@@ -425,31 +389,47 @@ namespace Microsoft.DotNet.DarcLib
                         async treeItem =>
                         {
                             Blob blob = await Client.Git.Blob.Get(owner, repo, treeItem.Sha);
+                            ContentEncoding encoding;
+                            switch (blob.Encoding.Value)
+                            {
+                                case EncodingType.Base64:
+                                    encoding = ContentEncoding.Base64;
+                                    break;
+                                case EncodingType.Utf8:
+                                    encoding = ContentEncoding.Utf8;
+                                    break;
+                                default:
+                                    throw new NotImplementedException($"Unknown github encoding type {blob.Encoding.StringValue}");
+
+                            }
                             return new GitFile(
                                 path + "/" + treeItem.Path,
                                 blob.Content,
-                                blob.Encoding == EncodingType.Base64 ? "base64" : "utf-8") {Mode = treeItem.Mode};
+                                encoding) {Mode = treeItem.Mode};
                         }));
             return files.ToList();
         }
 
-        public async Task<string> GetFileContentsAsync(string ownerAndRepo, string path)
+        private async Task<HttpResponseMessage> ExecuteRemoteGitCommand(
+            HttpMethod method,
+            string requestUri,
+            ILogger logger,
+            string body = null,
+            string versionOverride = null)
         {
-            HttpResponseMessage response = await this.ExecuteGitCommand(
-                HttpMethod.Get,
-                $"repos/{ownerAndRepo}/contents/{path}",
-                _logger);
+            using (HttpClient client = CreateHttpClient())
+            {
+                var requestManager = new HttpRequestManager(client, method, requestUri, logger, body, versionOverride);
 
-            JObject file = JObject.Parse(await response.Content.ReadAsStringAsync());
-            string encodedContent = file["content"].ToString();
-
-            byte[] data = Convert.FromBase64String(encodedContent);
-            string content = Encoding.UTF8.GetString(data);
-
-            return content;
+                return await requestManager.ExecuteAsync();
+            }
         }
 
-        public HttpClient CreateHttpClient(string versionOverride = null)
+        /// <summary>
+        /// Create a new http client for talking to github.
+        /// </summary>
+        /// <returns>New http client</returns
+        private HttpClient CreateHttpClient()
         {
             var client = new HttpClient {BaseAddress = new Uri(GitHubApiUri)};
             client.DefaultRequestHeaders.Add("Authorization", $"Token {_personalAccessToken}");
@@ -458,17 +438,25 @@ namespace Microsoft.DotNet.DarcLib
             return client;
         }
 
+        /// <summary>
+        ///     Determine whether a file exists in a repo at a specified branch and
+        ///     returns the SHA of the file if it does.
+        /// </summary>
+        /// <param name="repoUri">Repository URI</param>
+        /// <param name="filePath">Path to file</param>
+        /// <param name="branch">Branch</param>
+        /// <returns>Sha of file or null if the file does not exist.</returns>
         public async Task<string> CheckIfFileExistsAsync(string repoUri, string filePath, string branch)
         {
             string commit;
-            string ownerAndRepo = GetOwnerAndRepoFromRepoUri(repoUri);
+            (string owner, string repo) = ParseRepoUri(repoUri);
             HttpResponseMessage response;
 
             try
             {
-                response = await this.ExecuteGitCommand(
+                response = await this.ExecuteRemoteGitCommand(
                     HttpMethod.Get,
-                    $"repos/{ownerAndRepo}/contents/{filePath}?ref={branch}",
+                    $"repos/{owner}/{repo}/contents/{filePath}?ref={branch}",
                     _logger);
             }
             catch (HttpRequestException exc) when (exc.Message.Contains(((int) HttpStatusCode.NotFound).ToString()))
@@ -482,23 +470,47 @@ namespace Microsoft.DotNet.DarcLib
             return commit;
         }
 
-        public async Task<string> GetLastCommitShaAsync(string ownerAndRepo, string branch)
+        /// <summary>
+        ///     Get the latest commit in a repo on the specific branch 
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="branch">Branch to retrieve the latest sha for</param>
+        /// <returns>Latest sha.  Throws if no commits were found.</returns>
+        public Task<string> GetLastCommitShaAsync(string repoUri, string branch)
         {
-            HttpResponseMessage response = await this.ExecuteGitCommand(
+            (string owner, string repo) = ParseRepoUri(repoUri);
+            return GetLastCommitShaAsync(owner, repo, branch);
+        }
+
+        /// <summary>
+        ///     Get the latest commit in a repo on the specific branch 
+        /// </summary>
+        /// <param name="owner">Owner of repo</param>
+        /// <param name="repo">Repository name</param>
+        /// <param name="branch">Branch to retrieve the latest sha for</param>
+        /// <returns>Latest sha.  Throws if no commits were found.</returns>
+        private async Task<string> GetLastCommitShaAsync(string owner, string repo, string branch)
+        {
+            HttpResponseMessage response = await this.ExecuteRemoteGitCommand(
                 HttpMethod.Get,
-                $"repos/{ownerAndRepo}/commits/{branch}",
+                $"repos/{owner}/{repo}/commits/{branch}",
                 _logger);
 
             JObject content = JObject.Parse(await response.Content.ReadAsStringAsync());
 
             if (content == null)
             {
-                throw new Exception($"No commits found in branch '{branch}' of repo '{ownerAndRepo}'!");
+                throw new DarcException($"No commits found in branch '{branch}' of repo '{owner}/{repo}'!");
             }
 
             return content["sha"].ToString();
         }
 
+        /// <summary>
+        /// Retrieve the list of status checks on a PR.
+        /// </summary>
+        /// <param name="pullRequestUrl">Uri of pull request</param>
+        /// <returns>List of status checks.</returns>
         public async Task<IList<Check>> GetPullRequestChecksAsync(string pullRequestUrl)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
@@ -589,25 +601,6 @@ namespace Microsoft.DotNet.DarcLib
                 .ToList();
         }
 
-        public async Task<string> GetPullRequestBaseBranch(string pullRequestUrl)
-        {
-            string url = GetPrPartialAbsolutePath(pullRequestUrl);
-
-            HttpResponseMessage response = await this.ExecuteGitCommand(HttpMethod.Get, url, _logger);
-            JObject content = JObject.Parse(await response.Content.ReadAsStringAsync());
-
-            return content["head"]["ref"].ToString();
-        }
-
-        public async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
-        {
-            (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-
-            IReadOnlyList<PullRequestCommit> commits = await Client.PullRequest.Commits(owner, repo, id);
-
-            return commits.Select(c => new Commit(c.Author.Name, c.Sha)).ToList();
-        }
-
         private Octokit.GitHubClient CreateGitHubClientClient()
         {
             return new Octokit.GitHubClient(_product) {Credentials = new Credentials(_personalAccessToken)};
@@ -677,10 +670,10 @@ namespace Microsoft.DotNet.DarcLib
             _logger.LogInformation(
                 $"Getting the contents of file/files in '{path}' of repo '{repoUri}' at commit '{assetsProducedInCommit}'");
 
-            string ownerAndRepo = GetOwnerAndRepoFromRepoUri(repoUri);
-            HttpResponseMessage response = await this.ExecuteGitCommand(
+            (string owner, string repo) = ParseRepoUri(repoUri);
+            HttpResponseMessage response = await this.ExecuteRemoteGitCommand(
                 HttpMethod.Get,
-                $"repos/{ownerAndRepo}/contents/{path}?ref={assetsProducedInCommit}",
+                $"repos/{owner}/{repo}/contents/{path}?ref={assetsProducedInCommit}",
                 _logger);
 
             var contents =
@@ -692,7 +685,7 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     if (!GitFileManager.DependencyFiles.Contains(content.Path))
                     {
-                        string fileContent = await GetFileContentsAsync(ownerAndRepo, content.Path);
+                        string fileContent = await GetFileContentsAsync(owner, repo, content.Path);
                         var gitCommit = new GitFile(content.Path, fileContent);
                         files.Add(gitCommit);
                     }
@@ -713,24 +706,12 @@ namespace Microsoft.DotNet.DarcLib
                 $"Getting the contents of file/files in '{path}' of repo '{repoUri}' at commit '{assetsProducedInCommit}' succeeded!");
         }
 
-        private static string GetOwnerAndRepo(string uri, Regex pattern)
-        {
-            var u = new UriBuilder(uri);
-            Match match = pattern.Match(u.Path);
-            if (!match.Success)
-            {
-                return null;
-            }
-
-            return $"{match.Groups["owner"]}/{match.Groups["repo"]}";
-        }
-
-        public string GetOwnerAndRepoFromRepoUri(string repoUri)
-        {
-            return GetOwnerAndRepo(repoUri, repoUriPattern);
-        }
-
-        public static (string owner, string repo) ParseRepoUri(string uri)
+        /// <summary>
+        ///     Parse out the owner and repo from a repository url
+        /// </summary>
+        /// <param name="uri">Github repository URL</param>
+        /// <returns>Tuple of owner and repo</returns>
+        private (string owner, string repo) ParseRepoUri(string uri)
         {
             var u = new UriBuilder(uri);
             Match match = repoUriPattern.Match(u.Path);
@@ -742,6 +723,11 @@ namespace Microsoft.DotNet.DarcLib
             return (match.Groups["owner"].Value, match.Groups["repo"].Value);
         }
 
+        /// <summary>
+        ///     Parse out a pull request url into its component parts.
+        /// </summary>
+        /// <param name="uri">Github pr URL</param>
+        /// <returns>Tuple of owner, repo and pr id</returns>
         public static (string owner, string repo, int id) ParsePullRequestUri(string uri)
         {
             var u = new UriBuilder(uri);
@@ -754,48 +740,17 @@ namespace Microsoft.DotNet.DarcLib
             return (match.Groups["owner"].Value, match.Groups["repo"].Value, int.Parse(match.Groups["id"].Value));
         }
 
-        private async Task<string> CreateOrUpdatePullRequestAsync(
-            string uri,
-            string mergeWithBranch,
-            string sourceBranch,
-            HttpMethod method,
-            string title = null,
-            string description = null)
+        /// <summary>
+        ///     Commit or update a set of files to a repo
+        /// </summary>
+        /// <param name="filesToCommit">Files to comit</param>
+        /// <param name="repoUri">Remote repository URI</param>
+        /// <param name="branch">Branch to push to</param>
+        /// <param name="commitMessage">Commit message</param>
+        /// <returns></returns>
+        public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
-            string requestUri;
-
-            title = !string.IsNullOrEmpty(title)
-                ? $"{PullRequestProperties.TitleTag} {title}"
-                : PullRequestProperties.Title;
-            description = description ?? PullRequestProperties.Description;
-
-            var pullRequest = new GitHubPullRequest(title, description, sourceBranch, mergeWithBranch);
-
-            string body = JsonConvert.SerializeObject(pullRequest, _serializerSettings);
-
-            if (method == HttpMethod.Post)
-            {
-                string ownerAndRepo = GetOwnerAndRepoFromRepoUri(uri);
-                requestUri = $"repos/{ownerAndRepo}/pulls";
-            }
-            else
-            {
-                requestUri = GetPrPartialAbsolutePath(uri);
-            }
-
-            HttpResponseMessage response = await this.ExecuteGitCommand(method, requestUri, _logger, body);
-
-            JObject content = JObject.Parse(await response.Content.ReadAsStringAsync());
-
-            Console.WriteLine($"Browser ready link for this PR is: {content["html_url"]}");
-
-            return content["url"].ToString();
-        }
-
-        private string GetPrPartialAbsolutePath(string prLink)
-        {
-            var uri = new Uri(prLink);
-            return uri.PathAndQuery;
+            return this.CommitFilesAsync(filesToCommit, repoUri, branch, commitMessage, _logger, Client.Credentials.Password);
         }
     }
 }

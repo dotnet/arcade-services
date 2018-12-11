@@ -2,8 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Threading.Tasks;
 using Maestro.GitHub;
+using Maestro.AzureDevOps;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -15,16 +17,19 @@ namespace SubscriptionActorService
         public DarcRemoteFactory(
             ILoggerFactory loggerFactory,
             IConfigurationRoot configuration,
-            IGitHubTokenProvider gitHubTokenProvider)
+            IGitHubTokenProvider gitHubTokenProvider,
+            IAzureDevOpsTokenProvider azureDevOpsTokenProvider)
         {
             LoggerFactory = loggerFactory;
             Configuration = configuration;
             GitHubTokenProvider = gitHubTokenProvider;
+            AzureDevOpsTokenProvider = azureDevOpsTokenProvider;
         }
 
         public ILoggerFactory LoggerFactory { get; }
         public IConfigurationRoot Configuration { get; }
         public IGitHubTokenProvider GitHubTokenProvider { get; }
+        public IAzureDevOpsTokenProvider AzureDevOpsTokenProvider { get; }
 
         public async Task<IRemote> CreateAsync(string repoUrl, long installationId)
         {
@@ -39,10 +44,15 @@ namespace SubscriptionActorService
                 settings.GitType = GitRepoType.GitHub;
                 settings.PersonalAccessToken = await GitHubTokenProvider.GetTokenForInstallation(installationId);
             }
-            else
+            else if (repoUrl.Contains("dev.azure.com"))
             {
                 settings.GitType = GitRepoType.AzureDevOps;
-                settings.PersonalAccessToken = ""; // TODO: get this
+                // Parse out the instance name and then grab the PAT via 
+                settings.PersonalAccessToken = await AzureDevOpsTokenProvider.GetTokenForRepository(repoUrl);
+            }
+            else
+            {
+                throw new NotImplementedException($"Unknown repo url type {repoUrl}");
             }
 
             return new Remote(settings, LoggerFactory.CreateLogger<Remote>());

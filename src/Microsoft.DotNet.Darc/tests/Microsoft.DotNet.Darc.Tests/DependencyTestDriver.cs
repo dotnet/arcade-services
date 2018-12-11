@@ -71,7 +71,7 @@ namespace Microsoft.DotNet.Darc.Tests
                 null);
             List<GitFile> filesToUpdate = container.GetFilesToCommit();
             await 
-                _gitClient.PushFilesAsync(filesToUpdate, TemporaryRepositoryPath, null, null);
+                _gitClient.CommitFilesAsync(filesToUpdate, TemporaryRepositoryPath, null, null);
         }
 
         public async Task<DependencyGraph> GetDependencyGraph(DependencyDetail dependency)

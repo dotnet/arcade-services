@@ -14,22 +14,6 @@ namespace Microsoft.DotNet.DarcLib
 {
     public static class IGitRepoExtension
     {
-        public static async Task<HttpResponseMessage> ExecuteGitCommand(
-            this IGitRepo gitRepo,
-            HttpMethod method,
-            string requestUri,
-            ILogger logger,
-            string body = null,
-            string versionOverride = null)
-        {
-            using (HttpClient client = gitRepo.CreateHttpClient(versionOverride))
-            {
-                var requestManager = new HttpRequestManager(client, method, requestUri, logger, body, versionOverride);
-
-                return await requestManager.ExecuteAsync();
-            }
-        }
-
         public static string GetDecodedContent(this IGitRepo gitRepo, string encodedContent)
         {
             try
