@@ -1,4 +1,3 @@
-
 [CmdletBinding()]
 param(
   [Parameter(Mandatory=$true)]
@@ -6,6 +5,8 @@ param(
   [Parameter(Mandatory=$false)]
   $startupDll
 )
+
+$ErrorActionPreference = "Stop"
 
 function removeDllExtension {
   param($path)
@@ -19,11 +20,11 @@ function removeDllExtension {
 function Get-EfDllPath {
   $dotnetLocation = Split-Path -Parent (Get-Command dotnet).Path
   $sdkVersion = dotnet --version
-  $sdkToolsPath = Join-Path $dotnetLocation sdk $sdkVersion DotnetTools
+  $sdkToolsPath = "$dotnetLocation\sdk\$sdkVersion\DotnetTools"
   $dotnetEfToolPath = Join-Path $sdkToolsPath dotnet-ef
   $dotnetEfVersion = ls $dotnetEfToolPath | select -ExpandProperty Name | sort -Descending | select -First 1
 
-  return (Join-Path $dotnetEfToolPath $dotnetEfVersion tools netcoreapp2.1 any tools netcoreapp2.0 any ef.dll)
+  return "$dotnetEfToolPath\$dotnetEfVersion\tools\netcoreapp2.1\any\tools\netcoreapp2.0\any\ef.dll"
 }
 
 $migrationsNamespace = removeDllExtension $migrationsDll
