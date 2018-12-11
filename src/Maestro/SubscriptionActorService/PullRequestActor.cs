@@ -215,10 +215,10 @@ namespace SubscriptionActorService
         }
 
         /// <summary>
-        /// Retrieve the build number from a build ID.
+        /// Retrieve the build number from a database build id.
         /// </summary>
-        /// <param name="buildId">Build index.</param>
-        /// <returns>Build number (e.g. 123245.6</returns>
+        /// <param name="buildId">Build id</param>
+        /// <returns>Build number (e.g. 123245.6)</returns>
         private async Task<string> GetBuildNumberAsync(int buildId)
         {
             Build build = await Context.Builds.FindAsync(buildId);
