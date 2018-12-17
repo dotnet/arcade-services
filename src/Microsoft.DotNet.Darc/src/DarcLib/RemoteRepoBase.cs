@@ -73,9 +73,8 @@ namespace Microsoft.DotNet.DarcLib
 
                                 using (FileStream stream = File.Create(filePath))
                                 {
-                                    byte[] contentBytes = this.GetContentBytes(file.Content);
+                                    byte[] contentBytes = GetUtf8ContentBytes(file.Content, file.ContentEncoding);
                                     await stream.WriteAsync(contentBytes, 0, contentBytes.Length);
-                                    
                                 }
                             }
                             else
@@ -135,28 +134,17 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
-        /// <summary>
-        /// Decode a base64 string or return the original string if not in base 64 form.
-        /// </summary>
-        /// <param name="encodedContent">Potentially base64 encoded string</param>
-        /// <returns>Decoded string as utf8</returns>
-        protected string GetDecodedContent(string encodedContent)
+        private byte[] GetUtf8ContentBytes(string content, ContentEncoding encoding)
         {
-            try
+            switch (encoding)
             {
-                byte[] content = Convert.FromBase64String(encodedContent);
-                return Encoding.UTF8.GetString(content);
+                case ContentEncoding.Base64:
+                    return Convert.FromBase64String(content);
+                case ContentEncoding.Utf8:
+                    return Encoding.UTF8.GetBytes(content);
+                default:
+                    throw new NotImplementedException("Unexpected content encoding.");
             }
-            catch (FormatException)
-            {
-                return encodedContent;
-            }
-        }
-
-        protected byte[] GetContentBytes(string content)
-        {
-            string decodedContent = GetDecodedContent(content);
-            return Encoding.UTF8.GetBytes(decodedContent);
         }
     }
 }
