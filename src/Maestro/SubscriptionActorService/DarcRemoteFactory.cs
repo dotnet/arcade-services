@@ -34,26 +34,27 @@ namespace SubscriptionActorService
         public async Task<IRemote> CreateAsync(string repoUrl, long installationId)
         {
             var settings = new DarcSettings();
-            if (repoUrl.Contains("github.com"))
-            {
-                if (installationId == default)
-                {
-                    throw new SubscriptionException($"No installation is avaliable for repository '{repoUrl}'");
-                }
+            Uri repoUri = new Uri(repoUrl);
 
-                settings.GitType = GitRepoType.GitHub;
-                settings.PersonalAccessToken = await GitHubTokenProvider.GetTokenForInstallation(installationId);
-            }
-            else if (repoUrl.Contains("dev.azure.com"))
+            switch (repoUri.Host)
             {
-                settings.GitType = GitRepoType.AzureDevOps;
-                // Parse out the instance name and then grab the PAT via 
-                settings.PersonalAccessToken = await AzureDevOpsTokenProvider.GetTokenForRepository(repoUrl);
-            }
-            else
-            {
-                throw new NotImplementedException($"Unknown repo url type {repoUrl}");
-            }
+                case "github.com":
+                    if (installationId == default)
+                    {
+                        throw new SubscriptionException($"No installation is avaliable for repository '{repoUrl}'");
+                    }
+
+                    settings.GitType = GitRepoType.GitHub;
+                    settings.PersonalAccessToken = await GitHubTokenProvider.GetTokenForInstallation(installationId);
+                    break;
+                case "dev.azure.com":
+                    settings.GitType = GitRepoType.AzureDevOps;
+                    // Parse out the instance name and then grab the PAT via 
+                    settings.PersonalAccessToken = await AzureDevOpsTokenProvider.GetTokenForRepository(repoUrl);
+                    break;
+                default:
+                    throw new NotImplementedException($"Unknown repo url type {repoUrl}");
+            };
 
             return new Remote(settings, LoggerFactory.CreateLogger<Remote>());
         }
