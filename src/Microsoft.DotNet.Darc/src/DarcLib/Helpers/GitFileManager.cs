@@ -459,10 +459,10 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 
             }
-            else
-            {
-                UpdateVersionGlobalJson(itemToUpdate, token);
-            }
+
+            // Update the global json too, even if there was an element in the props file, in case
+            // it was listed in both
+            UpdateVersionGlobalJson(itemToUpdate, token);
         }
 
         private void UpdateVersionGlobalJson(DependencyDetail itemToUpdate, JToken token)
@@ -608,7 +608,8 @@ namespace Microsoft.DotNet.DarcLib
                 XmlNode versionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{versionElementName}']");
                 if (versionNode == null)
                 {
-                    versionNode = versionProps.DocumentElement.SelectSingleNode($"////*[local-name()='{alternateVersionElementName}']");
+                    versionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{alternateVersionElementName}']");
+                    versionElementName = alternateVersionElementName;
                 }
 
                 if (versionNode != null)
