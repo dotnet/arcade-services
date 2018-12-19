@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <Import Project="(MSBuildThisFileDirectory)/Versions.props" />
+  <Import Project="$(MSBuildThisFileDirectory)/Versions.props" />
 
   <PropertyGroup>
     <TargetFramework>net461</TargetFramework>
