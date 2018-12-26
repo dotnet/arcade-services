@@ -283,15 +283,10 @@ namespace Microsoft.DotNet.DarcLib
             return await _gitClient.SearchPullRequestsAsync(repoUri, pullRequestBranch, status, keyword, author);
         }
 
-        public Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
-        {
-            return _gitClient.GetPullRequestCommitsAsync(pullRequestUrl);
-        }
-
         public Task CreateOrUpdatePullRequestStatusCommentAsync(string pullRequestUrl, string message)
         {
             CheckForValidGitClient();
-            return _gitClient.CreateOrUpdatePullRequestDarcCommentAsync(pullRequestUrl, message);
+            return _gitClient.CreateOrUpdatePullRequestCommentAsync(pullRequestUrl, message);
         }
 
         public async Task<PrStatus> GetPullRequestStatusAsync(string pullRequestUrl)
@@ -377,7 +372,7 @@ namespace Microsoft.DotNet.DarcLib
                 filesToCommit.AddRange(engCommonFiles);
 
                 // Files in the target repo
-                string latestCommit = await _gitClient.GetLastCommitShaAsync(_gitClient.GetOwnerAndRepoFromRepoUri(repoUri), branch);
+                string latestCommit = await _gitClient.GetLastCommitShaAsync(repoUri, branch);
                 List<GitFile> targetEngCommonFiles = await GetCommonScriptFilesAsync(repoUri, latestCommit);
 
                 foreach (GitFile file in targetEngCommonFiles)
@@ -390,7 +385,7 @@ namespace Microsoft.DotNet.DarcLib
                 }
             }
 
-            await _gitClient.PushFilesAsync(filesToCommit, repoUri, branch, message);
+            await _gitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
         }
 
         public Task<PullRequest> GetPullRequestAsync(string pullRequestUri)
@@ -490,7 +485,7 @@ namespace Microsoft.DotNet.DarcLib
             CheckForValidGitClient();
             _logger.LogInformation("Generating commits for script files");
 
-            List<GitFile> files = await _gitClient.GetFilesForCommitAsync(repoUri, commit, "eng/common");
+            List<GitFile> files = await _gitClient.GetFilesAtCommitAsync(repoUri, commit, "eng/common");
 
             _logger.LogInformation("Generating commits for script files succeeded!");
 

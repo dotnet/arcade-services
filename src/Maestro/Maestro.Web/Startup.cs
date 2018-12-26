@@ -2,15 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Reflection;
-using System.Text;
 using Autofac;
 using EntityFrameworkCore.Triggers;
 using FluentValidation.AspNetCore;
+using Maestro.AzureDevOps;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
@@ -34,6 +29,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Reflection;
+using System.Text;
 using IHostingEnvironment = Microsoft.AspNetCore.Hosting.IHostingEnvironment;
 
 namespace Maestro.Web
@@ -134,6 +135,17 @@ namespace Maestro.Web
                     options.ApplicationVersion = Assembly.GetEntryAssembly()
                         .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                         ?.InformationalVersion;
+                });
+            services.AddAzureDevOpsTokenProvider();
+            services.Configure<AzureDevOpsTokenProviderOptions>(
+                (options, provider) =>
+                {
+                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                    var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
+                    foreach (IConfigurationSection token in tokenMap)
+                    {
+                        options.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
+                    }
                 });
 
             services.AddMergePolicies();

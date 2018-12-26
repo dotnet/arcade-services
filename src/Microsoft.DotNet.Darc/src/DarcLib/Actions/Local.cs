@@ -80,7 +80,7 @@ namespace Microsoft.DotNet.DarcLib
                     List<GitFile> engCommonFiles = await remote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit);
                     filesToUpdate.AddRange(engCommonFiles);
 
-                    List<GitFile> localEngCommonFiles = await _gitClient.GetFilesForCommitAsync(null, null, "eng/common");
+                    List<GitFile> localEngCommonFiles = await _gitClient.GetFilesAtCommitAsync(null, null, "eng/common");
 
                     foreach (GitFile file in localEngCommonFiles)
                     {
@@ -101,7 +101,7 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             // Push on local does not commit.
-            await _gitClient.PushFilesAsync(filesToUpdate, _repo, null, null);
+            await _gitClient.CommitFilesAsync(filesToUpdate, _repo, null, null);
         }
 
         /// <summary>

@@ -4,6 +4,14 @@
   },
   "GitHub": {
     "GitHubAppId": "[vault(github-application-id)]",
-    "PrivateKey": "[vault(github-application-private-key)]" 
+    "PrivateKey": "[vault(github-application-private-key)]"
+  },
+  "AzureDevOps": {
+    "Tokens": [
+      {
+        "Account": "dnceng",
+        "Token": "[vault(dnceng-code-rw)]"
+      }
+    ]
   }
 }
