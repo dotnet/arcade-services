@@ -71,6 +71,12 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 return NotFound();
             }
 
+            // Ensure that there are no subscriptions associated with the channel
+            if (await _context.Subscriptions.AnyAsync(s => s.ChannelId == id))
+            {
+                return Conflict(new ApiError($"Channel {id} has associated subscriptions and cannot be removed."));
+            }
+
             _context.Channels.Remove(channel);
 
             await _context.SaveChangesAsync();
