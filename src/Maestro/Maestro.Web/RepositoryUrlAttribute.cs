@@ -43,7 +43,7 @@ namespace Maestro.Web
         /// </summary>
         private static readonly List<Regex> _validUrlForms = new List<Regex>()
         {
-            new Regex(@"^https://github\.com/[a-zA-Z0-9]+/[a-zA-Z0-9-]+$"),
+            new Regex(@"^https://github\.com/[a-zA-Z0-9-]+/[a-zA-Z0-9-]+$"),
             new Regex(@"^https://dev\.azure\.com/[a-zA-Z0-9]+/[a-zA-Z0-9-]+/_git/[a-zA-Z0-9-\.]+$")
         };
 
