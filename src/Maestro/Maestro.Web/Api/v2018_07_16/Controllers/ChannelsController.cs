@@ -114,8 +114,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 return NotFound(new ApiError($"The build with id '{buildId}' was not found."));
             }
 
-            // If build is already in channel, nothing tod o
-            if (build.BuildChannels.Any(existingBuildChannels => existingBuildChannels.ChannelId == channelId))
+            // If build is already in channel, nothing to do
+            if (build.BuildChannels != null &&
+                build.BuildChannels.Any(existingBuildChannels => existingBuildChannels.ChannelId == channelId))
             {
                 return StatusCode((int)HttpStatusCode.Created);
             }
