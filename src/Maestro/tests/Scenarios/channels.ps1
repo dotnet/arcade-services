@@ -18,10 +18,7 @@ try {
     Write-Host
 
     # Test channel name
-    $newChannelName = "Maestro Test Channel"
-    
-    Write-Host "Removing $newChannelName if it exists"
-    try { Darc delete-channel --name `'$newChannelName`' } catch { }
+    $newChannelName = Get-Random
     
     # Add a new channel
     Write-Host "Creating channel '$newChannelName'"

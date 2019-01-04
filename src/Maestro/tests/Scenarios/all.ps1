@@ -17,7 +17,7 @@ $passed = 0
 foreach ($testScript in $testScripts) {
     try {
         Write-Host "Running $testScript"
-        Invoke-Expression "& $PSScriptRoot\channels.ps1 -maestroInstallation $maestroInstallation -darcVersion $darcVersion -maestroBearerToken $maestroBearerToken -githubPAT $githubPAT -azdoPAT $azdoPAT"
+        Invoke-Expression "& $PSScriptRoot\$testScript -maestroInstallation $maestroInstallation -darcVersion $darcVersion -maestroBearerToken $maestroBearerToken -githubPAT $githubPAT -azdoPAT $azdoPAT"
         $passed++
     }
     catch {
