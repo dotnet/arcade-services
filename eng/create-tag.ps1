@@ -1,5 +1,5 @@
 param(
-	$AccessToken
+    $AccessToken
 )
 
 $Commit = $env:Build.SourceVersion
@@ -9,19 +9,19 @@ $uri ="$($env:System_TeamFoundationCollectionUri)/$($env:System_TeamProject)/_ap
 $tag = "v$Version"
 
 if ($Commit -and $Version) {
-	Write-Output "Tagging $Commit with $tag"
-	$headers = New-Object 'System.Collections.Generic.Dictionary[[String],[String]]'
+    Write-Output "Tagging $Commit with $tag"
+    $headers = New-Object 'System.Collections.Generic.Dictionary[[String],[String]]'
     $base64authinfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":${AccessToken}"))
     $headers = @{"Authorization"="Basic $base64authinfo"}
 
-	$body = @{
-		message = "Version $Version";
-		name = "$tag";
-		taggedObject = @{
-			objectId = "$Commit";
-		}
-	} | ConvertTo-Json
-	Invoke-WebRequest -Method Post $uri -Headers $headers -Body $body -ContentType 'application/json'
+    $body = @{
+        message = "Version $Version";
+        name = "$tag";
+        taggedObject = @{
+            objectId = "$Commit";
+        }
+    } | ConvertTo-Json
+    Invoke-WebRequest -Method Post $uri -Headers $headers -Body $body -ContentType 'application/json'
 } else {
-	exit -1
+    exit -1
 }
