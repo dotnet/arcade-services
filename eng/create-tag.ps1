@@ -1,4 +1,4 @@
-params(
+param(
 	$AccessToken
 )
 
@@ -17,11 +17,11 @@ if ($Commit -and $Version) {
 	$body = @{
 		message = "Version $Version";
 		name = "$tag";
-		$taggedObject = @{
-			$objectId = "$Commit";
+		taggedObject = @{
+			objectId = "$Commit";
 		}
 	} | ConvertTo-Json
-	Invoke-RestMethod -Method Post $uri -Headers $headers -Body $body -ContentType 'application/json'
+	Invoke-WebRequest -Method Post $uri -Headers $headers -Body $body -ContentType 'application/json'
 } else {
 	exit -1
 }
