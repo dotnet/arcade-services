@@ -175,6 +175,27 @@ namespace Microsoft.DotNet.Darc.Tests
         }
 
         /// <summary>
+        /// Add a basic dependency that has dashes in the name.
+        /// </summary>
+        [Fact]
+        public void AddProductDependency6()
+        {
+            DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependency6), async driver =>
+            {
+                await driver.AddDependencyAsync(
+                    new DependencyDetail
+                    {
+                        Commit = "12345",
+                        Name = "dotnet-ef",
+                        RepoUri = "https://foo.com/foo/bar",
+                        Version = "1.2.3"
+                    },
+                    DependencyType.Product);
+                await driver.VerifyAsync();
+            });
+        }
+
+        /// <summary>
         /// Update a dependency only existing in Versions.Details.xml
         /// </summary>
         [Fact]
