@@ -22,7 +22,8 @@ foreach ($testScript in $testScripts) {
     }
     catch {
         $failed++
-        Write-Host "Failed $testScript"
+        Write-Host $_
+        Write-Host "Failed ${testScript}"
     }
 }
 
