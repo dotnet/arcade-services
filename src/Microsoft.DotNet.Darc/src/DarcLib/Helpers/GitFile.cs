@@ -20,11 +20,11 @@ namespace Microsoft.DotNet.DarcLib
         {
         }
 
-        public GitFile(string filePath, string content) : this(filePath, content, "utf-8")
+        public GitFile(string filePath, string content) : this(filePath, content, ContentEncoding.Utf8)
         {
         }
 
-        public GitFile(string filePath, string content, string contentEncoding)
+        public GitFile(string filePath, string content, ContentEncoding contentEncoding)
         {
             FilePath = filePath;
             // TODO: Newline normalization should happen on the writer side,
@@ -42,7 +42,7 @@ namespace Microsoft.DotNet.DarcLib
 
         public string Content { get; set; }
 
-        public string ContentEncoding { get; set; }
+        public ContentEncoding ContentEncoding { get; set; }
 
         public string Mode { get; set; } = "100644";
 
@@ -59,5 +59,11 @@ namespace Microsoft.DotNet.DarcLib
     {
         Add,
         Delete
+    }
+
+    public enum ContentEncoding
+    {
+        Base64,
+        Utf8
     }
 }

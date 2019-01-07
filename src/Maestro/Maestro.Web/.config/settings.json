@@ -3,11 +3,23 @@
     "ClientId": "[vault(github-oauth-id)]",
     "ClientSecret": "[vault(github-oauth-secret)]",
     "SaveTokens": true,
-    "CallbackPath": "/signin/github" 
+    "CallbackPath": "/signin/github"
   },
   "GitHub": {
     "GitHubAppId": "[vault(github-application-id)]",
-    "PrivateKey": "[vault(github-application-private-key)]" 
+    "PrivateKey": "[vault(github-application-private-key)]"
+  },
+  "AzureDevOps": {
+    "Tokens": [
+      {
+        "Account": "dnceng",
+        "Token": "[vault(dnceng-code-rw)]"
+      },
+      {
+        "Account": "devdiv",
+        "Token": "[vault(devdiv-code-rw)]"
+      }
+    ]
   },
   "DataProtection": {
     "KeyFileUri": "[vault(data-protection-key-file-uri)]",
@@ -17,10 +29,10 @@
     "ConnectionString": "[vault(build-asset-registry-sql-connection-string)]"
   },
   "WebHooks": {
-      "github": {
-          "SecretKey": {
-              "default":  "[vault(github-webhook-secret)]" 
-          } 
-      } 
-  } 
+    "github": {
+      "SecretKey": {
+        "default": "[vault(github-webhook-secret)]"
+      }
+    }
+  }
 }
