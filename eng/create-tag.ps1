@@ -5,15 +5,23 @@ params(
 $Commit = $env:Build.SourceVersion
 $Version = $env:VersionPrefix
 
-$uri ="$($env:System_TeamFoundationCollectionUri)/$($env:System_TeamProject)/_apis/git/repositories/$($env:Build_Repository_Name)/annotatedTags?api-version=4.1-preview.1"
+$uri ="$($env:System_TeamFoundationCollectionUri)/$($env:System_TeamProject)/_apis/git/repositories/$($env:Build_Repository_Name)/annotatedTags?api-version=5.0-preview.1"
 $tag = "v$Version"
 
 if ($Commit -and $Version) {
 	Write-Output "Tagging $Commit with $tag"
-	$bearer = @{ "Authorization" = "Bearer $AccessToken" }
-	@"
-	{ "name": "$tag", "taggedObject": { "objectId": "$Commit" }, "message": "Version $Version" }
-	"@ | Invoke-RestMethod -Method Post -UseBasicParsing $uri -ContentType "application/json" -Headers $bearer
+	$headers = New-Object 'System.Collections.Generic.Dictionary[[String],[String]]'
+    $base64authinfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":${AccessToken}"))
+    $headers = @{"Authorization"="Basic $base64authinfo"}
+
+	$body = @{
+		message = "Version $Version";
+		name = "$tag";
+		$taggedObject = @{
+			$objectId = "$Commit";
+		}
+	} | ConvertTo-Json
+	Invoke-RestMethod -Method Post $uri -Headers $headers -Body $body -ContentType 'application/json'
 } else {
 	exit -1
 }
