@@ -31,6 +31,7 @@ jobs:
 
       variables:
       - _InternalBuildArgs: ''
+      - _ProductionArgs: ''
 
       # Only enable publishing in non-public, non PR scenarios.
       - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
@@ -48,6 +49,9 @@ jobs:
             /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
             /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
             /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+      # In production, create stable package versions
+      - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
+          - _ProductionArgs: /p:DotNetFinalVersionKind=release
             
       strategy:
         matrix:
@@ -88,6 +92,7 @@ jobs:
           -configuration $(_BuildConfig)
           -prepareMachine
           $(_InternalBuildArgs)
+          $(_ProductionArgs)
         name: Build
         displayName: Build / Publish
         condition: succeeded()
