@@ -50,8 +50,11 @@ jobs:
             /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
             /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
       # In production, create stable package versions
-      - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
-          - _ProductionArgs: /p:DotNetFinalVersionKind=release
+      # TODO: We depend on a prerelease version of Microsoft.TeamFoundationServer.Client
+      # https://github.com/dotnet/arcade-services/issues/59
+      # and so we can't stabilize for right now.
+      # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
+          # - _ProductionArgs: /p:DotNetFinalVersionKind=release
             
       strategy:
         matrix:
@@ -151,6 +154,8 @@ jobs:
             ArtifactName: ReleaseUtilities
             ArtifactType: Container
 
-        - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
-          - powershell: eng\create-tag.ps1 -AccessToken $(System.AccessToken)
+        # Reenable tagging when stable package versions can be generated.
+        # https://github.com/dotnet/arcade-services/issues/59
+        # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
+          # - powershell: eng\create-tag.ps1 -AccessToken $(System.AccessToken)
 
