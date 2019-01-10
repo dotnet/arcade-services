@@ -42,6 +42,12 @@
             "format": "int32"
           },
           {
+            "name": "nonShipping",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
             "name": "loadLocations",
             "in": "query",
             "required": false,
@@ -830,7 +836,245 @@
           }
         ],
         "responses": {
+          "202": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/repo-config/merge-policy": {
+      "get": {
+        "tags": [
+          "Repository"
+        ],
+        "operationId": "Repository_GetMergePolicies",
+        "consumes": [],
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "parameters": [
+          {
+            "name": "repository",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "branch",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2018-07-16"
+            ]
+          }
+        ],
+        "responses": {
           "200": {
+            "description": "Success",
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/MergePolicy"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Repository"
+        ],
+        "operationId": "Repository_SetMergePolicies",
+        "consumes": [
+          "application/json-patch+json",
+          "application/json",
+          "text/json",
+          "application/*+json"
+        ],
+        "produces": [],
+        "parameters": [
+          {
+            "name": "repository",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "branch",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "policies",
+            "in": "body",
+            "required": false,
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/MergePolicy"
+              }
+            }
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2018-07-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/repo-config/history": {
+      "get": {
+        "tags": [
+          "Repository"
+        ],
+        "operationId": "Repository_GetHistory",
+        "consumes": [],
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "parameters": [
+          {
+            "name": "repository",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "branch",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2018-07-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/RepositoryHistoryItem"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/repo-config/retry/{timestamp}": {
+      "post": {
+        "tags": [
+          "Repository"
+        ],
+        "operationId": "Repository_RetryActionAsync",
+        "consumes": [],
+        "produces": [],
+        "parameters": [
+          {
+            "name": "repository",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "branch",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "timestamp",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2018-07-16"
+            ]
+          }
+        ],
+        "responses": {
+          "202": {
             "description": "Success"
           },
           "default": {
@@ -873,6 +1117,12 @@
             "required": false,
             "type": "integer",
             "format": "int32"
+          },
+          {
+            "name": "enabled",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           },
           {
             "name": "api-version",
@@ -1106,6 +1356,55 @@
         }
       }
     },
+    "/api/subscriptions/{id}/trigger": {
+      "post": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Trigger a subscription manually by ID",
+        "operationId": "Subscriptions_TriggerSubscription",
+        "consumes": [],
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID of subscription",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2018-07-16"
+            ]
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Subscription"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
     "/api/subscriptions/{id}/history": {
       "get": {
         "tags": [
@@ -1236,6 +1535,13 @@
           "type": "string",
           "readOnly": false
         },
+        "buildId": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "nonShipping": {
+          "type": "boolean"
+        },
         "locations": {
           "uniqueItems": false,
           "type": "array",
@@ -1295,6 +1601,10 @@
           "readOnly": false
         },
         "repository": {
+          "type": "string",
+          "readOnly": false
+        },
+        "branch": {
           "type": "string",
           "readOnly": false
         },
@@ -1410,6 +1720,9 @@
         "version": {
           "type": "string"
         },
+        "nonShipping": {
+          "type": "boolean"
+        },
         "locations": {
           "uniqueItems": false,
           "type": "array",
@@ -1484,6 +1797,52 @@
         }
       }
     },
+    "MergePolicy": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      }
+    },
+    "RepositoryHistoryItem": {
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string",
+          "readOnly": false
+        },
+        "branchName": {
+          "type": "string",
+          "readOnly": false
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string",
+          "readOnly": false
+        },
+        "errorMessage": {
+          "type": "string",
+          "readOnly": false
+        },
+        "success": {
+          "type": "boolean",
+          "readOnly": false
+        },
+        "action": {
+          "type": "string",
+          "readOnly": false
+        },
+        "retryUrl": {
+          "type": "string",
+          "readOnly": false
+        }
+      }
+    },
     "Subscription": {
       "type": "object",
       "properties": {
@@ -1515,16 +1874,22 @@
         "lastAppliedBuild": {
           "$ref": "#/definitions/Build",
           "readOnly": false
+        },
+        "enabled": {
+          "type": "boolean",
+          "readOnly": false
         }
       }
     },
     "SubscriptionPolicy": {
       "required": [
-        "updateFrequency",
-        "mergePolicies"
+        "updateFrequency"
       ],
       "type": "object",
       "properties": {
+        "batchable": {
+          "type": "boolean"
+        },
         "updateFrequency": {
           "enum": [
             "none",
@@ -1539,18 +1904,6 @@
           "items": {
             "$ref": "#/definitions/MergePolicy"
           }
-        }
-      }
-    },
-    "MergePolicy": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string"
-        },
-        "properties": {
-          "type": "object",
-          "additionalProperties": {}
         }
       }
     },
@@ -1576,6 +1929,9 @@
         "targetBranch": {
           "type": "string"
         },
+        "enabled": {
+          "type": "boolean"
+        },
         "policy": {
           "$ref": "#/definitions/SubscriptionPolicy"
         }
@@ -1592,6 +1948,9 @@
         },
         "policy": {
           "$ref": "#/definitions/SubscriptionPolicy"
+        },
+        "enabled": {
+          "type": "boolean"
         }
       }
     },
