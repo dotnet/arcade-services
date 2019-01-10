@@ -20,6 +20,7 @@ namespace Microsoft.DotNet.DarcLib
             try
             {
                 byte[] content = Convert.FromBase64String(encodedContent);
+                // We can't use Encoding.UTF8.GetString here because that returns a string containing a BOM if one exists in the bytes.
                 using (var str = new MemoryStream(content, false))
                 using (var reader = new StreamReader(str))
                 {
