@@ -471,7 +471,14 @@ namespace Microsoft.DotNet.DarcLib
                 // PAT is required for these types.
                 if (string.IsNullOrEmpty(settings.PersonalAccessToken))
                 {
-                    throw new ArgumentException("The personal access token is missing...");
+                    if (settings.GitType == GitRepoType.GitHub)
+                    {
+                        throw new ArgumentException("The GitHub personal access token is missing...");
+                    }
+                    else
+                    {
+                        throw new ArgumentException("The Azure DevOps personal access token is missing...");
+                    }
                 }
             }
             else if (settings.GitType != GitRepoType.None)

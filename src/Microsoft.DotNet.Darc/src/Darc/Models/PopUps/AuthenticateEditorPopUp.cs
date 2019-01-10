@@ -41,9 +41,9 @@ namespace Microsoft.DotNet.Darc.Models
             {
                 new Line("Create new BAR tokens at https://maestro-prod.westus2.cloudapp.azure.com/Account/Tokens", isComment: true),
                 new Line($"{barPasswordElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryPassword, string.Empty, true)}"),
-                new Line("Create new GitHub personal access tokens at https://github.com/settings/tokens", isComment: true),
+                new Line("Create new GitHub personal access tokens at https://github.com/settings/tokens (no auth scopes needed)", isComment: true),
                 new Line($"{githubTokenElement}={GetCurrentSettingForDisplay(settings.GitHubToken, string.Empty, true)}"),
-                new Line("Create new Azure Dev Ops tokens at https://dev.azure.com/dnceng/_details/security/tokens", isComment: true),
+                new Line("Create new Azure Dev Ops tokens at https://dev.azure.com/dnceng/_details/security/tokens (code read scope needed)", isComment: true),
                 new Line($"{azureDevOpsTokenElement}={GetCurrentSettingForDisplay(settings.AzureDevOpsToken, string.Empty, true)}"),
                 new Line($"{barBaseUriElement}={GetCurrentSettingForDisplay(settings.BuildAssetRegistryBaseUri, "<alternate build asset registry uri if needed, otherwise leave as is>", false)}"),
                 new Line(""),
