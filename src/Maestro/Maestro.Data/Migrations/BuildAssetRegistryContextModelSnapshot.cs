@@ -196,6 +196,19 @@ namespace Maestro.Data.Migrations
                     b.ToTable("Channels");
                 });
 
+            modelBuilder.Entity("Maestro.Data.Models.ChannelReleasePipeline", b =>
+                {
+                    b.Property<int>("ChannelId");
+
+                    b.Property<int>("ReleasePipelineId");
+
+                    b.HasKey("ChannelId", "ReleasePipelineId");
+
+                    b.HasIndex("ReleasePipelineId");
+
+                    b.ToTable("ChannelReleasePipelines");
+                });
+
             modelBuilder.Entity("Maestro.Data.Models.DefaultChannel", b =>
                 {
                     b.Property<int>("Id")
@@ -230,13 +243,13 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
+                    b.Property<string>("Organization");
+
                     b.Property<int>("PipelineIdentifier");
 
-                    b.Property<int>("ChannelId");
+                    b.Property<string>("Project");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ChannelId");
 
                     b.ToTable("ReleasePipeline");
                 });
@@ -589,18 +602,23 @@ namespace Maestro.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade);
                 });
 
+            modelBuilder.Entity("Maestro.Data.Models.ChannelReleasePipeline", b =>
+                {
+                    b.HasOne("Maestro.Data.Models.Channel", "Channel")
+                        .WithMany("ChannelReleasePipelines")
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Maestro.Data.Models.ReleasePipeline", "ReleasePipeline")
+                        .WithMany("ChannelReleasePipelines")
+                        .HasForeignKey("ReleasePipelineId")
+                        .OnDelete(DeleteBehavior.Cascade);
+                });
+
             modelBuilder.Entity("Maestro.Data.Models.DefaultChannel", b =>
                 {
                     b.HasOne("Maestro.Data.Models.Channel", "Channel")
                         .WithMany("DefaultChannels")
-                        .HasForeignKey("ChannelId")
-                        .OnDelete(DeleteBehavior.Cascade);
-                });
-
-            modelBuilder.Entity("Maestro.Data.Models.ReleasePipeline", b =>
-                {
-                    b.HasOne("Maestro.Data.Models.Channel")
-                        .WithMany("ReleasePipelines")
                         .HasForeignKey("ChannelId")
                         .OnDelete(DeleteBehavior.Cascade);
                 });
