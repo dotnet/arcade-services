@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Maestro.Data.Migrations
 {
     [DbContext(typeof(BuildAssetRegistryContext))]
-    [Migration("20190110201049_AddReleasePipelineConcept")]
+    [Migration("20190110235202_AddReleasePipelineConcept")]
     partial class AddReleasePipelineConcept
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
