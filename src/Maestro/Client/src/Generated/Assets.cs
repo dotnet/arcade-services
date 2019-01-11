@@ -53,6 +53,8 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </param>
         /// <param name='buildId'>
         /// </param>
+        /// <param name='nonShipping'>
+        /// </param>
         /// <param name='loadLocations'>
         /// </param>
         /// <param name='customHeaders'>
@@ -70,7 +72,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <return>
         /// A response object containing the response body and response headers.
         /// </return>
-        public async Task<HttpOperationResponse<IList<Asset>>> GetWithHttpMessagesAsync(string name = default(string), string version = default(string), int? buildId = default(int?), bool? loadLocations = default(bool?), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<HttpOperationResponse<IList<Asset>>> GetWithHttpMessagesAsync(string name = default(string), string version = default(string), int? buildId = default(int?), bool? nonShipping = default(bool?), bool? loadLocations = default(bool?), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             string apiVersion = "2018-07-16";
             // Tracing
@@ -83,6 +85,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 tracingParameters.Add("name", name);
                 tracingParameters.Add("version", version);
                 tracingParameters.Add("buildId", buildId);
+                tracingParameters.Add("nonShipping", nonShipping);
                 tracingParameters.Add("loadLocations", loadLocations);
                 tracingParameters.Add("apiVersion", apiVersion);
                 tracingParameters.Add("cancellationToken", cancellationToken);
@@ -103,6 +106,10 @@ namespace Microsoft.DotNet.Maestro.Client
             if (buildId != null)
             {
                 _queryParameters.Add(string.Format("buildId={0}", System.Uri.EscapeDataString(Rest.Serialization.SafeJsonConvert.SerializeObject(buildId, Client.SerializationSettings).Trim('"'))));
+            }
+            if (nonShipping != null)
+            {
+                _queryParameters.Add(string.Format("nonShipping={0}", System.Uri.EscapeDataString(Rest.Serialization.SafeJsonConvert.SerializeObject(nonShipping, Client.SerializationSettings).Trim('"'))));
             }
             if (loadLocations != null)
             {

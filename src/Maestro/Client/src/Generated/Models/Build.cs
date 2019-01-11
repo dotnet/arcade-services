@@ -25,10 +25,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// <summary>
         /// Initializes a new instance of the Build class.
         /// </summary>
-        public Build(int? id = default(int?), string repository = default(string), string commit = default(string), string buildNumber = default(string), System.DateTimeOffset? dateProduced = default(System.DateTimeOffset?), IList<Channel> channels = default(IList<Channel>), IList<Asset> assets = default(IList<Asset>), IList<BuildRef> dependencies = default(IList<BuildRef>))
+        public Build(int? id = default(int?), string repository = default(string), string branch = default(string), string commit = default(string), string buildNumber = default(string), System.DateTimeOffset? dateProduced = default(System.DateTimeOffset?), IList<Channel> channels = default(IList<Channel>), IList<Asset> assets = default(IList<Asset>), IList<BuildRef> dependencies = default(IList<BuildRef>))
         {
             Id = id;
             Repository = repository;
+            Branch = branch;
             Commit = commit;
             BuildNumber = buildNumber;
             DateProduced = dateProduced;
@@ -52,6 +53,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// </summary>
         [JsonProperty(PropertyName = "repository")]
         public string Repository { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "branch")]
+        public string Branch { get; set; }
 
         /// <summary>
         /// </summary>

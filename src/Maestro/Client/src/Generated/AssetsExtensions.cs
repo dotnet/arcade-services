@@ -27,14 +27,16 @@ namespace Microsoft.DotNet.Maestro.Client
             /// </param>
             /// <param name='buildId'>
             /// </param>
+            /// <param name='nonShipping'>
+            /// </param>
             /// <param name='loadLocations'>
             /// </param>
             /// <param name='cancellationToken'>
             /// The cancellation token.
             /// </param>
-            public static async Task<IList<Asset>> GetAsync(this IAssets operations, string name = default(string), string version = default(string), int? buildId = default(int?), bool? loadLocations = default(bool?), CancellationToken cancellationToken = default(CancellationToken))
+            public static async Task<IList<Asset>> GetAsync(this IAssets operations, string name = default(string), string version = default(string), int? buildId = default(int?), bool? nonShipping = default(bool?), bool? loadLocations = default(bool?), CancellationToken cancellationToken = default(CancellationToken))
             {
-                using (var _result = await operations.GetWithHttpMessagesAsync(name, version, buildId, loadLocations, null, cancellationToken).ConfigureAwait(false))
+                using (var _result = await operations.GetWithHttpMessagesAsync(name, version, buildId, nonShipping, loadLocations, null, cancellationToken).ConfigureAwait(false))
                 {
                     return _result.Body;
                 }

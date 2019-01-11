@@ -25,10 +25,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// <summary>
         /// Initializes a new instance of the AssetData class.
         /// </summary>
-        public AssetData(string name = default(string), string version = default(string), IList<AssetLocationData> locations = default(IList<AssetLocationData>))
+        public AssetData(string name = default(string), string version = default(string), bool? nonShipping = default(bool?), IList<AssetLocationData> locations = default(IList<AssetLocationData>))
         {
             Name = name;
             Version = version;
+            NonShipping = nonShipping;
             Locations = locations;
             CustomInit();
         }
@@ -47,6 +48,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// </summary>
         [JsonProperty(PropertyName = "version")]
         public string Version { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "nonShipping")]
+        public bool? NonShipping { get; set; }
 
         /// <summary>
         /// </summary>
