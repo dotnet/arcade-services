@@ -173,6 +173,22 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        /// Trigger a subscription by ID
+        /// </summary>
+        /// <param name="subscriptionId">ID of subscription to trigger</param>
+        /// <returns>Subscription just triggered.</returns>
+        public async Task<Subscription> TriggerSubscriptionAsync(string subscriptionId)
+        {
+            CheckForValidBarClient();
+            if (!Guid.TryParse(subscriptionId, out Guid subscriptionGuid))
+            {
+                throw new ArgumentException($"Subscription id '{subscriptionId}' is not a valid guid.");
+            }
+
+            return await _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionGuid);
+        }
+
+        /// <summary>
         ///     Create a new subscription
         /// </summary>
         /// <param name="channelName">Name of source channel</param>

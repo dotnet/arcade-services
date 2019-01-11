@@ -65,6 +65,7 @@ namespace Microsoft.DotNet.Darc
                     typeof(GetSubscriptionHistoryCommandLineOptions),
                     typeof(GetSubscriptionsCommandLineOptions),
                     typeof(RetrySubscriptionUpdateCommandLineOptions),
+                    typeof(TriggerSubscriptionsCommandLineOptions),
                     typeof(UpdateDependenciesCommandLineOptions),
                     typeof(VerifyCommandLineOptions),
                 };

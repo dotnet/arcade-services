@@ -48,6 +48,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 if (subscriptions.Count() == 0)
                 {
                     Console.WriteLine("No subscriptions found matching the specified criteria.");
+                    return Constants.ErrorCode;
                 }
 
                 // Based on the current output schema, sort by source repo, target repo, target branch, etc.
