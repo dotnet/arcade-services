@@ -120,12 +120,14 @@ namespace Maestro.Data
             builder.Entity<ChannelReleasePipeline>()
                 .HasOne(crp => crp.Channel)
                 .WithMany(c => c.ChannelReleasePipelines)
-                .HasForeignKey(rcp => rcp.ChannelId);
+                .HasForeignKey(rcp => rcp.ChannelId)
+                .OnDelete(DeleteBehavior.Restrict);
             
             builder.Entity<ChannelReleasePipeline>()
                 .HasOne(crp => crp.ReleasePipeline)
                 .WithMany(rp => rp.ChannelReleasePipelines)
-                .HasForeignKey(crp => crp.ReleasePipelineId);
+                .HasForeignKey(crp => crp.ReleasePipelineId)
+                .OnDelete(DeleteBehavior.Restrict);
             
             builder.Entity<ApplicationUserPersonalAccessToken>()
                 .HasIndex(
