@@ -59,8 +59,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 query = query.Include(asset => asset.Locations);
             }
 
-            List<Asset> results = query.AsEnumerable().Select(asset => new Asset(asset)).ToList();
-            return Ok(results);
+            return Ok(query);
         }
 
         [HttpGet("{id}")]
