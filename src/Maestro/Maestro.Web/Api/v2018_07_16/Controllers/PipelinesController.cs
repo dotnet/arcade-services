@@ -13,12 +13,12 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using ReleasePipeline = Maestro.Web.Api.v2019_01_10.Models.ReleasePipeline;
+using ReleasePipeline = Maestro.Web.Api.v2018_07_16.Models.ReleasePipeline;
 
-namespace Maestro.Web.Api.v2019_01_10.Controllers
+namespace Maestro.Web.Api.v2018_07_16.Controllers
 {
     [Route("pipelines")]
-    [ApiVersion("2019-01-10")]
+    [ApiVersion("2018-07-16")]
     public class PipelinesController : Controller
     {
         private readonly BuildAssetRegistryContext _context;
@@ -71,10 +71,20 @@ namespace Maestro.Web.Api.v2019_01_10.Controllers
 
         [HttpDelete("{id}")]
         [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(ReleasePipeline))]
+        [SwaggerResponse((int)HttpStatusCode.BadRequest)]
+        [SwaggerResponse((int)HttpStatusCode.NotFound)]
         [ValidateModelState]
         public async Task<IActionResult> DeletePipeline(int id)
         {
-            Data.Models.ReleasePipeline pipeline = await _context.ReleasePipelines.FirstOrDefaultAsync(c => c.Id == id);
+            bool isPipelineInUse = await _context.ChannelReleasePipelines.AnyAsync(crp => crp.ReleasePipelineId == id);
+
+            if (isPipelineInUse)
+            {
+                return BadRequest(new ApiError($"The pipeline with id '{id}' is in use and cannot be deleted."));
+            }
+
+            Data.Models.ReleasePipeline pipeline = await _context.ReleasePipelines
+                .FirstOrDefaultAsync(c => c.Id == id);
 
             if (pipeline == null)
             {

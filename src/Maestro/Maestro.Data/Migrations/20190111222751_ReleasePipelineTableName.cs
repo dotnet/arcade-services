@@ -7,10 +7,6 @@ namespace Maestro.Data.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(
-                name: "FK_ChannelReleasePipelines_Channels_ChannelId",
-                table: "ChannelReleasePipelines");
-
-            migrationBuilder.DropForeignKey(
                 name: "FK_ChannelReleasePipelines_ReleasePipeline_ReleasePipelineId",
                 table: "ChannelReleasePipelines");
 
@@ -28,28 +24,16 @@ namespace Maestro.Data.Migrations
                 column: "Id");
 
             migrationBuilder.AddForeignKey(
-                name: "FK_ChannelReleasePipelines_Channels_ChannelId",
-                table: "ChannelReleasePipelines",
-                column: "ChannelId",
-                principalTable: "Channels",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
-
-            migrationBuilder.AddForeignKey(
                 name: "FK_ChannelReleasePipelines_ReleasePipelines_ReleasePipelineId",
                 table: "ChannelReleasePipelines",
                 column: "ReleasePipelineId",
                 principalTable: "ReleasePipelines",
                 principalColumn: "Id",
-                onDelete: ReferentialAction.Cascade);
+                onDelete: ReferentialAction.Restrict);
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_ChannelReleasePipelines_Channels_ChannelId",
-                table: "ChannelReleasePipelines");
-
             migrationBuilder.DropForeignKey(
                 name: "FK_ChannelReleasePipelines_ReleasePipelines_ReleasePipelineId",
                 table: "ChannelReleasePipelines");
@@ -66,14 +50,6 @@ namespace Maestro.Data.Migrations
                 name: "PK_ReleasePipeline",
                 table: "ReleasePipeline",
                 column: "Id");
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_ChannelReleasePipelines_Channels_ChannelId",
-                table: "ChannelReleasePipelines",
-                column: "ChannelId",
-                principalTable: "Channels",
-                principalColumn: "Id",
-                onDelete: ReferentialAction.Restrict);
 
             migrationBuilder.AddForeignKey(
                 name: "FK_ChannelReleasePipelines_ReleasePipeline_ReleasePipelineId",

@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Maestro.Data.Migrations
 {
     [DbContext(typeof(BuildAssetRegistryContext))]
-    [Migration("20190111021615_ReleasePipelineTableName")]
+    [Migration("20190111222751_ReleasePipelineTableName")]
     partial class ReleasePipelineTableName
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -609,12 +609,12 @@ namespace Maestro.Data.Migrations
                     b.HasOne("Maestro.Data.Models.Channel", "Channel")
                         .WithMany("ChannelReleasePipelines")
                         .HasForeignKey("ChannelId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Maestro.Data.Models.ReleasePipeline", "ReleasePipeline")
                         .WithMany("ChannelReleasePipelines")
                         .HasForeignKey("ReleasePipelineId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.DefaultChannel", b =>

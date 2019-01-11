@@ -5,7 +5,7 @@
 using System;
 using JetBrains.Annotations;
 
-namespace Maestro.Web.Api.v2019_01_10.Models
+namespace Maestro.Web.Api.v2018_07_16.Models
 {
     public class ReleasePipeline
     {
