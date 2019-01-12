@@ -71,8 +71,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
         [HttpDelete("{id}")]
         [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(ReleasePipeline))]
-        [SwaggerResponse((int)HttpStatusCode.BadRequest)]
-        [SwaggerResponse((int)HttpStatusCode.NotFound)]
         [ValidateModelState]
         public async Task<IActionResult> DeletePipeline(int id)
         {
@@ -111,13 +109,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             // If an release pipeline with same values already exist then do nothing
             if (pipeline != null)
             {
-                return CreatedAtRoute(
-                    new
-                    {
-                        action = "GetPipeline",
-                        id = pipeline.Id
-                    },
-                    new ReleasePipeline(pipeline));
+                return StatusCode((int)HttpStatusCode.NotModified);
             }
 
             var pipelineModel = new Data.Models.ReleasePipeline

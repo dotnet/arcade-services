@@ -40,11 +40,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 query = query.Where(c => c.Classification == classification);
             }
 
-            List<Channel> results = query.Include(ch => ch.ChannelReleasePipelines)
-                .ThenInclude(crp => crp.ReleasePipeline)
-                .AsEnumerable()
-                .Select(c => new Channel(c)).ToList();
-
+            List<Channel> results = query.AsEnumerable().Select(c => new Channel(c)).ToList();
             return Ok(results);
         }
 
@@ -68,8 +64,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
         [HttpDelete("{id}")]
         [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(Channel))]
-        [SwaggerResponse((int)HttpStatusCode.BadRequest)]
-        [SwaggerResponse((int)HttpStatusCode.NotFound)]
         [ValidateModelState]
         public async Task<IActionResult> DeleteChannel(int id)
         {
@@ -86,7 +80,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             {
                 return BadRequest(
                     new ApiError($"The channel with id '{id}' has '{channel.ChannelReleasePipelines.Count()}' " +
-                    $"release pipeline(s) attached to it. Remove that relation first."));
+                    $"release pipeline(s) attached to it. Detach those release pipelines(s) first."));
             }
 
             _context.Channels.Remove(channel);
@@ -173,7 +167,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             if (pipeline.ChannelReleasePipelines != null &&
                 pipeline.ChannelReleasePipelines.Any(existingPipelineChannel => existingPipelineChannel.ChannelId == channelId))
             {
-                return StatusCode((int)HttpStatusCode.Created);
+                return StatusCode((int)HttpStatusCode.NotModified);
             }
 
             var pipelineChannel = new ChannelReleasePipeline
@@ -206,7 +200,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             // If pipeline is not in the channel, nothing to do
             if (pipeline == null)
             {
-                return StatusCode((int)HttpStatusCode.OK);
+                return StatusCode((int)HttpStatusCode.NotModified);
             }
 
             _context.ChannelReleasePipelines.Remove(pipeline);
