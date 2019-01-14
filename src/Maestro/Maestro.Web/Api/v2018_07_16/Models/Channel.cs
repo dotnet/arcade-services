@@ -3,6 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using JetBrains.Annotations;
 
 namespace Maestro.Web.Api.v2018_07_16.Models
@@ -19,6 +21,11 @@ namespace Maestro.Web.Api.v2018_07_16.Models
             Id = other.Id;
             Name = other.Name;
             Classification = other.Classification;
+            ReleasePipelines = other?.ChannelReleasePipelines
+                ?.Select(crp => crp.ReleasePipeline)
+                .Where(rp => rp != null)
+                .Select(rp => new ReleasePipeline(rp))
+                .ToList();
         }
 
         public int Id { get; }
@@ -26,5 +33,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
         public string Name { get; }
 
         public string Classification { get; }
+
+        public List<ReleasePipeline> ReleasePipelines { get; }
     }
 }

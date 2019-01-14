@@ -58,6 +58,7 @@ namespace Maestro.Data
         public DbSet<Build> Builds { get; set; }
         public DbSet<BuildChannel> BuildChannels { get; set; }
         public DbSet<ChannelReleasePipeline> ChannelReleasePipelines { get; set; }
+        public DbSet<ReleasePipeline> ReleasePipelines { get; set; }
         public DbSet<Channel> Channels { get; set; }
         public DbSet<DefaultChannel> DefaultChannels { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
