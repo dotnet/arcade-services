@@ -98,6 +98,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 query = query.Include(b => b.BuildChannels)
                     .ThenInclude(bc => bc.Channel)
                     .Include(b => b.Assets)
+                    .ThenInclude(a => a.Locations)
                     .Include(b => b.Dependencies);
             }
 
@@ -113,6 +114,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 .Include(b => b.BuildChannels)
                 .ThenInclude(bc => bc.Channel)
                 .Include(b => b.Assets)
+                .ThenInclude(a => a.Locations)
                 .Include(b => b.Dependencies)
                 .FirstOrDefaultAsync();
 
@@ -162,7 +164,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             buildModel.DateProduced = DateTimeOffset.UtcNow;
             buildModel.Dependencies = build.Dependencies != null
                 ? await _context.Builds.Where(b => build.Dependencies.Contains(b.Id)).ToListAsync()
-                : null;
+                     null;
             await _context.Builds.AddAsync(buildModel);
             await _context.SaveChangesAsync();
             return CreatedAtRoute(
