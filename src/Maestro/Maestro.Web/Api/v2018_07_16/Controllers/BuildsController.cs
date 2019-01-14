@@ -163,7 +163,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             Build buildModel = build.ToDb();
             buildModel.DateProduced = DateTimeOffset.UtcNow;
             buildModel.Dependencies = build.Dependencies != null
-                ? await _context.Builds.Where(b => build.Dependencies.Contains(b.Id)).ToListAsync()
+                ? await _context.Builds.Where(b => build.Dependencies.Contains(b.Id)).ToListAsync() :
                      null;
             await _context.Builds.AddAsync(buildModel);
             await _context.SaveChangesAsync();
