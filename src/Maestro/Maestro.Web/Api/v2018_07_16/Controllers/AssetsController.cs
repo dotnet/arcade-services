@@ -82,7 +82,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpPost("{assetId}/locations")]
-        [SwaggerResponse((int)HttpStatusCode.Created, Type = typeof(Channel))]
+        [SwaggerResponse((int)HttpStatusCode.Created, Type = typeof(AssetLocation))]
         public async Task<IActionResult> AddAssetLocationToAsset(int assetId, [Required] string location, [Required] LocationType assetLocationType)
         {
             var assetLocation = new Data.Models.AssetLocation
@@ -113,7 +113,13 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             asset.Locations.Add(assetLocation);
 
             await _context.SaveChangesAsync();
-            return StatusCode((int)HttpStatusCode.Created);
+            return CreatedAtRoute(
+                new
+                {
+                    action = "GetAsset",
+                    id = assetLocation.Id
+                },
+                new AssetLocation(assetLocation));
         }
 
         [HttpDelete("{assetId}/locations/{assetLocationId}")]
