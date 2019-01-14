@@ -22,6 +22,7 @@ jobs:
     helixRepo: dotnet/arcade-services
     jobs:
     - job: Windows_NT
+      timeoutInMinutes: 90
       pool:
         ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
           name: NetCorePublic-Int-Pool
@@ -41,7 +42,7 @@ jobs:
         - group: DotNet-Blob-Feed
         - group: DotNet-Symbol-Server-Pats
         - group: Publish-Build-Assets
-        - _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-arcade/index.json
+        - _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
         - _InternalBuildArgs: /p:DotNetSignType=$(_SignType) /p:TeamName=$(_TeamName)
             /p:DotNetPublishBlobFeedKey=$(dotnetfeed-storage-access-key-1)
             /p:DotNetPublishBlobFeedUrl=$(_PublishBlobFeedUrl)
