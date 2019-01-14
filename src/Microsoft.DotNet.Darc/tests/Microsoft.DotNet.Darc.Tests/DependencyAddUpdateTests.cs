@@ -51,9 +51,9 @@ namespace Microsoft.DotNet.Darc.Tests
                         Commit = "12345",
                         Name = "Foo.Bar",
                         RepoUri = "https://foo.com/foo/bar",
-                        Version = "1.2.3"
-                    },
-                    DependencyType.Product);
+                        Version = "1.2.3",
+                        Type = DependencyType.Product
+                    });
                 await driver.VerifyAsync();
             });
         }
@@ -72,9 +72,9 @@ namespace Microsoft.DotNet.Darc.Tests
                         Commit = "12345",
                         Name = "Foo.Bar",
                         RepoUri = "https://foo.com/foo/bar",
-                        Version = "1.2.3"
-                    },
-                    DependencyType.Product);
+                        Version = "1.2.3",
+                        Type = DependencyType.Product
+                    });
                 await driver.VerifyAsync();
             });
         }
@@ -95,9 +95,9 @@ namespace Microsoft.DotNet.Darc.Tests
                         Commit = "12345",
                         Name = "Foo.Bar",
                         RepoUri = "https://foo.com/foo/bar",
-                        Version = "1.2.3"
-                    },
-                    DependencyType.Product);
+                        Version = "1.2.3",
+                        Type = DependencyType.Product
+                    });
 
                 await Assert.ThrowsAsync<DependencyException>(
                     async () => await driver.AddDependencyAsync(
@@ -106,9 +106,9 @@ namespace Microsoft.DotNet.Darc.Tests
                         Commit = "67890",
                         Name = "Foo.Bar",
                         RepoUri = "https://foo.com/foo/bar",
-                        Version = "1.2.4"
-                    },
-                    DependencyType.Product));
+                        Version = "1.2.4",
+                        Type = DependencyType.Product
+                    }));
 
                 await driver.VerifyAsync();
             });
@@ -125,9 +125,9 @@ namespace Microsoft.DotNet.Darc.Tests
                         Commit = "12345",
                         Name = "Foo.Bar",
                         RepoUri = "https://foo.com/foo/bar",
-                        Version = "1.2.3"
-                    },
-                    DependencyType.Product);
+                        Version = "1.2.3",
+                        Type = DependencyType.Product
+                    });
 
                 await driver.AddDependencyAsync(
                     new DependencyDetail
@@ -135,9 +135,9 @@ namespace Microsoft.DotNet.Darc.Tests
                         Commit = "67890",
                         Name = "Foo.Bar2",
                         RepoUri = "https://foo.com/foo/bar",
-                        Version = "1.2.4"
-                    },
-                    DependencyType.Product);
+                        Version = "1.2.4",
+                        Type = DependencyType.Product
+                    });
 
                 await driver.AddDependencyAsync(
                     new DependencyDetail
@@ -145,9 +145,9 @@ namespace Microsoft.DotNet.Darc.Tests
                         Commit = "67890",
                         Name = "Foo.Bar3",
                         RepoUri = "https://foo.com/foo/bar",
-                        Version = "1.2.4"
-                    },
-                    DependencyType.Toolset);
+                        Version = "1.2.4",
+                        Type = DependencyType.Toolset
+                    });
                 await driver.VerifyAsync();
             });
         }
@@ -167,9 +167,9 @@ namespace Microsoft.DotNet.Darc.Tests
                         Commit = "123",
                         Name = "Foo.Bar",
                         RepoUri = "https://foo.com/bop/bop",
-                        Version = "1.2.3"
-                    },
-                    DependencyType.Product);
+                        Version = "1.2.3",
+                        Type = DependencyType.Product
+                    });
                 await driver.VerifyAsync();
             });
         }
@@ -188,9 +188,9 @@ namespace Microsoft.DotNet.Darc.Tests
                         Commit = "12345",
                         Name = "dotnet-ef",
                         RepoUri = "https://foo.com/foo/bar",
-                        Version = "1.2.3"
-                    },
-                    DependencyType.Product);
+                        Version = "1.2.3",
+                        Type = DependencyType.Product
+                    });
                 await driver.VerifyAsync();
             });
         }
@@ -300,9 +300,9 @@ namespace Microsoft.DotNet.Darc.Tests
                         Commit = "12345",
                         Name = "Foo.Bar",
                         RepoUri = "https://foo.com/foo/bar",
-                        Version = "4.5.6"
-                    },
-                    DependencyType.Product);
+                        Version = "4.5.6",
+                        Type = DependencyType.Product
+                    });
                 await driver.VerifyAsync();
             });
         }
@@ -321,9 +321,9 @@ namespace Microsoft.DotNet.Darc.Tests
                         Commit = "12345",
                         Name = "Foo.Bar",
                         RepoUri = "https://foo.com/foo/bar",
-                        Version = "4.5.6"
-                    },
-                    DependencyType.Product);
+                        Version = "4.5.6",
+                        Type = DependencyType.Product
+                    });
                 await driver.UpdateDependenciesAsync(
                     new List<DependencyDetail> {
                         new DependencyDetail
@@ -353,9 +353,9 @@ namespace Microsoft.DotNet.Darc.Tests
                         Commit = "123",
                         Name = "Microsoft.DotNet.Arcade.Sdk",
                         RepoUri = "https://github.com/dotnet/arcade",
-                        Version = "1.0"
-                    },
-                    DependencyType.Toolset);
+                        Version = "1.0",
+                        Type = DependencyType.Toolset
+                    });
                 await driver.VerifyAsync();
             });
         }
@@ -375,9 +375,9 @@ namespace Microsoft.DotNet.Darc.Tests
                         Commit = "123",
                         Name = "Microsoft.DotNet.Arcade.Sdk",
                         RepoUri = "https://github.com/dotnet/arcade",
-                        Version = "2.0"
-                    },
-                    DependencyType.Toolset);
+                        Version = "2.0",
+                        Type = DependencyType.Toolset
+                    });
                 await driver.VerifyAsync();
             });
         }

@@ -54,6 +54,20 @@
             "type": "boolean"
           },
           {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
             "name": "api-version",
             "in": "query",
             "description": "The api version",
@@ -121,6 +135,117 @@
             "schema": {
               "$ref": "#/definitions/Asset"
             }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/{assetId}/locations": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "operationId": "Assets_AddAssetLocationToAsset",
+        "consumes": [],
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "parameters": [
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "location",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "assetLocationType",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "none",
+              "nugetFeed",
+              "container"
+            ]
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2018-07-16"
+            ]
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/AssetLocation"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/{assetId}/locations/{assetLocationId}": {
+      "delete": {
+        "tags": [
+          "Assets"
+        ],
+        "operationId": "Assets_RemoveAssetLocationFromAsset",
+        "consumes": [],
+        "produces": [],
+        "parameters": [
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "assetLocationId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2018-07-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
           },
           "default": {
             "description": "Error",
@@ -656,6 +781,98 @@
         }
       }
     },
+    "/api/channels/{channelId}/pipelines/{pipelineId}": {
+      "post": {
+        "tags": [
+          "Channels"
+        ],
+        "operationId": "Channels_AddPipelineToChannel",
+        "consumes": [],
+        "produces": [],
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pipelineId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2018-07-16"
+            ]
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Channels"
+        ],
+        "operationId": "Channels_DeletePipelineFromChannel",
+        "consumes": [],
+        "produces": [],
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pipelineId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2018-07-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
     "/api/default-channels": {
       "get": {
         "tags": [
@@ -838,6 +1055,218 @@
         "responses": {
           "202": {
             "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/pipelines": {
+      "get": {
+        "tags": [
+          "Pipelines"
+        ],
+        "operationId": "Pipelines_Get",
+        "consumes": [],
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "parameters": [
+          {
+            "name": "pipelineIdentifier",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "organization",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "project",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2018-07-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ReleasePipeline"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Pipelines"
+        ],
+        "operationId": "Pipelines_CreatePipeline",
+        "consumes": [],
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "parameters": [
+          {
+            "name": "pipelineIdentifier",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "organization",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "project",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2018-07-16"
+            ]
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/ReleasePipeline"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/pipelines/{id}": {
+      "get": {
+        "tags": [
+          "Pipelines"
+        ],
+        "operationId": "Pipelines_GetPipeline",
+        "consumes": [],
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2018-07-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/ReleasePipeline"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Pipelines"
+        ],
+        "operationId": "Pipelines_DeletePipeline",
+        "consumes": [],
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2018-07-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/ReleasePipeline"
+            }
           },
           "default": {
             "description": "Error",
@@ -1662,6 +2091,14 @@
         "classification": {
           "type": "string",
           "readOnly": false
+        },
+        "releasePipelines": {
+          "uniqueItems": false,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ReleasePipeline"
+          },
+          "readOnly": false
         }
       }
     },
@@ -1671,6 +2108,25 @@
         "id": {
           "format": "int32",
           "type": "integer"
+        }
+      }
+    },
+    "ReleasePipeline": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "pipelineIdentifier": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "project": {
+          "type": "string"
         }
       }
     },

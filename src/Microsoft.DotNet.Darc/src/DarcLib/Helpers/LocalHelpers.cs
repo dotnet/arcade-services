@@ -52,6 +52,23 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             return dir;
         }
 
+        /// <summary>
+        ///     Get the current git commit sha.
+        /// </summary>
+        /// <param name="logger"></param>
+        /// <returns></returns>
+        public static string GetGitCommit(ILogger logger)
+        {
+            string dir = ExecuteCommand("git", "rev-parse HEAD", logger);
+
+            if (string.IsNullOrEmpty(dir))
+            {
+                throw new Exception("'.git' directory was not found. Check if git is installed and that a .git directory exists in the root of your repository.");
+            }
+
+            return dir;
+        }
+
         public static string GitShow(string repoFolderPath, string commit, string fileName, ILogger logger)
         {
             string fileContents = ExecuteCommand("git", $"show {commit}:{fileName}", logger, repoFolderPath);

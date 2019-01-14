@@ -78,6 +78,7 @@ namespace Microsoft.DotNet.DarcLib
             return GetFileContentsAsync(accountName, projectName, repoName, filePath, branch);
         }
 
+        private static readonly List<string> VersionTypes = new List<string>() { "branch", "commit", "tag" };
         /// <summary>
         ///     Retrieve the contents of a text file in a repo on a specific branch
         /// </summary>
@@ -85,21 +86,42 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="projectName">Azure DevOps project</param>
         /// <param name="repoName">Azure DevOps repo</param>
         /// <param name="filePath">Path to file</param>
-        /// <param name="branch">Branch</param>
+        /// <param name="branchOrCommit">Branch</param>
         /// <returns>Contents of file as string</returns>
-        private async Task<string> GetFileContentsAsync(string accountName, string projectName, string repoName, string filePath, string branch)
+        private async Task<string> GetFileContentsAsync(string accountName, string projectName,
+            string repoName, string filePath, string branchOrCommit)
         {
             _logger.LogInformation(
-                $"Getting the contents of file '{filePath}' from repo '{accountName}/{projectName}/{repoName}' in branch '{branch}'...");
+                $"Getting the contents of file '{filePath}' from repo '{accountName}/{projectName}/{repoName}' in branch/commit '{branchOrCommit}'...");
 
-            JObject content = await this.ExecuteRemoteGitCommandAsync(
-                HttpMethod.Get,
-                accountName,
-                projectName,
-                $"_apis/git/repositories/{repoName}/items?path={filePath}&version={branch}&includeContent=true",
-                _logger);
-
-            return content["content"].ToString();
+            // The AzDO REST API currently does not transparently handle commits vs. branches vs. tags.
+            // You really need to know whether you're talking about a commit or branch or tag
+            // when you ask the question. Avoid this issue for now by first checking branch (most common)
+            // then if it 404s, check commit and then tag.
+            HttpRequestException lastException = null;
+            foreach (var versionType in VersionTypes)
+            {
+                try
+                {
+                    JObject content = await this.ExecuteRemoteGitCommandAsync(
+                        HttpMethod.Get,
+                        accountName,
+                        projectName,
+                        $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={versionType}&version={branchOrCommit}&includeContent=true",
+                        _logger,
+                        // Don't log the failure so users don't get confused by 404 messages popping up in expected circumstances.
+                        logFailure: false);
+                    return content["content"].ToString();
+                }
+                catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)"))
+                {
+                    // Continue
+                    lastException = reqEx;
+                }
+            }
+            _logger.LogError(
+                        $"Could not get file contents at {filePath} from {repoName} at branch/commit '{branchOrCommit}'.");
+            throw lastException;
         }
 
         /// <summary>
@@ -603,11 +625,12 @@ namespace Microsoft.DotNet.DarcLib
             string requestPath,
             ILogger logger,
             string body = null,
-            string versionOverride = null)
+            string versionOverride = null,
+            bool logFailure = true)
         {
             using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride))
             {
-                HttpRequestManager requestManager = new HttpRequestManager(client, method, requestPath, logger, body, versionOverride);
+                HttpRequestManager requestManager = new HttpRequestManager(client, method, requestPath, logger, body, versionOverride, logFailure);
 
                 using (var response = await requestManager.ExecuteAsync())
                 {
@@ -637,34 +660,6 @@ namespace Microsoft.DotNet.DarcLib
                 Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _personalAccessToken))));
 
             return client;
-        }
-
-        /// <summary>
-        ///     Determine whether a file exists in a repo at a specified branch and
-        ///     returns the SHA of the file if it does.
-        /// </summary>
-        /// <param name="repoUri">Repository URI</param>
-        /// <param name="filePath">Path to file</param>
-        /// <param name="branch">Branch</param>
-        /// <returns>Sha of file or empty string if the file does not exist.</returns>
-        public async Task<string> CheckIfFileExistsAsync(string repoUri, string filePath, string branch)
-        {
-            (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
-            
-            try
-            {
-                JObject content = await this.ExecuteRemoteGitCommandAsync(
-                    HttpMethod.Get,
-                    accountName,
-                    projectName,
-                    $"_apis/git/repositories/{repoName}/items?path={filePath}&versionDescriptor[version]={branch}",
-                    _logger);
-                return content["objectId"].ToString();
-            }
-            catch (HttpRequestException exc) when (exc.Message.Contains(((int) HttpStatusCode.NotFound).ToString()))
-            {
-                return null;
-            }
         }
 
         /// <summary>

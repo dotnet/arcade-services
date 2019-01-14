@@ -58,11 +58,10 @@ namespace Microsoft.DotNet.Darc.Tests
             _gitFileManager = new GitFileManager(GitClient, NullLogger.Instance);
         }
 
-        public async Task AddDependencyAsync(DependencyDetail dependency, DependencyType dependencyType)
+        public async Task AddDependencyAsync(DependencyDetail dependency)
         {
             await _gitFileManager.AddDependencyAsync(
                 dependency,
-                dependencyType,
                 TemporaryRepositoryPath,
                 null);
         }
@@ -82,13 +81,14 @@ namespace Microsoft.DotNet.Darc.Tests
             await _gitFileManager.Verify(TemporaryRepositoryPath, null);
         }
 
-        public async Task<DependencyGraph> GetDependencyGraph(DependencyDetail dependency)
+        public async Task<DependencyGraph> GetDependencyGraph(DependencyDetail dependency, bool includeToolset)
         {
             return await DependencyGraph.GetDependencyGraphAsync(
-                null, 
-                dependency, 
-                false, 
-                NullLogger.Instance, 
+                null,
+                dependency,
+                includeToolset,
+                false,
+                NullLogger.Instance,
                 testPath: TemporaryRepositoryPath);
         }
 
@@ -185,12 +185,12 @@ namespace Microsoft.DotNet.Darc.Tests
         /// <param name="expectedDependencyGraph">The expected graph</param>
         public void AssertEqual(DependencyGraph actualDependencyGraph, DependencyGraph expectedDependencyGraph)
         {
-            Assert.Equal(actualDependencyGraph.Graph.DependencyDetail.Commit, expectedDependencyGraph.Graph.DependencyDetail.Commit);
-            Assert.Equal(actualDependencyGraph.Graph.DependencyDetail.Name, expectedDependencyGraph.Graph.DependencyDetail.Name);
-            Assert.Equal(actualDependencyGraph.Graph.DependencyDetail.RepoUri, expectedDependencyGraph.Graph.DependencyDetail.RepoUri);
-            Assert.Equal(actualDependencyGraph.Graph.DependencyDetail.Version, expectedDependencyGraph.Graph.DependencyDetail.Version);
-            Assert.True(actualDependencyGraph.FlatGraph.SetEquals(expectedDependencyGraph.FlatGraph));
-            Assert.True(actualDependencyGraph.Graph.ChildNodes.SetEquals(expectedDependencyGraph.Graph.ChildNodes));
+            Assert.Equal(actualDependencyGraph.Root.Dependencies.Commit, expectedDependencyGraph.Root.Dependencies.Commit);
+            Assert.Equal(actualDependencyGraph.Root.Dependencies.Name, expectedDependencyGraph.Root.Dependencies.Name);
+            Assert.Equal(actualDependencyGraph.Root.Dependencies.RepoUri, expectedDependencyGraph.Root.Dependencies.RepoUri);
+            Assert.Equal(actualDependencyGraph.Root.Dependencies.Version, expectedDependencyGraph.Root.Dependencies.Version);
+            Assert.True(actualDependencyGraph.UniqueDependencies.SetEquals(expectedDependencyGraph.UniqueDependencies));
+            Assert.True(actualDependencyGraph.Root.Children.SetEquals(expectedDependencyGraph.Root.Children));
         }
 
         /// <summary>
@@ -200,8 +200,8 @@ namespace Microsoft.DotNet.Darc.Tests
         /// <param name="expectedDependencyGraph">The expected graph</param>
         public void AssertNotEqual(DependencyGraph actualDependencyGraph, DependencyGraph expectedDependencyGraph)
         {
-            Assert.False(actualDependencyGraph.FlatGraph.SetEquals(expectedDependencyGraph.FlatGraph));
-            Assert.False(actualDependencyGraph.Graph.ChildNodes.SetEquals(expectedDependencyGraph.Graph.ChildNodes));
+            Assert.False(actualDependencyGraph.UniqueDependencies.SetEquals(expectedDependencyGraph.UniqueDependencies));
+            Assert.False(actualDependencyGraph.Root.Children.SetEquals(expectedDependencyGraph.Root.Children));
         }
 
         /// <summary>

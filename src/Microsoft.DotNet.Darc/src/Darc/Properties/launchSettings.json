@@ -2,7 +2,8 @@
   "profiles": {
     "Microsoft.DotNet.Darc": {
       "commandName": "Project",
-      "commandLineArgs": "authenticate"
+      "commandLineArgs": "gather-drop --repo https://github.com/dotnet/core-sdk --commit c57bde45936fc120c0124bf964f570c45bfd8f8b  --output-dir D:\\scratch\\preview2drop\\ --full --separated",
+      "workingDirectory": "D:\\enlistments\\corefx"
     }
   }
 }

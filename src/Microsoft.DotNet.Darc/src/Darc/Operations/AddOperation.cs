@@ -32,7 +32,8 @@ namespace Microsoft.DotNet.Darc.Operations
                 Name = _options.Name,
                 Version = _options.Version ?? string.Empty,
                 RepoUri = _options.RepoUri ?? string.Empty,
-                Commit = _options.Commit ?? string.Empty
+                Commit = _options.Commit ?? string.Empty,
+                Type = type
             };
 
             try

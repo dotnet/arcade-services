@@ -38,7 +38,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             // TODO: https://github.com/dotnet/arcade/issues/1095
             // This should be getting back a container and writing the files from here.
-            await _fileManager.AddDependencyAsync(dependency, dependencyType, _repo, null);
+            await _fileManager.AddDependencyAsync(dependency, _repo, null);
         }
 
         /// <summary>

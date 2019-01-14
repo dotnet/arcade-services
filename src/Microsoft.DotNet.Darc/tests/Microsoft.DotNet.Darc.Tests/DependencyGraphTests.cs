@@ -162,10 +162,10 @@ namespace Microsoft.DotNet.Darc.Tests
                         Version = xmlNode.Attributes["Version"].Value
                     };
                     DependencyGraphNode dependencyGraphNode = new DependencyGraphNode(dependencyDetail, node.VisitedNodes);
-                    dependencyGraphNode.VisitedNodes.Add(node.DependencyDetail.RepoUri);
-                    node.ChildNodes.Add(dependencyGraphNode);
+                    dependencyGraphNode.VisitedNodes.Add(node.Dependencies.RepoUri);
+                    node.Children.Add(dependencyGraphNode);
                     nodesToVisit.Push(dependencyGraphNode);
-                    flatGraph.Add(dependencyGraphNode.DependencyDetail);
+                    flatGraph.Add(dependencyGraphNode.Dependencies);
                     xmlNodes.Push(xmlNode);
                 }
             }
