@@ -46,7 +46,8 @@ namespace Microsoft.DotNet.DarcLib
         ///     PAT for Azure DevOps. This PAT should cover all
         ///     organizations that may be accessed in a single operation.
         /// </param>
-        public AzureDevOpsClient(string accessToken, ILogger logger)
+        public AzureDevOpsClient(string accessToken, ILogger logger, string temporaryRepositoryPath)
+            : base (temporaryRepositoryPath)
         {
             _personalAccessToken = accessToken;
             _logger = logger;
