@@ -65,17 +65,17 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             IQueryable<Build> query = _context.Builds;
             if (!string.IsNullOrEmpty(repository))
             {
-                query = query.Where(b => b.Repository == repository);
+                query = query.Where(b => b.GitHubBuildInfo.Repository == repository);
             }
 
             if (!string.IsNullOrEmpty(commit))
             {
-                query = query.Where(b => b.Commit == commit);
+                query = query.Where(b => b.GitHubBuildInfo.Commit == commit);
             }
 
             if (!string.IsNullOrEmpty(buildNumber))
             {
-                query = query.Where(b => b.BuildNumber == buildNumber);
+                query = query.Where(b => b.AzureDevOpsBuildInfo.BuildNumber == buildNumber);
             }
 
             if (notBefore.HasValue)

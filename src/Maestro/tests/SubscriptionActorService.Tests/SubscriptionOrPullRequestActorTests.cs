@@ -91,10 +91,16 @@ namespace SubscriptionActorService.Tests
             assets = assets ?? new[] {("quail.eating.ducks", "1.1.0", false), ("quite.expensive.device", "2.0.1", true)};
             var build = new Build
             {
-                Branch = SourceBranch,
-                Repository = SourceRepo,
-                BuildNumber = NewBuildNumber,
-                Commit = NewCommit,
+                GitHubBuildInfo = new GitHubBuildInfo()
+                {
+                    Branch = SourceBranch,
+                    Repository = SourceRepo,
+                    Commit = NewCommit,
+                },
+                AzureDevOpsBuildInfo = new AzureDevOpsBuildInfo()
+                {
+                    BuildNumber = NewBuildNumber,
+                },
                 DateProduced = DateTimeOffset.UtcNow,
                 Assets = new List<Asset>(
                     assets.Select(

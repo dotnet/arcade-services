@@ -81,7 +81,7 @@ namespace DependencyUpdater
                                          where sub.Enabled
                                          let latestBuild =
                                              sub.Channel.BuildChannels.Select(bc => bc.Build)
-                                                 .Where(b => b.Repository == sub.SourceRepository)
+                                                 .Where(b => b.GitHubBuildInfo.Repository == sub.SourceRepository)
                                                  .OrderByDescending(b => b.DateProduced)
                                                  .FirstOrDefault()
                                          where latestBuild != null
@@ -154,7 +154,7 @@ namespace DependencyUpdater
                 where updateFrequency == ((int) UpdateFrequency.EveryDay).ToString()
                 let latestBuild =
                     sub.Channel.BuildChannels.Select(bc => bc.Build)
-                        .Where(b => b.Repository == sub.SourceRepository)
+                        .Where(b => b.GitHubBuildInfo.Repository == sub.SourceRepository)
                         .OrderByDescending(b => b.DateProduced)
                         .FirstOrDefault()
                 where latestBuild != null
@@ -183,7 +183,7 @@ namespace DependencyUpdater
             List<Subscription> subscriptionsToUpdate = await (from sub in Context.Subscriptions
                 where sub.Enabled
                 where sub.ChannelId == channelId
-                where sub.SourceRepository == build.Repository
+                where sub.SourceRepository == build.GitHubBuildInfo.Repository
                 let updateFrequency = JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency")
                 where updateFrequency == ((int) UpdateFrequency.EveryBuild).ToString()
                 select sub).ToListAsync();

@@ -147,7 +147,7 @@ namespace SubscriptionActorService
                     })
                 .ToList();
 
-            await pullRequestActor.UpdateAssetsAsync(SubscriptionId, build.Id, build.Commit, assets);
+            await pullRequestActor.UpdateAssetsAsync(SubscriptionId, build.Id, build.GitHubBuildInfo.Commit, assets);
 
             return ActionResult.Create(true, "Update Sent");
         }

@@ -19,10 +19,10 @@ namespace Maestro.Web.Api.v2018_07_16.Models
             }
 
             Id = other.Id;
-            Repository = other.Repository;
-            Branch = other.Branch;
-            Commit = other.Commit;
-            BuildNumber = other.BuildNumber;
+            Repository = other.GitHubBuildInfo.Repository;
+            Branch = other.GitHubBuildInfo.Branch;
+            Commit = other.GitHubBuildInfo.Commit;
+            BuildNumber = other.AzureDevOpsBuildInfo.BuildNumber;
             DateProduced = other.DateProduced;
             Channels = other.BuildChannels?.Select(bc => bc.Channel)
                 .Where(c => c != null)

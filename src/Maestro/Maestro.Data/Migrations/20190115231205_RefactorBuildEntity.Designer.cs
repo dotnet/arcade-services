@@ -10,8 +10,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Maestro.Data.Migrations
 {
     [DbContext(typeof(BuildAssetRegistryContext))]
-    [Migration("20190115014331_AddAzDoBuildInformation")]
-    partial class AddAzDoBuildInformation
+    [Migration("20190115231205_RefactorBuildEntity")]
+    partial class RefactorBuildEntity
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -146,29 +146,9 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-                    b.Property<string>("Account");
-
-                    b.Property<string>("AzDoBranch");
-
-                    b.Property<int>("AzDoBuildId");
-
-                    b.Property<string>("AzDoRepository");
-
-                    b.Property<string>("Branch");
-
-                    b.Property<string>("BuildNumber");
-
-                    b.Property<string>("Commit");
-
                     b.Property<DateTimeOffset>("DateProduced");
 
                     b.Property<int?>("DependencyBuildId");
-
-                    b.Property<string>("Project");
-
-                    b.Property<string>("Repository");
-
-                    b.Property<int>("SourceBuildDefinitionId");
 
                     b.HasKey("Id");
 
@@ -601,6 +581,52 @@ namespace Maestro.Data.Migrations
                     b.HasOne("Maestro.Data.Models.Build")
                         .WithMany("Dependencies")
                         .HasForeignKey("DependencyBuildId");
+
+                    b.OwnsOne("Maestro.Data.Models.AzureDevOpsBuildInfo", "AzureDevOpsBuildInfo", b1 =>
+                        {
+                            b1.Property<int>("BuildId")
+                                .ValueGeneratedOnAdd()
+                                .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                            b1.Property<string>("Account");
+
+                            b1.Property<string>("Branch");
+
+                            b1.Property<int>("BuildDefinitionId");
+
+                            b1.Property<string>("BuildNumber");
+
+                            b1.Property<string>("Project");
+
+                            b1.Property<string>("Repository");
+
+                            b1.ToTable("Builds");
+
+                            b1.HasOne("Maestro.Data.Models.Build")
+                                .WithOne("AzureDevOpsBuildInfo")
+                                .HasForeignKey("Maestro.Data.Models.AzureDevOpsBuildInfo", "BuildId")
+                                .OnDelete(DeleteBehavior.Cascade);
+                        });
+
+                    b.OwnsOne("Maestro.Data.Models.GitHubBuildInfo", "GitHubBuildInfo", b1 =>
+                        {
+                            b1.Property<int>("BuildId")
+                                .ValueGeneratedOnAdd()
+                                .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                            b1.Property<string>("Branch");
+
+                            b1.Property<string>("Commit");
+
+                            b1.Property<string>("Repository");
+
+                            b1.ToTable("Builds");
+
+                            b1.HasOne("Maestro.Data.Models.Build")
+                                .WithOne("GitHubBuildInfo")
+                                .HasForeignKey("Maestro.Data.Models.GitHubBuildInfo", "BuildId")
+                                .OnDelete(DeleteBehavior.Cascade);
+                        });
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.BuildChannel", b =>

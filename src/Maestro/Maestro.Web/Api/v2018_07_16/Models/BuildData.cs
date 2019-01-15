@@ -5,6 +5,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using Maestro.Data.Models;
 
 namespace Maestro.Web.Api.v2018_07_16.Models
 {
@@ -29,10 +30,16 @@ namespace Maestro.Web.Api.v2018_07_16.Models
         {
             return new Data.Models.Build
             {
-                Repository = Repository,
-                Branch = Branch,
-                Commit = Commit,
-                BuildNumber = BuildNumber,
+                GitHubBuildInfo = new GitHubBuildInfo()
+                {
+                    Repository = Repository,
+                    Branch = Branch,
+                    Commit = Commit
+                },
+                AzureDevOpsBuildInfo = new AzureDevOpsBuildInfo()
+                {
+                    BuildNumber = BuildNumber,
+                },
                 Assets = Assets.Select(a => a.ToDb()).ToList()
             };
         }
