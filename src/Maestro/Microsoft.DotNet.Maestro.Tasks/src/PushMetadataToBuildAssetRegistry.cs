@@ -100,7 +100,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                     foreach (Package package in manifest.Packages)
                     {
-                        AddAsset(assets, package.Id, package.Version, manifest.Location, "NugetFeed", package.NonShipping ?? false);
+                        AddAsset(assets, package.Id, package.Version, manifest.Location, "NugetFeed", package.NonShipping);
                     }
 
                     foreach (Blob blob in manifest.Blobs)
@@ -113,7 +113,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             version = string.Empty;
                         }
 
-                        AddAsset(assets, blob.Id, version, manifest.Location, "Container", blob.NonShipping ?? false);
+                        AddAsset(assets, blob.Id, version, manifest.Location, "Container", blob.NonShipping);
                     }
 
                     buildsManifestMetadata.Add(new BuildData(manifest.Name, manifest.Commit, manifest.BuildId, manifest.Branch, assets, new List<int?>()));
