@@ -35,6 +35,18 @@ namespace Maestro.Data.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
+        public string Account { get; set; }
+
+        public string Project { get; set; }
+
+        public string AzDoRepository { get; set; }
+
+        public string AzDoBranch { get; set; }
+
+        public int AzDoBuildId { get; set; }
+
+        public int SourceBuildDefinitionId { get; set; }
+
         public string Repository { get; set; }
 
         public string Branch { get; set; }
