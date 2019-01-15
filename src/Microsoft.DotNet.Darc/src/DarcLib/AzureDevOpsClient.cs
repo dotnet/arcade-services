@@ -721,5 +721,114 @@ namespace Microsoft.DotNet.DarcLib
         {
             return this.CommitFilesAsync(filesToCommit, repoUri, branch, commitMessage, _logger, _personalAccessToken);
         }
+
+        public async Task<AzureDevOpsReleaseDefinition> AddArtifactSource(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, AzureDevOpsBuild build)
+        {
+            releaseDefinition.Artifacts = new AzureDevOpsArtifact[1] {
+                new AzureDevOpsArtifact()
+                {
+                    Alias = "PrimaryArtifact",
+                    Type = "Build",
+                    DefinitionReference = new AzureDevOpsArtifactSourceReference()
+                    {
+                        Definition = new AzureDevOpsIdNamePair()
+                        {
+                            Id = build.Definition.Id.ToString(),
+                            Name = build.Definition.Name
+                        },
+                        DefaultVersionType = new AzureDevOpsIdNamePair()
+                        {
+                            Id = "specificVersionType",
+                            Name = "Specific version"
+                        },
+                        DefaultVersionSpecific = new AzureDevOpsIdNamePair()
+                        {
+                            Id = build.Id.ToString(),
+                            Name = build.BuildNumber
+                        },
+                        Project = new AzureDevOpsIdNamePair()
+                        {
+                            Id = build.Project.Id.ToString(),
+                            Name = build.Project.Name
+                        }
+                    }
+                }
+            };
+
+            var _serializerSettings = new JsonSerializerSettings
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                NullValueHandling = NullValueHandling.Ignore
+            };
+
+            var body = JsonConvert.SerializeObject(releaseDefinition, _serializerSettings);
+
+            JObject content = await this.ExecuteRemoteGitCommandAsync(
+                HttpMethod.Put,
+                accountName,
+                projectName,
+                $"_apis/release/definitions/",
+                _logger,
+                body,
+                versionOverride: "5.0-preview.3");
+
+            return content.ToObject<AzureDevOpsReleaseDefinition>();
+        }
+
+        public async void RemoveAllArtifactSources(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition)
+        {
+            releaseDefinition.Artifacts = new AzureDevOpsArtifact[0];
+
+            var body = JsonConvert.SerializeObject(releaseDefinition);
+
+            JObject content = await this.ExecuteRemoteGitCommandAsync(
+                HttpMethod.Put,
+                accountName,
+                projectName,
+                $"_apis/release/definitions/",
+                _logger,
+                body,
+                versionOverride: "5.0-preview.3");
+        }
+
+        public async void StartNewRelease(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition)
+        {
+            var body = $"{{ \"definitionId\": {releaseDefinition.Id} }}";
+            
+            JObject content = await this.ExecuteRemoteGitCommandAsync(
+                HttpMethod.Post,
+                accountName,
+                projectName,
+                $"_apis/release/releases/",
+                _logger,
+                body,
+                versionOverride: "5.0-preview.3");
+        }
+
+        public async Task<AzureDevOpsBuild> GetBuildAsync(string accountName, string projectName, long buildId)
+        {
+            JObject content = await this.ExecuteRemoteGitCommandAsync(
+                HttpMethod.Get,
+                accountName,
+                projectName,
+                $"_apis/build/builds/{buildId}",
+                _logger,
+                versionOverride: "5.0-preview.3");
+            
+            return content.ToObject<AzureDevOpsBuild>();
+        }
+
+        public async Task<AzureDevOpsReleaseDefinition> GetReleaseDefinitionAsync(string accountName, string projectName, long releaseDefinitionId)
+        {
+            JObject content = await this.ExecuteRemoteGitCommandAsync(
+                HttpMethod.Get,
+                accountName,
+                projectName,
+                $"_apis/release/definitions/{releaseDefinitionId}",
+                _logger,
+                versionOverride: "5.0-preview.3");
+
+            return content.ToObject<AzureDevOpsReleaseDefinition>();
+        }
     }
 }
