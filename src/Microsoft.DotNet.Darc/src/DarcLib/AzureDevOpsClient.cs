@@ -582,9 +582,10 @@ namespace Microsoft.DotNet.DarcLib
             string requestPath,
             ILogger logger,
             string body = null,
-            string versionOverride = null)
+            string versionOverride = null,
+            string baseAddressSubpath = null)
         {
-            using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride))
+            using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride, baseAddressSubpath))
             {
                 HttpRequestManager requestManager = new HttpRequestManager(client, method, requestPath, logger, body, versionOverride);
 
@@ -599,13 +600,16 @@ namespace Microsoft.DotNet.DarcLib
         /// Create a new http client for talking to the specified azdo account name and project.
         /// </summary>
         /// <param name="versionOverride">Optional version override for the targeted API version.</param>
+        /// <param name="baseAddressSubpath">Optional subdomain for the base address for the API. Should include the final dot.</param>
         /// <param name="accountName">Azure DevOps account</param>
         /// <param name="projectName">Azure DevOps project</param>
         /// <returns>New http client</returns>
-        private HttpClient CreateHttpClient(string accountName, string projectName, string versionOverride = null)
+        private HttpClient CreateHttpClient(string accountName, string projectName, string versionOverride = null, string baseAddressSubpath = null)
         {
+            baseAddressSubpath = EnsureEndsWith(baseAddressSubpath, '.');
+
             var client = new HttpClient {
-                BaseAddress = new Uri($"https://dev.azure.com/{accountName}/{projectName}/")
+                BaseAddress = new Uri($"https://{baseAddressSubpath}dev.azure.com/{accountName}/{projectName}/")
             };
 
             client.DefaultRequestHeaders.Add(
@@ -616,6 +620,20 @@ namespace Microsoft.DotNet.DarcLib
                 Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _personalAccessToken))));
 
             return client;
+        }
+
+        /// <summary>
+        ///     Ensure that the input string ends with 'shouldEndWith' char. 
+        ///     Returns null if input parameter is null.
+        /// </summary>
+        /// <param name="input">String that must have 'shouldEndWith' at the end.</param>
+        /// <param name="shouldEndWith">Character that must be present at end of 'input' string.</param>
+        /// <returns>Input string appended with 'shouldEndWith'</returns>
+        private string EnsureEndsWith(string input, char shouldEndWith)
+        {
+            if (input == null) return null;
+
+            return input.TrimEnd(shouldEndWith) + shouldEndWith;
         }
 
         /// <summary>
@@ -722,7 +740,15 @@ namespace Microsoft.DotNet.DarcLib
             return this.CommitFilesAsync(filesToCommit, repoUri, branch, commitMessage, _logger, _personalAccessToken);
         }
 
-        public async Task<AzureDevOpsReleaseDefinition> AddArtifactSource(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, AzureDevOpsBuild build)
+        /// <summary>
+        ///     Add the informed build as an specific build artifact source to the release definition informed.
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account name</param>
+        /// <param name="projectName">Project name</param>
+        /// <param name="releaseDefinition">Release definition to be updated</param>
+        /// <param name="build">Build which should be added as source of the release definition.</param>
+        /// <returns>AzureDevOpsReleaseDefinition</returns>
+        public async Task<AzureDevOpsReleaseDefinition> AddArtifactSourceAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, AzureDevOpsBuild build)
         {
             releaseDefinition.Artifacts = new AzureDevOpsArtifact[1] {
                 new AzureDevOpsArtifact()
@@ -770,12 +796,19 @@ namespace Microsoft.DotNet.DarcLib
                 $"_apis/release/definitions/",
                 _logger,
                 body,
-                versionOverride: "5.0-preview.3");
+                versionOverride: "5.0-preview.3",
+                baseAddressSubpath: "vsrm.");
 
             return content.ToObject<AzureDevOpsReleaseDefinition>();
         }
 
-        public async void RemoveAllArtifactSources(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition)
+        /// <summary>
+        ///     Remove all artifact sources of the release definition informed.
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account name</param>
+        /// <param name="projectName">Project name</param>
+        /// <param name="releaseDefinition">Release definition to be modified</param>
+        public async void RemoveAllArtifactSourcesAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition)
         {
             releaseDefinition.Artifacts = new AzureDevOpsArtifact[0];
 
@@ -788,13 +821,21 @@ namespace Microsoft.DotNet.DarcLib
                 $"_apis/release/definitions/",
                 _logger,
                 body,
-                versionOverride: "5.0-preview.3");
+                versionOverride: "5.0-preview.3",
+                baseAddressSubpath: "vsrm.");
         }
 
-        public async void StartNewRelease(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition)
+        /// <summary>
+        ///     Trigger a new release using the release definition informed. No change is performed
+        ///     on the release definition - it is used as is.
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account name</param>
+        /// <param name="projectName">Project name</param>
+        /// <param name="releaseDefinition">Release definition to be updated</param>
+        public async void StartNewReleaseAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition)
         {
             var body = $"{{ \"definitionId\": {releaseDefinition.Id} }}";
-            
+
             JObject content = await this.ExecuteRemoteGitCommandAsync(
                 HttpMethod.Post,
                 accountName,
@@ -802,9 +843,17 @@ namespace Microsoft.DotNet.DarcLib
                 $"_apis/release/releases/",
                 _logger,
                 body,
-                versionOverride: "5.0-preview.3");
+                versionOverride: "5.0-preview.3",
+                baseAddressSubpath: "vsrm.");
         }
 
+        /// <summary>
+        ///     Fetches an specific AzDO build based on its ID.
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account name</param>
+        /// <param name="projectName">Project name</param>
+        /// <param name="buildId">Id of the build to be retrieved</param>
+        /// <returns>AzureDevOpsBuild</returns>
         public async Task<AzureDevOpsBuild> GetBuildAsync(string accountName, string projectName, long buildId)
         {
             JObject content = await this.ExecuteRemoteGitCommandAsync(
@@ -814,10 +863,17 @@ namespace Microsoft.DotNet.DarcLib
                 $"_apis/build/builds/{buildId}",
                 _logger,
                 versionOverride: "5.0-preview.3");
-            
+
             return content.ToObject<AzureDevOpsBuild>();
         }
 
+        /// <summary>
+        ///     Fetches an specific AzDO release definition based on its ID.
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account name</param>
+        /// <param name="projectName">Project name</param>
+        /// <param name="releaseDefinitionId">Id of the release definition to be retrieved</param>
+        /// <returns>AzureDevOpsReleaseDefinition</returns>
         public async Task<AzureDevOpsReleaseDefinition> GetReleaseDefinitionAsync(string accountName, string projectName, long releaseDefinitionId)
         {
             JObject content = await this.ExecuteRemoteGitCommandAsync(
@@ -826,7 +882,8 @@ namespace Microsoft.DotNet.DarcLib
                 projectName,
                 $"_apis/release/definitions/{releaseDefinitionId}",
                 _logger,
-                versionOverride: "5.0-preview.3");
+                versionOverride: "5.0-preview.3",
+                baseAddressSubpath: "vsrm.");
 
             return content.ToObject<AzureDevOpsReleaseDefinition>();
         }
