@@ -17,6 +17,12 @@ namespace Microsoft.DotNet.Darc.Options
             "Note that this overwrites the entire reviewers list for this subscription")]
         public string Reviewers { get; set; }
 
+        public UpdateReviewersCommandLineOptions()
+        {
+            SubscriptionId = string.Empty;
+            Reviewers = string.Empty;
+        }
+
         public override Operation GetOperation()
         {
             return new UpdateReviewersOperation(this);
