@@ -48,7 +48,8 @@ namespace Microsoft.DotNet.DarcLib
             _product = new ProductHeaderValue("DarcLib", version);
         }
 
-        public GitHubClient(string accessToken, ILogger logger)
+        public GitHubClient(string accessToken, ILogger logger, string temporaryRepositoryPath)
+            : base(temporaryRepositoryPath)
         {
             _personalAccessToken = accessToken;
             _logger = logger;

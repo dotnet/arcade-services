@@ -100,7 +100,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                     foreach (Package package in manifest.Packages)
                     {
-                        AddAsset(assets, package.Id, package.Version, manifest.Location, "NugetFeed");
+                        AddAsset(assets, package.Id, package.Version, manifest.Location, "NugetFeed", package.NonShipping);
                     }
 
                     foreach (Blob blob in manifest.Blobs)
@@ -113,7 +113,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             version = string.Empty;
                         }
 
-                        AddAsset(assets, blob.Id, version, manifest.Location, "Container");
+                        AddAsset(assets, blob.Id, version, manifest.Location, "Container", blob.NonShipping);
                     }
 
                     buildsManifestMetadata.Add(new BuildData(manifest.Name, manifest.Commit, manifest.BuildId, manifest.Branch, assets, new List<int?>()));
@@ -123,7 +123,16 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return buildsManifestMetadata;
         }
 
-        private void AddAsset(List<AssetData> assets, string assetName, string version, string location, string assetLocationType)
+        /// <summary>
+        ///     Add a new asset to the list of assets that will be uploaded to BAR
+        /// </summary>
+        /// <param name="assets">List of assets</param>
+        /// <param name="assetName">Name of new asset</param>
+        /// <param name="version">Version of asset</param>
+        /// <param name="location">Location of asset</param>
+        /// <param name="assetLocationType">Type of location</param>
+        /// <param name="nonShipping">If true, the asset is not intended for end customers</param>
+        private void AddAsset(List<AssetData> assets, string assetName, string version, string location, string assetLocationType, bool nonShipping)
         {
             assets.Add(new AssetData
             {
@@ -133,6 +142,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                                     },
                 Name = assetName,
                 Version = version,
+                NonShipping = nonShipping
             });
         }
 
