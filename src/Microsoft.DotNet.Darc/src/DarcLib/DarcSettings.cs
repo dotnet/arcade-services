@@ -23,5 +23,11 @@ namespace Microsoft.DotNet.DarcLib
         public string BuildAssetRegistryBaseUri { get; set; }
 
         public GitRepoType GitType { get; set; }
+
+        /// <summary>
+        ///     If the git clients need to clone a repository for whatever reason,
+        ///     this denotes the root of where the repository should be cloned.
+        /// </summary>
+        public string TemporaryRepositoryRoot { get; set; }
     }
 }

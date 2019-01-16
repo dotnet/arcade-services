@@ -8,6 +8,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.Web.Api.v2018_07_16.Models;
+using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +29,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
         [HttpGet]
         [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(List<Asset>))]
+        [Paginated(typeof(Models.Asset))]
         [ValidateModelState]
         public IActionResult Get(string name, [FromQuery] string version, int? buildId, bool? nonShipping, bool? loadLocations)
         {
@@ -57,8 +59,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 query = query.Include(asset => asset.Locations);
             }
 
-            List<Asset> results = query.AsEnumerable().Select(asset => new Asset(asset)).ToList();
-            return Ok(results);
+            return Ok(query);
         }
 
         [HttpGet("{id}")]

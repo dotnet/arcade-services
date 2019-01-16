@@ -27,12 +27,14 @@ namespace Microsoft.DotNet.Maestro.Client
             /// </param>
             /// <param name='channelId'>
             /// </param>
+            /// <param name='enabled'>
+            /// </param>
             /// <param name='cancellationToken'>
             /// The cancellation token.
             /// </param>
-            public static async Task<IList<Subscription>> GetAllSubscriptionsAsync(this ISubscriptions operations, string sourceRepository = default(string), string targetRepository = default(string), int? channelId = default(int?), CancellationToken cancellationToken = default(CancellationToken))
+            public static async Task<IList<Subscription>> GetAllSubscriptionsAsync(this ISubscriptions operations, string sourceRepository = default(string), string targetRepository = default(string), int? channelId = default(int?), bool? enabled = default(bool?), CancellationToken cancellationToken = default(CancellationToken))
             {
-                using (var _result = await operations.GetAllSubscriptionsWithHttpMessagesAsync(sourceRepository, targetRepository, channelId, null, cancellationToken).ConfigureAwait(false))
+                using (var _result = await operations.GetAllSubscriptionsWithHttpMessagesAsync(sourceRepository, targetRepository, channelId, enabled, null, cancellationToken).ConfigureAwait(false))
                 {
                     return _result.Body;
                 }
@@ -99,6 +101,26 @@ namespace Microsoft.DotNet.Maestro.Client
             public static async Task<Subscription> UpdateSubscriptionAsync(this ISubscriptions operations, System.Guid id, SubscriptionUpdate update = default(SubscriptionUpdate), CancellationToken cancellationToken = default(CancellationToken))
             {
                 using (var _result = await operations.UpdateSubscriptionWithHttpMessagesAsync(id, update, null, cancellationToken).ConfigureAwait(false))
+                {
+                    return _result.Body;
+                }
+            }
+
+            /// <summary>
+            /// Trigger a subscription manually by ID
+            /// </summary>
+            /// <param name='operations'>
+            /// The operations group for this extension method.
+            /// </param>
+            /// <param name='id'>
+            /// ID of subscription
+            /// </param>
+            /// <param name='cancellationToken'>
+            /// The cancellation token.
+            /// </param>
+            public static async Task<Subscription> TriggerSubscriptionAsync(this ISubscriptions operations, System.Guid id, CancellationToken cancellationToken = default(CancellationToken))
+            {
+                using (var _result = await operations.TriggerSubscriptionWithHttpMessagesAsync(id, null, cancellationToken).ConfigureAwait(false))
                 {
                     return _result.Body;
                 }

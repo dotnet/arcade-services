@@ -13,6 +13,13 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class RemoteRepoBase
     {
+        protected RemoteRepoBase(string temporaryRepositoryPath)
+        {
+            TemporaryRepositoryPath = temporaryRepositoryPath;
+        }
+
+        protected string TemporaryRepositoryPath { get; set; }
+
         /// <summary>
         /// We used to group commits in a tree object so there would be only one commit per 
         /// change but this doesn't work for trees that end up being too big (around 20K files).
@@ -35,7 +42,7 @@ namespace Microsoft.DotNet.DarcLib
             string dotnetMaestro = "dotnet-maestro";
             using (_logger.BeginScope("Pushing files to {branch}", branch))
             {
-                string tempRepoFolder = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+                string tempRepoFolder = Path.Combine(TemporaryRepositoryPath, Path.GetRandomFileName());
 
                 try
                 {

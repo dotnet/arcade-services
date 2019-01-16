@@ -8,20 +8,18 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Maestro.Data.Models
 {
-    public class Channel
+    public class ReleasePipeline
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
-        [Required]
-        public string Name { get; set; }
+        public string Organization { get; set; }
 
-        [Required]
-        public string Classification { get; set; }
+        public string Project { get; set; }
 
-        public List<BuildChannel> BuildChannels { get; set; }
-        public List<DefaultChannel> DefaultChannels { get; set; }
+        public int PipelineIdentifier { get; set; }
+
         public List<ChannelReleasePipeline> ChannelReleasePipelines { get; set; }
     }
 }

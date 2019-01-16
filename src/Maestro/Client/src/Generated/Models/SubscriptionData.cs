@@ -24,12 +24,13 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// <summary>
         /// Initializes a new instance of the SubscriptionData class.
         /// </summary>
-        public SubscriptionData(string channelName, string sourceRepository, string targetRepository, string targetBranch, SubscriptionPolicy policy)
+        public SubscriptionData(string channelName, string sourceRepository, string targetRepository, string targetBranch, SubscriptionPolicy policy, bool? enabled = default(bool?))
         {
             ChannelName = channelName;
             SourceRepository = sourceRepository;
             TargetRepository = targetRepository;
             TargetBranch = targetBranch;
+            Enabled = enabled;
             Policy = policy;
             CustomInit();
         }
@@ -58,6 +59,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// </summary>
         [JsonProperty(PropertyName = "targetBranch")]
         public string TargetBranch { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "enabled")]
+        public bool? Enabled { get; set; }
 
         /// <summary>
         /// </summary>

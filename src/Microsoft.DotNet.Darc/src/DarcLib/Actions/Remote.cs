@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client;
@@ -25,13 +26,21 @@ namespace Microsoft.DotNet.DarcLib
 
             _logger = logger;
 
+            // If a temporary repository root was not provided, use the environment
+            // provided temp directory
+            string temporaryRepositoryRoot = settings.TemporaryRepositoryRoot;
+            if (string.IsNullOrEmpty(temporaryRepositoryRoot))
+            {
+                temporaryRepositoryRoot = Path.GetTempPath();
+            }
+
             if (settings.GitType == GitRepoType.GitHub)
             {
-                _gitClient = new GitHubClient(settings.PersonalAccessToken, _logger);
+                _gitClient = new GitHubClient(settings.PersonalAccessToken, _logger, temporaryRepositoryRoot);
             }
             else if (settings.GitType == GitRepoType.AzureDevOps)
             {
-                _gitClient = new AzureDevOpsClient(settings.PersonalAccessToken, _logger);
+                _gitClient = new AzureDevOpsClient(settings.PersonalAccessToken, _logger, temporaryRepositoryRoot);
             }
 
             // Only initialize the file manager if we have a git client, which excludes "None"
@@ -471,7 +480,14 @@ namespace Microsoft.DotNet.DarcLib
                 // PAT is required for these types.
                 if (string.IsNullOrEmpty(settings.PersonalAccessToken))
                 {
-                    throw new ArgumentException("The personal access token is missing...");
+                    if (settings.GitType == GitRepoType.GitHub)
+                    {
+                        throw new ArgumentException("The GitHub personal access token is missing...");
+                    }
+                    else
+                    {
+                        throw new ArgumentException("The Azure DevOps personal access token is missing...");
+                    }
                 }
             }
             else if (settings.GitType != GitRepoType.None)

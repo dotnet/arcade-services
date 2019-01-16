@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,7 +20,12 @@ namespace Microsoft.DotNet.DarcLib
             try
             {
                 byte[] content = Convert.FromBase64String(encodedContent);
-                return Encoding.UTF8.GetString(content);
+                // We can't use Encoding.UTF8.GetString here because that returns a string containing a BOM if one exists in the bytes.
+                using (var str = new MemoryStream(content, false))
+                using (var reader = new StreamReader(str))
+                {
+                    return reader.ReadToEnd();
+                }
             }
             catch (FormatException)
             {

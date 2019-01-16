@@ -42,7 +42,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         public string Version { get; set; }
 
         [XmlAttribute(AttributeName = "NonShipping")]
-        public string NonShipping { get; set; }
+        public bool NonShipping { get; set; }
     }
 
     [XmlRoot(ElementName = "Blob")]
@@ -52,6 +52,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
         public string Id { get; set; }
 
         [XmlAttribute(AttributeName = "NonShipping")]
-        public string NonShipping { get; set; }
+        public bool NonShipping { get; set; }
     }
 }

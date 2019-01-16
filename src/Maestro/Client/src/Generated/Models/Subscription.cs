@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// <summary>
         /// Initializes a new instance of the Subscription class.
         /// </summary>
-        public Subscription(System.Guid? id = default(System.Guid?), Channel channel = default(Channel), string sourceRepository = default(string), string targetRepository = default(string), string targetBranch = default(string), SubscriptionPolicy policy = default(SubscriptionPolicy), Build lastAppliedBuild = default(Build))
+        public Subscription(System.Guid? id = default(System.Guid?), Channel channel = default(Channel), string sourceRepository = default(string), string targetRepository = default(string), string targetBranch = default(string), SubscriptionPolicy policy = default(SubscriptionPolicy), Build lastAppliedBuild = default(Build), bool? enabled = default(bool?))
         {
             Id = id;
             Channel = channel;
@@ -32,6 +32,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
             TargetBranch = targetBranch;
             Policy = policy;
             LastAppliedBuild = lastAppliedBuild;
+            Enabled = enabled;
             CustomInit();
         }
 
@@ -74,6 +75,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// </summary>
         [JsonProperty(PropertyName = "lastAppliedBuild")]
         public Build LastAppliedBuild { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "enabled")]
+        public bool? Enabled { get; set; }
 
         /// <summary>
         /// Validate the object.
