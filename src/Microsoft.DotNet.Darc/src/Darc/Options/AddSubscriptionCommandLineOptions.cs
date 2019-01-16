@@ -43,6 +43,12 @@ namespace Microsoft.DotNet.Darc.Options
         [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]
         public bool Quiet { get; set; }
 
+        /* todo
+        [Option("reviewers", HelpText = "Reviewers are automicatically added to all PRs created from this subscription. " + 
+            "Provide a comma separated list of user names.")]
+        public string Reviewers { get; set; }
+        */
+
         public override Operation GetOperation()
         {
             return new AddSubscriptionOperation(this);

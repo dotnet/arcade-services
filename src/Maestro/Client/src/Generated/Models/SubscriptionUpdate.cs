@@ -8,6 +8,7 @@
 namespace Microsoft.DotNet.Maestro.Client.Models
 {
     using Newtonsoft.Json;
+    using System.Collections.Generic;
     using System.Linq;
 
     public partial class SubscriptionUpdate
@@ -23,12 +24,13 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// <summary>
         /// Initializes a new instance of the SubscriptionUpdate class.
         /// </summary>
-        public SubscriptionUpdate(string channelName = default(string), string sourceRepository = default(string), SubscriptionPolicy policy = default(SubscriptionPolicy), bool? enabled = default(bool?))
+        public SubscriptionUpdate(string channelName = default(string), string sourceRepository = default(string), SubscriptionPolicy policy = default(SubscriptionPolicy), bool? enabled = default(bool?), IEnumerable<string> reviewers = null)
         {
             ChannelName = channelName;
             SourceRepository = sourceRepository;
             Policy = policy;
             Enabled = enabled;
+            Reviewers = reviewers;
             CustomInit();
         }
 
@@ -56,6 +58,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// </summary>
         [JsonProperty(PropertyName = "enabled")]
         public bool? Enabled { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "reviewers")]
+        public IEnumerable<string> Reviewers { get; set; }
 
         /// <summary>
         /// Validate the object.

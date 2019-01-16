@@ -210,6 +210,33 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Update reviewers for an existing subscription
+        /// </summary>
+        /// <param name="subscriptionId">ID of subscription to modify</param>
+        /// <param name="reviewers">
+        ///     Reviewers to add to PRs created through this subscription. 
+        ///     This will overwrite the existing reviewers every time, and null or empty list will clear out existing reviewers
+        /// </param>
+        /// <returns>The updated subscription, if successful</returns>
+        public async Task<Subscription> UpdateReviewersAsync(
+            string subscriptionId,
+            IEnumerable<string> reviewers)
+        {
+            CheckForValidBarClient();
+            if (!Guid.TryParse(subscriptionId, out Guid subscriptionGuid))
+            {
+                throw new ArgumentException($"Subscription id '{subscriptionId}' is not a valid guid.");
+            }
+
+            // create subscription update data
+            var subUpdate = new SubscriptionUpdate();
+            subUpdate.Reviewers = reviewers ?? new List<string>();
+
+            // update the subscription
+            return await _barClient.Subscriptions.UpdateSubscriptionAsync(subscriptionGuid, subUpdate);
+        }
+
+        /// <summary>
         ///     Delete a subscription by id
         /// </summary>
         /// <param name="subscriptionId">Id of subscription to delete</param>
