@@ -15,6 +15,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
 using Microsoft.VisualStudio.Services.Common;
+using Microsoft.VisualStudio.Services.Identity;
+using Microsoft.VisualStudio.Services.Identity.Client;
 using Microsoft.VisualStudio.Services.WebApi;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -286,9 +288,32 @@ namespace Microsoft.DotNet.DarcLib
             VssConnection connection = CreateVssConnection(accountName);
             GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
-            // get the reviewer's identities
-            var reviewers = new List<IdentityRefWithVote>();
-            //var identityClient = await connection.GetClientAsync<
+            // get the identity client used to resolve user name strings to identities
+            var identityClient = await connection.GetClientAsync<IdentityHttpClient>();
+
+            // Get the identities of each reviewer
+            var identities = new List<IdentityRefWithVote>();
+            foreach (var reviewer in pullRequest.Reviewers)
+            {
+                // look for a matching display name
+                var matchingIdentity = (await identityClient.ReadIdentitiesAsync(IdentitySearchFilter.DisplayName, reviewer).ConfigureAwait(false)).FirstOrDefault();
+                if (matchingIdentity == null)
+                {
+                    // if no match, look for a matching email address
+                    matchingIdentity = (await identityClient.ReadIdentitiesAsync(IdentitySearchFilter.MailAddress, reviewer).ConfigureAwait(false)).FirstOrDefault();
+                }
+
+                // if we found a match, add it to the list of identities. Otherwise, just skip it
+                if (matchingIdentity != null)
+                {
+                    var identityRefWithVote = new IdentityRefWithVote()
+                    {
+                        Id = matchingIdentity.Id.ToString()
+                    };
+
+                    identities.Add(identityRefWithVote);
+                }
+            }
 
             GitPullRequest createdPr = await client.CreatePullRequestAsync(
                 new GitPullRequest
@@ -297,7 +322,7 @@ namespace Microsoft.DotNet.DarcLib
                     Description = pullRequest.Description,
                     SourceRefName = "refs/heads/" + pullRequest.HeadBranch,
                     TargetRefName = "refs/heads/" + pullRequest.BaseBranch,
-                    Reviewers = reviewers.ToArray()
+                    Reviewers = identities.ToArray()
                 },
                 projectName,
                 repoName);
