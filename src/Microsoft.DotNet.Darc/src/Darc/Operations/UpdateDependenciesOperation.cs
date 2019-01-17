@@ -57,6 +57,14 @@ namespace Microsoft.DotNet.Darc.Operations
                 // find all repository uris, optionally restricted by the input dependency parameter.
                 IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync(_options.Name);
 
+                // If the source repository was specified, filter away any local dependencies not from that
+                // source repository.
+                if (!string.IsNullOrEmpty(_options.SourceRepository))
+                {
+                    dependencies = dependencies.Where(
+                        dependency => dependency.RepoUri.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase));
+                }
+
                 if (!dependencies.Any())
                 {
                     Console.WriteLine("Found no dependencies to update.");
@@ -89,6 +97,13 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
                 else
                 {
+                    if (string.IsNullOrEmpty(_options.Channel))
+                    {
+                        Console.WriteLine($"Please suppy either a channel name (--channel), a packages folder (--packages-folder) " +
+                            $"or a specific dependency name and version (--name and --version).");
+                        return Constants.ErrorCode;
+                    }
+
                     // Start channel query.
                     var channel = remote.GetChannelAsync(_options.Channel);
 
