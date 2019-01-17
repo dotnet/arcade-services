@@ -140,5 +140,6 @@ namespace Microsoft.DotNet.DarcLib
         public string Description { get; set; }
         public string BaseBranch { get; set; }
         public string HeadBranch { get; set; }
+        public IEnumerable<string> Reviewers { get; set; }
     }
 }

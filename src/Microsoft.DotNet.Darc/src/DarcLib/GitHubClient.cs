@@ -270,12 +270,15 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
             Octokit.PullRequest pr = await Client.PullRequest.Get(owner, repo, id);
+            var reviewers = pr.RequestedReviewers.Select(x => x.Name).ToList();
+
             return new PullRequest
             {
                 Title = pr.Title,
                 Description = pr.Body,
                 BaseBranch = pr.Base.Ref,
-                HeadBranch = pr.Head.Ref
+                HeadBranch = pr.Head.Ref,
+                Reviewers = reviewers
             };
         }
 
@@ -295,6 +298,10 @@ namespace Microsoft.DotNet.DarcLib
             };
             Octokit.PullRequest createdPullRequest = await Client.PullRequest.Create(owner, repo, pr);
 
+            // add reviewers to the created PR
+            PullRequestReviewRequest reviewers = new PullRequestReviewRequest(pullRequest.Reviewers.ToList());
+            await Client.PullRequest.ReviewRequest.Create(owner, repo, createdPullRequest.Number, reviewers);
+
             return createdPullRequest.Url;
         }
 
@@ -308,7 +315,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUri);
 
-            await Client.PullRequest.Update(
+            var pr = await Client.PullRequest.Update(
                 owner,
                 repo,
                 id,
@@ -317,6 +324,10 @@ namespace Microsoft.DotNet.DarcLib
                     Title = pullRequest.Title,
                     Body = pullRequest.Description
                 });
+
+            // add reviewers to the existing PR
+            PullRequestReviewRequest users = new PullRequestReviewRequest(pullRequest.Reviewers.ToList());
+            await Client.PullRequest.ReviewRequest.Create(owner, repo, pr.Number, users);
         }
 
         /// <summary>

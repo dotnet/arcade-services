@@ -286,13 +286,18 @@ namespace Microsoft.DotNet.DarcLib
             VssConnection connection = CreateVssConnection(accountName);
             GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
+            // get the reviewer's identities
+            var reviewers = new List<IdentityRefWithVote>();
+            //var identityClient = await connection.GetClientAsync<
+
             GitPullRequest createdPr = await client.CreatePullRequestAsync(
                 new GitPullRequest
                 {
                     Title = pullRequest.Title,
                     Description = pullRequest.Description,
                     SourceRefName = "refs/heads/" + pullRequest.HeadBranch,
-                    TargetRefName = "refs/heads/" + pullRequest.BaseBranch
+                    TargetRefName = "refs/heads/" + pullRequest.BaseBranch,
+                    Reviewers = reviewers.ToArray()
                 },
                 projectName,
                 repoName);
