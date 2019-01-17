@@ -20,6 +20,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option('v', "version", HelpText = "The new version of dependency --name.")]
         public string Version { get; set; }
 
+        [Option("source-repo", HelpText = "Only update dependencies whose source uri contains this string.")]
+        public string SourceRepository { get; set; }
+
         [Option("packages-folder", HelpText = "An optional path to a folder which contains the NuGet " +
             "packages whose versions will be used to update existing dependencies.")]
         public string PackagesFolder { get; set; }
