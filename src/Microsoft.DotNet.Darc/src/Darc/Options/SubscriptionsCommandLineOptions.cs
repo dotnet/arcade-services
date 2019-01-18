@@ -27,12 +27,20 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("regex", SetName = "regex", HelpText = "Match subscription parameters using regex (cannot be used with --exact).")]
         public bool RegexMatch { get; set; }
 
+        /// <summary>
+        ///     Compare input command line options against subscription parameters
+        /// </summary>
+        /// <param name="inputParameter">Input command line option</param>
+        /// <param name="subscriptionProperty">Subscription options.</param>
+        /// <returns>True if it's a match, false otherwise.</returns>
         public bool SubscriptionParameterMatches(string inputParameter, string subscriptionProperty)
         {
+            // If the parameter isn't set, it's a match
             if (string.IsNullOrEmpty(inputParameter))
             {
                 return true;
             }
+            // Compare properties ignoring case because branch, repo, etc. names cannot differ only by case.
             else if (ExactMatch && inputParameter.Equals(subscriptionProperty, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
