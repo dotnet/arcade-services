@@ -66,14 +66,10 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     IEnumerable<Subscription> subscriptions = (await remote.GetSubscriptionsAsync()).Where(subscription =>
                     {
-                        return (string.IsNullOrEmpty(_options.TargetRepository) ||
-                            subscription.TargetRepository.Contains(_options.TargetRepository, StringComparison.OrdinalIgnoreCase)) &&
-                        (string.IsNullOrEmpty(_options.TargetBranch) ||
-                            subscription.TargetBranch.Contains(_options.TargetBranch, StringComparison.OrdinalIgnoreCase)) &&
-                        (string.IsNullOrEmpty(_options.SourceRepository) ||
-                            subscription.SourceRepository.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase)) &&
-                        (string.IsNullOrEmpty(_options.Channel) ||
-                            subscription.Channel.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
+                        return (_options.SubscriptionParameterMatches(_options.TargetRepository, subscription.TargetRepository) &&
+                                _options.SubscriptionParameterMatches(_options.TargetBranch, subscription.TargetBranch) &&
+                                _options.SubscriptionParameterMatches(_options.SourceRepository, subscription.SourceRepository) &&
+                                _options.SubscriptionParameterMatches(_options.Channel, subscription.Channel.Name));
                     });
 
                     if (subscriptions.Count() == 0)

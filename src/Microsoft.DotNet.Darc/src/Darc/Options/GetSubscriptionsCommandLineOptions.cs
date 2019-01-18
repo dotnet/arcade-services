@@ -8,20 +8,8 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options
 {
     [Verb("get-subscriptions", HelpText = "Get information about subscriptions.")]
-    class GetSubscriptionsCommandLineOptions : CommandLineOptions
+    class GetSubscriptionsCommandLineOptions : SubscriptionsCommandLineOptions
     {
-        [Option("target-repo", HelpText = "Filter by target repo (matches substring).")]
-        public string TargetRepository { get; set; }
-
-        [Option("source-repo", HelpText = "Filter by source repo (matches substring).")]
-        public string SourceRepository { get; set; }
-
-        [Option("channel", HelpText = "Filter by source channel (matches substring).")]
-        public string Channel { get; set; }
-
-        [Option("target-branch", HelpText = "Filter by target branch (matches substring).")]
-        public string TargetBranch { get; set; }
-
         public override Operation GetOperation()
         {
             return new GetSubscriptionsOperation(this);
