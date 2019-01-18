@@ -33,11 +33,11 @@ namespace Microsoft.DotNet.Darc.Options
             {
                 return true;
             }
-            else if (ExactMatch && inputParameter == subscriptionProperty)
+            else if (ExactMatch && inputParameter.Equals(subscriptionProperty, StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
-            else if (RegexMatch && Regex.IsMatch(subscriptionProperty, inputParameter))
+            else if (RegexMatch && Regex.IsMatch(subscriptionProperty, inputParameter, RegexOptions.IgnoreCase))
             {
                 return true;
             }
