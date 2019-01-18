@@ -22,7 +22,8 @@ namespace Maestro.Data.Models
 
                 context.BuildChannels.AddRange(
                     from dc in context.DefaultChannels
-                    where dc.Repository == build.GitHubBuildInfo.Repository && dc.Branch == build.GitHubBuildInfo.Branch
+                    where (dc.Repository == build.GitHubRepository || dc.Repository == build.AzureDevOpsRepository)
+                    where (dc.Branch == build.GitHubBranch || dc.Branch == build.AzureDevOpsBranch)
                     select new BuildChannel
                     {
                         Channel = dc.Channel,
@@ -34,10 +35,26 @@ namespace Maestro.Data.Models
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
+        
+        public string Commit { get; set; }
 
-        public AzureDevOpsBuildInfo AzureDevOpsBuildInfo { get; set; }
+        public int AzureDevOpsBuildId { get; set; }
 
-        public GitHubBuildInfo GitHubBuildInfo { get; set; }
+        public int AzureDevOpsBuildDefinitionId { get; set; }
+
+        public string AzureDevOpsAccount { get; set; }
+
+        public string AzureDevOpsProject { get; set; }
+
+        public string AzureDevOpsBuildNumber { get; set; }
+
+        public string AzureDevOpsRepository { get; set; }
+
+        public string AzureDevOpsBranch { get; set; }
+      
+        public string GitHubRepository { get; set; }
+
+        public string GitHubBranch { get; set; }
 
         public DateTimeOffset DateProduced { get; set; }
 

@@ -279,7 +279,7 @@ namespace SubscriptionActorService.Tests
                     {
                         SubscriptionId = Subscription.Id,
                         BuildId = forBuild.Id,
-                        SourceSha = forBuild.GitHubBuildInfo.Commit,
+                        SourceSha = forBuild.Commit,
                         Assets = forBuild.Assets.Select(
                                 a => new Asset
                                 {
@@ -345,7 +345,7 @@ namespace SubscriptionActorService.Tests
                     {
                         SubscriptionId = Subscription.Id,
                         BuildId = forBuild.Id,
-                        SourceSha = forBuild.GitHubBuildInfo.Commit,
+                        SourceSha = forBuild.Commit,
                         Assets = forBuild.Assets.Select(
                                 a => new Asset
                                 {

@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -28,19 +29,18 @@ namespace Maestro.Web.Api.v2018_07_16.Models
 
         public Data.Models.Build ToDb()
         {
+            var isGitHubInfo = Repository.IndexOf("github", StringComparison.OrdinalIgnoreCase) >= 0;
+
             return new Data.Models.Build
             {
-                GitHubBuildInfo = new GitHubBuildInfo()
-                {
-                    Repository = Repository,
-                    Branch = Branch,
-                    Commit = Commit
-                },
-                AzureDevOpsBuildInfo = new AzureDevOpsBuildInfo()
-                {
-                    BuildNumber = BuildNumber,
-                },
-                Assets = Assets.Select(a => a.ToDb()).ToList()
+                Commit = Commit,
+                Assets = Assets.Select(a => a.ToDb()).ToList(),
+
+                GitHubRepository = isGitHubInfo ? Repository : null,
+                GitHubBranch = isGitHubInfo ? Branch : null,
+
+                AzureDevOpsRepository = isGitHubInfo ? null : Repository,
+                AzureDevOpsBranch = isGitHubInfo ? null : Branch,
             };
         }
     }

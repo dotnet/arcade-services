@@ -18,11 +18,17 @@ namespace Maestro.Web.Api.v2018_07_16.Models
                 throw new ArgumentNullException(nameof(other));
             }
 
+            var hasGitHubInfo = other.GitHubRepository != null;
+
             Id = other.Id;
-            Repository = other.GitHubBuildInfo.Repository;
-            Branch = other.GitHubBuildInfo.Branch;
-            Commit = other.GitHubBuildInfo.Commit;
-            BuildNumber = other.AzureDevOpsBuildInfo.BuildNumber;
+            Repository = (hasGitHubInfo) 
+                ? other.GitHubRepository 
+                : other.AzureDevOpsRepository;
+            Branch = (hasGitHubInfo) 
+                ? other.GitHubBranch 
+                : other.AzureDevOpsBranch;
+            Commit = other.Commit;
+            BuildNumber = other.AzureDevOpsBuildNumber;
             DateProduced = other.DateProduced;
             Channels = other.BuildChannels?.Select(bc => bc.Channel)
                 .Where(c => c != null)

@@ -222,7 +222,7 @@ namespace SubscriptionActorService
         private async Task<string> GetBuildNumberAsync(int buildId)
         {
             Build build = await Context.Builds.FindAsync(buildId);
-            return build?.AzureDevOpsBuildInfo.BuildNumber;
+            return build.AzureDevOpsBuildNumber;
         }
 
         public Task RunProcessPendingUpdatesAsync()
