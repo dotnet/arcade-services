@@ -5,22 +5,23 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using Maestro.Web.Api.v2018_07_16.Models;
+using Maestro.Web.Api.v2019_01_16.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 
 namespace Maestro.Web.Api.v2019_01_16.Models
 {
-    public class BuildData : Maestro.Web.Api.v2018_07_16.Models.BuildData
+    public class BuildData
     {
-        public new string Repository { get; set; }
-
-        public new string Branch { get; set; }
-
         [Required]
-        public int AzureDevOpsBuildId { get; set; }
+        public string Commit { get; set; }
 
-        [Required]
-        public int AzureDevOpsBuildDefinitionId { get; set; }
+        public List<v2018_07_16.Models.AssetData> Assets { get; set; }
+
+        public List<int> Dependencies { get; set; }
+
+        public int? AzureDevOpsBuildId { get; set; }
+
+        public int? AzureDevOpsBuildDefinitionId { get; set; }
 
         [Required]
         public string AzureDevOpsAccount { get; set; }
@@ -41,7 +42,7 @@ namespace Maestro.Web.Api.v2019_01_16.Models
 
         public string GitHubBranch { get; set; }
 
-        public new Data.Models.Build ToDb()
+        public Data.Models.Build ToDb()
         {
             return new Data.Models.Build
             {

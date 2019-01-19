@@ -18,13 +18,60 @@ using Build = Maestro.Data.Models.Build;
 
 namespace Maestro.Web.Api.v2019_01_16.Controllers
 {
+    public class BuildsController_ApiRemoved : Maestro.Web.Api.v2018_07_16.Controllers.BuildsController
+    {
+        public BuildsController_ApiRemoved(BuildAssetRegistryContext context)
+            : base(context)
+        {
+        }
+
+        [ApiRemoved]
+        public override sealed IActionResult GetAllBuilds(
+            string repository,
+            string commit,
+            string buildNumber,
+            int? channelId,
+            DateTimeOffset? notBefore,
+            DateTimeOffset? notAfter,
+            bool? loadCollections)
+        {
+            throw new NotSupportedException();
+        }
+
+        [ApiRemoved]
+        public override sealed Task<IActionResult> GetBuild(int id)
+        {
+            throw new NotSupportedException();
+        }
+
+        [ApiRemoved]
+        public override sealed Task<IActionResult> GetLatest(
+            string repository,
+            string commit,
+            string buildNumber,
+            int? channelId,
+            DateTimeOffset? notBefore,
+            DateTimeOffset? notAfter,
+            bool? loadCollections)
+        {
+            throw new NotSupportedException();
+        }
+
+        [ApiRemoved]
+        public override sealed Task<IActionResult> Create([FromBody] v2018_07_16.Models.BuildData build)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
     [Route("builds")]
     [ApiVersion("2019-01-16")]
-    public class BuildsController : Maestro.Web.Api.v2018_07_16.Controllers.BuildsController
+    public class BuildsController : BuildsController_ApiRemoved
     {
         private readonly BuildAssetRegistryContext _context;
 
-        public BuildsController(BuildAssetRegistryContext context) : base(context)
+        public BuildsController(BuildAssetRegistryContext context)
+            : base(context)
         {
             _context = context;
         }
@@ -33,7 +80,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(List<Models.Build>))]
         [Paginated(typeof(Models.Build))]
         [ValidateModelState]
-        public override IActionResult GetAllBuilds(
+        public new IActionResult GetAllBuilds(
             string repository,
             string commit,
             string buildNumber,
@@ -56,7 +103,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         [HttpGet("{id}")]
         [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(Models.Build))]
         [ValidateModelState]
-        public override async Task<IActionResult> GetBuild(int id)
+        public new async Task<IActionResult> GetBuild(int id)
         {
             Build build = await _context.Builds.Where(b => b.Id == id)
                 .Include(b => b.BuildChannels)
@@ -76,7 +123,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         [HttpGet("latest")]
         [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(Models.Build))]
         [ValidateModelState]
-        public override async Task<IActionResult> GetLatest(
+        public new async Task<IActionResult> GetLatest(
             string repository,
             string commit,
             string buildNumber,
@@ -121,16 +168,6 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                     id = buildModel.Id
                 },
                 new Models.Build(buildModel));
-        }
-
-        /// We need the `ApiRemoved` annotation here because we can't override the 
-        /// method below since it receive a BuildData parameter from the previous
-        /// version of the API and the Create method on this API need to receive
-        /// a BuildData from the current version.
-        [ApiRemoved]
-        public override async Task<IActionResult> Create([FromBody] v2018_07_16.Models.BuildData build)
-        {
-            return await base.Create(build);
         }
     }
 }

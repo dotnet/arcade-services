@@ -38,9 +38,9 @@ namespace Maestro.Data.Models
         
         public string Commit { get; set; }
 
-        public int AzureDevOpsBuildId { get; set; }
+        public int? AzureDevOpsBuildId { get; set; }
 
-        public int AzureDevOpsBuildDefinitionId { get; set; }
+        public int? AzureDevOpsBuildDefinitionId { get; set; }
 
         public string AzureDevOpsAccount { get; set; }
 

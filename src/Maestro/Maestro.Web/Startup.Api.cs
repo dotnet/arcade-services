@@ -41,8 +41,6 @@ namespace Maestro.Web
             services.AddSwaggerGen(
                 options =>
                 {
-                    options.CustomSchemaIds(x => x.FullName);
-
                     options.FilterOperations(
                         (op, ctx) =>
                         {

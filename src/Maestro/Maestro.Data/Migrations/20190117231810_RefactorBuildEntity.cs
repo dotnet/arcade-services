@@ -36,12 +36,12 @@ namespace Maestro.Data.Migrations
                 table: "Builds",
                 nullable: true);
 
-            migrationBuilder.AddColumn<int>(
+            migrationBuilder.AddColumn<int?>(
                 name: "AzureDevOpsBuildDefinitionId",
                 table: "Builds",
                 nullable: true);
 
-            migrationBuilder.AddColumn<int>(
+            migrationBuilder.AddColumn<int?>(
                 name: "AzureDevOpsBuildId",
                 table: "Builds",
                 nullable: true);

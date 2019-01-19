@@ -34,6 +34,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
             return new Data.Models.Build
             {
                 Commit = Commit,
+                AzureDevOpsBuildNumber = BuildNumber,
                 Assets = Assets.Select(a => a.ToDb()).ToList(),
 
                 GitHubRepository = isGitHubInfo ? Repository : null,
