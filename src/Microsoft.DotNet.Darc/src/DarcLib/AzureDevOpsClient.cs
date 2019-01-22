@@ -32,6 +32,9 @@ namespace Microsoft.DotNet.DarcLib
         private static readonly Regex RepositoryUriPattern = new Regex(
             @"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\.]+)");
 
+        private static readonly Regex LegacyRepositoryUriPattern = new Regex(
+            @"^https://(?<account>[a-zA-Z0-9]+)\.visualstudio\.com/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\.]+)");
+
         private static readonly Regex PullRequestApiUriPattern = new Regex(
             @"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_apis/git/repositories/(?<repo>[a-zA-Z0-9-\.]+)/pullRequests/(?<id>\d+)");
 
@@ -672,17 +675,29 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        /// Parse a repository url into its component parts
+        /// Parse a repository url into its component parts.
         /// </summary>
         /// <param name="repoUri">Repository url to parse</param>
         /// <returns>Tuple of account, project, repo</returns>
+        /// <remarks>
+        ///     While we really only want to support dev.azure.com, in some cases
+        ///     builds are still being reported from foo.visualstudio.com. This is apparently because
+        ///     the url the agent connects to is what determines this property. So for now, support both forms.
+        ///     We don't need to support this for PR urls because the repository target urls in the Maestro
+        ///     database are restricted to dev.azure.com forms.
+        /// </remarks>
         public static (string accountName, string projectName, string repoName) ParseRepoUri(string repoUri)
         {
             Match m = RepositoryUriPattern.Match(repoUri);
             if (!m.Success)
             {
-                throw new ArgumentException(
-                    @"Repository URI should be in the form  https://dev.azure.com/:account/:project/_git/:repo");
+                m = LegacyRepositoryUriPattern.Match(repoUri);
+                if (!m.Success)
+                {
+                    throw new ArgumentException(
+                        "Repository URI should be in the form https://dev.azure.com/:account/:project/_git/:repo or " +
+                        "https://:account.visualstudio.com/:project/_git/:repo");
+                }
             }
 
             return (m.Groups["account"].Value,
