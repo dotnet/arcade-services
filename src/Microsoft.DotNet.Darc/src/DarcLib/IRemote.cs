@@ -52,6 +52,13 @@ namespace Microsoft.DotNet.DarcLib
         Task<Subscription> GetSubscriptionAsync(string subscriptionId);
 
         /// <summary>
+        /// Trigger a subscription by ID
+        /// </summary>
+        /// <param name="subscriptionId">ID of subscription to trigger</param>
+        /// <returns>Subscription just triggered.</returns>
+        Task<Subscription> TriggerSubscriptionAsync(string subscriptionId);
+
+        /// <summary>
         /// Retrieve subscription history.
         /// </summary>
         /// <param name="subscriptionId">ID of subscription</param>
