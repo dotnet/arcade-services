@@ -25,6 +25,8 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </param>
         /// <param name='channelId'>
         /// </param>
+        /// <param name='enabled'>
+        /// </param>
         /// <param name='customHeaders'>
         /// The headers that will be added to request.
         /// </param>
@@ -40,7 +42,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <exception cref="Microsoft.Rest.ValidationException">
         /// Thrown when a required parameter is null
         /// </exception>
-        Task<HttpOperationResponse<IList<Subscription>>> GetAllSubscriptionsWithHttpMessagesAsync(string sourceRepository = default(string), string targetRepository = default(string), int? channelId = default(int?), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken));
+        Task<HttpOperationResponse<IList<Subscription>>> GetAllSubscriptionsWithHttpMessagesAsync(string sourceRepository = default(string), string targetRepository = default(string), int? channelId = default(int?), bool? enabled = default(bool?), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken));
         /// <param name='subscription'>
         /// </param>
         /// <param name='customHeaders'>
@@ -115,6 +117,28 @@ namespace Microsoft.DotNet.Maestro.Client
         /// Thrown when a required parameter is null
         /// </exception>
         Task<HttpOperationResponse<Subscription>> UpdateSubscriptionWithHttpMessagesAsync(System.Guid id, SubscriptionUpdate update = default(SubscriptionUpdate), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken));
+        /// <summary>
+        /// Trigger a subscription manually by ID
+        /// </summary>
+        /// <param name='id'>
+        /// ID of subscription
+        /// </param>
+        /// <param name='customHeaders'>
+        /// The headers that will be added to request.
+        /// </param>
+        /// <param name='cancellationToken'>
+        /// The cancellation token.
+        /// </param>
+        /// <exception cref="ApiErrorException">
+        /// Thrown when the operation returned an invalid status code
+        /// </exception>
+        /// <exception cref="Microsoft.Rest.SerializationException">
+        /// Thrown when unable to deserialize the response
+        /// </exception>
+        /// <exception cref="Microsoft.Rest.ValidationException">
+        /// Thrown when a required parameter is null
+        /// </exception>
+        Task<HttpOperationResponse<Subscription>> TriggerSubscriptionWithHttpMessagesAsync(System.Guid id, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken));
         /// <param name='id'>
         /// </param>
         /// <param name='page'>

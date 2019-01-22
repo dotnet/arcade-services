@@ -1,3 +1,8 @@
+variables:
+  # Cannot use key:value syntax in root defined variables
+  - name: _TeamName
+    value: DotNetCore
+
 # CI and PR triggers
 trigger:
 - master
@@ -7,119 +12,151 @@ pr:
 
 # Three phases for each of the three OSes we want to run on
 jobs:
-- template: /eng/common/templates/job/job.yml
+- template: /eng/common/templates/jobs/jobs.yml
   parameters:
-    name: Windows_NT
     enableMicrobuild: true
     enablePublishBuildArtifacts: true
     enablePublishTestResults: true
-    enablePublishBuildAssets: false
+    enablePublishBuildAssets: true
     enableTelemetry: true
     helixRepo: dotnet/arcade-services
-    pool:
-      ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
-        name: NetCorePublic-Int-Pool
-        queue: Windows.10.Amd64.Open
-      ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-        name: dotnet-internal-temp
-    strategy:
-      matrix:
-        debug_configuration:
-          _BuildConfig: Debug
-        release_configuration:
-          _BuildConfig: Release
-    steps:
-    - checkout: self
-      clean: true
+    jobs:
+    - job: Windows_NT
+      timeoutInMinutes: 90
+      pool:
+        ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
+          name: NetCorePublic-Int-Pool
+          queue: Windows.10.Amd64.Open
+        ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+          name: dotnet-internal-temp
 
-    - task: NuGetToolInstaller@0
-      inputs:
-        versionSpec: 4.4.1
+      variables:
+      - _InternalBuildArgs: ''
+      - _ProductionArgs: ''
 
-    - task: NuGetCommand@2
-      displayName: Restore Packages
-      inputs:
-        command: restore
-        solution: "**/*.sln"
+      # Only enable publishing in non-public, non PR scenarios.
+      - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+        # DotNet-Blob-Feed provides: dotnetfeed-storage-access-key-1
+        # DotNet-Symbol-Server-Pats provides: microsoft-symbol-server-pat, symweb-symbol-server-pat
+        # Publish-Build-Assets provides: MaestroAccessToken, BotAccount-dotnet-maestro-bot-PAT
+        - group: DotNet-Blob-Feed
+        - group: DotNet-Symbol-Server-Pats
+        - group: Publish-Build-Assets
+        - _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
+        - _InternalBuildArgs: /p:DotNetSignType=$(_SignType) /p:TeamName=$(_TeamName)
+            /p:DotNetPublishBlobFeedKey=$(dotnetfeed-storage-access-key-1)
+            /p:DotNetPublishBlobFeedUrl=$(_PublishBlobFeedUrl)
+            /p:DotNetPublishToBlobFeed=$(_DotNetPublishToBlobFeed)
+            /p:DotNetSymbolServerTokenMsdl=$(microsoft-symbol-server-pat)
+            /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
+            /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
+      # In production, create stable package versions
+      # TODO: We depend on a prerelease version of Microsoft.TeamFoundationServer.Client
+      # https://github.com/dotnet/arcade-services/issues/59
+      # and so we can't stabilize for right now.
+      # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
+          # - _ProductionArgs: /p:DotNetFinalVersionKind=release
+            
+      strategy:
+        matrix:
+          debug_configuration:
+            _BuildConfig: Debug
+            _PublishType: none
+            _SignType: test
+            _DotNetPublishToBlobFeed : false
+          release_configuration:
+            _BuildConfig: Release
+            # PRs or external builds are not signed.
+            ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
+              _PublishType: none
+              _SignType: test
+              _DotNetPublishToBlobFeed : false
+            ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+              _PublishType: blob
+              _SignType: real
+              _DotNetPublishToBlobFeed : true
+      steps:
+      - checkout: self
+        clean: true
 
-    - powershell: eng\set-version-parameters.ps1
-      displayName: Calculate release version variables
-
-    - script: eng\common\cibuild.cmd
-        -configuration $(_BuildConfig)
-        -prepareMachine
-      name: Build
-      displayName: Build
-      condition: succeeded()
-
-    - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-    
-      ## Prepare service fabric artifact
-      - task: ServiceFabricUpdateManifests@2
+      - task: NuGetToolInstaller@0
         inputs:
-          applicationPackagePath: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage
+          versionSpec: 4.4.1
 
-      - powershell: |
-          robocopy src/Maestro/MaestroApplication/PublishProfiles $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\PublishProfiles /S *.xml
-          robocopy src/Maestro/MaestroApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationParameters /S *.xml
-          exit 0
-        displayName: Copy Maestro Project Artifacts
-
-      - task: PublishBuildArtifacts@1
-        displayName: Publish Service Fabric Artifact
+      - task: NuGetCommand@2
+        displayName: Restore Packages
         inputs:
-          PathtoPublish: $(Build.ArtifactStagingDirectory)\ServiceFabric\
-          ArtifactName: ServiceFabric
-          ArtifactType: Container
+          command: restore
+          solution: "**/*.sln"
+
+      - powershell: eng\set-version-parameters.ps1
+        displayName: Calculate release version variables
+
+      - script: eng\common\cibuild.cmd
+          -configuration $(_BuildConfig)
+          -prepareMachine
+          $(_InternalBuildArgs)
+          $(_ProductionArgs)
+        name: Build
+        displayName: Build / Publish
+        condition: succeeded()
+
+      - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
       
-      ## Prepare database update artifact
-      - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp2.1
-        workingDirectory: src/Maestro/Maestro.Data
-        displayName: Create Data Package
-        
-      - task: CopyFiles@2
-        displayName: Copy update-database.ps1
-        inputs:
-          sourceFolder: $(Build.SourcesDirectory)\src\Maestro
-          contents: update-database.ps1 
-          targetFolder: $(Build.ArtifactStagingDirectory)\Maestro.Data\
-        
-      - task: PublishBuildArtifacts@1
-        displayName: Publish Maestro.Data Artifact
-        inputs:
-          PathtoPublish: $(Build.ArtifactStagingDirectory)\Maestro.Data
-          ArtifactName: Maestro.Data
-          ArtifactType: Container
-      
-      ## Prepare nuget package publish artifact
-      - task: CopyFiles@2
-        displayName: Prepare NuGet publish steps (Part 1, build files)
-        inputs:
-          sourceFolder: $(Build.SourcesDirectory)\eng
-          contents: '*'
-          targetFolder: $(Build.ArtifactStagingDirectory)\nupkgs
+        ## Prepare service fabric artifact
+        - task: ServiceFabricUpdateManifests@2
+          inputs:
+            applicationPackagePath: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\applicationpackage
 
-      - task: CopyFiles@2
-        displayName: Prepare NuGet publish steps (Part 2, package sources)
-        inputs:
-          sourceFolder: $(Build.SourcesDirectory)\
-          contents: Nuget.config
-          targetFolder: $(Build.ArtifactStagingDirectory)\nupkgs
-          
-      - task: CopyFiles@2
-        displayName: Prepare NuGet publish steps (Part 3, packages)
-        inputs:
-          sourceFolder: $(Build.SourcesDirectory)\artifacts\packages\$(_BuildConfig)\Shipping
-          contents: '**'
-          targetFolder: $(Build.ArtifactStagingDirectory)\nupkgs
-          
-      - task: PublishBuildArtifacts@1
-        displayName: Publish NuPkgs Artifact
-        inputs:
-          PathtoPublish: $(Build.ArtifactStagingDirectory)\nupkgs
-          ArtifactName: NuPkgs
-          ArtifactType: Container
+        - powershell: |
+            robocopy src/Maestro/MaestroApplication/PublishProfiles $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\PublishProfiles /S *.xml
+            robocopy src/Maestro/MaestroApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationParameters /S *.xml
+            exit 0
+          displayName: Copy Maestro Project Artifacts
 
-      - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
-        - powershell: eng\create-tag.ps1 -AccessToken $(System.AccessToken)
+        - task: PublishBuildArtifacts@1
+          displayName: Publish Service Fabric Artifact
+          inputs:
+            PathtoPublish: $(Build.ArtifactStagingDirectory)\ServiceFabric\
+            ArtifactName: ServiceFabric
+            ArtifactType: Container
+        
+        ## Prepare database update artifact
+        - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp2.1
+          workingDirectory: src/Maestro/Maestro.Data
+          displayName: Create Data Package
+          
+        - task: CopyFiles@2
+          displayName: Copy update-database.ps1
+          inputs:
+            sourceFolder: $(Build.SourcesDirectory)\src\Maestro
+            contents: update-database.ps1 
+            targetFolder: $(Build.ArtifactStagingDirectory)\Maestro.Data\
+          
+        - task: PublishBuildArtifacts@1
+          displayName: Publish Maestro.Data Artifact
+          inputs:
+            PathtoPublish: $(Build.ArtifactStagingDirectory)\Maestro.Data
+            ArtifactName: Maestro.Data
+            ArtifactType: Container
+        
+        ## Prepare release utilities artifact
+        - task: CopyFiles@2
+          displayName: Prepare Release Utilities
+          inputs:
+            sourceFolder: $(Build.SourcesDirectory)\eng
+            contents: '*'
+            targetFolder: $(Build.ArtifactStagingDirectory)\eng
+            
+        - task: PublishBuildArtifacts@1
+          displayName: Publish Release Utilities Artifact
+          inputs:
+            PathtoPublish: $(Build.ArtifactStagingDirectory)\eng
+            ArtifactName: ReleaseUtilities
+            ArtifactType: Container
+
+        # Reenable tagging when stable package versions can be generated.
+        # https://github.com/dotnet/arcade-services/issues/59
+        # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
+          # - powershell: eng\create-tag.ps1 -AccessToken $(System.AccessToken)
 

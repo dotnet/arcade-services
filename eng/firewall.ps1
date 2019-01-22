@@ -72,6 +72,9 @@ if ($Remove) {
     Write-Host "Searching for server '$server'..."
     $resource = Get-AzureRmSqlServer | where FullyQualifiedDomainName -eq $server
     Write-Host "Found server '$($resource.ServerName)' in resource group '$($resource.ResourceGroupName)'."
+    if (-not $resource) {
+        throw "Could not find resource group for server '$server'"
+    }
     $existing = Get-AzureRmSqlServerFirewallRule -ServerName $resource.ServerName -ResourceGroupName $resource.ResourceGroupName | where FirewallRuleName -eq $RuleName
     if (-not $existing) {
         Write-Host "No rule detected. No action taken."

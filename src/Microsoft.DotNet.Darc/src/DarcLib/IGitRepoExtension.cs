@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,28 +15,17 @@ namespace Microsoft.DotNet.DarcLib
 {
     public static class IGitRepoExtension
     {
-        public static async Task<HttpResponseMessage> ExecuteGitCommand(
-            this IGitRepo gitRepo,
-            HttpMethod method,
-            string requestUri,
-            ILogger logger,
-            string body = null,
-            string versionOverride = null)
-        {
-            using (HttpClient client = gitRepo.CreateHttpClient(versionOverride))
-            {
-                var requestManager = new HttpRequestManager(client, method, requestUri, logger, body, versionOverride);
-
-                return await requestManager.ExecuteAsync();
-            }
-        }
-
         public static string GetDecodedContent(this IGitRepo gitRepo, string encodedContent)
         {
             try
             {
                 byte[] content = Convert.FromBase64String(encodedContent);
-                return Encoding.UTF8.GetString(content);
+                // We can't use Encoding.UTF8.GetString here because that returns a string containing a BOM if one exists in the bytes.
+                using (var str = new MemoryStream(content, false))
+                using (var reader = new StreamReader(str))
+                {
+                    return reader.ReadToEnd();
+                }
             }
             catch (FormatException)
             {

@@ -19,10 +19,22 @@ namespace Microsoft.DotNet.DarcLib
         public const string VersionPropsAlternateVersionElementSuffix = "Version";
         public const string VersionPropsPackageElementSuffix = "Package";
 
+        private static string GetVersionPropsElementBaseName(string dependencyName)
+        {
+            // Remove characters which appear in package names that we don't want in msbuild property names
+            return dependencyName.Replace(".", string.Empty).Replace("-", string.Empty);
+        }
+
+        /// <summary>
+        ///     Determine the Versions.props version element name for a specific dependency.
+        /// </summary>
+        /// <param name="dependencyName">Dependency</param>
+        /// <returns>Element name</returns>
         public static string GetVersionPropsPackageVersionElementName(string dependencyName)
         {
-            return $"{dependencyName.Replace(".", string.Empty)}{VersionPropsVersionElementSuffix}";
+            return $"{GetVersionPropsElementBaseName(dependencyName)}{VersionPropsVersionElementSuffix}";
         }
+
         /// <summary>
         /// Special temporary alternative package version element names.  This is used where the
         /// version props file already has "Version" instead of PackageVersion. Eventually this will
@@ -32,12 +44,17 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public static string GetVersionPropsAlternatePackageVersionElementName(string dependencyName)
         {
-            return $"{dependencyName.Replace(".", string.Empty)}{VersionPropsAlternateVersionElementSuffix}";
+            return $"{GetVersionPropsElementBaseName(dependencyName)}{VersionPropsAlternateVersionElementSuffix}";
         }
 
+        /// <summary>
+        ///     Determine the Versions.props package element name for a specific dependency.
+        /// </summary>
+        /// <param name="dependencyName">Dependency</param>
+        /// <returns>Element name</returns>
         public static string GetVersionPropsPackageElementName(string dependencyName)
         {
-            return $"{dependencyName.Replace(".", string.Empty)}{VersionPropsPackageElementSuffix}";
+            return $"{GetVersionPropsElementBaseName(dependencyName)}{VersionPropsPackageElementSuffix}";
         }
 
         public static string CalculateGlobalJsonElementName(string dependencyName)

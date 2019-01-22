@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Reflection;
+using Maestro.AzureDevOps;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.GitHub;
@@ -12,6 +12,8 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
+using System.Linq;
 
 namespace SubscriptionActorService
 {
@@ -40,6 +42,7 @@ namespace SubscriptionActorService
                             services.AddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
                             services.AddSingleton<IDarcRemoteFactory, DarcRemoteFactory>();
                             services.AddGitHubTokenProvider();
+                            services.AddAzureDevOpsTokenProvider();
                             services.AddSingleton(
                                 provider => ServiceHostConfiguration.Get(
                                     provider.GetRequiredService<IHostingEnvironment>()));
@@ -59,6 +62,16 @@ namespace SubscriptionActorService
                                     options.ApplicationVersion = Assembly.GetEntryAssembly()
                                         .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                                         ?.InformationalVersion;
+                                });
+                            services.Configure<AzureDevOpsTokenProviderOptions>(
+                                (options, provider) =>
+                                {
+                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
+                                    foreach (IConfigurationSection token in tokenMap)
+                                    {
+                                        options.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
+                                    }
                                 });
 
                             services.AddMergePolicies();

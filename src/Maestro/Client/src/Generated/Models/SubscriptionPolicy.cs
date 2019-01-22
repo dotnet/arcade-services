@@ -28,8 +28,9 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// </summary>
         /// <param name="updateFrequency">Possible values include: 'none',
         /// 'everyDay', 'everyBuild'</param>
-        public SubscriptionPolicy(string updateFrequency, IList<MergePolicy> mergePolicies)
+        public SubscriptionPolicy(string updateFrequency, bool? batchable = default(bool?), IList<MergePolicy> mergePolicies = default(IList<MergePolicy>))
         {
+            Batchable = batchable;
             UpdateFrequency = updateFrequency;
             MergePolicies = mergePolicies;
             CustomInit();
@@ -39,6 +40,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// An initialization method that performs custom operations like setting defaults
         /// </summary>
         partial void CustomInit();
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "batchable")]
+        public bool? Batchable { get; set; }
 
         /// <summary>
         /// Gets or sets possible values include: 'none', 'everyDay',
@@ -63,10 +69,6 @@ namespace Microsoft.DotNet.Maestro.Client.Models
             if (UpdateFrequency == null)
             {
                 throw new ValidationException(ValidationRules.CannotBeNull, "UpdateFrequency");
-            }
-            if (MergePolicies == null)
-            {
-                throw new ValidationException(ValidationRules.CannotBeNull, "MergePolicies");
             }
         }
     }

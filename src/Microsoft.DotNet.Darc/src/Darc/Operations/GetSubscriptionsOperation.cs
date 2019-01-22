@@ -35,19 +35,16 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 var subscriptions = (await remote.GetSubscriptionsAsync()).Where(subscription =>
                 {
-                    return (string.IsNullOrEmpty(_options.TargetRepository) ||
-                        subscription.TargetRepository.Contains(_options.TargetRepository, StringComparison.OrdinalIgnoreCase)) &&
-                    (string.IsNullOrEmpty(_options.TargetBranch) ||
-                        subscription.TargetBranch.Contains(_options.TargetBranch, StringComparison.OrdinalIgnoreCase)) &&
-                    (string.IsNullOrEmpty(_options.SourceRepository) ||
-                        subscription.SourceRepository.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase)) &&
-                    (string.IsNullOrEmpty(_options.Channel) ||
-                        subscription.Channel.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
+                    return (_options.SubscriptionParameterMatches(_options.TargetRepository, subscription.TargetRepository) &&
+                                _options.SubscriptionParameterMatches(_options.TargetBranch, subscription.TargetBranch) &&
+                                _options.SubscriptionParameterMatches(_options.SourceRepository, subscription.SourceRepository) &&
+                                _options.SubscriptionParameterMatches(_options.Channel, subscription.Channel.Name));
                 });
 
                 if (subscriptions.Count() == 0)
                 {
                     Console.WriteLine("No subscriptions found matching the specified criteria.");
+                    return Constants.ErrorCode;
                 }
 
                 // Based on the current output schema, sort by source repo, target repo, target branch, etc.
@@ -62,28 +59,31 @@ namespace Microsoft.DotNet.Darc.Operations
                     foreach (var mergePolicy in subscription.Policy.MergePolicies)
                     {
                         Console.WriteLine($"    {mergePolicy.Name}");
-                        foreach (var mergePolicyProperty in mergePolicy.Properties)
+                        if (mergePolicy.Properties != null)
                         {
-                            // The merge policy property is a key value pair.  For formatting, turn it into a string.
-                            // It's often a JToken, so handle appropriately
-                            // 1. If the number of lines in the string is 1, write on same line as key
-                            // 2. If the number of lines in the string is more than one, start on new
-                            //    line and indent.
-                            string valueString = mergePolicyProperty.Value.ToString();
-                            string[] valueLines = valueString.Split(System.Environment.NewLine);
-                            string keyString = $"      {mergePolicyProperty.Key} = ";
-                            Console.Write(keyString);
-                            if (valueLines.Length == 1)
+                            foreach (var mergePolicyProperty in mergePolicy.Properties)
                             {
-                                Console.WriteLine(valueString);
-                            }
-                            else
-                            {
-                                string indentString = new string(' ', keyString.Length);
-                                Console.WriteLine();
-                                foreach (string line in valueLines)
+                                // The merge policy property is a key value pair.  For formatting, turn it into a string.
+                                // It's often a JToken, so handle appropriately
+                                // 1. If the number of lines in the string is 1, write on same line as key
+                                // 2. If the number of lines in the string is more than one, start on new
+                                //    line and indent.
+                                string valueString = mergePolicyProperty.Value.ToString();
+                                string[] valueLines = valueString.Split(System.Environment.NewLine);
+                                string keyString = $"      {mergePolicyProperty.Key} = ";
+                                Console.Write(keyString);
+                                if (valueLines.Length == 1)
                                 {
-                                    Console.WriteLine($"{indentString}{line}");
+                                    Console.WriteLine(valueString);
+                                }
+                                else
+                                {
+                                    string indentString = new string(' ', keyString.Length);
+                                    Console.WriteLine();
+                                    foreach (string line in valueLines)
+                                    {
+                                        Console.WriteLine($"{indentString}{line}");
+                                    }
                                 }
                             }
                         }

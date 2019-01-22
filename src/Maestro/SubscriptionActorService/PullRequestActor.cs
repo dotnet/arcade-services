@@ -214,6 +214,17 @@ namespace SubscriptionActorService
             return subscription?.SourceRepository;
         }
 
+        /// <summary>
+        /// Retrieve the build number from a database build id.
+        /// </summary>
+        /// <param name="buildId">Build id</param>
+        /// <returns>Build number (e.g. 123245.6)</returns>
+        private async Task<string> GetBuildNumberAsync(int buildId)
+        {
+            Build build = await Context.Builds.FindAsync(buildId);
+            return build?.BuildNumber;
+        }
+
         public Task RunProcessPendingUpdatesAsync()
         {
             return ActionRunner.ExecuteAction(() => ProcessPendingUpdatesAsync());
@@ -532,6 +543,47 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         }
 
         /// <summary>
+        ///     Compute the title for a pull request.
+        /// </summary>
+        /// <param name="inProgressPr">Current in progress pull request information</param>
+        /// <returns>Pull request title</returns>
+        private async Task<string> ComputePullRequestTitleAsync(InProgressPullRequest inProgressPr)
+        {
+            // Get the unique subscription IDs.
+            var uniqueSubscriptionIds = inProgressPr.ContainedSubscriptions.Select(subscription => subscription.SubscriptionId).ToHashSet();
+
+            // We'll either list out the repos involved (in a shortened form)
+            // or we'll list out the number of repos that are involved.
+            // Start building up the list. If we reach a max length, then backtrack and
+            // just note the number of input subscriptions.
+            const string baseTitle = "Update dependencies from ";
+            StringBuilder titleBuilder = new StringBuilder(baseTitle);
+            bool prefixComma = false;
+            const int maxTitleLength = 80;
+            foreach (Guid subscriptionId in uniqueSubscriptionIds)
+            {
+                string repoName = await GetSourceRepositoryAsync(subscriptionId);
+
+                // Strip down repo name.
+                repoName = repoName?.Replace("https://github.com/", "");
+                repoName = repoName?.Replace("https://dev.azure.com/", "");
+                repoName = repoName?.Replace("_git/", "");
+                string repoNameForTitle = prefixComma ? $", {repoName}" : repoName;
+
+                if (titleBuilder.Length + repoNameForTitle?.Length > maxTitleLength)
+                {
+                    return $"{baseTitle} {uniqueSubscriptionIds.Count} repositories";
+                }
+                else
+                {
+                    titleBuilder.Append(repoNameForTitle);
+                }
+            }
+
+            return titleBuilder.ToString();
+        }
+
+        /// <summary>
         ///     Creates a pull request from the given updates.
         /// </summary>
         /// <param name="updates"></param>
@@ -561,19 +613,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
 
                 await CommitUpdatesAsync(requiredUpdates, description, darc, targetRepository, newBranchName);
 
-                string prUrl = await darc.CreatePullRequestAsync(
-                    targetRepository,
-                    new PullRequest
-                    {
-                        Title = "Update dependency files",
-                        Description = description.ToString(),
-                        BaseBranch = targetBranch,
-                        HeadBranch = newBranchName
-                    });
-
                 var inProgressPr = new InProgressPullRequest
                 {
-                    Url = prUrl,
                     ContainedSubscriptions = requiredUpdates.Select(
                             u => new SubscriptionPullRequestUpdate
                             {
@@ -582,6 +623,18 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                             })
                         .ToList()
                 };
+
+                string prUrl = await darc.CreatePullRequestAsync(
+                    targetRepository,
+                    new PullRequest
+                    {
+                        Title = await ComputePullRequestTitleAsync(inProgressPr),
+                        Description = description.ToString(),
+                        BaseBranch = targetBranch,
+                        HeadBranch = newBranchName
+                    });
+
+                inProgressPr.Url = prUrl;
 
                 await StateManager.SetStateAsync(PullRequest, inProgressPr);
                 await StateManager.SaveStateAsync();
@@ -594,6 +647,18 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             }
         }
 
+        /// <summary>
+        /// Commit a dependency update to a target branch 
+        /// </summary>
+        /// <param name="requiredUpdates">Version updates to apply</param>
+        /// <param name="description">
+        ///     A string writer that the PR description should be written to. If this an update
+        ///     to an existing PR, this will contain the existing PR description.
+        /// </param>
+        /// <param name="darc">Remote darc interface</param>
+        /// <param name="targetRepository">Target repository that the updates should be applied to</param>
+        /// <param name="newBranchName">Target branch the updates should be to</param>
+        /// <returns></returns>
         private async Task CommitUpdatesAsync(
             List<(UpdateAssetsParameters update, List<DependencyDetail> deps)> requiredUpdates,
             StringWriter description,
@@ -604,9 +669,10 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             foreach ((UpdateAssetsParameters update, List<DependencyDetail> deps) in requiredUpdates)
             {
                 string sourceRepository = await GetSourceRepositoryAsync(update.SubscriptionId);
+                string buildNumber = await GetBuildNumberAsync(update.BuildId);
                 using (var message = new StringWriter())
                 {
-                    message.WriteLine($"Update dependencies from {sourceRepository} build {update.BuildId}");
+                    message.WriteLine($"Update dependencies from {sourceRepository} build {buildNumber}");
                     message.WriteLine();
                     message.WriteLine("This change updates the following dependencies");
                     description.WriteLine($"Updates from {sourceRepository}");
@@ -642,14 +708,6 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             PullRequest pullRequest = await darc.GetPullRequestAsync(pr.Url);
             string headBranch = pullRequest.HeadBranch;
 
-            using (var description = new StringWriter(new StringBuilder(pullRequest.Description)))
-            {
-                await CommitUpdatesAsync(requiredUpdates, description, darc, targetRepository, headBranch);
-
-                pullRequest.Description = description.ToString();
-                await darc.UpdatePullRequestAsync(pr.Url, pullRequest);
-            }
-
             pr.ContainedSubscriptions.AddRange(
                 requiredUpdates.Select(
                     u => new SubscriptionPullRequestUpdate
@@ -657,6 +715,15 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                         SubscriptionId = u.update.SubscriptionId,
                         BuildId = u.update.BuildId
                     }));
+
+            using (var description = new StringWriter(new StringBuilder(pullRequest.Description)))
+            {
+                await CommitUpdatesAsync(requiredUpdates, description, darc, targetRepository, headBranch);
+
+                pullRequest.Description = description.ToString();
+                pullRequest.Title = await ComputePullRequestTitleAsync(pr);
+                await darc.UpdatePullRequestAsync(pr.Url, pullRequest);
+            }
 
             await StateManager.SetStateAsync(PullRequest, pr);
             await StateManager.SaveStateAsync();

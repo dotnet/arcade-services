@@ -56,12 +56,12 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
-        public Task CreateOrUpdatePullRequestDarcCommentAsync(string pullRequestUrl, string message)
+        public Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message)
         {
             throw new NotImplementedException();
         }
 
-        public Task<List<GitFile>> GetFilesForCommitAsync(string repoUri, string commit, string path)
+        public Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path)
         {
             string gitDir = LocalHelpers.GetGitDir(_logger);
             string repoDir = Directory.GetParent(gitDir).FullName;
@@ -138,7 +138,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="branch">Unused</param>
         /// <param name="commitMessage">Unused</param>
         /// <returns></returns>
-        public async Task PushFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
+        public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
             foreach (GitFile file in filesToCommit.Where(f => f.Operation != GitFileOperation.Delete))
             {
@@ -158,10 +158,10 @@ namespace Microsoft.DotNet.DarcLib
                             string finalContent;
                             switch (file.ContentEncoding)
                             {
-                                case "utf-8":
+                                case ContentEncoding.Utf8:
                                     finalContent = file.Content;
                                     break;
-                                case "base64":
+                                case ContentEncoding.Base64:
                                     byte[] bytes = Convert.FromBase64String(file.Content);
                                     finalContent = Encoding.UTF8.GetString(bytes);
                                     break;

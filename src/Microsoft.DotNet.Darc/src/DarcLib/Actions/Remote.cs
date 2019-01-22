@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client;
@@ -25,13 +26,21 @@ namespace Microsoft.DotNet.DarcLib
 
             _logger = logger;
 
+            // If a temporary repository root was not provided, use the environment
+            // provided temp directory
+            string temporaryRepositoryRoot = settings.TemporaryRepositoryRoot;
+            if (string.IsNullOrEmpty(temporaryRepositoryRoot))
+            {
+                temporaryRepositoryRoot = Path.GetTempPath();
+            }
+
             if (settings.GitType == GitRepoType.GitHub)
             {
-                _gitClient = new GitHubClient(settings.PersonalAccessToken, _logger);
+                _gitClient = new GitHubClient(settings.PersonalAccessToken, _logger, temporaryRepositoryRoot);
             }
             else if (settings.GitType == GitRepoType.AzureDevOps)
             {
-                _gitClient = new AzureDevOpsClient(settings.PersonalAccessToken, _logger);
+                _gitClient = new AzureDevOpsClient(settings.PersonalAccessToken, _logger, temporaryRepositoryRoot);
             }
 
             // Only initialize the file manager if we have a git client, which excludes "None"
@@ -173,6 +182,22 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        /// Trigger a subscription by ID
+        /// </summary>
+        /// <param name="subscriptionId">ID of subscription to trigger</param>
+        /// <returns>Subscription just triggered.</returns>
+        public async Task<Subscription> TriggerSubscriptionAsync(string subscriptionId)
+        {
+            CheckForValidBarClient();
+            if (!Guid.TryParse(subscriptionId, out Guid subscriptionGuid))
+            {
+                throw new ArgumentException($"Subscription id '{subscriptionId}' is not a valid guid.");
+            }
+
+            return await _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionGuid);
+        }
+
+        /// <summary>
         ///     Create a new subscription
         /// </summary>
         /// <param name="channelName">Name of source channel</param>
@@ -283,15 +308,10 @@ namespace Microsoft.DotNet.DarcLib
             return await _gitClient.SearchPullRequestsAsync(repoUri, pullRequestBranch, status, keyword, author);
         }
 
-        public Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
-        {
-            return _gitClient.GetPullRequestCommitsAsync(pullRequestUrl);
-        }
-
         public Task CreateOrUpdatePullRequestStatusCommentAsync(string pullRequestUrl, string message)
         {
             CheckForValidGitClient();
-            return _gitClient.CreateOrUpdatePullRequestDarcCommentAsync(pullRequestUrl, message);
+            return _gitClient.CreateOrUpdatePullRequestCommentAsync(pullRequestUrl, message);
         }
 
         public async Task<PrStatus> GetPullRequestStatusAsync(string pullRequestUrl)
@@ -377,7 +397,7 @@ namespace Microsoft.DotNet.DarcLib
                 filesToCommit.AddRange(engCommonFiles);
 
                 // Files in the target repo
-                string latestCommit = await _gitClient.GetLastCommitShaAsync(_gitClient.GetOwnerAndRepoFromRepoUri(repoUri), branch);
+                string latestCommit = await _gitClient.GetLastCommitShaAsync(repoUri, branch);
                 List<GitFile> targetEngCommonFiles = await GetCommonScriptFilesAsync(repoUri, latestCommit);
 
                 foreach (GitFile file in targetEngCommonFiles)
@@ -390,7 +410,7 @@ namespace Microsoft.DotNet.DarcLib
                 }
             }
 
-            await _gitClient.PushFilesAsync(filesToCommit, repoUri, branch, message);
+            await _gitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
         }
 
         public Task<PullRequest> GetPullRequestAsync(string pullRequestUri)
@@ -476,7 +496,14 @@ namespace Microsoft.DotNet.DarcLib
                 // PAT is required for these types.
                 if (string.IsNullOrEmpty(settings.PersonalAccessToken))
                 {
-                    throw new ArgumentException("The personal access token is missing...");
+                    if (settings.GitType == GitRepoType.GitHub)
+                    {
+                        throw new ArgumentException("The GitHub personal access token is missing...");
+                    }
+                    else
+                    {
+                        throw new ArgumentException("The Azure DevOps personal access token is missing...");
+                    }
                 }
             }
             else if (settings.GitType != GitRepoType.None)
@@ -490,7 +517,7 @@ namespace Microsoft.DotNet.DarcLib
             CheckForValidGitClient();
             _logger.LogInformation("Generating commits for script files");
 
-            List<GitFile> files = await _gitClient.GetFilesForCommitAsync(repoUri, commit, "eng/common");
+            List<GitFile> files = await _gitClient.GetFilesAtCommitAsync(repoUri, commit, "eng/common");
 
             _logger.LogInformation("Generating commits for script files succeeded!");
 

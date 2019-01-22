@@ -41,9 +41,9 @@ namespace Microsoft.DotNet.Darc.Operations
                 // TODO: PAT only used for pulling the arcade eng/common dir,
                 // so hardcoded to GitHub PAT right now. Must be more generic in the future.
                 darcSettings.GitType = GitRepoType.GitHub;
-                LocalSettings localSettings = LocalSettings.LoadSettingsFile();
+                LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
 
-                darcSettings.PersonalAccessToken = !string.IsNullOrEmpty(localSettings.GitHubToken) ?
+                darcSettings.PersonalAccessToken = localSettings != null && !string.IsNullOrEmpty(localSettings.GitHubToken) ?
                                                     localSettings.GitHubToken :
                                                     _options.GitHubPat;
 
@@ -56,6 +56,14 @@ namespace Microsoft.DotNet.Darc.Operations
                 // First we need to figure out what to query for.  Load Version.Details.xml and
                 // find all repository uris, optionally restricted by the input dependency parameter.
                 IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync(_options.Name);
+
+                // If the source repository was specified, filter away any local dependencies not from that
+                // source repository.
+                if (!string.IsNullOrEmpty(_options.SourceRepository))
+                {
+                    dependencies = dependencies.Where(
+                        dependency => dependency.RepoUri.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase));
+                }
 
                 if (!dependencies.Any())
                 {
@@ -89,6 +97,13 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
                 else
                 {
+                    if (string.IsNullOrEmpty(_options.Channel))
+                    {
+                        Console.WriteLine($"Please suppy either a channel name (--channel), a packages folder (--packages-folder) " +
+                            $"or a specific dependency name and version (--name and --version).");
+                        return Constants.ErrorCode;
+                    }
+
                     // Start channel query.
                     var channel = remote.GetChannelAsync(_options.Channel);
 
@@ -191,7 +206,6 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Now call the local updater to run the update
                 await local.UpdateDependenciesAsync(dependenciesToUpdate, remote);
 
-                
                 Console.WriteLine(finalMessage);
 
                 return Constants.SuccessCode;

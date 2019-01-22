@@ -15,6 +15,7 @@
     <LibGit2SharpVersion>0.25.2</LibGit2SharpVersion>
     <log4netVersion>2.0.8</log4netVersion>
     <SystemNetHttpVersion>4.3.3</SystemNetHttpVersion>
+    <MicrosoftAzureKeyVaultVersion>3.0.0</MicrosoftAzureKeyVaultVersion>
     <MicrosoftBuildVersion>15.7.179</MicrosoftBuildVersion>
     <MicrosoftBuildFrameworkVersion>15.7.179</MicrosoftBuildFrameworkVersion>
     <MicrosoftBuildTasksCoreVersion>15.7.179</MicrosoftBuildTasksCoreVersion>
@@ -43,8 +44,14 @@
     <WindowsAzureStorageVersion>8.5.0</WindowsAzureStorageVersion>
     <XUnitVersion>2.4.1-pre.build.4059</XUnitVersion>
     <XUnitVSRunnerVersion>2.4.1-pre.build.4059</XUnitVSRunnerVersion>
-    <MicrosoftDotNetBuildTasksFeedVersion>2.2.0-beta.18562.25</MicrosoftDotNetBuildTasksFeedVersion>
-    <MicrosoftDotNetMaestroTasksVersion>1.0.0-beta.18562.25</MicrosoftDotNetMaestroTasksVersion>
-    <MicrosoftDotNetSignToolVersion>1.0.0-beta.18562.25</MicrosoftDotNetSignToolVersion>
+    <MicrosoftDotNetSignToolVersion>1.0.0-beta.19069.2</MicrosoftDotNetSignToolVersion>
+    <MicrosoftDotNetBuildTasksFeedVersion>2.2.0-beta.19069.2</MicrosoftDotNetBuildTasksFeedVersion>
+    <MicrosoftDotNetMaestroTasksVersion>1.0.0-beta.19060.8</MicrosoftDotNetMaestroTasksVersion>
+  </PropertyGroup>
+  <!--Package names-->
+  <PropertyGroup>
+    <MicrosoftDotNetSignToolPackage>Microsoft.DotNet.SignTool</MicrosoftDotNetSignToolPackage>
+    <MicrosoftDotNetBuildTasksFeedPackage>Microsoft.DotNet.Build.Tasks.Feed</MicrosoftDotNetBuildTasksFeedPackage>
+    <MicrosoftDotNetMaestroTasksPackage>Microsoft.DotNet.Maestro.Tasks</MicrosoftDotNetMaestroTasksPackage>
   </PropertyGroup>
 </Project>

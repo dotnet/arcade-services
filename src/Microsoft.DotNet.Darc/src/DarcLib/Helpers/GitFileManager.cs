@@ -201,7 +201,7 @@ namespace Microsoft.DotNet.DarcLib
             // https://github.com/dotnet/arcade/issues/1095.  Today this is only called from the Local interface so 
             // it's okay for now.
             var file = new GitFile(VersionFiles.VersionDetailsXml, versionDetails);
-            await _gitClient.PushFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
+            await _gitClient.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
                 $"'{VersionFiles.VersionDetailsXml}'");
 
             _logger.LogInformation(
@@ -323,7 +323,7 @@ namespace Microsoft.DotNet.DarcLib
             // https://github.com/dotnet/arcade/issues/1095.  Today this is only called from the Local interface so 
             // it's okay for now.
             var file = new GitFile(VersionFiles.VersionProps, versionProps);
-            await _gitClient.PushFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
+            await _gitClient.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependency} to " +
                 $"'{VersionFiles.VersionProps}'");
 
             _logger.LogInformation(
@@ -352,7 +352,7 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             var file = new GitFile(VersionFiles.GlobalJson, globalJson);
-            await _gitClient.PushFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependencyName} to " +
+            await _gitClient.CommitFilesAsync(new List<GitFile> { file }, repo, branch, $"Add {dependencyName} to " +
                 $"'{VersionFiles.GlobalJson}'");
 
             _logger.LogInformation(
@@ -459,10 +459,10 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 
             }
-            else
-            {
-                UpdateVersionGlobalJson(itemToUpdate, token);
-            }
+
+            // Update the global json too, even if there was an element in the props file, in case
+            // it was listed in both
+            UpdateVersionGlobalJson(itemToUpdate, token);
         }
 
         private void UpdateVersionGlobalJson(DependencyDetail itemToUpdate, JToken token)
@@ -608,7 +608,8 @@ namespace Microsoft.DotNet.DarcLib
                 XmlNode versionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{versionElementName}']");
                 if (versionNode == null)
                 {
-                    versionNode = versionProps.DocumentElement.SelectSingleNode($"////*[local-name()='{alternateVersionElementName}']");
+                    versionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{alternateVersionElementName}']");
+                    versionElementName = alternateVersionElementName;
                 }
 
                 if (versionNode != null)
