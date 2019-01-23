@@ -646,15 +646,13 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                             null,
                             TimeSpan.FromMinutes(5),
                             TimeSpan.FromMinutes(5));
-                    }
-                    else
-                    {
-                        // Something wrong happened when trying to create the PR but didn't throw an exception (probably there was no diff). 
-                        // We need to delete the branch also in this case.
-                        await darc.DeleteBranchAsync(targetRepository, newBranchName);
+                        return prUrl;
                     }
 
-                    return prUrl;
+                    // Something wrong happened when trying to create the PR but didn't throw an exception (probably there was no diff). 
+                    // We need to delete the branch also in this case.
+                    await darc.DeleteBranchAsync(targetRepository, newBranchName);
+                    return null;
                 }
             }
             catch
