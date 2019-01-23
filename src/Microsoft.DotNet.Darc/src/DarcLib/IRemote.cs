@@ -73,6 +73,8 @@ namespace Microsoft.DotNet.DarcLib
 
         Task CreateNewBranchAsync(string repoUri, string baseBranch, string newBranch);
 
+        Task DeleteBranchAsync(string repoUri, string branch);
+
         Task CommitUpdatesAsync(string repoUri, string branch, List<DependencyDetail> itemsToUpdate, string message);
 
         Task<PullRequest> GetPullRequestAsync(string pullRequestUri);

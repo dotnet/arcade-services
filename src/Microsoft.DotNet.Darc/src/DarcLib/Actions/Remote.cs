@@ -287,6 +287,11 @@ namespace Microsoft.DotNet.DarcLib
             await _gitClient.CreateBranchAsync(repoUri, newBranch, baseBranch);
         }
 
+        public async Task DeleteBranchAsync(string repoUri, string branch)
+        {
+            await _gitClient.DeleteBranchAsync(repoUri, branch);
+        }
+
         public async Task<IList<Check>> GetPullRequestChecksAsync(string pullRequestUrl)
         {
             CheckForValidGitClient();
