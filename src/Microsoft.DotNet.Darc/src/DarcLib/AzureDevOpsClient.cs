@@ -32,8 +32,14 @@ namespace Microsoft.DotNet.DarcLib
         private static readonly Regex RepositoryUriPattern = new Regex(
             @"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\.]+)");
 
+        private static readonly Regex LegacyRepositoryUriPattern = new Regex(
+            @"^https://(?<account>[a-zA-Z0-9]+)\.visualstudio\.com/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\.]+)");
+
         private static readonly Regex PullRequestApiUriPattern = new Regex(
             @"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_apis/git/repositories/(?<repo>[a-zA-Z0-9-\.]+)/pullRequests/(?<id>\d+)");
+
+        // Azure DevOps uses this id when creating a new branch as well as when deleting a branch
+        private static readonly string BaseObjectId = "0000000000000000000000000000000000000000";
 
         private readonly ILogger _logger;
         private readonly string _personalAccessToken;
@@ -123,7 +129,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 _logger.LogInformation($"'{newBranch}' branch doesn't exist. Creating it...");
 
-                azureDevOpsRef = new AzureDevOpsRef($"refs/heads/{newBranch}", latestSha);
+                azureDevOpsRef = new AzureDevOpsRef($"refs/heads/{newBranch}", latestSha, BaseObjectId);
                 azureDevOpsRefs.Add(azureDevOpsRef);
             }
             else
@@ -138,6 +144,20 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             string body = JsonConvert.SerializeObject(azureDevOpsRefs, _serializerSettings);
+
+            await this.ExecuteRemoteGitCommandAsync(HttpMethod.Post,
+                accountName, projectName, $"_apis/git/repositories/{repoName}/refs", _logger, body);
+        }
+
+        public async Task DeleteBranchAsync(string repoUri, string branch)
+        {
+            (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+
+            string latestSha = await GetLastCommitShaAsync(accountName, projectName, repoName, branch);
+
+            AzureDevOpsRef azureDevOpsRef = new AzureDevOpsRef($"refs/heads/{branch}", BaseObjectId, latestSha);
+
+            string body = JsonConvert.SerializeObject(azureDevOpsRef, _serializerSettings);
 
             await this.ExecuteRemoteGitCommandAsync(HttpMethod.Post,
                 accountName, projectName, $"_apis/git/repositories/{repoName}/refs", _logger, body);
@@ -672,17 +692,29 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        /// Parse a repository url into its component parts
+        /// Parse a repository url into its component parts.
         /// </summary>
         /// <param name="repoUri">Repository url to parse</param>
         /// <returns>Tuple of account, project, repo</returns>
+        /// <remarks>
+        ///     While we really only want to support dev.azure.com, in some cases
+        ///     builds are still being reported from foo.visualstudio.com. This is apparently because
+        ///     the url the agent connects to is what determines this property. So for now, support both forms.
+        ///     We don't need to support this for PR urls because the repository target urls in the Maestro
+        ///     database are restricted to dev.azure.com forms.
+        /// </remarks>
         public static (string accountName, string projectName, string repoName) ParseRepoUri(string repoUri)
         {
             Match m = RepositoryUriPattern.Match(repoUri);
             if (!m.Success)
             {
-                throw new ArgumentException(
-                    @"Repository URI should be in the form  https://dev.azure.com/:account/:project/_git/:repo");
+                m = LegacyRepositoryUriPattern.Match(repoUri);
+                if (!m.Success)
+                {
+                    throw new ArgumentException(
+                        "Repository URI should be in the form https://dev.azure.com/:account/:project/_git/:repo or " +
+                        "https://:account.visualstudio.com/:project/_git/:repo");
+                }
             }
 
             return (m.Groups["account"].Value,

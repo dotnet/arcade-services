@@ -174,6 +174,13 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
+        public async Task DeleteBranchAsync(string repoUri, string branch)
+        {
+            (string owner, string repo) = ParseRepoUri(repoUri);
+
+            await Client.Git.Reference.Delete(owner, repo, $"heads/{branch}");
+        }
+
         /// <summary>
         ///     Search pull requests matching the specified criteria
         /// </summary>
