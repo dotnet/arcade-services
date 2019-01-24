@@ -21,6 +21,6 @@ namespace Microsoft.DotNet.DarcLib
 
         public string NewObjectId { get; set; }
 
-        public string OldObjectId { get; set; } = "0000000000000000000000000000000000000000";
+        public string OldObjectId { get; set; }
     }
 }

@@ -28,6 +28,7 @@ namespace SubscriptionActorService.Tests
         private const long InstallationId = 1174;
         private const string InProgressPrUrl = "https://github.com/owner/repo/pull/10";
         private const string InProgressPrHeadBranch = "pr.head.branch";
+        private const string PrUrl = "https://git.com/pr/123";
 
         private readonly Dictionary<(string repo, long installationId), Mock<IRemote>> DarcRemotes =
             new Dictionary<(string repo, long installationId), Mock<IRemote>>();
@@ -139,6 +140,13 @@ namespace SubscriptionActorService.Tests
                     }
                 },
                 options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
+        }
+
+        private void CreatePullRequestShouldReturnAValidValue()
+        {
+            DarcRemotes[(TargetRepo, InstallationId)]
+                .Setup(s => s.CreatePullRequestAsync(It.IsAny<string>(), It.IsAny<PullRequest>()))
+                .ReturnsAsync(() => PrUrl);
         }
 
         private void AndUpdatePullRequestShouldHaveBeenCalled()
@@ -265,7 +273,8 @@ namespace SubscriptionActorService.Tests
                             BuildId = forBuild.Id,
                             SubscriptionId = Subscription.Id
                         }
-                    }
+                    },
+                    Url = PrUrl
                 });
         }
 
@@ -473,6 +482,8 @@ namespace SubscriptionActorService.Tests
                 Build b = GivenANewBuild();
 
                 WithRequiredUpdates(b);
+
+                CreatePullRequestShouldReturnAValidValue();
 
                 await WhenUpdateAssetsAsyncIsCalled(b);
 

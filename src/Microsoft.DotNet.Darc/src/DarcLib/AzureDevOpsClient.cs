@@ -38,6 +38,9 @@ namespace Microsoft.DotNet.DarcLib
         private static readonly Regex PullRequestApiUriPattern = new Regex(
             @"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_apis/git/repositories/(?<repo>[a-zA-Z0-9-\.]+)/pullRequests/(?<id>\d+)");
 
+        // Azure DevOps uses this id when creating a new branch as well as when deleting a branch
+        private static readonly string BaseObjectId = "0000000000000000000000000000000000000000";
+
         private readonly ILogger _logger;
         private readonly string _personalAccessToken;
         private readonly JsonSerializerSettings _serializerSettings;
@@ -126,7 +129,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 _logger.LogInformation($"'{newBranch}' branch doesn't exist. Creating it...");
 
-                azureDevOpsRef = new AzureDevOpsRef($"refs/heads/{newBranch}", latestSha);
+                azureDevOpsRef = new AzureDevOpsRef($"refs/heads/{newBranch}", latestSha, BaseObjectId);
                 azureDevOpsRefs.Add(azureDevOpsRef);
             }
             else
@@ -141,6 +144,20 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             string body = JsonConvert.SerializeObject(azureDevOpsRefs, _serializerSettings);
+
+            await this.ExecuteRemoteGitCommandAsync(HttpMethod.Post,
+                accountName, projectName, $"_apis/git/repositories/{repoName}/refs", _logger, body);
+        }
+
+        public async Task DeleteBranchAsync(string repoUri, string branch)
+        {
+            (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+
+            string latestSha = await GetLastCommitShaAsync(accountName, projectName, repoName, branch);
+
+            AzureDevOpsRef azureDevOpsRef = new AzureDevOpsRef($"refs/heads/{branch}", BaseObjectId, latestSha);
+
+            string body = JsonConvert.SerializeObject(azureDevOpsRef, _serializerSettings);
 
             await this.ExecuteRemoteGitCommandAsync(HttpMethod.Post,
                 accountName, projectName, $"_apis/git/repositories/{repoName}/refs", _logger, body);

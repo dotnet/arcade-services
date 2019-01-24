@@ -37,6 +37,11 @@ namespace Microsoft.DotNet.DarcLib
             throw new InvalidOperationException();
         }
 
+        public Task DeleteBranchAsync(string repoUri, string branch)
+        {
+            throw new NotImplementedException();
+        }
+
         public HttpClient CreateHttpClient(string versionOverride = null)
         {
             throw new InvalidOperationException();
