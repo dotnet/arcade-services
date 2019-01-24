@@ -603,47 +603,62 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             }
 
             string newBranchName = $"darc-{targetBranch}-{Guid.NewGuid()}";
-
             await darc.CreateNewBranchAsync(targetRepository, targetBranch, newBranchName);
 
-            using (var description = new StringWriter())
+            try
             {
-                description.WriteLine("This pull request updates the following dependencies");
-                description.WriteLine();
-
-                await CommitUpdatesAsync(requiredUpdates, description, darc, targetRepository, newBranchName);
-
-                var inProgressPr = new InProgressPullRequest
+                using (var description = new StringWriter())
                 {
-                    ContainedSubscriptions = requiredUpdates.Select(
-                            u => new SubscriptionPullRequestUpdate
-                            {
-                                SubscriptionId = u.update.SubscriptionId,
-                                BuildId = u.update.BuildId
-                            })
-                        .ToList()
-                };
+                    description.WriteLine("This pull request updates the following dependencies");
+                    description.WriteLine();
 
-                string prUrl = await darc.CreatePullRequestAsync(
-                    targetRepository,
-                    new PullRequest
+                    await CommitUpdatesAsync(requiredUpdates, description, darc, targetRepository, newBranchName);
+
+                    var inProgressPr = new InProgressPullRequest
                     {
-                        Title = await ComputePullRequestTitleAsync(inProgressPr),
-                        Description = description.ToString(),
-                        BaseBranch = targetBranch,
-                        HeadBranch = newBranchName
-                    });
+                        ContainedSubscriptions = requiredUpdates.Select(
+                                u => new SubscriptionPullRequestUpdate
+                                {
+                                    SubscriptionId = u.update.SubscriptionId,
+                                    BuildId = u.update.BuildId
+                                })
+                            .ToList()
+                    };
 
-                inProgressPr.Url = prUrl;
+                    string prUrl = await darc.CreatePullRequestAsync(
+                        targetRepository,
+                        new PullRequest
+                        {
+                            Title = await ComputePullRequestTitleAsync(inProgressPr),
+                            Description = description.ToString(),
+                            BaseBranch = targetBranch,
+                            HeadBranch = newBranchName
+                        });
 
-                await StateManager.SetStateAsync(PullRequest, inProgressPr);
-                await StateManager.SaveStateAsync();
-                await Reminders.TryRegisterReminderAsync(
-                    PullRequestCheck,
-                    null,
-                    TimeSpan.FromMinutes(5),
-                    TimeSpan.FromMinutes(5));
-                return prUrl;
+                    if (!string.IsNullOrEmpty(prUrl))
+                    {
+                        inProgressPr.Url = prUrl;
+
+                        await StateManager.SetStateAsync(PullRequest, inProgressPr);
+                        await StateManager.SaveStateAsync();
+                        await Reminders.TryRegisterReminderAsync(
+                            PullRequestCheck,
+                            null,
+                            TimeSpan.FromMinutes(5),
+                            TimeSpan.FromMinutes(5));
+                        return prUrl;
+                    }
+
+                    // Something wrong happened when trying to create the PR but didn't throw an exception (probably there was no diff). 
+                    // We need to delete the branch also in this case.
+                    await darc.DeleteBranchAsync(targetRepository, newBranchName);
+                    return null;
+                }
+            }
+            catch
+            {
+                await darc.DeleteBranchAsync(targetRepository, newBranchName);
+                throw;
             }
         }
 

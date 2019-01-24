@@ -19,6 +19,13 @@ namespace Microsoft.DotNet.DarcLib
         Task CreateBranchAsync(string repoUri, string newBranch, string baseBranch);
 
         /// <summary>
+        /// Delete a branch from a repository
+        /// </summary>
+        /// <param name="repoUri">Repository where the branch lives</param>
+        /// <param name="branch">The branch to delete</param>
+        Task DeleteBranchAsync(string repoUri, string branch);
+
+        /// <summary>
         ///     Commit or update a set of files to a repo
         /// </summary>
         /// <param name="filesToCommit">Files to comit</param>
