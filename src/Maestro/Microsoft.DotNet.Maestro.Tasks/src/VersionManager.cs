@@ -61,12 +61,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
             if (versionStart == versionEnd)
             {
-                if (!string.IsNullOrEmpty(pathVersion))
-                {
-                    return pathVersion;
-                }
-
-                return null;
+                return pathVersion;
             }
 
             // Append major which might cointain fragments of the name so we need to only get the numeric piece out of that
