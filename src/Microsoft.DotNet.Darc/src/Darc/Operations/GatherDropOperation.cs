@@ -62,7 +62,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 bool success = true;
 
                 // Gather the list of builds that need to be downloaded.
-                InputBuilds buildsToDownload = await GatherBuildsToDownload();
+                InputBuilds buildsToDownload = await GatherBuildsToDownloadAsync();
 
                 if (!buildsToDownload.Successful)
                 {
@@ -230,7 +230,7 @@ namespace Microsoft.DotNet.Darc.Operations
         ///     not desired (just determine the root build and return it) or it could
         ///     be a matter of determining all builds that contributed to all dependencies.
         /// </remarks>
-        private async Task<InputBuilds> GatherBuildsToDownload()
+        private async Task<InputBuilds> GatherBuildsToDownloadAsync()
         {
             Console.WriteLine("Determining what builds to download...");
             List<string> errors = new List<string>();
@@ -349,10 +349,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
                 else
                 {
-                    if (!builds.Contains(assetBuild))
-                    {
-                        builds.Add(assetBuild);
-                    }
+                    builds.Add(assetBuild);
                 }
             }
 
@@ -628,7 +625,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
                 else
                 {
-                    errors.Add($"Package uri '{assetLocation.Location} for {assetNameAndVersion} is of an unknown type");
+                    errors.Add($"Package uri '{assetLocation.Location} for {assetNameAndVersion} is of an unknown type.");
                 }
             }
 
@@ -843,7 +840,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         Console.Write($"  {sourceUri} => {targetFile}...");
                         await inStream.CopyToAsync(outStream);
-                        Console.WriteLine("done");
+                        Console.WriteLine("Done");
                     }
                 }
                 return true;

@@ -88,8 +88,12 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="filePath">Path to file</param>
         /// <param name="branchOrCommit">Branch</param>
         /// <returns>Contents of file as string</returns>
-        private async Task<string> GetFileContentsAsync(string accountName, string projectName,
-            string repoName, string filePath, string branchOrCommit)
+        private async Task<string> GetFileContentsAsync(
+            string accountName,
+            string projectName,
+            string repoName,
+            string filePath,
+            string branchOrCommit)
         {
             _logger.LogInformation(
                 $"Getting the contents of file '{filePath}' from repo '{accountName}/{projectName}/{repoName}' in branch/commit '{branchOrCommit}'...");

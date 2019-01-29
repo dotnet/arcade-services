@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option('c', "commit", HelpText = "Branch, commit or tag to look up and gather a build drop for.")]
         public string Commit { get; set; }
 
-        [Option('o',"output-dir", Required = true, HelpText = "Output directory to place build drop")]
+        [Option('o',"output-dir", Required = true, HelpText = "Output directory to place build drop.")]
         public string OutputDirectory { get; set; }
 
         [Option('f', "full", HelpText = "Gather the full drop (build and all input builds).")]

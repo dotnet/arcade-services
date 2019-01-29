@@ -23,12 +23,13 @@ namespace Microsoft.DotNet.Darc.Tests
                 Name = "Base.Asset",
                 RepoUri = "RepoA",
                 Commit = "shaA",
-                Version = "1.0.0"
+                Version = "1.0.0",
+                Type = DependencyType.Product
             };
 
             DependencyTestDriver.GetGraphAndCompare("DependencyGraph", async driver =>
             {
-                return await driver.GetDependencyGraph(dependencyDetail);
+                return await driver.GetDependencyGraph(dependencyDetail, true);
             },
             GetExpectedDependencyGraphAsync,
             dependencyDetail,
@@ -44,12 +45,13 @@ namespace Microsoft.DotNet.Darc.Tests
                 Name = "Base.Asset",
                 RepoUri = "RepoA",
                 Commit = "shaA",
-                Version = "1.0.0"
+                Version = "1.0.0",
+                Type = DependencyType.Product
             };
 
             DependencyTestDriver.GetGraphAndCompare("DependencyGraph", async driver =>
             {
-                return await driver.GetDependencyGraph(dependencyDetail);
+                return await driver.GetDependencyGraph(dependencyDetail, true);
             },
             GetExpectedDependencyGraphAsync,
             dependencyDetail,
@@ -65,12 +67,13 @@ namespace Microsoft.DotNet.Darc.Tests
                 Name = "Base.Asset",
                 RepoUri = "RepoB",
                 Commit = "shaB",
-                Version = "1.0.0"
+                Version = "1.0.0",
+                Type = DependencyType.Product
             };
 
             DependencyTestDriver.GetGraphAndCompare("DependencyGraph", async driver =>
             {
-                return await driver.GetDependencyGraph(dependencyDetail);
+                return await driver.GetDependencyGraph(dependencyDetail, true);
             },
             GetExpectedDependencyGraphAsync,
             dependencyDetail,
@@ -86,12 +89,13 @@ namespace Microsoft.DotNet.Darc.Tests
                 Name = "Base.Asset",
                 RepoUri = "RepoX",
                 Commit = "shaX",
-                Version = "1.0.0"
+                Version = "1.0.0",
+                Type = DependencyType.Product
             };
 
             DependencyTestDriver.GetGraphAndCompare("DependencyGraph", async driver =>
             {
-                return await driver.GetDependencyGraph(dependencyDetail);
+                return await driver.GetDependencyGraph(dependencyDetail, true);
             },
             GetExpectedDependencyGraphAsync,
             dependencyDetail,
@@ -107,12 +111,13 @@ namespace Microsoft.DotNet.Darc.Tests
                 Name = "Base.Asset",
                 RepoUri = "RepoE",
                 Commit = "shaE1",
-                Version = "1.0.0"
+                Version = "1.0.0",
+                Type = DependencyType.Product
             };
 
             DependencyTestDriver.GetGraphAndCompare("DependencyGraph", async driver =>
             {
-                return await driver.GetDependencyGraph(dependencyDetail);
+                return await driver.GetDependencyGraph(dependencyDetail, true);
             },
             GetExpectedDependencyGraphAsync,
             dependencyDetail,
@@ -123,7 +128,9 @@ namespace Microsoft.DotNet.Darc.Tests
         private async Task<DependencyGraph> GetExpectedDependencyGraphAsync(DependencyDetail rootDependency, string temporaryRepositoryPath, string outputFileName)
         {
             HashSet<DependencyDetail> flatGraph = new HashSet<DependencyDetail>(new DependencyDetailComparer()) { rootDependency };
-            DependencyGraphNode graphNode = new DependencyGraphNode(rootDependency);
+            DependencyGraphNode rootGraphNode = new DependencyGraphNode(rootDependency.RepoUri,
+                                                                    rootDependency.Commit,
+                                                                    new List<DependencyDetail>() { rootDependency });
             Stack<DependencyGraphNode> nodesToVisit = new Stack<DependencyGraphNode>();
 
             string outputFilePath = Path.Combine(
@@ -134,7 +141,7 @@ namespace Microsoft.DotNet.Darc.Tests
 
             if (!File.Exists(outputFilePath))
             {
-                return new DependencyGraph(graphNode, flatGraph);
+                return new DependencyGraph(rootGraphNode, new List<DependencyDetail>(), new List<DependencyGraphNode>(), new List<DependencyGraphNode>());
             }
 
             string output = await File.ReadAllTextAsync(outputFilePath);
@@ -145,7 +152,7 @@ namespace Microsoft.DotNet.Darc.Tests
             Stack<XmlNode> xmlNodes = new Stack<XmlNode>();
             xmlNodes.Push(baseNode);
 
-            nodesToVisit.Push(graphNode);
+            nodesToVisit.Push(rootGraphNode);
 
             while (nodesToVisit.Count > 0)
             {
@@ -161,7 +168,7 @@ namespace Microsoft.DotNet.Darc.Tests
                         RepoUri = xmlNode.Attributes["Uri"].Value,
                         Version = xmlNode.Attributes["Version"].Value
                     };
-                    DependencyGraphNode dependencyGraphNode = new DependencyGraphNode(dependencyDetail, node.VisitedNodes);
+                    DependencyGraphNode dependencyGraphNode = new DependencyGraphNode(dependencyDetail.RepoUri, dependencyDetail.Commit, node.VisitedNodes);
                     dependencyGraphNode.VisitedNodes.Add(node.Dependencies.RepoUri);
                     node.Children.Add(dependencyGraphNode);
                     nodesToVisit.Push(dependencyGraphNode);
@@ -170,7 +177,7 @@ namespace Microsoft.DotNet.Darc.Tests
                 }
             }
 
-            return new DependencyGraph(graphNode, flatGraph);
+            return new DependencyGraph(rootGraphNode, flatGraph);
         }
     }
 }

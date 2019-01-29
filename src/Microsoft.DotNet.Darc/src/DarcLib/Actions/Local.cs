@@ -34,7 +34,7 @@ namespace Microsoft.DotNet.DarcLib
         ///     Adds a dependency to the dependency files
         /// </summary>
         /// <returns></returns>
-        public async Task AddDependencyAsync(DependencyDetail dependency, DependencyType dependencyType)
+        public async Task AddDependencyAsync(DependencyDetail dependency)
         {
             // TODO: https://github.com/dotnet/arcade/issues/1095
             // This should be getting back a container and writing the files from here.
