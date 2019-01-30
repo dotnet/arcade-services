@@ -59,14 +59,14 @@ namespace Microsoft.DotNet.DarcLib.Helpers
         /// <returns></returns>
         public static string GetGitCommit(ILogger logger)
         {
-            string dir = ExecuteCommand("git", "rev-parse HEAD", logger);
+            string commit = ExecuteCommand("git", "rev-parse HEAD", logger);
 
-            if (string.IsNullOrEmpty(dir))
+            if (string.IsNullOrEmpty(commit))
             {
-                throw new Exception("'.git' directory was not found. Check if git is installed and that a .git directory exists in the root of your repository.");
+                throw new Exception("Commit was not resolved. Check if git is installed and that a .git directory exists in the root of your repository.");
             }
 
-            return dir;
+            return commit;
         }
 
         public static string GitShow(string repoFolderPath, string commit, string fileName, ILogger logger)

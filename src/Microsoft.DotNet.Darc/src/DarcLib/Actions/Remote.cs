@@ -486,7 +486,9 @@ namespace Microsoft.DotNet.DarcLib
         public Task<IList<Build>> GetBuildsAsync(string repoUri, string commit)
         {
             CheckForValidBarClient();
-            return _barClient.Builds.GetAllBuildsAsync(repository: repoUri, commit: commit, loadCollections: true);
+            return _barClient.Builds.GetAllBuildsAsync(repository: repoUri,
+                                                       commit: commit,
+                                                       loadCollections: true);
         }
 
         /// <summary>
@@ -497,7 +499,10 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="buildId">ID of build producing the asset</param>
         /// <param name="nonShipping">Only non-shipping</param>
         /// <returns>List of assets.</returns>
-        public async Task<IList<Asset>> GetAssetsAsync(string name = null, string version = null, int? buildId = null, bool? nonShipping = null)
+        public async Task<IList<Asset>> GetAssetsAsync(string name = null,
+                                                       string version = null,
+                                                       int? buildId = null,
+                                                       bool? nonShipping = null)
         {
             CheckForValidBarClient();
             // Start at the first page and go until we 404
@@ -525,7 +530,9 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="branchOrCommit">Commit to get dependencies at</param>
         /// <param name="name">Optional name of specific dependency to get information on</param>
         /// <returns>Matching dependency information.</returns>
-        public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri, string branchOrCommit, string name = null)
+        public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri,
+                                                                              string branchOrCommit,
+                                                                              string name = null)
         {
             CheckForValidGitClient();
             return (await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branchOrCommit)).Where(

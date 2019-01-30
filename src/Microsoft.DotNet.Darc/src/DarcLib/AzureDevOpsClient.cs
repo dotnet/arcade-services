@@ -634,7 +634,13 @@ namespace Microsoft.DotNet.DarcLib
         {
             using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride))
             {
-                HttpRequestManager requestManager = new HttpRequestManager(client, method, requestPath, logger, body, versionOverride, logFailure);
+                HttpRequestManager requestManager = new HttpRequestManager(client,
+                                                                           method,
+                                                                           requestPath,
+                                                                           logger,
+                                                                           body,
+                                                                           versionOverride,
+                                                                           logFailure);
 
                 using (var response = await requestManager.ExecuteAsync())
                 {

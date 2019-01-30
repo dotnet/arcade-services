@@ -76,11 +76,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     Console.WriteLine($"Building repository dependency graph...");
 
-                    if (!_options.IncludeToolset)
-                    {
-                        Console.WriteLine($"Removing toolset dependencies...");
-                        rootDependencies = rootDependencies.Where(dependency => dependency.Type != DependencyType.Toolset);
-                    }
+                    FilterToolsetDependencies(rootDependencies);
 
                     if (!rootDependencies.Any())
                     {
@@ -105,11 +101,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     rootDependencies = await local.GetDependenciesAsync(
                         _options.AssetName);
 
-                    if (!_options.IncludeToolset)
-                    {
-                        Console.WriteLine($"Removing toolset dependencies...");
-                        rootDependencies = rootDependencies.Where(dependency => dependency.Type != DependencyType.Toolset);
-                    }
+                    FilterToolsetDependencies(rootDependencies);
 
                     if (!rootDependencies.Any())
                     {
@@ -147,6 +139,16 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 return Constants.ErrorCode;
             }
+        }
+
+        private IEnumerable<DependencyDetail> FilterToolsetDependencies(IEnumerable<DependencyDetail> dependencies)
+        {
+            if (!_options.IncludeToolset)
+            {
+                Console.WriteLine($"Removing toolset dependencies...");
+                return dependencies.Where(dependency => dependency.Type != DependencyType.Toolset);
+            }
+            return dependencies;
         }
 
         /// <summary>

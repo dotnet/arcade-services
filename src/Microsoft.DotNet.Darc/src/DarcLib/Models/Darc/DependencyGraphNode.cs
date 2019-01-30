@@ -41,6 +41,7 @@ namespace Microsoft.DotNet.DarcLib
         ///     Node repository URI
         /// </summary>
         public readonly string RepoUri;
+
         /// <summary>
         /// Node commit
         /// </summary>

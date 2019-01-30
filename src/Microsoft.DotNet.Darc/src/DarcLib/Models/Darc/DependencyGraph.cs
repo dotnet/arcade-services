@@ -45,7 +45,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="remoteFactory">Factory that can create remotes based on repo uris</param>
         /// <param name="repoUri">Root repository URI</param>
         /// <param name="commit">Root commit</param>
-        /// <param name="includeToolset">If true, toolset dependencies are incldued.</param>
+        /// <param name="includeToolset">If true, toolset dependencies are included.</param>
         /// <param name="logger">Logger</param>
         /// <returns>New dependency graph.</returns>
         public static async Task<DependencyGraph> BuildRemoteDependencyGraphAsync(
@@ -75,7 +75,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="rootDependencies">Root set of dependencies</param>
         /// <param name="repoUri">Root repository URI</param>
         /// <param name="commit">Root commit</param>
-        /// <param name="includeToolset">If true, toolset dependencies are incldued.</param>
+        /// <param name="includeToolset">If true, toolset dependencies are included.</param>
         /// <param name="logger">Logger</param>
         /// <returns>New dependency graph.</returns>
         public static async Task<DependencyGraph> BuildRemoteDependencyGraphAsync(
@@ -104,10 +104,13 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="remoteFactory">Factory that can create remotes based on repo uris</param>
         /// <param name="rootDependencies">Root set of dependencies</param>
-        /// <param name="repoUri">Root repository URI</param>
-        /// <param name="commit">Root commit</param>
-        /// <param name="includeToolset">If true, toolset dependencies are incldued.</param>
+        /// <param name="rootRepoFolder">Root repository folder</param>
+        /// <param name="rootRepoCommit">Root commit</param>
+        /// <param name="includeToolset">If true, toolset dependencies are included.</param>
         /// <param name="logger">Logger</param>
+        /// <param name="testPath">If running unit tests, commits will be looked up as folders under this path</param>
+        /// <param name="remotesMap">Map of remote uris to local paths</param>
+        /// <param name="reposFolder">Folder containing local repositories.</param>
         /// <returns>New dependency graph.</returns>
         public static async Task<DependencyGraph> BuildLocalDependencyGraphAsync(
             IEnumerable<DependencyDetail> rootDependencies,
@@ -144,7 +147,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="logger">Logger</param>
         /// <param name="reposFolder">Path to repos</param>
         /// <param name="remotesMap">Map of remotes (e.g. https://github.com/dotnet/corefx) to folders</param>
-        /// <param name="testPath"></param>
+        /// <param name="testPath">If running unit tests, commits will be looked up as folders under this path</param>
         /// <returns>New dependency graph</returns>
         private static async Task<DependencyGraph> BuildDependencyGraphImplAsync(
             IRemoteFactory remoteFactory,

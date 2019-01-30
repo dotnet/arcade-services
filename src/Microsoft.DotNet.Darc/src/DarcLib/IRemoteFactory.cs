@@ -7,7 +7,8 @@ using Microsoft.Extensions.Logging;
 namespace Microsoft.DotNet.DarcLib
 {
     /// <summary>
-    ///     For certain use cases where 
+    ///     For certain use cases where components will step between various remote repositories
+    ///     (e.g. between azure devops and github).
     /// </summary>
     public interface IRemoteFactory
     {

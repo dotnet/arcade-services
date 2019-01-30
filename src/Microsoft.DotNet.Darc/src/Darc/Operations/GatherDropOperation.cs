@@ -361,7 +361,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 Console.WriteLine($"  Build - {build.BuildNumber} of {build.Repository} @ {build.Commit}");
             }
 
-            if (errors.Count != 0)
+            if (errors.Any())
             {
                 Console.WriteLine($"Failed to obtain full list of builds.  See errors:");
                 foreach (string error in errors)
@@ -564,11 +564,11 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="subPath">Root path to download file to.</param>
         /// <returns>True if package could be downloaded, false otherwise.</returns>
         private async Task<DownloadedAsset> DownloadNugetPackageAsync(HttpClient client,
-                                                                                   Build build,
-                                                                                   Asset asset,
-                                                                                   AssetLocation assetLocation,
-                                                                                   string subPath,
-                                                                                   List<string> errors)
+                                                                      Build build,
+                                                                      Asset asset,
+                                                                      AssetLocation assetLocation,
+                                                                      string subPath,
+                                                                      List<string> errors)
         {
             // Attempt to figure out how to download this. If the location is a blob storage account, then
             // strip off index.json, append 'flatcontainer', the asset name (lower case), then the version,
