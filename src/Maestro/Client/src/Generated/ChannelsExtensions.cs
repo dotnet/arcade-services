@@ -99,5 +99,35 @@ namespace Microsoft.DotNet.Maestro.Client
                 (await operations.AddBuildToChannelWithHttpMessagesAsync(channelId, buildId, null, cancellationToken).ConfigureAwait(false)).Dispose();
             }
 
+            /// <param name='operations'>
+            /// The operations group for this extension method.
+            /// </param>
+            /// <param name='channelId'>
+            /// </param>
+            /// <param name='pipelineId'>
+            /// </param>
+            /// <param name='cancellationToken'>
+            /// The cancellation token.
+            /// </param>
+            public static async Task AddPipelineToChannelAsync(this IChannels operations, int channelId, int pipelineId, CancellationToken cancellationToken = default(CancellationToken))
+            {
+                (await operations.AddPipelineToChannelWithHttpMessagesAsync(channelId, pipelineId, null, cancellationToken).ConfigureAwait(false)).Dispose();
+            }
+
+            /// <param name='operations'>
+            /// The operations group for this extension method.
+            /// </param>
+            /// <param name='channelId'>
+            /// </param>
+            /// <param name='pipelineId'>
+            /// </param>
+            /// <param name='cancellationToken'>
+            /// The cancellation token.
+            /// </param>
+            public static async Task DeletePipelineFromChannelAsync(this IChannels operations, int channelId, int pipelineId, CancellationToken cancellationToken = default(CancellationToken))
+            {
+                (await operations.DeletePipelineFromChannelWithHttpMessagesAsync(channelId, pipelineId, null, cancellationToken).ConfigureAwait(false)).Dispose();
+            }
+
     }
 }

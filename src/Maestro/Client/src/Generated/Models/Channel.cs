@@ -8,6 +8,8 @@
 namespace Microsoft.DotNet.Maestro.Client.Models
 {
     using Newtonsoft.Json;
+    using System.Collections;
+    using System.Collections.Generic;
     using System.Linq;
 
     public partial class Channel
@@ -23,11 +25,12 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// <summary>
         /// Initializes a new instance of the Channel class.
         /// </summary>
-        public Channel(int? id = default(int?), string name = default(string), string classification = default(string))
+        public Channel(int? id = default(int?), string name = default(string), string classification = default(string), IList<ReleasePipeline> releasePipelines = default(IList<ReleasePipeline>))
         {
             Id = id;
             Name = name;
             Classification = classification;
+            ReleasePipelines = releasePipelines;
             CustomInit();
         }
 
@@ -50,6 +53,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// </summary>
         [JsonProperty(PropertyName = "classification")]
         public string Classification { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "releasePipelines")]
+        public IList<ReleasePipeline> ReleasePipelines { get; set; }
 
     }
 }

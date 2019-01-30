@@ -14,6 +14,7 @@ namespace Microsoft.DotNet.DarcLib
         private readonly HttpClient _client;
         private readonly ILogger _logger;
         private readonly HttpRequestMessage _message;
+        private readonly bool _logFailure;
 
         public HttpRequestManager(
             HttpClient client,
@@ -21,11 +22,13 @@ namespace Microsoft.DotNet.DarcLib
             string requestUri,
             ILogger logger,
             string body = null,
-            string versionOverride = null)
+            string versionOverride = null,
+            bool logFailure = true)
         {
             _client = client;
             _logger = logger;
             _message = new HttpRequestMessage(method, requestUri);
+            _logFailure = logFailure;
 
             if (!string.IsNullOrEmpty(body))
             {
@@ -39,8 +42,12 @@ namespace Microsoft.DotNet.DarcLib
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogError(
-                    $"There was an error executing method '{_message.Method}' against URI '{_message.RequestUri}'. Request failed with error code: '{response.StatusCode}'");
+                if (_logFailure)
+                {
+                    _logger.LogError(
+                        $"There was an error executing method '{_message.Method}' against URI '{_message.RequestUri}'. " +
+                        $"Request failed with error code: '{response.StatusCode}'");
+                }
                 response.EnsureSuccessStatusCode();
             }
 

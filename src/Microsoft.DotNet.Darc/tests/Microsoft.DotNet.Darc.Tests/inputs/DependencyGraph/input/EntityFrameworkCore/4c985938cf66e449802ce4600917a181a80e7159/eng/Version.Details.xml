@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Dependencies>
+  <ProductDependencies>
+    <Dependency Name="Microsoft.CSharp" Version="4.6.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Extensions.Caching.Memory" Version="3.0.0-preview.19068.1">
+      <Uri>Extensions</Uri>
+      <Sha>9d9fbcd3fa2278d73900c0a00fb73bf0aee29b06</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Extensions.Configuration.Abstractions" Version="3.0.0-preview.19068.1">
+      <Uri>Extensions</Uri>
+      <Sha>9d9fbcd3fa2278d73900c0a00fb73bf0aee29b06</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="3.0.0-preview.19068.1">
+      <Uri>Extensions</Uri>
+      <Sha>9d9fbcd3fa2278d73900c0a00fb73bf0aee29b06</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Extensions.Configuration.Json" Version="3.0.0-preview.19068.1">
+      <Uri>Extensions</Uri>
+      <Sha>9d9fbcd3fa2278d73900c0a00fb73bf0aee29b06</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Extensions.Configuration" Version="3.0.0-preview.19068.1">
+      <Uri>Extensions</Uri>
+      <Sha>9d9fbcd3fa2278d73900c0a00fb73bf0aee29b06</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Extensions.DependencyInjection" Version="3.0.0-preview.19068.1">
+      <Uri>Extensions</Uri>
+      <Sha>9d9fbcd3fa2278d73900c0a00fb73bf0aee29b06</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Extensions.DependencyModel" Version="3.0.0-preview-27318-8">
+      <Uri>core-setup</Uri>
+      <Sha>5bdcd4b15d203109d341a6c42bfdf7c730633bdb</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Extensions.HostFactoryResolver.Sources" Version="3.0.0-preview.19068.1">
+      <Uri>Extensions</Uri>
+      <Sha>9d9fbcd3fa2278d73900c0a00fb73bf0aee29b06</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Extensions.Logging" Version="3.0.0-preview.19068.1">
+      <Uri>Extensions</Uri>
+      <Sha>9d9fbcd3fa2278d73900c0a00fb73bf0aee29b06</Sha>
+    </Dependency>
+    <Dependency Name="System.Collections.Immutable" Version="1.6.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="System.ComponentModel.Annotations" Version="4.6.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="System.Data.SqlClient" Version="4.7.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="System.Diagnostics.DiagnosticSource" Version="4.6.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+  </ProductDependencies>
+  <ToolsetDependencies>
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="1.0.0-beta.19068.4">
+      <Uri>arcade</Uri>
+      <Sha>4de204b5decdcee471d186e2290a09e35c5c3996</Sha>
+    </Dependency>
+  </ToolsetDependencies>
+</Dependencies>

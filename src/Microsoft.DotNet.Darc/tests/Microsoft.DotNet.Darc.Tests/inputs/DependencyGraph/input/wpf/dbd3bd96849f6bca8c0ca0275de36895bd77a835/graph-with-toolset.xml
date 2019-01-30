@@ -1,0 +1,259 @@
+<?xml version="1.0"?>
+<DependencyGraph>
+  <RootNode>
+    <DependencyGraphNode>
+      <RepoUri>wpf</RepoUri>
+      <Commit>dbd3bd96849f6bca8c0ca0275de36895bd77a835</Commit>
+      <Dependencies>
+        <Dependency>
+          <Name>Microsoft.DotNet.Arcade.Sdk</Name>
+          <Version>1.0.0-beta.19061.6</Version>
+          <Type>Toolset</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>52d4b539dd1ab771015bdf33ed4221afcaaabf3d</Commit>
+        </Dependency>
+        <Dependency>
+          <Name>Microsoft.Win32.Registry</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Configuration.ConfigurationManager</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Diagnostics.EventLog</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Reflection.Emit</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Reflection.TypeExtensions</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Security.AccessControl</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Security.Cryptography.Xml</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Security.Permissions</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Security.Principal.Windows</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Windows.Extensions</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.CodeDom</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+      </Dependencies>
+      <Children>
+        <Child>
+          <RepoUri>arcade</RepoUri>
+          <Commit>52d4b539dd1ab771015bdf33ed4221afcaaabf3d</Commit>
+        </Child>
+      </Children>
+      <Parents />
+    </DependencyGraphNode>
+  </RootNode>
+  <UniqueDependencies>
+    <Dependency>
+      <Name>Microsoft.DotNet.Arcade.Sdk</Name>
+      <Version>1.0.0-beta.19061.6</Version>
+      <Type>Toolset</Type>
+      <RepoUri>arcade</RepoUri>
+      <Commit>52d4b539dd1ab771015bdf33ed4221afcaaabf3d</Commit>
+    </Dependency>
+  </UniqueDependencies>
+  <AllNodes>
+    <DependencyGraphNode>
+      <RepoUri>wpf</RepoUri>
+      <Commit>dbd3bd96849f6bca8c0ca0275de36895bd77a835</Commit>
+      <Dependencies>
+        <Dependency>
+          <Name>Microsoft.DotNet.Arcade.Sdk</Name>
+          <Version>1.0.0-beta.19061.6</Version>
+          <Type>Toolset</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>52d4b539dd1ab771015bdf33ed4221afcaaabf3d</Commit>
+        </Dependency>
+        <Dependency>
+          <Name>Microsoft.Win32.Registry</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Configuration.ConfigurationManager</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Diagnostics.EventLog</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Reflection.Emit</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Reflection.TypeExtensions</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Security.AccessControl</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Security.Cryptography.Xml</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Security.Permissions</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Security.Principal.Windows</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.Windows.Extensions</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+        <Dependency>
+          <Name>System.CodeDom</Name>
+          <Version>4.6.0-preview.19060.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>corefx</RepoUri>
+          <Commit />
+        </Dependency>
+      </Dependencies>
+      <Children>
+        <Child>
+          <RepoUri>arcade</RepoUri>
+          <Commit>52d4b539dd1ab771015bdf33ed4221afcaaabf3d</Commit>
+        </Child>
+      </Children>
+      <Parents />
+    </DependencyGraphNode>
+    <DependencyGraphNode>
+      <RepoUri>arcade</RepoUri>
+      <Commit>52d4b539dd1ab771015bdf33ed4221afcaaabf3d</Commit>
+      <Dependencies>
+        <Dependency>
+          <Name>Microsoft.DotNet.Arcade.Sdk</Name>
+          <Version>1.0.0-beta.19060.8</Version>
+          <Type>Toolset</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>67384d20d310611afc1c2b4dd3b953fda182def4</Commit>
+        </Dependency>
+        <Dependency>
+          <Name>Microsoft.DotNet.Build.Tasks.Feed</Name>
+          <Version>2.2.0-beta.19060.8</Version>
+          <Type>Toolset</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>67384d20d310611afc1c2b4dd3b953fda182def4</Commit>
+        </Dependency>
+        <Dependency>
+          <Name>Microsoft.DotNet.Maestro.Tasks</Name>
+          <Version>1.0.0-beta.19060.8</Version>
+          <Type>Toolset</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>67384d20d310611afc1c2b4dd3b953fda182def4</Commit>
+        </Dependency>
+        <Dependency>
+          <Name>Microsoft.DotNet.SignTool</Name>
+          <Version>1.0.0-beta.19060.8</Version>
+          <Type>Toolset</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>67384d20d310611afc1c2b4dd3b953fda182def4</Commit>
+        </Dependency>
+        <Dependency>
+          <Name>Microsoft.DotNet.Helix.Sdk</Name>
+          <Version>2.0.0-beta.19060.8</Version>
+          <Type>Toolset</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>67384d20d310611afc1c2b4dd3b953fda182def4</Commit>
+        </Dependency>
+      </Dependencies>
+      <Children />
+      <Parents>
+        <Parent>
+          <RepoUri>wpf</RepoUri>
+          <Commit>dbd3bd96849f6bca8c0ca0275de36895bd77a835</Commit>
+        </Parent>
+      </Parents>
+    </DependencyGraphNode>
+  </AllNodes>
+  <IncoherentNodes />
+</DependencyGraph>
