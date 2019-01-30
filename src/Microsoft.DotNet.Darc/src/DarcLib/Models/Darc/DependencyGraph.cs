@@ -19,6 +19,7 @@ namespace Microsoft.DotNet.DarcLib
         public DependencyGraph(
             DependencyGraphNode root, 
             IEnumerable<DependencyDetail> uniqueDependencies,
+            IEnumerable<DependencyDetail> incoherentDependencies,
             IEnumerable<DependencyGraphNode> allNodes,
             IEnumerable<DependencyGraphNode> incoherentNodes)
         {
@@ -26,6 +27,7 @@ namespace Microsoft.DotNet.DarcLib
             UniqueDependencies = uniqueDependencies;
             Nodes = allNodes;
             IncoherentNodes = incoherentNodes;
+            IncoherentDependencies = incoherentDependencies;
         }
 
         public DependencyGraphNode Root { get; set; }
@@ -33,10 +35,24 @@ namespace Microsoft.DotNet.DarcLib
         public IEnumerable<DependencyDetail> UniqueDependencies { get; set; }
 
         /// <summary>
+        ///     Incoherent dependencies in the graph.
+        ///     This is the list of dependencies that have the same name but different versions.
+        ///     This list could contain more incoherencies than the other incoherent nodes list,
+        ///     if multiple builds were done of the same sha in a repo.
+        /// </summary>
+        public IEnumerable<DependencyDetail> IncoherentDependencies { get; set; }
+
+        /// <summary>
         ///     All nodes in the graph (unique repo+sha combinations)
         /// </summary>
         public IEnumerable<DependencyGraphNode> Nodes { get; set; }
 
+        /// <summary>
+        ///     Incoherent nodes in the graph.
+        ///     Incoherencies are cases where the same repository appears multiple times in the graph
+        ///     at different commits. For instance, if two different versions of core-setup appear in the graph,
+        ///     these are incoherent nodes.
+        /// </summary>
         public IEnumerable<DependencyGraphNode> IncoherentNodes { get; set; }
 
         /// <summary>
@@ -212,6 +228,9 @@ namespace Microsoft.DotNet.DarcLib
             // Cache of incoherent nodes, looked up by repo URI.
             Dictionary<string, DependencyGraphNode> visitedRepoUriNodes = new Dictionary<string, DependencyGraphNode>();
             HashSet<DependencyGraphNode> incoherentNodes = new HashSet<DependencyGraphNode>();
+            // Cache of incoherent dependencies, looked up by name
+            Dictionary<string, DependencyDetail> incoherentDependenciesCache = new Dictionary<string, DependencyDetail>();
+            HashSet<DependencyDetail> incoherentDependencies = new HashSet<DependencyDetail>();
 
             while (nodesToVisit.Count > 0)
             {
@@ -271,6 +290,15 @@ namespace Microsoft.DotNet.DarcLib
                         // Add the individual dependency to the set of unique dependencies seen
                         // in the whole graph.
                         uniqueDependencyDetails.Add(dependency);
+                        if (incoherentDependenciesCache.TryGetValue(dependency.Name, out DependencyDetail existingDependency))
+                        {
+                            incoherentDependencies.Add(existingDependency);
+                            incoherentDependencies.Add(dependency);
+                        }
+                        else
+                        {
+                            incoherentDependenciesCache.Add(dependency.Name, dependency);
+                        }
 
                         // We may have visited this node before.  If so, add it as a child and avoid additional walks.
                         if (nodeCache.TryGetValue($"{dependency.RepoUri}@{dependency.Commit}", out DependencyGraphNode existingNode))
@@ -307,7 +335,7 @@ namespace Microsoft.DotNet.DarcLib
                 }
             }
 
-            return new DependencyGraph(rootGraphNode, uniqueDependencyDetails, nodeCache.Values, incoherentNodes);
+            return new DependencyGraph(rootGraphNode, uniqueDependencyDetails, incoherentDependencies, nodeCache.Values, incoherentNodes);
         }
 
         private static string GetRepoPath(

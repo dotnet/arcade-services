@@ -174,14 +174,31 @@ namespace Microsoft.DotNet.Darc.Operations
             LogIncoherencies(graph);
         }
 
+        /// <summary>
+        ///     Log incoherencies in the graph, places where repos appear at different shas,
+        ///     or dependencies appear at different version numbers.
+        /// </summary>
+        /// <param name="graph">Graph to log incoherencies for</param>
         private void LogIncoherencies(DependencyGraph graph)
         {
             if (!graph.IncoherentNodes.Any())
             {
                 return;
             }
+            Console.WriteLine("Incoherent Dependencies:");
+            foreach (DependencyDetail incoherentDependency in graph.IncoherentDependencies)
+            {
+                Console.WriteLine($"  - Repo:    {incoherentDependency.RepoUri}");
+                Console.WriteLine($"    Commit:  {incoherentDependency.Commit}");
+                Console.WriteLine($"    Name:    {incoherentDependency.Name}");
+                Console.WriteLine($"    Version: {incoherentDependency.Version}");
+                if (_options.IncludeToolset)
+                {
+                    Console.WriteLine($"    Type:    {incoherentDependency.Type}");
+                }
+            }
 
-            Console.WriteLine("Incoherencies:");
+            Console.WriteLine("Incoherent Repositories:");
             foreach (DependencyGraphNode incoherentRoot in graph.IncoherentNodes)
             {
                 LogIncoherentPath(incoherentRoot, null, "  ");
