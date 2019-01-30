@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Dependencies>
+  <ProductDependencies>
+    <Dependency Name="Microsoft.Win32.Registry" Version="4.6.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="System.ComponentModel.Annotations" Version="4.6.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="System.Data.SqlClient" Version="4.7.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="System.Diagnostics.DiagnosticSource" Version="4.6.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="System.Diagnostics.EventLog" Version="4.6.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="System.IO.Pipelines" Version="4.6.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="System.Reflection.Metadata" Version="1.7.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="System.Runtime.CompilerServices.Unsafe" Version="4.6.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="System.Security.Cryptography.Cng" Version="4.6.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="System.Security.Cryptography.Xml" Version="4.6.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="System.Text.Encodings.Web" Version="4.6.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.NETCore.App" Version="3.0.0-preview-27319-3">
+      <Uri>core-setup</Uri>
+      <Sha>66bef64d51b21f583b431428a41982aee1b6305c</Sha>
+    </Dependency>
+  </ProductDependencies>
+  <ToolsetDependencies>
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="1.0.0-beta.19066.1">
+      <Uri>arcade</Uri>
+      <Sha>0fb5fc58347f42121ddc9c0b361e84b8acbffb12</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.DotNet.Build.Tasks.Feed" Version="2.2.0-beta.19066.1">
+      <Uri>arcade</Uri>
+      <Sha>0fb5fc58347f42121ddc9c0b361e84b8acbffb12</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.DotNet.Helix.Sdk" Version="2.0.0-beta.19066.1">
+      <Uri>arcade</Uri>
+      <Sha>0fb5fc58347f42121ddc9c0b361e84b8acbffb12</Sha>
+    </Dependency>
+  </ToolsetDependencies>
+</Dependencies>
