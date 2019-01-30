@@ -205,7 +205,7 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             // Cache of nodes we've visited. If we reach a repo/commit combo already in the cache,
-            // we can just add these node as a child. The cache key is '{repoUri}@{commit}'
+            // we can just add these nodes as a child. The cache key is '{repoUri}@{commit}'
             Dictionary<string, DependencyGraphNode> nodeCache = new Dictionary<string, DependencyGraphNode>();
             nodeCache.Add($"{rootGraphNode.RepoUri}@{rootGraphNode.Commit}", rootGraphNode);
 

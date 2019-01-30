@@ -180,7 +180,7 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        ///     Write out a manifest of the items in the droip
+        ///     Write out a manifest of the items in the drop
         /// </summary>
         /// <returns></returns>
         private async Task WriteDropManifest(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
