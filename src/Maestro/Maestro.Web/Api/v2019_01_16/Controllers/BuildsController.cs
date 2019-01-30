@@ -8,7 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Maestro.Data;
-using Maestro.Web.Api.v2018_07_16.Models;
+using Maestro.Web.Api.v2019_01_16.Models;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Mvc;
@@ -16,24 +16,71 @@ using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;
 using Build = Maestro.Data.Models.Build;
 
-namespace Maestro.Web.Api.v2018_07_16.Controllers
+namespace Maestro.Web.Api.v2019_01_16.Controllers
 {
+    public class BuildsController_ApiRemoved : Maestro.Web.Api.v2018_07_16.Controllers.BuildsController
+    {
+        public BuildsController_ApiRemoved(BuildAssetRegistryContext context)
+            : base(context)
+        {
+        }
+
+        [ApiRemoved]
+        public override sealed IActionResult GetAllBuilds(
+            string repository,
+            string commit,
+            string buildNumber,
+            int? channelId,
+            DateTimeOffset? notBefore,
+            DateTimeOffset? notAfter,
+            bool? loadCollections)
+        {
+            throw new NotSupportedException();
+        }
+
+        [ApiRemoved]
+        public override sealed Task<IActionResult> GetBuild(int id)
+        {
+            throw new NotSupportedException();
+        }
+
+        [ApiRemoved]
+        public override sealed Task<IActionResult> GetLatest(
+            string repository,
+            string commit,
+            string buildNumber,
+            int? channelId,
+            DateTimeOffset? notBefore,
+            DateTimeOffset? notAfter,
+            bool? loadCollections)
+        {
+            throw new NotSupportedException();
+        }
+
+        [ApiRemoved]
+        public override sealed Task<IActionResult> Create([FromBody] v2018_07_16.Models.BuildData build)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
     [Route("builds")]
-    [ApiVersion("2018-07-16")]
-    public class BuildsController : Controller
+    [ApiVersion("2019-01-16")]
+    public class BuildsController : BuildsController_ApiRemoved
     {
         private readonly BuildAssetRegistryContext _context;
 
         public BuildsController(BuildAssetRegistryContext context)
+            : base(context)
         {
             _context = context;
         }
 
         [HttpGet]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(List<Models.Build>))]
+        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(List<Models.Build>))]
         [Paginated(typeof(Models.Build))]
         [ValidateModelState]
-        public virtual IActionResult GetAllBuilds(
+        public new IActionResult GetAllBuilds(
             string repository,
             string commit,
             string buildNumber,
@@ -53,61 +100,10 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Ok(query);
         }
 
-        protected IQueryable<Build> Query(
-            string repository,
-            string commit,
-            string buildNumber,
-            int? channelId,
-            DateTimeOffset? notBefore,
-            DateTimeOffset? notAfter,
-            bool? loadCollections)
-        {
-            IQueryable<Build> query = _context.Builds;
-            if (!string.IsNullOrEmpty(repository))
-            {
-                query = query.Where(b => (repository == b.GitHubRepository || repository == b.AzureDevOpsRepository));
-            }
-
-            if (!string.IsNullOrEmpty(commit))
-            {
-                query = query.Where(b => b.Commit == commit);
-            }
-
-            if (!string.IsNullOrEmpty(buildNumber))
-            {
-                query = query.Where(b => b.AzureDevOpsBuildNumber == buildNumber);
-            }
-
-            if (notBefore.HasValue)
-            {
-                query = query.Where(b => b.DateProduced >= notBefore.Value);
-            }
-
-            if (notAfter.HasValue)
-            {
-                query = query.Where(b => b.DateProduced <= notAfter.Value);
-            }
-
-            if (channelId.HasValue)
-            {
-                query = query.Where(b => b.BuildChannels.Any(c => c.ChannelId == channelId.Value));
-            }
-
-            if (loadCollections ?? false)
-            {
-                query = query.Include(b => b.BuildChannels)
-                    .ThenInclude(bc => bc.Channel)
-                    .Include(b => b.Assets)
-                    .Include(b => b.Dependencies);
-            }
-
-            return query.OrderByDescending(b => b.DateProduced);
-        }
-
         [HttpGet("{id}")]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(Models.Build))]
+        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(Models.Build))]
         [ValidateModelState]
-        public virtual async Task<IActionResult> GetBuild(int id)
+        public new async Task<IActionResult> GetBuild(int id)
         {
             Build build = await _context.Builds.Where(b => b.Id == id)
                 .Include(b => b.BuildChannels)
@@ -125,9 +121,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet("latest")]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(Models.Build))]
+        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(Models.Build))]
         [ValidateModelState]
-        public virtual async Task<IActionResult> GetLatest(
+        public new async Task<IActionResult> GetLatest(
             string repository,
             string commit,
             string buildNumber,
@@ -154,9 +150,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpPost]
-        [SwaggerResponse((int) HttpStatusCode.Created, Type = typeof(Models.Build))]
+        [SwaggerResponse((int)HttpStatusCode.Created, Type = typeof(Models.Build))]
         [ValidateModelState]
-        public virtual async Task<IActionResult> Create([FromBody] BuildData build)
+        public async Task<IActionResult> Create([FromBody] BuildData build)
         {
             Build buildModel = build.ToDb();
             buildModel.DateProduced = DateTimeOffset.UtcNow;
