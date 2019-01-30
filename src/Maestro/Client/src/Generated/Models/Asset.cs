@@ -25,11 +25,13 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// <summary>
         /// Initializes a new instance of the Asset class.
         /// </summary>
-        public Asset(int? id = default(int?), string name = default(string), string version = default(string), IList<AssetLocation> locations = default(IList<AssetLocation>))
+        public Asset(int? id = default(int?), string name = default(string), string version = default(string), int? buildId = default(int?), bool? nonShipping = default(bool?), IList<AssetLocation> locations = default(IList<AssetLocation>))
         {
             Id = id;
             Name = name;
             Version = version;
+            BuildId = buildId;
+            NonShipping = nonShipping;
             Locations = locations;
             CustomInit();
         }
@@ -53,6 +55,16 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// </summary>
         [JsonProperty(PropertyName = "version")]
         public string Version { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "buildId")]
+        public int? BuildId { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "nonShipping")]
+        public bool? NonShipping { get; set; }
 
         /// <summary>
         /// </summary>

@@ -33,7 +33,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(List<Models.Build>))]
         [Paginated(typeof(Models.Build))]
         [ValidateModelState]
-        public IActionResult GetAllBuilds(
+        public virtual IActionResult GetAllBuilds(
             string repository,
             string commit,
             string buildNumber,
@@ -53,7 +53,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Ok(query);
         }
 
-        private IQueryable<Build> Query(
+        protected IQueryable<Build> Query(
             string repository,
             string commit,
             string buildNumber,
@@ -65,7 +65,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             IQueryable<Build> query = _context.Builds;
             if (!string.IsNullOrEmpty(repository))
             {
-                query = query.Where(b => b.Repository == repository);
+                query = query.Where(b => (repository == b.GitHubRepository || repository == b.AzureDevOpsRepository));
             }
 
             if (!string.IsNullOrEmpty(commit))
@@ -75,7 +75,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             if (!string.IsNullOrEmpty(buildNumber))
             {
-                query = query.Where(b => b.BuildNumber == buildNumber);
+                query = query.Where(b => b.AzureDevOpsBuildNumber == buildNumber);
             }
 
             if (notBefore.HasValue)
@@ -107,7 +107,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [HttpGet("{id}")]
         [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(Models.Build))]
         [ValidateModelState]
-        public async Task<IActionResult> GetBuild(int id)
+        public virtual async Task<IActionResult> GetBuild(int id)
         {
             Build build = await _context.Builds.Where(b => b.Id == id)
                 .Include(b => b.BuildChannels)
@@ -127,7 +127,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [HttpGet("latest")]
         [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(Models.Build))]
         [ValidateModelState]
-        public async Task<IActionResult> GetLatest(
+        public virtual async Task<IActionResult> GetLatest(
             string repository,
             string commit,
             string buildNumber,
@@ -156,7 +156,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [HttpPost]
         [SwaggerResponse((int) HttpStatusCode.Created, Type = typeof(Models.Build))]
         [ValidateModelState]
-        public async Task<IActionResult> Create([FromBody] BuildData build)
+        public virtual async Task<IActionResult> Create([FromBody] BuildData build)
         {
             Build buildModel = build.ToDb();
             buildModel.DateProduced = DateTimeOffset.UtcNow;

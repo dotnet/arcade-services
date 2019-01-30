@@ -22,6 +22,7 @@ jobs:
     helixRepo: dotnet/arcade-services
     jobs:
     - job: Windows_NT
+      timeoutInMinutes: 90
       pool:
         ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
           name: NetCorePublic-Int-Pool
@@ -41,7 +42,7 @@ jobs:
         - group: DotNet-Blob-Feed
         - group: DotNet-Symbol-Server-Pats
         - group: Publish-Build-Assets
-        - _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-arcade/index.json
+        - _PublishBlobFeedUrl: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
         - _InternalBuildArgs: /p:DotNetSignType=$(_SignType) /p:TeamName=$(_TeamName)
             /p:DotNetPublishBlobFeedKey=$(dotnetfeed-storage-access-key-1)
             /p:DotNetPublishBlobFeedUrl=$(_PublishBlobFeedUrl)
@@ -50,8 +51,11 @@ jobs:
             /p:DotNetSymbolServerTokenSymWeb=$(symweb-symbol-server-pat)
             /p:OfficialBuildId=$(BUILD.BUILDNUMBER)
       # In production, create stable package versions
-      - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
-          - _ProductionArgs: /p:DotNetFinalVersionKind=release
+      # TODO: We depend on a prerelease version of Microsoft.TeamFoundationServer.Client
+      # https://github.com/dotnet/arcade-services/issues/59
+      # and so we can't stabilize for right now.
+      # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
+          # - _ProductionArgs: /p:DotNetFinalVersionKind=release
             
       strategy:
         matrix:
@@ -151,6 +155,8 @@ jobs:
             ArtifactName: ReleaseUtilities
             ArtifactType: Container
 
-        - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
-          - powershell: eng\create-tag.ps1 -AccessToken $(System.AccessToken)
+        # Reenable tagging when stable package versions can be generated.
+        # https://github.com/dotnet/arcade-services/issues/59
+        # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
+          # - powershell: eng\create-tag.ps1 -AccessToken $(System.AccessToken)
 

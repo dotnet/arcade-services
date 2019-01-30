@@ -1,3 +1,4 @@
 {
-  "KeyVaultUri": "https://maestroprod.vault.azure.net/"
+  "KeyVaultUri": "https://maestroprod.vault.azure.net/",
+  "DarcTemporaryRepoRoot": "D:\\"
 }

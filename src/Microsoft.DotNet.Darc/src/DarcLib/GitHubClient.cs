@@ -48,7 +48,8 @@ namespace Microsoft.DotNet.DarcLib
             _product = new ProductHeaderValue("DarcLib", version);
         }
 
-        public GitHubClient(string accessToken, ILogger logger)
+        public GitHubClient(string accessToken, ILogger logger, string temporaryRepositoryPath)
+            : base(temporaryRepositoryPath)
         {
             _personalAccessToken = accessToken;
             _logger = logger;
@@ -171,6 +172,13 @@ namespace Microsoft.DotNet.DarcLib
                     $"Checking if '{newBranch}' branch existed in repo '{repoUri}' failed with '{exc.Message}'");
                 throw;
             }
+        }
+
+        public async Task DeleteBranchAsync(string repoUri, string branch)
+        {
+            (string owner, string repo) = ParseRepoUri(repoUri);
+
+            await Client.Git.Reference.Delete(owner, repo, $"heads/{branch}");
         }
 
         /// <summary>

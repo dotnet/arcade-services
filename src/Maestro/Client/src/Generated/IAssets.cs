@@ -25,6 +25,8 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </param>
         /// <param name='buildId'>
         /// </param>
+        /// <param name='nonShipping'>
+        /// </param>
         /// <param name='loadLocations'>
         /// </param>
         /// <param name='customHeaders'>
@@ -42,7 +44,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <exception cref="Microsoft.Rest.ValidationException">
         /// Thrown when a required parameter is null
         /// </exception>
-        Task<HttpOperationResponse<IList<Asset>>> GetWithHttpMessagesAsync(string name = default(string), string version = default(string), int? buildId = default(int?), bool? loadLocations = default(bool?), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken));
+        Task<HttpOperationResponse<IList<Asset>>> GetWithHttpMessagesAsync(string name = default(string), string version = default(string), int? buildId = default(int?), bool? nonShipping = default(bool?), bool? loadLocations = default(bool?), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken));
         /// <param name='id'>
         /// </param>
         /// <param name='customHeaders'>
