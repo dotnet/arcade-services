@@ -20,7 +20,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("target-repo", HelpText = "Target repository for the subscription.")]
         public string TargetRepository { get; set; }
 
-        [Option("target-branch", HelpText = "Target repository for the subscription.")]
+        [Option("target-branch", HelpText = "Target branch for the subscription.")]
         public string TargetBranch { get; set; }
 
         [Option("update-frequency", HelpText = "Frequency of updates. Valid values are: 'none', 'everyDay', or 'everyBuild'.")]
