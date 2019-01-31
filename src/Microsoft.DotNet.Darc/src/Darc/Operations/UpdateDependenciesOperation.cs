@@ -55,7 +55,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // First we need to figure out what to query for.  Load Version.Details.xml and
                 // find all repository uris, optionally restricted by the input dependency parameter.
-                IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync(_options.Name);
+                IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync(_options.Name, false);
 
                 // If the source repository was specified, filter away any local dependencies not from that
                 // source repository.
@@ -76,6 +76,9 @@ namespace Microsoft.DotNet.Darc.Operations
                     DependencyDetail dependency = dependencies.First();
                     dependency.Version = _options.Version;
                     dependenciesToUpdate.Add(dependency);
+
+                    Console.WriteLine($"Updating '{dependency.Name}': '{dependency.Version}' => '{_options.Version}'");
+
                     finalMessage = $"Local dependency {_options.Name} updated to version '{_options.Version}'.";
                 }
                 else if (!string.IsNullOrEmpty(_options.PackagesFolder))
@@ -163,6 +166,10 @@ namespace Microsoft.DotNet.Darc.Operations
                             RepoUri = build.Repository,
                             Version = buildAsset.Version
                         };
+
+                        // Print out what we are going to do.	
+                        Console.WriteLine($"Updating '{dependency.Name}': '{dependency.Version}' => '{updatedDependency.Version}'" +
+                            $" (from build '{build.BuildNumber}' of '{build.Repository}')");
 
                         // Notify on casing changes.
                         if (buildAsset.Name != dependency.Name)

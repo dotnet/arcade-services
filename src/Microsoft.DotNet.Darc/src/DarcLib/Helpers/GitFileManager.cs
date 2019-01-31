@@ -132,6 +132,12 @@ namespace Microsoft.DotNet.DarcLib
 
             foreach (DependencyDetail itemToUpdate in itemsToUpdate)
             {
+                // Double check that the dependency is not pinned
+                if (itemToUpdate.Pinned)
+                {
+                    throw new DarcException($"An attempt to update pinned dependency '{itemToUpdate.Name}' was made");
+                }
+
                 // Use a case-insensitive update.
                 XmlNodeList versionList = versionDetails.SelectNodes($"//Dependency[translate(@Name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ'," +
                     $"'abcdefghijklmnopqrstuvwxyz')='{itemToUpdate.Name.ToLower()}']");
@@ -150,19 +156,6 @@ namespace Microsoft.DotNet.DarcLib
                 }
 
                 XmlNode nodeToUpdate = versionList.Item(0);
-
-                // If the 'Pinned' attribute does not exist or if it is set to false we just not update it 
-                if (nodeToUpdate.Attributes["Pinned"] != null &&
-                    bool.TryParse(nodeToUpdate.Attributes["Pinned"].Value, out bool isPinned) &&
-                    isPinned)
-                {
-                    continue;
-                }
-
-                // Print out what we are going to do.
-                Console.WriteLine($"Updating '{nodeToUpdate.Attributes["Name"].Value}': '{nodeToUpdate.Attributes["Version"].Value}' " +
-                    $"=> '{itemToUpdate.Version}' of '{itemToUpdate.RepoUri}')");
-
                 nodeToUpdate.Attributes["Version"].Value = itemToUpdate.Version;
                 nodeToUpdate.Attributes["Name"].Value = itemToUpdate.Name;
                 nodeToUpdate.SelectSingleNode("Sha").InnerText = itemToUpdate.Commit;
@@ -196,6 +189,10 @@ namespace Microsoft.DotNet.DarcLib
             XmlAttribute versionAttribute = versionDetails.CreateAttribute("Version");
             versionAttribute.Value = dependency.Version;
             newDependency.Attributes.Append(versionAttribute);
+
+            XmlAttribute pinnedAttribute = versionDetails.CreateAttribute("Pinned");
+            pinnedAttribute.Value = dependency.Pinned.ToString();
+            newDependency.Attributes.Append(pinnedAttribute);
 
             XmlNode uri = versionDetails.CreateElement("Uri");
             uri.InnerText = dependency.RepoUri;
@@ -785,6 +782,18 @@ namespace Microsoft.DotNet.DarcLib
                                         throw new DarcException($"Unknown dependency type '{dependency.ParentNode.Name}'");
                                 }
 
+                                bool isPinned = false;
+
+                                // If the 'Pinned' attribute does not exist or if it is set to false we just not update it 
+                                if (dependency.Attributes["Pinned"] != null)
+                                {
+                                    if (!bool.TryParse(dependency.Attributes["Pinned"].Value, out isPinned))
+                                    {
+                                        throw new DarcException($"The 'Pinned' attribute is set but the value '{dependency.Attributes["Pinned"].Value}' " +
+                                            $"is not a valid boolean...");
+                                    }
+                                }
+
                                 DependencyDetail dependencyDetail = new DependencyDetail
                                 {
                                     Branch = branch,
@@ -792,6 +801,7 @@ namespace Microsoft.DotNet.DarcLib
                                     RepoUri = dependency.SelectSingleNode("Uri").InnerText,
                                     Commit = dependency.SelectSingleNode("Sha").InnerText,
                                     Version = dependency.Attributes["Version"].Value,
+                                    Pinned = isPinned,
                                     Type = type
                                 };
 
