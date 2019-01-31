@@ -76,9 +76,6 @@ namespace Microsoft.DotNet.Darc.Operations
                     DependencyDetail dependency = dependencies.First();
                     dependency.Version = _options.Version;
                     dependenciesToUpdate.Add(dependency);
-
-                    Console.WriteLine($"Updating '{dependency.Name}': '{dependency.Version}' => '{_options.Version}'");
-
                     finalMessage = $"Local dependency {_options.Name} updated to version '{_options.Version}'.";
                 }
                 else if (!string.IsNullOrEmpty(_options.PackagesFolder))
@@ -158,6 +155,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         DependencyDetail updatedDependency = new DependencyDetail
                         {
                             // TODO: Not needed, but not currently provided in Build info. Will be available on next rollout.
+                            // When this is ready, add "(from build '{build.BuildNumber}'" to line 163 in GitFileManager.cs
                             Branch = null,
                             Commit = build.Commit,
                             // If casing changes, ensure that the dependency name gets updated.
@@ -166,11 +164,6 @@ namespace Microsoft.DotNet.Darc.Operations
                             Version = buildAsset.Version
                         };
 
-                        dependenciesToUpdate.Add(updatedDependency);
-
-                        // Print out what we are going to do.
-                        Console.WriteLine($"Updating '{dependency.Name}': '{dependency.Version}' => '{updatedDependency.Version}'" +
-                            $" (from build '{build.BuildNumber}' of '{build.Repository}')");
                         // Notify on casing changes.
                         if (buildAsset.Name != dependency.Name)
                         {

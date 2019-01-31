@@ -150,6 +150,19 @@ namespace Microsoft.DotNet.DarcLib
                 }
 
                 XmlNode nodeToUpdate = versionList.Item(0);
+
+                // If the 'Pinned' attribute does not exist or if it is set to false we just not update it 
+                if (nodeToUpdate.Attributes["Pinned"] != null &&
+                    bool.TryParse(nodeToUpdate.Attributes["Pinned"].Value, out bool isPinned) &&
+                    isPinned)
+                {
+                    continue;
+                }
+
+                // Print out what we are going to do.
+                Console.WriteLine($"Updating '{nodeToUpdate.Attributes["Name"].Value}': '{nodeToUpdate.Attributes["Version"].Value}' " +
+                    $"=> '{itemToUpdate.Version}' of '{itemToUpdate.RepoUri}')");
+
                 nodeToUpdate.Attributes["Version"].Value = itemToUpdate.Version;
                 nodeToUpdate.Attributes["Name"].Value = itemToUpdate.Name;
                 nodeToUpdate.SelectSingleNode("Sha").InnerText = itemToUpdate.Commit;

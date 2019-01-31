@@ -286,6 +286,35 @@ namespace Microsoft.DotNet.Darc.Tests
         }
 
         /// <summary>
+        /// Update dependencies including a pinned dependency which should not be updated
+        /// </summary>
+        [Fact]
+        public void UpdateDependencies5()
+        {
+            DependencyTestDriver.TestAndCompareOutput(nameof(UpdateDependencies5), async driver =>
+            {
+                await driver.UpdateDependenciesAsync(
+                    new List<DependencyDetail> {
+                        new DependencyDetail
+                        {
+                            Commit = "4",
+                            Name = "Existing.DEPendency",
+                            RepoUri = "https://foo.com/foo/bar",
+                            Version = "4.5.6"
+                        },
+                        new DependencyDetail
+                        {
+                            Commit = "5",
+                            Name = "Pinned.Dependency",
+                            RepoUri = "https://foo.com/foo/bar",
+                            Version = "4.5.6"
+                        }
+                    });
+                await driver.VerifyAsync();
+            });
+        }
+
+        /// <summary>
         /// Support both Version and PackageVersion properties in Versions.props.
         /// When adding, use what's already in the file.
         /// </summary>
