@@ -126,6 +126,10 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     LogFlatDependencyGraph(graph);
                 }
+                else if (_options.GraphViz)
+                {
+                    LogGraphViz(graph);
+                }
                 else
                 {
                     LogDependencyGraph(graph);
@@ -172,6 +176,73 @@ namespace Microsoft.DotNet.Darc.Operations
             Console.WriteLine($"Repositories:");
             LogDependencyGraphNode(graph.Root, "  ");
             LogIncoherencies(graph);
+        }
+
+        private string GetSimpleRepoName(string repoUri)
+        {
+            int lastSlash = repoUri.LastIndexOf("/");
+            if ((lastSlash != -1) && (lastSlash < (repoUri.Length - 1)))
+            {
+                return repoUri.Substring(lastSlash + 1);
+            }
+            return repoUri;
+        }
+
+        private string GetGraphVizNodeName(DependencyGraphNode node)
+        {
+            return GetSimpleRepoName(node.RepoUri).Replace("-", "") + node.Commit;
+        }
+
+        private void LogGraphViz(DependencyGraph graph)
+        {
+            List<string> colors = new List<string>()
+            {
+                "bisque",
+                "blanchedalmond",
+                "brown",
+                "burlywood",
+                "cadetblue",
+                "chartreuse",
+                "chocolate",
+                "coral",
+                "cornflowerblue",
+                "cornsilk",
+                "crimson",
+                "cyan",
+                "darkgoldenrod",
+                "darkkhaki",
+                "darkolivegreen",
+                "darkorange",
+                "darkorchid",
+                "darksalmon",
+                "darkturquoise",
+                "deeppink",
+                "deepskyblue",
+                "dimgray",
+                "dimgrey",
+                "dodgerblue",
+                "firebrick",
+                "forestgreen",
+                "gainsboro",
+                "gold",
+                "goldenrod"
+            };
+            Random randColor = new Random();
+            Console.WriteLine("digraph repositoryGraph {");
+            Console.WriteLine("    node [shape=record]");
+            foreach (DependencyGraphNode node in graph.Nodes)
+            {
+                int colorIndex = randColor.Next(colors.Count - 1);
+                string color = colors[colorIndex];
+                colors.Remove(color);
+                Console.WriteLine($"    {GetGraphVizNodeName(node)}[label=\"{GetSimpleRepoName(node.RepoUri)}\\n{node.Commit.Substring(0, 5)}\", color={color}, style=filled];");
+                foreach (DependencyGraphNode childNode in node.Children)
+                {
+                    Console.WriteLine($"    {GetGraphVizNodeName(node)} -> {GetGraphVizNodeName(childNode)}");
+                }
+            }
+
+            Console.WriteLine("}");
         }
 
         /// <summary>

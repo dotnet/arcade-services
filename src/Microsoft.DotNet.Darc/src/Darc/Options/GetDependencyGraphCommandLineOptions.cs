@@ -30,8 +30,11 @@ namespace Microsoft.DotNet.Darc.Options
            + @"https://github.com/dotnet/corefx,C:\repos\corefx.")]
         public IEnumerable<string> RemotesMap { get; set; }
 
-        [Option('f', "flat", HelpText = @"Returns a unique set of repository+sha combination.")]
+        [Option('f', "flat", SetName = "output", HelpText = @"Returns a unique set of repository+sha combination.")]
         public bool Flat { get; set; }
+
+        [Option("graphviz", SetName = "output", HelpText = @"Returns the repository graph in GraphViz form.")]
+        public bool GraphViz { get; set; }
 
         [Option("include-toolset", HelpText = "Include toolset dependencies.")]
         public bool IncludeToolset { get; set; }
