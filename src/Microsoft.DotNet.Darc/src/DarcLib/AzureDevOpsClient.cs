@@ -630,7 +630,7 @@ namespace Microsoft.DotNet.DarcLib
             ILogger logger,
             string body = null,
             string versionOverride = null,
-            bool logFailure = true)
+            bool logFailure = true,
             string baseAddressSubpath = null)
         {
             using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride, baseAddressSubpath))
@@ -648,6 +648,20 @@ namespace Microsoft.DotNet.DarcLib
                     return JObject.Parse(await response.Content.ReadAsStringAsync());
                 }
             }
+        }
+
+        /// <summary>
+        ///     Ensure that the input string ends with 'shouldEndWith' char. 
+        ///     Returns null if input parameter is null.
+        /// </summary>
+        /// <param name="input">String that must have 'shouldEndWith' at the end.</param>
+        /// <param name="shouldEndWith">Character that must be present at end of 'input' string.</param>
+        /// <returns>Input string appended with 'shouldEndWith'</returns>
+        private string EnsureEndsWith(string input, char shouldEndWith)
+        {
+            if (input == null) return null;
+
+            return input.TrimEnd(shouldEndWith) + shouldEndWith;
         }
 
         /// <summary>
