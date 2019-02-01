@@ -110,15 +110,8 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string name = null, bool includePinned = true)
         {
-            IEnumerable<DependencyDetail> dependencies = (await _fileManager.ParseVersionDetailsXmlAsync(_repo, null)).Where(
+            return (await _fileManager.ParseVersionDetailsXmlAsync(_repo, null, includePinned)).Where(
                 dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-
-            if (includePinned)
-            {
-                return dependencies;
-            }
-
-            return dependencies.Where(d => !d.Pinned);
         }
 
         /// <summary>
@@ -134,9 +127,9 @@ namespace Microsoft.DotNet.DarcLib
         /// Gets local dependencies from a local repository
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<DependencyDetail> GetDependenciesFromFileContents(string fileContents)
+        public IEnumerable<DependencyDetail> GetDependenciesFromFileContents(string fileContents, bool includePinned = true)
         {
-            return _fileManager.ParseVersionDetailsXml(fileContents);
+            return _fileManager.ParseVersionDetailsXml(fileContents, includePinned);
         }
     }
 }

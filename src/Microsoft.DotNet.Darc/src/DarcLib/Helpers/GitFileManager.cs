@@ -57,16 +57,16 @@ namespace Microsoft.DotNet.DarcLib
             return JObject.Parse(fileContent);
         }
 
-        public IEnumerable<DependencyDetail> ParseVersionDetailsXml(string fileContents)
+        public IEnumerable<DependencyDetail> ParseVersionDetailsXml(string fileContents, bool includePinned = true)
         {
             _logger.LogInformation($"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}'...");
 
             XmlDocument document = ReadVersionDetailsXml(fileContents);
 
-            return GetDependencyDetails(document);
+            return GetDependencyDetails(document, includePinned: includePinned);
         }
 
-        public async Task<IEnumerable<DependencyDetail>> ParseVersionDetailsXmlAsync(string repoUri, string branch)
+        public async Task<IEnumerable<DependencyDetail>> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true)
         {
             if (!string.IsNullOrEmpty(branch))
             {
@@ -83,7 +83,7 @@ namespace Microsoft.DotNet.DarcLib
             var dependencyDetails = new List<DependencyDetail>();
             XmlDocument document = await ReadVersionDetailsXmlAsync(repoUri, branch);
 
-            return GetDependencyDetails(document);
+            return GetDependencyDetails(document, includePinned: includePinned);
         }
 
         /// <summary>
@@ -753,7 +753,7 @@ namespace Microsoft.DotNet.DarcLib
             return Task.FromResult(result);
         }
 
-        private IEnumerable<DependencyDetail> GetDependencyDetails(XmlDocument document, string branch = null)
+        private IEnumerable<DependencyDetail> GetDependencyDetails(XmlDocument document, string branch = null, bool includePinned = true)
         {
             List<DependencyDetail> dependencyDetails = new List<DependencyDetail>();
 
@@ -821,7 +821,12 @@ namespace Microsoft.DotNet.DarcLib
                     $"Look for exceptions above.");
             }
 
-            return dependencyDetails;
+            if (includePinned)
+            {
+                return dependencyDetails;
+            }
+
+            return dependencyDetails.Where(d => !d.Pinned);
         }
     }
 }
