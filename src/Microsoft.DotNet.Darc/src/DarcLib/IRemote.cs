@@ -65,6 +65,15 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Subscription history</returns>
         Task<IEnumerable<SubscriptionHistoryItem>> GetSubscriptionHistoryAsync(string subscriptionId);
 
+        /// <summary>
+        ///     Get the list of dependencies in the specified repo and branch/commit
+        /// </summary>
+        /// <param name="repoUri">Repository to get dependencies from</param>
+        /// <param name="branchOrCommit">Commit to get dependencies at</param>
+        /// <param name="name">Optional name of specific dependency to get information on</param>
+        /// <returns>Matching dependency information.</returns>
+        Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri, string branchOrCommit, string name = null);
+
         Task<List<DependencyDetail>> GetRequiredUpdatesAsync(
             string repoUri,
             string branch,
@@ -137,5 +146,23 @@ namespace Microsoft.DotNet.DarcLib
         /// or null if there is no latest.</returns>
         /// <remarks>The build's assets are returned</remarks>
         Task<Build> GetLatestBuildAsync(string repoUri, int channelId);
+
+        /// <summary>
+        ///     Retrieve information about the specified build.
+        /// </summary>
+        /// <param name="buildId">Id of build.</param>
+        /// <returns>Information about the specific build</returns>
+        /// <remarks>The build's assets are returned</remarks>
+        Task<Build> GetBuildAsync(int buildId);
+
+        /// <summary>
+        ///     Get assets matching a particular set of properties. All are optional.
+        /// </summary>
+        /// <param name="name">Name of asset</param>
+        /// <param name="version">Version of asset</param>
+        /// <param name="buildId">ID of build producing the asset</param>
+        /// <param name="nonShipping">Only non-shipping</param>
+        /// <returns>List of assets.</returns>
+        Task<IList<Asset>> GetAssetsAsync(string name = null, string version = null, int? buildId = null, bool? nonShipping = null);
     }
 }

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Dependencies>
+  <ProductDependencies>
+    <Dependency Name="Microsoft.DotNet.Cli.Runtime" Version="3.0.100-preview.19072.2">
+      <Uri>cli</Uri>
+      <Sha>4d8c4255cbf3e6219ea8361c9b7691e6ab37aedf</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.NET.Sdk" Version="3.0.100-preview.19073.1">
+      <Uri>sdk</Uri>
+      <Sha>6c3324d3624a10c9d1dfcfba188c974063e86984</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Build" Version="16.0.0-preview.383">
+      <Uri>msbuild</Uri>
+      <Sha>b2db71bebaae4f54f7236ca303e2b0a14aca1a0d</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.FSharp.Compiler" Version="10.2.3-rtm-181017-0">
+      <Uri>visualfsharp</Uri>
+      <Sha></Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.NETCore.Compilers" Version="3.0.0-beta3-19067-14">
+      <Uri>roslyn</Uri>
+      <Sha>359844cc9c32a5b4c1ba72a6e73a32989bd5daeb</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.NET.Sdk.Razor" Version="3.0.0-preview-19072-08">
+      <Uri>AspNetCore-Tooling</Uri>
+      <Sha>5e05f5ff63eb6ade6621c915a36573a763ea2791</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.NET.Sdk.WindowsDesktop" Version="3.0.0-preview-27323-10">
+      <Uri>DotNet-Trusted</Uri>
+      <Sha>619a17dad9a44c9dd349fd192141019279a6a020</Sha>
+    </Dependency>
+    <Dependency Name="NuGet.Build.Tasks" Version="5.0.0-preview1.5663">
+      <Uri>nuget.client</Uri>
+      <Sha></Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.NET.Test.Sdk" Version="15.9.0">
+      <Uri>vstest</Uri>
+      <Sha></Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.NET.Sdk.Web" Version="3.0.100-preview.19064.1">
+      <Uri>websdk</Uri>
+      <Sha>c92b1354da7d7290ec63984cf445a4d2cc9667e8</Sha>
+    </Dependency>
+  </ProductDependencies>
+  <ToolsetDependencies>
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="1.0.0-beta.19073.5">
+      <Uri>arcade</Uri>
+      <Sha>af8ab7d7ca13d5f129c31cfa7aeda19f6d168e6e</Sha>
+    </Dependency>
+  </ToolsetDependencies>
+</Dependencies>

@@ -7,7 +7,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
+using System.Xml;
 using Xunit;
 
 namespace Microsoft.DotNet.Darc.Tests
@@ -58,11 +60,10 @@ namespace Microsoft.DotNet.Darc.Tests
             _gitFileManager = new GitFileManager(GitClient, NullLogger.Instance);
         }
 
-        public async Task AddDependencyAsync(DependencyDetail dependency, DependencyType dependencyType)
+        public async Task AddDependencyAsync(DependencyDetail dependency)
         {
             await _gitFileManager.AddDependencyAsync(
                 dependency,
-                dependencyType,
                 TemporaryRepositoryPath,
                 null);
         }
@@ -82,14 +83,17 @@ namespace Microsoft.DotNet.Darc.Tests
             await _gitFileManager.Verify(TemporaryRepositoryPath, null);
         }
 
-        public async Task<DependencyGraph> GetDependencyGraph(DependencyDetail dependency)
+        public async Task<DependencyGraph> GetDependencyGraph(string rootRepoFolder, string rootRepoCommit, bool includeToolset)
         {
-            return await DependencyGraph.GetDependencyGraphAsync(
-                null, 
-                dependency, 
-                false, 
-                NullLogger.Instance, 
-                testPath: TemporaryRepositoryPath);
+            return await DependencyGraph.BuildLocalDependencyGraphAsync(
+                null,
+                includeToolset,
+                NullLogger.Instance,
+                rootRepoFolder,
+                rootRepoCommit,
+                reposFolder: null,
+                remotesMap: null,
+                testPath: RootInputsPath);
         }
 
         private async static void TestAndCompareImpl(
@@ -127,10 +131,7 @@ namespace Microsoft.DotNet.Darc.Tests
 
         public async static void GetGraphAndCompare(string testInputsName, 
             Func<DependencyTestDriver, Task<DependencyGraph>> testFunc,
-            Func<DependencyDetail, string, string, Task<DependencyGraph>> getExpectedDependencyGraph,
-            DependencyDetail rootDependency,
-            string outputFileName,
-            bool equal)
+            string expectedGraphFile)
         {
             DependencyTestDriver dependencyTestDriver = new DependencyTestDriver(testInputsName);
 
@@ -138,23 +139,105 @@ namespace Microsoft.DotNet.Darc.Tests
             {
                 dependencyTestDriver.Setup();
                 DependencyGraph dependencyGraph = await testFunc(dependencyTestDriver);
-                DependencyGraph expectedDependencyGraph = await getExpectedDependencyGraph(
-                    rootDependency, 
-                    dependencyTestDriver.TemporaryRepositoryPath, 
-                    outputFileName);
 
-                if (equal)
+                // Load in the expected graph and validate against the dependencyGraph
+                XmlDocument graphDocument = new XmlDocument();
+                graphDocument.Load(Path.Combine(dependencyTestDriver.RootInputsPath, expectedGraphFile));
+
+                // Compare the root node
+                dependencyTestDriver.AssertDependencyGraphNodeIsEqual(dependencyGraph.Root, graphDocument.SelectSingleNode("//RootNode/DependencyGraphNode"));
+
+                // Compare all the nodes
+                XmlNodeList allNodes = graphDocument.SelectNodes("//AllNodes/DependencyGraphNode");
+                dependencyTestDriver.AssetGraphNodeListIsEqual(dependencyGraph.Nodes, allNodes);
+
+                // Compare incoherencies
+                XmlNodeList incoherentNodes = graphDocument.SelectNodes("//IncoherentNodes/DependencyGraphNode");
+                dependencyTestDriver.AssetGraphNodeListIsEqual(dependencyGraph.IncoherentNodes, incoherentNodes);
+
+                // Compare unique dependencies
+                XmlNodeList dependencyNodes = graphDocument.SelectNodes("//UniqueDependencies/Dependency");
+                foreach (XmlNode dep in dependencyNodes)
                 {
-                    dependencyTestDriver.AssertEqual(dependencyGraph, expectedDependencyGraph);
-                }
-                else
-                {
-                    dependencyTestDriver.AssertNotEqual(dependencyGraph, expectedDependencyGraph);
+                    // Find each dependency in the graphNode's dependency
+                    var matchingDependency = dependencyGraph.UniqueDependencies.FirstOrDefault(dependency =>
+                    {
+                        return (dependency.Name == dep.SelectSingleNode("Name").InnerText &&
+                            dependency.Version == dep.SelectSingleNode("Version").InnerText &&
+                            dependency.RepoUri == dep.SelectSingleNode("RepoUri").InnerText &&
+                            dependency.Commit == dep.SelectSingleNode("Commit").InnerText &&
+                            dependency.Type.ToString() == dep.SelectSingleNode("Type").InnerText);
+                    });
+
+                    Assert.NotNull(matchingDependency);
                 }
             }
             finally
             {
                 dependencyTestDriver.Cleanup();
+            }
+        }
+
+        private void AssetGraphNodeListIsEqual(IEnumerable<DependencyGraphNode> nodes, XmlNodeList nodeList)
+        {
+            foreach (XmlNode node in nodeList)
+            {
+                string repoUri = node.SelectSingleNode("RepoUri").InnerText;
+                string commit = node.SelectSingleNode("Commit").InnerText;
+                DependencyGraphNode matchingNode = nodes.FirstOrDefault(graphNode =>
+                        graphNode.RepoUri == repoUri &&
+                        graphNode.Commit == commit);
+
+                Assert.NotNull(matchingNode);
+                AssertDependencyGraphNodeIsEqual(matchingNode, node);
+            }
+        }
+
+        private void AssertDependencyGraphNodeIsEqual(DependencyGraphNode graphNode, XmlNode xmlNode)
+        {
+            // Check root commit info
+            Assert.Equal(graphNode.RepoUri, xmlNode.SelectSingleNode("RepoUri").InnerText);
+            Assert.Equal(graphNode.Commit, xmlNode.SelectSingleNode("Commit").InnerText);
+
+            // Check dependencies
+            XmlNodeList dependencyNodes = xmlNode.SelectNodes("Dependencies/Dependency");
+            foreach (XmlNode dep in dependencyNodes)
+            {
+                string name = dep.SelectSingleNode("Name").InnerText;
+                string version = dep.SelectSingleNode("Version").InnerText;
+                string repoUri = dep.SelectSingleNode("RepoUri").InnerText;
+                string commit = dep.SelectSingleNode("Commit").InnerText;
+                string type = dep.SelectSingleNode("Type").InnerText;
+
+                // Find each dependency in the graphNode's dependency
+                var matchingDependency = graphNode.Dependencies.FirstOrDefault(dependency =>
+                {
+                    return (dependency.Name == name &&
+                        dependency.Version == version &&
+                        dependency.RepoUri == repoUri &&
+                        dependency.Commit == commit &&
+                        dependency.Type.ToString() == type);
+                });
+
+                Assert.NotNull(matchingDependency);
+            }
+
+            AssertMatchingGraphNodeReferenceList(xmlNode.SelectNodes("/Children/Child"), graphNode.Children);
+            AssertMatchingGraphNodeReferenceList(xmlNode.SelectNodes("/Parents/Parent"), graphNode.Parents);
+        }
+
+        private void AssertMatchingGraphNodeReferenceList(XmlNodeList xmlNodes, IEnumerable<DependencyGraphNode> graphNodes)
+        {   
+            foreach (XmlNode node in xmlNodes)
+            {
+                string repoUri = node.SelectSingleNode("RepoUri").InnerText;
+                string commit = node.SelectSingleNode("Commit").InnerText;
+
+                var matchingNode = graphNodes.FirstOrDefault(graphNode =>
+                    graphNode.RepoUri == repoUri &&
+                    graphNode.Commit == commit);
+
+                Assert.NotNull(matchingNode);
             }
         }
 
@@ -176,32 +259,6 @@ namespace Microsoft.DotNet.Darc.Tests
                     expectedOutput,
                     actualOutput);
             }
-        }
-
-        /// <summary>
-        ///     Determine whether two DependencyGraphs are the same.
-        /// </summary>
-        /// <param name="actualDependencyGraph">The generated graph</param>
-        /// <param name="expectedDependencyGraph">The expected graph</param>
-        public void AssertEqual(DependencyGraph actualDependencyGraph, DependencyGraph expectedDependencyGraph)
-        {
-            Assert.Equal(actualDependencyGraph.Graph.DependencyDetail.Commit, expectedDependencyGraph.Graph.DependencyDetail.Commit);
-            Assert.Equal(actualDependencyGraph.Graph.DependencyDetail.Name, expectedDependencyGraph.Graph.DependencyDetail.Name);
-            Assert.Equal(actualDependencyGraph.Graph.DependencyDetail.RepoUri, expectedDependencyGraph.Graph.DependencyDetail.RepoUri);
-            Assert.Equal(actualDependencyGraph.Graph.DependencyDetail.Version, expectedDependencyGraph.Graph.DependencyDetail.Version);
-            Assert.True(actualDependencyGraph.FlatGraph.SetEquals(expectedDependencyGraph.FlatGraph));
-            Assert.True(actualDependencyGraph.Graph.ChildNodes.SetEquals(expectedDependencyGraph.Graph.ChildNodes));
-        }
-
-        /// <summary>
-        ///     Determine whether two DependencyGraphs are different.
-        /// </summary>
-        /// <param name="actualDependencyGraph">The generated graph</param>
-        /// <param name="expectedDependencyGraph">The expected graph</param>
-        public void AssertNotEqual(DependencyGraph actualDependencyGraph, DependencyGraph expectedDependencyGraph)
-        {
-            Assert.False(actualDependencyGraph.FlatGraph.SetEquals(expectedDependencyGraph.FlatGraph));
-            Assert.False(actualDependencyGraph.Graph.ChildNodes.SetEquals(expectedDependencyGraph.Graph.ChildNodes));
         }
 
         /// <summary>

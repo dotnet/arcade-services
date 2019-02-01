@@ -2,43 +2,67 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Microsoft.DotNet.DarcLib
 {
     public class DependencyGraphNode
     {
-        public DependencyGraphNode(DependencyDetail dependencyDetail)
+        public DependencyGraphNode(string repoUri,
+                                   string commit,
+                                   IEnumerable<DependencyDetail> dependencies)
             : this(
-                  dependencyDetail,
-                  new HashSet<string>())
+                  repoUri,
+                  commit,
+                  dependencies,
+                  new HashSet<string>(StringComparer.OrdinalIgnoreCase))
         {
         }
 
         public DependencyGraphNode(
-            DependencyDetail dependencyDetail,
+            string repoUri,
+            string commit,
+            IEnumerable<DependencyDetail> dependencies,
             HashSet<string> visitedNodes)
-            : this(
-                dependencyDetail,
-                visitedNodes,
-                new HashSet<DependencyGraphNode>())
         {
-        }
-
-        public DependencyGraphNode(
-            DependencyDetail dependencyDetail,
-            HashSet<string> visitedNodes,
-            HashSet<DependencyGraphNode> childNodes)
-        {
-            DependencyDetail = dependencyDetail;
-            VisitedNodes = new HashSet<string>(visitedNodes);
-            ChildNodes = new HashSet<DependencyGraphNode>(childNodes, new DependencyGraphNodeComparer());
+            RepoUri = repoUri;
+            Commit = commit;
+            Dependencies = dependencies;
+            VisitedNodes = new HashSet<string>(visitedNodes, StringComparer.OrdinalIgnoreCase);
+            Children = new HashSet<DependencyGraphNode>(new DependencyGraphNodeComparer());
+            Parents = new HashSet<DependencyGraphNode>(new DependencyGraphNodeComparer());
         }
 
         public HashSet<string> VisitedNodes { get; set; }
 
-        public DependencyDetail DependencyDetail { get; set; }
+        /// <summary>
+        ///     Node repository URI
+        /// </summary>
+        public readonly string RepoUri;
 
-        public HashSet<DependencyGraphNode> ChildNodes { get; set; }
+        /// <summary>
+        /// Node commit
+        /// </summary>
+        public readonly string Commit;
+
+        /// <summary>
+        ///     Dependencies of the node at RepoUri and Commit.
+        /// </summary>
+        public IEnumerable<DependencyDetail> Dependencies { get; set; }
+
+        /// <summary>
+        ///     Unique set of repositories that this node is dependent on.
+        /// </summary>
+        public HashSet<DependencyGraphNode> Children { get; set; }
+
+        public HashSet<DependencyGraphNode> Parents { get; set; }
+
+        public void AddChild(DependencyGraphNode newChild, DependencyDetail dependency)
+        {
+            Children.Add(newChild);
+            newChild.Parents.Add(this);
+        }
     }
 }

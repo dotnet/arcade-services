@@ -73,6 +73,7 @@ namespace Microsoft.DotNet.Darc.Operations
             Console.WriteLine($"Version: {dependency.Version}");
             Console.WriteLine($"Repo:    {dependency.RepoUri}");
             Console.WriteLine($"Commit:  {dependency.Commit}");
+            Console.WriteLine($"Type:    {dependency.Type}");
         }
     }
 }

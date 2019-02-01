@@ -11,14 +11,14 @@ namespace Microsoft.DotNet.Darc.Options
     [Verb("get-dependency-graph", HelpText = "Get local dependencies.")]
     internal class GetDependencyGraphCommandLineOptions : CommandLineOptions
     {
-        [Option('r', "remote", HelpText = "Get the graph from remote repositories.")]
-        public bool Remote { get; set; }
+        [Option('l', "local", HelpText = "Get the graph using only local information.  Requires that repos-folder be passed.")]
+        public bool Local { get; set; }
 
-        [Option("repo-uri", HelpText = "If remote is set to true, we fetch Version.Details.xml from the remote 'repo-uri'.")]
+        [Option("repo", HelpText = "If set, gather dependency information from the remote repository. Requires --version.")]
         public string RepoUri { get; set; }
 
-        [Option('b', "branch", HelpText = "If 'repo-uri' is set the branch is required.")]
-        public string Branch { get; set; }
+        [Option('v', "version", HelpText = "Branch, commit or tag to look up if looking up version information remotely.")]
+        public string Version { get; set; }
 
         [Option("asset-name", HelpText = "Get the graph based on a single asset and not the whole Version.Details.xml contents.")]
         public string AssetName { get; set; }
@@ -30,8 +30,14 @@ namespace Microsoft.DotNet.Darc.Options
            + @"https://github.com/dotnet/corefx,C:\repos\corefx.")]
         public IEnumerable<string> RemotesMap { get; set; }
 
-        [Option('f', "flat", HelpText = @"Returns a unique set of repository+sha combination.")]
+        [Option('f', "flat", SetName = "output", HelpText = @"Returns a unique set of repository+sha combination.")]
         public bool Flat { get; set; }
+
+        [Option("graphviz", SetName = "output", HelpText = @"Returns the repository graph in GraphViz form.")]
+        public bool GraphViz { get; set; }
+
+        [Option("include-toolset", HelpText = "Include toolset dependencies.")]
+        public bool IncludeToolset { get; set; }
 
         public override Operation GetOperation()
         {
