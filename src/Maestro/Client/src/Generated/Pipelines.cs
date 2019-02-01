@@ -20,12 +20,12 @@ namespace Microsoft.DotNet.Maestro.Client
     using System.Threading.Tasks;
 
     /// <summary>
-    /// Repository operations.
+    /// Pipelines operations.
     /// </summary>
-    public partial class Repository : IServiceOperations<MaestroApi>, IRepository
+    public partial class Pipelines : IServiceOperations<MaestroApi>, IPipelines
     {
         /// <summary>
-        /// Initializes a new instance of the Repository class.
+        /// Initializes a new instance of the Pipelines class.
         /// </summary>
         /// <param name='client'>
         /// Reference to the service client.
@@ -33,7 +33,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <exception cref="System.ArgumentNullException">
         /// Thrown when a required parameter is null
         /// </exception>
-        public Repository(MaestroApi client)
+        public Pipelines(MaestroApi client)
         {
             if (client == null)
             {
@@ -47,9 +47,11 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </summary>
         public MaestroApi Client { get; private set; }
 
-        /// <param name='repository'>
+        /// <param name='pipelineIdentifier'>
         /// </param>
-        /// <param name='branch'>
+        /// <param name='organization'>
+        /// </param>
+        /// <param name='project'>
         /// </param>
         /// <param name='customHeaders'>
         /// Headers that will be added to request.
@@ -66,7 +68,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <return>
         /// A response object containing the response body and response headers.
         /// </return>
-        public async Task<HttpOperationResponse<IList<MergePolicy>>> GetMergePoliciesWithHttpMessagesAsync(string repository = default(string), string branch = default(string), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<HttpOperationResponse<IList<ReleasePipeline>>> GetWithHttpMessagesAsync(int? pipelineIdentifier = default(int?), string organization = default(string), string project = default(string), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             string apiVersion = "2019-01-16";
             // Tracing
@@ -76,23 +78,28 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _invocationId = ServiceClientTracing.NextInvocationId.ToString();
                 Dictionary<string, object> tracingParameters = new Dictionary<string, object>();
-                tracingParameters.Add("repository", repository);
-                tracingParameters.Add("branch", branch);
+                tracingParameters.Add("pipelineIdentifier", pipelineIdentifier);
+                tracingParameters.Add("organization", organization);
+                tracingParameters.Add("project", project);
                 tracingParameters.Add("apiVersion", apiVersion);
                 tracingParameters.Add("cancellationToken", cancellationToken);
-                ServiceClientTracing.Enter(_invocationId, this, "GetMergePolicies", tracingParameters);
+                ServiceClientTracing.Enter(_invocationId, this, "Get", tracingParameters);
             }
             // Construct URL
             var _baseUrl = Client.BaseUri.AbsoluteUri;
-            var _url = new System.Uri(new System.Uri(_baseUrl + (_baseUrl.EndsWith("/") ? "" : "/")), "api/repo-config/merge-policy").ToString();
+            var _url = new System.Uri(new System.Uri(_baseUrl + (_baseUrl.EndsWith("/") ? "" : "/")), "api/pipelines").ToString();
             List<string> _queryParameters = new List<string>();
-            if (repository != null)
+            if (pipelineIdentifier != null)
             {
-                _queryParameters.Add(string.Format("repository={0}", System.Uri.EscapeDataString(repository)));
+                _queryParameters.Add(string.Format("pipelineIdentifier={0}", System.Uri.EscapeDataString(Rest.Serialization.SafeJsonConvert.SerializeObject(pipelineIdentifier, Client.SerializationSettings).Trim('"'))));
             }
-            if (branch != null)
+            if (organization != null)
             {
-                _queryParameters.Add(string.Format("branch={0}", System.Uri.EscapeDataString(branch)));
+                _queryParameters.Add(string.Format("organization={0}", System.Uri.EscapeDataString(organization)));
+            }
+            if (project != null)
+            {
+                _queryParameters.Add(string.Format("project={0}", System.Uri.EscapeDataString(project)));
             }
             if (apiVersion != null)
             {
@@ -174,7 +181,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw ex;
             }
             // Create Result
-            var _result = new HttpOperationResponse<IList<MergePolicy>>();
+            var _result = new HttpOperationResponse<IList<ReleasePipeline>>();
             _result.Request = _httpRequest;
             _result.Response = _httpResponse;
             // Deserialize Response
@@ -183,7 +190,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 _responseContent = await _httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
                 try
                 {
-                    _result.Body = Rest.Serialization.SafeJsonConvert.DeserializeObject<IList<MergePolicy>>(_responseContent, Client.DeserializationSettings);
+                    _result.Body = Rest.Serialization.SafeJsonConvert.DeserializeObject<IList<ReleasePipeline>>(_responseContent, Client.DeserializationSettings);
                 }
                 catch (JsonException ex)
                 {
@@ -202,11 +209,11 @@ namespace Microsoft.DotNet.Maestro.Client
             return _result;
         }
 
-        /// <param name='repository'>
+        /// <param name='pipelineIdentifier'>
         /// </param>
-        /// <param name='branch'>
+        /// <param name='organization'>
         /// </param>
-        /// <param name='policies'>
+        /// <param name='project'>
         /// </param>
         /// <param name='customHeaders'>
         /// Headers that will be added to request.
@@ -217,11 +224,28 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <exception cref="ApiErrorException">
         /// Thrown when the operation returned an invalid status code
         /// </exception>
+        /// <exception cref="SerializationException">
+        /// Thrown when unable to deserialize the response
+        /// </exception>
+        /// <exception cref="ValidationException">
+        /// Thrown when a required parameter is null
+        /// </exception>
+        /// <exception cref="System.ArgumentNullException">
+        /// Thrown when a required parameter is null
+        /// </exception>
         /// <return>
         /// A response object containing the response body and response headers.
         /// </return>
-        public async Task<HttpOperationResponse> SetMergePoliciesWithHttpMessagesAsync(string repository = default(string), string branch = default(string), IList<MergePolicy> policies = default(IList<MergePolicy>), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<HttpOperationResponse<ReleasePipeline>> CreatePipelineWithHttpMessagesAsync(int pipelineIdentifier, string organization, string project, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
+            if (organization == null)
+            {
+                throw new ValidationException(ValidationRules.CannotBeNull, "organization");
+            }
+            if (project == null)
+            {
+                throw new ValidationException(ValidationRules.CannotBeNull, "project");
+            }
             string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
@@ -230,24 +254,25 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _invocationId = ServiceClientTracing.NextInvocationId.ToString();
                 Dictionary<string, object> tracingParameters = new Dictionary<string, object>();
-                tracingParameters.Add("repository", repository);
-                tracingParameters.Add("branch", branch);
-                tracingParameters.Add("policies", policies);
+                tracingParameters.Add("pipelineIdentifier", pipelineIdentifier);
+                tracingParameters.Add("organization", organization);
+                tracingParameters.Add("project", project);
                 tracingParameters.Add("apiVersion", apiVersion);
                 tracingParameters.Add("cancellationToken", cancellationToken);
-                ServiceClientTracing.Enter(_invocationId, this, "SetMergePolicies", tracingParameters);
+                ServiceClientTracing.Enter(_invocationId, this, "CreatePipeline", tracingParameters);
             }
             // Construct URL
             var _baseUrl = Client.BaseUri.AbsoluteUri;
-            var _url = new System.Uri(new System.Uri(_baseUrl + (_baseUrl.EndsWith("/") ? "" : "/")), "api/repo-config/merge-policy").ToString();
+            var _url = new System.Uri(new System.Uri(_baseUrl + (_baseUrl.EndsWith("/") ? "" : "/")), "api/pipelines").ToString();
             List<string> _queryParameters = new List<string>();
-            if (repository != null)
+            _queryParameters.Add(string.Format("pipelineIdentifier={0}", System.Uri.EscapeDataString(Rest.Serialization.SafeJsonConvert.SerializeObject(pipelineIdentifier, Client.SerializationSettings).Trim('"'))));
+            if (organization != null)
             {
-                _queryParameters.Add(string.Format("repository={0}", System.Uri.EscapeDataString(repository)));
+                _queryParameters.Add(string.Format("organization={0}", System.Uri.EscapeDataString(organization)));
             }
-            if (branch != null)
+            if (project != null)
             {
-                _queryParameters.Add(string.Format("branch={0}", System.Uri.EscapeDataString(branch)));
+                _queryParameters.Add(string.Format("project={0}", System.Uri.EscapeDataString(project)));
             }
             if (apiVersion != null)
             {
@@ -279,12 +304,6 @@ namespace Microsoft.DotNet.Maestro.Client
 
             // Serialize Request
             string _requestContent = null;
-            if(policies != null)
-            {
-                _requestContent = Rest.Serialization.SafeJsonConvert.SerializeObject(policies, Client.SerializationSettings);
-                _httpRequest.Content = new StringContent(_requestContent, System.Text.Encoding.UTF8);
-                _httpRequest.Content.Headers.ContentType =System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json-patch+json; charset=utf-8");
-            }
             // Set Credentials
             if (Client.Credentials != null)
             {
@@ -305,7 +324,7 @@ namespace Microsoft.DotNet.Maestro.Client
             HttpStatusCode _statusCode = _httpResponse.StatusCode;
             cancellationToken.ThrowIfCancellationRequested();
             string _responseContent = null;
-            if ((int)_statusCode != 200)
+            if ((int)_statusCode != 201)
             {
                 var ex = new ApiErrorException(string.Format("Operation returned an invalid status code '{0}'", _statusCode));
                 try
@@ -335,9 +354,27 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw ex;
             }
             // Create Result
-            var _result = new HttpOperationResponse();
+            var _result = new HttpOperationResponse<ReleasePipeline>();
             _result.Request = _httpRequest;
             _result.Response = _httpResponse;
+            // Deserialize Response
+            if ((int)_statusCode == 201)
+            {
+                _responseContent = await _httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
+                try
+                {
+                    _result.Body = Rest.Serialization.SafeJsonConvert.DeserializeObject<ReleasePipeline>(_responseContent, Client.DeserializationSettings);
+                }
+                catch (JsonException ex)
+                {
+                    _httpRequest.Dispose();
+                    if (_httpResponse != null)
+                    {
+                        _httpResponse.Dispose();
+                    }
+                    throw new SerializationException("Unable to deserialize the response.", _responseContent, ex);
+                }
+            }
             if (_shouldTrace)
             {
                 ServiceClientTracing.Exit(_invocationId, _result);
@@ -345,13 +382,7 @@ namespace Microsoft.DotNet.Maestro.Client
             return _result;
         }
 
-        /// <param name='repository'>
-        /// </param>
-        /// <param name='branch'>
-        /// </param>
-        /// <param name='page'>
-        /// </param>
-        /// <param name='perPage'>
+        /// <param name='id'>
         /// </param>
         /// <param name='customHeaders'>
         /// Headers that will be added to request.
@@ -368,7 +399,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <return>
         /// A response object containing the response body and response headers.
         /// </return>
-        public async Task<HttpOperationResponse<IList<RepositoryHistoryItem>>> GetHistoryWithHttpMessagesAsync(string repository = default(string), string branch = default(string), int? page = default(int?), int? perPage = default(int?), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<HttpOperationResponse<ReleasePipeline>> GetPipelineWithHttpMessagesAsync(int id, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             string apiVersion = "2019-01-16";
             // Tracing
@@ -378,34 +409,16 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _invocationId = ServiceClientTracing.NextInvocationId.ToString();
                 Dictionary<string, object> tracingParameters = new Dictionary<string, object>();
-                tracingParameters.Add("repository", repository);
-                tracingParameters.Add("branch", branch);
-                tracingParameters.Add("page", page);
-                tracingParameters.Add("perPage", perPage);
+                tracingParameters.Add("id", id);
                 tracingParameters.Add("apiVersion", apiVersion);
                 tracingParameters.Add("cancellationToken", cancellationToken);
-                ServiceClientTracing.Enter(_invocationId, this, "GetHistory", tracingParameters);
+                ServiceClientTracing.Enter(_invocationId, this, "GetPipeline", tracingParameters);
             }
             // Construct URL
             var _baseUrl = Client.BaseUri.AbsoluteUri;
-            var _url = new System.Uri(new System.Uri(_baseUrl + (_baseUrl.EndsWith("/") ? "" : "/")), "api/repo-config/history").ToString();
+            var _url = new System.Uri(new System.Uri(_baseUrl + (_baseUrl.EndsWith("/") ? "" : "/")), "api/pipelines/{id}").ToString();
+            _url = _url.Replace("{id}", System.Uri.EscapeDataString(Rest.Serialization.SafeJsonConvert.SerializeObject(id, Client.SerializationSettings).Trim('"')));
             List<string> _queryParameters = new List<string>();
-            if (repository != null)
-            {
-                _queryParameters.Add(string.Format("repository={0}", System.Uri.EscapeDataString(repository)));
-            }
-            if (branch != null)
-            {
-                _queryParameters.Add(string.Format("branch={0}", System.Uri.EscapeDataString(branch)));
-            }
-            if (page != null)
-            {
-                _queryParameters.Add(string.Format("page={0}", System.Uri.EscapeDataString(Rest.Serialization.SafeJsonConvert.SerializeObject(page, Client.SerializationSettings).Trim('"'))));
-            }
-            if (perPage != null)
-            {
-                _queryParameters.Add(string.Format("perPage={0}", System.Uri.EscapeDataString(Rest.Serialization.SafeJsonConvert.SerializeObject(perPage, Client.SerializationSettings).Trim('"'))));
-            }
             if (apiVersion != null)
             {
                 _queryParameters.Add(string.Format("api-version={0}", System.Uri.EscapeDataString(apiVersion)));
@@ -486,7 +499,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw ex;
             }
             // Create Result
-            var _result = new HttpOperationResponse<IList<RepositoryHistoryItem>>();
+            var _result = new HttpOperationResponse<ReleasePipeline>();
             _result.Request = _httpRequest;
             _result.Response = _httpResponse;
             // Deserialize Response
@@ -495,7 +508,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 _responseContent = await _httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
                 try
                 {
-                    _result.Body = Rest.Serialization.SafeJsonConvert.DeserializeObject<IList<RepositoryHistoryItem>>(_responseContent, Client.DeserializationSettings);
+                    _result.Body = Rest.Serialization.SafeJsonConvert.DeserializeObject<ReleasePipeline>(_responseContent, Client.DeserializationSettings);
                 }
                 catch (JsonException ex)
                 {
@@ -514,11 +527,7 @@ namespace Microsoft.DotNet.Maestro.Client
             return _result;
         }
 
-        /// <param name='timestamp'>
-        /// </param>
-        /// <param name='repository'>
-        /// </param>
-        /// <param name='branch'>
+        /// <param name='id'>
         /// </param>
         /// <param name='customHeaders'>
         /// Headers that will be added to request.
@@ -529,10 +538,13 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <exception cref="ApiErrorException">
         /// Thrown when the operation returned an invalid status code
         /// </exception>
+        /// <exception cref="SerializationException">
+        /// Thrown when unable to deserialize the response
+        /// </exception>
         /// <return>
         /// A response object containing the response body and response headers.
         /// </return>
-        public async Task<HttpOperationResponse> RetryActionAsyncWithHttpMessagesAsync(long timestamp, string repository = default(string), string branch = default(string), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<HttpOperationResponse<ReleasePipeline>> DeletePipelineWithHttpMessagesAsync(int id, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             string apiVersion = "2019-01-16";
             // Tracing
@@ -542,26 +554,16 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _invocationId = ServiceClientTracing.NextInvocationId.ToString();
                 Dictionary<string, object> tracingParameters = new Dictionary<string, object>();
-                tracingParameters.Add("repository", repository);
-                tracingParameters.Add("branch", branch);
-                tracingParameters.Add("timestamp", timestamp);
+                tracingParameters.Add("id", id);
                 tracingParameters.Add("apiVersion", apiVersion);
                 tracingParameters.Add("cancellationToken", cancellationToken);
-                ServiceClientTracing.Enter(_invocationId, this, "RetryActionAsync", tracingParameters);
+                ServiceClientTracing.Enter(_invocationId, this, "DeletePipeline", tracingParameters);
             }
             // Construct URL
             var _baseUrl = Client.BaseUri.AbsoluteUri;
-            var _url = new System.Uri(new System.Uri(_baseUrl + (_baseUrl.EndsWith("/") ? "" : "/")), "api/repo-config/retry/{timestamp}").ToString();
-            _url = _url.Replace("{timestamp}", System.Uri.EscapeDataString(Rest.Serialization.SafeJsonConvert.SerializeObject(timestamp, Client.SerializationSettings).Trim('"')));
+            var _url = new System.Uri(new System.Uri(_baseUrl + (_baseUrl.EndsWith("/") ? "" : "/")), "api/pipelines/{id}").ToString();
+            _url = _url.Replace("{id}", System.Uri.EscapeDataString(Rest.Serialization.SafeJsonConvert.SerializeObject(id, Client.SerializationSettings).Trim('"')));
             List<string> _queryParameters = new List<string>();
-            if (repository != null)
-            {
-                _queryParameters.Add(string.Format("repository={0}", System.Uri.EscapeDataString(repository)));
-            }
-            if (branch != null)
-            {
-                _queryParameters.Add(string.Format("branch={0}", System.Uri.EscapeDataString(branch)));
-            }
             if (apiVersion != null)
             {
                 _queryParameters.Add(string.Format("api-version={0}", System.Uri.EscapeDataString(apiVersion)));
@@ -573,7 +575,7 @@ namespace Microsoft.DotNet.Maestro.Client
             // Create HTTP transport objects
             var _httpRequest = new HttpRequestMessage();
             HttpResponseMessage _httpResponse = null;
-            _httpRequest.Method = new HttpMethod("POST");
+            _httpRequest.Method = new HttpMethod("DELETE");
             _httpRequest.RequestUri = new System.Uri(_url);
             // Set Headers
 
@@ -612,7 +614,7 @@ namespace Microsoft.DotNet.Maestro.Client
             HttpStatusCode _statusCode = _httpResponse.StatusCode;
             cancellationToken.ThrowIfCancellationRequested();
             string _responseContent = null;
-            if ((int)_statusCode != 202)
+            if ((int)_statusCode != 200)
             {
                 var ex = new ApiErrorException(string.Format("Operation returned an invalid status code '{0}'", _statusCode));
                 try
@@ -642,9 +644,27 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw ex;
             }
             // Create Result
-            var _result = new HttpOperationResponse();
+            var _result = new HttpOperationResponse<ReleasePipeline>();
             _result.Request = _httpRequest;
             _result.Response = _httpResponse;
+            // Deserialize Response
+            if ((int)_statusCode == 200)
+            {
+                _responseContent = await _httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
+                try
+                {
+                    _result.Body = Rest.Serialization.SafeJsonConvert.DeserializeObject<ReleasePipeline>(_responseContent, Client.DeserializationSettings);
+                }
+                catch (JsonException ex)
+                {
+                    _httpRequest.Dispose();
+                    if (_httpResponse != null)
+                    {
+                        _httpResponse.Dispose();
+                    }
+                    throw new SerializationException("Unable to deserialize the response.", _responseContent, ex);
+                }
+            }
             if (_shouldTrace)
             {
                 ServiceClientTracing.Exit(_invocationId, _result);

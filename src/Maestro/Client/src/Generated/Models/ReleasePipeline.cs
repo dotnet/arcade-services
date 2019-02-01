@@ -8,29 +8,27 @@
 namespace Microsoft.DotNet.Maestro.Client.Models
 {
     using Newtonsoft.Json;
-    using System.Collections;
-    using System.Collections.Generic;
     using System.Linq;
 
-    public partial class Channel
+    public partial class ReleasePipeline
     {
         /// <summary>
-        /// Initializes a new instance of the Channel class.
+        /// Initializes a new instance of the ReleasePipeline class.
         /// </summary>
-        public Channel()
+        public ReleasePipeline()
         {
             CustomInit();
         }
 
         /// <summary>
-        /// Initializes a new instance of the Channel class.
+        /// Initializes a new instance of the ReleasePipeline class.
         /// </summary>
-        public Channel(int? id = default(int?), string name = default(string), string classification = default(string), IList<ReleasePipeline> releasePipelines = default(IList<ReleasePipeline>))
+        public ReleasePipeline(int? id = default(int?), int? pipelineIdentifier = default(int?), string organization = default(string), string project = default(string))
         {
             Id = id;
-            Name = name;
-            Classification = classification;
-            ReleasePipelines = releasePipelines;
+            PipelineIdentifier = pipelineIdentifier;
+            Organization = organization;
+            Project = project;
             CustomInit();
         }
 
@@ -46,18 +44,18 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 
         /// <summary>
         /// </summary>
-        [JsonProperty(PropertyName = "name")]
-        public string Name { get; set; }
+        [JsonProperty(PropertyName = "pipelineIdentifier")]
+        public int? PipelineIdentifier { get; set; }
 
         /// <summary>
         /// </summary>
-        [JsonProperty(PropertyName = "classification")]
-        public string Classification { get; set; }
+        [JsonProperty(PropertyName = "organization")]
+        public string Organization { get; set; }
 
         /// <summary>
         /// </summary>
-        [JsonProperty(PropertyName = "releasePipelines")]
-        public IList<ReleasePipeline> ReleasePipelines { get; set; }
+        [JsonProperty(PropertyName = "project")]
+        public string Project { get; set; }
 
     }
 }

@@ -15,23 +15,15 @@ namespace Microsoft.DotNet.Maestro.Client
     using System.Threading.Tasks;
 
     /// <summary>
-    /// Assets operations.
+    /// Pipelines operations.
     /// </summary>
-    public partial interface IAssets
+    public partial interface IPipelines
     {
-        /// <param name='name'>
+        /// <param name='pipelineIdentifier'>
         /// </param>
-        /// <param name='version'>
+        /// <param name='organization'>
         /// </param>
-        /// <param name='buildId'>
-        /// </param>
-        /// <param name='nonShipping'>
-        /// </param>
-        /// <param name='loadLocations'>
-        /// </param>
-        /// <param name='page'>
-        /// </param>
-        /// <param name='perPage'>
+        /// <param name='project'>
         /// </param>
         /// <param name='customHeaders'>
         /// The headers that will be added to request.
@@ -48,7 +40,29 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <exception cref="Microsoft.Rest.ValidationException">
         /// Thrown when a required parameter is null
         /// </exception>
-        Task<HttpOperationResponse<IList<Asset>>> GetWithHttpMessagesAsync(string name = default(string), string version = default(string), int? buildId = default(int?), bool? nonShipping = default(bool?), bool? loadLocations = default(bool?), int? page = default(int?), int? perPage = default(int?), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken));
+        Task<HttpOperationResponse<IList<ReleasePipeline>>> GetWithHttpMessagesAsync(int? pipelineIdentifier = default(int?), string organization = default(string), string project = default(string), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken));
+        /// <param name='pipelineIdentifier'>
+        /// </param>
+        /// <param name='organization'>
+        /// </param>
+        /// <param name='project'>
+        /// </param>
+        /// <param name='customHeaders'>
+        /// The headers that will be added to request.
+        /// </param>
+        /// <param name='cancellationToken'>
+        /// The cancellation token.
+        /// </param>
+        /// <exception cref="ApiErrorException">
+        /// Thrown when the operation returned an invalid status code
+        /// </exception>
+        /// <exception cref="Microsoft.Rest.SerializationException">
+        /// Thrown when unable to deserialize the response
+        /// </exception>
+        /// <exception cref="Microsoft.Rest.ValidationException">
+        /// Thrown when a required parameter is null
+        /// </exception>
+        Task<HttpOperationResponse<ReleasePipeline>> CreatePipelineWithHttpMessagesAsync(int pipelineIdentifier, string organization, string project, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken));
         /// <param name='id'>
         /// </param>
         /// <param name='customHeaders'>
@@ -66,13 +80,8 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <exception cref="Microsoft.Rest.ValidationException">
         /// Thrown when a required parameter is null
         /// </exception>
-        Task<HttpOperationResponse<Asset>> GetAssetWithHttpMessagesAsync(int id, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken));
-        /// <param name='assetId'>
-        /// </param>
-        /// <param name='location'>
-        /// </param>
-        /// <param name='assetLocationType'>
-        /// Possible values include: 'none', 'nugetFeed', 'container'
+        Task<HttpOperationResponse<ReleasePipeline>> GetPipelineWithHttpMessagesAsync(int id, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken));
+        /// <param name='id'>
         /// </param>
         /// <param name='customHeaders'>
         /// The headers that will be added to request.
@@ -89,23 +98,6 @@ namespace Microsoft.DotNet.Maestro.Client
         /// <exception cref="Microsoft.Rest.ValidationException">
         /// Thrown when a required parameter is null
         /// </exception>
-        Task<HttpOperationResponse<AssetLocation>> AddAssetLocationToAssetWithHttpMessagesAsync(int assetId, string location, string assetLocationType, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken));
-        /// <param name='assetId'>
-        /// </param>
-        /// <param name='assetLocationId'>
-        /// </param>
-        /// <param name='customHeaders'>
-        /// The headers that will be added to request.
-        /// </param>
-        /// <param name='cancellationToken'>
-        /// The cancellation token.
-        /// </param>
-        /// <exception cref="ApiErrorException">
-        /// Thrown when the operation returned an invalid status code
-        /// </exception>
-        /// <exception cref="Microsoft.Rest.ValidationException">
-        /// Thrown when a required parameter is null
-        /// </exception>
-        Task<HttpOperationResponse> RemoveAssetLocationFromAssetWithHttpMessagesAsync(int assetId, int assetLocationId, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken));
+        Task<HttpOperationResponse<ReleasePipeline>> DeletePipelineWithHttpMessagesAsync(int id, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken));
     }
 }

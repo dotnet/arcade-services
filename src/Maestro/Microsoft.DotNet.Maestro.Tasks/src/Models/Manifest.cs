@@ -37,10 +37,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
         public string InitialAssetsLocation { get; set; }
 
         [XmlAttribute(AttributeName = "AzureDevOpsBuildId")]
-        public string AzureDevOpsBuildId { get; set; }
+        public int? AzureDevOpsBuildId { get; set; }
 
         [XmlAttribute(AttributeName = "AzureDevOpsBuildDefinitionId")]
-        public string AzureDevOpsBuildDefinitionId { get; set; }
+        public int? AzureDevOpsBuildDefinitionId { get; set; }
 
         [XmlAttribute(AttributeName = "AzureDevOpsAccount")]
         public string AzureDevOpsAccount { get; set; }
