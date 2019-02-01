@@ -4,7 +4,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
@@ -25,13 +27,21 @@ namespace Microsoft.DotNet.DarcLib
 
             _logger = logger;
 
+            // If a temporary repository root was not provided, use the environment
+            // provided temp directory
+            string temporaryRepositoryRoot = settings.TemporaryRepositoryRoot;
+            if (string.IsNullOrEmpty(temporaryRepositoryRoot))
+            {
+                temporaryRepositoryRoot = Path.GetTempPath();
+            }
+
             if (settings.GitType == GitRepoType.GitHub)
             {
-                _gitClient = new GitHubClient(settings.PersonalAccessToken, _logger);
+                _gitClient = new GitHubClient(settings.PersonalAccessToken, _logger, temporaryRepositoryRoot);
             }
             else if (settings.GitType == GitRepoType.AzureDevOps)
             {
-                _gitClient = new AzureDevOpsClient(settings.PersonalAccessToken, _logger);
+                _gitClient = new AzureDevOpsClient(settings.PersonalAccessToken, _logger, temporaryRepositoryRoot);
             }
 
             // Only initialize the file manager if we have a git client, which excludes "None"
@@ -173,6 +183,22 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        /// Trigger a subscription by ID
+        /// </summary>
+        /// <param name="subscriptionId">ID of subscription to trigger</param>
+        /// <returns>Subscription just triggered.</returns>
+        public async Task<Subscription> TriggerSubscriptionAsync(string subscriptionId)
+        {
+            CheckForValidBarClient();
+            if (!Guid.TryParse(subscriptionId, out Guid subscriptionGuid))
+            {
+                throw new ArgumentException($"Subscription id '{subscriptionId}' is not a valid guid.");
+            }
+
+            return await _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionGuid);
+        }
+
+        /// <summary>
         ///     Create a new subscription
         /// </summary>
         /// <param name="channelName">Name of source channel</param>
@@ -260,6 +286,11 @@ namespace Microsoft.DotNet.DarcLib
         public async Task CreateNewBranchAsync(string repoUri, string baseBranch, string newBranch)
         {
             await _gitClient.CreateBranchAsync(repoUri, newBranch, baseBranch);
+        }
+
+        public async Task DeleteBranchAsync(string repoUri, string branch)
+        {
+            await _gitClient.DeleteBranchAsync(repoUri, branch);
         }
 
         public async Task<IList<Check>> GetPullRequestChecksAsync(string pullRequestUrl)
@@ -434,10 +465,77 @@ namespace Microsoft.DotNet.DarcLib
             return _barClient.Builds.GetLatestAsync(repository: repoUri, channelId: channelId, loadCollections: true);
         }
 
-        public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri, string branch, string name = null)
+        /// <summary>
+        ///     Retrieve information about the specified build.
+        /// </summary>
+        /// <param name="buildId">Id of build.</param>
+        /// <returns>Information about the specific build</returns>
+        /// <remarks>The build's assets are returned</remarks>
+        public Task<Build> GetBuildAsync(int buildId)
+        {
+            CheckForValidBarClient();
+            return _barClient.Builds.GetBuildAsync(buildId);
+        }
+
+        /// <summary>
+        ///     Get a list of builds for the given repo uri and commit.
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="commit">Commit</param>
+        /// <returns></returns>
+        public Task<IList<Build>> GetBuildsAsync(string repoUri, string commit)
+        {
+            CheckForValidBarClient();
+            return _barClient.Builds.GetAllBuildsAsync(repository: repoUri,
+                                                       commit: commit,
+                                                       loadCollections: true);
+        }
+
+        /// <summary>
+        ///     Get assets matching a particular set of properties. All are optional.
+        /// </summary>
+        /// <param name="name">Name of asset</param>
+        /// <param name="version">Version of asset</param>
+        /// <param name="buildId">ID of build producing the asset</param>
+        /// <param name="nonShipping">Only non-shipping</param>
+        /// <returns>List of assets.</returns>
+        public async Task<IList<Asset>> GetAssetsAsync(string name = null,
+                                                       string version = null,
+                                                       int? buildId = null,
+                                                       bool? nonShipping = null)
+        {
+            CheckForValidBarClient();
+            // Start at the first page and go until we 404
+            List<Asset> assets = new List<Asset>();
+            int page = 0;
+            while (true)
+            {
+                try
+                {
+                    IList<Asset> assetPage = await _barClient.Assets.GetAsync(name, version, buildId, nonShipping, loadLocations: true, page: ++page);
+                    assets.AddRange(assetPage);
+                }
+                catch (ApiErrorException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    break;
+                }
+            }
+            return assets;
+        }
+
+        /// <summary>
+        ///     Get the list of dependencies in the specified repo and branch/commit
+        /// </summary>
+        /// <param name="repoUri">Repository to get dependencies from</param>
+        /// <param name="branchOrCommit">Commit to get dependencies at</param>
+        /// <param name="name">Optional name of specific dependency to get information on</param>
+        /// <returns>Matching dependency information.</returns>
+        public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri,
+                                                                              string branchOrCommit,
+                                                                              string name = null)
         {
             CheckForValidGitClient();
-            return (await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branch)).Where(
+            return (await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branchOrCommit)).Where(
                 dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         }
 

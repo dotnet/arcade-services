@@ -76,6 +76,14 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 return NotFound();
             }
 
+            // Ensure that there are no subscriptions associated with the channel
+            if (await _context.Subscriptions.AnyAsync(s => s.ChannelId == id))
+            {
+                return BadRequest(
+                    new ApiError($"The channel with id '{id}' has associated subscriptions. " +
+                    "Please remove these before removing this channel."));
+            }
+
             if (channel.ChannelReleasePipelines != null && channel.ChannelReleasePipelines.Any())
             {
                 return BadRequest(

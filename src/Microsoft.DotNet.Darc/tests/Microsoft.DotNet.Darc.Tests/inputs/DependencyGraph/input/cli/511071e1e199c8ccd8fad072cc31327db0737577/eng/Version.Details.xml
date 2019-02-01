@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Dependencies>
+  <ProductDependencies>
+    <Dependency Name="Microsoft.TemplateEngine.Cli" Version="1.0.2-beta5.19066.2">
+      <Uri>templating</Uri>
+      <Sha>ac8f12b90238542dfd2ea596178ae24ea20a0f55</Sha>
+    </Dependency>
+  </ProductDependencies>
+  <ToolsetDependencies>
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="1.0.0-beta.19073.5">
+      <Uri>arcade</Uri>
+      <Sha>af8ab7d7ca13d5f129c31cfa7aeda19f6d168e6e</Sha>
+    </Dependency>
+  </ToolsetDependencies>
+  <ProductDependencies>
+    <Dependency Name="Microsoft.NET.Sdk" Version="3.0.100-preview.19075.2">
+      <Uri>sdk</Uri>
+      <Sha>010b0fb362878d3eb8dfff7f521fc0db6b7e3a50</Sha>
+    </Dependency>
+    <!-- We don't want migrate being updated by DARC just yet due to the NuGet
+    discrepancy between it and the CLI. We will fix that for P3 -->
+    <!-- <Dependency Name="Microsoft.DotNet.ProjectJsonMigration" Version="1.3.2-preview.19074.1">
+      <Uri>cli-migrate</Uri>
+      <Sha>37e3a01aa1df320a286b0a858876f9994fb6bb18</Sha>
+    </Dependency> -->
+    <Dependency Name="Microsoft.DotNet.Cli.CommandLine" Version="1.0.0-preview.19074.1">
+      <Uri>cliCommandLineParser</Uri>
+      <Sha>d8f545b1995fb62fd5c64f794491afbfcf6a84ca</Sha>
+    </Dependency>
+  </ProductDependencies>
+</Dependencies>

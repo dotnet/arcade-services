@@ -29,36 +29,97 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             try
             {
-                Local local = new Local(LocalHelpers.GetGitDir(Logger), Logger);
-                IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync(
-                    _options.AssetName);
-                DarcSettings darcSettings = null;
+                IEnumerable<DependencyDetail> rootDependencies = null;
+                DependencyGraph graph;
+                RemoteFactory remoteFactory = new RemoteFactory(_options);
 
-                if (_options.Remote)
+                if (!_options.Local)
                 {
-                    if (string.IsNullOrEmpty(_options.RepoUri))
-                    {
-                        Logger.LogError("If '--remote' is set '--repo-uri' is required.");
+                    // If the repo uri and version are set, then call the graph
+                    // build operation based on those.  Both should be set in this case.
+                    // If they are not set, then gather the initial set based on the local repository,
+                    // and then call the graph build with that root set.
 
+                    if (!string.IsNullOrEmpty(_options.RepoUri))
+                    {
+                        if (string.IsNullOrEmpty(_options.Version))
+                        {
+                            Logger.LogError("If --repo is set, --version should be supplied");
+                            return Constants.ErrorCode;
+                        }
+
+                        Console.WriteLine($"Getting root dependencies from {_options.RepoUri}@{_options.Version}...");
+
+                        // Grab root dependency set. The graph build can do this, but
+                        // if an original asset name is passed, then this will do the initial filtering.
+                        IRemote rootRepoRemote = remoteFactory.GetRemote(_options.RepoUri, Logger);
+                        rootDependencies = await rootRepoRemote.GetDependenciesAsync(
+                            _options.RepoUri,
+                            _options.Version,
+                            _options.AssetName);
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(_options.Version))
+                        {
+                            Logger.LogError("If --version is supplied, then --repo is required");
+                            return Constants.ErrorCode;
+                        }
+
+                        Console.WriteLine($"Getting root dependencies from local repository...");
+
+                        // Grab root dependency set from local repo
+                        Local local = new Local(LocalHelpers.GetGitDir(Logger), Logger);
+                        rootDependencies = await local.GetDependenciesAsync(
+                            _options.AssetName);
+                    }
+
+                    Console.WriteLine($"Building repository dependency graph...");
+
+                    FilterToolsetDependencies(rootDependencies);
+
+                    if (!rootDependencies.Any())
+                    {
+                        Console.WriteLine($"No root dependencies found, exiting.");
                         return Constants.ErrorCode;
                     }
 
-                    darcSettings = LocalSettings.GetDarcSettings(
-                        _options, 
-                        Logger, 
-                        _options.RepoUri);
-                    Remote remote = new Remote(darcSettings, Logger);
-                    dependencies = await remote.GetDependenciesAsync(
-                        _options.RepoUri, 
-                        _options.Branch, 
-                        _options.AssetName);
+                    // Build graph
+                    graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
+                        remoteFactory,
+                        rootDependencies,
+                        _options.RepoUri ?? LocalHelpers.GetGitDir(Logger),
+                        _options.Version ?? LocalHelpers.GetGitCommit(Logger),
+                        _options.IncludeToolset,
+                        Logger);
                 }
-
-                List<DependencyGraph> graph = await CreateGraphAsync(dependencies, darcSettings);
-
-                if (graph == null)
+                else
                 {
-                    return Constants.ErrorCode;
+                    Console.WriteLine($"Getting root dependencies from local repository...");
+
+                    Local local = new Local(LocalHelpers.GetGitDir(Logger), Logger);
+                    rootDependencies = await local.GetDependenciesAsync(
+                        _options.AssetName);
+
+                    FilterToolsetDependencies(rootDependencies);
+
+                    if (!rootDependencies.Any())
+                    {
+                        Console.WriteLine($"No root dependencies found, exiting.");
+                        return Constants.ErrorCode;
+                    }
+
+                    Console.WriteLine($"Building repository dependency graph from local information...");
+
+                    // Build graph using only local resources
+                    graph = await DependencyGraph.BuildLocalDependencyGraphAsync(
+                        rootDependencies,
+                        _options.IncludeToolset,
+                        Logger,
+                        LocalHelpers.GetGitDir(Logger),
+                        LocalHelpers.GetGitCommit(Logger),
+                        _options.ReposFolder,
+                        _options.RemotesMap);
                 }
 
                 if (_options.Flat)
@@ -80,97 +141,115 @@ namespace Microsoft.DotNet.Darc.Operations
             }
         }
 
+        private IEnumerable<DependencyDetail> FilterToolsetDependencies(IEnumerable<DependencyDetail> dependencies)
+        {
+            if (!_options.IncludeToolset)
+            {
+                Console.WriteLine($"Removing toolset dependencies...");
+                return dependencies.Where(dependency => dependency.Type != DependencyType.Toolset);
+            }
+            return dependencies;
+        }
+
         /// <summary>
-        /// Create the graph or graphs dependending on the amount of base dependencies 
-        /// passed in as an input.
+        ///     Log the dependency graph as a simple flat list of repo/sha combinations
+        ///     that contribute to this graph.
         /// </summary>
-        /// <param name="dependencies">Input dependencies.</param>
-        /// <param name="darcSettings">The Darc settings.</param>
-        /// <returns>Collection of graph nodes.</returns>
-        private async Task<List<DependencyGraph>> CreateGraphAsync(
-            IEnumerable<DependencyDetail> dependencies, 
-            DarcSettings darcSettings)
+        /// <param name="graph">Graph to log</param>
+        private void LogFlatDependencyGraph(DependencyGraph graph)
         {
-            List<DependencyGraph> graph = new List<DependencyGraph>();
-
-            if (string.IsNullOrEmpty(_options.AssetName))
+            Console.WriteLine($"Repositories:");
+            foreach (DependencyGraphNode node in graph.Nodes)
             {
-                await Task.WhenAll(dependencies.Select(
-                    dependency => AddNodeToGraphAsync(
-                        darcSettings, 
-                        dependency, 
-                        graph)));
+                Console.WriteLine($"  - Repo:     {node.RepoUri}");
+                Console.WriteLine($"    Commit:   {node.Commit}");
             }
-            else
+            LogIncoherencies(graph);
+        }
+
+        private void LogDependencyGraph(DependencyGraph graph)
+        {
+            Console.WriteLine($"Repositories:");
+            LogDependencyGraphNode(graph.Root, "  ");
+            LogIncoherencies(graph);
+        }
+
+        /// <summary>
+        ///     Log incoherencies in the graph, places where repos appear at different shas,
+        ///     or dependencies appear at different version numbers.
+        /// </summary>
+        /// <param name="graph">Graph to log incoherencies for</param>
+        private void LogIncoherencies(DependencyGraph graph)
+        {
+            if (!graph.IncoherentNodes.Any())
             {
-                DependencyDetail dependency = dependencies.FirstOrDefault();
-
-                if (dependency == null)
+                return;
+            }
+            Console.WriteLine("Incoherent Dependencies:");
+            foreach (DependencyDetail incoherentDependency in graph.IncoherentDependencies)
+            {
+                Console.WriteLine($"  - Repo:    {incoherentDependency.RepoUri}");
+                Console.WriteLine($"    Commit:  {incoherentDependency.Commit}");
+                Console.WriteLine($"    Name:    {incoherentDependency.Name}");
+                Console.WriteLine($"    Version: {incoherentDependency.Version}");
+                if (_options.IncludeToolset)
                 {
-                    Logger.LogError($"Dependency '{_options.AssetName}' was not found.");
-                    return null;
+                    Console.WriteLine($"    Type:    {incoherentDependency.Type}");
                 }
-
-                await AddNodeToGraphAsync(darcSettings, dependency, graph);
             }
 
-            return graph;
-        }
-
-        private async Task AddNodeToGraphAsync(
-            DarcSettings darcSettings, 
-            DependencyDetail dependency, 
-            List<DependencyGraph> graph)
-        {
-            DependencyGraph dependencyGraph = await DependencyGraph.GetDependencyGraphAsync(
-                darcSettings, 
-                dependency, 
-                _options.Remote, 
-                Logger, 
-                _options.ReposFolder, 
-                _options.RemotesMap);
-            graph.Add(dependencyGraph);
-        }
-
-        private void LogDependency(DependencyDetail dependency, string indent = "")
-        {
-            Console.WriteLine($"{indent}- Name:    {dependency.Name}");
-            Console.WriteLine($"{indent}  Version: {dependency.Version}");
-            Console.WriteLine($"{indent}  Repo:    {dependency.RepoUri}");
-            Console.WriteLine($"{indent}  Commit:  {dependency.Commit}");
-        }
-
-        private void LogFlatDependencyGraph(List<DependencyGraph> flatGraphs)
-        {
-            foreach (DependencyGraph flatGraph in flatGraphs)
+            Console.WriteLine("Incoherent Repositories:");
+            foreach (DependencyGraphNode incoherentRoot in graph.IncoherentNodes)
             {
-                foreach (DependencyDetail graphNode in flatGraph.FlatGraph)
-                {
-                    Console.WriteLine($"- Repo:    {graphNode.RepoUri}");
-                    Console.WriteLine($"  Commit:  {graphNode.Commit}");
-                }
-
-                Console.WriteLine();
+                LogIncoherentPath(incoherentRoot, null, "  ");
             }
         }
 
-        private void LogDependencyGraph(List<DependencyGraph> graph)
+        private void LogIncoherentPath(DependencyGraphNode currentNode, DependencyGraphNode childNode, string indent)
         {
-            LogDependencyGraph(graph.Select(g => g.Graph));
+            Console.WriteLine($"{indent}- Repo:    {currentNode.RepoUri}");
+            Console.WriteLine($"{indent}  Commit:  {currentNode.Commit}");
+            foreach (DependencyGraphNode parentNode in currentNode.Parents)
+            {
+                LogIncoherentPath(parentNode, currentNode, indent + "  ");
+            }
         }
 
-        private void LogDependencyGraph(IEnumerable<DependencyGraphNode> graph, string indent = "")
+        /// <summary>
+        ///     Log an individual dependency graph node.
+        /// </summary>
+        /// <param name="node">Node to log</param>
+        /// <param name="indent">Current indentation level.</param>
+        private void LogDependencyGraphNode(DependencyGraphNode node, string indent)
         {
-            foreach (DependencyGraphNode node in graph)
+            // Log the repository information.
+            Console.WriteLine($"{indent}- Repo:    {node.RepoUri}");
+            Console.WriteLine($"{indent}  Commit:  {node.Commit}");
+            if (node.Dependencies.Any())
             {
-                LogDependency(node.DependencyDetail, indent);
+                Console.WriteLine($"{indent}  Dependencies:");
 
-                if (node.ChildNodes != null)
+                // Log the dependencies at this repository.
+                foreach (DependencyDetail dependency in node.Dependencies)
                 {
-                    LogDependencyGraph(node.ChildNodes, indent + "  ");
+                    Console.WriteLine($"{indent}  - Name:    {dependency.Name}");
+                    Console.WriteLine($"{indent}    Version: {dependency.Version}");
+                    if (_options.IncludeToolset)
+                    {
+                        Console.WriteLine($"{indent}    Type:    {dependency.Type}");
+                    }
                 }
+            }
 
-                Console.WriteLine();
+            if (node.Children.Any())
+            {
+                Console.WriteLine($"{indent}  Input Repositories:");
+
+                // Walk children
+                foreach (DependencyGraphNode childNode in node.Children)
+                {
+                    LogDependencyGraphNode(childNode, $"{indent}  ");
+                }
             }
         }
     }

@@ -33,8 +33,12 @@ namespace SubscriptionActorService
 
         public async Task<IRemote> CreateAsync(string repoUrl, long installationId)
         {
-            var settings = new DarcSettings();
+            DarcSettings settings = new DarcSettings();
             Uri repoUri = new Uri(repoUrl);
+
+            // Look up the setting for where the repo root should be held.  Default to empty,
+            // which will use the temp directory.
+            settings.TemporaryRepositoryRoot = Configuration.GetValue<string>("DarcTemporaryRepoRoot", null);
 
             switch (repoUri.Host)
             {

@@ -32,8 +32,14 @@ namespace Microsoft.DotNet.DarcLib
         private static readonly Regex RepositoryUriPattern = new Regex(
             @"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\.]+)");
 
+        private static readonly Regex LegacyRepositoryUriPattern = new Regex(
+            @"^https://(?<account>[a-zA-Z0-9]+)\.visualstudio\.com/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\.]+)");
+
         private static readonly Regex PullRequestApiUriPattern = new Regex(
             @"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_apis/git/repositories/(?<repo>[a-zA-Z0-9-\.]+)/pullRequests/(?<id>\d+)");
+
+        // Azure DevOps uses this id when creating a new branch as well as when deleting a branch
+        private static readonly string BaseObjectId = "0000000000000000000000000000000000000000";
 
         private readonly ILogger _logger;
         private readonly string _personalAccessToken;
@@ -46,7 +52,8 @@ namespace Microsoft.DotNet.DarcLib
         ///     PAT for Azure DevOps. This PAT should cover all
         ///     organizations that may be accessed in a single operation.
         /// </param>
-        public AzureDevOpsClient(string accessToken, ILogger logger)
+        public AzureDevOpsClient(string accessToken, ILogger logger, string temporaryRepositoryPath)
+            : base (temporaryRepositoryPath)
         {
             _personalAccessToken = accessToken;
             _logger = logger;
@@ -71,6 +78,7 @@ namespace Microsoft.DotNet.DarcLib
             return GetFileContentsAsync(accountName, projectName, repoName, filePath, branch);
         }
 
+        private static readonly List<string> VersionTypes = new List<string>() { "branch", "commit", "tag" };
         /// <summary>
         ///     Retrieve the contents of a text file in a repo on a specific branch
         /// </summary>
@@ -78,21 +86,46 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="projectName">Azure DevOps project</param>
         /// <param name="repoName">Azure DevOps repo</param>
         /// <param name="filePath">Path to file</param>
-        /// <param name="branch">Branch</param>
+        /// <param name="branchOrCommit">Branch</param>
         /// <returns>Contents of file as string</returns>
-        private async Task<string> GetFileContentsAsync(string accountName, string projectName, string repoName, string filePath, string branch)
+        private async Task<string> GetFileContentsAsync(
+            string accountName,
+            string projectName,
+            string repoName,
+            string filePath,
+            string branchOrCommit)
         {
             _logger.LogInformation(
-                $"Getting the contents of file '{filePath}' from repo '{accountName}/{projectName}/{repoName}' in branch '{branch}'...");
+                $"Getting the contents of file '{filePath}' from repo '{accountName}/{projectName}/{repoName}' in branch/commit '{branchOrCommit}'...");
 
-            JObject content = await this.ExecuteRemoteGitCommandAsync(
-                HttpMethod.Get,
-                accountName,
-                projectName,
-                $"_apis/git/repositories/{repoName}/items?path={filePath}&version={branch}&includeContent=true",
-                _logger);
-
-            return content["content"].ToString();
+            // The AzDO REST API currently does not transparently handle commits vs. branches vs. tags.
+            // You really need to know whether you're talking about a commit or branch or tag
+            // when you ask the question. Avoid this issue for now by first checking branch (most common)
+            // then if it 404s, check commit and then tag.
+            HttpRequestException lastException = null;
+            foreach (var versionType in VersionTypes)
+            {
+                try
+                {
+                    JObject content = await this.ExecuteRemoteGitCommandAsync(
+                        HttpMethod.Get,
+                        accountName,
+                        projectName,
+                        $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={versionType}&version={branchOrCommit}&includeContent=true",
+                        _logger,
+                        // Don't log the failure so users don't get confused by 404 messages popping up in expected circumstances.
+                        logFailure: false);
+                    return content["content"].ToString();
+                }
+                catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)"))
+                {
+                    // Continue
+                    lastException = reqEx;
+                }
+            }
+            _logger.LogError(
+                        $"Could not get file contents at {filePath} from {repoName} at branch/commit '{branchOrCommit}'.");
+            throw lastException;
         }
 
         /// <summary>
@@ -122,7 +155,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 _logger.LogInformation($"'{newBranch}' branch doesn't exist. Creating it...");
 
-                azureDevOpsRef = new AzureDevOpsRef($"refs/heads/{newBranch}", latestSha);
+                azureDevOpsRef = new AzureDevOpsRef($"refs/heads/{newBranch}", latestSha, BaseObjectId);
                 azureDevOpsRefs.Add(azureDevOpsRef);
             }
             else
@@ -137,6 +170,20 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             string body = JsonConvert.SerializeObject(azureDevOpsRefs, _serializerSettings);
+
+            await this.ExecuteRemoteGitCommandAsync(HttpMethod.Post,
+                accountName, projectName, $"_apis/git/repositories/{repoName}/refs", _logger, body);
+        }
+
+        public async Task DeleteBranchAsync(string repoUri, string branch)
+        {
+            (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+
+            string latestSha = await GetLastCommitShaAsync(accountName, projectName, repoName, branch);
+
+            AzureDevOpsRef azureDevOpsRef = new AzureDevOpsRef($"refs/heads/{branch}", BaseObjectId, latestSha);
+
+            string body = JsonConvert.SerializeObject(azureDevOpsRef, _serializerSettings);
 
             await this.ExecuteRemoteGitCommandAsync(HttpMethod.Post,
                 accountName, projectName, $"_apis/git/repositories/{repoName}/refs", _logger, body);
@@ -583,11 +630,18 @@ namespace Microsoft.DotNet.DarcLib
             ILogger logger,
             string body = null,
             string versionOverride = null,
+            bool logFailure = true)
             string baseAddressSubpath = null)
         {
             using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride, baseAddressSubpath))
             {
-                HttpRequestManager requestManager = new HttpRequestManager(client, method, requestPath, logger, body, versionOverride);
+                HttpRequestManager requestManager = new HttpRequestManager(client,
+                                                                           method,
+                                                                           requestPath,
+                                                                           logger,
+                                                                           body,
+                                                                           versionOverride,
+                                                                           logFailure);
 
                 using (var response = await requestManager.ExecuteAsync())
                 {
@@ -623,48 +677,6 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Ensure that the input string ends with 'shouldEndWith' char. 
-        ///     Returns null if input parameter is null.
-        /// </summary>
-        /// <param name="input">String that must have 'shouldEndWith' at the end.</param>
-        /// <param name="shouldEndWith">Character that must be present at end of 'input' string.</param>
-        /// <returns>Input string appended with 'shouldEndWith'</returns>
-        private string EnsureEndsWith(string input, char shouldEndWith)
-        {
-            if (input == null) return null;
-
-            return input.TrimEnd(shouldEndWith) + shouldEndWith;
-        }
-
-        /// <summary>
-        ///     Determine whether a file exists in a repo at a specified branch and
-        ///     returns the SHA of the file if it does.
-        /// </summary>
-        /// <param name="repoUri">Repository URI</param>
-        /// <param name="filePath">Path to file</param>
-        /// <param name="branch">Branch</param>
-        /// <returns>Sha of file or empty string if the file does not exist.</returns>
-        public async Task<string> CheckIfFileExistsAsync(string repoUri, string filePath, string branch)
-        {
-            (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
-            
-            try
-            {
-                JObject content = await this.ExecuteRemoteGitCommandAsync(
-                    HttpMethod.Get,
-                    accountName,
-                    projectName,
-                    $"_apis/git/repositories/{repoName}/items?path={filePath}&versionDescriptor[version]={branch}",
-                    _logger);
-                return content["objectId"].ToString();
-            }
-            catch (HttpRequestException exc) when (exc.Message.Contains(((int) HttpStatusCode.NotFound).ToString()))
-            {
-                return null;
-            }
-        }
-
-        /// <summary>
         /// Create a connection to AzureDevOps using the VSS APIs
         /// </summary>
         /// <param name="accountName">Uri of repository or pull request</param>
@@ -689,17 +701,29 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        /// Parse a repository url into its component parts
+        /// Parse a repository url into its component parts.
         /// </summary>
         /// <param name="repoUri">Repository url to parse</param>
         /// <returns>Tuple of account, project, repo</returns>
+        /// <remarks>
+        ///     While we really only want to support dev.azure.com, in some cases
+        ///     builds are still being reported from foo.visualstudio.com. This is apparently because
+        ///     the url the agent connects to is what determines this property. So for now, support both forms.
+        ///     We don't need to support this for PR urls because the repository target urls in the Maestro
+        ///     database are restricted to dev.azure.com forms.
+        /// </remarks>
         public static (string accountName, string projectName, string repoName) ParseRepoUri(string repoUri)
         {
             Match m = RepositoryUriPattern.Match(repoUri);
             if (!m.Success)
             {
-                throw new ArgumentException(
-                    @"Repository URI should be in the form  https://dev.azure.com/:account/:project/_git/:repo");
+                m = LegacyRepositoryUriPattern.Match(repoUri);
+                if (!m.Success)
+                {
+                    throw new ArgumentException(
+                        "Repository URI should be in the form https://dev.azure.com/:account/:project/_git/:repo or " +
+                        "https://:account.visualstudio.com/:project/_git/:repo");
+                }
             }
 
             return (m.Groups["account"].Value,

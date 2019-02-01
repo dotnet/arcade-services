@@ -31,12 +31,16 @@ namespace Microsoft.DotNet.Maestro.Client
             /// </param>
             /// <param name='loadLocations'>
             /// </param>
+            /// <param name='page'>
+            /// </param>
+            /// <param name='perPage'>
+            /// </param>
             /// <param name='cancellationToken'>
             /// The cancellation token.
             /// </param>
-            public static async Task<IList<Asset>> GetAsync(this IAssets operations, string name = default(string), string version = default(string), int? buildId = default(int?), bool? nonShipping = default(bool?), bool? loadLocations = default(bool?), CancellationToken cancellationToken = default(CancellationToken))
+            public static async Task<IList<Asset>> GetAsync(this IAssets operations, string name = default(string), string version = default(string), int? buildId = default(int?), bool? nonShipping = default(bool?), bool? loadLocations = default(bool?), int? page = default(int?), int? perPage = default(int?), CancellationToken cancellationToken = default(CancellationToken))
             {
-                using (var _result = await operations.GetWithHttpMessagesAsync(name, version, buildId, nonShipping, loadLocations, null, cancellationToken).ConfigureAwait(false))
+                using (var _result = await operations.GetWithHttpMessagesAsync(name, version, buildId, nonShipping, loadLocations, page, perPage, null, cancellationToken).ConfigureAwait(false))
                 {
                     return _result.Body;
                 }
@@ -56,6 +60,42 @@ namespace Microsoft.DotNet.Maestro.Client
                 {
                     return _result.Body;
                 }
+            }
+
+            /// <param name='operations'>
+            /// The operations group for this extension method.
+            /// </param>
+            /// <param name='assetId'>
+            /// </param>
+            /// <param name='location'>
+            /// </param>
+            /// <param name='assetLocationType'>
+            /// Possible values include: 'none', 'nugetFeed', 'container'
+            /// </param>
+            /// <param name='cancellationToken'>
+            /// The cancellation token.
+            /// </param>
+            public static async Task<AssetLocation> AddAssetLocationToAssetAsync(this IAssets operations, int assetId, string location, string assetLocationType, CancellationToken cancellationToken = default(CancellationToken))
+            {
+                using (var _result = await operations.AddAssetLocationToAssetWithHttpMessagesAsync(assetId, location, assetLocationType, null, cancellationToken).ConfigureAwait(false))
+                {
+                    return _result.Body;
+                }
+            }
+
+            /// <param name='operations'>
+            /// The operations group for this extension method.
+            /// </param>
+            /// <param name='assetId'>
+            /// </param>
+            /// <param name='assetLocationId'>
+            /// </param>
+            /// <param name='cancellationToken'>
+            /// The cancellation token.
+            /// </param>
+            public static async Task RemoveAssetLocationFromAssetAsync(this IAssets operations, int assetId, int assetLocationId, CancellationToken cancellationToken = default(CancellationToken))
+            {
+                (await operations.RemoveAssetLocationFromAssetWithHttpMessagesAsync(assetId, assetLocationId, null, cancellationToken).ConfigureAwait(false)).Dispose();
             }
 
     }

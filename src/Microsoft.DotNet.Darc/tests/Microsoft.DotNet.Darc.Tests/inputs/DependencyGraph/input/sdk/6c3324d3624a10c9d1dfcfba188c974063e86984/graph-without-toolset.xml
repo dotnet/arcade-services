@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<DependencyGraph>
+  <RootNode>
+    <DependencyGraphNode>
+      <RepoUri>sdk</RepoUri>
+      <Commit>6c3324d3624a10c9d1dfcfba188c974063e86984</Commit>
+      <Dependencies>
+        <Dependency>
+          <Name>Microsoft.DotNet.SignTool</Name>
+          <Version>1.0.0-beta.19072.5</Version>
+          <Type>Product</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>044fa99d22e576fcfaf63f09ee9bba821855dddb</Commit>
+        </Dependency>
+      </Dependencies>
+      <Children>
+        <Child>
+          <RepoUri>arcade</RepoUri>
+          <Commit>044fa99d22e576fcfaf63f09ee9bba821855dddb</Commit>
+        </Child>
+      </Children>
+      <Parents />
+    </DependencyGraphNode>
+  </RootNode>
+  <UniqueDependencies>
+    <Dependency>
+      <Name>Microsoft.DotNet.SignTool</Name>
+      <Version>1.0.0-beta.19072.5</Version>
+      <Type>Product</Type>
+      <RepoUri>arcade</RepoUri>
+      <Commit>044fa99d22e576fcfaf63f09ee9bba821855dddb</Commit>
+    </Dependency>
+  </UniqueDependencies>
+  <AllNodes>
+    <DependencyGraphNode>
+      <RepoUri>sdk</RepoUri>
+      <Commit>6c3324d3624a10c9d1dfcfba188c974063e86984</Commit>
+      <Dependencies>
+        <Dependency>
+          <Name>Microsoft.DotNet.SignTool</Name>
+          <Version>1.0.0-beta.19072.5</Version>
+          <Type>Product</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>044fa99d22e576fcfaf63f09ee9bba821855dddb</Commit>
+        </Dependency>
+      </Dependencies>
+      <Children>
+        <Child>
+          <RepoUri>arcade</RepoUri>
+          <Commit>044fa99d22e576fcfaf63f09ee9bba821855dddb</Commit>
+        </Child>
+      </Children>
+      <Parents />
+    </DependencyGraphNode>
+    <DependencyGraphNode>
+      <RepoUri>arcade</RepoUri>
+      <Commit>044fa99d22e576fcfaf63f09ee9bba821855dddb</Commit>
+      <Dependencies />
+      <Children />
+      <Parents>
+        <Parent>
+          <RepoUri>sdk</RepoUri>
+          <Commit>6c3324d3624a10c9d1dfcfba188c974063e86984</Commit>
+        </Parent>
+      </Parents>
+    </DependencyGraphNode>
+  </AllNodes>
+  <IncoherentNodes />
+</DependencyGraph>

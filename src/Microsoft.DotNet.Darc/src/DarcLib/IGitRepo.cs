@@ -19,6 +19,13 @@ namespace Microsoft.DotNet.DarcLib
         Task CreateBranchAsync(string repoUri, string newBranch, string baseBranch);
 
         /// <summary>
+        /// Delete a branch from a repository
+        /// </summary>
+        /// <param name="repoUri">Repository where the branch lives</param>
+        /// <param name="branch">The branch to delete</param>
+        Task DeleteBranchAsync(string repoUri, string branch);
+
+        /// <summary>
         ///     Commit or update a set of files to a repo
         /// </summary>
         /// <param name="filesToCommit">Files to comit</param>
@@ -115,16 +122,6 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="branch">Branch to retrieve the latest sha for</param>
         /// <returns>Latest sha.  Throws if no commits were found.</returns>
         Task<string> GetLastCommitShaAsync(string repoUri, string branch);
-
-        /// <summary>
-        ///     Determine whether a file exists in a repo at a specified branch and
-        ///     returns the SHA of the file if it does.
-        /// </summary>
-        /// <param name="repoUri">Repository URI</param>
-        /// <param name="filePath">Path to file</param>
-        /// <param name="branch">Branch</param>
-        /// <returns>Sha of file or empty string if the file does not exist.</returns>
-        Task<string> CheckIfFileExistsAsync(string repoUri, string filePath, string branch);
 
         /// <summary>
         /// Retrieve the list of status checks on a PR.

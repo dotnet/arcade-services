@@ -13,6 +13,7 @@ namespace Microsoft.DotNet.Darc.Tests
     {
         [Theory]
         [InlineData("https://dev.azure.com/dnceng/public/_git/foo", "dnceng", "public", "foo")]
+        [InlineData("https://borkbork.visualstudio.com/borky/_git/foo2", "borkbork", "borky", "foo2")]
         [InlineData("https://dev.azure.com/dcn2eng/public-s/_git/foo-23bar", "dcn2eng", "public-s", "foo-23bar")]
         [InlineData("https://dev.azure.com/foo/bar/_git/baz-bop/pullrequest/11?_a=overview", "foo", "bar", "baz-bop")]
         private void ParseValidRepoUriTests(string inputUri, string expectedAccount, string expectedProject, string expectedRepo)
@@ -24,7 +25,6 @@ namespace Microsoft.DotNet.Darc.Tests
         }
 
         [Theory]
-        [InlineData("https://dnceng.visualstudio.com/public/_git/foo")]
         [InlineData("https://dev.azure.com/dcn-eng/public-s/_git/foo-23bar")]
         [InlineData("https://dnceng@dev.azure.com/dnceng/public/_git/foo-core")]
         private void ParseInvalidRepoUriTests(string inputUri)
