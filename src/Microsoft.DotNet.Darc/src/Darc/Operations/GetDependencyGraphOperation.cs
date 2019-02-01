@@ -195,47 +195,11 @@ namespace Microsoft.DotNet.Darc.Operations
 
         private void LogGraphViz(DependencyGraph graph)
         {
-            List<string> colors = new List<string>()
-            {
-                "bisque",
-                "blanchedalmond",
-                "brown",
-                "burlywood",
-                "cadetblue",
-                "chartreuse",
-                "chocolate",
-                "coral",
-                "cornflowerblue",
-                "cornsilk",
-                "crimson",
-                "cyan",
-                "darkgoldenrod",
-                "darkkhaki",
-                "darkolivegreen",
-                "darkorange",
-                "darkorchid",
-                "darksalmon",
-                "darkturquoise",
-                "deeppink",
-                "deepskyblue",
-                "dimgray",
-                "dimgrey",
-                "dodgerblue",
-                "firebrick",
-                "forestgreen",
-                "gainsboro",
-                "gold",
-                "goldenrod"
-            };
-            Random randColor = new Random();
             Console.WriteLine("digraph repositoryGraph {");
             Console.WriteLine("    node [shape=record]");
             foreach (DependencyGraphNode node in graph.Nodes)
             {
-                int colorIndex = randColor.Next(colors.Count - 1);
-                string color = colors[colorIndex];
-                colors.Remove(color);
-                Console.WriteLine($"    {GetGraphVizNodeName(node)}[label=\"{GetSimpleRepoName(node.RepoUri)}\\n{node.Commit.Substring(0, 5)}\", color={color}, style=filled];");
+                Console.WriteLine($"    {GetGraphVizNodeName(node)}[label=\"{GetSimpleRepoName(node.RepoUri)}\\n{node.Commit.Substring(0, 5)}\"];");
                 foreach (DependencyGraphNode childNode in node.Children)
                 {
                     Console.WriteLine($"    {GetGraphVizNodeName(node)} -> {GetGraphVizNodeName(childNode)}");
