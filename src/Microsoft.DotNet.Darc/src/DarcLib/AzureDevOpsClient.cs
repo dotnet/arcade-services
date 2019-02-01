@@ -107,7 +107,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 try
                 {
-                    JObject content = await this.ExecuteRemoteGitCommandAsync(
+                    JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                         HttpMethod.Get,
                         accountName,
                         projectName,
@@ -141,7 +141,7 @@ namespace Microsoft.DotNet.DarcLib
             var azureDevOpsRefs = new List<AzureDevOpsRef>();
             string latestSha = await GetLastCommitShaAsync(accountName, projectName, repoName, baseBranch);
 
-            JObject content = await this.ExecuteRemoteGitCommandAsync(
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Get,
                 accountName,
                 projectName,
@@ -171,7 +171,7 @@ namespace Microsoft.DotNet.DarcLib
 
             string body = JsonConvert.SerializeObject(azureDevOpsRefs, _serializerSettings);
 
-            await this.ExecuteRemoteGitCommandAsync(HttpMethod.Post,
+            await this.ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Post,
                 accountName, projectName, $"_apis/git/repositories/{repoName}/refs", _logger, body);
         }
 
@@ -185,7 +185,7 @@ namespace Microsoft.DotNet.DarcLib
 
             string body = JsonConvert.SerializeObject(azureDevOpsRef, _serializerSettings);
 
-            await this.ExecuteRemoteGitCommandAsync(HttpMethod.Post,
+            await this.ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Post,
                 accountName, projectName, $"_apis/git/repositories/{repoName}/refs", _logger, body);
         }
 
@@ -239,7 +239,7 @@ namespace Microsoft.DotNet.DarcLib
                 query.Append($"&searchCriteria.creatorId={author}");
             }
 
-            JObject content = await this.ExecuteRemoteGitCommandAsync(
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Get,
                 accountName,
                 projectName,
@@ -261,7 +261,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
-            JObject content = await this.ExecuteRemoteGitCommandAsync(HttpMethod.Get,
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Get,
                 accountName, projectName, $"_apis/git/repositories/{repoName}/pullRequests/{id}", _logger);
 
             if (Enum.TryParse(content["status"].ToString(), true, out AzureDevOpsPrStatus status))
@@ -490,7 +490,7 @@ namespace Microsoft.DotNet.DarcLib
 
             (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
 
-            JObject content = await this.ExecuteRemoteGitCommandAsync(
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Get,
                 accountName,
                 projectName,
@@ -539,7 +539,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Latest sha. Throws if there were not commits on <paramref name="branch"/></returns>
         private async Task<string> GetLastCommitShaAsync(string accountName, string projectName, string repoName, string branch)
         {
-            JObject content = await this.ExecuteRemoteGitCommandAsync(
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Get,
                 accountName,
                 projectName,
@@ -566,7 +566,7 @@ namespace Microsoft.DotNet.DarcLib
 
             string statusesPath = $"_apis/git/repositories/{repo}/pullRequests/{id}/statuses";
 
-            JObject content = await this.ExecuteRemoteGitCommandAsync(HttpMethod.Get,
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Get,
                 accountName,
                 projectName,
                 statusesPath,
@@ -621,8 +621,9 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="logger">Logger</param>
         /// <param name="body">Optional body if <paramref name="method"/> is Put or Post</param>
         /// <param name="versionOverride">API version override</param>
+        /// <param name="baseAddressSubpath">[baseAddressSubPath]dev.azure.com subdomain to make the request</param>
         /// <returns>Http response</returns>
-        private async Task<JObject> ExecuteRemoteGitCommandAsync(
+        private async Task<JObject> ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod method,
             string accountName,
             string projectName,
@@ -827,7 +828,7 @@ namespace Microsoft.DotNet.DarcLib
 
             var body = JsonConvert.SerializeObject(releaseDefinition, _serializerSettings);
 
-            JObject content = await this.ExecuteRemoteGitCommandAsync(
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Put,
                 accountName,
                 projectName,
@@ -852,7 +853,7 @@ namespace Microsoft.DotNet.DarcLib
 
             var body = JsonConvert.SerializeObject(releaseDefinition);
 
-            JObject content = await this.ExecuteRemoteGitCommandAsync(
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Put,
                 accountName,
                 projectName,
@@ -874,7 +875,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             var body = $"{{ \"definitionId\": {releaseDefinition.Id} }}";
 
-            JObject content = await this.ExecuteRemoteGitCommandAsync(
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Post,
                 accountName,
                 projectName,
@@ -894,7 +895,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>AzureDevOpsBuild</returns>
         public async Task<AzureDevOpsBuild> GetBuildAsync(string accountName, string projectName, long buildId)
         {
-            JObject content = await this.ExecuteRemoteGitCommandAsync(
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Get,
                 accountName,
                 projectName,
@@ -914,7 +915,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>AzureDevOpsReleaseDefinition</returns>
         public async Task<AzureDevOpsReleaseDefinition> GetReleaseDefinitionAsync(string accountName, string projectName, long releaseDefinitionId)
         {
-            JObject content = await this.ExecuteRemoteGitCommandAsync(
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Get,
                 accountName,
                 projectName,
