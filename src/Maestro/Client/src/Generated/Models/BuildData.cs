@@ -26,20 +26,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// <summary>
         /// Initializes a new instance of the BuildData class.
         /// </summary>
-        public BuildData(string repository, 
-            string commit, 
-            string buildNumber, 
-            string branch = default(string), 
-            IList<AssetData> assets = default(IList<AssetData>), 
-            IList<int?> dependencies = default(IList<int?>),
-            string initialAssetsLocation = null,
-            string azureDevOpsBuildId = null,
-            string azureDevOpsBuildDefinitionId = null,
-            string azureDevOpsAccount = null,
-            string azureDevOpsProject = null,
-            string azureDevOpsBuildNumber = null,
-            string azureDevOpsRepository = null,
-            string azureDevOpsBranch = null)
+        public BuildData(string repository, string commit, string buildNumber, string branch = default(string), IList<AssetData> assets = default(IList<AssetData>), IList<int?> dependencies = default(IList<int?>))
         {
             Repository = repository;
             Branch = branch;
@@ -48,15 +35,6 @@ namespace Microsoft.DotNet.Maestro.Client.Models
             Assets = assets;
             Dependencies = dependencies;
             CustomInit();
-
-            InitialAssetsLocation = initialAssetsLocation;
-            AzureDevOpsBuildId = azureDevOpsBuildId;
-            AzureDevOpsBuildDefinitionId = azureDevOpsBuildDefinitionId;
-            AzureDevOpsAccount = azureDevOpsAccount;
-            AzureDevOpsProject = azureDevOpsProject;
-            AzureDevOpsBuildNumber = azureDevOpsBuildNumber;
-            AzureDevOpsRepository = azureDevOpsRepository;
-            AzureDevOpsBranch = azureDevOpsBranch;
         }
 
         /// <summary>
@@ -93,35 +71,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// </summary>
         [JsonProperty(PropertyName = "dependencies")]
         public IList<int?> Dependencies { get; set; }
-        
-        #region Properties to be used in new publishing flow
 
-        [JsonProperty(PropertyName = "InitialAssetsLocation")]
-        public string InitialAssetsLocation { get; set; }
-
-        [JsonProperty(PropertyName = "AzureDevOpsBuildId")]
-        public string AzureDevOpsBuildId { get; set; }
-
-        [JsonProperty(PropertyName = "AzureDevOpsBuildDefinitionId")]
-        public string AzureDevOpsBuildDefinitionId { get; set; }
-
-        [JsonProperty(PropertyName = "AzureDevOpsAccount")]
-        public string AzureDevOpsAccount { get; set; }
-
-        [JsonProperty(PropertyName = "AzureDevOpsProject")]
-        public string AzureDevOpsProject { get; set; }
-
-        [JsonProperty(PropertyName = "AzureDevOpsBuildNumber")]
-        public string AzureDevOpsBuildNumber { get; set; }
-
-        [JsonProperty(PropertyName = "AzureDevOpsRepository")]
-        public string AzureDevOpsRepository { get; set; }
-
-        [JsonProperty(PropertyName = "AzureDevOpsBranch")]
-        public string AzureDevOpsBranch { get; set; }
-
-        #endregion
-        
         /// <summary>
         /// Validate the object.
         /// </summary>
