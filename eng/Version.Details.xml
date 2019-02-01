@@ -14,9 +14,5 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>1e859f1c17fffbe9c4fb6bbfc0fc71cd0c56563b</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.Maestro.Tasks" Version="1.1.0-beta.19101.2">
-      <Uri>https://github.com/dotnet/arcade-services</Uri>
-      <Sha>29ae212f41f6dc5555b95ef4daf8c77f86ea6b28</Sha>
-    </Dependency>
   </ToolsetDependencies>
 </Dependencies>
