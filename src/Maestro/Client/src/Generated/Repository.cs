@@ -68,7 +68,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<IList<MergePolicy>>> GetMergePoliciesWithHttpMessagesAsync(string repository = default(string), string branch = default(string), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -222,7 +222,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse> SetMergePoliciesWithHttpMessagesAsync(string repository = default(string), string branch = default(string), IList<MergePolicy> policies = default(IList<MergePolicy>), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -370,7 +370,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<IList<RepositoryHistoryItem>>> GetHistoryWithHttpMessagesAsync(string repository = default(string), string branch = default(string), int? page = default(int?), int? perPage = default(int?), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -534,7 +534,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse> RetryActionAsyncWithHttpMessagesAsync(long timestamp, string repository = default(string), string branch = default(string), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;

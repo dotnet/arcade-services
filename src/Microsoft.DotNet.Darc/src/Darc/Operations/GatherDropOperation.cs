@@ -144,7 +144,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     Console.WriteLine($"There were {builds.Count} potential root builds.  Please select one and pass it with --id");
                     foreach (var build in builds)
                     {
-                        Console.WriteLine($"  {build.Id}: {build.BuildNumber} @ {build.DateProduced.Value.ToLocalTime()}");
+                        Console.WriteLine($"  {build.Id}: {build.AzureDevOpsBuildNumber} @ {build.DateProduced.Value.ToLocalTime()}");
                     }
                     return null;
                 }
@@ -201,11 +201,11 @@ namespace Microsoft.DotNet.Darc.Operations
                 await writer.WriteLineAsync($"Builds:");
                 foreach (DownloadedBuild build in downloadedBuilds)
                 {
-                    await writer.WriteLineAsync($"  - Repo:         {build.Build.Repository}");
+                    await writer.WriteLineAsync($"  - Repo:         {build.Build.AzureDevOpsRepository}");
                     await writer.WriteLineAsync($"    Commit:       {build.Build.Commit}");
-                    await writer.WriteLineAsync($"    Branch:       {build.Build.Branch}");
+                    await writer.WriteLineAsync($"    Branch:       {build.Build.AzureDevOpsBranch}");
                     await writer.WriteLineAsync($"    Produced:     {build.Build.DateProduced.Value}");
-                    await writer.WriteLineAsync($"    Build Number: {build.Build.BuildNumber}");
+                    await writer.WriteLineAsync($"    Build Number: {build.Build.AzureDevOpsBuildNumber}");
                     await writer.WriteLineAsync($"    BAR Build ID: {build.Build.Id}");
                     await writer.WriteLineAsync($"    Assets:");
                     foreach (DownloadedAsset asset in build.DownloadedAssets)
@@ -241,7 +241,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 return new InputBuilds { Successful = false };
             }
-            Console.WriteLine($"Root build - Build number {rootBuild.BuildNumber} of {rootBuild.Repository} @ {rootBuild.Commit}");
+            Console.WriteLine($"Root build - Build number {rootBuild.AzureDevOpsBuildNumber} of {rootBuild.AzureDevOpsRepository} @ {rootBuild.Commit}");
             
             // If transitive (full tree) was not selected, we're done
             if (!_options.Transitive)
@@ -257,7 +257,7 @@ namespace Microsoft.DotNet.Darc.Operations
             builds.Add(rootBuild);
             RemoteFactory remoteFactory = new RemoteFactory(_options);
             // Grab dependencies
-            IRemote rootBuildRemote = remoteFactory.GetRemote(rootBuild.Repository, Logger);
+            IRemote rootBuildRemote = remoteFactory.GetRemote(rootBuild.AzureDevOpsRepository, Logger);
 
             Console.WriteLine($"Getting dependencies of root build...");
 
@@ -270,7 +270,7 @@ namespace Microsoft.DotNet.Darc.Operations
             Console.WriteLine("Building graph of all dependencies under root build...");
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 remoteFactory,
-                rootBuild.Repository,
+                rootBuild.AzureDevOpsRepository,
                 rootBuild.Commit,
                 _options.IncludeToolset,
                 Logger);
@@ -324,7 +324,8 @@ namespace Microsoft.DotNet.Darc.Operations
                                     Name = buildAsset.Name,
                                     Version = buildAsset.Version,
                                     Commit = potentialBuild.Commit,
-                                    RepoUri = potentialBuild.Repository },
+                                    RepoUri = potentialBuild.AzureDevOpsRepository
+                                },
                                 potentialBuild);
                         }
 
@@ -358,7 +359,7 @@ namespace Microsoft.DotNet.Darc.Operations
             Console.WriteLine("Full set of builds in graph:");
             foreach (var build in buildList)
             {
-                Console.WriteLine($"  Build - {build.BuildNumber} of {build.Repository} @ {build.Commit}");
+                Console.WriteLine($"  Build - {build.AzureDevOpsBuildNumber} of {build.AzureDevOpsRepository} @ {build.Commit}");
             }
 
             if (errors.Any())
@@ -409,22 +410,22 @@ namespace Microsoft.DotNet.Darc.Operations
             string outputDirectory = rootOutputDirectory;
             if (_options.Separated)
             {
-                int lastSlash = build.Repository.LastIndexOf("/");
-                if (lastSlash != -1 && lastSlash != build.Repository.Length - 1)
+                int lastSlash = build.AzureDevOpsRepository.LastIndexOf("/");
+                if (lastSlash != -1 && lastSlash != build.AzureDevOpsRepository.Length - 1)
                 {
-                    outputDirectory = Path.Combine(rootOutputDirectory, build.Repository.Substring(lastSlash + 1), build.BuildNumber);
+                    outputDirectory = Path.Combine(rootOutputDirectory, build.AzureDevOpsRepository.Substring(lastSlash + 1), build.AzureDevOpsBuildNumber);
                 }
                 else
                 {
                     // Might contain invalid path chars, this is currently unhandled.
-                    outputDirectory = Path.Combine(rootOutputDirectory, build.Repository, build.BuildNumber);
+                    outputDirectory = Path.Combine(rootOutputDirectory, build.AzureDevOpsRepository, build.AzureDevOpsBuildNumber);
                 }
                 Directory.CreateDirectory(outputDirectory);
             }
 
             List<DownloadedAsset> downloadedAssets = new List<DownloadedAsset>();
 
-            Console.WriteLine($"Gathering drop for build {build.BuildNumber} of {build.Repository}");
+            Console.WriteLine($"Gathering drop for build {build.AzureDevOpsBuildNumber} of {build.AzureDevOpsRepository}");
             using (HttpClient client = new HttpClient())
             {
                 var assets = await remote.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?)false : null));
@@ -748,7 +749,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         symbolPackageName = asset.Name.Substring(lastSlash);
                     }
                     string shippingNonShippingFolder = asset.NonShipping.Value ? "NonShipping" : "Shipping";
-                    string aspnetciSymbolSharePath = $@"\\aspnetci\drops\AspNetCore\master\{build.BuildNumber}\packages\Release\{shippingNonShippingFolder}\{symbolPackageName}";
+                    string aspnetciSymbolSharePath = $@"\\aspnetci\drops\AspNetCore\master\{build.AzureDevOpsBuildNumber}\packages\Release\{shippingNonShippingFolder}\{symbolPackageName}";
                     if (await DownloadFromShareAsync(aspnetciSymbolSharePath, fullTargetPath, errors))
                     {
                         downloadedAsset.Successful = true;

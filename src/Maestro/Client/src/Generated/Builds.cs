@@ -82,7 +82,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<IList<Build>>> GetAllBuildsWithHttpMessagesAsync(string repository = default(string), string commit = default(string), string buildNumber = default(string), int? channelId = default(int?), System.DateTimeOffset? notBefore = default(System.DateTimeOffset?), System.DateTimeOffset? notAfter = default(System.DateTimeOffset?), bool? loadCollections = default(bool?), int? page = default(int?), int? perPage = default(int?), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -274,7 +274,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 build.Validate();
             }
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -424,7 +424,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<Build>> GetBuildWithHttpMessagesAsync(int id, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -581,7 +581,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<Build>> GetLatestWithHttpMessagesAsync(string repository = default(string), string commit = default(string), string buildNumber = default(string), int? channelId = default(int?), System.DateTimeOffset? notBefore = default(System.DateTimeOffset?), System.DateTimeOffset? notAfter = default(System.DateTimeOffset?), bool? loadCollections = default(bool?), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;

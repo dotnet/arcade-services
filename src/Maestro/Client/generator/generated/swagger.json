@@ -1,8 +1,8 @@
 {
   "swagger": "2.0",
   "info": {
-    "version": "2018-07-16",
-    "title": "Version 2018-07-16"
+    "version": "2019-01-16",
+    "title": "Version 2019-01-16"
   },
   "host": "localhost:4430",
   "schemes": [
@@ -74,7 +74,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -125,7 +125,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -256,6 +256,117 @@
         }
       }
     },
+    "/api/assets/{assetId}/locations": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "operationId": "Assets_AddAssetLocationToAsset",
+        "consumes": [],
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "parameters": [
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "location",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "assetLocationType",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "none",
+              "nugetFeed",
+              "container"
+            ]
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/AssetLocation"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/{assetId}/locations/{assetLocationId}": {
+      "delete": {
+        "tags": [
+          "Assets"
+        ],
+        "operationId": "Assets_RemoveAssetLocationFromAsset",
+        "consumes": [],
+        "produces": [],
+        "parameters": [
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "assetLocationId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
     "/api/builds": {
       "get": {
         "tags": [
@@ -335,7 +446,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -390,7 +501,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -437,7 +548,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -522,7 +633,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -568,7 +679,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -622,7 +733,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -669,7 +780,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -714,7 +825,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -764,7 +875,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -873,6 +984,98 @@
         }
       }
     },
+    "/api/channels/{channelId}/pipelines/{pipelineId}": {
+      "post": {
+        "tags": [
+          "Channels"
+        ],
+        "operationId": "Channels_AddPipelineToChannel",
+        "consumes": [],
+        "produces": [],
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pipelineId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Channels"
+        ],
+        "operationId": "Channels_DeletePipelineFromChannel",
+        "consumes": [],
+        "produces": [],
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pipelineId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
     "/api/default-channels": {
       "get": {
         "tags": [
@@ -912,7 +1115,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -963,7 +1166,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -1007,7 +1210,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -1048,7 +1251,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -1277,6 +1480,218 @@
         }
       }
     },
+    "/api/pipelines": {
+      "get": {
+        "tags": [
+          "Pipelines"
+        ],
+        "operationId": "Pipelines_Get",
+        "consumes": [],
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "parameters": [
+          {
+            "name": "pipelineIdentifier",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "organization",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "project",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ReleasePipeline"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Pipelines"
+        ],
+        "operationId": "Pipelines_CreatePipeline",
+        "consumes": [],
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "parameters": [
+          {
+            "name": "pipelineIdentifier",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "organization",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "project",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/ReleasePipeline"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/pipelines/{id}": {
+      "get": {
+        "tags": [
+          "Pipelines"
+        ],
+        "operationId": "Pipelines_GetPipeline",
+        "consumes": [],
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/ReleasePipeline"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Pipelines"
+        ],
+        "operationId": "Pipelines_DeletePipeline",
+        "consumes": [],
+        "produces": [
+          "text/plain",
+          "application/json",
+          "text/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/ReleasePipeline"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
     "/api/repo-config/merge-policy": {
       "get": {
         "tags": [
@@ -1309,7 +1724,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -1376,7 +1791,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -1439,7 +1854,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -1498,7 +1913,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -1560,7 +1975,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -1615,7 +2030,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -1662,7 +2077,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -1707,7 +2122,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -1765,7 +2180,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -1814,7 +2229,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -1875,7 +2290,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -1929,7 +2344,7 @@
             "required": true,
             "type": "string",
             "enum": [
-              "2018-07-16"
+              "2019-01-16"
             ]
           }
         ],
@@ -2029,21 +2444,38 @@
           "type": "integer",
           "readOnly": false
         },
-        "repository": {
-          "type": "string",
-          "readOnly": false
-        },
-        "branch": {
-          "type": "string",
-          "readOnly": false
-        },
         "commit": {
           "type": "string",
           "readOnly": false
         },
-        "buildNumber": {
-          "type": "string",
-          "readOnly": false
+        "azureDevOpsBuildId": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "azureDevOpsBuildDefinitionId": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "azureDevOpsAccount": {
+          "type": "string"
+        },
+        "azureDevOpsProject": {
+          "type": "string"
+        },
+        "azureDevOpsBuildNumber": {
+          "type": "string"
+        },
+        "azureDevOpsRepository": {
+          "type": "string"
+        },
+        "azureDevOpsBranch": {
+          "type": "string"
+        },
+        "gitHubRepository": {
+          "type": "string"
+        },
+        "gitHubBranch": {
+          "type": "string"
         },
         "dateProduced": {
           "format": "date-time",
@@ -2132,22 +2564,16 @@
     },
     "BuildData": {
       "required": [
-        "repository",
         "commit",
-        "buildNumber"
+        "azureDevOpsAccount",
+        "azureDevOpsProject",
+        "azureDevOpsBuildNumber",
+        "azureDevOpsRepository",
+        "azureDevOpsBranch"
       ],
       "type": "object",
       "properties": {
-        "repository": {
-          "type": "string"
-        },
-        "branch": {
-          "type": "string"
-        },
         "commit": {
-          "type": "string"
-        },
-        "buildNumber": {
           "type": "string"
         },
         "assets": {
@@ -2164,6 +2590,35 @@
             "format": "int32",
             "type": "integer"
           }
+        },
+        "azureDevOpsBuildId": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "azureDevOpsBuildDefinitionId": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "azureDevOpsAccount": {
+          "type": "string"
+        },
+        "azureDevOpsProject": {
+          "type": "string"
+        },
+        "azureDevOpsBuildNumber": {
+          "type": "string"
+        },
+        "azureDevOpsRepository": {
+          "type": "string"
+        },
+        "azureDevOpsBranch": {
+          "type": "string"
+        },
+        "gitHubRepository": {
+          "type": "string"
+        },
+        "gitHubBranch": {
+          "type": "string"
         }
       }
     },

@@ -70,7 +70,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<IList<ReleasePipeline>>> GetWithHttpMessagesAsync(int? pipelineIdentifier = default(int?), string organization = default(string), string project = default(string), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -246,7 +246,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 throw new ValidationException(ValidationRules.CannotBeNull, "project");
             }
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -401,7 +401,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<ReleasePipeline>> GetPipelineWithHttpMessagesAsync(int id, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -546,7 +546,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<ReleasePipeline>> DeletePipelineWithHttpMessagesAsync(int id, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;

@@ -26,14 +26,20 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// <summary>
         /// Initializes a new instance of the BuildData class.
         /// </summary>
-        public BuildData(string repository, string commit, string buildNumber, string branch = default(string), IList<AssetData> assets = default(IList<AssetData>), IList<int?> dependencies = default(IList<int?>))
+        public BuildData(string commit, string azureDevOpsAccount, string azureDevOpsProject, string azureDevOpsBuildNumber, string azureDevOpsRepository, string azureDevOpsBranch, IList<AssetData> assets = default(IList<AssetData>), IList<int?> dependencies = default(IList<int?>), int? azureDevOpsBuildId = default(int?), int? azureDevOpsBuildDefinitionId = default(int?), string gitHubRepository = default(string), string gitHubBranch = default(string))
         {
-            Repository = repository;
-            Branch = branch;
             Commit = commit;
-            BuildNumber = buildNumber;
             Assets = assets;
             Dependencies = dependencies;
+            AzureDevOpsBuildId = azureDevOpsBuildId;
+            AzureDevOpsBuildDefinitionId = azureDevOpsBuildDefinitionId;
+            AzureDevOpsAccount = azureDevOpsAccount;
+            AzureDevOpsProject = azureDevOpsProject;
+            AzureDevOpsBuildNumber = azureDevOpsBuildNumber;
+            AzureDevOpsRepository = azureDevOpsRepository;
+            AzureDevOpsBranch = azureDevOpsBranch;
+            GitHubRepository = gitHubRepository;
+            GitHubBranch = gitHubBranch;
             CustomInit();
         }
 
@@ -44,23 +50,8 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 
         /// <summary>
         /// </summary>
-        [JsonProperty(PropertyName = "repository")]
-        public string Repository { get; set; }
-
-        /// <summary>
-        /// </summary>
-        [JsonProperty(PropertyName = "branch")]
-        public string Branch { get; set; }
-
-        /// <summary>
-        /// </summary>
         [JsonProperty(PropertyName = "commit")]
         public string Commit { get; set; }
-
-        /// <summary>
-        /// </summary>
-        [JsonProperty(PropertyName = "buildNumber")]
-        public string BuildNumber { get; set; }
 
         /// <summary>
         /// </summary>
@@ -73,6 +64,51 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public IList<int?> Dependencies { get; set; }
 
         /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "azureDevOpsBuildId")]
+        public int? AzureDevOpsBuildId { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "azureDevOpsBuildDefinitionId")]
+        public int? AzureDevOpsBuildDefinitionId { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "azureDevOpsAccount")]
+        public string AzureDevOpsAccount { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "azureDevOpsProject")]
+        public string AzureDevOpsProject { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "azureDevOpsBuildNumber")]
+        public string AzureDevOpsBuildNumber { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "azureDevOpsRepository")]
+        public string AzureDevOpsRepository { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "azureDevOpsBranch")]
+        public string AzureDevOpsBranch { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "gitHubRepository")]
+        public string GitHubRepository { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "gitHubBranch")]
+        public string GitHubBranch { get; set; }
+
+        /// <summary>
         /// Validate the object.
         /// </summary>
         /// <exception cref="ValidationException">
@@ -80,17 +116,29 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// </exception>
         public virtual void Validate()
         {
-            if (Repository == null)
-            {
-                throw new ValidationException(ValidationRules.CannotBeNull, "Repository");
-            }
             if (Commit == null)
             {
                 throw new ValidationException(ValidationRules.CannotBeNull, "Commit");
             }
-            if (BuildNumber == null)
+            if (AzureDevOpsAccount == null)
             {
-                throw new ValidationException(ValidationRules.CannotBeNull, "BuildNumber");
+                throw new ValidationException(ValidationRules.CannotBeNull, "AzureDevOpsAccount");
+            }
+            if (AzureDevOpsProject == null)
+            {
+                throw new ValidationException(ValidationRules.CannotBeNull, "AzureDevOpsProject");
+            }
+            if (AzureDevOpsBuildNumber == null)
+            {
+                throw new ValidationException(ValidationRules.CannotBeNull, "AzureDevOpsBuildNumber");
+            }
+            if (AzureDevOpsRepository == null)
+            {
+                throw new ValidationException(ValidationRules.CannotBeNull, "AzureDevOpsRepository");
+            }
+            if (AzureDevOpsBranch == null)
+            {
+                throw new ValidationException(ValidationRules.CannotBeNull, "AzureDevOpsBranch");
             }
         }
     }

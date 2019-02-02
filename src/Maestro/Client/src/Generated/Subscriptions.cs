@@ -72,7 +72,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<IList<Subscription>>> GetAllSubscriptionsWithHttpMessagesAsync(string sourceRepository = default(string), string targetRepository = default(string), int? channelId = default(int?), bool? enabled = default(bool?), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -239,7 +239,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 subscription.Validate();
             }
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -389,7 +389,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<Subscription>> GetSubscriptionWithHttpMessagesAsync(System.Guid id, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -534,7 +534,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<Subscription>> DeleteSubscriptionWithHttpMessagesAsync(System.Guid id, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -681,7 +681,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<Subscription>> UpdateSubscriptionWithHttpMessagesAsync(System.Guid id, SubscriptionUpdate update = default(SubscriptionUpdate), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -837,7 +837,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<Subscription>> TriggerSubscriptionWithHttpMessagesAsync(System.Guid id, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -986,7 +986,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<IList<SubscriptionHistoryItem>>> GetSubscriptionHistoryWithHttpMessagesAsync(System.Guid id, int? page = default(int?), int? perPage = default(int?), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -1140,7 +1140,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse> RetrySubscriptionActionAsyncWithHttpMessagesAsync(System.Guid id, long timestamp, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;

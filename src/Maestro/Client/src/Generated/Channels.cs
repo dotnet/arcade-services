@@ -66,7 +66,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<IList<Channel>>> GetWithHttpMessagesAsync(string classification = default(string), Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -230,7 +230,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 throw new ValidationException(ValidationRules.CannotBeNull, "classification");
             }
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -383,7 +383,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<Channel>> GetChannelWithHttpMessagesAsync(int id, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -528,7 +528,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse<Channel>> DeleteChannelWithHttpMessagesAsync(int id, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -672,7 +672,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse> AddBuildToChannelWithHttpMessagesAsync(int channelId, int buildId, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -800,7 +800,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse> AddPipelineToChannelWithHttpMessagesAsync(int channelId, int pipelineId, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
@@ -928,7 +928,7 @@ namespace Microsoft.DotNet.Maestro.Client
         /// </return>
         public async Task<HttpOperationResponse> DeletePipelineFromChannelWithHttpMessagesAsync(int channelId, int pipelineId, Dictionary<string, List<string>> customHeaders = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string apiVersion = "2018-07-16";
+            string apiVersion = "2019-01-16";
             // Tracing
             bool _shouldTrace = ServiceClientTracing.IsEnabled;
             string _invocationId = null;
