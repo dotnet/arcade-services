@@ -31,7 +31,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("continue-on-error", HelpText = "Continue on error rather than halting.")]
         public bool ContinueOnError { get; set; }
 
-        [Option("non-shipping", Default = true, HelpText = "Include non-shipping assets.")]
+        [Option("non-shipping", HelpText = "Include non-shipping assets.")]
         public bool IncludeNonShipping { get; set; }
 
         [Option("overwrite", HelpText = "Overwrite existing files at the destination.")]

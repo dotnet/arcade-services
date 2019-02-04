@@ -100,7 +100,13 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                     foreach (Package package in manifest.Packages)
                     {
-                        AddAsset(assets, package.Id, package.Version, manifest.Location, "NugetFeed", package.NonShipping);
+                        AddAsset(
+                            assets, 
+                            package.Id, 
+                            package.Version, 
+                            manifest.InitialAssetsLocation ?? manifest.Location,
+                            (manifest.InitialAssetsLocation == null) ? "NugetFeed" : "Container",
+                            package.NonShipping);
                     }
 
                     foreach (Blob blob in manifest.Blobs)
@@ -113,10 +119,30 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             version = string.Empty;
                         }
 
-                        AddAsset(assets, blob.Id, version, manifest.Location, "Container", blob.NonShipping);
+                        AddAsset(
+                            assets, 
+                            blob.Id, 
+                            version, 
+                            manifest.InitialAssetsLocation ?? manifest.Location, 
+                            "Container", 
+                            blob.NonShipping);
                     }
 
-                    buildsManifestMetadata.Add(new BuildData(manifest.Name, manifest.Commit, manifest.BuildId, manifest.Branch, assets, new List<int?>()));
+                    var buildInfo = new BuildData(
+                        manifest.Commit,
+                        manifest.AzureDevOpsAccount,
+                        manifest.AzureDevOpsProject,
+                        manifest.AzureDevOpsBuildNumber,
+                        manifest.AzureDevOpsRepository,
+                        manifest.AzureDevOpsBranch,
+                        assets,
+                        new List<int?>(),
+                        manifest.AzureDevOpsBuildId,
+                        manifest.AzureDevOpsBuildDefinitionId,
+                        manifest.Name, 
+                        manifest.Branch);
+
+                    buildsManifestMetadata.Add(buildInfo);
                 }
             }
 
@@ -154,10 +180,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
             {
                 BuildData build = buildsMetadata[i];
 
-                if (mergedBuild.Branch != build.Branch ||
-                    mergedBuild.BuildNumber != build.BuildNumber ||
+                if (mergedBuild.AzureDevOpsBranch != build.AzureDevOpsBranch ||
+                    mergedBuild.AzureDevOpsBuildNumber != build.AzureDevOpsBuildNumber ||
                     mergedBuild.Commit != build.Commit ||
-                    mergedBuild.Repository != build.Repository)
+                    mergedBuild.AzureDevOpsRepository != build.AzureDevOpsRepository)
                 {
                     throw new Exception("Can't merge if one or more manifests have different branch, build number, commit or repository values.");
                 }
@@ -165,32 +191,26 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 ((List<AssetData>)mergedBuild.Assets).AddRange(build.Assets);
             }
 
-            mergedBuild.Repository = GetRepoUrl(mergedBuild.Repository, mergedBuild.Commit);
+            LookupForMatchingGitHubRepository(mergedBuild);
 
             return mergedBuild;
         }
 
         /// <summary>
-        /// When we flow dependencies we expect source and target repos to be the same i.e github.com or dev.azure.com/dnceng. When this task is executed
-        /// the repository is an Azure DevOps repository even though the real source is GitHub since we just mirror the code. 
-        /// When we detect an Azure DevOps repository we check if the latest commit exist in GitHub to determine if the source is GitHub or not. If the commit exists in
-        /// the repo we transform the Url from Azure DevOps to GitHub. If not we continue to work with the original Url.
+        /// When we flow dependencies we expect source and target repos to be the same i.e github.com or dev.azure.com/dnceng. 
+        /// When this task is executed the repository is an Azure DevOps repository even though the real source is GitHub 
+        /// since we just mirror the code. When we detect an Azure DevOps repository we check if the latest commit exist in 
+        /// GitHub to determine if the source is GitHub or not. If the commit exists in the repo we transform the Url from 
+        /// Azure DevOps to GitHub. If not we continue to work with the original Url.
         /// </summary>
         /// <param name="repoUrl">The repo Url.</param>
         /// <param name="lastCommitHash">The hash of the last commit.</param>
         /// <returns></returns>
-        private string GetRepoUrl(string repoUrl, string lastCommitHash)
+        private void LookupForMatchingGitHubRepository(BuildData mergedBuild)
         {
-            Uri uri = new Uri(repoUrl);
-
-            if (uri.Host == "github.com")
-            {
-                return repoUrl;
-            }
-
             using (HttpClient client = new HttpClient())
             {
-                string[] segments = repoUrl.Split('/');
+                string[] segments = mergedBuild.AzureDevOpsRepository.Split('/');
                 string repoName = segments[segments.Length - 1];
                 int index = repoName.IndexOf('-');
 
@@ -202,14 +222,18 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 client.BaseAddress = new Uri("https://api.github.com");
                 client.DefaultRequestHeaders.Add("User-Agent", "PushToBarTask");
 
-                HttpResponseMessage response = client.GetAsync($"/repos/{repoName}/commits/{lastCommitHash}").Result;
+                HttpResponseMessage response = client.GetAsync($"/repos/{repoName}/commits/{mergedBuild.Commit}").Result;
 
                 if (response.IsSuccessStatusCode)
                 {
-                    return $"https://github.com/{repoName}";
+                    mergedBuild.GitHubRepository = $"https://github.com/{repoName}";
+                    mergedBuild.GitHubBranch = mergedBuild.AzureDevOpsBranch;
                 }
-
-                return repoUrl;
+                else
+                {
+                    mergedBuild.GitHubRepository = null;
+                    mergedBuild.GitHubBranch = null;
+                }
             }
         }
     }

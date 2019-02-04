@@ -25,13 +25,19 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         /// <summary>
         /// Initializes a new instance of the Build class.
         /// </summary>
-        public Build(int? id = default(int?), string repository = default(string), string branch = default(string), string commit = default(string), string buildNumber = default(string), System.DateTimeOffset? dateProduced = default(System.DateTimeOffset?), IList<Channel> channels = default(IList<Channel>), IList<Asset> assets = default(IList<Asset>), IList<BuildRef> dependencies = default(IList<BuildRef>))
+        public Build(int? id = default(int?), string commit = default(string), int? azureDevOpsBuildId = default(int?), int? azureDevOpsBuildDefinitionId = default(int?), string azureDevOpsAccount = default(string), string azureDevOpsProject = default(string), string azureDevOpsBuildNumber = default(string), string azureDevOpsRepository = default(string), string azureDevOpsBranch = default(string), string gitHubRepository = default(string), string gitHubBranch = default(string), System.DateTimeOffset? dateProduced = default(System.DateTimeOffset?), IList<Channel> channels = default(IList<Channel>), IList<Asset> assets = default(IList<Asset>), IList<BuildRef> dependencies = default(IList<BuildRef>))
         {
             Id = id;
-            Repository = repository;
-            Branch = branch;
             Commit = commit;
-            BuildNumber = buildNumber;
+            AzureDevOpsBuildId = azureDevOpsBuildId;
+            AzureDevOpsBuildDefinitionId = azureDevOpsBuildDefinitionId;
+            AzureDevOpsAccount = azureDevOpsAccount;
+            AzureDevOpsProject = azureDevOpsProject;
+            AzureDevOpsBuildNumber = azureDevOpsBuildNumber;
+            AzureDevOpsRepository = azureDevOpsRepository;
+            AzureDevOpsBranch = azureDevOpsBranch;
+            GitHubRepository = gitHubRepository;
+            GitHubBranch = gitHubBranch;
             DateProduced = dateProduced;
             Channels = channels;
             Assets = assets;
@@ -51,23 +57,53 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 
         /// <summary>
         /// </summary>
-        [JsonProperty(PropertyName = "repository")]
-        public string Repository { get; set; }
-
-        /// <summary>
-        /// </summary>
-        [JsonProperty(PropertyName = "branch")]
-        public string Branch { get; set; }
-
-        /// <summary>
-        /// </summary>
         [JsonProperty(PropertyName = "commit")]
         public string Commit { get; set; }
 
         /// <summary>
         /// </summary>
-        [JsonProperty(PropertyName = "buildNumber")]
-        public string BuildNumber { get; set; }
+        [JsonProperty(PropertyName = "azureDevOpsBuildId")]
+        public int? AzureDevOpsBuildId { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "azureDevOpsBuildDefinitionId")]
+        public int? AzureDevOpsBuildDefinitionId { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "azureDevOpsAccount")]
+        public string AzureDevOpsAccount { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "azureDevOpsProject")]
+        public string AzureDevOpsProject { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "azureDevOpsBuildNumber")]
+        public string AzureDevOpsBuildNumber { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "azureDevOpsRepository")]
+        public string AzureDevOpsRepository { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "azureDevOpsBranch")]
+        public string AzureDevOpsBranch { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "gitHubRepository")]
+        public string GitHubRepository { get; set; }
+
+        /// <summary>
+        /// </summary>
+        [JsonProperty(PropertyName = "gitHubBranch")]
+        public string GitHubBranch { get; set; }
 
         /// <summary>
         /// </summary>

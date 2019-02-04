@@ -88,7 +88,7 @@ namespace Microsoft.DotNet.Darc.Operations
                             }
                         }
                     }
-                    Console.WriteLine($"  - Last Build: {(subscription.LastAppliedBuild != null ? subscription.LastAppliedBuild.BuildNumber : "N/A")}");
+                    Console.WriteLine($"  - Last Build: {(subscription.LastAppliedBuild != null ? subscription.LastAppliedBuild.AzureDevOpsBuildNumber : "N/A")}");
                 }
                 return Constants.SuccessCode;
             }

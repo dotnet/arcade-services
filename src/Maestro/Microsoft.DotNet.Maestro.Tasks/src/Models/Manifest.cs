@@ -30,6 +30,34 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         [XmlAttribute(AttributeName = "Location")]
         public string Location { get; set; }
+
+        #region Properties to be used in new publishing flow
+
+        [XmlAttribute(AttributeName = "InitialAssetsLocation")]
+        public string InitialAssetsLocation { get; set; }
+
+        [XmlAttribute(AttributeName = "AzureDevOpsBuildId")]
+        public int? AzureDevOpsBuildId { get; set; }
+
+        [XmlAttribute(AttributeName = "AzureDevOpsBuildDefinitionId")]
+        public int? AzureDevOpsBuildDefinitionId { get; set; }
+
+        [XmlAttribute(AttributeName = "AzureDevOpsAccount")]
+        public string AzureDevOpsAccount { get; set; }
+
+        [XmlAttribute(AttributeName = "AzureDevOpsProject")]
+        public string AzureDevOpsProject { get; set; }
+
+        [XmlAttribute(AttributeName = "AzureDevOpsBuildNumber")]
+        public string AzureDevOpsBuildNumber { get; set; }
+
+        [XmlAttribute(AttributeName = "AzureDevOpsRepository")]
+        public string AzureDevOpsRepository { get; set; }
+
+        [XmlAttribute(AttributeName = "AzureDevOpsBranch")]
+        public string AzureDevOpsBranch { get; set; }
+
+        #endregion
     }
 
     [XmlRoot(ElementName = "Package")]

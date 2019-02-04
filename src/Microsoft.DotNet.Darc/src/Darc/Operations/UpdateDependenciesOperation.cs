@@ -147,7 +147,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                         if (buildAsset.Version == dependency.Version &&
                             buildAsset.Name == dependency.Name &&
-                            build.Repository == dependency.RepoUri &&
+                            (build.GitHubRepository == dependency.RepoUri || build.AzureDevOpsRepository == dependency.RepoUri) &&
                             build.Commit == dependency.Commit)
                         {
                             // No changes
@@ -163,14 +163,13 @@ namespace Microsoft.DotNet.Darc.Operations
                             Commit = build.Commit,
                             // If casing changes, ensure that the dependency name gets updated.
                             Name = buildAsset.Name,
-                            RepoUri = build.Repository,
+                            RepoUri = build.AzureDevOpsRepository,
                             Version = buildAsset.Version
                         };
 
                         // Print out what we are going to do.	
                         Console.WriteLine($"Updating '{dependency.Name}': '{dependency.Version}' => '{updatedDependency.Version}'" +
-                            $" (from build '{build.BuildNumber}' of '{build.Repository}')");
-
+                            $" (from build '{build.AzureDevOpsBuildNumber}' of '{build.AzureDevOpsRepository}')");
                         // Notify on casing changes.
                         if (buildAsset.Name != dependency.Name)
                         {
