@@ -47,10 +47,14 @@ namespace Maestro.Web
         {
             Triggers<BuildChannel>.Inserted += entry =>
             {
+                BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
                 BuildChannel entity = entry.Entity;
                 Build barBuildInfo = entity.Build;
-                Channel channel = entity.Channel;
-                DbContext context = entry.Context;
+                Channel channel = context.Channels
+                    .Where(ch => ch.Id == entity.ChannelId)
+                    .Include(ch => ch.ChannelReleasePipelines)
+                    .ThenInclude(crp => crp.ReleasePipeline)
+                    .First();
 
                 var azdoTokenProvider = context.GetService<IAzureDevOpsTokenProvider>();
                 var accessToken = azdoTokenProvider.GetTokenForRepository(barBuildInfo.AzureDevOpsRepository).GetAwaiter().GetResult();
@@ -72,9 +76,9 @@ namespace Maestro.Web
                     var pipelineId = pipeline.ReleasePipeline.PipelineIdentifier;
 
                     var pipeDef = azdoClient.GetReleaseDefinitionAsync(account, project, pipelineId).GetAwaiter().GetResult();
-                    azdoClient.RemoveAllArtifactSourcesAsync(account, project, pipeDef).GetAwaiter().GetResult();
+                    azdoClient.RemoveAllArtifactSourcesAsync(account, project, pipeDef);
                     azdoClient.AddArtifactSourceAsync(account, project, pipeDef, azdoBuild).GetAwaiter().GetResult();
-                    azdoClient.StartNewReleaseAsync(account, project, pipeDef).GetAwaiter().GetResult();
+                    azdoClient.StartNewReleaseAsync(account, project, pipeDef);
                 }
 
                 var queue = context.GetService<BackgroundQueue>();
@@ -170,7 +174,7 @@ namespace Maestro.Web
             services.Configure<AzureDevOpsTokenProviderOptions>(
                 (options, provider) =>
                 {
-                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                    var config = provider.GetRequiredService<IConfiguration>();
                     var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
                     foreach (IConfigurationSection token in tokenMap)
                     {
