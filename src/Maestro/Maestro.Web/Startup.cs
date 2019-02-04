@@ -21,12 +21,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System;
@@ -46,7 +48,35 @@ namespace Maestro.Web
             Triggers<BuildChannel>.Inserted += entry =>
             {
                 BuildChannel entity = entry.Entity;
+                Build barBuildInfo = entity.Build;
+                Channel channel = entity.Channel;
                 DbContext context = entry.Context;
+
+                var azdoTokenProvider = context.GetService<IAzureDevOpsTokenProvider>();
+                var accessToken = azdoTokenProvider.GetTokenForRepository(barBuildInfo.AzureDevOpsRepository).GetAwaiter().GetResult();
+                var logger = context.GetService<ILogger<BuildChannel>>();
+
+                var azdoClient = new AzureDevOpsClient(
+                    accessToken,
+                    logger,
+                    null);
+
+                var azdoBuild = azdoClient.GetBuildAsync(barBuildInfo.AzureDevOpsAccount,
+                    barBuildInfo.AzureDevOpsProject,
+                    barBuildInfo.AzureDevOpsBuildId.Value).GetAwaiter().GetResult();
+
+                foreach (var pipeline in channel.ChannelReleasePipelines)
+                {
+                    var account = pipeline.ReleasePipeline.Organization;
+                    var project = pipeline.ReleasePipeline.Project;
+                    var pipelineId = pipeline.ReleasePipeline.PipelineIdentifier;
+
+                    var pipeDef = azdoClient.GetReleaseDefinitionAsync(account, project, pipelineId).GetAwaiter().GetResult();
+                    azdoClient.RemoveAllArtifactSourcesAsync(account, project, pipeDef).GetAwaiter().GetResult();
+                    azdoClient.AddArtifactSourceAsync(account, project, pipeDef, azdoBuild).GetAwaiter().GetResult();
+                    azdoClient.StartNewReleaseAsync(account, project, pipeDef).GetAwaiter().GetResult();
+                }
+
                 var queue = context.GetService<BackgroundQueue>();
                 var dependencyUpdater = context.GetService<IDependencyUpdater>();
                 queue.Post(() => dependencyUpdater.StartUpdateDependenciesAsync(entity.BuildId, entity.ChannelId));
