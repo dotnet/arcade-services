@@ -52,7 +52,6 @@ namespace Microsoft.DotNet.Darc.Tests
                         Name = "Foo.Bar",
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "1.2.3",
-                        Pinned = false,
                         Type = DependencyType.Product
                     });
                 await driver.VerifyAsync();
@@ -97,7 +96,6 @@ namespace Microsoft.DotNet.Darc.Tests
                         Name = "Foo.Bar",
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "1.2.3",
-                        Pinned = false,
                         Type = DependencyType.Product
                     });
 
@@ -129,7 +127,6 @@ namespace Microsoft.DotNet.Darc.Tests
                         Name = "Foo.Bar",
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "1.2.3",
-                        Pinned = false,
                         Type = DependencyType.Product
                     });
 
@@ -151,7 +148,6 @@ namespace Microsoft.DotNet.Darc.Tests
                         Name = "Foo.Bar3",
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "1.2.4",
-                        Pinned = false,
                         Type = DependencyType.Toolset
                     });
                 await driver.VerifyAsync();
@@ -321,7 +317,7 @@ namespace Microsoft.DotNet.Darc.Tests
                         Name = "Foo.Bar",
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "4.5.6",
-                        Pinned = false,
+                        Pinned = true,
                         Type = DependencyType.Product
                     });
                 await driver.VerifyAsync();
@@ -353,8 +349,7 @@ namespace Microsoft.DotNet.Darc.Tests
                             Commit = "4",
                             Name = "Existing.Dependency",
                             RepoUri = "https://foo.com/foo/bar",
-                            Version = "4.5.6",
-                            Pinned = false
+                            Version = "4.5.6"
                         }
                     });
                 await driver.VerifyAsync();
@@ -377,7 +372,7 @@ namespace Microsoft.DotNet.Darc.Tests
                         Name = "Microsoft.DotNet.Arcade.Sdk",
                         RepoUri = "https://github.com/dotnet/arcade",
                         Version = "1.0",
-                        Pinned = false,
+                        Pinned = true,
                         Type = DependencyType.Toolset
                     });
                 await driver.VerifyAsync();

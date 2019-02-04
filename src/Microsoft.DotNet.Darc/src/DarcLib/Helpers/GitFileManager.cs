@@ -190,9 +190,13 @@ namespace Microsoft.DotNet.DarcLib
             versionAttribute.Value = dependency.Version;
             newDependency.Attributes.Append(versionAttribute);
 
-            XmlAttribute pinnedAttribute = versionDetails.CreateAttribute("Pinned");
-            pinnedAttribute.Value = dependency.Pinned.ToString();
-            newDependency.Attributes.Append(pinnedAttribute);
+            // Only add the pinned attribute if the pinned option is set to true
+            if (dependency.Pinned)
+            {
+                XmlAttribute pinnedAttribute = versionDetails.CreateAttribute("Pinned");
+                pinnedAttribute.Value = dependency.Pinned.ToString();
+                newDependency.Attributes.Append(pinnedAttribute);
+            }
 
             XmlNode uri = versionDetails.CreateElement("Uri");
             uri.InnerText = dependency.RepoUri;
