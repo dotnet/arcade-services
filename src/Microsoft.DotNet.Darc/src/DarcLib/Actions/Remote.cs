@@ -283,6 +283,12 @@ namespace Microsoft.DotNet.DarcLib
             return _barClient.Subscriptions.RetrySubscriptionActionAsyncAsync(subscriptionGuid, actionIdentifier);
         }
 
+        public async Task<Subscription> UpdateSubscriptionAsync(Guid subscriptionId, SubscriptionUpdate subscription)
+        {
+            CheckForValidBarClient();
+            return await _barClient.Subscriptions.UpdateSubscriptionAsync(subscriptionId, subscription);
+        }
+
         public async Task CreateNewBranchAsync(string repoUri, string baseBranch, string newBranch)
         {
             await _gitClient.CreateBranchAsync(repoUri, newBranch, baseBranch);

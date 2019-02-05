@@ -64,90 +64,77 @@ namespace Microsoft.DotNet.Darc.Operations
                 }));
             }
 
-            // First, try to get the subscription
-
-
-            if (!_options.Quiet)
-            {
-
-            }
-
             string channel = _options.Channel;
             string sourceRepository = _options.SourceRepository;
             string updateFrequency = _options.UpdateFrequency;
             bool batchable = _options.Batchable;
+            bool enabled = _options.Enabled;
 
-            // If in quiet (non-interactive mode), ensure that all options were passed, then
-            // just call the remote API
-            if (_options.Quiet)
+            // First, try to get the subscription. If it doesn't exist the call will throw and the exception will be
+            // caught by `RunOperation`
+            Subscription subscription = await remote.GetSubscriptionAsync(_options.Id);
+
+            if (!_options.Quiet)
             {
-                if (string.IsNullOrEmpty(channel) ||
-                    string.IsNullOrEmpty(sourceRepository) ||
-                    string.IsNullOrEmpty(updateFrequency) ||
-                    !Constants.AvailableFrequencies.Contains(updateFrequency, StringComparer.OrdinalIgnoreCase))
-                {
-                    Logger.LogError($"Missing input parameters for the subscription. Please see command help or remove --quiet/-q for interactive mode");
-                    return Constants.ErrorCode;
-                }
-            }
-            else
-            {
-                // Grab existing subscriptions to get suggested values.
-                // TODO: When this becomes paged, set a max number of results to avoid
-                // pulling too much.
                 var suggestedRepos = remote.GetSubscriptionsAsync();
                 var suggestedChannels = remote.GetChannelsAsync();
 
-                // Help the user along with a form.  We'll use the API to gather suggested values
-                // from existing subscriptions based on the input parameters.
-                AddSubscriptionPopUp initEditorPopUp =
-                    new AddSubscriptionPopUp("add-subscription/add-subscription-todo",
-                                             Logger,
-                                             channel,
-                                             sourceRepository,
-                                             targetRepository,
-                                             targetBranch,
-                                             updateFrequency,
-                                             mergePolicies,
-                                             (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
-                                             (await suggestedRepos).SelectMany(subscription => new List<string> { subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
-                                             Constants.AvailableFrequencies,
-                                             Constants.AvailableMergePolicyYamlHelp);
+                UpdateSubscriptionPopUp updateSubscriptionPopUp = new UpdateSubscriptionPopUp(
+                    "update-subscription/update-subscription-todo",
+                    Logger,
+                    subscription,
+                    (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
+                    (await suggestedRepos).SelectMany(subs => new List<string> { subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
+                    Constants.AvailableFrequencies,
+                    Constants.AvailableMergePolicyYamlHelp);
 
                 UxManager uxManager = new UxManager(Logger);
-                int exitCode = uxManager.PopUp(initEditorPopUp);
+
+                int exitCode = uxManager.PopUp(updateSubscriptionPopUp);
+
                 if (exitCode != Constants.SuccessCode)
                 {
                     return exitCode;
                 }
-                channel = initEditorPopUp.Channel;
-                sourceRepository = initEditorPopUp.SourceRepository;
-                targetRepository = initEditorPopUp.TargetRepository;
-                targetBranch = initEditorPopUp.TargetBranch;
-                updateFrequency = initEditorPopUp.UpdateFrequency;
-                mergePolicies = initEditorPopUp.MergePolicies;
+
+                channel = updateSubscriptionPopUp.Channel;
+                sourceRepository = updateSubscriptionPopUp.SourceRepository;
+                updateFrequency = updateSubscriptionPopUp.UpdateFrequency;
+                batchable = updateSubscriptionPopUp.Batchable;
+                enabled = updateSubscriptionPopUp.Enabled;
+                mergePolicies = updateSubscriptionPopUp.MergePolicies;
             }
 
             try
             {
-                var newSubscription = await remote.CreateSubscriptionAsync(channel,
-                                                                           sourceRepository,
-                                                                           targetRepository,
-                                                                           targetBranch,
-                                                                           updateFrequency,
-                                                                           mergePolicies);
-                Console.WriteLine($"Successfully created new subscription with id '{newSubscription.Id}'.");
+                SubscriptionUpdate subscriptionToUpdate = new SubscriptionUpdate
+                {
+                    ChannelName = channel ?? subscription.Channel.Name,
+                    SourceRepository = sourceRepository ?? subscription.SourceRepository,
+                    Enabled = enabled,
+                    Policy = subscription.Policy
+                };
+                subscriptionToUpdate.Policy.Batchable = batchable;
+                subscriptionToUpdate.Policy.UpdateFrequency = subscription.Policy.UpdateFrequency;
+                subscriptionToUpdate.Policy.MergePolicies = mergePolicies.Any() ? mergePolicies : subscriptionToUpdate.Policy.MergePolicies;
+
+                var updatedSubscription = await remote.UpdateSubscriptionAsync(
+                    subscription.Id.Value,
+                    subscriptionToUpdate);
+
+                Console.WriteLine($"Successfully updated subscription with id '{updatedSubscription.Id}'.");
+
                 return Constants.SuccessCode;
             }
             catch (ApiErrorException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.BadRequest)
             {
                 // Could have been some kind of validation error (e.g. channel doesn't exist)
-                Logger.LogError($"Failed to create subscription: {e.Response.Content}");
+                Logger.LogError($"Failed to update subscription: {e.Response.Content}");
                 return Constants.ErrorCode;
             }
             catch (Exception e)
             {
-                Logger.LogError(e, $"Failed to create subscription.");
+                Logger.LogError(e, $"Failed to update subscription.");
                 return Constants.ErrorCode;
             }
         }
