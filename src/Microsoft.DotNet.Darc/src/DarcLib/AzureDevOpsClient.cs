@@ -848,7 +848,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="accountName">Azure DevOps account name</param>
         /// <param name="projectName">Project name</param>
         /// <param name="releaseDefinition">Release definition to be modified</param>
-        public async void RemoveAllArtifactSourcesAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition)
+        public async Task<AzureDevOpsReleaseDefinition> RemoveAllArtifactSourcesAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition)
         {
             releaseDefinition.Artifacts = new AzureDevOpsArtifact[0];
 
@@ -863,6 +863,8 @@ namespace Microsoft.DotNet.DarcLib
                 body,
                 versionOverride: "5.0-preview.3",
                 baseAddressSubpath: "vsrm.");
+
+            return content.ToObject<AzureDevOpsReleaseDefinition>();
         }
 
         /// <summary>

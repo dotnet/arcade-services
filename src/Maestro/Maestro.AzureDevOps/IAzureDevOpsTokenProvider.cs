@@ -9,5 +9,7 @@ namespace Maestro.AzureDevOps
     public interface IAzureDevOpsTokenProvider
     {
         Task<string> GetTokenForRepository(string repositoryUrl);
+
+        Task<string> GetTokenForAccount(string accountName);
     }
 }
