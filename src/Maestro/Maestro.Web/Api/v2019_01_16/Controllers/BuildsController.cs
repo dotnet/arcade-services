@@ -11,62 +11,16 @@ using Maestro.Data;
 using Maestro.Web.Api.v2019_01_16.Models;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
+using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Swashbuckle.AspNetCore.Annotations;
 using Build = Maestro.Data.Models.Build;
 
 namespace Maestro.Web.Api.v2019_01_16.Controllers
 {
-    public class BuildsController_ApiRemoved : Maestro.Web.Api.v2018_07_16.Controllers.BuildsController
-    {
-        public BuildsController_ApiRemoved(BuildAssetRegistryContext context)
-            : base(context)
-        {
-        }
-
-        [ApiRemoved]
-        public override sealed IActionResult GetAllBuilds(
-            string repository,
-            string commit,
-            string buildNumber,
-            int? channelId,
-            DateTimeOffset? notBefore,
-            DateTimeOffset? notAfter,
-            bool? loadCollections)
-        {
-            throw new NotSupportedException();
-        }
-
-        [ApiRemoved]
-        public override sealed Task<IActionResult> GetBuild(int id)
-        {
-            throw new NotSupportedException();
-        }
-
-        [ApiRemoved]
-        public override sealed Task<IActionResult> GetLatest(
-            string repository,
-            string commit,
-            string buildNumber,
-            int? channelId,
-            DateTimeOffset? notBefore,
-            DateTimeOffset? notAfter,
-            bool? loadCollections)
-        {
-            throw new NotSupportedException();
-        }
-
-        [ApiRemoved]
-        public override sealed Task<IActionResult> Create([FromBody] v2018_07_16.Models.BuildData build)
-        {
-            throw new NotSupportedException();
-        }
-    }
-
     [Route("builds")]
     [ApiVersion("2019-01-16")]
-    public class BuildsController : BuildsController_ApiRemoved
+    public class BuildsController : v2018_07_16.Controllers.BuildsController
     {
         private readonly BuildAssetRegistryContext _context;
 
@@ -77,10 +31,10 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         }
 
         [HttpGet]
-        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(List<Models.Build>))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Models.Build>))]
         [Paginated(typeof(Models.Build))]
         [ValidateModelState]
-        public new IActionResult GetAllBuilds(
+        public override IActionResult GetAllBuilds(
             string repository,
             string commit,
             string buildNumber,
@@ -101,9 +55,9 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         }
 
         [HttpGet("{id}")]
-        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(Models.Build))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Models.Build))]
         [ValidateModelState]
-        public new async Task<IActionResult> GetBuild(int id)
+        public override async Task<IActionResult> GetBuild(int id)
         {
             Build build = await _context.Builds.Where(b => b.Id == id)
                 .Include(b => b.BuildChannels)
@@ -121,9 +75,9 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         }
 
         [HttpGet("latest")]
-        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(Models.Build))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Models.Build))]
         [ValidateModelState]
-        public new async Task<IActionResult> GetLatest(
+        public override async Task<IActionResult> GetLatest(
             string repository,
             string commit,
             string buildNumber,
@@ -149,8 +103,14 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             return Ok(new Models.Build(build));
         }
 
+        [ApiRemoved]
+        public override sealed Task<IActionResult> Create(v2018_07_16.Models.BuildData build)
+        {
+            throw new NotImplementedException();
+        }
+
         [HttpPost]
-        [SwaggerResponse((int)HttpStatusCode.Created, Type = typeof(Models.Build))]
+        [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Models.Build))]
         [ValidateModelState]
         public async Task<IActionResult> Create([FromBody] BuildData build)
         {

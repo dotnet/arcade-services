@@ -42,7 +42,7 @@
         // Build a system
         var ui = SwaggerUIBundle({
             urls: [
-                @foreach (string api in Vcp.Versions.Keys)
+                @foreach (string api in Vcp.Versions.Keys.OrderByDescending(v => v))
                 {
                     @:{
                     @:url: "/api/@api/swagger.json",

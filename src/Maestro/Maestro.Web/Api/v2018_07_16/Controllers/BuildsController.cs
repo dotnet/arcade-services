@@ -11,6 +11,7 @@ using Maestro.Data;
 using Maestro.Web.Api.v2018_07_16.Models;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
+using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;
@@ -30,7 +31,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(List<Models.Build>))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Models.Build>))]
         [Paginated(typeof(Models.Build))]
         [ValidateModelState]
         public virtual IActionResult GetAllBuilds(
@@ -105,7 +106,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet("{id}")]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(Models.Build))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Models.Build))]
         [ValidateModelState]
         public virtual async Task<IActionResult> GetBuild(int id)
         {
@@ -125,7 +126,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet("latest")]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(Models.Build))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Models.Build))]
         [ValidateModelState]
         public virtual async Task<IActionResult> GetLatest(
             string repository,
@@ -154,7 +155,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpPost]
-        [SwaggerResponse((int) HttpStatusCode.Created, Type = typeof(Models.Build))]
+        [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Models.Build))]
         [ValidateModelState]
         public virtual async Task<IActionResult> Create([FromBody] BuildData build)
         {

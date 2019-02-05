@@ -41,6 +41,15 @@ namespace Maestro.Web
             services.AddSwaggerGen(
                 options =>
                 {
+                    // If you get an exception saying 'Identical schemaIds detected for types Maestro.Web.Api.<version>.Models.<something> and Maestro.Web.Api.<different-version>.Models.<something>'
+                    // Then you should NEVER add the following like the StackOverflow answers will suggest.
+                    // options.CustomSchemaIds(x => x.FullName);
+
+                    // This exception means that you have added something to one of the versions of the api that results in a conflict, because one version of the api cannot have 2 models for the same object
+                    // e.g. If you add a new api, or just a new model to an existing version (with new or modified properties), every method in the API that can return this type,
+                    // even nested (e.g. you changed Build, and Subscription contains a Build object), must be updated to return the new type.
+                    // It could also mean that you forgot to apply [ApiRemoved] to an inherited method that shouldn't be included in the new version
+
                     options.FilterOperations(
                         (op, ctx) =>
                         {
