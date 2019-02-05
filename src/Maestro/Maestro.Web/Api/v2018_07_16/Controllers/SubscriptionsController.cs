@@ -14,6 +14,7 @@ using Maestro.Data.Models;
 using Maestro.Web.Api.v2018_07_16.Models;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
+using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,9 +48,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(List<Subscription>))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Subscription>))]
         [ValidateModelState]
-        public IActionResult GetAllSubscriptions(
+        public virtual IActionResult GetAllSubscriptions(
             string sourceRepository = null,
             string targetRepository = null,
             int? channelId = null,
@@ -82,9 +83,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet("{id}")]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(Subscription))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription))]
         [ValidateModelState]
-        public async Task<IActionResult> GetSubscription(Guid id)
+        public virtual async Task<IActionResult> GetSubscription(Guid id)
         {
             Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
                 .Include(sub => sub.Channel)
@@ -104,9 +105,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="id">ID of subscription</param>
         /// <returns></returns>
         [HttpPost("{id}/trigger")]
-        [SwaggerResponse((int)HttpStatusCode.Accepted, Type = typeof(Subscription))]
+        [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription))]
         [ValidateModelState]
-        public async Task<IActionResult> TriggerSubscription(Guid id)
+        public virtual async Task<IActionResult> TriggerSubscription(Guid id)
         {
             Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
                 .Include(sub => sub.Channel)
@@ -127,9 +128,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpPatch("{id}")]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(Subscription))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription))]
         [ValidateModelState]
-        public async Task<IActionResult> UpdateSubscription(Guid id, [FromBody] SubscriptionUpdate update)
+        public virtual async Task<IActionResult> UpdateSubscription(Guid id, [FromBody] SubscriptionUpdate update)
         {
             Data.Models.Subscription subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
                 .FirstOrDefaultAsync();
@@ -186,9 +187,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpDelete("{id}")]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(Subscription))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription))]
         [ValidateModelState]
-        public async Task<IActionResult> DeleteSubscription(Guid id)
+        public virtual async Task<IActionResult> DeleteSubscription(Guid id)
         {
             Data.Models.Subscription subscription =
                 await _context.Subscriptions.FirstOrDefaultAsync(sub => sub.Id == id);
@@ -213,9 +214,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet("{id}/history")]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(List<SubscriptionHistoryItem>))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<SubscriptionHistoryItem>))]
         [Paginated(typeof(SubscriptionHistoryItem))]
-        public async Task<IActionResult> GetSubscriptionHistory(Guid id)
+        public virtual async Task<IActionResult> GetSubscriptionHistory(Guid id)
         {
             Data.Models.Subscription subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
                 .FirstOrDefaultAsync();
@@ -233,8 +234,8 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpPost("{id}/retry/{timestamp}")]
-        [SwaggerResponse((int) HttpStatusCode.Accepted)]
-        public async Task<IActionResult> RetrySubscriptionActionAsync(Guid id, long timestamp)
+        [SwaggerApiResponse(HttpStatusCode.Accepted)]
+        public virtual async Task<IActionResult> RetrySubscriptionActionAsync(Guid id, long timestamp)
         {
             DateTime ts = DateTimeOffset.FromUnixTimeSeconds(timestamp).UtcDateTime;
 
@@ -272,11 +273,10 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Accepted();
         }
 
-
         [HttpPost]
-        [SwaggerResponse((int) HttpStatusCode.Created, Type = typeof(Subscription))]
+        [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Subscription))]
         [ValidateModelState]
-        public async Task<IActionResult> Create([FromBody] SubscriptionData subscription)
+        public virtual async Task<IActionResult> Create([FromBody] SubscriptionData subscription)
         {
             Channel channel = await _context.Channels.Where(c => c.Name == subscription.ChannelName)
                 .FirstOrDefaultAsync();

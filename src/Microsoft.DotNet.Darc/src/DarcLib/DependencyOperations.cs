@@ -69,8 +69,7 @@ namespace Microsoft.DotNet.DarcLib
             await fileManager.AddDependencyToVersionDetailsAsync(
                 repository,
                 branch,
-                dependency,
-                DependencyType.Toolset);
+                dependency);
         }
     }
 }

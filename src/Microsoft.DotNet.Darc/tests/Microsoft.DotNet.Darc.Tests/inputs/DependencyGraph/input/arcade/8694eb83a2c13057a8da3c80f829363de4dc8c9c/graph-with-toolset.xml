@@ -1,0 +1,81 @@
+<?xml version="1.0"?>
+<DependencyGraph>
+  <RootNode>
+    <DependencyGraphNode>
+      <RepoUri>arcade</RepoUri>
+      <Commit>8694eb83a2c13057a8da3c80f829363de4dc8c9c</Commit>
+      <Dependencies>
+        <Dependency>
+          <Name>Microsoft.DotNet.Build.Tasks.Feed</Name>
+          <Version>2.2.0-beta.18615.1</Version>
+          <Type>Product</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>3befdb62fd0e1c2c5750f3548f19cc0e7c8ff2cb</Commit>
+        </Dependency>
+        <Dependency>
+          <Name>Microsoft.DotNet.Maestro.Tasks</Name>
+          <Version>1.0.0-beta.18615.1</Version>
+          <Type>Product</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>3befdb62fd0e1c2c5750f3548f19cc0e7c8ff2cb</Commit>
+        </Dependency>
+        <Dependency>
+          <Name>Microsoft.DotNet.SignTool</Name>
+          <Version>1.0.0-beta.18615.1</Version>
+          <Type>Product</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>3befdb62fd0e1c2c5750f3548f19cc0e7c8ff2cb</Commit>
+        </Dependency>
+        <Dependency>
+          <Name>Microsoft.DotNet.Arcade.Sdk</Name>
+          <Version>1.0.0-beta.18615.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>3befdb62fd0e1c2c5750f3548f19cc0e7c8ff2cb</Commit>
+        </Dependency>
+      </Dependencies>
+      <Children />
+      <Parents />
+    </DependencyGraphNode>
+  </RootNode>
+  <UniqueDependencies />
+  <AllNodes>
+    <DependencyGraphNode>
+      <RepoUri>arcade</RepoUri>
+      <Commit>8694eb83a2c13057a8da3c80f829363de4dc8c9c</Commit>
+      <Dependencies>
+        <Dependency>
+          <Name>Microsoft.DotNet.Build.Tasks.Feed</Name>
+          <Version>2.2.0-beta.18615.1</Version>
+          <Type>Product</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>3befdb62fd0e1c2c5750f3548f19cc0e7c8ff2cb</Commit>
+        </Dependency>
+        <Dependency>
+          <Name>Microsoft.DotNet.Maestro.Tasks</Name>
+          <Version>1.0.0-beta.18615.1</Version>
+          <Type>Product</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>3befdb62fd0e1c2c5750f3548f19cc0e7c8ff2cb</Commit>
+        </Dependency>
+        <Dependency>
+          <Name>Microsoft.DotNet.SignTool</Name>
+          <Version>1.0.0-beta.18615.1</Version>
+          <Type>Product</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>3befdb62fd0e1c2c5750f3548f19cc0e7c8ff2cb</Commit>
+        </Dependency>
+        <Dependency>
+          <Name>Microsoft.DotNet.Arcade.Sdk</Name>
+          <Version>1.0.0-beta.18615.1</Version>
+          <Type>Toolset</Type>
+          <RepoUri>arcade</RepoUri>
+          <Commit>3befdb62fd0e1c2c5750f3548f19cc0e7c8ff2cb</Commit>
+        </Dependency>
+      </Dependencies>
+      <Children />
+      <Parents />
+    </DependencyGraphNode>
+  </AllNodes>
+  <IncoherentNodes />
+</DependencyGraph>

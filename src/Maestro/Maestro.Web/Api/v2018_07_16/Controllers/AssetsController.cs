@@ -12,6 +12,7 @@ using Maestro.Data;
 using Maestro.Web.Api.v2018_07_16.Models;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
+using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;
@@ -30,7 +31,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(List<Asset>))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Asset>))]
         [Paginated(typeof(Models.Asset))]
         [ValidateModelState]
         public IActionResult Get(string name, [FromQuery] string version, int? buildId, bool? nonShipping, bool? loadLocations)
@@ -65,7 +66,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet("{id}")]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(Asset))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Asset))]
         [ValidateModelState]
         public async Task<IActionResult> GetAsset(int id)
         {
@@ -82,7 +83,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpPost("{assetId}/locations")]
-        [SwaggerResponse((int)HttpStatusCode.Created, Type = typeof(AssetLocation))]
+        [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(AssetLocation))]
         public async Task<IActionResult> AddAssetLocationToAsset(int assetId, [Required] string location, [Required] LocationType assetLocationType)
         {
             var assetLocation = new Data.Models.AssetLocation
@@ -123,7 +124,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpDelete("{assetId}/locations/{assetLocationId}")]
-        [SwaggerResponse((int)HttpStatusCode.OK)]
+        [SwaggerApiResponse(HttpStatusCode.OK)]
         public async Task<IActionResult> RemoveAssetLocationFromAsset(int assetId, int assetLocationId)
         {
             Maestro.Data.Models.Asset asset = await _context.Assets

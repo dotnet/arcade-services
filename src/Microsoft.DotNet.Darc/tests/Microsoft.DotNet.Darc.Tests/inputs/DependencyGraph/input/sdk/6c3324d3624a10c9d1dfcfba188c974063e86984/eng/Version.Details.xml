@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Dependencies>
+  <ProductDependencies>
+    <Dependency Name="Microsoft.DotNet.SignTool" Version="1.0.0-beta.19072.5">
+      <Uri>arcade</Uri>
+      <Sha>044fa99d22e576fcfaf63f09ee9bba821855dddb</Sha>
+    </Dependency>
+  </ProductDependencies>
+  <ToolsetDependencies>
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="1.0.0-beta.19072.5">
+      <Uri>arcade</Uri>
+      <Sha>044fa99d22e576fcfaf63f09ee9bba821855dddb</Sha>
+    </Dependency>
+  </ToolsetDependencies>
+</Dependencies>

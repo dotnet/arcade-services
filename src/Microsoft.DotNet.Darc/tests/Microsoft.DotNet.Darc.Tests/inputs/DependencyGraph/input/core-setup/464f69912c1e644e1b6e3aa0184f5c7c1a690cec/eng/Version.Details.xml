@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Dependencies>
+  <ProductDependencies>
+    <Dependency Name="Microsoft.Private.CoreFx.NETCoreApp" Version="4.6.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.NETCore.Platforms" Version="3.0.0-preview.19067.6">
+      <Uri>corefx</Uri>
+      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+    </Dependency>
+    <PinnedDependency Name="Microsoft.NETCore.Targets" Version="2.0.0">
+      <Uri>corefx</Uri>
+    </PinnedDependency>
+    <PinnedDependency Name="NETStandard.Library" Version="2.0.3">
+      <Uri>standard</Uri>
+    </PinnedDependency>
+    <Dependency Name="Microsoft.NETCore.Runtime.CoreCLR" Version="3.0.0-preview-27316-72">
+      <Uri>coreclr</Uri>
+      <Sha>80720a220c340e99aa88d04ebae8118eb4fc198b</Sha>
+    </Dependency>
+  </ProductDependencies>
+  <ToolsetDependencies>
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="1.0.0-beta.19066.1">
+      <Uri>arcade</Uri>
+      <Sha>0fb5fc58347f42121ddc9c0b361e84b8acbffb12</Sha>
+    </Dependency>
+  </ToolsetDependencies>
+</Dependencies>

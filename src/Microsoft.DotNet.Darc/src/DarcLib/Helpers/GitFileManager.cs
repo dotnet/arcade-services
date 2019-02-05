@@ -68,9 +68,17 @@ namespace Microsoft.DotNet.DarcLib
 
         public async Task<IEnumerable<DependencyDetail>> ParseVersionDetailsXmlAsync(string repoUri, string branch)
         {
-            _logger.LogInformation(
-                $"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}' in repo '{repoUri}' " +
-                $"and branch '{branch}'...");
+            if (!string.IsNullOrEmpty(branch))
+            {
+                _logger.LogInformation(
+                    $"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}' in repo '{repoUri}' " +
+                    $"and branch '{branch}'...");
+            }
+            else
+            {
+                _logger.LogInformation(
+                    $"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}' in repo '{repoUri}'...");
+            }
 
             var dependencyDetails = new List<DependencyDetail>();
             XmlDocument document = await ReadVersionDetailsXmlAsync(repoUri, branch);
@@ -82,13 +90,11 @@ namespace Microsoft.DotNet.DarcLib
         /// Add a new dependency to the repository
         /// </summary>
         /// <param name="dependency">Dependency to add.</param>
-        /// <param name="dependencyType">Type of dependency.</param>
         /// <param name="repoUri">Repository URI to add the dependency to.</param>
         /// <param name="branch">Branch to add the dependency to.</param>
         /// <returns>Async task.</returns>
         public async Task AddDependencyAsync(
             DependencyDetail dependency,
-            DependencyType dependencyType,
             string repoUri,
             string branch)
         {
@@ -111,8 +117,7 @@ namespace Microsoft.DotNet.DarcLib
                 await AddDependencyToVersionDetailsAsync(
                     repoUri,
                     branch,
-                    dependency,
-                    dependencyType);
+                    dependency);
             }
         }
 
@@ -165,8 +170,7 @@ namespace Microsoft.DotNet.DarcLib
         public async Task AddDependencyToVersionDetailsAsync(
             string repo,
             string branch,
-            DependencyDetail dependency,
-            DependencyType dependencyType)
+            DependencyDetail dependency)
         {
             XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repo, null);
 
@@ -188,10 +192,10 @@ namespace Microsoft.DotNet.DarcLib
             sha.InnerText = dependency.Commit;
             newDependency.AppendChild(sha);
 
-            XmlNode dependenciesNode = versionDetails.SelectSingleNode($"//{dependencyType}Dependencies");
+            XmlNode dependenciesNode = versionDetails.SelectSingleNode($"//{dependency.Type}Dependencies");
             if (dependenciesNode == null)
             {
-                dependenciesNode = versionDetails.CreateElement($"{dependencyType}Dependencies");
+                dependenciesNode = versionDetails.CreateElement($"{dependency.Type}Dependencies");
                 versionDetails.DocumentElement.AppendChild(dependenciesNode);
             }
             dependenciesNode.AppendChild(newDependency);
@@ -755,13 +759,27 @@ namespace Microsoft.DotNet.DarcLib
                         {
                             if (dependency.NodeType != XmlNodeType.Comment && dependency.NodeType != XmlNodeType.Whitespace)
                             {
+                                DependencyType type;
+                                switch (dependency.ParentNode.Name)
+                                {
+                                    case "ProductDependencies":
+                                        type = DependencyType.Product;
+                                        break;
+                                    case "ToolsetDependencies":
+                                        type = DependencyType.Toolset;
+                                        break;
+                                    default:
+                                        throw new DarcException($"Unknown dependency type '{dependency.ParentNode.Name}'");
+                                }
+
                                 DependencyDetail dependencyDetail = new DependencyDetail
                                 {
                                     Branch = branch,
                                     Name = dependency.Attributes["Name"].Value,
                                     RepoUri = dependency.SelectSingleNode("Uri").InnerText,
                                     Commit = dependency.SelectSingleNode("Sha").InnerText,
-                                    Version = dependency.Attributes["Version"].Value
+                                    Version = dependency.Attributes["Version"].Value,
+                                    Type = type
                                 };
 
                                 dependencyDetails.Add(dependencyDetail);

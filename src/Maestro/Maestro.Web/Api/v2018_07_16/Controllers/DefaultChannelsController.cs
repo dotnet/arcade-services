@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.Web.Api.v2018_07_16.Models;
 using Microsoft.AspNetCore.ApiVersioning;
+using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Swashbuckle.AspNetCore.Annotations;
@@ -28,7 +29,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(List<DefaultChannel>))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<DefaultChannel>))]
         public IActionResult List(string repository = null, string branch = null, int? channelId = null)
         {
             IQueryable<Data.Models.DefaultChannel> query = _context.DefaultChannels.Include(dc => dc.Channel)
@@ -54,7 +55,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpPost]
-        [SwaggerResponse((int) HttpStatusCode.Created)]
+        [SwaggerApiResponse(HttpStatusCode.Created)]
         [ValidateModelState]
         [HandleDuplicateKeyRows("A default channel with the same (repository, branch, channel) already exists.")]
         public async Task<IActionResult> Create([FromBody] DefaultChannel.PostData data)
@@ -84,7 +85,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet("{id}")]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(DefaultChannel))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(DefaultChannel))]
         [ValidateModelState]
         public async Task<IActionResult> Get(int id)
         {
@@ -99,7 +100,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
         [HttpDelete("{id}")]
         [ValidateModelState]
-        [SwaggerResponse((int) HttpStatusCode.Accepted)]
+        [SwaggerApiResponse(HttpStatusCode.Accepted)]
         public async Task<IActionResult> Delete(int id)
         {
             Data.Models.DefaultChannel defaultChannel = await _context.DefaultChannels.FindAsync(id);

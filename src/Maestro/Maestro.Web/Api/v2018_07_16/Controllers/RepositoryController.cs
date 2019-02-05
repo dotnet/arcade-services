@@ -14,6 +14,7 @@ using Maestro.Data.Models;
 using Maestro.Web.Api.v2018_07_16.Models;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
+using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.ServiceFabric.Actors;
@@ -40,7 +41,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         public Func<ActorId, IPullRequestActor> PullRequestActorFactory { get; }
 
         [HttpGet("merge-policy")]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(IList<MergePolicy>))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(IList<MergePolicy>))]
         public async Task<IActionResult> GetMergePolicies(string repository, string branch)
         {
             RepositoryBranch repoBranch = await Context.RepositoryBranches.FindAsync(repository, branch);
@@ -84,7 +85,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet("history")]
-        [SwaggerResponse((int) HttpStatusCode.OK, Type = typeof(List<RepositoryHistoryItem>))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<RepositoryHistoryItem>))]
         [Paginated(typeof(RepositoryHistoryItem))]
         public async Task<IActionResult> GetHistory(string repository, string branch)
         {
@@ -118,7 +119,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpPost("retry/{timestamp}")]
-        [SwaggerResponse((int) HttpStatusCode.Accepted)]
+        [SwaggerApiResponse(HttpStatusCode.Accepted)]
         public async Task<IActionResult> RetryActionAsync(string repository, string branch, long timestamp)
         {
             if (string.IsNullOrEmpty(repository))

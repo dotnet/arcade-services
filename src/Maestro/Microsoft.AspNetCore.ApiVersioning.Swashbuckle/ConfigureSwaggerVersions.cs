@@ -6,6 +6,7 @@ using JetBrains.Annotations;
 using Microsoft.AspNetCore.ApiVersioning.Schemes;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -49,10 +50,10 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
                     string version = desc.ActionDescriptor.RouteValues["version"];
                     if (controller.EndsWith(version))
                     {
-                        return controller.Substring(0, controller.Length - version.Length - 1);
+                        controller = controller.Substring(0, controller.Length - version.Length - 1);
                     }
 
-                    return controller;
+                    return new[] {controller};
                 });
             options.OperationFilter<SwaggerModelBindingOperationFilter>();
             options.OperationFilter<SwaggerNamingOperationFilter>();

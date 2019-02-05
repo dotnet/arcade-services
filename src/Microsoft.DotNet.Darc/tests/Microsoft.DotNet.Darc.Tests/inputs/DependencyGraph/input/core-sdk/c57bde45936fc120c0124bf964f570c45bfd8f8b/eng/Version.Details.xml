@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Dependencies>
+  <ProductDependencies>
+    <!-- Winforms / WPF -->
+    <Dependency Name="Microsoft.WindowsDesktop.App" Version="3.0.0-preview-27325-3">
+      <Uri>DotNet-Trusted</Uri>
+      <Sha>24b4ae9332545f7677a8ce2f8916cc2284e31b75</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.NETCore.App" Version="3.0.0-preview-27324-5">
+      <Uri>core-setup</Uri>
+      <Sha>63a01b08e5d1d1a6b8544f598b3d3bda76e6e424</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.AspNetCore.App" Version="3.0.0-preview-19075-0444">
+      <Uri>AspNetCore</Uri>
+      <Sha>1aa50faa290ecda304507981cd01ed92651d5e34</Sha>
+    </Dependency>
+    <Dependency Name="dotnet-ef" Version="3.0.0-preview.19074.3">
+      <Uri>EntityFrameworkCore</Uri>
+      <Sha>3d1e08eb08789a9dde3ac20851d3c82fdf9272e5</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.DotNet.Common.ItemTemplates" Version="1.0.2-beta5.19066.2">
+      <Uri>templating</Uri>
+      <Sha>ac8f12b90238542dfd2ea596178ae24ea20a0f55</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Dotnet.Toolset.Internal" Version="3.0.100-preview.19075.5">
+      <Uri>toolset</Uri>
+      <Sha>b1d20340cbb0da27bb9e17bc64a83b9f44921f5b</Sha>
+    </Dependency>
+  </ProductDependencies>
+  <ToolsetDependencies>
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="1.0.0-beta.19073.5">
+      <Uri>arcade</Uri>
+      <Sha>af8ab7d7ca13d5f129c31cfa7aeda19f6d168e6e</Sha>
+    </Dependency>
+  </ToolsetDependencies>
+</Dependencies>
