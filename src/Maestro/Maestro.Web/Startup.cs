@@ -35,6 +35,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -62,6 +63,7 @@ namespace Maestro.Web
         private static async Task StartAssociatedReleasePipelinesAsync(IInsertedEntry<BuildChannel, DbContext> entry)
         {
             BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
+            ILogger<BuildChannel> logger = context.GetService<ILogger<BuildChannel>>();
             BuildChannel entity = entry.Entity;
             Build barBuildInfo = entity.Build;
             Channel channel = context.Channels
@@ -70,9 +72,23 @@ namespace Maestro.Web
                 .ThenInclude(crp => crp.ReleasePipeline)
                 .First();
 
+            // If something use the old API version we won't have this information available.
+            // This will also be the case if something adds an existing build (created using 
+            // the old API version) to a channel
+            if (barBuildInfo.AzureDevOpsBuildId == null)
+            {
+                logger.LogWarning($"barBuildInfo.AzureDevOpsBuildId is null for BAR Build.Id {barBuildInfo.Id}.");
+                return;
+            }
+
+            if (channel.ChannelReleasePipelines?.Any() != true)
+            {
+                logger.LogWarning($"Channel {channel.Id}, which build with BAR ID {barBuildInfo.Id} is attached to, doesn't have an associated publishing pipeline.");
+                return;
+            }
+
             var azdoTokenProvider = context.GetService<IAzureDevOpsTokenProvider>();
-            var accessToken = azdoTokenProvider.GetTokenForRepository(barBuildInfo.AzureDevOpsRepository).GetAwaiter().GetResult();
-            var logger = context.GetService<ILogger<BuildChannel>>();
+            var accessToken = azdoTokenProvider.GetTokenForAccount(barBuildInfo.AzureDevOpsAccount).GetAwaiter().GetResult();
 
             var azdoClient = new AzureDevOpsClient(accessToken, logger, null);
 
@@ -83,19 +99,36 @@ namespace Maestro.Web
 
             foreach (var pipeline in channel.ChannelReleasePipelines)
             {
-                var account = pipeline.ReleasePipeline.Organization;
-                var project = pipeline.ReleasePipeline.Project;
-                var pipelineId = pipeline.ReleasePipeline.PipelineIdentifier;
+                try
+                {
+                    var account = pipeline.ReleasePipeline.Organization;
+                    var project = pipeline.ReleasePipeline.Project;
+                    var pipelineId = pipeline.ReleasePipeline.PipelineIdentifier;
 
-                var pipeDef = await azdoClient.GetReleaseDefinitionAsync(account, project, pipelineId);
+                    var pipeDef = await azdoClient.GetReleaseDefinitionAsync(account, project, pipelineId);
 
-                pipeDef = await azdoClient.AddArtifactSourceAsync(account, project, pipeDef, azdoBuild);
+                    pipeDef = await azdoClient.RemoveAllArtifactSourcesAsync(account, project, pipeDef);
 
-                var releaseId = await azdoClient.StartNewReleaseAsync(account, project, pipeDef, barBuildInfo.Id);
+                    pipeDef = await azdoClient.AddArtifactSourceAsync(account, project, pipeDef, azdoBuild);
 
-                azdoClient.WaitUntilCompleted(account, project, releaseId);
+                    var releaseId = await azdoClient.StartNewReleaseAsync(account, project, pipeDef, barBuildInfo.Id);
 
-                azdoClient.RemoveAllArtifactSourcesAsync(account, project, pipeDef);
+                    azdoClient.WaitUntilCompleted(account, project, releaseId);
+                }
+                catch (HttpRequestException e)
+                {
+                    logger.LogError($"Some problem happened interacting with DevOps API: {e.Message}", e);
+                }
+                catch (JsonException e)
+                {
+                    logger.LogError($"Some problem happened serializing/deserializaing JSON data: {e.Message}", e);
+                }
+                catch (Exception e)
+                {
+                    logger.LogError($"Some problem happened while starting publishing pipeline " +
+                        $"{pipeline.ReleasePipeline.PipelineIdentifier} for build " +
+                        $"{barBuildInfo.AzureDevOpsBuildId}: {e.Message}", e);
+                }
             }
         }
 
