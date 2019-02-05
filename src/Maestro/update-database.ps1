@@ -23,8 +23,9 @@ function Get-EfDllPath {
   $sdkToolsPath = "$dotnetLocation\sdk\$sdkVersion\DotnetTools"
   $dotnetEfToolPath = Join-Path $sdkToolsPath dotnet-ef
   $dotnetEfVersion = ls $dotnetEfToolPath | select -ExpandProperty Name | sort -Descending | select -First 1
+  $dotnetEfDllSubpath = ls -R -Name ef.dll -Path $dotnetEfToolPath\$dotnetEfVersion\tools\
 
-  return "$dotnetEfToolPath\$dotnetEfVersion\tools\netcoreapp2.1\any\tools\netcoreapp2.0\any\ef.dll"
+  return "$dotnetEfToolPath\$dotnetEfVersion\tools\$dotnetEfDllSubpath"
 }
 
 $migrationsNamespace = removeDllExtension $migrationsDll
