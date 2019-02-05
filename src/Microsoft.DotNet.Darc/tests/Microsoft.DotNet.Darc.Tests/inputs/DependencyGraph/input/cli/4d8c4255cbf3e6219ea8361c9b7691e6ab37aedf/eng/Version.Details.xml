@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Dependencies>
+  <ProductDependencies>
+    <Dependency Name="Microsoft.TemplateEngine.Cli" Version="1.0.2-beta5.19066.2">
+      <Uri>templating</Uri>
+      <Sha>ac8f12b90238542dfd2ea596178ae24ea20a0f55</Sha>
+    </Dependency>
+  </ProductDependencies>
+  <ToolsetDependencies>
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="1.0.0-beta.19072.5">
+      <Uri>arcade</Uri>
+      <Sha>044fa99d22e576fcfaf63f09ee9bba821855dddb</Sha>
+    </Dependency>
+  </ToolsetDependencies>
+  <ProductDependencies>
+    <Dependency Name="Microsoft.NET.Sdk" Version="3.0.100-preview.19059.1">
+      <Uri>sdk</Uri>
+      <Sha>674b4ae3250f294d3c922a425b44a1731dcff207</Sha>
+    </Dependency>
+  </ProductDependencies>
+</Dependencies>

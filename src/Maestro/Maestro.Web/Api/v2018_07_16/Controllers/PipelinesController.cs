@@ -13,6 +13,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using ReleasePipeline = Maestro.Web.Api.v2018_07_16.Models.ReleasePipeline;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
@@ -29,7 +30,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet]
-        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(List<ReleasePipeline>))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<ReleasePipeline>))]
         [ValidateModelState]
         public IActionResult Get(int? pipelineIdentifier = null, string organization = null, string project = null)
         {
@@ -55,7 +56,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet("{id}")]
-        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(ReleasePipeline))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(ReleasePipeline))]
         [ValidateModelState]
         public async Task<IActionResult> GetPipeline(int id)
         {
@@ -70,7 +71,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpDelete("{id}")]
-        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(ReleasePipeline))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(ReleasePipeline))]
         [ValidateModelState]
         public async Task<IActionResult> DeletePipeline(int id)
         {
@@ -96,7 +97,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpPost]
-        [SwaggerResponse((int)HttpStatusCode.Created, Type = typeof(ReleasePipeline))]
+        [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(ReleasePipeline))]
         public async Task<IActionResult> CreatePipeline([Required] int pipelineIdentifier, [Required] string organization, [Required] string project)
         {
             Data.Models.ReleasePipeline pipeline = await _context.ReleasePipelines

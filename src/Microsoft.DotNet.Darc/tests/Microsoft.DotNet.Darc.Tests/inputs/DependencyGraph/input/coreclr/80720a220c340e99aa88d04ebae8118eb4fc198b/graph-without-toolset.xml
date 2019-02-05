@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<DependencyGraph>
+  <RootNode>
+    <DependencyGraphNode>
+      <RepoUri>coreclr</RepoUri>
+      <Commit>80720a220c340e99aa88d04ebae8118eb4fc198b</Commit>
+      <Dependencies />
+      <Children />
+      <Parents />
+    </DependencyGraphNode>
+  </RootNode>
+  <UniqueDependencies />
+  <AllNodes>
+    <DependencyGraphNode>
+      <RepoUri>coreclr</RepoUri>
+      <Commit>80720a220c340e99aa88d04ebae8118eb4fc198b</Commit>
+      <Dependencies />
+      <Children />
+      <Parents />
+    </DependencyGraphNode>
+  </AllNodes>
+  <IncoherentNodes />
+</DependencyGraph>

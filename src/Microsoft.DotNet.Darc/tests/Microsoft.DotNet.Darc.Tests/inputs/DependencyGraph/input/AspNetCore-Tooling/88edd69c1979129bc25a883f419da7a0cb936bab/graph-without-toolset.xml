@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<DependencyGraph>
+  <RootNode>
+    <DependencyGraphNode>
+      <RepoUri>AspNetCore-Tooling</RepoUri>
+      <Commit>88edd69c1979129bc25a883f419da7a0cb936bab</Commit>
+      <Dependencies />
+      <Children />
+      <Parents />
+    </DependencyGraphNode>
+  </RootNode>
+  <UniqueDependencies />
+  <AllNodes>
+    <DependencyGraphNode>
+      <RepoUri>AspNetCore-Tooling</RepoUri>
+      <Commit>88edd69c1979129bc25a883f419da7a0cb936bab</Commit>
+      <Dependencies />
+      <Children />
+      <Parents />
+    </DependencyGraphNode>
+  </AllNodes>
+  <IncoherentNodes />
+</DependencyGraph>

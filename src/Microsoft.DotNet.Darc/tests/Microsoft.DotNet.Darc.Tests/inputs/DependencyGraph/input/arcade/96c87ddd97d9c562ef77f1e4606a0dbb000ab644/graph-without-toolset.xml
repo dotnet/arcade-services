@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<DependencyGraph>
+  <RootNode>
+    <DependencyGraphNode>
+      <RepoUri>arcade</RepoUri>
+      <Commit>96c87ddd97d9c562ef77f1e4606a0dbb000ab644</Commit>
+      <Dependencies />
+      <Children />
+      <Parents />
+    </DependencyGraphNode>
+  </RootNode>
+  <UniqueDependencies />
+  <AllNodes>
+    <DependencyGraphNode>
+      <RepoUri>arcade</RepoUri>
+      <Commit>96c87ddd97d9c562ef77f1e4606a0dbb000ab644</Commit>
+      <Dependencies />
+      <Children />
+      <Parents />
+    </DependencyGraphNode>
+  </AllNodes>
+  <IncoherentNodes />
+</DependencyGraph>

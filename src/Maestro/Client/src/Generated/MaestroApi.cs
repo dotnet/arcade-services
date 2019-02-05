@@ -59,6 +59,11 @@ namespace Microsoft.DotNet.Maestro.Client
         public virtual IDefaultChannels DefaultChannels { get; private set; }
 
         /// <summary>
+        /// Gets the IPipelines.
+        /// </summary>
+        public virtual IPipelines Pipelines { get; private set; }
+
+        /// <summary>
         /// Gets the IRepository.
         /// </summary>
         public virtual IRepository Repository { get; private set; }
@@ -273,6 +278,7 @@ namespace Microsoft.DotNet.Maestro.Client
             Builds = new Builds(this);
             Channels = new Channels(this);
             DefaultChannels = new DefaultChannels(this);
+            Pipelines = new Pipelines(this);
             Repository = new Repository(this);
             Subscriptions = new Subscriptions(this);
             BaseUri = new System.Uri("https://localhost:4430");

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Dependencies>
+  <ProductDependencies>
+    <Dependency Name="Microsoft.Private.Winforms" Version="1.0.0-preview.19074.2">
+      <Uri>winforms</Uri>
+      <Sha>63c7e76b747e67819a00b153b2d9dea6d9045d7b</Sha>
+    </Dependency>
+    <Dependency Name="runtime.win-x64.Microsoft.DotNet.Wpf.Private" Version="4.8.0-prerelease.19064.4">
+      <Uri>wpf</Uri>
+      <Sha>dbd3bd96849f6bca8c0ca0275de36895bd77a835</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Private.CoreFx.NETCoreApp" Version="4.6.0-preview.19073.11">
+      <Uri>corefx</Uri>
+      <Sha>351ca391579740ae8af8a5405cffa16d152ad6b2</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Private.PackageBaseline" Version="4.6.0-preview.19073.11">
+      <Uri>corefx</Uri>
+      <Sha>351ca391579740ae8af8a5405cffa16d152ad6b2</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.NETCore.Platforms" Version="3.0.0-preview.19073.11">
+      <Uri>corefx</Uri>
+      <Sha>351ca391579740ae8af8a5405cffa16d152ad6b2</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.Windows.Compatibility" Version="2.1.0-preview.19073.11">
+      <Uri>corefx</Uri>
+      <Sha>351ca391579740ae8af8a5405cffa16d152ad6b2</Sha>
+    </Dependency>
+    <Dependency Name="System.Windows.Extensions" Version="4.6.0-preview.19073.11">
+      <Uri>corefx</Uri>
+      <Sha>351ca391579740ae8af8a5405cffa16d152ad6b2</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.NETCore.Runtime.CoreCLR" Version="3.0.0-preview-27322-72">
+      <Uri>coreclr</Uri>
+      <Sha>b9e88989458e24fa9764e045917b141e3338eae7</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.NETCore.DotNetHost" Version="3.0.0-preview-27324-5">
+      <Uri>core-setup</Uri>
+      <Sha>63a01b08e5d1d1a6b8544f598b3d3bda76e6e424</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.NETCore.DotNetHostPolicy" Version="3.0.0-preview-27324-5">
+      <Uri>core-setup</Uri>
+      <Sha>63a01b08e5d1d1a6b8544f598b3d3bda76e6e424</Sha>
+    </Dependency>
+    <Dependency Name="Microsoft.NETCore.App" Version="3.0.0-preview-27324-5">
+      <Uri>core-setup</Uri>
+      <Sha>63a01b08e5d1d1a6b8544f598b3d3bda76e6e424</Sha>
+    </Dependency>
+  </ProductDependencies>
+  <ToolsetDependencies></ToolsetDependencies>
+</Dependencies>

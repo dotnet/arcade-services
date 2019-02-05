@@ -58,6 +58,7 @@ namespace Microsoft.DotNet.Darc
                     typeof(DeleteChannelCommandLineOptions),
                     typeof(DeleteDefaultChannelCommandLineOptions),
                     typeof(DeleteSubscriptionCommandLineOptions),
+                    typeof(GatherDropCommandLineOptions),
                     typeof(GetChannelsCommandLineOptions),
                     typeof(GetDefaultChannelsCommandLineOptions),
                     typeof(GetDependenciesCommandLineOptions),

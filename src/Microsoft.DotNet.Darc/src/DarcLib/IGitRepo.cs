@@ -124,16 +124,6 @@ namespace Microsoft.DotNet.DarcLib
         Task<string> GetLastCommitShaAsync(string repoUri, string branch);
 
         /// <summary>
-        ///     Determine whether a file exists in a repo at a specified branch and
-        ///     returns the SHA of the file if it does.
-        /// </summary>
-        /// <param name="repoUri">Repository URI</param>
-        /// <param name="filePath">Path to file</param>
-        /// <param name="branch">Branch</param>
-        /// <returns>Sha of file or empty string if the file does not exist.</returns>
-        Task<string> CheckIfFileExistsAsync(string repoUri, string filePath, string branch);
-
-        /// <summary>
         /// Retrieve the list of status checks on a PR.
         /// </summary>
         /// <param name="pullRequestUrl">Uri of pull request</param>

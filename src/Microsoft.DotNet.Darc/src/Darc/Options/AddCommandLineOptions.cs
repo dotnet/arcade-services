@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option('r', "repo", HelpText = "Repository where the dependency was built.")]
         public string RepoUri { get; set; }
 
-        [Option('c', "commmit", Required = false, HelpText = "SHA at which the dependency was produced.")]
+        [Option('c', "commit", Required = false, HelpText = "SHA at which the dependency was produced.")]
         public string Commit { get; set; }
 
         public override Operation GetOperation()

@@ -13,6 +13,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Build = Maestro.Data.Models.Build;
 using Channel = Maestro.Web.Api.v2018_07_16.Models.Channel;
 
@@ -30,7 +31,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet]
-        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(List<Channel>))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Channel>))]
         [ValidateModelState]
         public IActionResult Get(string classification = null)
         {
@@ -45,7 +46,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpGet("{id}")]
-        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(Channel))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Channel))]
         [ValidateModelState]
         public async Task<IActionResult> GetChannel(int id)
         {
@@ -63,7 +64,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpDelete("{id}")]
-        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(Channel))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Channel))]
         [ValidateModelState]
         public async Task<IActionResult> DeleteChannel(int id)
         {
@@ -74,6 +75,14 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             if (channel == null)
             {
                 return NotFound();
+            }
+
+            // Ensure that there are no subscriptions associated with the channel
+            if (await _context.Subscriptions.AnyAsync(s => s.ChannelId == id))
+            {
+                return BadRequest(
+                    new ApiError($"The channel with id '{id}' has associated subscriptions. " +
+                    "Please remove these before removing this channel."));
             }
 
             if (channel.ChannelReleasePipelines != null && channel.ChannelReleasePipelines.Any())
@@ -90,7 +99,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpPost]
-        [SwaggerResponse((int)HttpStatusCode.Created, Type = typeof(Channel))]
+        [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Channel))]
         [HandleDuplicateKeyRows("Could not create channel '{name}'. A channel with the specified name already exists.")]
         public async Task<IActionResult> CreateChannel([Required] string name, [Required] string classification)
         {
@@ -111,7 +120,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpPost("{channelId}/builds/{buildId}")]
-        [SwaggerResponse((int)HttpStatusCode.Created)]
+        [SwaggerApiResponse(HttpStatusCode.Created)]
         public async Task<IActionResult> AddBuildToChannel(int channelId, int buildId)
         {
             Data.Models.Channel channel = await _context.Channels.FindAsync(channelId);
@@ -144,7 +153,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpPost("{channelId}/pipelines/{pipelineId}")]
-        [SwaggerResponse((int)HttpStatusCode.Created)]
+        [SwaggerApiResponse(HttpStatusCode.Created)]
         public async Task<IActionResult> AddPipelineToChannel(int channelId, int pipelineId)
         {
             Data.Models.Channel channel = await _context.Channels.FindAsync(channelId);
@@ -181,7 +190,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         [HttpDelete("{channelId}/pipelines/{pipelineId}")]
-        [SwaggerResponse((int)HttpStatusCode.OK)]
+        [SwaggerApiResponse(HttpStatusCode.OK)]
         public async Task<IActionResult> DeletePipelineFromChannel(int channelId, int pipelineId)
         {
             Data.Models.Channel channel = await _context.Channels

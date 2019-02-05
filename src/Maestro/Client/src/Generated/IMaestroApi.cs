@@ -58,6 +58,11 @@ namespace Microsoft.DotNet.Maestro.Client
         IDefaultChannels DefaultChannels { get; }
 
         /// <summary>
+        /// Gets the IPipelines.
+        /// </summary>
+        IPipelines Pipelines { get; }
+
+        /// <summary>
         /// Gets the IRepository.
         /// </summary>
         IRepository Repository { get; }

@@ -10,19 +10,13 @@ namespace Microsoft.DotNet.DarcLib
     {
         public bool Equals(DependencyGraphNode x, DependencyGraphNode y)
         {
-            return x.DependencyDetail.Commit == y.DependencyDetail.Commit &&
-                x.DependencyDetail.Name == y.DependencyDetail.Name &&
-                x.DependencyDetail.RepoUri == y.DependencyDetail.RepoUri &&
-                x.DependencyDetail.Version == y.DependencyDetail.Version &&
-                x.ChildNodes.SetEquals(y.ChildNodes);
+            return x.Commit == y.Commit &&
+                   x.RepoUri == y.RepoUri;
         }
 
         public int GetHashCode(DependencyGraphNode obj)
         {
-            return (obj.DependencyDetail.Commit,
-                obj.DependencyDetail.Name,
-                obj.DependencyDetail.RepoUri,
-                obj.DependencyDetail.Version).GetHashCode();
+            return (obj.Commit, obj.RepoUri).GetHashCode();
         }
     }
 }
