@@ -11,6 +11,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
@@ -871,9 +872,9 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="accountName">Azure DevOps account name</param>
         /// <param name="projectName">Project name</param>
         /// <param name="releaseDefinition">Release definition to be updated</param>
-        public async void StartNewReleaseAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition)
+        public async Task<int> StartNewReleaseAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, int barBuildId)
         {
-            var body = $"{{ \"definitionId\": {releaseDefinition.Id} }}";
+            var body = $"{{ \"definitionId\": {releaseDefinition.Id}, \"variables\": {{ \"BARBuildId\": {{ \"value\": \"{barBuildId}\" }} }} }}";
 
             JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Post,
@@ -884,6 +885,55 @@ namespace Microsoft.DotNet.DarcLib
                 body,
                 versionOverride: "5.0-preview.3",
                 baseAddressSubpath: "vsrm.");
+
+            return content.GetValue("id").ToObject<int>();
+        }
+
+        /// <summary>
+        /// Block until the release with ID informed finishes execution.
+        /// Checks the status of the release every 15 seconds.
+        /// </summary>
+        /// <param name="accountName"></param>
+        /// <param name="projectName"></param>
+        /// <param name="releaseId"></param>
+        public void WaitUntilCompleted(string accountName, string projectName, int releaseId)
+        {
+            while (true)
+            {
+                AzureDevOpsRelease rel = GetReleaseAsync(accountName, projectName, releaseId).GetAwaiter().GetResult();
+
+                if (rel.Environments[0].Status != "notStarted"
+                    && rel.Environments[0].Status != "scheduled"
+                    && rel.Environments[0].Status != "queued"
+                    && rel.Environments[0].Status != "inProgress")
+                {
+                    break;
+                }
+                
+                // Check status of the release every 15 seconds
+                Thread.Sleep(15 * 1000);
+            }
+        }
+
+        /// <summary>
+        /// Return the description of the release with ID informed.
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account name</param>
+        /// <param name="projectName">Project name</param>
+        /// <param name="releaseId">ID of the release that should be looked up for</param>
+        /// <returns></returns>
+        public async Task<AzureDevOpsRelease> GetReleaseAsync(string accountName, string projectName, int releaseId)
+        {
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                projectName,
+                $"_apis/release/releases/{releaseId}",
+                _logger,
+                versionOverride: "5.1-preview.8",
+                baseAddressSubpath: "vsrm.");
+
+            return content.ToObject<AzureDevOpsRelease>();
         }
 
         /// <summary>
