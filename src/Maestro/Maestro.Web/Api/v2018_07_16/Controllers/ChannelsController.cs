@@ -36,7 +36,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Gets a list of all <see cref="Channel"/>s that match the given classification.
         /// </summary>
         /// <param name="classification">The <see cref="Channel.Classification"/> of <see cref="Channel"/> to get</param>
-        /// <returns></returns>
         [HttpGet]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Channel>), Description = "The list of Channels")]
         [ValidateModelState]
@@ -56,7 +55,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Gets a single <see cref="Channel"/>, including all <see cref="ReleasePipeline"/> data.
         /// </summary>
         /// <param name="id">The id of the <see cref="Channel"/> to get</param>
-        /// <returns></returns>
         [HttpGet("{id}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Channel), Description = "The requested Channel")]
         [ValidateModelState]
@@ -79,7 +77,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Deletes a <see cref="Channel"/>.
         /// </summary>
         /// <param name="id">The id of the <see cref="Channel"/> to delete</param>
-        /// <returns></returns>
         [HttpDelete("{id}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Channel), Description = "The Channel has been deleted")]
         [ValidateModelState]
@@ -120,7 +117,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// </summary>
         /// <param name="name">The name of the new <see cref="Channel"/>. This is required to be unique.</param>
         /// <param name="classification">The classification of the new <see cref="Channel"/></param>
-        /// <returns></returns>
         [HttpPost]
         [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Channel), Description = "The Channel has been created")]
         [SwaggerApiResponse(HttpStatusCode.Conflict, Description = "A Channel with that name already exists.")]
@@ -148,7 +144,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// </summary>
         /// <param name="channelId">The id of the <see cref="Channel"/>.</param>
         /// <param name="buildId">The id of the <see cref="Build"/></param>
-        /// <returns></returns>
         [HttpPost("{channelId}/builds/{buildId}")]
         [SwaggerApiResponse(HttpStatusCode.Created, Description = "Build successfully added to the Channel")]
         public async Task<IActionResult> AddBuildToChannel(int channelId, int buildId)
@@ -187,7 +182,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// </summary>
         /// <param name="channelId">The id of the <see cref="Channel"/></param>
         /// <param name="pipelineId">The id of the <see cref="ReleasePipeline"/></param>
-        /// <returns></returns>
         [HttpPost("{channelId}/pipelines/{pipelineId}")]
         [SwaggerApiResponse(HttpStatusCode.Created, Description = "ReleasePipeline successfully added to Channel")]
         public async Task<IActionResult> AddPipelineToChannel(int channelId, int pipelineId)
@@ -230,7 +224,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// </summary>
         /// <param name="channelId">The id of the <see cref="Channel"/></param>
         /// <param name="pipelineId">The id of the <see cref="ReleasePipeline"/></param>
-        /// <returns></returns>
         [HttpDelete("{channelId}/pipelines/{pipelineId}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Description = "ReleasePipelines successfully removed from Channel")]
         public async Task<IActionResult> DeletePipelineFromChannel(int channelId, int pipelineId)

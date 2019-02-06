@@ -41,7 +41,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="notBefore">Don't return <see cref="Build"/>s that happened before this time.</param>
         /// <param name="notAfter">Don't return <see cref="Build"/>s that happened after this time.</param>
         /// <param name="loadCollections">**true** to include the <see cref="Channel"/>, <see cref="Asset"/>, and dependent <see cref="Build"/> data with the response; **false** otherwise.</param>
-        /// <returns></returns>
         [HttpGet]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Build>), Description = "The list of Builds matching the search criteria")]
         [Paginated(typeof(Build))]
@@ -121,7 +120,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Gets a single <see cref="Build"/>, including all the <see cref="Channel"/>, <see cref="Asset"/>, and dependent <see cref="Build"/> data.
         /// </summary>
         /// <param name="id">The id of the <see cref="Build"/>.</param>
-        /// <returns></returns>
         [HttpGet("{id}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The requested Build")]
         [ValidateModelState]
@@ -152,7 +150,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="notBefore">Don't return <see cref="Build"/>s that happened before this time.</param>
         /// <param name="notAfter">Don't return <see cref="Build"/>s that happened after this time.</param>
         /// <param name="loadCollections">**true** to include the <see cref="Channel"/>, <see cref="Asset"/>, and dependent <see cref="Build"/> data with the response; **false** otherwise.</param>
-        /// <returns></returns>
         [HttpGet("latest")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The latest Build matching the search criteria")]
         [ValidateModelState]
@@ -186,7 +183,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Creates a new <see cref="Build"/> in the database.
         /// </summary>
         /// <param name="build">An object containing the data for the new <see cref="Build"/></param>
-        /// <returns></returns>
         [HttpPost]
         [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Build), Description = "The created build")]
         [ValidateModelState]

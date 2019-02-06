@@ -48,7 +48,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// </summary>
         /// <param name="repository">The repository</param>
         /// <param name="branch">The branch</param>
-        /// <returns></returns>
         [HttpGet("merge-policy")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(IList<MergePolicy>), Description = "The list of MergePolicies")]
         public async Task<IActionResult> GetMergePolicies([Required]string repository, [Required]string branch)
@@ -85,7 +84,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="repository">The repository</param>
         /// <param name="branch">The branch</param>
         /// <param name="policies">The <see cref="MergePolicy">MergePolicies</see></param>
-        /// <returns></returns>
         [HttpPost("merge-policy")]
         [SwaggerApiResponse(HttpStatusCode.OK, Description = "MergePolicies successfully updated")]
         public async Task<IActionResult> SetMergePolicies(
@@ -121,7 +119,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// </summary>
         /// <param name="repository">The repository</param>
         /// <param name="branch">The branch</param>
-        /// <returns></returns>
         [HttpGet("history")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<RepositoryHistoryItem>), Description = "The requested history")]
         [Paginated(typeof(RepositoryHistoryItem))]
@@ -163,7 +160,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="repository">The repository</param>
         /// <param name="branch">The branch</param>
         /// <param name="timestamp">The timestamp identifying the history item to retry</param>
-        /// <returns></returns>
         [HttpPost("retry/{timestamp}")]
         [SwaggerApiResponse(HttpStatusCode.Accepted, Description = "Retry successfully requested")]
         [SwaggerApiResponse(HttpStatusCode.NotAcceptable, Description = "The requested history item was successful and cannot be retried")]

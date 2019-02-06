@@ -36,7 +36,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="repository"></param>
         /// <param name="branch"></param>
         /// <param name="channelId"></param>
-        /// <returns></returns>
         [HttpGet]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<DefaultChannel>), Description = "The list of DefaultChannels")]
         public IActionResult List(string repository = null, string branch = null, int? channelId = null)
@@ -67,7 +66,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Creates a <see cref="DefaultChannel"/> mapping.
         /// </summary>
         /// <param name="data">An object containing the data for the new <see cref="DefaultChannel"/></param>
-        /// <returns></returns>
         [HttpPost]
         [SwaggerApiResponse(HttpStatusCode.Created, Description = "DefaultChannel successfully created")]
         [SwaggerApiResponse(HttpStatusCode.Conflict, Description = "A DefaultChannel matching the data already exists")]
@@ -103,7 +101,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Gets a single <see cref="DefaultChannel"/>.
         /// </summary>
         /// <param name="id">The id of the <see cref="DefaultChannel"/></param>
-        /// <returns></returns>
         [HttpGet("{id}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(DefaultChannel), Description = "The requested DefaultChannel")]
         [ValidateModelState]
@@ -122,7 +119,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Deleted a single <see cref="DefaultChannel"/>
         /// </summary>
         /// <param name="id">The id of the <see cref="DefaultChannel"/> to delete.</param>
-        /// <returns></returns>
         [HttpDelete("{id}")]
         [ValidateModelState]
         [SwaggerApiResponse(HttpStatusCode.Accepted, Description = "DefaultChannel successfully deleted")]

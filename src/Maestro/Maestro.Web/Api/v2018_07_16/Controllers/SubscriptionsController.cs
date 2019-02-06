@@ -51,7 +51,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="targetRepository"></param>
         /// <param name="channelId"></param>
         /// <param name="enabled"></param>
-        /// <returns></returns>
         [HttpGet]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Subscription>), Description = "The list of Subscriptions")]
         [ValidateModelState]
@@ -91,7 +90,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Gets a single <see cref="Subscription"/>
         /// </summary>
         /// <param name="id">The id of the <see cref="Subscription"/></param>
-        /// <returns></returns>
         [HttpGet("{id}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription), Description = "The requested Subscription")]
         [ValidateModelState]
@@ -113,7 +111,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Trigger a <see cref="Subscription"/> manually by id
         /// </summary>
         /// <param name="id">The id of the <see cref="Subscription"/> to trigger.</param>
-        /// <returns></returns>
         [HttpPost("{id}/trigger")]
         [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription), Description = "Subscription update has been triggered")]
         [ValidateModelState]
@@ -142,7 +139,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// </summary>
         /// <param name="id">The id of the <see cref="Subscription"/> to update</param>
         /// <param name="update">An object containing the new data for the <see cref="Subscription"/></param>
-        /// <returns></returns>
         [HttpPatch("{id}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription), Description = "Subscription successfully updated")]
         [ValidateModelState]
@@ -206,7 +202,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Delete an existing <see cref="Subscription"/>
         /// </summary>
         /// <param name="id">The id of the <see cref="Subscription"/> to delete</param>
-        /// <returns></returns>
         [HttpDelete("{id}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription), Description = "Subscription successfully deleted")]
         [ValidateModelState]
@@ -238,7 +233,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Gets a paginated list of the Subscription history for the given Subscription
         /// </summary>
         /// <param name="id">The id of the <see cref="Subscription"/> to get history for</param>
-        /// <returns></returns>
         [HttpGet("{id}/history")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<SubscriptionHistoryItem>), Description = "The list of Subscription history")]
         [Paginated(typeof(SubscriptionHistoryItem))]
@@ -265,7 +259,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// </summary>
         /// <param name="id">The id of the <see cref="Subscription"/> containing the history item to retry</param>
         /// <param name="timestamp">The timestamp identifying the history item to retry</param>
-        /// <returns></returns>
         [HttpPost("{id}/retry/{timestamp}")]
         [SwaggerApiResponse(HttpStatusCode.Accepted, Description = "Retry successfully requested")]
         [SwaggerApiResponse(HttpStatusCode.NotAcceptable, Description = "The requested history item was successful and cannot be retried")]
@@ -311,7 +304,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Creates a new <see cref="Subscription"/>
         /// </summary>
         /// <param name="subscription">An object containing data for the new <see cref="Subscription"/></param>
-        /// <returns></returns>
         [HttpPost]
         [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Subscription), Description = "New Subscription successfully created")]
         [ValidateModelState]

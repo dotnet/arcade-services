@@ -40,7 +40,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="buildId"></param>
         /// <param name="nonShipping"></param>
         /// <param name="loadLocations">**true** to include the Asset Location data with the response; **false** otherwise.</param>
-        /// <returns></returns>
         [HttpGet]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Asset>), Description = "List of Assets")]
         [Paginated(typeof(Models.Asset))]
@@ -80,7 +79,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Gets a single <see cref="Asset"/>, including all <see cref="AssetLocation"/>s.
         /// </summary>
         /// <param name="id">The id of the <see cref="Asset"/>.</param>
-        /// <returns></returns>
         [HttpGet("{id}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Asset), Description = "The requested Asset")]
         [ValidateModelState]
@@ -104,7 +102,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="assetId">The id of the <see cref="Asset"/> to add the <see cref="AssetLocation"/> to.</param>
         /// <param name="location">The location to add to the Asset.</param>
         /// <param name="assetLocationType">The type of the location.</param>
-        /// <returns></returns>
         [HttpPost("{assetId}/locations")]
         [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(AssetLocation), Description = "AssetLocation successfully added")]
         public async Task<IActionResult> AddAssetLocationToAsset(int assetId, [Required] string location, [Required] LocationType assetLocationType)
@@ -151,7 +148,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// </summary>
         /// <param name="assetId">The id of the <see cref="Asset"/> to remove the <see cref="AssetLocation"/> from.</param>
         /// <param name="assetLocationId">The id of the <see cref="AssetLocation"/> to remove.</param>
-        /// <returns></returns>
         [HttpDelete("{assetId}/locations/{assetLocationId}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Description = "AssetLocation successfully removed")]
         public async Task<IActionResult> RemoveAssetLocationFromAsset(int assetId, int assetLocationId)

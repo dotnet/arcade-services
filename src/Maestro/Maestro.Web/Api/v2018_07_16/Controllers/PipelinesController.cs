@@ -37,7 +37,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="pipelineIdentifier">The Azure DevOps Release Pipeline id</param>
         /// <param name="organization">The Azure DevOps organization</param>
         /// <param name="project">The Azure DevOps project</param>
-        /// <returns></returns>
         [HttpGet]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<ReleasePipeline>), Description = "The list of ReleasePipelines")]
         [ValidateModelState]
@@ -68,7 +67,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Gets a single <see cref="ReleasePipeline"/>.
         /// </summary>
         /// <param name="id">The id of the <see cref="ReleasePipeline"/> to get</param>
-        /// <returns></returns>
         [HttpGet("{id}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(ReleasePipeline), Description = "The requested ReleasePipeline")]
         [ValidateModelState]
@@ -88,7 +86,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Deletes a <see cref="ReleasePipeline"/>
         /// </summary>
         /// <param name="id">The id of the <see cref="ReleasePipeline"/> to delete</param>
-        /// <returns></returns>
         [HttpDelete("{id}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(ReleasePipeline), Description = "ReleasePipeline successfully deleted")]
         [ValidateModelState]
@@ -121,7 +118,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="pipelineIdentifier">The Azure DevOps Release Pipeline id</param>
         /// <param name="organization">The Azure DevOps organization</param>
         /// <param name="project">The Azure DevOps project</param>
-        /// <returns></returns>
         [HttpPost]
         [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(ReleasePipeline), Description = "ReleasePipeline successfully created")]
         public async Task<IActionResult> CreatePipeline([Required] int pipelineIdentifier, [Required] string organization, [Required] string project)
