@@ -20,6 +20,7 @@ using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using Xunit;
 using Asset = Maestro.Contracts.Asset;
+using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
 
 namespace SubscriptionActorService.Tests
 {
