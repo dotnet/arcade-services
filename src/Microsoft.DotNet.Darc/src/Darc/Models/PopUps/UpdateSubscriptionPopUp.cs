@@ -4,6 +4,7 @@
 
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -40,6 +41,36 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             : base(path, logger)
         {
             _logger = logger;
+            List<MergePolicy> mergePolicies = new List<MergePolicy>();
+
+            // This is a workaround issue https://github.com/aaubry/YamlDotNet/issues/383 which
+            // is causing to display empty items in the properties collection of the mergePolicies
+            try
+            {
+                foreach (MergePolicy mergePolicy in subscription.Policy.MergePolicies)
+                {
+                    MergePolicy policy = new MergePolicy
+                    {
+                        Name = mergePolicy.Name,
+                        Properties = new Dictionary<string, object>()
+                    };
+
+                    foreach (string key in mergePolicy.Properties.Keys)
+                    {
+                        IEnumerable<object> items = JsonConvert.DeserializeObject<IEnumerable<object>>(
+                            mergePolicy.Properties[key].ToString());
+                        policy.Properties.Add(key, items);
+                    }
+
+                    mergePolicies.Add(policy);
+                }
+            }
+            catch
+            {
+                // Something failed parsing the properties. Continue with the original collection
+                mergePolicies = new List<MergePolicy>(subscription.Policy.MergePolicies);
+            }
+
             _yamlData = new SubscriptionData
             {
                 Channel = GetCurrentSettingForDisplay(subscription.Channel.Name, subscription.Channel.Name, false),
@@ -47,7 +78,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 Batchable = GetCurrentSettingForDisplay(subscription.Policy.Batchable.ToString(), subscription.Policy.Batchable.ToString(), false),
                 UpdateFrequency = GetCurrentSettingForDisplay(subscription.Policy.UpdateFrequency, subscription.Policy.UpdateFrequency, false),
                 Enabled = GetCurrentSettingForDisplay(subscription.Enabled.ToString(), subscription.Enabled.ToString(), false),
-                MergePolicies = new List<MergePolicy>(subscription.Policy.MergePolicies)
+                MergePolicies = mergePolicies
             };
 
             ISerializer serializer = new SerializerBuilder().Build();
@@ -60,6 +91,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             Contents = new Collection<Line>(new List<Line>
             {
                 new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
+                new Line($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
                 new Line()
             });
 
@@ -109,15 +141,22 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 return Constants.ErrorCode;
             }
 
+            _yamlData.Batchable = ParseSetting(outputYamlData.Batchable, _yamlData.Batchable, false);
+            _yamlData.Enabled = ParseSetting(outputYamlData.Enabled, _yamlData.Enabled, false);
             // Make sure Batchable and Enabled are valid bools
-            if (!bool.TryParse(outputYamlData.Batchable, out bool batchable) || !bool.TryParse(outputYamlData.Batchable, out bool enabled))
+            if (!bool.TryParse(outputYamlData.Batchable, out bool batchable) || !bool.TryParse(outputYamlData.Enabled, out bool enabled))
             {
                 _logger.LogError("Either Batchable or Enabled is not a valid boolean values.");
                 return Constants.ErrorCode;
             }
 
+            if (!bool.Parse(outputYamlData.Batchable) && outputYamlData.MergePolicies == null)
+            {
+                return Constants.ErrorCode;
+            }
+
             // Validate the merge policies
-            if (!ValidateMergePolicies(outputYamlData.MergePolicies))
+            if (outputYamlData.MergePolicies != null &&!ValidateMergePolicies(outputYamlData.MergePolicies))
             {
                 return Constants.ErrorCode;
             }

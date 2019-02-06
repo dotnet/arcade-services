@@ -35,75 +35,37 @@ namespace Microsoft.DotNet.Darc.Operations
             // No need to set up a git type or PAT here.
             Remote remote = new Remote(darcSettings, Logger);
 
-            if (_options.IgnoreChecks.Count() > 0 && !_options.AllChecksSuccessfulMergePolicy)
-            {
-                Logger.LogError($"--ignore-checks must be combined with --all-checks-passed");
-                return Constants.ErrorCode;
-            }
-            // Parse the merge policies
-            List<MergePolicy> mergePolicies = new List<MergePolicy>();
-
-            if (_options.NoExtraCommitsMergePolicy)
-            {
-                mergePolicies.Add(new MergePolicy("NoExtraCommits", null));
-            }
-
-            if (_options.AllChecksSuccessfulMergePolicy)
-            {
-                mergePolicies.Add(new MergePolicy("AllChecksSuccessful", new Dictionary<string, object>
-                {
-                    { "ignoreChecks", _options.IgnoreChecks }
-                }));
-            }
-
-            if (_options.RequireChecksMergePolicy.Count() > 0)
-            {
-                mergePolicies.Add(new MergePolicy("RequireChecks", new Dictionary<string, object>
-                {
-                    { "checks", _options.RequireChecksMergePolicy }
-                }));
-            }
-
-            string channel = _options.Channel;
-            string sourceRepository = _options.SourceRepository;
-            string updateFrequency = _options.UpdateFrequency;
-            bool batchable = _options.Batchable;
-            bool enabled = _options.Enabled;
-
             // First, try to get the subscription. If it doesn't exist the call will throw and the exception will be
             // caught by `RunOperation`
             Subscription subscription = await remote.GetSubscriptionAsync(_options.Id);
 
-            if (!_options.Quiet)
+            var suggestedRepos = remote.GetSubscriptionsAsync();
+            var suggestedChannels = remote.GetChannelsAsync();
+
+            UpdateSubscriptionPopUp updateSubscriptionPopUp = new UpdateSubscriptionPopUp(
+                "update-subscription/update-subscription-todo",
+                Logger,
+                subscription,
+                (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
+                (await suggestedRepos).SelectMany(subs => new List<string> { subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
+                Constants.AvailableFrequencies,
+                Constants.AvailableMergePolicyYamlHelp);
+
+            UxManager uxManager = new UxManager(Logger);
+
+            int exitCode = uxManager.PopUp(updateSubscriptionPopUp);
+
+            if (exitCode != Constants.SuccessCode)
             {
-                var suggestedRepos = remote.GetSubscriptionsAsync();
-                var suggestedChannels = remote.GetChannelsAsync();
-
-                UpdateSubscriptionPopUp updateSubscriptionPopUp = new UpdateSubscriptionPopUp(
-                    "update-subscription/update-subscription-todo",
-                    Logger,
-                    subscription,
-                    (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
-                    (await suggestedRepos).SelectMany(subs => new List<string> { subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
-                    Constants.AvailableFrequencies,
-                    Constants.AvailableMergePolicyYamlHelp);
-
-                UxManager uxManager = new UxManager(Logger);
-
-                int exitCode = uxManager.PopUp(updateSubscriptionPopUp);
-
-                if (exitCode != Constants.SuccessCode)
-                {
-                    return exitCode;
-                }
-
-                channel = updateSubscriptionPopUp.Channel;
-                sourceRepository = updateSubscriptionPopUp.SourceRepository;
-                updateFrequency = updateSubscriptionPopUp.UpdateFrequency;
-                batchable = updateSubscriptionPopUp.Batchable;
-                enabled = updateSubscriptionPopUp.Enabled;
-                mergePolicies = updateSubscriptionPopUp.MergePolicies;
+                return exitCode;
             }
+
+            string channel = updateSubscriptionPopUp.Channel;
+            string sourceRepository = updateSubscriptionPopUp.SourceRepository;
+            string updateFrequency = updateSubscriptionPopUp.UpdateFrequency;
+            bool batchable = updateSubscriptionPopUp.Batchable;
+            bool enabled = updateSubscriptionPopUp.Enabled;
+            List<MergePolicy> mergePolicies = updateSubscriptionPopUp.MergePolicies;
 
             try
             {
@@ -115,8 +77,8 @@ namespace Microsoft.DotNet.Darc.Operations
                     Policy = subscription.Policy
                 };
                 subscriptionToUpdate.Policy.Batchable = batchable;
-                subscriptionToUpdate.Policy.UpdateFrequency = subscription.Policy.UpdateFrequency;
-                subscriptionToUpdate.Policy.MergePolicies = mergePolicies.Any() ? mergePolicies : subscriptionToUpdate.Policy.MergePolicies;
+                subscriptionToUpdate.Policy.UpdateFrequency = updateFrequency;
+                subscriptionToUpdate.Policy.MergePolicies = mergePolicies;
 
                 var updatedSubscription = await remote.UpdateSubscriptionAsync(
                     subscription.Id.Value,
@@ -137,6 +99,24 @@ namespace Microsoft.DotNet.Darc.Operations
                 Logger.LogError(e, $"Failed to update subscription.");
                 return Constants.ErrorCode;
             }
+        }
+
+        private IList<MergePolicy> UpdatedMergePolicies(IList<MergePolicy> originalPolicies, IList<MergePolicy> updatedPolicies)
+        {
+            // If batchable is set to true, MergePolicies have to be null
+            if (updatedPolicies == null)
+            {
+                return null;
+            }
+
+            // If there were no passed in updates to merge policies we set the original list
+            if (!updatedPolicies.Any())
+            {
+                return originalPolicies;
+            }
+
+            // Return the updated policies since it has changes in it
+            return updatedPolicies;
         }
     }
 }
