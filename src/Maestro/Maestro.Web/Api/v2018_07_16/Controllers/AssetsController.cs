@@ -15,10 +15,12 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Swashbuckle.AspNetCore.Annotations;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
 {
+    /// <summary>
+    ///   Exposes methods to Read/Query <see cref="Asset"/>s and modify <see cref="AssetLocation"/> information
+    /// </summary>
     [Route("assets")]
     [ApiVersion("2018-07-16")]
     public class AssetsController : Controller
@@ -30,11 +32,20 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             _context = context;
         }
 
+        /// <summary>
+        ///   Gets a paged list of all <see cref="Asset"/>s that match the given search criteria.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <param name="version"></param>
+        /// <param name="buildId"></param>
+        /// <param name="nonShipping"></param>
+        /// <param name="loadLocations">**true** to include the Asset Location data with the response; **false** otherwise.</param>
+        /// <returns></returns>
         [HttpGet]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Asset>))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Asset>), Description = "List of Assets")]
         [Paginated(typeof(Models.Asset))]
         [ValidateModelState]
-        public IActionResult Get(string name, [FromQuery] string version, int? buildId, bool? nonShipping, bool? loadLocations)
+        public IActionResult ListAssets(string name, [FromQuery] string version, int? buildId, bool? nonShipping, bool? loadLocations)
         {
             IQueryable<Data.Models.Asset> query = _context.Assets;
             if (!string.IsNullOrEmpty(name))
@@ -65,8 +76,13 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Ok(query);
         }
 
+        /// <summary>
+        ///   Gets a single <see cref="Asset"/>, including all <see cref="AssetLocation"/>s.
+        /// </summary>
+        /// <param name="id">The id of the <see cref="Asset"/>.</param>
+        /// <returns></returns>
         [HttpGet("{id}")]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Asset))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Asset), Description = "The requested Asset")]
         [ValidateModelState]
         public async Task<IActionResult> GetAsset(int id)
         {
@@ -82,8 +98,15 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Ok(new Asset(asset));
         }
 
+        /// <summary>
+        ///   Adds a new <see cref="AssetLocation"/> to an existing <see cref="Asset"/> object.
+        /// </summary>
+        /// <param name="assetId">The id of the <see cref="Asset"/> to add the <see cref="AssetLocation"/> to.</param>
+        /// <param name="location">The location to add to the Asset.</param>
+        /// <param name="assetLocationType">The type of the location.</param>
+        /// <returns></returns>
         [HttpPost("{assetId}/locations")]
-        [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(AssetLocation))]
+        [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(AssetLocation), Description = "AssetLocation successfully added")]
         public async Task<IActionResult> AddAssetLocationToAsset(int assetId, [Required] string location, [Required] LocationType assetLocationType)
         {
             var assetLocation = new Data.Models.AssetLocation
@@ -123,8 +146,14 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 new AssetLocation(assetLocation));
         }
 
+        /// <summary>
+        ///   Removes an existing <see cref="AssetLocation"/> from an <see cref="Asset"/>.
+        /// </summary>
+        /// <param name="assetId">The id of the <see cref="Asset"/> to remove the <see cref="AssetLocation"/> from.</param>
+        /// <param name="assetLocationId">The id of the <see cref="AssetLocation"/> to remove.</param>
+        /// <returns></returns>
         [HttpDelete("{assetId}/locations/{assetLocationId}")]
-        [SwaggerApiResponse(HttpStatusCode.OK)]
+        [SwaggerApiResponse(HttpStatusCode.OK, Description = "AssetLocation successfully removed")]
         public async Task<IActionResult> RemoveAssetLocationFromAsset(int assetId, int assetLocationId)
         {
             Maestro.Data.Models.Asset asset = await _context.Assets

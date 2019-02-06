@@ -61,7 +61,7 @@ namespace Maestro.Data.Models
         public RepositoryBranch RepositoryBranch { get; set; }
 
         /// <summary>
-        ///     <see langword="true" /> if the update succeeded; <see langword="false" /> otherwise.
+        ///     **true** if the update succeeded; **false** otherwise.
         /// </summary>
         public bool Success { get; set; }
 
@@ -96,7 +96,7 @@ namespace Maestro.Data.Models
         public string BranchName { get; set; }
 
         /// <summary>
-        ///     <see langword="true" /> if the update succeeded; <see langword="false" /> otherwise.
+        ///     **true** if the update succeeded; **false** otherwise.
         /// </summary>
         public bool Success { get; set; }
 

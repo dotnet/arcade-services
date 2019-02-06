@@ -6,26 +6,23 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data;
-using Maestro.Data.Models;
 using Maestro.Web.Api.v2018_07_16.Models;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Actors;
-using Swashbuckle.AspNetCore.Annotations;
 using Channel = Maestro.Data.Models.Channel;
-using Subscription = Maestro.Web.Api.v2018_07_16.Models.Subscription;
-using SubscriptionUpdate = Maestro.Web.Api.v2018_07_16.Models.SubscriptionUpdate;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
 {
+    /// <summary>
+    ///   Exposes methods to Create/Read/Update/Delete <see cref="Subscription"/>s
+    /// </summary>
     [Route("subscriptions")]
     [ApiVersion("2018-07-16")]
     public class SubscriptionsController : Controller
@@ -47,10 +44,18 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             _subscriptionActorFactory = subscriptionActorFactory;
         }
 
+        /// <summary>
+        ///   Gets a list of all <see cref="Subscription"/>s that match the given search criteria.
+        /// </summary>
+        /// <param name="sourceRepository"></param>
+        /// <param name="targetRepository"></param>
+        /// <param name="channelId"></param>
+        /// <param name="enabled"></param>
+        /// <returns></returns>
         [HttpGet]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Subscription>))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Subscription>), Description = "The list of Subscriptions")]
         [ValidateModelState]
-        public virtual IActionResult GetAllSubscriptions(
+        public virtual IActionResult ListSubscriptions(
             string sourceRepository = null,
             string targetRepository = null,
             int? channelId = null,
@@ -82,8 +87,13 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Ok(results);
         }
 
+        /// <summary>
+        ///   Gets a single <see cref="Subscription"/>
+        /// </summary>
+        /// <param name="id">The id of the <see cref="Subscription"/></param>
+        /// <returns></returns>
         [HttpGet("{id}")]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription), Description = "The requested Subscription")]
         [ValidateModelState]
         public virtual async Task<IActionResult> GetSubscription(Guid id)
         {
@@ -100,12 +110,12 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         /// <summary>
-        ///     Trigger a subscription manually by ID
+        ///   Trigger a <see cref="Subscription"/> manually by id
         /// </summary>
-        /// <param name="id">ID of subscription</param>
+        /// <param name="id">The id of the <see cref="Subscription"/> to trigger.</param>
         /// <returns></returns>
         [HttpPost("{id}/trigger")]
-        [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription))]
+        [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription), Description = "Subscription update has been triggered")]
         [ValidateModelState]
         public virtual async Task<IActionResult> TriggerSubscription(Guid id)
         {
@@ -127,8 +137,14 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Accepted(new Subscription(subscription));
         }
 
+        /// <summary>
+        ///   Edit an existing <see cref="Subscription"/>
+        /// </summary>
+        /// <param name="id">The id of the <see cref="Subscription"/> to update</param>
+        /// <param name="update">An object containing the new data for the <see cref="Subscription"/></param>
+        /// <returns></returns>
         [HttpPatch("{id}")]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription), Description = "Subscription successfully updated")]
         [ValidateModelState]
         public virtual async Task<IActionResult> UpdateSubscription(Guid id, [FromBody] SubscriptionUpdate update)
         {
@@ -186,8 +202,13 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Ok(new Subscription(subscription));
         }
 
+        /// <summary>
+        ///   Delete an existing <see cref="Subscription"/>
+        /// </summary>
+        /// <param name="id">The id of the <see cref="Subscription"/> to delete</param>
+        /// <returns></returns>
         [HttpDelete("{id}")]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription), Description = "Subscription successfully deleted")]
         [ValidateModelState]
         public virtual async Task<IActionResult> DeleteSubscription(Guid id)
         {
@@ -213,8 +234,13 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Ok(new Subscription(subscription));
         }
 
+        /// <summary>
+        ///   Gets a paginated list of the Subscription history for the given Subscription
+        /// </summary>
+        /// <param name="id">The id of the <see cref="Subscription"/> to get history for</param>
+        /// <returns></returns>
         [HttpGet("{id}/history")]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<SubscriptionHistoryItem>))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<SubscriptionHistoryItem>), Description = "The list of Subscription history")]
         [Paginated(typeof(SubscriptionHistoryItem))]
         public virtual async Task<IActionResult> GetSubscriptionHistory(Guid id)
         {
@@ -233,8 +259,16 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Ok(query);
         }
 
+        /// <summary>
+        ///   Requests that Maestro++ retry the reference history item.
+        ///   Links to this api are returned from the <see cref="GetSubscriptionHistory"/> api.
+        /// </summary>
+        /// <param name="id">The id of the <see cref="Subscription"/> containing the history item to retry</param>
+        /// <param name="timestamp">The timestamp identifying the history item to retry</param>
+        /// <returns></returns>
         [HttpPost("{id}/retry/{timestamp}")]
-        [SwaggerApiResponse(HttpStatusCode.Accepted)]
+        [SwaggerApiResponse(HttpStatusCode.Accepted, Description = "Retry successfully requested")]
+        [SwaggerApiResponse(HttpStatusCode.NotAcceptable, Description = "The requested history item was successful and cannot be retried")]
         public virtual async Task<IActionResult> RetrySubscriptionActionAsync(Guid id, long timestamp)
         {
             DateTime ts = DateTimeOffset.FromUnixTimeSeconds(timestamp).UtcDateTime;
@@ -273,8 +307,13 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Accepted();
         }
 
+        /// <summary>
+        ///   Creates a new <see cref="Subscription"/>
+        /// </summary>
+        /// <param name="subscription">An object containing data for the new <see cref="Subscription"/></param>
+        /// <returns></returns>
         [HttpPost]
-        [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Subscription))]
+        [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Subscription), Description = "New Subscription successfully created")]
         [ValidateModelState]
         public virtual async Task<IActionResult> Create([FromBody] SubscriptionData subscription)
         {
@@ -288,7 +327,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                         new[] {$"The channel '{subscription.ChannelName}' could not be found."}));
             }
 
-            Repository repo = await _context.Repositories.FindAsync(subscription.TargetRepository);
+            Data.Models.Repository repo = await _context.Repositories.FindAsync(subscription.TargetRepository);
 
             if (subscription.TargetRepository.Contains("github.com"))
             {

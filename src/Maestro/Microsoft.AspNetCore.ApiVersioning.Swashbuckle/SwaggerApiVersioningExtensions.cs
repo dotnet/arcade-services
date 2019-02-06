@@ -14,9 +14,13 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
     [PublicAPI]
     public static class SwaggerApiVersioningExtensions
     {
-        public static IServiceCollection AddSwaggerApiVersioning(this IServiceCollection services)
+        public static IServiceCollection AddSwaggerApiVersioning(this IServiceCollection services, Action<string, Info> configureVersionInfo = null)
         {
-            return services.AddSingleton<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerVersions>();
+            return services.AddSingleton<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerVersions>(
+                provider => new ConfigureSwaggerVersions(
+                    provider.GetRequiredService<VersionedControllerProvider>(),
+                    provider.GetRequiredService<IOptions<ApiVersioningOptions>>(),
+                    configureVersionInfo));
         }
 
         public static void FilterOperations(
