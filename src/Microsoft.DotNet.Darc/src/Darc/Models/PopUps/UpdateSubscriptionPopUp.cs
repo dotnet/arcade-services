@@ -4,6 +4,7 @@
 
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -12,25 +13,27 @@ using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.Darc.Models.PopUps
 {
-    public class AddSubscriptionPopUp : SubscriptionPopUp
+    public class UpdateSubscriptionPopUp : SubscriptionPopUp
     {
         private readonly ILogger _logger;
+
         private SubscriptionData _yamlData;
+
         public string Channel => _yamlData.Channel;
+
         public string SourceRepository => _yamlData.SourceRepository;
-        public string TargetRepository => _yamlData.TargetRepository;
-        public string TargetBranch => _yamlData.TargetBranch;
+
+        public bool Batchable => bool.Parse(_yamlData.Batchable);
+
         public string UpdateFrequency => _yamlData.UpdateFrequency;
+
+        public bool Enabled => bool.Parse(_yamlData.Enabled);
+
         public List<MergePolicy> MergePolicies => _yamlData.MergePolicies;
 
-        public AddSubscriptionPopUp(string path,
+        public UpdateSubscriptionPopUp(string path,
                                     ILogger logger,
-                                    string channel,
-                                    string sourceRepository,
-                                    string targetRepository,
-                                    string targetBranch,
-                                    string updateFrequency,
-                                    List<MergePolicy> mergePolicies,
+                                    Subscription subscription,
                                     IEnumerable<string> suggestedChannels,
                                     IEnumerable<string> suggestedRepositories,
                                     IEnumerable<string> availableUpdateFrequencies,
@@ -38,49 +41,85 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             : base(path, logger)
         {
             _logger = logger;
+            List<MergePolicy> mergePolicies = new List<MergePolicy>();
+
+            // This is a workaround issue https://github.com/aaubry/YamlDotNet/issues/383 which
+            // is causing to display empty items in the properties collection of the mergePolicies
+            try
+            {
+                foreach (MergePolicy mergePolicy in subscription.Policy.MergePolicies)
+                {
+                    MergePolicy policy = new MergePolicy
+                    {
+                        Name = mergePolicy.Name,
+                        Properties = new Dictionary<string, object>()
+                    };
+
+                    foreach (string key in mergePolicy.Properties.Keys)
+                    {
+                        IEnumerable<object> items = JsonConvert.DeserializeObject<IEnumerable<object>>(
+                            mergePolicy.Properties[key].ToString());
+                        policy.Properties.Add(key, items);
+                    }
+
+                    mergePolicies.Add(policy);
+                }
+            }
+            catch
+            {
+                // Something failed parsing the properties. Continue with the original collection
+                mergePolicies = new List<MergePolicy>(subscription.Policy.MergePolicies);
+            }
+
             _yamlData = new SubscriptionData
             {
-                Channel = GetCurrentSettingForDisplay(channel, "<required>", false),
-                SourceRepository = GetCurrentSettingForDisplay(sourceRepository, "<required>", false),
-                TargetRepository = GetCurrentSettingForDisplay(targetRepository, "<required>", false),
-                TargetBranch = GetCurrentSettingForDisplay(targetBranch, "<required>", false),
-                UpdateFrequency = GetCurrentSettingForDisplay(updateFrequency, $"<'{string.Join("', '", Constants.AvailableFrequencies)}'>", false),
-                MergePolicies = new List<MergePolicy>(mergePolicies)
+                Id = GetCurrentSettingForDisplay(subscription.Id.ToString(), subscription.Id.ToString(), false),
+                Channel = GetCurrentSettingForDisplay(subscription.Channel.Name, subscription.Channel.Name, false),
+                SourceRepository = GetCurrentSettingForDisplay(subscription.SourceRepository, subscription.SourceRepository, false),
+                Batchable = GetCurrentSettingForDisplay(subscription.Policy.Batchable.ToString(), subscription.Policy.Batchable.ToString(), false),
+                UpdateFrequency = GetCurrentSettingForDisplay(subscription.Policy.UpdateFrequency, subscription.Policy.UpdateFrequency, false),
+                Enabled = GetCurrentSettingForDisplay(subscription.Enabled.ToString(), subscription.Enabled.ToString(), false),
+                MergePolicies = mergePolicies
             };
 
             ISerializer serializer = new SerializerBuilder().Build();
+
             string yaml = serializer.Serialize(_yamlData);
+
             string[] lines = yaml.Split(Environment.NewLine);
 
             // Initialize line contents.  Augment the input lines with suggestions and explanation
             Contents = new Collection<Line>(new List<Line>
             {
-                new Line("Use this form to create a new subscription.", true),
-                new Line("A subscription maps a build of a source repository that has been applied to a specific channel", true),
-                new Line("onto a specific branch in a target repository.  The subscription has a trigger (update frequency)", true),
-                new Line("and merge policy.  For additional information about subscriptions, please see", true),
-                new Line("https://github.com/dotnet/arcade/blob/master/Documentation/BranchesChannelsAndSubscriptions.md", true),
-                new Line("", true),
-                new Line("Fill out the following form.  Suggested values for fields are shown below.", true),
+                new Line($"Use this form to update the values of subscription '{subscription.Id}'.", true),
+                new Line($"Note that if you are setting 'Is batchable' to true you need to remove all Merge Policies.", true),
                 new Line()
             });
+
             foreach (string line in lines)
             {
                 Contents.Add(new Line(line));
             }
+
             // Add helper comments
-            Contents.Add(new Line($"Suggested repository URLs for '{SubscriptionData.sourceRepoElement}' or '{SubscriptionData.targetRepoElement}':", true));
-            foreach (string suggestedRepo in suggestedRepositories) {
+            Contents.Add(new Line($"Suggested repository URLs for '{SubscriptionData.sourceRepoElement}':", true));
+
+            foreach (string suggestedRepo in suggestedRepositories)
+            {
                 Contents.Add(new Line($"  {suggestedRepo}", true));
             }
+
             Contents.Add(new Line("", true));
             Contents.Add(new Line("Suggested Channels", true));
+
             foreach (string suggestedChannel in suggestedChannels)
             {
                 Contents.Add(new Line($"  {suggestedChannel}", true));
             }
+
             Contents.Add(new Line("", true));
             Contents.Add(new Line("Available Merge Policies", true));
+
             foreach (string mergeHelp in availableMergePolicyHelp)
             {
                 Contents.Add(new Line($"  {mergeHelp}", true));
@@ -93,9 +132,6 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
 
             try
             {
-                // Join the lines back into a string and deserialize as YAML.
-                // TODO: Alter the popup/ux manager to pass along the raw file to avoid this unnecessary
-                // operation once authenticate ends up as YAML.
                 string yamlString = contents.Aggregate<Line, string>("", (current, line) => $"{current}{System.Environment.NewLine}{line.Text}");
                 IDeserializer serializer = new DeserializerBuilder().Build();
                 outputYamlData = serializer.Deserialize<SubscriptionData>(yamlString);
@@ -106,8 +142,17 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 return Constants.ErrorCode;
             }
 
+            _yamlData.Batchable = ParseSetting(outputYamlData.Batchable, _yamlData.Batchable, false);
+            _yamlData.Enabled = ParseSetting(outputYamlData.Enabled, _yamlData.Enabled, false);
+            // Make sure Batchable and Enabled are valid bools
+            if (!bool.TryParse(outputYamlData.Batchable, out bool batchable) || !bool.TryParse(outputYamlData.Enabled, out bool enabled))
+            {
+                _logger.LogError("Either Batchable or Enabled is not a valid boolean values.");
+                return Constants.ErrorCode;
+            }
+
             // Validate the merge policies
-            if (!ValidateMergePolicies(outputYamlData.MergePolicies))
+            if (outputYamlData.MergePolicies != null &&!ValidateMergePolicies(outputYamlData.MergePolicies))
             {
                 return Constants.ErrorCode;
             }
@@ -129,20 +174,6 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 return Constants.ErrorCode;
             }
 
-            _yamlData.TargetRepository = ParseSetting(outputYamlData.TargetRepository, _yamlData.TargetRepository, false);
-            if (string.IsNullOrEmpty(_yamlData.TargetRepository))
-            {
-                _logger.LogError("Target repository URL must be non-empty");
-                return Constants.ErrorCode;
-            }
-
-            _yamlData.TargetBranch = ParseSetting(outputYamlData.TargetBranch, _yamlData.TargetBranch, false);
-            if (string.IsNullOrEmpty(_yamlData.TargetBranch))
-            {
-                _logger.LogError("Target branch must be non-empty");
-                return Constants.ErrorCode;
-            }
-
             _yamlData.UpdateFrequency = ParseSetting(outputYamlData.UpdateFrequency, _yamlData.UpdateFrequency, false);
             if (string.IsNullOrEmpty(_yamlData.UpdateFrequency) || 
                 !Constants.AvailableFrequencies.Contains(_yamlData.UpdateFrequency, StringComparer.OrdinalIgnoreCase))
@@ -159,25 +190,33 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
         /// Helper class for YAML encoding/decoding purposes.
         /// This is used so that we can have friendly alias names for elements.
         /// </summary>
-        class SubscriptionData
+        private class SubscriptionData
         {
             public const string channelElement = "Channel";
             public const string sourceRepoElement = "Source Repository URL";
-            public const string targetRepoElement = "Target Repository URL";
-            public const string targetBranchElement = "Target Branch";
+            public const string batchable = "Is batchable";
             public const string updateFrequencyElement = "Update Frequency";
             public const string mergePolicyElement = "Merge Policies";
+            public const string enabled = "Enabled";
+
+            [YamlMember(ApplyNamingConventions = false)]
+            public string Id { get; set; }
 
             [YamlMember(Alias = channelElement, ApplyNamingConventions = false)]
             public string Channel { get; set; }
+
             [YamlMember(Alias = sourceRepoElement, ApplyNamingConventions = false)]
             public string SourceRepository { get; set; }
-            [YamlMember(Alias = targetRepoElement, ApplyNamingConventions = false)]
-            public string TargetRepository { get; set; }
-            [YamlMember(Alias = targetBranchElement, ApplyNamingConventions = false)]
-            public string TargetBranch { get; set; }
+
+            [YamlMember(Alias = batchable, ApplyNamingConventions = false)]
+            public string Batchable { get; set; }
+
             [YamlMember(Alias = updateFrequencyElement, ApplyNamingConventions = false)]
             public string UpdateFrequency { get; set; }
+
+            [YamlMember(Alias = enabled, ApplyNamingConventions = false)]
+            public string Enabled { get; set; }
+
             [YamlMember(Alias = mergePolicyElement, ApplyNamingConventions = false)]
             public List<MergePolicy> MergePolicies { get; set; }
         }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Dependencies>
   <ProductDependencies>
-    <Dependency Name="dotnet-ef" Version="1.2.3">
+    <Dependency Name="dotnet-ef" Version="1.2.3" Pinned="True">
       <Uri>https://foo.com/foo/bar</Uri>
       <Sha>12345</Sha>
     </Dependency>

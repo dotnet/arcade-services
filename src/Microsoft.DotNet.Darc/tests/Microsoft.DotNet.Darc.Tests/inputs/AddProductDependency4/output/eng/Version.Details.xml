@@ -5,7 +5,7 @@
       <Uri>https://foo.com/foo/bar</Uri>
       <Sha>12345</Sha>
     </Dependency>
-    <Dependency Name="Foo.Bar2" Version="1.2.4">
+    <Dependency Name="Foo.Bar2" Version="1.2.4" Pinned="True">
       <Uri>https://foo.com/foo/bar</Uri>
       <Sha>67890</Sha>
     </Dependency>

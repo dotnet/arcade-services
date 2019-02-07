@@ -55,7 +55,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // First we need to figure out what to query for.  Load Version.Details.xml and
                 // find all repository uris, optionally restricted by the input dependency parameter.
-                IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync(_options.Name);
+                IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync(_options.Name, false);
 
                 // If the source repository was specified, filter away any local dependencies not from that
                 // source repository.
@@ -158,6 +158,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         DependencyDetail updatedDependency = new DependencyDetail
                         {
                             // TODO: Not needed, but not currently provided in Build info. Will be available on next rollout.
+                            // When this is ready, add "(from build '{build.BuildNumber}'" to line 163 in GitFileManager.cs
                             Branch = null,
                             Commit = build.Commit,
                             // If casing changes, ensure that the dependency name gets updated.
@@ -166,9 +167,7 @@ namespace Microsoft.DotNet.Darc.Operations
                             Version = buildAsset.Version
                         };
 
-                        dependenciesToUpdate.Add(updatedDependency);
-
-                        // Print out what we are going to do.
+                        // Print out what we are going to do.	
                         Console.WriteLine($"Updating '{dependency.Name}': '{dependency.Version}' => '{updatedDependency.Version}'" +
                             $" (from build '{build.AzureDevOpsBuildNumber}' of '{build.AzureDevOpsRepository}')");
                         // Notify on casing changes.

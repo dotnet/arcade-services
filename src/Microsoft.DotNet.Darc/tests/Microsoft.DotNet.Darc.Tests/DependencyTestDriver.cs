@@ -78,6 +78,20 @@ namespace Microsoft.DotNet.Darc.Tests
             await _gitClient.CommitFilesAsync(filesToUpdate, TemporaryRepositoryPath, null, null);
         }
 
+        public async Task UpdatePinnedDependenciesAsync()
+        {
+            string testVersionDetailsXmlPath = Path.Combine(RootExpectedOutputsPath, VersionFiles.VersionDetailsXml);
+            string versionDetailsContents = File.ReadAllText(testVersionDetailsXmlPath);
+            IEnumerable<DependencyDetail> dependencies = _gitFileManager.ParseVersionDetailsXml(versionDetailsContents, false);
+
+            GitFileContentContainer container = await _gitFileManager.UpdateDependencyFiles(
+                dependencies,
+                TemporaryRepositoryPath,
+                null);
+            List<GitFile> filesToUpdate = container.GetFilesToCommit();
+            await _gitClient.CommitFilesAsync(filesToUpdate, TemporaryRepositoryPath, null, null);
+        }
+
         public async Task VerifyAsync()
         {
             await _gitFileManager.Verify(TemporaryRepositoryPath, null);
