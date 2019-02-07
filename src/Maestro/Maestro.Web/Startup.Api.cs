@@ -24,7 +24,17 @@ namespace Maestro.Web
         private void ConfigureApiServices(IServiceCollection services)
         {
             services.AddApiVersioning(options => options.VersionByQuery("api-version"));
-            services.AddSwaggerApiVersioning();
+            services.AddSwaggerApiVersioning(
+                (version, info) =>
+                {
+                    info.Description =
+                        "The Web API enabling access to the Maestro++ service that supports the [.NET Core Dependency Flow infrastructure](https://github.com/dotnet/arcade/blob/master/Documentation/DependenciesFlowPlan.md).";
+                    info.Contact = new Contact
+                    {
+                        Name = ".NET Core Engineering",
+                        Email = "dnceng@microsoft.com",
+                    };
+                });
             services.Configure<MvcJsonOptions>(
                 options =>
                 {
@@ -80,7 +90,7 @@ namespace Maestro.Web
                     string xmlPath;
                     if (HostingEnvironment.IsDevelopment())
                     {
-                        xmlPath = Path.Combine(HostingEnvironment.ContentRootPath, "bin/Debug/net461");
+                        xmlPath = Path.GetDirectoryName(typeof(Startup).Assembly.Location);
                     }
                     else
                     {

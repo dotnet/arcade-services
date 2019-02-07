@@ -5,11 +5,9 @@
       <Uri>https://foo.com/foo/baz</Uri>
       <Sha>szdfsdfsdf</Sha>
     </Dependency>
-  </ProductDependencies>
-  <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="1.0" Pinned="True">
-      <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>123</Sha>
+    <Dependency Name="Pinned.Dependency" Version="1.2.3" Pinned="true">
+      <Uri>https://foo.com/foo/baz</Uri>
+      <Sha>szdfsdfsdf</Sha>
     </Dependency>
-  </ToolsetDependencies>
+  </ProductDependencies>
 </Dependencies>

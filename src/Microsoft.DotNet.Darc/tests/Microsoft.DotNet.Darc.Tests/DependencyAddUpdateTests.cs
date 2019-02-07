@@ -107,6 +107,7 @@ namespace Microsoft.DotNet.Darc.Tests
                         Name = "Foo.Bar",
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "1.2.4",
+                        Pinned = false,
                         Type = DependencyType.Product
                     }));
 
@@ -136,6 +137,7 @@ namespace Microsoft.DotNet.Darc.Tests
                         Name = "Foo.Bar2",
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "1.2.4",
+                        Pinned = true,
                         Type = DependencyType.Product
                     });
 
@@ -189,6 +191,7 @@ namespace Microsoft.DotNet.Darc.Tests
                         Name = "dotnet-ef",
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "1.2.3",
+                        Pinned = true,
                         Type = DependencyType.Product
                     });
                 await driver.VerifyAsync();
@@ -286,6 +289,19 @@ namespace Microsoft.DotNet.Darc.Tests
         }
 
         /// <summary>
+        /// Update dependencies including a pinned dependency which should not be updated
+        /// </summary>
+        [Fact]
+        public void UpdateDependencies5()
+        {
+            DependencyTestDriver.TestAndCompareOutput(nameof(UpdateDependencies5), async driver =>
+            {
+                await driver.UpdatePinnedDependenciesAsync();
+                await driver.VerifyAsync();
+            });
+        }
+
+        /// <summary>
         /// Support both Version and PackageVersion properties in Versions.props.
         /// When adding, use what's already in the file.
         /// </summary>
@@ -301,6 +317,7 @@ namespace Microsoft.DotNet.Darc.Tests
                         Name = "Foo.Bar",
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "4.5.6",
+                        Pinned = true,
                         Type = DependencyType.Product
                     });
                 await driver.VerifyAsync();
@@ -322,6 +339,7 @@ namespace Microsoft.DotNet.Darc.Tests
                         Name = "Foo.Bar",
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "4.5.6",
+                        Pinned = true,
                         Type = DependencyType.Product
                     });
                 await driver.UpdateDependenciesAsync(
@@ -354,6 +372,7 @@ namespace Microsoft.DotNet.Darc.Tests
                         Name = "Microsoft.DotNet.Arcade.Sdk",
                         RepoUri = "https://github.com/dotnet/arcade",
                         Version = "1.0",
+                        Pinned = true,
                         Type = DependencyType.Toolset
                     });
                 await driver.VerifyAsync();
@@ -376,6 +395,7 @@ namespace Microsoft.DotNet.Darc.Tests
                         Name = "Microsoft.DotNet.Arcade.Sdk",
                         RepoUri = "https://github.com/dotnet/arcade",
                         Version = "2.0",
+                        Pinned = false,
                         Type = DependencyType.Toolset
                     });
                 await driver.VerifyAsync();

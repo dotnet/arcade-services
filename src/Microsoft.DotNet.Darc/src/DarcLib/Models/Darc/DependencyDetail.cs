@@ -16,6 +16,8 @@ namespace Microsoft.DotNet.DarcLib
 
         public string Commit { get; set; }
 
+        public bool Pinned { get; set; }
+
         public DependencyType Type { get; set; }
     }
 }

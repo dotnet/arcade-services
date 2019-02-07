@@ -68,6 +68,7 @@ namespace Microsoft.DotNet.Darc
                     typeof(RetrySubscriptionUpdateCommandLineOptions),
                     typeof(TriggerSubscriptionsCommandLineOptions),
                     typeof(UpdateDependenciesCommandLineOptions),
+                    typeof(UpdateSubscriptionCommandLineOptions),
                     typeof(VerifyCommandLineOptions),
                 };
         }

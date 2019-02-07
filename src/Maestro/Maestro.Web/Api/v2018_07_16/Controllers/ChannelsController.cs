@@ -7,7 +7,6 @@ using Maestro.Data.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Swashbuckle.AspNetCore.Annotations;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -19,6 +18,9 @@ using Channel = Maestro.Web.Api.v2018_07_16.Models.Channel;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
 {
+    /// <summary>
+    ///   Exposes methods to Create/Read/Edit/Delete <see cref="Channel"/>s.
+    /// </summary>
     [Route("channels")]
     [ApiVersion("2018-07-16")]
     public class ChannelsController : Controller
@@ -30,10 +32,14 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             _context = context;
         }
 
+        /// <summary>
+        ///   Gets a list of all <see cref="Channel"/>s that match the given classification.
+        /// </summary>
+        /// <param name="classification">The <see cref="Channel.Classification"/> of <see cref="Channel"/> to get</param>
         [HttpGet]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Channel>))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Channel>), Description = "The list of Channels")]
         [ValidateModelState]
-        public IActionResult Get(string classification = null)
+        public IActionResult ListChannels(string classification = null)
         {
             IQueryable<Data.Models.Channel> query = _context.Channels;
             if (!string.IsNullOrEmpty(classification))
@@ -45,8 +51,12 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Ok(results);
         }
 
+        /// <summary>
+        ///   Gets a single <see cref="Channel"/>, including all <see cref="ReleasePipeline"/> data.
+        /// </summary>
+        /// <param name="id">The id of the <see cref="Channel"/> to get</param>
         [HttpGet("{id}")]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Channel))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Channel), Description = "The requested Channel")]
         [ValidateModelState]
         public async Task<IActionResult> GetChannel(int id)
         {
@@ -63,8 +73,12 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Ok(new Channel(channel));
         }
 
+        /// <summary>
+        ///   Deletes a <see cref="Channel"/>.
+        /// </summary>
+        /// <param name="id">The id of the <see cref="Channel"/> to delete</param>
         [HttpDelete("{id}")]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Channel))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Channel), Description = "The Channel has been deleted")]
         [ValidateModelState]
         public async Task<IActionResult> DeleteChannel(int id)
         {
@@ -98,8 +112,14 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Ok(new Channel(channel));
         }
 
+        /// <summary>
+        ///   Creates a <see cref="Channel"/>.
+        /// </summary>
+        /// <param name="name">The name of the new <see cref="Channel"/>. This is required to be unique.</param>
+        /// <param name="classification">The classification of the new <see cref="Channel"/></param>
         [HttpPost]
-        [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Channel))]
+        [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Channel), Description = "The Channel has been created")]
+        [SwaggerApiResponse(HttpStatusCode.Conflict, Description = "A Channel with that name already exists.")]
         [HandleDuplicateKeyRows("Could not create channel '{name}'. A channel with the specified name already exists.")]
         public async Task<IActionResult> CreateChannel([Required] string name, [Required] string classification)
         {
@@ -119,8 +139,13 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 new Channel(channelModel));
         }
 
+        /// <summary>
+        ///   Adds an existing <see cref="Build"/> to the specified <see cref="Channel"/>
+        /// </summary>
+        /// <param name="channelId">The id of the <see cref="Channel"/>.</param>
+        /// <param name="buildId">The id of the <see cref="Build"/></param>
         [HttpPost("{channelId}/builds/{buildId}")]
-        [SwaggerApiResponse(HttpStatusCode.Created)]
+        [SwaggerApiResponse(HttpStatusCode.Created, Description = "Build successfully added to the Channel")]
         public async Task<IActionResult> AddBuildToChannel(int channelId, int buildId)
         {
             Data.Models.Channel channel = await _context.Channels.FindAsync(channelId);
@@ -152,8 +177,13 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return StatusCode((int)HttpStatusCode.Created);
         }
 
+        /// <summary>
+        ///   Add an existing <see cref="ReleasePipeline"/> to the specified <see cref="Channel"/>
+        /// </summary>
+        /// <param name="channelId">The id of the <see cref="Channel"/></param>
+        /// <param name="pipelineId">The id of the <see cref="ReleasePipeline"/></param>
         [HttpPost("{channelId}/pipelines/{pipelineId}")]
-        [SwaggerApiResponse(HttpStatusCode.Created)]
+        [SwaggerApiResponse(HttpStatusCode.Created, Description = "ReleasePipeline successfully added to Channel")]
         public async Task<IActionResult> AddPipelineToChannel(int channelId, int pipelineId)
         {
             Data.Models.Channel channel = await _context.Channels.FindAsync(channelId);
@@ -189,8 +219,13 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return StatusCode((int)HttpStatusCode.Created);
         }
 
+        /// <summary>
+        ///   Remove a <see cref="ReleasePipeline"/> from the specified <see cref="Channel"/>
+        /// </summary>
+        /// <param name="channelId">The id of the <see cref="Channel"/></param>
+        /// <param name="pipelineId">The id of the <see cref="ReleasePipeline"/></param>
         [HttpDelete("{channelId}/pipelines/{pipelineId}")]
-        [SwaggerApiResponse(HttpStatusCode.OK)]
+        [SwaggerApiResponse(HttpStatusCode.OK, Description = "ReleasePipelines successfully removed from Channel")]
         public async Task<IActionResult> DeletePipelineFromChannel(int channelId, int pipelineId)
         {
             Data.Models.Channel channel = await _context.Channels
