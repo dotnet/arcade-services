@@ -73,6 +73,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
 
             _yamlData = new SubscriptionData
             {
+                Id = GetCurrentSettingForDisplay(subscription.Id.ToString(), subscription.Id.ToString(), false),
                 Channel = GetCurrentSettingForDisplay(subscription.Channel.Name, subscription.Channel.Name, false),
                 SourceRepository = GetCurrentSettingForDisplay(subscription.SourceRepository, subscription.SourceRepository, false),
                 Batchable = GetCurrentSettingForDisplay(subscription.Policy.Batchable.ToString(), subscription.Policy.Batchable.ToString(), false),
@@ -150,11 +151,6 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 return Constants.ErrorCode;
             }
 
-            if (!bool.Parse(outputYamlData.Batchable) && outputYamlData.MergePolicies == null)
-            {
-                return Constants.ErrorCode;
-            }
-
             // Validate the merge policies
             if (outputYamlData.MergePolicies != null &&!ValidateMergePolicies(outputYamlData.MergePolicies))
             {
@@ -202,6 +198,9 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             public const string updateFrequencyElement = "Update Frequency";
             public const string mergePolicyElement = "Merge Policies";
             public const string enabled = "Enabled";
+
+            [YamlMember(ApplyNamingConventions = false)]
+            public string Id { get; set; }
 
             [YamlMember(Alias = channelElement, ApplyNamingConventions = false)]
             public string Channel { get; set; }

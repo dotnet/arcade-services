@@ -100,23 +100,5 @@ namespace Microsoft.DotNet.Darc.Operations
                 return Constants.ErrorCode;
             }
         }
-
-        private IList<MergePolicy> UpdatedMergePolicies(IList<MergePolicy> originalPolicies, IList<MergePolicy> updatedPolicies)
-        {
-            // If batchable is set to true, MergePolicies have to be null
-            if (updatedPolicies == null)
-            {
-                return null;
-            }
-
-            // If there were no passed in updates to merge policies we set the original list
-            if (!updatedPolicies.Any())
-            {
-                return originalPolicies;
-            }
-
-            // Return the updated policies since it has changes in it
-            return updatedPolicies;
-        }
     }
 }
