@@ -886,7 +886,10 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             if (subscription == null)
             {
                 await Reminders.TryUnregisterReminderAsync(PullRequestCheck);
+                await Reminders.TryUnregisterReminderAsync(PullRequestUpdate);
                 await StateManager.TryRemoveStateAsync(PullRequest);
+
+                throw new SubscriptionException($"Subscription '{SubscriptionId}' was not found...");
             }
 
             return subscription;
