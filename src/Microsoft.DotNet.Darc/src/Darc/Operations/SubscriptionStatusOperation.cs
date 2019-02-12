@@ -34,7 +34,7 @@ namespace Microsoft.DotNet.Darc.Operations
             if ((_options.Enable && _options.Disable) ||
                 (!_options.Enable && !_options.Disable))
             {
-                Logger.LogError("'enable' and 'disable' options should have different values...");
+                Console.WriteLine("'Please specify either --enable or --disable");
                 return Constants.ErrorCode;
             }
 
