@@ -41,11 +41,15 @@ namespace Microsoft.DotNet.Darc.Helpers
             IGitRepo gitClient = null;
             if (darcSettings.GitType == GitRepoType.GitHub)
             {
-                gitClient = new GitHubClient(darcSettings.GitRepoPersonalAccessToken, logger, temporaryRepositoryRoot);
+                gitClient = new GitHubClient(darcSettings.GitRepoPersonalAccessToken,
+                                             logger,
+                                             temporaryRepositoryRoot);
             }
             else if (darcSettings.GitType == GitRepoType.AzureDevOps)
             {
-                gitClient = new AzureDevOpsClient(darcSettings.GitRepoPersonalAccessToken, logger, temporaryRepositoryRoot);
+                gitClient = new AzureDevOpsClient(darcSettings.GitRepoPersonalAccessToken,
+                                                  logger,
+                                                  temporaryRepositoryRoot);
             }
 
             IBarClient barClient = null;
