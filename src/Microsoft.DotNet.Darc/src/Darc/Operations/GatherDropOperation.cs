@@ -137,10 +137,11 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
                 Console.WriteLine($"Looking up builds of {_options.RepoUri}@{_options.Commit}");
                 IEnumerable<Build> builds = await remote.GetBuildsAsync(_options.RepoUri, _options.Commit);
+                int buildCount = builds.Count();
                 // If more than one is available, print them with their IDs.
-                if (builds.Count() > 1)
+                if (buildCount > 1)
                 {
-                    Console.WriteLine($"There were {builds.Count()} potential root builds.  Please select one and pass it with --id");
+                    Console.WriteLine($"There were {buildCount} potential root builds.  Please select one and pass it with --id");
                     foreach (var build in builds)
                     {
                         Console.WriteLine($"  {build.Id}: {build.AzureDevOpsBuildNumber} @ {build.DateProduced.Value.ToLocalTime()}");
