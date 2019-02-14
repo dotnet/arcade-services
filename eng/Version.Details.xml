@@ -2,17 +2,17 @@
 <Dependencies>
   <ProductDependencies></ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="1.0.0-beta.19108.1">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="1.0.0-beta.19113.4">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>044309163eadaad0068156f0327af458d562f171</Sha>
+      <Sha>dab378d518928e3b1aa02a9a9984aad076d8f09a</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.SignTool" Version="1.0.0-beta.19108.1">
+    <Dependency Name="Microsoft.DotNet.SignTool" Version="1.0.0-beta.19113.4">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>044309163eadaad0068156f0327af458d562f171</Sha>
+      <Sha>dab378d518928e3b1aa02a9a9984aad076d8f09a</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.Build.Tasks.Feed" Version="2.2.0-beta.19108.1">
+    <Dependency Name="Microsoft.DotNet.Build.Tasks.Feed" Version="2.2.0-beta.19113.4">
       <Uri>https://github.com/dotnet/arcade</Uri>
-      <Sha>044309163eadaad0068156f0327af458d562f171</Sha>
+      <Sha>dab378d518928e3b1aa02a9a9984aad076d8f09a</Sha>
     </Dependency>
   </ToolsetDependencies>
 </Dependencies>

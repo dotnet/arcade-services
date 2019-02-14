@@ -547,7 +547,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         /// </summary>
         /// <param name="inProgressPr">Current in progress pull request information</param>
         /// <returns>Pull request title</returns>
-        private async Task<string> ComputePullRequestTitleAsync(InProgressPullRequest inProgressPr)
+        private async Task<string> ComputePullRequestTitleAsync(InProgressPullRequest inProgressPr, string targetBranch)
         {
             // Get the unique subscription IDs.
             var uniqueSubscriptionIds = inProgressPr.ContainedSubscriptions.Select(subscription => subscription.SubscriptionId).ToHashSet();
@@ -556,7 +556,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             // or we'll list out the number of repos that are involved.
             // Start building up the list. If we reach a max length, then backtrack and
             // just note the number of input subscriptions.
-            const string baseTitle = "Update dependencies from ";
+            string baseTitle = $"[{targetBranch}] Update dependencies from ";
             StringBuilder titleBuilder = new StringBuilder(baseTitle);
             bool prefixComma = false;
             const int maxTitleLength = 80;
@@ -629,7 +629,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                         targetRepository,
                         new PullRequest
                         {
-                            Title = await ComputePullRequestTitleAsync(inProgressPr),
+                            Title = await ComputePullRequestTitleAsync(inProgressPr, targetBranch),
                             Description = description.ToString(),
                             BaseBranch = targetBranch,
                             HeadBranch = newBranchName
@@ -736,7 +736,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 await CommitUpdatesAsync(requiredUpdates, description, darc, targetRepository, headBranch);
 
                 pullRequest.Description = description.ToString();
-                pullRequest.Title = await ComputePullRequestTitleAsync(pr);
+                pullRequest.Title = await ComputePullRequestTitleAsync(pr, targetBranch);
                 await darc.UpdatePullRequestAsync(pr.Url, pullRequest);
             }
 
