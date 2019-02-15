@@ -216,7 +216,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="graph">Graph to log incoherencies for</param>
         private void LogIncoherencies(DependencyGraph graph)
         {
-            if (!graph.IncoherentNodes.Any())
+            if (!graph.IncoherentNodes.Any() || !_options.IncludeCoherency)
             {
                 return;
             }
