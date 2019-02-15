@@ -49,7 +49,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("runtime", HelpText = "Download a runtime (core-setup). Requires --commit or --channel.")]
         public bool DownloadRuntime { get; set; }
 
-        [Option("aspnet", HelpText = "Download an aspnet drop (aspnet) Requires --commit or --channel.")]
+        [Option("aspnet", HelpText = "Download an aspnet drop (aspnet). Requires --commit or --channel.")]
         public bool DownloadAspNet { get; set; }
 
         [Option("channel", HelpText = "Download the latest from this channel. Matched on substring.")]

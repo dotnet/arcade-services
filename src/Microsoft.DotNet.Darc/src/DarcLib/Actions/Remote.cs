@@ -388,8 +388,7 @@ namespace Microsoft.DotNet.DarcLib
             CheckForValidBarClient();
             try
             {
-                return await _barClient.GetLatestBuildAsync(repoUri: repoUri,
-                                                      channelId: channelId);
+                return await _barClient.GetLatestBuildAsync(repoUri: repoUri, channelId: channelId);
             }
             catch (ApiErrorException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
             {
