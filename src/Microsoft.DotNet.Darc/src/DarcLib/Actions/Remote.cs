@@ -383,11 +383,18 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Latest build of <paramref name="repoUri"/> on channel <paramref name="channelId"/>,
         /// or null if there is no latest.</returns>
         /// <remarks>The build's assets are returned</remarks>
-        public Task<Build> GetLatestBuildAsync(string repoUri, int channelId)
+        public async Task<Build> GetLatestBuildAsync(string repoUri, int channelId)
         {
             CheckForValidBarClient();
-            return _barClient.GetLatestBuildAsync(repoUri: repoUri,
-                                                  channelId: channelId);
+            try
+            {
+                return await _barClient.GetLatestBuildAsync(repoUri: repoUri,
+                                                      channelId: channelId);
+            }
+            catch (ApiErrorException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return null;
+            }
         }
 
         /// <summary>

@@ -10,13 +10,13 @@ namespace Microsoft.DotNet.Darc.Options
     [Verb("gather-drop", HelpText = "Gather a drop of the outputs for a build")]
     internal class GatherDropCommandLineOptions : CommandLineOptions
     {
-        [Option('i', "id", SetName = "rootbuild", HelpText = "BAR ID of build.")]
+        [Option('i', "id", HelpText = "BAR ID of build.")]
         public int RootBuildId { get; set; }
 
-        [Option('r', "repo", SetName = "rootbuild", HelpText = "If set, gather a build drop for a build of this repo. Requires --commit.")]
+        [Option('r', "repo", HelpText = "Gather a build drop for a build of this repo. Requires --commit or --channel.")]
         public string RepoUri { get; set; }
 
-        [Option('c', "commit", HelpText = "Branch, commit or tag to look up and gather a build drop for.")]
+        [Option('c', "commit", HelpText = "Commit to gather a drop for.")]
         public string Commit { get; set; }
 
         [Option('o',"output-dir", Required = true, HelpText = "Output directory to place build drop.")]
@@ -43,19 +43,16 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("include-toolset", HelpText = "Include toolset dependencies.")]
         public bool IncludeToolset { get; set; }
 
-        [Option("sdk", SetName = "rootbuild",
-                HelpText = "Download an SDK (core-sdk). Requires --commit or --channel.")]
+        [Option("sdk", HelpText = "Download an SDK (core-sdk). Requires --commit or --channel.")]
         public bool DownloadSdk { get; set; }
 
-        [Option("runtime", SetName = "rootbuild",
-                HelpText = "Download a runtime (core-setup). Requires --commit or --channel.")]
+        [Option("runtime", HelpText = "Download a runtime (core-setup). Requires --commit or --channel.")]
         public bool DownloadRuntime { get; set; }
 
-        [Option("aspnet", SetName = "rootbuild",
-                HelpText = "Download an aspnet drop (aspnet) Requires --commit or --channel.")]
+        [Option("aspnet", HelpText = "Download an aspnet drop (aspnet) Requires --commit or --channel.")]
         public bool DownloadAspNet { get; set; }
 
-        [Option("channel", HelpText = "Download the latest from this channel.")]
+        [Option("channel", HelpText = "Download the latest from this channel. Matched on substring.")]
         public string Channel { get; set; }
 
         public override Operation GetOperation()
