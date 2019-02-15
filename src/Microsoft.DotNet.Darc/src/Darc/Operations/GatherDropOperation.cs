@@ -115,6 +115,34 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
+        ///     Returns the repo uri if 
+        /// </summary>
+        /// <returns></returns>
+        private string GetRepoUri()
+        {
+            const string sdkUri = "https://github.com/dotnet/core-sdk";
+            const string runtimeUri = "https://github.com/dotnet/core-setup";
+            const string aspnetUri = "https://github.com/aspnet/AspNetCore";
+            string repoUri = _options.RepoUri;
+            if (string.IsNullOrEmpty(repoUri))
+            {
+                if (_options.DownloadSdk)
+                {
+                    repoUri = sdkUri;
+                }
+                else if (_options.DownloadRuntime)
+                {
+                    repoUri = runtimeUri;
+                }
+                else if (_options.DownloadAspNet)
+                {
+                    repoUri = aspnetUri;
+                }
+            }
+            return repoUri;
+        }
+
+        /// <summary>
         ///     Obtain the root build.
         /// </summary>
         /// <returns>Root build to start with.</returns>
@@ -124,33 +152,41 @@ namespace Microsoft.DotNet.Darc.Operations
             // No need to set up a git type or PAT here.
             Remote remote = new Remote(darcSettings, Logger);
             Build rootBuild;
+            string repoUri = GetRepoUri();
             if (_options.RootBuildId != 0)
             {
                 Console.WriteLine($"Looking up build by id {_options.RootBuildId}");
                 rootBuild = await remote.GetBuildAsync(_options.RootBuildId);
             }
-            else if (!string.IsNullOrEmpty(_options.RepoUri))
+            else if (!string.IsNullOrEmpty(repoUri))
             {
-                if (string.IsNullOrEmpty(_options.Commit))
+                if (string.IsNullOrEmpty(_options.Channel))
                 {
-                    Console.WriteLine("If --repo is specified, --commit should be supplied");
-                    return null;
-                }
-                Console.WriteLine($"Looking up builds of {_options.RepoUri}@{_options.Commit}");
-                IList <Build> builds = await remote.GetBuildsAsync(_options.RepoUri, _options.Commit);
-                // If more than one is available, print them with their IDs.
-                if (builds.Count > 1)
-                {
-                    Console.WriteLine($"There were {builds.Count} potential root builds.  Please select one and pass it with --id");
-                    foreach (var build in builds)
+                    Console.WriteLine($"Looking up builds of {_options.RepoUri}@{_options.Commit}");
+                    IList<Build> builds = await remote.GetBuildsAsync(_options.RepoUri, _options.Commit);
+                    // If more than one is available, print them with their IDs.
+                    if (builds.Count > 1)
                     {
-                        Console.WriteLine($"  {build.Id}: {build.AzureDevOpsBuildNumber} @ {build.DateProduced.Value.ToLocalTime()}");
+                        Console.WriteLine($"There were {builds.Count} potential root builds.  Please select one and pass it with --id");
+                        foreach (var build in builds)
+                        {
+                            Console.WriteLine($"  {build.Id}: {build.AzureDevOpsBuildNumber} @ {build.DateProduced.Value.ToLocalTime()}");
+                        }
+                        return null;
                     }
-                    return null;
+                    else
+                    {
+                        rootBuild = builds.SingleOrDefault();
+                    }
+                }
+                if (!string.IsNullOrEmpty(_options.Commit))
+                {
+                    
                 }
                 else
                 {
-                    rootBuild = builds.SingleOrDefault();
+                    Console.WriteLine("Please specify a --commit or --channel.");
+                    return null;
                 }
             }
             else

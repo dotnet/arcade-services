@@ -43,6 +43,21 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("include-toolset", HelpText = "Include toolset dependencies.")]
         public bool IncludeToolset { get; set; }
 
+        [Option("sdk", SetName = "rootbuild",
+                HelpText = "Download an SDK (core-sdk). Requires --commit or --channel.")]
+        public bool DownloadSdk { get; set; }
+
+        [Option("runtime", SetName = "rootbuild",
+                HelpText = "Download a runtime (core-setup). Requires --commit or --channel.")]
+        public bool DownloadRuntime { get; set; }
+
+        [Option("aspnet", SetName = "rootbuild",
+                HelpText = "Download an aspnet drop (aspnet) Requires --commit or --channel.")]
+        public bool DownloadAspNet { get; set; }
+
+        [Option("channel", HelpText = "Download the latest from this channel.")]
+        public string Channel { get; set; }
+
         public override Operation GetOperation()
         {
             return new GatherDropOperation(this);
