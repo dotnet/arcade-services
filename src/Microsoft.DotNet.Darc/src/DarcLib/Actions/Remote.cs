@@ -8,7 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 
@@ -16,53 +15,20 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class Remote : IRemote
     {
-        private readonly IMaestroApi _barClient;
+        private readonly IBarClient _barClient;
         private readonly GitFileManager _fileManager;
         private readonly IGitRepo _gitClient;
         private readonly ILogger _logger;
 
-        public Remote(DarcSettings settings, ILogger logger)
+        public Remote(IGitRepo gitClient, IBarClient barClient, ILogger logger)
         {
-            ValidateSettings(settings);
-
             _logger = logger;
+            _barClient = barClient;
+            _gitClient = gitClient;
 
-            // If a temporary repository root was not provided, use the environment
-            // provided temp directory
-            string temporaryRepositoryRoot = settings.TemporaryRepositoryRoot;
-            if (string.IsNullOrEmpty(temporaryRepositoryRoot))
-            {
-                temporaryRepositoryRoot = Path.GetTempPath();
-            }
-
-            if (settings.GitType == GitRepoType.GitHub)
-            {
-                _gitClient = new GitHubClient(settings.PersonalAccessToken, _logger, temporaryRepositoryRoot);
-            }
-            else if (settings.GitType == GitRepoType.AzureDevOps)
-            {
-                _gitClient = new AzureDevOpsClient(settings.PersonalAccessToken, _logger, temporaryRepositoryRoot);
-            }
-
-            // Only initialize the file manager if we have a git client, which excludes "None"
             if (_gitClient != null)
             {
                 _fileManager = new GitFileManager(_gitClient, _logger);
-            }
-
-            // Initialize the bar client if there is a password
-            if (!string.IsNullOrEmpty(settings.BuildAssetRegistryPassword))
-            {
-                if (!string.IsNullOrEmpty(settings.BuildAssetRegistryBaseUri))
-                {
-                    _barClient = ApiFactory.GetAuthenticated(
-                        settings.BuildAssetRegistryBaseUri,
-                        settings.BuildAssetRegistryPassword);
-                }
-                else
-                {
-                    _barClient = ApiFactory.GetAuthenticated(settings.BuildAssetRegistryPassword);
-                }
             }
         }
 
@@ -73,20 +39,15 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="branch">Optionally filter by branch</param>
         /// <param name="channel">Optionally filter by channel</param>
         /// <returns>Collection of default channels.</returns>
-        public async Task<IEnumerable<DefaultChannel>> GetDefaultChannelsAsync(
+        public Task<IEnumerable<DefaultChannel>> GetDefaultChannelsAsync(
             string repository = null,
             string branch = null,
             string channel = null)
         {
             CheckForValidBarClient();
-            IList<DefaultChannel> channels = await _barClient.DefaultChannels.ListAsync(repository, branch);
-            if (!string.IsNullOrEmpty(channel))
-            {
-                return channels.Where(c => c.Channel.Name.Equals(channel, StringComparison.OrdinalIgnoreCase));
-            }
-
-            // Filter away based on channel info.
-            return channels;
+            return _barClient.GetDefaultChannelsAsync(repository: repository,
+                                                      branch: branch,
+                                                      channel: channel);
         }
 
         /// <summary>
@@ -96,26 +57,10 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="branch">Branch receiving the default association</param>
         /// <param name="channel">Name of channel that builds of 'repository' on 'branch' should automatically be applied to.</param>
         /// <returns>Async task.</returns>
-        public async Task AddDefaultChannelAsync(string repository, string branch, string channel)
+        public Task AddDefaultChannelAsync(string repository, string branch, string channel)
         {
             CheckForValidBarClient();
-            // Look up channel to translate to channel id.
-            Channel foundChannel = (await _barClient.Channels.GetAsync())
-                .Where(c => c.Name.Equals(channel, StringComparison.OrdinalIgnoreCase))
-                .SingleOrDefault();
-            if (foundChannel == null)
-            {
-                throw new ArgumentException($"Channel {channel} is not a valid channel.");
-            }
-
-            var defaultChannelsData = new PostData
-            {
-                Branch = branch,
-                Repository = repository,
-                ChannelId = foundChannel.Id.Value
-            };
-
-            await _barClient.DefaultChannels.CreateAsync(defaultChannelsData);
+            return _barClient.AddDefaultChannelAsync(repository, branch, channel);
         }
 
         /// <summary>
@@ -125,18 +70,10 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="branch">Branch having a default association</param>
         /// <param name="channel">Name of channel that builds of 'repository' on 'branch' are being applied to.</param>
         /// <returns>Async task</returns>
-        public async Task DeleteDefaultChannelAsync(string repository, string branch, string channel)
+        public Task DeleteDefaultChannelAsync(string repository, string branch, string channel)
         {
             CheckForValidBarClient();
-
-            DefaultChannel existingDefaultChannel =
-                (await GetDefaultChannelsAsync(repository, branch, channel)).SingleOrDefault();
-
-            if (existingDefaultChannel != null)
-            {
-                // Find the existing default channel.  If none found then nothing to do.
-                await _barClient.DefaultChannels.DeleteAsync(existingDefaultChannel.Id.Value);
-            }
+            return _barClient.DeleteDefaultChannelAsync(repository, branch, channel);
         }
 
         /// <summary>
@@ -145,10 +82,10 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="name">Name of channel</param>
         /// <param name="classification">Classification of the channel</param>
         /// <returns>Newly created channel</returns>
-        public async Task<Channel> CreateChannelAsync(string name, string classification)
+        public Task<Channel> CreateChannelAsync(string name, string classification)
         {
             CheckForValidBarClient();
-            return await _barClient.Channels.CreateChannelAsync(name, classification);
+            return _barClient.CreateChannelAsync(name, classification);
         }
 
         /// <summary>
@@ -156,30 +93,39 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="name">Name of channel</param>
         /// <returns>Channel just deleted</returns>
-        public async Task<Channel> DeleteChannelAsync(int id)
+        public Task<Channel> DeleteChannelAsync(int id)
         {
             CheckForValidBarClient();
-            return await _barClient.Channels.DeleteChannelAsync(id);
+            return _barClient.DeleteChannelAsync(id);
         }
 
-        public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(
+        /// <summary>
+        ///     Get a set of subscriptions based on input filters.
+        /// </summary>
+        /// <param name="sourceRepo">Filter by the source repository of the subscription.</param>
+        /// <param name="targetRepo">Filter by the target repository of the subscription.</param>
+        /// <param name="channelId">Filter by the target channel id of the subscription.</param>
+        /// <returns>Set of subscription.</returns>
+        public Task<IEnumerable<Subscription>> GetSubscriptionsAsync(
             string sourceRepo = null,
             string targetRepo = null,
             int? channelId = null)
         {
             CheckForValidBarClient();
-            return await _barClient.Subscriptions.GetAllSubscriptionsAsync(sourceRepo, targetRepo, channelId);
+            return _barClient.GetSubscriptionsAsync(sourceRepo: sourceRepo,
+                                                    targetRepo: targetRepo,
+                                                    channelId: channelId);
         }
 
-        public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)
+        /// <summary>
+        ///     Retrieve a subscription by ID
+        /// </summary>
+        /// <param name="subscriptionId">Id of subscription</param>
+        /// <returns>Subscription information</returns>
+        public Task<Subscription> GetSubscriptionAsync(string subscriptionId)
         {
             CheckForValidBarClient();
-            if (!Guid.TryParse(subscriptionId, out Guid subscriptionGuid))
-            {
-                throw new ArgumentException($"Subscription id '{subscriptionId}' is not a valid guid.");
-            }
-
-            return await _barClient.Subscriptions.GetSubscriptionAsync(subscriptionGuid);
+            return _barClient.GetSubscriptionAsync(GetSubscriptionGuid(subscriptionId));
         }
 
         /// <summary>
@@ -190,12 +136,7 @@ namespace Microsoft.DotNet.DarcLib
         public async Task<Subscription> TriggerSubscriptionAsync(string subscriptionId)
         {
             CheckForValidBarClient();
-            if (!Guid.TryParse(subscriptionId, out Guid subscriptionGuid))
-            {
-                throw new ArgumentException($"Subscription id '{subscriptionId}' is not a valid guid.");
-            }
-
-            return await _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionGuid);
+            return await _barClient.TriggerSubscriptionAsync(GetSubscriptionGuid(subscriptionId));
         }
 
         /// <summary>
@@ -211,7 +152,7 @@ namespace Microsoft.DotNet.DarcLib
         ///     of metadata
         /// </param>
         /// <returns>Newly created subscription, if successful</returns>
-        public async Task<Subscription> CreateSubscriptionAsync(
+        public Task<Subscription> CreateSubscriptionAsync(
             string channelName,
             string sourceRepo,
             string targetRepo,
@@ -220,19 +161,27 @@ namespace Microsoft.DotNet.DarcLib
             List<MergePolicy> mergePolicies)
         {
             CheckForValidBarClient();
-            var subscriptionData = new SubscriptionData
+            return _barClient.CreateSubscriptionAsync(
+                channelName,
+                sourceRepo,
+                targetRepo,
+                targetBranch,
+                updateFrequency,
+                mergePolicies);
+        }
+
+        /// <summary>
+        /// Convert subscription id to a Guid, throwing if not valid.
+        /// </summary>
+        /// <param name="subscriptionId">ID of subscription.</param>
+        /// <returns>New guid</returns>
+        private Guid GetSubscriptionGuid(string subscriptionId)
+        {
+            if (!Guid.TryParse(subscriptionId, out Guid subscriptionGuid))
             {
-                ChannelName = channelName,
-                SourceRepository = sourceRepo,
-                TargetRepository = targetRepo,
-                TargetBranch = targetBranch,
-                Policy = new SubscriptionPolicy
-                {
-                    UpdateFrequency = updateFrequency,
-                    MergePolicies = mergePolicies
-                }
-            };
-            return await _barClient.Subscriptions.CreateAsync(subscriptionData);
+                throw new ArgumentException($"Subscription id '{subscriptionId}' is not a valid guid.");
+            }
+            return subscriptionGuid;
         }
 
         /// <summary>
@@ -243,50 +192,19 @@ namespace Microsoft.DotNet.DarcLib
         public async Task<Subscription> DeleteSubscriptionAsync(string subscriptionId)
         {
             CheckForValidBarClient();
-            if (!Guid.TryParse(subscriptionId, out Guid subscriptionGuid))
-            {
-                throw new ArgumentException($"Subscription id '{subscriptionId}' is not a valid guid.");
-            }
-
-            return await _barClient.Subscriptions.DeleteSubscriptionAsync(subscriptionGuid);
+            return await _barClient.DeleteSubscriptionAsync(GetSubscriptionGuid(subscriptionId));
         }
 
         /// <summary>
-        /// Retrieve subscription history.
+        ///     Update an existing subscription
         /// </summary>
-        /// <param name="subscriptionId">ID of subscription</param>
-        /// <returns>Subscription history</returns>
-        public async Task<IEnumerable<SubscriptionHistoryItem>> GetSubscriptionHistoryAsync(string subscriptionId)
+        /// <param name="subscriptionId">Id of subscription to update</param>
+        /// <param name="subscription">Subscription information</param>
+        /// <returns>Updated subscription</returns>
+        public Task<Subscription> UpdateSubscriptionAsync(string subscriptionId, SubscriptionUpdate subscription)
         {
             CheckForValidBarClient();
-            if (!Guid.TryParse(subscriptionId, out Guid subscriptionGuid))
-            {
-                throw new ArgumentException($"Subscription id '{subscriptionId}' is not a valid guid.");
-            }
-
-            return await _barClient.Subscriptions.GetSubscriptionHistoryAsync(subscriptionGuid);
-        }
-
-        /// <summary>
-        /// Retry subscription operation.
-        /// </summary>
-        /// <param name="subscriptionId">Id of subscription that should have its action retried</param>
-        /// <param name="actionIdentifier">Timestamp of the action that needs to be retried</param>
-        public Task RetrySubscriptionUpdateAsync(string subscriptionId, long actionIdentifier)
-        {
-            CheckForValidBarClient();
-            if (!Guid.TryParse(subscriptionId, out Guid subscriptionGuid))
-            {
-                throw new ArgumentException($"Subscription id '{subscriptionId}' is not a valid guid.");
-            }
-
-            return _barClient.Subscriptions.RetrySubscriptionActionAsyncAsync(subscriptionGuid, actionIdentifier);
-        }
-
-        public async Task<Subscription> UpdateSubscriptionAsync(Guid subscriptionId, SubscriptionUpdate subscription)
-        {
-            CheckForValidBarClient();
-            return await _barClient.Subscriptions.UpdateSubscriptionAsync(subscriptionId, subscription);
+            return _barClient.UpdateSubscriptionAsync(GetSubscriptionGuid(subscriptionId), subscription);
         }
 
         public async Task CreateNewBranchAsync(string repoUri, string baseBranch, string newBranch)
@@ -299,12 +217,12 @@ namespace Microsoft.DotNet.DarcLib
             await _gitClient.DeleteBranchAsync(repoUri, branch);
         }
 
-        public async Task<IList<Check>> GetPullRequestChecksAsync(string pullRequestUrl)
+        public async Task<IEnumerable<Check>> GetPullRequestChecksAsync(string pullRequestUrl)
         {
             CheckForValidGitClient();
             _logger.LogInformation($"Getting status checks for pull request '{pullRequestUrl}'...");
 
-            IList<Check> checks = await _gitClient.GetPullRequestChecksAsync(pullRequestUrl);
+            IEnumerable<Check> checks = await _gitClient.GetPullRequestChecksAsync(pullRequestUrl);
 
             return checks;
         }
@@ -440,10 +358,10 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="classification">Optional classification to get</param>
         /// <returns></returns>
-        public async Task<IEnumerable<Channel>> GetChannelsAsync(string classification = null)
+        public Task<IEnumerable<Channel>> GetChannelsAsync(string classification = null)
         {
             CheckForValidBarClient();
-            return await _barClient.Channels.GetAsync(classification);
+            return _barClient.GetChannelsAsync(classification);
         }
 
         /// <summary>
@@ -451,10 +369,10 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="channel">Channel name.</param>
         /// <returns>Channel or null if not found.</returns>
-        public async Task<Channel> GetChannelAsync(string channel)
+        public Task<Channel> GetChannelAsync(string channel)
         {
             CheckForValidBarClient();
-            return (await _barClient.Channels.GetAsync()).Where(c => c.Name.Equals(channel, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+            return _barClient.GetChannelAsync(channel);
         }
 
         /// <summary>
@@ -468,7 +386,8 @@ namespace Microsoft.DotNet.DarcLib
         public Task<Build> GetLatestBuildAsync(string repoUri, int channelId)
         {
             CheckForValidBarClient();
-            return _barClient.Builds.GetLatestAsync(repository: repoUri, channelId: channelId, loadCollections: true);
+            return _barClient.GetLatestBuildAsync(repoUri: repoUri,
+                                                  channelId: channelId);
         }
 
         /// <summary>
@@ -480,7 +399,7 @@ namespace Microsoft.DotNet.DarcLib
         public Task<Build> GetBuildAsync(int buildId)
         {
             CheckForValidBarClient();
-            return _barClient.Builds.GetBuildAsync(buildId);
+            return _barClient.GetBuildAsync(buildId);
         }
 
         /// <summary>
@@ -489,12 +408,11 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository uri</param>
         /// <param name="commit">Commit</param>
         /// <returns></returns>
-        public Task<IList<Build>> GetBuildsAsync(string repoUri, string commit)
+        public Task<IEnumerable<Build>> GetBuildsAsync(string repoUri, string commit)
         {
             CheckForValidBarClient();
-            return _barClient.Builds.GetAllBuildsAsync(repository: repoUri,
-                                                       commit: commit,
-                                                       loadCollections: true);
+            return _barClient.GetBuildsAsync(repoUri: repoUri,
+                                             commit: commit);
         }
 
         /// <summary>
@@ -505,28 +423,16 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="buildId">ID of build producing the asset</param>
         /// <param name="nonShipping">Only non-shipping</param>
         /// <returns>List of assets.</returns>
-        public async Task<IList<Asset>> GetAssetsAsync(string name = null,
+        public Task<IEnumerable<Asset>> GetAssetsAsync(string name = null,
                                                        string version = null,
                                                        int? buildId = null,
                                                        bool? nonShipping = null)
         {
             CheckForValidBarClient();
-            // Start at the first page and go until we 404
-            List<Asset> assets = new List<Asset>();
-            int page = 0;
-            while (true)
-            {
-                try
-                {
-                    IList<Asset> assetPage = await _barClient.Assets.GetAsync(name, version, buildId, nonShipping, loadLocations: true, page: ++page);
-                    assets.AddRange(assetPage);
-                }
-                catch (ApiErrorException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
-                {
-                    break;
-                }
-            }
-            return assets;
+            return _barClient.GetAssetsAsync(name: name,
+                                      version: version,
+                                      buildId: buildId,
+                                      nonShipping: nonShipping);
         }
 
         /// <summary>
@@ -552,7 +458,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             if (_barClient == null)
             {
-                throw new ArgumentException("Must supply a build asset registry password");
+                throw new ArgumentException("Must supply a build asset registry client");
             }
         }
 
@@ -564,30 +470,6 @@ namespace Microsoft.DotNet.DarcLib
             if (_gitClient == null)
             {
                 throw new ArgumentException("Must supply a valid GitHub/Azure DevOps PAT");
-            }
-        }
-
-        private void ValidateSettings(DarcSettings settings)
-        {
-            // Should have a git repo type of AzureDevOps, GitHub, or None.
-            if (settings.GitType == GitRepoType.GitHub || settings.GitType == GitRepoType.AzureDevOps)
-            {
-                // PAT is required for these types.
-                if (string.IsNullOrEmpty(settings.PersonalAccessToken))
-                {
-                    if (settings.GitType == GitRepoType.GitHub)
-                    {
-                        throw new ArgumentException("The GitHub personal access token is missing...");
-                    }
-                    else
-                    {
-                        throw new ArgumentException("The Azure DevOps personal access token is missing...");
-                    }
-                }
-            }
-            else if (settings.GitType != GitRepoType.None)
-            {
-                throw new ArgumentException($"Unexpected git repo type: {settings.GitType}");
             }
         }
 

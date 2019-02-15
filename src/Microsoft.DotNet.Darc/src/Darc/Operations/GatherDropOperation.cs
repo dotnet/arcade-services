@@ -120,9 +120,8 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <returns>Root build to start with.</returns>
         private async Task<Build> GetRootBuildAsync()
         {
-            DarcSettings darcSettings = LocalSettings.GetDarcSettings(_options, Logger);
-            // No need to set up a git type or PAT here.
-            Remote remote = new Remote(darcSettings, Logger);
+            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+
             Build rootBuild;
             if (_options.RootBuildId != 0)
             {
@@ -137,11 +136,12 @@ namespace Microsoft.DotNet.Darc.Operations
                     return null;
                 }
                 Console.WriteLine($"Looking up builds of {_options.RepoUri}@{_options.Commit}");
-                IList <Build> builds = await remote.GetBuildsAsync(_options.RepoUri, _options.Commit);
+                IEnumerable<Build> builds = await remote.GetBuildsAsync(_options.RepoUri, _options.Commit);
+                int buildCount = builds.Count();
                 // If more than one is available, print them with their IDs.
-                if (builds.Count > 1)
+                if (buildCount > 1)
                 {
-                    Console.WriteLine($"There were {builds.Count} potential root builds.  Please select one and pass it with --id");
+                    Console.WriteLine($"There were {buildCount} potential root builds.  Please select one and pass it with --id");
                     foreach (var build in builds)
                     {
                         Console.WriteLine($"  {build.Id}: {build.AzureDevOpsBuildNumber} @ {build.DateProduced.Value.ToLocalTime()}");
@@ -308,7 +308,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     // Look up the asset by name and version.
                     Console.WriteLine($"Looking up {dependency.Name}@{dependency.Version} in Build Asset Registry...");
-                    IList<Asset> matchingAssets = await rootBuildRemote.GetAssetsAsync(dependency.Name, dependency.Version);
+                    IEnumerable<Asset> matchingAssets = await rootBuildRemote.GetAssetsAsync(dependency.Name, dependency.Version);
 
                     // Because the same asset could be produced more than once by different builds (e.g. if you had
                     // a stable asset version), look up the builds by ID until we find one that built the right commit.
@@ -400,9 +400,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="rootOutputDirectory">Output directory. Must exist.</param>
         private async Task<DownloadedBuild> GatherDropForBuildAsync(Build build, string rootOutputDirectory)
         {
-            DarcSettings darcSettings = LocalSettings.GetDarcSettings(_options, Logger);
-            // No need to set up a git type or PAT here.
-            Remote remote = new Remote(darcSettings, Logger);
+            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
             bool success = true;
 
             // If the drop is separated, calculate the directory name based on the last element of the build

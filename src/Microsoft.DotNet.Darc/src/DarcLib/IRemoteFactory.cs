@@ -13,5 +13,7 @@ namespace Microsoft.DotNet.DarcLib
     public interface IRemoteFactory
     {
         IRemote GetRemote(string repoUrl, ILogger logger);
+
+        IRemote GetBarOnlyRemote(ILogger logger);
     }
 }

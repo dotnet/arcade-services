@@ -30,9 +30,7 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             try
             {
-                DarcSettings darcSettings = LocalSettings.GetDarcSettings(_options, Logger);
-                // No need to set up a git type or PAT here.
-                Remote remote = new Remote(darcSettings, Logger);
+                IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
                 // If the user tried to mark as internal, indicate that this is currently
                 // unsupported.
