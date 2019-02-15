@@ -31,9 +31,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="options"></param>
         public override async Task<int> ExecuteAsync()
         {
-            DarcSettings darcSettings = LocalSettings.GetDarcSettings(_options, Logger);
-            // No need to set up a git type or PAT here.
-            Remote remote = new Remote(darcSettings, Logger);
+            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             if (_options.IgnoreChecks.Count() > 0 && !_options.AllChecksSuccessfulMergePolicy)
             {

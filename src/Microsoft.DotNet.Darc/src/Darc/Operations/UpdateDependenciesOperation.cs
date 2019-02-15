@@ -43,11 +43,12 @@ namespace Microsoft.DotNet.Darc.Operations
                 darcSettings.GitType = GitRepoType.GitHub;
                 LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
 
-                darcSettings.PersonalAccessToken = localSettings != null && !string.IsNullOrEmpty(localSettings.GitHubToken) ?
+                darcSettings.GitRepoPersonalAccessToken = localSettings != null && !string.IsNullOrEmpty(localSettings.GitHubToken) ?
                                                     localSettings.GitHubToken :
                                                     _options.GitHubPat;
 
-                Remote remote = new Remote(darcSettings, Logger);
+                IRemoteFactory remoteFactory = new RemoteFactory(_options);
+                IRemote barOnlyRemote = remoteFactory.GetBarOnlyRemote(Logger);
                 Local local = new Local(LocalHelpers.GetGitDir(Logger), Logger);
                 List<DependencyDetail> dependenciesToUpdate = new List<DependencyDetail>();
                 bool someUpToDate = false;
@@ -105,7 +106,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     }
 
                     // Start channel query.
-                    var channel = remote.GetChannelAsync(_options.Channel);
+                    var channel = barOnlyRemote.GetChannelAsync(_options.Channel);
 
                     // Limit the number of BAR queries by grabbing the repo URIs and making a hash set.
                     var repositoryUrisForQuery = dependencies.Select(dependency => dependency.RepoUri).ToHashSet();
@@ -120,7 +121,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     foreach (string repoToQuery in repositoryUrisForQuery)
                     {
-                        var latestBuild = remote.GetLatestBuildAsync(repoToQuery, channelInfo.Id.Value);
+                        var latestBuild = barOnlyRemote.GetLatestBuildAsync(repoToQuery, channelInfo.Id.Value);
                         getLatestBuildTaskDictionary.TryAdd(repoToQuery, latestBuild);
                     }
 
@@ -204,7 +205,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
 
                 // Now call the local updater to run the update
-                await local.UpdateDependenciesAsync(dependenciesToUpdate, remote);
+                await local.UpdateDependenciesAsync(dependenciesToUpdate, remoteFactory);
 
                 Console.WriteLine(finalMessage);
 

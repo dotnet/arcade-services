@@ -102,12 +102,12 @@ namespace Microsoft.DotNet.Darc.Helpers
                         if (parsedUri.Host == "github.com")
                         {
                             darcSettings.GitType = GitRepoType.GitHub;
-                            darcSettings.PersonalAccessToken = localSettings.GitHubToken;
+                            darcSettings.GitRepoPersonalAccessToken = localSettings.GitHubToken;
                         }
                         else if (parsedUri.Host == "dev.azure.com" || parsedUri.Host.EndsWith("visualstudio.com"))
                         {
                             darcSettings.GitType = GitRepoType.AzureDevOps;
-                            darcSettings.PersonalAccessToken = localSettings.AzureDevOpsToken;
+                            darcSettings.GitRepoPersonalAccessToken = localSettings.AzureDevOpsToken;
                         }
                     }
                     

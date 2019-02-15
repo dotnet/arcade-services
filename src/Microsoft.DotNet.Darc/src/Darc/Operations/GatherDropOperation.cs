@@ -148,40 +148,65 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <returns>Root build to start with.</returns>
         private async Task<Build> GetRootBuildAsync()
         {
-            DarcSettings darcSettings = LocalSettings.GetDarcSettings(_options, Logger);
-            // No need to set up a git type or PAT here.
-            Remote remote = new Remote(darcSettings, Logger);
-            Build rootBuild;
+            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+
             string repoUri = GetRepoUri();
             if (_options.RootBuildId != 0)
             {
                 Console.WriteLine($"Looking up build by id {_options.RootBuildId}");
-                rootBuild = await remote.GetBuildAsync(_options.RootBuildId);
+                Build rootBuild = await remote.GetBuildAsync(_options.RootBuildId);
+                if (rootBuild == null)
+                {
+                    Console.WriteLine($"No build found with id {_options.RootBuildId}");
+                    return null;
+                }
+                return rootBuild;
             }
             else if (!string.IsNullOrEmpty(repoUri))
             {
-                if (string.IsNullOrEmpty(_options.Channel))
+                if (!string.IsNullOrEmpty(_options.Channel))
+                {
+                    IEnumerable<Channel> channels = await remote.GetChannelsAsync();
+                    IEnumerable<Channel> desiredChannels = channels.Where(channel => channel.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
+                    if (desiredChannels.Count() != 1)
+                    {
+                        Console.WriteLine($"Channel name {_options.Channel} did not match a unique channel. Available channels:");
+                        foreach (var channel in channels)
+                        {
+                            Console.WriteLine($"  {channel.Name}");
+                        }
+                        return null;
+                    }
+                    Channel targetChannel = desiredChannels.First();
+                    Console.WriteLine($"Looking up latest build of {repoUri} on channel {targetChannel.Name}");
+                    Build rootBuild = await remote.GetLatestBuildAsync(repoUri, targetChannel.Id.Value);
+                    if (rootBuild == null)
+                    {
+                        Console.WriteLine($"No build of {repoUri} found on channel {targetChannel.Name}");
+                        return null;
+                    }
+                    return rootBuild;
+                }
+                if (!string.IsNullOrEmpty(_options.Commit))
                 {
                     Console.WriteLine($"Looking up builds of {_options.RepoUri}@{_options.Commit}");
-                    IList<Build> builds = await remote.GetBuildsAsync(_options.RepoUri, _options.Commit);
+                    IEnumerable<Build> builds = await remote.GetBuildsAsync(_options.RepoUri, _options.Commit);
                     // If more than one is available, print them with their IDs.
-                    if (builds.Count > 1)
+                    if (builds.Count() > 1)
                     {
-                        Console.WriteLine($"There were {builds.Count} potential root builds.  Please select one and pass it with --id");
+                        Console.WriteLine($"There were {builds.Count()} potential root builds.  Please select one and pass it with --id");
                         foreach (var build in builds)
                         {
                             Console.WriteLine($"  {build.Id}: {build.AzureDevOpsBuildNumber} @ {build.DateProduced.Value.ToLocalTime()}");
                         }
                         return null;
                     }
-                    else
+                    Build rootBuild = builds.SingleOrDefault();
+                    if (rootBuild == null)
                     {
-                        rootBuild = builds.SingleOrDefault();
+                        Console.WriteLine($"No builds were found of {_options.RepoUri}@{_options.Commit}");
                     }
-                }
-                if (!string.IsNullOrEmpty(_options.Commit))
-                {
-                    
+                    return rootBuild;
                 }
                 else
                 {
@@ -191,15 +216,9 @@ namespace Microsoft.DotNet.Darc.Operations
             }
             else
             {
-                Console.WriteLine("Please specify either --id or --repo and --commit");
+                Console.WriteLine("Please specify options to indicate the root build.  Please see help");
                 return null;
             }
-
-            if (rootBuild == null)
-            {
-                Console.WriteLine("No build was found matching the specified parameters.");
-            }
-            return rootBuild;
         }
 
         class BuildComparer : IEqualityComparer<Build>
@@ -344,7 +363,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     // Look up the asset by name and version.
                     Console.WriteLine($"Looking up {dependency.Name}@{dependency.Version} in Build Asset Registry...");
-                    IList<Asset> matchingAssets = await rootBuildRemote.GetAssetsAsync(dependency.Name, dependency.Version);
+                    IEnumerable<Asset> matchingAssets = await rootBuildRemote.GetAssetsAsync(dependency.Name, dependency.Version);
 
                     // Because the same asset could be produced more than once by different builds (e.g. if you had
                     // a stable asset version), look up the builds by ID until we find one that built the right commit.
@@ -436,9 +455,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="rootOutputDirectory">Output directory. Must exist.</param>
         private async Task<DownloadedBuild> GatherDropForBuildAsync(Build build, string rootOutputDirectory)
         {
-            DarcSettings darcSettings = LocalSettings.GetDarcSettings(_options, Logger);
-            // No need to set up a git type or PAT here.
-            Remote remote = new Remote(darcSettings, Logger);
+            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
             bool success = true;
 
             // If the drop is separated, calculate the directory name based on the last element of the build

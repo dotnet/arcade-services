@@ -2,7 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace Microsoft.DotNet.DarcLib
+namespace Microsoft.DotNet.Darc
 {
     public class DarcSettings
     {
@@ -13,12 +13,12 @@ namespace Microsoft.DotNet.DarcLib
         public DarcSettings(GitRepoType gitType, string personalAccessToken)
         {
             GitType = gitType;
-            PersonalAccessToken = personalAccessToken;
+            GitRepoPersonalAccessToken = personalAccessToken;
         }
 
         public string BuildAssetRegistryPassword { get; set; }
 
-        public string PersonalAccessToken { get; set; }
+        public string GitRepoPersonalAccessToken { get; set; }
 
         public string BuildAssetRegistryBaseUri { get; set; }
 
