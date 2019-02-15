@@ -115,7 +115,7 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        ///     Returns the repo uri if 
+        ///     Returns the repo uri if it's set explicity or one of the shorthand versions is used.
         /// </summary>
         /// <returns></returns>
         private string GetRepoUri()
@@ -124,6 +124,7 @@ namespace Microsoft.DotNet.Darc.Operations
             const string runtimeUri = "https://github.com/dotnet/core-setup";
             const string aspnetUri = "https://github.com/aspnet/AspNetCore";
             string repoUri = _options.RepoUri;
+
             if (string.IsNullOrEmpty(repoUri))
             {
                 if (_options.DownloadSdk)
