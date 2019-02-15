@@ -459,7 +459,7 @@ namespace Microsoft.DotNet.DarcLib
             catch (DependencyFileNotFoundException)
             {
                 // This is not an error. Dependencies can be specified with explicit shas that
-                // may not have eng/Version.Details at that point.
+                // may not have eng/Version.Details.xml at that point.
                 logger.LogWarning($"{repoUri}@{commit} does not have an eng/Version.Details.xml.");
                 return null;
             }
