@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -55,6 +56,8 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         public IEnumerable<DependencyGraphNode> IncoherentNodes { get; set; }
 
+        public IEnumerable<Build> ContributingBuilds { get; set; }
+
         /// <summary>
         ///     Builds a dependency graph given a root repo and commit using remotes.
         /// </summary>
@@ -69,6 +72,7 @@ namespace Microsoft.DotNet.DarcLib
             string repoUri,
             string commit,
             bool includeToolset,
+            bool lookupBuilds,
             ILogger logger)
         {
             return await BuildDependencyGraphImplAsync(
@@ -77,6 +81,7 @@ namespace Microsoft.DotNet.DarcLib
                 repoUri,
                 commit,
                 includeToolset,
+                lookupBuilds,
                 true,
                 logger,
                 null,
@@ -92,6 +97,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Root repository URI</param>
         /// <param name="commit">Root commit</param>
         /// <param name="includeToolset">If true, toolset dependencies are included.</param>
+        /// <param name="lookupBuilds">If true, the builds contributing to each node are looked up. Must be a remote build.</param>
         /// <param name="logger">Logger</param>
         /// <returns>New dependency graph.</returns>
         public static async Task<DependencyGraph> BuildRemoteDependencyGraphAsync(
@@ -100,6 +106,7 @@ namespace Microsoft.DotNet.DarcLib
             string repoUri,
             string commit,
             bool includeToolset,
+            bool lookupBuilds,
             ILogger logger)
         {
             return await BuildDependencyGraphImplAsync(
@@ -108,6 +115,7 @@ namespace Microsoft.DotNet.DarcLib
                 repoUri,
                 commit,
                 includeToolset,
+                lookupBuilds,
                 true,
                 logger,
                 null,
@@ -145,6 +153,7 @@ namespace Microsoft.DotNet.DarcLib
                 rootRepoCommit,
                 includeToolset,
                 false,
+                false,
                 logger,
                 reposFolder,
                 remotesMap,
@@ -159,6 +168,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Root repository uri.  Must be valid if no root dependencies are passed.</param>
         /// <param name="commit">Root commit.  Must be valid if no root dependencies were passed.</param>
         /// <param name="includeToolset">If true, toolset dependencies are included.</param>
+        /// <param name="lookupBuilds">If true, the builds contributing to each node are looked up. Must be a remote build.</param>
         /// <param name="remote">If true, remote graph build is used.</param>
         /// <param name="logger">Logger</param>
         /// <param name="reposFolder">Path to repos</param>
@@ -171,6 +181,7 @@ namespace Microsoft.DotNet.DarcLib
             string repoUri,
             string commit,
             bool includeToolset,
+            bool lookupBuilds,
             bool remote,
             ILogger logger,
             string reposFolder,
@@ -202,8 +213,23 @@ namespace Microsoft.DotNet.DarcLib
                 logger.LogInformation($"Starting build of graph from ({repoUri}@{commit})");
             }
 
+            IEnumerable<Build> rootNodeBuilds = null;
+            if (lookupBuilds)
+            {
+                // Look up the dependency and get the creating build.
+                var barOnlyRemote = remoteFactory.GetBarOnlyRemote(logger);
+                rootNodeBuilds = await barOnlyRemote.GetBuildsAsync(repoUri, commit);
+                // Filter by those actually producing the root dependencies, if they were supplied
+                if (rootDependencies != null)
+                {
+                    rootNodeBuilds = rootNodeBuilds.Where(b =>
+                        b.Assets.Any(a => rootDependencies.Any(d => a.Name.Equals(d.Name, StringComparison.OrdinalIgnoreCase) &&
+                                          a.Version == d.Version)));
+                }
+            }
+
             // Create the root node and add the repo to the visited bit vector.
-            DependencyGraphNode rootGraphNode = new DependencyGraphNode(repoUri, commit, rootDependencies);
+            DependencyGraphNode rootGraphNode = new DependencyGraphNode(repoUri, commit, rootDependencies, rootNodeBuilds);
             rootGraphNode.VisitedNodes.Add(repoUri);
             Stack<DependencyGraphNode> nodesToVisit = new Stack<DependencyGraphNode>();
             nodesToVisit.Push(rootGraphNode);
@@ -308,12 +334,27 @@ namespace Microsoft.DotNet.DarcLib
                             continue;
                         }
 
+                        IEnumerable<Build> contributingBuilds = null;
+                        if (lookupBuilds)
+                        {
+                            // Look up the dependency and get the creating build.
+                            var barOnlyRemote = remoteFactory.GetBarOnlyRemote(logger);
+                            contributingBuilds = await barOnlyRemote.GetBuildsAsync(dependency.RepoUri, dependency.Commit);
+                            // Filter by those actually producing the dependency. Most of the time this won't
+                            // actually result in a different set of contributing builds, but should avoid any subtle bugs where
+                            // there might be overlap between repos.
+                            contributingBuilds = contributingBuilds.Where(b => 
+                                b.Assets.Any(a => a.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase) &&
+                                                  a.Version == dependency.Version));
+                        }
+
                         // Otherwise, create a new node for this dependency.
                         DependencyGraphNode newNode = new DependencyGraphNode(
                             dependency.RepoUri,
                             dependency.Commit,
                             null,
-                            node.VisitedNodes);
+                            node.VisitedNodes,
+                            contributingBuilds);
                         // Cache the dependency and add it to the visitation stack.
                         nodeCache.Add($"{dependency.RepoUri}@{dependency.Commit}", newNode);
                         nodesToVisit.Push(newNode);

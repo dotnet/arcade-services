@@ -111,7 +111,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     // Limit the number of BAR queries by grabbing the repo URIs and making a hash set.
                     // We gather the latest build for any dependencies that aren't marked with coherent parent
                     // dependencies.  For those with coherent parent dependencies we need to do a special set of queries.
-                    HashSet<string> repositoryUrisForQuery = dependencies.Where(dependency => dependency.CoherentParentDependency == null)
+                    HashSet<string> repositoryUrisForQuery = dependencies.Where(dependency => dependency.CoherentParentDependencyName == null)
                                                                          .Select(dependency => dependency.RepoUri).ToHashSet();
 
                     ConcurrentDictionary<string, Task<Build>> getLatestBuildTaskDictionary = new ConcurrentDictionary<string, Task<Build>>();
@@ -143,7 +143,7 @@ namespace Microsoft.DotNet.Darc.Operations
                             continue;
                         }
 
-                        Asset buildAsset = build.Assets.Where(asset => asset.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+                        /*Asset buildAsset = build.Assets.Where(asset => asset.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
                         if (buildAsset == null)
                         {
                             Logger.LogTrace($"Dependency '{dependency.Name}' not found in latest build of '{dependency.RepoUri}' on '{_options.Channel}', skipping.");

@@ -6,6 +6,17 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class DependencyDetail
     {
+        public DependencyDetail() { }
+        public DependencyDetail(DependencyDetail other)
+        {
+            Name = other.Name;
+            Version = other.Version;
+            RepoUri = other.RepoUri;
+            Commit = other.Commit;
+            Pinned = other.Pinned;
+            Type = other.Type;
+            CoherentParentDependencyName = other.CoherentParentDependencyName;
+        }
         /// <summary>
         ///     Name of dependency.
         /// </summary>
@@ -58,6 +69,6 @@ namespace Microsoft.DotNet.DarcLib
         ///     Microsoft.Private.CoreFx.NETCoreApp. By corrolary, that means Microsoft.NETCore.Runtime.CoreCLR cannot
         ///     be updated unless that version exists in the subtree of Microsoft.Private.CoreFx.NETCoreApp.
         /// </summary>
-        public DependencyDetail CoherentParentDependency { get; set; }
+        public string CoherentParentDependencyName { get; set; }
     }
 }

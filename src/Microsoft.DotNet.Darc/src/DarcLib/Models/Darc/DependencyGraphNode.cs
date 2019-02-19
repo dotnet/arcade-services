@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.DotNet.Maestro.Client.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,12 +13,14 @@ namespace Microsoft.DotNet.DarcLib
     {
         public DependencyGraphNode(string repoUri,
                                    string commit,
-                                   IEnumerable<DependencyDetail> dependencies)
+                                   IEnumerable<DependencyDetail> dependencies,
+                                   IEnumerable<Build> contributingBuilds)
             : this(
                   repoUri,
                   commit,
                   dependencies,
-                  new HashSet<string>(StringComparer.OrdinalIgnoreCase))
+                  new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+                  contributingBuilds)
         {
         }
 
@@ -25,12 +28,14 @@ namespace Microsoft.DotNet.DarcLib
             string repoUri,
             string commit,
             IEnumerable<DependencyDetail> dependencies,
-            HashSet<string> visitedNodes)
+            HashSet<string> visitedNodes,
+            IEnumerable<Build> contributingBuilds)
         {
             RepoUri = repoUri;
             Commit = commit;
             Dependencies = dependencies;
             VisitedNodes = new HashSet<string>(visitedNodes, StringComparer.OrdinalIgnoreCase);
+            ContributingBuilds = contributingBuilds;
             Children = new HashSet<DependencyGraphNode>(new DependencyGraphNodeComparer());
             Parents = new HashSet<DependencyGraphNode>(new DependencyGraphNodeComparer());
         }
@@ -47,6 +52,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         public readonly string Commit;
 
+        public IEnumerable<Build> ContributingBuilds { get; set; }
         /// <summary>
         ///     Dependencies of the node at RepoUri and Commit.
         /// </summary>

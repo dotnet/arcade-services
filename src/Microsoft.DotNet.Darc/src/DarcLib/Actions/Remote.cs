@@ -271,6 +271,108 @@ namespace Microsoft.DotNet.DarcLib
             _logger.LogInformation($"Merging pull request '{pullRequestUrl}' succeeded!");
         }
 
+        /// <summary>
+        ///     Determine what dependencies need to be updated given an input set of assets.
+        /// </summary>
+        /// <param name="sourceCommit">Commit the assets come from.</param>
+        /// <param name="assets">Assets as inputs for the update.</param>
+        /// <param name="dependencies">Current set of the dependencies.</param>
+        /// <returns>List of dependencies to update.</returns>
+        public async Task<List<DependencyDetail>> GetRequiredUpdatesAsync(
+            string repoUri,
+            string sourceCommit,
+            IEnumerable<AssetData> assets,
+            IEnumerable<DependencyDetail> dependencies,
+            IRemoteFactory remoteFactory)
+        {
+            List<DependencyDetail> toUpdate = new List<DependencyDetail>();
+            IEnumerable<DependencyDetail> dependenciesWithCoherentParents =
+                    dependencies.Where(d => d.CoherentParentDependencyName != null);
+
+            // First make a pass over the dependencies with no coherency links.
+            // That will give us enough data to do the coherency update in a second pass.
+            foreach (AssetData asset in assets)
+            {
+                DependencyDetail matchingDependenciesByName =
+                    dependencies.FirstOrDefault(d => d.Name.Equals(asset.Name, StringComparison.Ordinal) &&
+                                                     string.IsNullOrEmpty(d.CoherentParentDependencyName));
+
+                if (!matchingDependenciesByName.Any())
+                {
+                    continue;
+                }
+
+                DependencyDetail newDependency = new DependencyDetail(matchingDependenciesByName.FirstOrDefault());
+                newDependency.Commit = sourceCommit;
+                newDependency.RepoUri = repoUri;
+                newDependency.Version = asset.Version;
+                newDependency.Name = asset.Name;
+                toUpdate.Add(newDependency);
+            }
+
+
+            // Now make a walk over coherent dependencies. Note that coherent dependencies could make
+            // a chain (A->B->C). In all cases we need to walk to the head of the chain, keeping track
+            // of all elements in the chain. Also note that we are walking all dependencies here, not
+            // just those that match the incoming AssetData and aligning all of these based on the coherency data.
+            Dictionary<string, DependencyGraphNode> nodeCache = new Dictionary<string, DependencyGraphNode>();
+            HashSet<DependencyDetail> visited = new HashSet<DependencyDetail>();
+            foreach (DependencyDetail dependency in dependenciesWithCoherentParents)
+            {
+                // If the dependency was already updated, then skip it (could have been part of a larger
+                // dependency chain)
+                if (visited.Contains(dependency))
+                {
+                    continue;
+                }
+
+                // Walk to head of chain, keeping track of elements along the way.
+                List<DependencyDetail> updateList = new List<DependencyDetail>();
+                DependencyDetail currentDependency = dependency;
+                while (!string.IsNullOrEmpty(currentDependency.CoherentParentDependencyName))
+                {
+                    updateList.Add(dependency);
+                    currentDependency = dependencies.FirstOrDefault(d =>
+                        d.Name.Equals(currentDependency.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
+                }
+
+                DependencyGraphNode rootNode = null;
+
+                // At head, build dependency graph if need be. It's quite possible that this node
+                // has already been visited in a relatively coherent graph, so first check the node cache
+                if (!nodeCache.TryGetValue($"{currentDependency.RepoUri}@{currentDependency.Commit}", out rootNode))
+                {
+                    DependencyGraph dependencyGraph =
+                        await DependencyGraph.BuildRemoteDependencyGraphAsync(remoteFactory,
+                                                                              new List<DependencyDetail>() { currentDependency },
+                                                                              currentDependency.RepoUri,
+                                                                              currentDependency.Commit,
+                                                                              true, /* include toolset */
+                                                                              true, /* lookup builds */
+                                                                              _logger);
+                    // Cache all nodes in this built graph.
+                    foreach (DependencyGraphNode node in dependencyGraph.Nodes)
+                    {
+                        if (!nodeCache.ContainsKey($"{node.RepoUri}@{node.Commit}"))
+                        {
+                            nodeCache.Add($"{node.RepoUri}@{node.Commit}", node);
+                        }
+                    }
+                    rootNode = dependencyGraph.Root;
+                }
+
+                // Now that we have the root node, walk from the root through the graph
+                // and identify builds that could create the dependencies in the input list.
+                // Note that we can't specifically say that it will be nodes in the graph that have
+                // matching repo uris, because repo uris may change. However, that doesn't usually happen,
+                // so we can bias the lookup towards nodes with matching repo uris first,
+                // then go from there.
+
+            }
+
+            return toUpdate;
+        }
+
         public async Task<List<DependencyDetail>> GetRequiredUpdatesAsync(
             string repoUri,
             string branch,
