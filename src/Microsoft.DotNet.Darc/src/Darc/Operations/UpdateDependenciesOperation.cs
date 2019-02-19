@@ -152,7 +152,6 @@ namespace Microsoft.DotNet.Darc.Operations
 
                         if (buildAsset.Version == dependency.Version &&
                             buildAsset.Name == dependency.Name &&
-                            (build.GitHubRepository == dependency.RepoUri || build.AzureDevOpsRepository == dependency.RepoUri) &&
                             build.Commit == dependency.Commit)
                         {
                             // No changes
@@ -165,7 +164,9 @@ namespace Microsoft.DotNet.Darc.Operations
                             Commit = build.Commit,
                             // If casing changes, ensure that the dependency name gets updated.
                             Name = buildAsset.Name,
-                            RepoUri = build.AzureDevOpsRepository,
+                            // Keep the same repo uri.  The original build lookup is based on the repo uri,
+                            // so no point in changing it.
+                            RepoUri = dependency.RepoUri,
                             Version = buildAsset.Version
                         };
 
