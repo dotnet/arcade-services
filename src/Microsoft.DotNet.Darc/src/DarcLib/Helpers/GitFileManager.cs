@@ -800,11 +800,11 @@ namespace Microsoft.DotNet.DarcLib
 
                                 DependencyDetail dependencyDetail = new DependencyDetail
                                 {
-                                    Branch = branch,
                                     Name = dependency.Attributes["Name"].Value,
                                     RepoUri = dependency.SelectSingleNode("Uri").InnerText,
                                     Commit = dependency.SelectSingleNode("Sha").InnerText,
                                     Version = dependency.Attributes["Version"].Value,
+                                    CoherentParentDependency = dependency.Attributes["CoherentParentDependency"].Value,
                                     Pinned = isPinned,
                                     Type = type
                                 };

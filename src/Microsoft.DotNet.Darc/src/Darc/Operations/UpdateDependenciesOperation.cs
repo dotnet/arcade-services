@@ -106,10 +106,14 @@ namespace Microsoft.DotNet.Darc.Operations
                     }
 
                     // Start channel query.
-                    var channel = barOnlyRemote.GetChannelAsync(_options.Channel);
+                    Task<Channel> channel = barOnlyRemote.GetChannelAsync(_options.Channel);
 
                     // Limit the number of BAR queries by grabbing the repo URIs and making a hash set.
-                    var repositoryUrisForQuery = dependencies.Select(dependency => dependency.RepoUri).ToHashSet();
+                    // We gather the latest build for any dependencies that aren't marked with coherent parent
+                    // dependencies.  For those with coherent parent dependencies we need to do a special set of queries.
+                    HashSet<string> repositoryUrisForQuery = dependencies.Where(dependency => dependency.CoherentParentDependency == null)
+                                                                         .Select(dependency => dependency.RepoUri).ToHashSet();
+
                     ConcurrentDictionary<string, Task<Build>> getLatestBuildTaskDictionary = new ConcurrentDictionary<string, Task<Build>>();
 
                     Channel channelInfo = await channel;
@@ -158,9 +162,6 @@ namespace Microsoft.DotNet.Darc.Operations
 
                         DependencyDetail updatedDependency = new DependencyDetail
                         {
-                            // TODO: Not needed, but not currently provided in Build info. Will be available on next rollout.
-                            // When this is ready, add "(from build '{build.BuildNumber}'" to line 163 in GitFileManager.cs
-                            Branch = null,
                             Commit = build.Commit,
                             // If casing changes, ensure that the dependency name gets updated.
                             Name = buildAsset.Name,
