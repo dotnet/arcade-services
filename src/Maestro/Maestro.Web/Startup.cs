@@ -47,12 +47,24 @@ namespace Maestro.Web
     {
         static Startup()
         {
+            Triggers<BuildChannel>.Inserting += entry =>
+            {
+                BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
+                BuildChannel entity = entry.Entity;
+
+                if (ChannelHasAssociatedReleasePipeline(entity.ChannelId, context))
+                {
+                    entry.Cancel = true;
+                    var queue = context.GetService<BackgroundQueue>();
+                    var releasePipelineRunner = context.GetService<IReleasePipelineRunner>();
+                    queue.Post(() => releasePipelineRunner.StartAssociatedReleasePipelinesAsync(entity.BuildId, entity.ChannelId));
+                }
+            };
+
             Triggers<BuildChannel>.Inserted += entry =>
             {
                 DbContext context = entry.Context;
                 BuildChannel entity = entry.Entity;
-
-                StartAssociatedReleasePipelinesAsync(entry).GetAwaiter().GetResult();
 
                 var queue = context.GetService<BackgroundQueue>();
                 var dependencyUpdater = context.GetService<IDependencyUpdater>();
@@ -60,76 +72,14 @@ namespace Maestro.Web
             };
         }
 
-        private static async Task StartAssociatedReleasePipelinesAsync(IInsertedEntry<BuildChannel, DbContext> entry)
+        private static bool ChannelHasAssociatedReleasePipeline(int channelId, BuildAssetRegistryContext context)
         {
-            BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
-            ILogger<BuildChannel> logger = context.GetService<ILogger<BuildChannel>>();
-            BuildChannel entity = entry.Entity;
-            Build barBuildInfo = entity.Build;
             Channel channel = context.Channels
-                .Where(ch => ch.Id == entity.ChannelId)
+                .Where(ch => ch.Id == channelId)
                 .Include(ch => ch.ChannelReleasePipelines)
                 .ThenInclude(crp => crp.ReleasePipeline)
                 .First();
-
-            // If something use the old API version we won't have this information available.
-            // This will also be the case if something adds an existing build (created using 
-            // the old API version) to a channel
-            if (barBuildInfo.AzureDevOpsBuildId == null)
-            {
-                logger.LogWarning($"barBuildInfo.AzureDevOpsBuildId is null for BAR Build.Id {barBuildInfo.Id}.");
-                return;
-            }
-
-            if (channel.ChannelReleasePipelines?.Any() != true)
-            {
-                logger.LogWarning($"Channel {channel.Id}, which build with BAR ID {barBuildInfo.Id} is attached to, doesn't have an associated publishing pipeline.");
-                return;
-            }
-
-            var azdoTokenProvider = context.GetService<IAzureDevOpsTokenProvider>();
-            var accessToken = azdoTokenProvider.GetTokenForAccount(barBuildInfo.AzureDevOpsAccount).GetAwaiter().GetResult();
-
-            var azdoClient = new AzureDevOpsClient(accessToken, logger, null);
-
-            var azdoBuild = await azdoClient.GetBuildAsync(
-                barBuildInfo.AzureDevOpsAccount,
-                barBuildInfo.AzureDevOpsProject,
-                barBuildInfo.AzureDevOpsBuildId.Value);
-
-            foreach (var pipeline in channel.ChannelReleasePipelines)
-            {
-                try
-                {
-                    var account = pipeline.ReleasePipeline.Organization;
-                    var project = pipeline.ReleasePipeline.Project;
-                    var pipelineId = pipeline.ReleasePipeline.PipelineIdentifier;
-
-                    var pipeDef = await azdoClient.GetReleaseDefinitionAsync(account, project, pipelineId);
-
-                    pipeDef = await azdoClient.RemoveAllArtifactSourcesAsync(account, project, pipeDef);
-
-                    pipeDef = await azdoClient.AddArtifactSourceAsync(account, project, pipeDef, azdoBuild);
-
-                    var releaseId = await azdoClient.StartNewReleaseAsync(account, project, pipeDef, barBuildInfo.Id);
-
-                    azdoClient.WaitUntilCompleted(account, project, releaseId);
-                }
-                catch (HttpRequestException e)
-                {
-                    logger.LogError($"Some problem happened interacting with DevOps API: {e.Message}", e);
-                }
-                catch (JsonException e)
-                {
-                    logger.LogError($"Some problem happened serializing/deserializaing JSON data: {e.Message}", e);
-                }
-                catch (Exception e)
-                {
-                    logger.LogError($"Some problem happened while starting publishing pipeline " +
-                        $"{pipeline.ReleasePipeline.PipelineIdentifier} for build " +
-                        $"{barBuildInfo.AzureDevOpsBuildId}: {e.Message}", e);
-                }
-            }
+            return channel.ChannelReleasePipelines.Count > 0;
         }
 
         public Startup(IHostingEnvironment env)
@@ -204,6 +154,7 @@ namespace Maestro.Web
             services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BackgroundQueue>());
 
             services.AddServiceFabricService<IDependencyUpdater>("fabric:/MaestroApplication/DependencyUpdater");
+            services.AddServiceFabricService<IReleasePipelineRunner>("fabric:/MaestroApplication/ReleasePipelineRunner");
 
             services.AddGitHubTokenProvider();
             services.Configure<GitHubTokenProviderOptions>(

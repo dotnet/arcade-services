@@ -1,0 +1,17 @@
+{
+  "BuildAssetRegistry": {
+    "ConnectionString": "[vault(build-asset-registry-sql-connection-string)]"
+  },
+  "AzureDevOps": {
+    "Tokens": [
+      {
+        "Account": "dnceng",
+        "Token": "[vault(dnceng-code-rw)]"
+      },
+      {
+        "Account": "devdiv",
+        "Token": "[vault(devdiv-code-rw)]"
+      }
+    ]
+  }
+}

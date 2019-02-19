@@ -623,6 +623,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="body">Optional body if <paramref name="method"/> is Put or Post</param>
         /// <param name="versionOverride">API version override</param>
         /// <param name="baseAddressSubpath">[baseAddressSubPath]dev.azure.com subdomain to make the request</param>
+        /// <param name="maxAttempts">Maximum number of tries to attempt the API request</param>
         /// <returns>Http response</returns>
         private async Task<JObject> ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod method,
@@ -633,8 +634,12 @@ namespace Microsoft.DotNet.DarcLib
             string body = null,
             string versionOverride = null,
             bool logFailure = true,
-            string baseAddressSubpath = null)
+            string baseAddressSubpath = null,
+            int maxAttempts = 15)
         {
+            int retryCount = maxAttempts;
+            // Add a bit of randomness to the retry delay.
+            var rng = new Random();
             using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride, baseAddressSubpath))
             {
                 HttpRequestManager requestManager = new HttpRequestManager(client,
@@ -645,9 +650,30 @@ namespace Microsoft.DotNet.DarcLib
                                                                            versionOverride,
                                                                            logFailure);
 
-                using (var response = await requestManager.ExecuteAsync())
+                while (true)
                 {
-                    return JObject.Parse(await response.Content.ReadAsStringAsync());
+                    try
+                    {
+                        using (var response = await requestManager.ExecuteAsync())
+                        {
+                            return JObject.Parse(await response.Content.ReadAsStringAsync());
+                        }
+                    }
+                    catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
+                    {
+                        if (retryCount <= 0)
+                        {
+                            logger.LogError($"Failed to send HttpRequest to Azure DevOps API after {maxAttempts} attempts. Path: {requestPath}. Exception: {ex.ToString()}");
+                            throw;
+                        }
+                        else
+                        {
+                            logger.LogWarning($"Failed to send HttpRequest to Azure DevOps API: Path:{requestPath}. {retryCount} attempts remaining. Exception: {ex.ToString()}");
+                        }
+                    }
+                    --retryCount;
+                    int delay = (maxAttempts - retryCount) * rng.Next(1, 7);
+                    await Task.Delay(delay * 1000);
                 }
             }
         }
@@ -889,32 +915,6 @@ namespace Microsoft.DotNet.DarcLib
                 baseAddressSubpath: "vsrm.");
 
             return content.GetValue("id").ToObject<int>();
-        }
-
-        /// <summary>
-        /// Block until the release with ID informed finishes execution.
-        /// Checks the status of the release every 15 seconds.
-        /// </summary>
-        /// <param name="accountName"></param>
-        /// <param name="projectName"></param>
-        /// <param name="releaseId"></param>
-        public void WaitUntilCompleted(string accountName, string projectName, int releaseId)
-        {
-            while (true)
-            {
-                AzureDevOpsRelease rel = GetReleaseAsync(accountName, projectName, releaseId).GetAwaiter().GetResult();
-
-                if (rel.Environments[0].Status != "notStarted"
-                    && rel.Environments[0].Status != "scheduled"
-                    && rel.Environments[0].Status != "queued"
-                    && rel.Environments[0].Status != "inProgress")
-                {
-                    break;
-                }
-                
-                // Check status of the release every 15 seconds
-                Thread.Sleep(15 * 1000);
-            }
         }
 
         /// <summary>
