@@ -57,16 +57,16 @@ namespace Microsoft.DotNet.DarcLib
             return JObject.Parse(fileContent);
         }
 
-        public IEnumerable<DependencyDetail> ParseVersionDetailsXml(string fileContents)
+        public IEnumerable<DependencyDetail> ParseVersionDetailsXml(string fileContents, bool includePinned = true)
         {
             _logger.LogInformation($"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}'...");
 
             XmlDocument document = ReadVersionDetailsXml(fileContents);
 
-            return GetDependencyDetails(document);
+            return GetDependencyDetails(document, includePinned: includePinned);
         }
 
-        public async Task<IEnumerable<DependencyDetail>> ParseVersionDetailsXmlAsync(string repoUri, string branch)
+        public async Task<IEnumerable<DependencyDetail>> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true)
         {
             if (!string.IsNullOrEmpty(branch))
             {
@@ -83,7 +83,7 @@ namespace Microsoft.DotNet.DarcLib
             var dependencyDetails = new List<DependencyDetail>();
             XmlDocument document = await ReadVersionDetailsXmlAsync(repoUri, branch);
 
-            return GetDependencyDetails(document);
+            return GetDependencyDetails(document, includePinned: includePinned);
         }
 
         /// <summary>
@@ -132,6 +132,12 @@ namespace Microsoft.DotNet.DarcLib
 
             foreach (DependencyDetail itemToUpdate in itemsToUpdate)
             {
+                // Double check that the dependency is not pinned
+                if (itemToUpdate.Pinned)
+                {
+                    throw new DarcException($"An attempt to update pinned dependency '{itemToUpdate.Name}' was made");
+                }
+
                 // Use a case-insensitive update.
                 XmlNodeList versionList = versionDetails.SelectNodes($"//Dependency[translate(@Name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ'," +
                     $"'abcdefghijklmnopqrstuvwxyz')='{itemToUpdate.Name.ToLower()}']");
@@ -183,6 +189,14 @@ namespace Microsoft.DotNet.DarcLib
             XmlAttribute versionAttribute = versionDetails.CreateAttribute("Version");
             versionAttribute.Value = dependency.Version;
             newDependency.Attributes.Append(versionAttribute);
+
+            // Only add the pinned attribute if the pinned option is set to true
+            if (dependency.Pinned)
+            {
+                XmlAttribute pinnedAttribute = versionDetails.CreateAttribute("Pinned");
+                pinnedAttribute.Value = dependency.Pinned.ToString();
+                newDependency.Attributes.Append(pinnedAttribute);
+            }
 
             XmlNode uri = versionDetails.CreateElement("Uri");
             uri.InnerText = dependency.RepoUri;
@@ -743,7 +757,7 @@ namespace Microsoft.DotNet.DarcLib
             return Task.FromResult(result);
         }
 
-        private IEnumerable<DependencyDetail> GetDependencyDetails(XmlDocument document, string branch = null)
+        private IEnumerable<DependencyDetail> GetDependencyDetails(XmlDocument document, string branch = null, bool includePinned = true)
         {
             List<DependencyDetail> dependencyDetails = new List<DependencyDetail>();
 
@@ -772,6 +786,18 @@ namespace Microsoft.DotNet.DarcLib
                                         throw new DarcException($"Unknown dependency type '{dependency.ParentNode.Name}'");
                                 }
 
+                                bool isPinned = false;
+
+                                // If the 'Pinned' attribute does not exist or if it is set to false we just not update it 
+                                if (dependency.Attributes["Pinned"] != null)
+                                {
+                                    if (!bool.TryParse(dependency.Attributes["Pinned"].Value, out isPinned))
+                                    {
+                                        throw new DarcException($"The 'Pinned' attribute is set but the value '{dependency.Attributes["Pinned"].Value}' " +
+                                            $"is not a valid boolean...");
+                                    }
+                                }
+
                                 DependencyDetail dependencyDetail = new DependencyDetail
                                 {
                                     Branch = branch,
@@ -779,6 +805,7 @@ namespace Microsoft.DotNet.DarcLib
                                     RepoUri = dependency.SelectSingleNode("Uri").InnerText,
                                     Commit = dependency.SelectSingleNode("Sha").InnerText,
                                     Version = dependency.Attributes["Version"].Value,
+                                    Pinned = isPinned,
                                     Type = type
                                 };
 
@@ -798,7 +825,12 @@ namespace Microsoft.DotNet.DarcLib
                     $"Look for exceptions above.");
             }
 
-            return dependencyDetails;
+            if (includePinned)
+            {
+                return dependencyDetails;
+            }
+
+            return dependencyDetails.Where(d => !d.Pinned);
         }
     }
 }

@@ -184,6 +184,7 @@ namespace Maestro.Web
                     {
                         options.Conventions.AuthorizeFolder("/");
                         options.Conventions.AllowAnonymousToPage("/Index");
+                        options.Conventions.AllowAnonymousToPage("/SwaggerUi");
                     })
                 .AddGitHubWebHooks()
                 .AddApiPagination()

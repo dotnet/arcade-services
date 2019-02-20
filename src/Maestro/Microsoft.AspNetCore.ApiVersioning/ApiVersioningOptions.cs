@@ -29,6 +29,7 @@ namespace Microsoft.AspNetCore.ApiVersioning
     }
 
     [PublicAPI]
+    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
     public class ApiVersionAttribute : Attribute
     {
         public ApiVersionAttribute(string version)

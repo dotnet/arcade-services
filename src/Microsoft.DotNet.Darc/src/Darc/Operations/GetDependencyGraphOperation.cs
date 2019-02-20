@@ -76,7 +76,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     Console.WriteLine($"Building repository dependency graph...");
 
-                    FilterToolsetDependencies(rootDependencies);
+                    rootDependencies = FilterToolsetDependencies(rootDependencies);
 
                     if (!rootDependencies.Any())
                     {
@@ -101,7 +101,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     rootDependencies = await local.GetDependenciesAsync(
                         _options.AssetName);
 
-                    FilterToolsetDependencies(rootDependencies);
+                    rootDependencies = FilterToolsetDependencies(rootDependencies);
 
                     if (!rootDependencies.Any())
                     {
@@ -216,7 +216,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="graph">Graph to log incoherencies for</param>
         private void LogIncoherencies(DependencyGraph graph)
         {
-            if (!graph.IncoherentNodes.Any())
+            if (!graph.IncoherentNodes.Any() || !_options.IncludeCoherency)
             {
                 return;
             }

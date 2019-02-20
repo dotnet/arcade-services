@@ -49,7 +49,7 @@ namespace Maestro.Data.Models
         public Subscription Subscription { get; set; }
 
         /// <summary>
-        ///     <see langword="true" /> if the update succeeded; <see langword="false" /> otherwise.
+        ///     **true** if the update succeeded; **false** otherwise.
         /// </summary>
         public bool Success { get; set; }
 
@@ -81,7 +81,7 @@ namespace Maestro.Data.Models
         public Guid SubscriptionId { get; set; }
 
         /// <summary>
-        ///     <see langword="true" /> if the update succeeded; <see langword="false" /> otherwise.
+        ///     **true** if the update succeeded; **false** otherwise.
         /// </summary>
         public bool Success { get; set; }
 

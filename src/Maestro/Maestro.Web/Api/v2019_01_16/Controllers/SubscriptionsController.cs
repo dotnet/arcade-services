@@ -9,80 +9,25 @@ using System.Net;
 using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data;
-using Maestro.Data.Models;
-using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
+using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.ServiceFabric.Actors;
-using Swashbuckle.AspNetCore.Annotations;
-using Channel = Maestro.Data.Models.Channel;
-using Subscription = Maestro.Web.Api.v2019_01_16.Models.Subscription;
-using SubscriptionUpdate = Maestro.Web.Api.v2018_07_16.Models.SubscriptionUpdate;
-using SubscriptionData = Maestro.Web.Api.v2018_07_16.Models.SubscriptionData;
+using Maestro.Web.Api.v2019_01_16.Models;
 
 namespace Maestro.Web.Api.v2019_01_16.Controllers
 {
-    public class SubscriptionsController_ApiRemoved : Maestro.Web.Api.v2018_07_16.Controllers.SubscriptionsController
-    {
-        public SubscriptionsController_ApiRemoved(
-            BuildAssetRegistryContext context,
-            BackgroundQueue queue,
-            IDependencyUpdater dependencyUpdater,
-            Func<ActorId, ISubscriptionActor> subscriptionActorFactory)
-            : base(context, queue, dependencyUpdater, subscriptionActorFactory)
-        {
-        }
-
-        [ApiRemoved]
-        public override sealed IActionResult GetAllSubscriptions(
-            string sourceRepository = null,
-            string targetRepository = null,
-            int? channelId = null,
-            bool? enabled = null)
-        {
-            throw new NotSupportedException();
-        }
-
-        [ApiRemoved]
-        public override Task<IActionResult> GetSubscription(Guid id)
-        {
-            throw new NotSupportedException();
-        }
-
-        [ApiRemoved]
-        public override Task<IActionResult> TriggerSubscription(Guid id)
-        {
-            throw new NotSupportedException();
-        }
-
-        [ApiRemoved]
-        public override Task<IActionResult> UpdateSubscription(Guid id, [FromBody] SubscriptionUpdate update)
-        {
-            throw new NotSupportedException();
-        }
-
-        [ApiRemoved]
-        public override Task<IActionResult> DeleteSubscription(Guid id)
-        {
-            throw new NotSupportedException();
-        }
-
-        [ApiRemoved]
-        public override Task<IActionResult> Create([FromBody] SubscriptionData subscription)
-        {
-            throw new NotSupportedException();
-        }
-    }
-
+    /// <summary>
+    ///   Exposes methods to Create/Read/Update/Delete <see cref="Subscription"/>s
+    /// </summary>
     [Route("subscriptions")]
     [ApiVersion("2019-01-16")]
-    public class SubscriptionsController : SubscriptionsController_ApiRemoved
+    public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsController
     {
         private readonly BuildAssetRegistryContext _context;
         private readonly BackgroundQueue _queue;
         private readonly IDependencyUpdater _dependencyUpdater;
-        private readonly Func<ActorId, ISubscriptionActor> _subscriptionActorFactory;
 
         public SubscriptionsController(
             BuildAssetRegistryContext context,
@@ -94,13 +39,19 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             _context = context;
             _queue = queue;
             _dependencyUpdater = dependencyUpdater;
-            _subscriptionActorFactory = subscriptionActorFactory;
         }
 
+        /// <summary>
+        ///   Gets a list of all <see cref="Subscription"/>s that match the given search criteria.
+        /// </summary>
+        /// <param name="sourceRepository"></param>
+        /// <param name="targetRepository"></param>
+        /// <param name="channelId"></param>
+        /// <param name="enabled"></param>
         [HttpGet]
-        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(List<Subscription>))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<Subscription>), Description = "The list of Subscriptions")]
         [ValidateModelState]
-        public new IActionResult GetAllSubscriptions(
+        public override IActionResult ListSubscriptions(
             string sourceRepository = null,
             string targetRepository = null,
             int? channelId = null,
@@ -132,10 +83,14 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             return Ok(results);
         }
 
+        /// <summary>
+        ///   Gets a single <see cref="Subscription"/>
+        /// </summary>
+        /// <param name="id">The id of the <see cref="Subscription"/></param>
         [HttpGet("{id}")]
-        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(Subscription))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription), Description = "The requested Subscription")]
         [ValidateModelState]
-        public new async Task<IActionResult> GetSubscription(Guid id)
+        public override async Task<IActionResult> GetSubscription(Guid id)
         {
             Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
                 .Include(sub => sub.Channel)
@@ -150,13 +105,13 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         }
 
         /// <summary>
-        ///     Trigger a subscription manually by ID
+        ///   Trigger a <see cref="Subscription"/> manually by id
         /// </summary>
-        /// <param name="id">ID of subscription</param>
+        /// <param name="id">The id of the <see cref="Subscription"/> to trigger.</param>
         [HttpPost("{id}/trigger")]
-        [SwaggerResponse((int)HttpStatusCode.Accepted, Type = typeof(Subscription))]
+        [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription), Description = "Subscription update has been triggered")]
         [ValidateModelState]
-        public new async Task<IActionResult> TriggerSubscription(Guid id)
+        public override async Task<IActionResult> TriggerSubscription(Guid id)
         {
             Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
                 .Include(sub => sub.Channel)
@@ -176,10 +131,15 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             return Accepted(new Subscription(subscription));
         }
 
+        /// <summary>
+        ///   Edit an existing <see cref="Subscription"/>
+        /// </summary>
+        /// <param name="id">The id of the <see cref="Subscription"/> to update</param>
+        /// <param name="update">An object containing the new data for the <see cref="Subscription"/></param>
         [HttpPatch("{id}")]
-        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(Subscription))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription), Description = "Subscription successfully updated")]
         [ValidateModelState]
-        public new async Task<IActionResult> UpdateSubscription(Guid id, [FromBody] SubscriptionUpdate update)
+        public override async Task<IActionResult> UpdateSubscription(Guid id, [FromBody] v2018_07_16.Models.SubscriptionUpdate update)
         {
             Data.Models.Subscription subscription = await _context.Subscriptions.Where(sub => sub.Id == id)
                 .FirstOrDefaultAsync();
@@ -205,7 +165,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
 
             if (!string.IsNullOrEmpty(update.ChannelName))
             {
-                Channel channel = await _context.Channels.Where(c => c.Name == update.ChannelName)
+                Data.Models.Channel channel = await _context.Channels.Where(c => c.Name == update.ChannelName)
                     .FirstOrDefaultAsync();
                 if (channel == null)
                 {
@@ -235,10 +195,14 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             return Ok(new Subscription(subscription));
         }
 
+        /// <summary>
+        ///   Delete an existing <see cref="Subscription"/>
+        /// </summary>
+        /// <param name="id">The id of the <see cref="Subscription"/> to delete</param>
         [HttpDelete("{id}")]
-        [SwaggerResponse((int)HttpStatusCode.OK, Type = typeof(Subscription))]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription), Description = "Subscription successfully deleted")]
         [ValidateModelState]
-        public new async Task<IActionResult> DeleteSubscription(Guid id)
+        public override async Task<IActionResult> DeleteSubscription(Guid id)
         {
             Data.Models.Subscription subscription =
                 await _context.Subscriptions.FirstOrDefaultAsync(sub => sub.Id == id);
@@ -262,12 +226,16 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             return Ok(new Subscription(subscription));
         }
 
+        /// <summary>
+        ///   Creates a new <see cref="Subscription"/>
+        /// </summary>
+        /// <param name="subscription">An object containing data for the new <see cref="Subscription"/></param>
         [HttpPost]
-        [SwaggerResponse((int)HttpStatusCode.Created, Type = typeof(Subscription))]
+        [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Subscription), Description = "New Subscription successfully created")]
         [ValidateModelState]
-        public new async Task<IActionResult> Create([FromBody] SubscriptionData subscription)
+        public override async Task<IActionResult> Create([FromBody] v2018_07_16.Models.SubscriptionData subscription)
         {
-            Channel channel = await _context.Channels.Where(c => c.Name == subscription.ChannelName)
+            Data.Models.Channel channel = await _context.Channels.Where(c => c.Name == subscription.ChannelName)
                 .FirstOrDefaultAsync();
             if (channel == null)
             {
@@ -277,7 +245,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                         new[] { $"The channel '{subscription.ChannelName}' could not be found." }));
             }
 
-            Repository repo = await _context.Repositories.FindAsync(subscription.TargetRepository);
+            Data.Models.Repository repo = await _context.Repositories.FindAsync(subscription.TargetRepository);
 
             if (subscription.TargetRepository.Contains("github.com"))
             {

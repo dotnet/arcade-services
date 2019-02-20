@@ -47,7 +47,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="dependencies">Dependencies that need updates.</param>
         /// <param name="remote">Remote instance for gathering eng/common script updates.</param>
         /// <returns></returns>
-        public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemote remote)
+        public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemoteFactory remoteFactory)
         {
             // TODO: This should use known updaters, but today the updaters for global.json can only
             // add, not actually update.  This needs a fix. https://github.com/dotnet/arcade/issues/1095
@@ -77,6 +77,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 try
                 {
+                    IRemote remote = remoteFactory.GetRemote(arcadeItem.RepoUri, _logger);
                     List<GitFile> engCommonFiles = await remote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit);
                     filesToUpdate.AddRange(engCommonFiles);
 
@@ -108,9 +109,9 @@ namespace Microsoft.DotNet.DarcLib
         ///     Gets the local dependencies
         /// </summary>
         /// <returns></returns>
-        public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string name = null)
+        public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string name = null, bool includePinned = true)
         {
-            return (await _fileManager.ParseVersionDetailsXmlAsync(_repo, null)).Where(
+            return (await _fileManager.ParseVersionDetailsXmlAsync(_repo, null, includePinned)).Where(
                 dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         }
 
@@ -127,9 +128,9 @@ namespace Microsoft.DotNet.DarcLib
         /// Gets local dependencies from a local repository
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<DependencyDetail> GetDependenciesFromFileContents(string fileContents)
+        public IEnumerable<DependencyDetail> GetDependenciesFromFileContents(string fileContents, bool includePinned = true)
         {
-            return _fileManager.ParseVersionDetailsXml(fileContents);
+            return _fileManager.ParseVersionDetailsXml(fileContents, includePinned);
         }
     }
 }

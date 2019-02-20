@@ -12,7 +12,7 @@ using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.Darc.Models.PopUps
 {
-    public class AddSubscriptionPopUp : EditorPopUp
+    public class AddSubscriptionPopUp : SubscriptionPopUp
     {
         private readonly ILogger _logger;
         private SubscriptionData _yamlData;
@@ -35,7 +35,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                                     IEnumerable<string> suggestedRepositories,
                                     IEnumerable<string> availableUpdateFrequencies,
                                     IEnumerable<string> availableMergePolicyHelp)
-            : base(path)
+            : base(path, logger)
         {
             _logger = logger;
             _yamlData = new SubscriptionData
@@ -85,50 +85,6 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             {
                 Contents.Add(new Line($"  {mergeHelp}", true));
             }
-        }
-
-        /// <summary>
-        /// Validate the merge policies specified in YAML
-        /// </summary>
-        /// <returns>True if the merge policies are valid, false otherwise.</returns>
-        private bool ValidateMergePolicies(List<MergePolicy> mergePolicies)
-        {
-            foreach (MergePolicy policy in mergePolicies)
-            {
-                switch (policy.Name)
-                {
-                    case "AllChecksSuccessful":
-                        // Should either have no properties, or one called "ignoreChecks"
-                        object ignoreChecksProperty = null;
-                        if (policy.Properties != null &&
-                            (policy.Properties.Count > 1 ||
-                            (policy.Properties.Count == 1 &&
-                            !policy.Properties.TryGetValue("ignoreChecks", out ignoreChecksProperty))))
-                        {
-                            _logger.LogError($"AllChecksSuccessful merge policy should have no properties, or an 'ignoreChecks' property. See help.");
-                            return false;
-                        }
-                        break;
-                    case "RequireChecks":
-                        // Should have 'checks' property.
-                        object checksProperty = null;
-                        if (policy.Properties != null &&
-                            (policy.Properties.Count != 1 ||
-                            !policy.Properties.TryGetValue("checks", out checksProperty)))
-                        {
-                            _logger.LogError($"RequireChecks merge policy should have a list of required checks specified with 'checks'. See help.");
-                            return false;
-                        }
-                        break;
-                    case "NoExtraCommits":
-                        break;
-                    default:
-                        _logger.LogError($"Unknown merge policy {policy.Name}");
-                        return false;
-                }
-            }
-
-            return true;
         }
 
         public override int ProcessContents(IList<Line> contents)

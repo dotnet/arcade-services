@@ -43,11 +43,12 @@ namespace Microsoft.DotNet.Darc.Operations
                 darcSettings.GitType = GitRepoType.GitHub;
                 LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
 
-                darcSettings.PersonalAccessToken = localSettings != null && !string.IsNullOrEmpty(localSettings.GitHubToken) ?
+                darcSettings.GitRepoPersonalAccessToken = localSettings != null && !string.IsNullOrEmpty(localSettings.GitHubToken) ?
                                                     localSettings.GitHubToken :
                                                     _options.GitHubPat;
 
-                Remote remote = new Remote(darcSettings, Logger);
+                IRemoteFactory remoteFactory = new RemoteFactory(_options);
+                IRemote barOnlyRemote = remoteFactory.GetBarOnlyRemote(Logger);
                 Local local = new Local(LocalHelpers.GetGitDir(Logger), Logger);
                 List<DependencyDetail> dependenciesToUpdate = new List<DependencyDetail>();
                 bool someUpToDate = false;
@@ -55,7 +56,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // First we need to figure out what to query for.  Load Version.Details.xml and
                 // find all repository uris, optionally restricted by the input dependency parameter.
-                IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync(_options.Name);
+                IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync(_options.Name, false);
 
                 // If the source repository was specified, filter away any local dependencies not from that
                 // source repository.
@@ -105,7 +106,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     }
 
                     // Start channel query.
-                    var channel = remote.GetChannelAsync(_options.Channel);
+                    var channel = barOnlyRemote.GetChannelAsync(_options.Channel);
 
                     // Limit the number of BAR queries by grabbing the repo URIs and making a hash set.
                     var repositoryUrisForQuery = dependencies.Select(dependency => dependency.RepoUri).ToHashSet();
@@ -120,7 +121,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     foreach (string repoToQuery in repositoryUrisForQuery)
                     {
-                        var latestBuild = remote.GetLatestBuildAsync(repoToQuery, channelInfo.Id.Value);
+                        var latestBuild = barOnlyRemote.GetLatestBuildAsync(repoToQuery, channelInfo.Id.Value);
                         getLatestBuildTaskDictionary.TryAdd(repoToQuery, latestBuild);
                     }
 
@@ -147,7 +148,6 @@ namespace Microsoft.DotNet.Darc.Operations
 
                         if (buildAsset.Version == dependency.Version &&
                             buildAsset.Name == dependency.Name &&
-                            (build.GitHubRepository == dependency.RepoUri || build.AzureDevOpsRepository == dependency.RepoUri) &&
                             build.Commit == dependency.Commit)
                         {
                             // No changes
@@ -158,17 +158,18 @@ namespace Microsoft.DotNet.Darc.Operations
                         DependencyDetail updatedDependency = new DependencyDetail
                         {
                             // TODO: Not needed, but not currently provided in Build info. Will be available on next rollout.
+                            // When this is ready, add "(from build '{build.BuildNumber}'" to line 163 in GitFileManager.cs
                             Branch = null,
                             Commit = build.Commit,
                             // If casing changes, ensure that the dependency name gets updated.
                             Name = buildAsset.Name,
-                            RepoUri = build.AzureDevOpsRepository,
+                            // Keep the same repo uri.  The original build lookup is based on the repo uri,
+                            // so no point in changing it.
+                            RepoUri = dependency.RepoUri,
                             Version = buildAsset.Version
                         };
 
-                        dependenciesToUpdate.Add(updatedDependency);
-
-                        // Print out what we are going to do.
+                        // Print out what we are going to do.	
                         Console.WriteLine($"Updating '{dependency.Name}': '{dependency.Version}' => '{updatedDependency.Version}'" +
                             $" (from build '{build.AzureDevOpsBuildNumber}' of '{build.AzureDevOpsRepository}')");
                         // Notify on casing changes.
@@ -204,7 +205,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
 
                 // Now call the local updater to run the update
-                await local.UpdateDependenciesAsync(dependenciesToUpdate, remote);
+                await local.UpdateDependenciesAsync(dependenciesToUpdate, remoteFactory);
 
                 Console.WriteLine(finalMessage);
 

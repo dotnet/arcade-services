@@ -2,10 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.ApiVersioning.Schemes;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -17,9 +19,11 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
     {
         public ConfigureSwaggerVersions(
             VersionedControllerProvider controllerProvider,
-            IOptions<ApiVersioningOptions> versioningOptionsAccessor)
+            IOptions<ApiVersioningOptions> versioningOptionsAccessor,
+            Action<string, Info> configureVersionInfo)
         {
             ControllerProvider = controllerProvider;
+            ConfigureVersionInfo = configureVersionInfo;
             VersioningOptions = versioningOptionsAccessor.Value;
         }
 
@@ -27,18 +31,20 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
 
         private VersionedControllerProvider ControllerProvider { get; }
 
+        private Action<string, Info> ConfigureVersionInfo { get; }
+
         public void Configure(SwaggerGenOptions options)
         {
             ConfigureSwaggerVersioningParameters(options, VersioningOptions.VersioningScheme);
             foreach (string version in ControllerProvider.Versions.Keys)
             {
-                options.SwaggerDoc(
-                    version,
-                    new Info
-                    {
-                        Version = version,
-                        Title = $"Version {version}"
-                    });
+                var info = new Info
+                {
+                    Version = version,
+                    Title = $"Version {version}",
+                };
+                ConfigureVersionInfo?.Invoke(version, info);
+                options.SwaggerDoc(version, info);
             }
 
             options.DocInclusionPredicate(IsVersion);
@@ -49,10 +55,10 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
                     string version = desc.ActionDescriptor.RouteValues["version"];
                     if (controller.EndsWith(version))
                     {
-                        return controller.Substring(0, controller.Length - version.Length - 1);
+                        controller = controller.Substring(0, controller.Length - version.Length - 1);
                     }
 
-                    return controller;
+                    return new[] {controller};
                 });
             options.OperationFilter<SwaggerModelBindingOperationFilter>();
             options.OperationFilter<SwaggerNamingOperationFilter>();

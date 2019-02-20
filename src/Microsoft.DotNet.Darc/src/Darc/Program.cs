@@ -63,11 +63,11 @@ namespace Microsoft.DotNet.Darc
                     typeof(GetDefaultChannelsCommandLineOptions),
                     typeof(GetDependenciesCommandLineOptions),
                     typeof(GetDependencyGraphCommandLineOptions),
-                    typeof(GetSubscriptionHistoryCommandLineOptions),
                     typeof(GetSubscriptionsCommandLineOptions),
-                    typeof(RetrySubscriptionUpdateCommandLineOptions),
+                    typeof(SubscriptionStatusCommandLineOptions),
                     typeof(TriggerSubscriptionsCommandLineOptions),
                     typeof(UpdateDependenciesCommandLineOptions),
+                    typeof(UpdateSubscriptionCommandLineOptions),
                     typeof(VerifyCommandLineOptions),
                 };
         }

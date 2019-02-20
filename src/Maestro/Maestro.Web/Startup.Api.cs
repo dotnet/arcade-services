@@ -24,7 +24,17 @@ namespace Maestro.Web
         private void ConfigureApiServices(IServiceCollection services)
         {
             services.AddApiVersioning(options => options.VersionByQuery("api-version"));
-            services.AddSwaggerApiVersioning();
+            services.AddSwaggerApiVersioning(
+                (version, info) =>
+                {
+                    info.Description =
+                        "The Web API enabling access to the Maestro++ service that supports the [.NET Core Dependency Flow infrastructure](https://github.com/dotnet/arcade/blob/master/Documentation/DependenciesFlowPlan.md).";
+                    info.Contact = new Contact
+                    {
+                        Name = ".NET Core Engineering",
+                        Email = "dnceng@microsoft.com",
+                    };
+                });
             services.Configure<MvcJsonOptions>(
                 options =>
                 {
@@ -41,6 +51,15 @@ namespace Maestro.Web
             services.AddSwaggerGen(
                 options =>
                 {
+                    // If you get an exception saying 'Identical schemaIds detected for types Maestro.Web.Api.<version>.Models.<something> and Maestro.Web.Api.<different-version>.Models.<something>'
+                    // Then you should NEVER add the following like the StackOverflow answers will suggest.
+                    // options.CustomSchemaIds(x => x.FullName);
+
+                    // This exception means that you have added something to one of the versions of the api that results in a conflict, because one version of the api cannot have 2 models for the same object
+                    // e.g. If you add a new api, or just a new model to an existing version (with new or modified properties), every method in the API that can return this type,
+                    // even nested (e.g. you changed Build, and Subscription contains a Build object), must be updated to return the new type.
+                    // It could also mean that you forgot to apply [ApiRemoved] to an inherited method that shouldn't be included in the new version
+
                     options.FilterOperations(
                         (op, ctx) =>
                         {
@@ -71,7 +90,7 @@ namespace Maestro.Web
                     string xmlPath;
                     if (HostingEnvironment.IsDevelopment())
                     {
-                        xmlPath = Path.Combine(HostingEnvironment.ContentRootPath, "bin/Debug/net461");
+                        xmlPath = Path.GetDirectoryName(typeof(Startup).Assembly.Location);
                     }
                     else
                     {

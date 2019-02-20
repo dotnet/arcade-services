@@ -30,9 +30,7 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             try
             {
-                DarcSettings darcSettings = LocalSettings.GetDarcSettings(_options, Logger);
-                // No need to set up a git type or PAT here.
-                Remote remote = new Remote(darcSettings, Logger);
+                IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
                 // Get the ID of the channel with the specified name.
                 Channel existingChannel = (await remote.GetChannelsAsync()).Where(channel => channel.Name.Equals(_options.Name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
