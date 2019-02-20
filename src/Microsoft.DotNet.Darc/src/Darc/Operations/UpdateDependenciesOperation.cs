@@ -128,12 +128,9 @@ namespace Microsoft.DotNet.Darc.Operations
                     // Now walk dependencies again and attempt the update
                     foreach (DependencyDetail dependency in dependencies)
                     {
-                        Build build;
-                        try
-                        {
-                            build = await getLatestBuildTaskDictionary[dependency.RepoUri];
-                        }
-                        catch (ApiErrorException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                        Build build = await getLatestBuildTaskDictionary[dependency.RepoUri];
+                        
+                        if (build == null)
                         {
                             Logger.LogTrace($"No build of '{dependency.RepoUri}' found on channel '{_options.Channel}'.");
                             continue;
