@@ -6,6 +6,7 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -91,6 +92,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         _options.RepoUri ?? LocalHelpers.GetGitDir(Logger),
                         _options.Version ?? LocalHelpers.GetGitCommit(Logger),
                         _options.IncludeToolset,
+                        !_options.SkipBuildLookup,
                         Logger);
                 }
                 else
@@ -167,6 +169,18 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 Console.WriteLine($"  - Repo:     {node.RepoUri}");
                 Console.WriteLine($"    Commit:   {node.Commit}");
+                if (node.ContributingBuilds.Any())
+                {
+                    Console.WriteLine($"    Builds:");
+                    foreach (var build in node.ContributingBuilds)
+                    {
+                        Console.WriteLine($"      - {build.AzureDevOpsBuildId.Value} ({build.DateProduced.Value.ToLocalTime()})");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"    Builds: []");
+                }
             }
             LogIncoherencies(graph);
         }
@@ -260,6 +274,18 @@ namespace Microsoft.DotNet.Darc.Operations
             // Log the repository information.
             Console.WriteLine($"{indent}- Repo:    {node.RepoUri}");
             Console.WriteLine($"{indent}  Commit:  {node.Commit}");
+            if (node.ContributingBuilds.Any())
+            {
+                Console.WriteLine($"{indent}  Builds:");
+                foreach (Build build in node.ContributingBuilds)
+                {
+                    Console.WriteLine($"{indent}    - {build.AzureDevOpsBuildId.Value} ({build.DateProduced.Value.ToLocalTime()})");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"    Builds: []");
+            }
             if (node.Dependencies.Any())
             {
                 Console.WriteLine($"{indent}  Dependencies:");

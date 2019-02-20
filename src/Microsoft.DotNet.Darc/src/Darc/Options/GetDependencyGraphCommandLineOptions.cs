@@ -39,6 +39,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("include-toolset", HelpText = "Include toolset dependencies.")]
         public bool IncludeToolset { get; set; }
 
+        [Option("skip-builds", HelpText = "Do not look up build information.")]
+        public bool SkipBuildLookup { get; set; }
+
         [Option("coherency", HelpText = "Report coherency information.")]
         public bool IncludeCoherency { get; set; }
 

@@ -18,17 +18,21 @@ namespace Microsoft.DotNet.DarcLib
         private static Dictionary<string, string> _remotesMapping = null;
 
         public DependencyGraph(
-            DependencyGraphNode root, 
+            DependencyGraphNode root,
             IEnumerable<DependencyDetail> uniqueDependencies,
             IEnumerable<DependencyDetail> incoherentDependencies,
             IEnumerable<DependencyGraphNode> allNodes,
-            IEnumerable<DependencyGraphNode> incoherentNodes)
+            IEnumerable<DependencyGraphNode> incoherentNodes,
+            IEnumerable<Build> contributingBuilds,
+            IEnumerable<DependencyDetail> dependenciesMissingBuilds)
         {
             Root = root;
             UniqueDependencies = uniqueDependencies;
             Nodes = allNodes;
             IncoherentNodes = incoherentNodes;
             IncoherentDependencies = incoherentDependencies;
+            ContributingBuilds = contributingBuilds;
+            DependenciesMissingBuilds = dependenciesMissingBuilds;
         }
 
         public DependencyGraphNode Root { get; set; }
@@ -57,6 +61,8 @@ namespace Microsoft.DotNet.DarcLib
         public IEnumerable<DependencyGraphNode> IncoherentNodes { get; set; }
 
         public IEnumerable<Build> ContributingBuilds { get; set; }
+
+        public IEnumerable<DependencyDetail> DependenciesMissingBuilds { get; set; }
 
         /// <summary>
         ///     Builds a dependency graph given a root repo and commit using remotes.
@@ -213,18 +219,36 @@ namespace Microsoft.DotNet.DarcLib
                 logger.LogInformation($"Starting build of graph from ({repoUri}@{commit})");
             }
 
-            IEnumerable<Build> rootNodeBuilds = null;
+            HashSet<Build> allContributingBuilds = null;
+            HashSet<DependencyDetail> dependenciesMissingBuilds = null;
+            HashSet<Build> rootNodeBuilds = null;
+            Dictionary<DependencyDetail, Build> dependencyCache =
+                new Dictionary<DependencyDetail, Build>(new DependencyDetailComparer());
+
             if (lookupBuilds)
             {
+                allContributingBuilds = new HashSet<Build>(new BuildComparer());
+                dependenciesMissingBuilds = new HashSet<DependencyDetail>(new DependencyDetailComparer());
+                rootNodeBuilds = new HashSet<Build>(new BuildComparer());
+
                 // Look up the dependency and get the creating build.
                 var barOnlyRemote = remoteFactory.GetBarOnlyRemote(logger);
-                rootNodeBuilds = await barOnlyRemote.GetBuildsAsync(repoUri, commit);
+                IEnumerable<Build> potentialRootNodeBuilds = await barOnlyRemote.GetBuildsAsync(repoUri, commit);
                 // Filter by those actually producing the root dependencies, if they were supplied
                 if (rootDependencies != null)
                 {
-                    rootNodeBuilds = rootNodeBuilds.Where(b =>
+                    potentialRootNodeBuilds = potentialRootNodeBuilds.Where(b =>
                         b.Assets.Any(a => rootDependencies.Any(d => a.Name.Equals(d.Name, StringComparison.OrdinalIgnoreCase) &&
                                           a.Version == d.Version)));
+                }
+                // It's entirely possible that the root has no builds (e.g. change just checked in).
+                // Don't record those. Instead, users of the graph should just look at the
+                // root node's contributing builds and determine whether it's empty or not.
+                foreach (Build build in potentialRootNodeBuilds)
+                {
+                    allContributingBuilds.Add(build);
+                    rootNodeBuilds.Add(build);
+                    AddAssetsToBuildCache(build, dependencyCache);
                 }
             }
 
@@ -326,26 +350,59 @@ namespace Microsoft.DotNet.DarcLib
                             incoherentDependenciesCache.Add(dependency.Name, dependency);
                         }
 
-                        // We may have visited this node before.  If so, add it as a child and avoid additional walks.
-                        if (nodeCache.TryGetValue($"{dependency.RepoUri}@{dependency.Commit}", out DependencyGraphNode existingNode))
-                        {
-                            logger.LogInformation($"Node {dependency.RepoUri}@{dependency.Commit} has been created, adding as child");
-                            node.AddChild(existingNode, dependency);
-                            continue;
-                        }
-
-                        IEnumerable<Build> contributingBuilds = null;
+                        HashSet<Build> nodeContributingBuilds = null;
                         if (lookupBuilds)
                         {
-                            // Look up the dependency and get the creating build.
-                            var barOnlyRemote = remoteFactory.GetBarOnlyRemote(logger);
-                            contributingBuilds = await barOnlyRemote.GetBuildsAsync(dependency.RepoUri, dependency.Commit);
-                            // Filter by those actually producing the dependency. Most of the time this won't
-                            // actually result in a different set of contributing builds, but should avoid any subtle bugs where
-                            // there might be overlap between repos.
-                            contributingBuilds = contributingBuilds.Where(b => 
-                                b.Assets.Any(a => a.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase) &&
-                                                  a.Version == dependency.Version));
+                            nodeContributingBuilds = new HashSet<Build>(new BuildComparer());
+                            // Look up dependency in cache first
+                            if (dependencyCache.TryGetValue(dependency, out Build existingBuild))
+                            {
+                                nodeContributingBuilds.Add(existingBuild);
+                                allContributingBuilds.Add(existingBuild);
+                            }
+                            else
+                            {
+                                // Look up the dependency and get the creating build.
+                                var barOnlyRemote = remoteFactory.GetBarOnlyRemote(logger);
+                                var potentiallyContributingBuilds = await barOnlyRemote.GetBuildsAsync(dependency.RepoUri, dependency.Commit);
+                                // Filter by those actually producing the dependency. Most of the time this won't
+                                // actually result in a different set of contributing builds, but should avoid any subtle bugs where
+                                // there might be overlap between repos, or cases where there were multiple builds at the same sha.
+                                potentiallyContributingBuilds = potentiallyContributingBuilds.Where(b =>
+                                    b.Assets.Any(a => a.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase) &&
+                                                      a.Version == dependency.Version));
+                                if (!potentiallyContributingBuilds.Any())
+                                {
+                                    // Couldn't find a build that produced the dependency.
+                                    dependenciesMissingBuilds.Add(dependency);
+                                }
+                                else
+                                {
+                                    foreach (Build build in potentiallyContributingBuilds)
+                                    {
+                                        allContributingBuilds.Add(build);
+                                        nodeContributingBuilds.Add(build);
+                                        AddAssetsToBuildCache(build, dependencyCache);
+                                    }
+                                }
+
+                            }
+                        }
+
+                        // We may have visited this node before.  If so, add it as a child and avoid additional walks.
+                        // Update the list of contributing builds.
+                        if (nodeCache.TryGetValue($"{dependency.RepoUri}@{dependency.Commit}", out DependencyGraphNode existingNode))
+                        {
+                            if (lookupBuilds)
+                            {
+                                foreach (Build build in nodeContributingBuilds)
+                                {
+                                    existingNode.ContributingBuilds.Add(build);
+                                }
+                            }
+                            logger.LogInformation($"Node {dependency.RepoUri}@{dependency.Commit} has already been created, adding as child");
+                            node.AddChild(existingNode, dependency);
+                            continue;
                         }
 
                         // Otherwise, create a new node for this dependency.
@@ -354,7 +411,7 @@ namespace Microsoft.DotNet.DarcLib
                             dependency.Commit,
                             null,
                             node.VisitedNodes,
-                            contributingBuilds);
+                            nodeContributingBuilds);
                         // Cache the dependency and add it to the visitation stack.
                         nodeCache.Add($"{dependency.RepoUri}@{dependency.Commit}", newNode);
                         nodesToVisit.Push(newNode);
@@ -376,7 +433,28 @@ namespace Microsoft.DotNet.DarcLib
                 }
             }
 
-            return new DependencyGraph(rootGraphNode, uniqueDependencyDetails, incoherentDependencies, nodeCache.Values, incoherentNodes);
+            return new DependencyGraph(rootGraphNode,
+                                       uniqueDependencyDetails,
+                                       incoherentDependencies,
+                                       nodeCache.Values,
+                                       incoherentNodes,
+                                       allContributingBuilds,
+                                       dependenciesMissingBuilds);
+        }
+
+        private static void AddAssetsToBuildCache(Build build, Dictionary<DependencyDetail, Build> dependencyCache)
+        {
+            foreach (Asset buildAsset in build.Assets)
+            {
+                DependencyDetail newDependency =
+                    new DependencyDetail() { Name = buildAsset.Name, Version = buildAsset.Version, Commit = build.Commit };
+                // Possible that the same asset could be listed multiple times in a build, so avoid accidentally adding
+                // things multiple times
+                if (!dependencyCache.ContainsKey(newDependency))
+                {
+                    dependencyCache.Add(newDependency, build);
+                }
+            }
         }
 
         private static string GetRepoPath(

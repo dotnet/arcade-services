@@ -204,6 +204,44 @@ namespace Microsoft.DotNet.DarcLib
         Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri, string branchOrCommit, string name = null);
 
         /// <summary>
+        ///     Given a repo and branch, determine what updates are required to satisfy
+        ///     coherency constraints.
+        /// </summary>
+        /// <param name="repoUri">Repository uri to check for updates in.</param>
+        /// <param name="branch">Branch to check for updates in.</param>
+        /// <param name="remoteFactory">Remote factory use in walking the repo dependency graph.</param>
+        /// <returns>Map of existing dependencies to dependencies with updates.</returns>
+        Task<Dictionary<DependencyDetail, DependencyDetail>> GetRequiredCoherencyUpdatesAsync(
+            string repoUri,
+            string branch,
+            IRemoteFactory remoteFactory);
+
+        /// <summary>
+        ///     Get updates required by coherency constraints.
+        /// </summary>
+        /// <param name="dependencies">Current set of dependencies.</param>
+        /// <param name="remoteFactory">Remote factory for remote queries.</param>
+        /// <returns>Dependencies with updates.</returns>
+        Task<Dictionary<DependencyDetail, DependencyDetail>> GetRequiredCoherencyUpdatesAsync(
+            IEnumerable<DependencyDetail> dependencies,
+            IRemoteFactory remoteFactory);
+
+        /// <summary>
+        ///     Given a current set of dependencies, determine what non-coherency updates
+        ///     are required.
+        /// </summary>
+        /// <param name="repoUri">Repository uri.</param>
+        /// <param name="sourceCommit">Commit that <paramref name="assets"/> came from.</param>
+        /// <param name="assets">Assets to apply</param>
+        /// <param name="dependencies">Current set of dependencies.</param>
+        /// <returns></returns>
+        Dictionary<DependencyDetail, DependencyDetail> GetRequiredNonCoherencyUpdatesAsync(
+            string repoUri,
+            string sourceCommit,
+            IEnumerable<AssetData> assets,
+            IEnumerable<DependencyDetail> dependencies);
+
+        /// <summary>
         ///     Get the list of dependencies that need updates given an input set of asset data.
         /// </summary>
         /// <param name="repoUri">Repository that may need updates.</param>
@@ -211,7 +249,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="sourceCommit">Source commit the assets came from.</param>
         /// <param name="assets">Set of updated assets.</param>
         /// <returns>List of dependencies in <paramref name="repoUri"/> that need updates.</returns>
-        Task<List<DependencyDetail>> GetRequiredUpdatesAsync(
+        Task<Dictionary<DependencyDetail, DependencyDetail>> GetRequiredNonCoherencyUpdatesAsync(
             string repoUri,
             string branch,
             string sourceCommit,

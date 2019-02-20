@@ -270,46 +270,52 @@ namespace Microsoft.DotNet.DarcLib
 
             _logger.LogInformation($"Merging pull request '{pullRequestUrl}' succeeded!");
         }
-
+        
         /// <summary>
-        ///     Determine what dependencies need to be updated given an input set of assets.
+        ///     Get updates required by coherency constraints.
         /// </summary>
-        /// <param name="sourceCommit">Commit the assets come from.</param>
-        /// <param name="assets">Assets as inputs for the update.</param>
-        /// <param name="dependencies">Current set of the dependencies.</param>
-        /// <returns>List of dependencies to update.</returns>
-        public async Task<List<DependencyDetail>> GetRequiredUpdatesAsync(
-            string repoUri,
-            string sourceCommit,
-            IEnumerable<AssetData> assets,
+        /// <param name="dependencies">Current set of dependencies.</param>
+        /// <param name="remoteFactory">Remote factory for remote queries.</param>
+        /// <returns>Dependencies with updates.</returns>
+        public async Task<Dictionary<DependencyDetail, DependencyDetail>> GetRequiredCoherencyUpdatesAsync(
             IEnumerable<DependencyDetail> dependencies,
             IRemoteFactory remoteFactory)
         {
-            List<DependencyDetail> toUpdate = new List<DependencyDetail>();
-            IEnumerable<DependencyDetail> dependenciesWithCoherentParents =
-                    dependencies.Where(d => d.CoherentParentDependencyName != null);
-
-            // First make a pass over the dependencies with no coherency links.
-            // That will give us enough data to do the coherency update in a second pass.
-            foreach (AssetData asset in assets)
+            Dictionary<DependencyDetail, DependencyDetail> toUpdate = new Dictionary<DependencyDetail, DependencyDetail>();
+            // Leaves of the coherent dependency trees.  Basically 
+            // this means that the coherent dependency is not
+            // pointed to by another dependency, or is pointed to by only
+            // pinned dependencies.
+            // Examples:
+            //  - A->B(pinned)->C->D(pinned)
+            //      - C
+            //  - A->B->C->D
+            //      - D
+            //  - A->B
+            //      - B
+            //  - A->B->C(pinned)->D
+            //      - D
+            //      - B
+            //  - A->B(pinned)->C(pinned)
+            //      - None
+            IEnumerable<DependencyDetail> leavesOfCoherencyTrees =
+                    dependencies.Where(d => !string.IsNullOrEmpty(d.CoherentParentDependencyName));
+            leavesOfCoherencyTrees = leavesOfCoherencyTrees.Where(potentialLeaf =>
             {
-                DependencyDetail matchingDependenciesByName =
-                    dependencies.FirstOrDefault(d => d.Name.Equals(asset.Name, StringComparison.Ordinal) &&
-                                                     string.IsNullOrEmpty(d.CoherentParentDependencyName));
-
-                if (!matchingDependenciesByName.Any())
+                bool pointedToByNonPinnedDependencies = dependencies.Any(otherLeaf =>
                 {
-                    continue;
-                }
+                    return !string.IsNullOrEmpty(otherLeaf.CoherentParentDependencyName) && 
+                            otherLeaf.CoherentParentDependencyName.Equals(potentialLeaf.Name, StringComparison.OrdinalIgnoreCase) &&
+                            !otherLeaf.Pinned;
+                });
+                return !pointedToByNonPinnedDependencies;
+            });
 
-                DependencyDetail newDependency = new DependencyDetail(matchingDependenciesByName.FirstOrDefault());
-                newDependency.Commit = sourceCommit;
-                newDependency.RepoUri = repoUri;
-                newDependency.Version = asset.Version;
-                newDependency.Name = asset.Name;
-                toUpdate.Add(newDependency);
+            if (!leavesOfCoherencyTrees.Any())
+            {
+                // Nothing to do.
+                return toUpdate;
             }
-
 
             // Now make a walk over coherent dependencies. Note that coherent dependencies could make
             // a chain (A->B->C). In all cases we need to walk to the head of the chain, keeping track
@@ -317,7 +323,7 @@ namespace Microsoft.DotNet.DarcLib
             // just those that match the incoming AssetData and aligning all of these based on the coherency data.
             Dictionary<string, DependencyGraphNode> nodeCache = new Dictionary<string, DependencyGraphNode>();
             HashSet<DependencyDetail> visited = new HashSet<DependencyDetail>();
-            foreach (DependencyDetail dependency in dependenciesWithCoherentParents)
+            foreach (DependencyDetail dependency in leavesOfCoherencyTrees)
             {
                 // If the dependency was already updated, then skip it (could have been part of a larger
                 // dependency chain)
@@ -326,14 +332,30 @@ namespace Microsoft.DotNet.DarcLib
                     continue;
                 }
 
-                // Walk to head of chain, keeping track of elements along the way.
+                // Walk to head of dependency tree, keeping track of elements along the way.
+                // If we hit a pinned dependency in the walk, that means we can't move
+                // the dependency and therefore it is effectively the "head" of the subtree.
+                // We will still visit all the elements in the chain eventually in this algorithm:
+                // Consider A->B(pinned)->C(pinned)->D.
                 List<DependencyDetail> updateList = new List<DependencyDetail>();
                 DependencyDetail currentDependency = dependency;
-                while (!string.IsNullOrEmpty(currentDependency.CoherentParentDependencyName))
+                while (!string.IsNullOrEmpty(currentDependency.CoherentParentDependencyName) && !currentDependency.Pinned)
                 {
                     updateList.Add(dependency);
-                    currentDependency = dependencies.FirstOrDefault(d =>
+                    DependencyDetail parentCoherentDependency = dependencies.FirstOrDefault(d =>
                         d.Name.Equals(currentDependency.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
+                    // If the coherent dependency is not found, this is non-valid.
+                    if (parentCoherentDependency == null)
+                    {
+                        throw new DarcException($"Dependency {currentDependency.Name} has non-existent parent " +
+                            $"dependency {currentDependency.CoherentParentDependencyName}");
+                    }
+                    currentDependency = parentCoherentDependency;
+                }
+
+                if (!updateList.Any())
+                {
+                    throw new DarcException($"Unexpected error while determining coherent dependencies to update.");
                 }
 
                 DependencyGraphNode rootNode = null;
@@ -344,7 +366,7 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     DependencyGraph dependencyGraph =
                         await DependencyGraph.BuildRemoteDependencyGraphAsync(remoteFactory,
-                                                                              new List<DependencyDetail>() { currentDependency },
+                                                                              null,
                                                                               currentDependency.RepoUri,
                                                                               currentDependency.Commit,
                                                                               true, /* include toolset */
@@ -361,19 +383,140 @@ namespace Microsoft.DotNet.DarcLib
                     rootNode = dependencyGraph.Root;
                 }
 
-                // Now that we have the root node, walk from the root through the graph
-                // and identify builds that could create the dependencies in the input list.
-                // Note that we can't specifically say that it will be nodes in the graph that have
-                // matching repo uris, because repo uris may change. However, that doesn't usually happen,
-                // so we can bias the lookup towards nodes with matching repo uris first,
-                // then go from there.
+                // Now do the lookup to find the element in the tree for each item in the update list
+                foreach (DependencyDetail dependencyInUpdateChain in updateList)
+                {
+                    (Asset coherentAsset, Build buildForAsset) =
+                        FindAssetInBuildTree(dependencyInUpdateChain.Name, rootNode);
 
+                    if (coherentAsset == null)
+                    {
+                        // This is an invalid state. We can't satisfy the
+                        // constraints so they should either be removed or pinned.
+                        throw new DarcException($"Unable to update {dependencyInUpdateChain.Name} to have coherency with " +
+                            $"parent {dependencyInUpdateChain.CoherentParentDependencyName}. Either remove the coherency attribute or mark as pinned.");
+                    }
+
+                    DependencyDetail updatedDependency = new DependencyDetail(dependencyInUpdateChain);
+                    updatedDependency.Name = coherentAsset.Name;
+                    updatedDependency.Version = coherentAsset.Version;
+                    updatedDependency.RepoUri = buildForAsset.AzureDevOpsRepository ?? buildForAsset.GitHubRepository;
+                    updatedDependency.Commit = buildForAsset.Commit;
+
+                    toUpdate.Add(dependencyInUpdateChain, updatedDependency);
+                    visited.Add(dependencyInUpdateChain);
+                }
             }
 
             return toUpdate;
         }
 
-        public async Task<List<DependencyDetail>> GetRequiredUpdatesAsync(
+        /// <summary>
+        ///     Given an asset name, find the asset in the dependency tree.
+        ///     Returns the asset with the shortest path to the root node.
+        /// </summary>
+        /// <param name="assetName">Name of asset.</param>
+        /// <param name="currentNode">Dependency graph node to find the asset in.</param>
+        /// <returns>(Asset, Build), or (null, null) if not found.</returns>
+        private (Asset, Build, int) FindAssetInBuildTree(string assetName, DependencyGraphNode currentNode, int currentDepth)
+        {
+            foreach (Build build in currentNode.ContributingBuilds)
+            {
+                Asset matchingAsset = build.Assets.FirstOrDefault(a => a.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase));
+                if (matchingAsset != null)
+                {
+                    return (matchingAsset, build, currentDepth);
+                }
+            }
+
+            // Walk child nodes
+            Asset shallowestAsset = null;
+            Build shallowestBuild = null;
+            int shallowestBuildDepth = int.MaxValue;
+            foreach (DependencyGraphNode childNode in currentNode.Children)
+            {
+                (Asset asset, Build build, int buildDepth) = FindAssetInBuildTree(assetName, childNode, currentDepth++);
+                if (asset != null)
+                {
+                    if (buildDepth < shallowestBuildDepth)
+                    {
+                        shallowestAsset = asset;
+                        shallowestBuild = build;
+                        shallowestBuildDepth = buildDepth;
+                    }
+                }
+            }
+            return (shallowestAsset, shallowestBuild, shallowestBuildDepth);
+        }
+
+        /// <summary>
+        ///     Given an asset name, find the asset in the dependency tree.
+        ///     Returns the asset with the shortest path to the root node.
+        /// </summary>
+        /// <param name="assetName">Name of asset.</param>
+        /// <param name="currentNode">Dependency graph node to find the asset in.</param>
+        /// <returns>(Asset, Build), or (null, null) if not found.</returns>
+        private (Asset, Build) FindAssetInBuildTree(string assetName, DependencyGraphNode currentNode)
+        {
+            (Asset asset, Build build, int depth) = FindAssetInBuildTree(assetName, currentNode, 0);
+            return (asset, build);
+        }
+
+        /// <summary>
+        ///     Determine what dependencies need to be updated given an input set of assets.
+        /// </summary>
+        /// <param name="sourceCommit">Commit the assets come from.</param>
+        /// <param name="assets">Assets as inputs for the update.</param>
+        /// <param name="dependencies">Current set of the dependencies.</param>
+        /// <returns>Map of existing dependency->updated dependency</returns>
+        public Dictionary<DependencyDetail, DependencyDetail> GetRequiredNonCoherencyUpdatesAsync(
+            string repoUri,
+            string sourceCommit,
+            IEnumerable<AssetData> assets,
+            IEnumerable<DependencyDetail> dependencies)
+        {
+            Dictionary<DependencyDetail, DependencyDetail> toUpdate = new Dictionary<DependencyDetail, DependencyDetail>();
+
+            // Walk the assets, finding the dependencies that don't have coherency markers.
+            // those must be updated in a second pass.
+            foreach (AssetData asset in assets)
+            {
+                DependencyDetail matchingDependencyByName =
+                    dependencies.FirstOrDefault(d => d.Name.Equals(asset.Name, StringComparison.Ordinal) &&
+                                                     string.IsNullOrEmpty(d.CoherentParentDependencyName));
+
+                if (matchingDependencyByName == null)
+                {
+                    continue;
+                }
+
+                // If the dependency is pinned, don't touch it.
+                if (matchingDependencyByName.Pinned)
+                {
+                    continue;
+                }
+
+                DependencyDetail newDependency = new DependencyDetail(matchingDependencyByName);
+                newDependency.Commit = sourceCommit;
+                newDependency.RepoUri = repoUri;
+                newDependency.Version = asset.Version;
+                newDependency.Name = asset.Name;
+                toUpdate.Add(matchingDependencyByName, newDependency);
+            }
+
+            return toUpdate;
+        }
+
+        /// <summary>
+        ///     Determine what dependencies need to be updated given an input repo uri, branch
+        ///     and set of produced assets.
+        /// </summary>
+        /// <param name="repoUri">Repository</param>
+        /// <param name="branch">Branch</param>
+        /// <param name="sourceCommit">Commit the assets come from.</param>
+        /// <param name="assets">Assets as inputs for the update.</param>
+        /// <returns>Map of existing dependency->updated dependency</returns>
+        public async Task<Dictionary<DependencyDetail, DependencyDetail>> GetRequiredNonCoherencyUpdatesAsync(
             string repoUri,
             string branch,
             string sourceCommit,
@@ -382,29 +525,30 @@ namespace Microsoft.DotNet.DarcLib
             CheckForValidGitClient();
             _logger.LogInformation($"Check if repo '{repoUri}' and branch '{branch}' needs updates...");
 
-            var toUpdate = new List<DependencyDetail>();
             IEnumerable<DependencyDetail> dependencyDetails =
                 await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branch);
-            Dictionary<string, DependencyDetail> dependencies = dependencyDetails.ToDictionary(d => d.Name);
+            return GetRequiredNonCoherencyUpdatesAsync(repoUri, sourceCommit, assets, dependencyDetails);
+        }
 
-            foreach (AssetData asset in assets)
-            {
-                if (!dependencies.TryGetValue(asset.Name, out DependencyDetail dependency))
+        /// <summary>
+        ///     Given a repo and branch, determine what updates are required to satisfy
+        ///     coherency constraints.
+        /// </summary>
+        /// <param name="repoUri">Repository uri to check for updates in.</param>
+        /// <param name="branch">Branch to check for updates in.</param>
+        /// <param name="remoteFactory">Remote factory use in walking the repo dependency graph.</param>
+        /// <returns>List of dependencies requiring updates (with updated info).</returns>
+        public async Task<Dictionary<DependencyDetail, DependencyDetail>> GetRequiredCoherencyUpdatesAsync(
+            string repoUri,
+            string branch,
+            IRemoteFactory remoteFactory)
+        {
+            CheckForValidGitClient();
+            _logger.LogInformation($"Determining required coherency updates in {repoUri}@{branch}...");
 
-                {
-                    _logger.LogInformation($"No dependency found for updated asset '{asset.Name}'");
-                    continue;
-                }
-
-                dependency.Version = asset.Version;
-                dependency.Commit = sourceCommit;
-                toUpdate.Add(dependency);
-            }
-
-            _logger.LogInformation(
-                $"Getting dependencies which need to be updated in repo '{repoUri}' and branch '{branch}' succeeded!");
-
-            return toUpdate;
+            IEnumerable<DependencyDetail> currentDependencies =
+                await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branch);
+            return await GetRequiredCoherencyUpdatesAsync(currentDependencies, remoteFactory);
         }
 
         public async Task CommitUpdatesAsync(

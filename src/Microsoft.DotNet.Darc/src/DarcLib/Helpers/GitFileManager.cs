@@ -804,7 +804,7 @@ namespace Microsoft.DotNet.DarcLib
                                     RepoUri = dependency.SelectSingleNode("Uri").InnerText,
                                     Commit = dependency.SelectSingleNode("Sha").InnerText,
                                     Version = dependency.Attributes["Version"].Value,
-                                    CoherentParentDependency = dependency.Attributes["CoherentParentDependency"].Value,
+                                    CoherentParentDependencyName = dependency.Attributes["CoherentParentDependency"]?.Value,
                                     Pinned = isPinned,
                                     Type = type
                                 };

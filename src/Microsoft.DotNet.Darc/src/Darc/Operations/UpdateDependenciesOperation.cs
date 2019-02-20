@@ -56,25 +56,27 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // First we need to figure out what to query for.  Load Version.Details.xml and
                 // find all repository uris, optionally restricted by the input dependency parameter.
-                IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync(_options.Name, false);
+                IEnumerable<DependencyDetail> localDependencies = await local.GetDependenciesAsync(_options.Name, false);
 
                 // If the source repository was specified, filter away any local dependencies not from that
                 // source repository.
                 if (!string.IsNullOrEmpty(_options.SourceRepository))
                 {
-                    dependencies = dependencies.Where(
+                    localDependencies = localDependencies.Where(
                         dependency => dependency.RepoUri.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase));
                 }
 
-                if (!dependencies.Any())
+                if (!localDependencies.Any())
                 {
                     Console.WriteLine("Found no dependencies to update.");
                     return Constants.ErrorCode;
                 }
 
+                List<DependencyDetail> currentDependencies = localDependencies.ToList();
+
                 if (!string.IsNullOrEmpty(_options.Name) && !string.IsNullOrEmpty(_options.Version))
                 {
-                    DependencyDetail dependency = dependencies.First();
+                    DependencyDetail dependency = currentDependencies.First();
                     dependency.Version = _options.Version;
                     dependenciesToUpdate.Add(dependency);
 
@@ -86,7 +88,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     try
                     {
-                        dependenciesToUpdate.AddRange(GetDependenciesFromPackagesFolder(_options.PackagesFolder, dependencies));
+                        dependenciesToUpdate.AddRange(GetDependenciesFromPackagesFolder(_options.PackagesFolder, currentDependencies));
                     }
                     catch (DarcException exc)
                     {
@@ -110,9 +112,10 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     // Limit the number of BAR queries by grabbing the repo URIs and making a hash set.
                     // We gather the latest build for any dependencies that aren't marked with coherent parent
-                    // dependencies.  For those with coherent parent dependencies we need to do a special set of queries.
-                    HashSet<string> repositoryUrisForQuery = dependencies.Where(dependency => dependency.CoherentParentDependencyName == null)
-                                                                         .Select(dependency => dependency.RepoUri).ToHashSet();
+                    // dependencies, as those will be updated based on additional queries.
+                    HashSet<string> repositoryUrisForQuery =
+                        currentDependencies.Where(dependency => string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
+                                           .Select(dependency => dependency.RepoUri).ToHashSet();
 
                     ConcurrentDictionary<string, Task<Build>> getLatestBuildTaskDictionary = new ConcurrentDictionary<string, Task<Build>>();
 
@@ -129,57 +132,61 @@ namespace Microsoft.DotNet.Darc.Operations
                         getLatestBuildTaskDictionary.TryAdd(repoToQuery, latestBuild);
                     }
 
-                    // Now walk dependencies again and attempt the update
-                    foreach (DependencyDetail dependency in dependencies)
+                    // For each build, first go through and determine the required updates,
+                    // updating the "live" dependency information as we go.
+                    // Then run a second pass where we update any assets based on coherency information.
+                    foreach (KeyValuePair<string, Task<Build>> buildKvPair in getLatestBuildTaskDictionary)
                     {
-                        Build build;
-                        try
+                        string repoUri = buildKvPair.Key;
+                        Build build = await buildKvPair.Value;
+                        if (build ==null)
                         {
-                            build = await getLatestBuildTaskDictionary[dependency.RepoUri];
-                        }
-                        catch (ApiErrorException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                        {
-                            Logger.LogTrace($"No build of '{dependency.RepoUri}' found on channel '{_options.Channel}'.");
+                            Logger.LogTrace($"No build of '{repoUri}' found on channel '{_options.Channel}'.");
                             continue;
                         }
+                        IEnumerable<AssetData> assetData = build.Assets.Select(
+                            a => new AssetData
+                            {
+                                Name = a.Name,
+                                Version = a.Version
+                            });
+                        // Now determine what needs to be updated.
+                        Dictionary<DependencyDetail, DependencyDetail> updates =
+                            barOnlyRemote.GetRequiredNonCoherencyUpdatesAsync(repoUri, build.Commit, assetData, currentDependencies);
 
-                        /*Asset buildAsset = build.Assets.Where(asset => asset.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
-                        if (buildAsset == null)
+                        foreach (KeyValuePair<DependencyDetail, DependencyDetail> updatedDependencyPair in updates)
                         {
-                            Logger.LogTrace($"Dependency '{dependency.Name}' not found in latest build of '{dependency.RepoUri}' on '{_options.Channel}', skipping.");
-                            continue;
+                            DependencyDetail before = updatedDependencyPair.Key;
+                            DependencyDetail after = updatedDependencyPair.Value;
+                            // Print out what we are going to do.	
+                            Console.WriteLine($"Updating '{before.Name}': '{before.Version}' => '{after.Version}'" +
+                                $" (from build '{build.AzureDevOpsBuildNumber}' of '{repoUri}')");
+
+                            // Final list of dependencies to update
+                            dependenciesToUpdate.Add(after);
+                            // Replace in the current dependencies list so the correct data is fed into the coherency pass.
+                            currentDependencies.Remove(before);
+                            currentDependencies.Add(after);
                         }
+                    }
+                    
+                    // Now that we have the updated dependencies, update our original dependency list
+                    // with these, then run a coherency update.
+                    Dictionary<DependencyDetail, DependencyDetail> coherencyUpdates =
+                        await barOnlyRemote.GetRequiredCoherencyUpdatesAsync(currentDependencies, remoteFactory);
 
-                        if (buildAsset.Version == dependency.Version &&
-                            buildAsset.Name == dependency.Name &&
-                            build.Commit == dependency.Commit)
-                        {
-                            // No changes
-                            someUpToDate = true;
-                            continue;
-                        }
-
-                        DependencyDetail updatedDependency = new DependencyDetail
-                        {
-                            Commit = build.Commit,
-                            // If casing changes, ensure that the dependency name gets updated.
-                            Name = buildAsset.Name,
-                            // Keep the same repo uri.  The original build lookup is based on the repo uri,
-                            // so no point in changing it.
-                            RepoUri = dependency.RepoUri,
-                            Version = buildAsset.Version
-                        };
-
+                    foreach (KeyValuePair<DependencyDetail, DependencyDetail> updatedDependencyPair in coherencyUpdates)
+                    {
+                        DependencyDetail before = updatedDependencyPair.Key;
+                        DependencyDetail after = updatedDependencyPair.Value;
+                        DependencyDetail coherencyParent = currentDependencies.First(d =>
+                            d.Name.Equals(before.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
                         // Print out what we are going to do.	
-                        Console.WriteLine($"Updating '{dependency.Name}': '{dependency.Version}' => '{updatedDependency.Version}'" +
-                            $" (from build '{build.AzureDevOpsBuildNumber}' of '{build.AzureDevOpsRepository}')");
-                        // Notify on casing changes.
-                        if (buildAsset.Name != dependency.Name)
-                        {
-                            Console.WriteLine($"  Dependency name normalized to '{updatedDependency.Name}'");
-                        }
+                        Console.WriteLine($"Updating '{before.Name}': '{before.Version}' => '{after.Version}' " +
+                            $"to ensure coherency with {before.CoherentParentDependencyName}@{coherencyParent.Version}");
 
-                        dependenciesToUpdate.Add(updatedDependency);
+                        // Final list of dependencies to update
+                        dependenciesToUpdate.Add(after);
                     }
                 }
 
@@ -205,7 +212,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     return Constants.SuccessCode;
                 }
 
-                // Now call the local updater to run the update
+                // Now call the local updater to run the update.
                 await local.UpdateDependenciesAsync(dependenciesToUpdate, remoteFactory);
 
                 Console.WriteLine(finalMessage);

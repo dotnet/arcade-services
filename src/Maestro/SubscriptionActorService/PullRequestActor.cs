@@ -766,7 +766,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                         Name = a.Name,
                         Version = a.Version
                     });
-                List<DependencyDetail> dependenciesToUpdate = await darc.GetRequiredUpdatesAsync(
+                Dictionary<DependencyDetail, DependencyDetail> dependenciesToUpdate = await darc.GetRequiredNonCoherencyUpdatesAsync(
                     targetRepository,
                     branch,
                     update.SourceSha,
@@ -787,7 +787,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     continue;
                 }
 
-                requiredUpdates.Add((update, dependenciesToUpdate));
+                requiredUpdates.Add((update, dependenciesToUpdate.Values.ToList()));
             }
 
             return requiredUpdates;

@@ -79,7 +79,7 @@ namespace SubscriptionActorService.Tests
         {
             var assets = new List<IEnumerable<AssetData>>();
             DarcRemotes[(TargetRepo, InstallationId)]
-                .Verify(r => r.GetRequiredUpdatesAsync(TargetRepo, TargetBranch, NewCommit, Capture.In(assets)));
+                .Verify(r => r.GetRequiredNonCoherencyUpdatesAsync(TargetRepo, TargetBranch, NewCommit, Capture.In(assets)));
             assets.Should()
                 .BeEquivalentTo(
                     new List<List<AssetData>>
@@ -178,7 +178,7 @@ namespace SubscriptionActorService.Tests
         {
             DarcRemotes.GetOrAddValue((TargetRepo, InstallationId), CreateMock<IRemote>)
                 .Setup(
-                    r => r.GetRequiredUpdatesAsync(
+                    r => r.GetRequiredNonCoherencyUpdatesAsync(
                         TargetRepo,
                         TargetBranch,
                         NewCommit,

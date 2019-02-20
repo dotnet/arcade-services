@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.DarcLib
         public DependencyGraphNode(string repoUri,
                                    string commit,
                                    IEnumerable<DependencyDetail> dependencies,
-                                   IEnumerable<Build> contributingBuilds)
+                                   HashSet<Build> contributingBuilds)
             : this(
                   repoUri,
                   commit,
@@ -29,7 +29,7 @@ namespace Microsoft.DotNet.DarcLib
             string commit,
             IEnumerable<DependencyDetail> dependencies,
             HashSet<string> visitedNodes,
-            IEnumerable<Build> contributingBuilds)
+            HashSet<Build> contributingBuilds)
         {
             RepoUri = repoUri;
             Commit = commit;
@@ -52,7 +52,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         public readonly string Commit;
 
-        public IEnumerable<Build> ContributingBuilds { get; set; }
+        public HashSet<Build> ContributingBuilds { get; set; }
         /// <summary>
         ///     Dependencies of the node at RepoUri and Commit.
         /// </summary>
