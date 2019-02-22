@@ -418,7 +418,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         // Do some quick caching after this lookup.
                         foreach (Asset buildAsset in potentialBuild.Assets)
                         {
-                            DependencyDetail dependencyDetail = new DependencyDetail()
+                            DependencyDetail dependencyDetail = new DependencyDetail
                             {
                                 Name = buildAsset.Name,
                                 Version = buildAsset.Version,
@@ -428,9 +428,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                             if (!dependencyCache.ContainsKey(dependencyDetail))
                             {
-                                dependencyCache.Add(
-                                dependencyDetail,
-                                potentialBuild);
+                                dependencyCache.Add(dependencyDetail, potentialBuild);
                             }
                         }
 

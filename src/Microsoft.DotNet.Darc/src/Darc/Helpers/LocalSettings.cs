@@ -109,7 +109,7 @@ namespace Microsoft.DotNet.Darc.Helpers
                             darcSettings.GitType = GitRepoType.AzureDevOps;
                             darcSettings.GitRepoPersonalAccessToken = 
                                 localSettings != null ? 
-                                string.IsNullOrEmpty(localSettings.AzureDevOpsToken) ? options.AzureDevOpsPat : localSettings.AzureDevOpsToken : 
+                                (string.IsNullOrEmpty(localSettings.AzureDevOpsToken) ? options.AzureDevOpsPat : localSettings.AzureDevOpsToken) : 
                                 options.AzureDevOpsPat;
                         }
                     }
