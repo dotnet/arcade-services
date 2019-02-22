@@ -107,7 +107,10 @@ namespace Microsoft.DotNet.Darc.Helpers
                         else if (parsedUri.Host == "dev.azure.com" || parsedUri.Host.EndsWith("visualstudio.com"))
                         {
                             darcSettings.GitType = GitRepoType.AzureDevOps;
-                            darcSettings.GitRepoPersonalAccessToken = localSettings != null ? localSettings.AzureDevOpsToken : options.AzureDevOpsPat;
+                            darcSettings.GitRepoPersonalAccessToken = 
+                                localSettings != null ? 
+                                string.IsNullOrEmpty(localSettings.AzureDevOpsToken) ? options.AzureDevOpsPat : localSettings.AzureDevOpsToken : 
+                                options.AzureDevOpsPat;
                         }
                     }
 
