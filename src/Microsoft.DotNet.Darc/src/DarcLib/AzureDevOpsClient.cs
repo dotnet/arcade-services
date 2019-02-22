@@ -171,8 +171,13 @@ namespace Microsoft.DotNet.DarcLib
 
             string body = JsonConvert.SerializeObject(azureDevOpsRefs, _serializerSettings);
 
-            await this.ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Post,
-                accountName, projectName, $"_apis/git/repositories/{repoName}/refs", _logger, body);
+            await this.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Post,
+                accountName, 
+                projectName, 
+                $"_apis/git/repositories/{repoName}/refs", 
+                _logger, 
+                body);
         }
 
         public async Task DeleteBranchAsync(string repoUri, string branch)
@@ -181,12 +186,19 @@ namespace Microsoft.DotNet.DarcLib
 
             string latestSha = await GetLastCommitShaAsync(accountName, projectName, repoName, branch);
 
+            var azureDevOpsRefs = new List<AzureDevOpsRef>();
             AzureDevOpsRef azureDevOpsRef = new AzureDevOpsRef($"refs/heads/{branch}", BaseObjectId, latestSha);
+            azureDevOpsRefs.Add(azureDevOpsRef);
 
-            string body = JsonConvert.SerializeObject(azureDevOpsRef, _serializerSettings);
+            string body = JsonConvert.SerializeObject(azureDevOpsRefs, _serializerSettings);
 
-            await this.ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Post,
-                accountName, projectName, $"_apis/git/repositories/{repoName}/refs", _logger, body);
+            await this.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Post,
+                accountName, 
+                projectName, 
+                $"_apis/git/repositories/{repoName}/refs", 
+                _logger, 
+                body);
         }
 
         /// <summary>
@@ -494,7 +506,7 @@ namespace Microsoft.DotNet.DarcLib
                 HttpMethod.Get,
                 accountName,
                 projectName,
-                $"repositories/{repoName}/items?scopePath={path}&version={commit}&includeContent=true&versionType=commit&recursionLevel=full",
+                $"_apis/git/repositories/{repoName}/items?scopePath={path}&version={commit}&includeContent=true&versionType=commit&recursionLevel=full",
                 _logger);
             List<AzureDevOpsItem> items = JsonConvert.DeserializeObject<List<AzureDevOpsItem>>(Convert.ToString(content["value"]));
 
