@@ -30,6 +30,11 @@ namespace Microsoft.DotNet.Darc.Helpers
         {
             DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger, repoUrl);
 
+            if (string.IsNullOrEmpty(darcSettings.GitRepoPersonalAccessToken))
+            {
+                throw new DarcException($"No personal access token was provided for repo type '{darcSettings.GitType}'");
+            }
+
             // If a temporary repository root was not provided, use the environment
             // provided temp directory.
             string temporaryRepositoryRoot = darcSettings.TemporaryRepositoryRoot;
