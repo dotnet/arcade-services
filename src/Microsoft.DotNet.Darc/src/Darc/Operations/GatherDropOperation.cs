@@ -369,7 +369,7 @@ namespace Microsoft.DotNet.Darc.Operations
             Console.WriteLine("Building graph of all dependencies under root build...");
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 remoteFactory,
-                rootBuild.AzureDevOpsRepository,
+                rootBuild.AzureDevOpsRepository ?? rootBuild.GitHubRepository,
                 rootBuild.Commit,
                 _options.IncludeToolset,
                 Logger);
@@ -418,14 +418,18 @@ namespace Microsoft.DotNet.Darc.Operations
                         // Do some quick caching after this lookup.
                         foreach (Asset buildAsset in potentialBuild.Assets)
                         {
-                            dependencyCache.Add(
-                                new DependencyDetail() {
-                                    Name = buildAsset.Name,
-                                    Version = buildAsset.Version,
-                                    Commit = potentialBuild.Commit,
-                                    RepoUri = potentialBuild.AzureDevOpsRepository
-                                },
-                                potentialBuild);
+                            DependencyDetail dependencyDetail = new DependencyDetail
+                            {
+                                Name = buildAsset.Name,
+                                Version = buildAsset.Version,
+                                Commit = potentialBuild.Commit,
+                                RepoUri = potentialBuild.AzureDevOpsRepository
+                            };
+
+                            if (!dependencyCache.ContainsKey(dependencyDetail))
+                            {
+                                dependencyCache.Add(dependencyDetail, potentialBuild);
+                            }
                         }
 
                         // Determine whether this build matches. Commit should be enough.  We could
