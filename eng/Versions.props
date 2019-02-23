@@ -44,8 +44,8 @@
     <WindowsAzureStorageVersion>8.5.0</WindowsAzureStorageVersion>
     <XUnitVersion>2.4.1-pre.build.4059</XUnitVersion>
     <XUnitVSRunnerVersion>2.4.1-pre.build.4059</XUnitVSRunnerVersion>
-    <MicrosoftDotNetSignToolVersion>1.0.0-beta.19121.8</MicrosoftDotNetSignToolVersion>
-    <MicrosoftDotNetBuildTasksFeedVersion>2.2.0-beta.19121.8</MicrosoftDotNetBuildTasksFeedVersion>
+    <MicrosoftDotNetSignToolVersion>1.0.0-beta.19122.3</MicrosoftDotNetSignToolVersion>
+    <MicrosoftDotNetBuildTasksFeedVersion>2.2.0-beta.19122.3</MicrosoftDotNetBuildTasksFeedVersion>
   </PropertyGroup>
   <!--Package names-->
   <PropertyGroup>
