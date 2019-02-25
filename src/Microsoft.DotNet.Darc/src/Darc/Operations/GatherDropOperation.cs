@@ -368,7 +368,7 @@ namespace Microsoft.DotNet.Darc.Operations
             Console.WriteLine("Building graph of all dependencies under root build...");
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 remoteFactory,
-                rootBuild.AzureDevOpsRepository,
+                rootBuild.AzureDevOpsRepository ?? rootBuild.GitHubRepository,
                 rootBuild.Commit,
                 _options.IncludeToolset,
                 true, /* lookup builds */

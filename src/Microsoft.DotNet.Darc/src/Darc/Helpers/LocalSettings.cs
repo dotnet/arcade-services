@@ -102,15 +102,18 @@ namespace Microsoft.DotNet.Darc.Helpers
                         if (parsedUri.Host == "github.com")
                         {
                             darcSettings.GitType = GitRepoType.GitHub;
-                            darcSettings.GitRepoPersonalAccessToken = localSettings.GitHubToken;
+                            darcSettings.GitRepoPersonalAccessToken = localSettings != null ? localSettings.GitHubToken : options.GitHubPat;
                         }
                         else if (parsedUri.Host == "dev.azure.com" || parsedUri.Host.EndsWith("visualstudio.com"))
                         {
                             darcSettings.GitType = GitRepoType.AzureDevOps;
-                            darcSettings.GitRepoPersonalAccessToken = localSettings.AzureDevOpsToken;
+                            darcSettings.GitRepoPersonalAccessToken = 
+                                localSettings != null ? 
+                                (string.IsNullOrEmpty(localSettings.AzureDevOpsToken) ? options.AzureDevOpsPat : localSettings.AzureDevOpsToken) : 
+                                options.AzureDevOpsPat;
                         }
                     }
-                    
+
                     if (darcSettings.GitType == GitRepoType.None)
                     {
                         throw new DarcException($"Unknown repository '{repoUri}', repo type set to 'None'.");

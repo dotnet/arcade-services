@@ -140,7 +140,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         string repoUri = buildKvPair.Key;
                         Build build = await buildKvPair.Value;
-                        if (build ==null)
+                        if (build == null)
                         {
                             Logger.LogTrace($"No build of '{repoUri}' found on channel '{_options.Channel}'.");
                             continue;

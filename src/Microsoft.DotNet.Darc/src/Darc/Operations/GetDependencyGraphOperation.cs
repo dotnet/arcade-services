@@ -312,7 +312,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 Console.WriteLine($"    Builds: []");
             }
-            if (node.Dependencies.Any())
+            if (node.Dependencies != null && node.Dependencies.Any())
             {
                 Console.WriteLine($"{indent}  Dependencies:");
 

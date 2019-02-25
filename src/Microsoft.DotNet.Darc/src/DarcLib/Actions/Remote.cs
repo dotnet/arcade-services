@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -595,8 +594,21 @@ namespace Microsoft.DotNet.DarcLib
 
             if (arcadeItem != null && repoUri != arcadeItem.RepoUri)
             {
-                // Files in arcade repository
-                List<GitFile> engCommonFiles = await GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+                // Files in arcade repository. All Arcade items have a GitHub repo URI by default so we need to change the
+                // URI from we are getting the eng/common files. If in an AzDO context we change the URI to that of
+                // dotnet-arcade in dnceng
+
+                string engCommonRepoUri = arcadeItem.RepoUri;
+
+                if (Uri.TryCreate(repoUri, UriKind.Absolute, out Uri parsedUri))
+                {
+                    if (parsedUri.Host == "dev.azure.com" || parsedUri.Host.EndsWith("visualstudio.com"))
+                    {
+                        engCommonRepoUri = "https://dev.azure.com/dnceng/internal/_git/dotnet-arcade";
+                    }
+                }
+                    
+                List<GitFile> engCommonFiles = await GetCommonScriptFilesAsync(engCommonRepoUri, arcadeItem.Commit);
                 filesToCommit.AddRange(engCommonFiles);
 
                 // Files in the target repo
