@@ -374,9 +374,6 @@ namespace Microsoft.DotNet.Darc.Operations
                 true, /* lookup builds */
                 Logger);
 
-            Console.WriteLine($"There are {graph.UniqueDependencies.Count()} unique dependencies in the graph.");
-            Console.WriteLine($"Builds contributing all dependencies:");
-
             Dictionary<DependencyDetail, Build> dependencyCache =
                 new Dictionary<DependencyDetail, Build>(new DependencyDetailComparer());
 
@@ -393,6 +390,7 @@ namespace Microsoft.DotNet.Darc.Operations
             foreach (var build in graph.ContributingBuilds)
             {
                 Console.WriteLine($"  Build - {build.AzureDevOpsBuildNumber} of {build.AzureDevOpsRepository ?? build.GitHubRepository} @ {build.Commit}");
+                builds.Add(build);
             }
 
             if (graph.DependenciesMissingBuilds.Any())
@@ -400,14 +398,14 @@ namespace Microsoft.DotNet.Darc.Operations
                 Console.WriteLine("Dependencies missing builds:");
                 foreach (DependencyDetail dependency in graph.DependenciesMissingBuilds)
                 {
-                    Console.WriteLine($"  {dependency.Name}@{dependency.Version} @ {dependency.Commit}");
+                    Console.WriteLine($"  {dependency.Name}@{dependency.Version} @ ({dependency.RepoUri}@{dependency.Commit})");
                 }
                 if (!_options.ContinueOnError)
                 {
                     return new InputBuilds()
                     {
                         Successful = false,
-                        Builds = graph.ContributingBuilds
+                        Builds = builds
                     };
                 }
             }

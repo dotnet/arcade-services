@@ -2,7 +2,7 @@
   "profiles": {
     "Microsoft.DotNet.Darc": {
       "commandName": "Project",
-      "commandLineArgs": "update-dependencies --channel \".NET Core 3 Dev\"",
+      "commandLineArgs": "gather-drop --sdk --channel \".NET Core 3 Release\" --output-dir D:\\share\\netcore3.x\\preview3\\20190225-01\\unified --full",
       "workingDirectory": "D:\\enlistments\\aspnetcore"
     }
   }
