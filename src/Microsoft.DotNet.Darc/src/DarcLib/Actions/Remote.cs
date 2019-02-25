@@ -394,7 +394,18 @@ namespace Microsoft.DotNet.DarcLib
                         // This is an invalid state. We can't satisfy the
                         // constraints so they should either be removed or pinned.
                         throw new DarcException($"Unable to update {dependencyInUpdateChain.Name} to have coherency with " +
-                            $"parent {dependencyInUpdateChain.CoherentParentDependencyName}. Either remove the coherency attribute or mark as pinned.");
+                            $"parent {dependencyInUpdateChain.CoherentParentDependencyName}. No matching asset found in tree. " +
+                            $"Either remove the coherency attribute or mark as pinned.");
+                    }
+
+                    string buildRepoUri = buildForAsset.AzureDevOpsRepository ?? buildForAsset.GitHubRepository;
+
+                    if (dependencyInUpdateChain.Name == coherentAsset.Name &&
+                        dependencyInUpdateChain.Version == coherentAsset.Version &&
+                        dependencyInUpdateChain.Commit == buildForAsset.Commit &&
+                        dependencyInUpdateChain.RepoUri == buildRepoUri)
+                    {
+                        continue;
                     }
 
                     DependencyDetail updatedDependency = new DependencyDetail(dependencyInUpdateChain);
@@ -492,6 +503,22 @@ namespace Microsoft.DotNet.DarcLib
 
                 // If the dependency is pinned, don't touch it.
                 if (matchingDependencyByName.Pinned)
+                {
+                    continue;
+                }
+
+                // Build might contain multiple assets of the same name
+                if (toUpdate.ContainsKey(matchingDependencyByName))
+                {
+                    continue;
+                }
+
+                // Check if an update is actually needed.
+                // Case-sensitive compare as case-correction is desired.
+                if (matchingDependencyByName.Name == asset.Name &&
+                    matchingDependencyByName.Version == asset.Version &&
+                    matchingDependencyByName.Commit == sourceCommit &&
+                    matchingDependencyByName.RepoUri == repoUri)
                 {
                     continue;
                 }

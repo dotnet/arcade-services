@@ -128,6 +128,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     foreach (string repoToQuery in repositoryUrisForQuery)
                     {
+                        Console.WriteLine($"Looking up latest build of {repoToQuery} on {_options.Channel}");
                         var latestBuild = barOnlyRemote.GetLatestBuildAsync(repoToQuery, channelInfo.Id.Value);
                         getLatestBuildTaskDictionary.TryAdd(repoToQuery, latestBuild);
                     }
@@ -150,6 +151,7 @@ namespace Microsoft.DotNet.Darc.Operations
                                 Name = a.Name,
                                 Version = a.Version
                             });
+                        
                         // Now determine what needs to be updated.
                         Dictionary<DependencyDetail, DependencyDetail> updates =
                             barOnlyRemote.GetRequiredNonCoherencyUpdatesAsync(repoUri, build.Commit, assetData, currentDependencies);
@@ -169,7 +171,9 @@ namespace Microsoft.DotNet.Darc.Operations
                             currentDependencies.Add(after);
                         }
                     }
-                    
+
+                    Console.WriteLine($"Checking for coherency updates...");
+
                     // Now that we have the updated dependencies, update our original dependency list
                     // with these, then run a coherency update.
                     Dictionary<DependencyDetail, DependencyDetail> coherencyUpdates =

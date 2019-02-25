@@ -169,17 +169,24 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 Console.WriteLine($"  - Repo:     {node.RepoUri}");
                 Console.WriteLine($"    Commit:   {node.Commit}");
-                if (node.ContributingBuilds.Any())
+                if (node.ContributingBuilds.Count() == 1)
                 {
-                    Console.WriteLine($"    Builds:");
+                    // Because the number of builds is almost always 1, log as just a
+                    // single build string in this case.
+                    Build singleBuild = node.ContributingBuilds.Single();
+                    Console.WriteLine($"    Build:    {singleBuild.AzureDevOpsBuildNumber} ({singleBuild.DateProduced.Value.ToLocalTime()})");
+                }
+                else if (node.ContributingBuilds.Any())
+                {
+                    Console.WriteLine("    Builds:");
                     foreach (var build in node.ContributingBuilds)
                     {
-                        Console.WriteLine($"      - {build.AzureDevOpsBuildId.Value} ({build.DateProduced.Value.ToLocalTime()})");
+                        Console.WriteLine($"      - {build.AzureDevOpsBuildNumber} ({build.DateProduced.Value.ToLocalTime()})");
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"    Builds: []");
+                    Console.WriteLine($"    Build:");
                 }
             }
             LogIncoherencies(graph);
@@ -258,6 +265,25 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             Console.WriteLine($"{indent}- Repo:    {currentNode.RepoUri}");
             Console.WriteLine($"{indent}  Commit:  {currentNode.Commit}");
+            if (currentNode.ContributingBuilds.Count() == 1)
+            {
+                // Because the number of builds is almost always 1, log as just a
+                // single build string in this case.
+                Build singleBuild = currentNode.ContributingBuilds.Single();
+                Console.WriteLine($"    Build:   {singleBuild.AzureDevOpsBuildNumber} ({singleBuild.DateProduced.Value.ToLocalTime()})");
+            }
+            else if (currentNode.ContributingBuilds.Any())
+            {
+                Console.WriteLine("    Builds:");
+                foreach (var build in currentNode.ContributingBuilds)
+                {
+                    Console.WriteLine($"      - {build.AzureDevOpsBuildNumber} ({build.DateProduced.Value.ToLocalTime()})");
+                }
+            }
+            else
+            {
+                Console.WriteLine("    Build:");
+            }
             foreach (DependencyGraphNode parentNode in currentNode.Parents)
             {
                 LogIncoherentPath(parentNode, currentNode, indent + "  ");
