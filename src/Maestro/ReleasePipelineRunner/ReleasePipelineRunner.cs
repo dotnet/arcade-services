@@ -281,7 +281,7 @@ namespace ReleasePipelineRunner
                                 AzureDevOpsClient azdoClient = await GetAzureDevOpsClientForAccount(releaseStatus.PipelineOrganization);
                                 AzureDevOpsRelease release = await azdoClient.GetReleaseAsync(releaseStatus.PipelineOrganization, releaseStatus.PipelineProject, releaseStatus.ReleaseId);
                                 string currentStatus = release.Environments[0].Status;
-                                if (InProgressStatuses.Contains(currentStatus.ToLower()))
+                                if (InProgressStatuses.Contains(currentStatus.ToLowerInvariant()))
                                 {
                                     allFinished = false;
                                 }
