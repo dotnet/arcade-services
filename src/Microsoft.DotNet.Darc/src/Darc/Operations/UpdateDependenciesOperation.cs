@@ -43,11 +43,12 @@ namespace Microsoft.DotNet.Darc.Operations
                 darcSettings.GitType = GitRepoType.GitHub;
                 LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
 
-                darcSettings.PersonalAccessToken = localSettings != null && !string.IsNullOrEmpty(localSettings.GitHubToken) ?
+                darcSettings.GitRepoPersonalAccessToken = localSettings != null && !string.IsNullOrEmpty(localSettings.GitHubToken) ?
                                                     localSettings.GitHubToken :
                                                     _options.GitHubPat;
 
-                Remote remote = new Remote(darcSettings, Logger);
+                IRemoteFactory remoteFactory = new RemoteFactory(_options);
+                IRemote barOnlyRemote = remoteFactory.GetBarOnlyRemote(Logger);
                 Local local = new Local(LocalHelpers.GetGitDir(Logger), Logger);
                 List<DependencyDetail> dependenciesToUpdate = new List<DependencyDetail>();
                 bool someUpToDate = false;
@@ -105,7 +106,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     }
 
                     // Start channel query.
-                    var channel = remote.GetChannelAsync(_options.Channel);
+                    var channel = barOnlyRemote.GetChannelAsync(_options.Channel);
 
                     // Limit the number of BAR queries by grabbing the repo URIs and making a hash set.
                     var repositoryUrisForQuery = dependencies.Select(dependency => dependency.RepoUri).ToHashSet();
@@ -120,19 +121,16 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     foreach (string repoToQuery in repositoryUrisForQuery)
                     {
-                        var latestBuild = remote.GetLatestBuildAsync(repoToQuery, channelInfo.Id.Value);
+                        var latestBuild = barOnlyRemote.GetLatestBuildAsync(repoToQuery, channelInfo.Id.Value);
                         getLatestBuildTaskDictionary.TryAdd(repoToQuery, latestBuild);
                     }
 
                     // Now walk dependencies again and attempt the update
                     foreach (DependencyDetail dependency in dependencies)
                     {
-                        Build build;
-                        try
-                        {
-                            build = await getLatestBuildTaskDictionary[dependency.RepoUri];
-                        }
-                        catch (ApiErrorException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                        Build build = await getLatestBuildTaskDictionary[dependency.RepoUri];
+                        
+                        if (build == null)
                         {
                             Logger.LogTrace($"No build of '{dependency.RepoUri}' found on channel '{_options.Channel}'.");
                             continue;
@@ -147,7 +145,6 @@ namespace Microsoft.DotNet.Darc.Operations
 
                         if (buildAsset.Version == dependency.Version &&
                             buildAsset.Name == dependency.Name &&
-                            (build.GitHubRepository == dependency.RepoUri || build.AzureDevOpsRepository == dependency.RepoUri) &&
                             build.Commit == dependency.Commit)
                         {
                             // No changes
@@ -163,7 +160,9 @@ namespace Microsoft.DotNet.Darc.Operations
                             Commit = build.Commit,
                             // If casing changes, ensure that the dependency name gets updated.
                             Name = buildAsset.Name,
-                            RepoUri = build.AzureDevOpsRepository,
+                            // Keep the same repo uri.  The original build lookup is based on the repo uri,
+                            // so no point in changing it.
+                            RepoUri = dependency.RepoUri,
                             Version = buildAsset.Version
                         };
 
@@ -203,7 +202,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
 
                 // Now call the local updater to run the update
-                await local.UpdateDependenciesAsync(dependenciesToUpdate, remote);
+                await local.UpdateDependenciesAsync(dependenciesToUpdate, remoteFactory);
 
                 Console.WriteLine(finalMessage);
 

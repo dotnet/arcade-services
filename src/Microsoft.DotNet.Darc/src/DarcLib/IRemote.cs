@@ -2,14 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.DotNet.Maestro.Client.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Maestro.Client.Models;
 
 namespace Microsoft.DotNet.DarcLib
 {
     public interface IRemote
     {
+        #region Channel Operations
+
         /// <summary>
         ///     Retrieve a set of default channel associations based on the provided filters.
         /// </summary>
@@ -40,15 +42,56 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Async task</returns>
         Task DeleteDefaultChannelAsync(string repository, string branch, string channel);
 
+        /// <summary>
+        ///     Create a new channel
+        /// </summary>
+        /// <param name="name">Name of channel. Must be unique.</param>
+        /// <param name="classification">Classification of channel.</param>
+        /// <returns>Newly created channel</returns>
         Task<Channel> CreateChannelAsync(string name, string classification);
 
+        /// <summary>
+        ///     Delete a channel.
+        /// </summary>
+        /// <param name="id">Id of channel to delete</param>
+        /// <returns>Channel just deleted</returns>
         Task<Channel> DeleteChannelAsync(int id);
 
+        /// <summary>
+        ///     Retrieve the list of channels from the build asset registry.
+        /// </summary>
+        /// <param name="classification">Optional classification to get</param>
+        /// <returns></returns>
+        Task<IEnumerable<Channel>> GetChannelsAsync(string classification = null);
+
+        /// <summary>
+        ///     Retrieve a specific channel by name.
+        /// </summary>
+        /// <param name="channel">Channel name.</param>
+        /// <returns>Channel or null if not found.</returns>
+        Task<Channel> GetChannelAsync(string channel);
+
+        #endregion
+
+        #region Subscription Operations
+
+        /// <summary>
+        ///     Get a set of subscriptions based on input filters.
+        /// </summary>
+        /// <param name="sourceRepo">Filter by the source repository of the subscription.</param>
+        /// <param name="targetRepo">Filter by the target repository of the subscription.</param>
+        /// <param name="channelId">Filter by the target channel id of the subscription.</param>
+        /// <returns>Set of subscription.</returns>
         Task<IEnumerable<Subscription>> GetSubscriptionsAsync(
             string sourceRepo = null,
             string targetRepo = null,
             int? channelId = null);
 
+        /// <summary>
+        ///     Retrieve a subscription by ID
+        /// </summary>
+        /// <param name="subscriptionId">Id of subscription</param>
+        /// <returns>Subscription information</returns>
         Task<Subscription> GetSubscriptionAsync(string subscriptionId);
 
         /// <summary>
@@ -59,11 +102,97 @@ namespace Microsoft.DotNet.DarcLib
         Task<Subscription> TriggerSubscriptionAsync(string subscriptionId);
 
         /// <summary>
-        /// Retrieve subscription history.
+        ///     Create a new subscription.
         /// </summary>
-        /// <param name="subscriptionId">ID of subscription</param>
-        /// <returns>Subscription history</returns>
-        Task<IEnumerable<SubscriptionHistoryItem>> GetSubscriptionHistoryAsync(string subscriptionId);
+        /// <param name="channelName">Name of source channel.</param>
+        /// <param name="sourceRepo">Source repository URI.</param>
+        /// <param name="targetRepo">Target repository URI.</param>
+        /// <param name="targetBranch">Target branch in <paramref name="targetRepo"/></param>
+        /// <param name="updateFrequency">Frequency of update.  'none', 'everyDay', or 'everyBuild'.</param>
+        /// <param name="mergePolicies">Set of auto-merge policies.</param>
+        /// <returns>Newly created subscription.</returns>
+        Task<Subscription> CreateSubscriptionAsync(
+            string channelName,
+            string sourceRepo,
+            string targetRepo,
+            string targetBranch,
+            string updateFrequency,
+            List<MergePolicy> mergePolicies);
+
+        /// <summary>
+        ///     Update an existing subscription
+        /// </summary>
+        /// <param name="subscriptionId">Id of subscription to update</param>
+        /// <param name="subscription">Subscription information</param>
+        /// <returns>Updated subscription</returns>
+        Task<Subscription> UpdateSubscriptionAsync(string subscriptionId, SubscriptionUpdate subscription);
+
+        /// <summary>
+        ///     Delete a subscription by ID.
+        /// </summary>
+        /// <param name="subscriptionId">Id of subscription to delete.</param>
+        /// <returns>Information on deleted subscription</returns>
+        Task<Subscription> DeleteSubscriptionAsync(string subscriptionId);
+
+        #endregion
+
+        #region Pull Request Operations
+        /// <summary>
+        ///     Merge a pull request.
+        /// </summary>
+        /// <param name="pullRequestUrl">Uri of pull request to merge</param>
+        /// <param name="parameters">Merge options.</param>
+        /// <returns>Async task.</returns>
+        Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
+
+        /// <summary>
+        ///     Create a comment on a pull request, or update the last comment if it was made by Maestro.
+        /// </summary>
+        /// <param name="pullRequestUrl">Url of pull request.</param>
+        /// <param name="message">Comment message.</param>
+        /// <returns>Async task.</returns>
+        Task CreateOrUpdatePullRequestStatusCommentAsync(string pullRequestUrl, string message);
+
+        /// <summary>
+        ///     Get the status of a pull request.
+        /// </summary>
+        /// <param name="pullRequestUrl">Url of pull request.</param>
+        /// <returns>PR status information.</returns>
+        Task<PrStatus> GetPullRequestStatusAsync(string pullRequestUrl);
+
+        /// <summary>
+        ///     Get the checks that are being run on a pull request.
+        /// </summary>
+        /// <param name="pullRequestUrl">Url of pull request.</param>
+        /// <returns>Async task.</returns>
+        Task<IEnumerable<Check>> GetPullRequestChecksAsync(string pullRequestUrl);
+
+        /// <summary>
+        ///     Retrieve information about a pull request.
+        /// </summary>
+        /// <param name="pullRequestUri">URI of pull request.</param>
+        /// <returns>Pull request information.</returns>
+        Task<PullRequest> GetPullRequestAsync(string pullRequestUri);
+
+        /// <summary>
+        ///     Create a new pull request.
+        /// </summary>
+        /// <param name="repoUri">Repository uri.</param>
+        /// <param name="pullRequest">Information about pull request to create.</param>
+        /// <returns>URI of new pull request.</returns>
+        Task<string> CreatePullRequestAsync(string repoUri, PullRequest pullRequest);
+
+        /// <summary>
+        ///     Update a pull request with new data.
+        /// </summary>
+        /// <param name="pullRequestUri">URI of pull request to update</param>
+        /// <param name="pullRequest">Pull request information to update.</param>
+        /// <returns>Async task.</returns>
+        Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest);
+
+        #endregion
+
+        #region Repo/Dependency Operations
 
         /// <summary>
         ///     Get the list of dependencies in the specified repo and branch/commit
@@ -74,53 +203,19 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Matching dependency information.</returns>
         Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri, string branchOrCommit, string name = null);
 
+        /// <summary>
+        ///     Get the list of dependencies that need updates given an input set of asset data.
+        /// </summary>
+        /// <param name="repoUri">Repository that may need updates.</param>
+        /// <param name="branch">Branch in <paramref name="repoUri"/> that may need updates.</param>
+        /// <param name="sourceCommit">Source commit the assets came from.</param>
+        /// <param name="assets">Set of updated assets.</param>
+        /// <returns>List of dependencies in <paramref name="repoUri"/> that need updates.</returns>
         Task<List<DependencyDetail>> GetRequiredUpdatesAsync(
             string repoUri,
             string branch,
             string sourceCommit,
             IEnumerable<AssetData> assets);
-
-        Task CreateNewBranchAsync(string repoUri, string baseBranch, string newBranch);
-
-        Task DeleteBranchAsync(string repoUri, string branch);
-
-        Task CommitUpdatesAsync(string repoUri, string branch, List<DependencyDetail> itemsToUpdate, string message);
-
-        Task<PullRequest> GetPullRequestAsync(string pullRequestUri);
-
-        Task<string> CreatePullRequestAsync(string repoUri, PullRequest pullRequest);
-
-        Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest);
-
-        Task<Subscription> CreateSubscriptionAsync(
-            string channelName,
-            string sourceRepo,
-            string targetRepo,
-            string targetBranch,
-            string updateFrequency,
-            List<MergePolicy> mergePolicies);
-
-        /// <summary>
-        ///     Delete a subscription by ID.
-        /// </summary>
-        /// <param name="subscriptionId">Id of subscription to delete.</param>
-        /// <returns>Information on deleted subscription</returns>
-        Task<Subscription> DeleteSubscriptionAsync(string subscriptionId);
-
-        Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
-
-        Task CreateOrUpdatePullRequestStatusCommentAsync(string pullRequestUrl, string message);
-
-        Task<PrStatus> GetPullRequestStatusAsync(string pullRequestUrl);
-
-        Task<IList<Check>> GetPullRequestChecksAsync(string pullRequestUrl);
-
-        Task<IEnumerable<int>> SearchPullRequestsAsync(
-            string repoUri,
-            string pullRequestBranch,
-            PrStatus status,
-            string keyword = null,
-            string author = null);
 
         /// <summary>
         /// Retrieve the common script files from a remote source.
@@ -131,11 +226,35 @@ namespace Microsoft.DotNet.DarcLib
         Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit);
 
         /// <summary>
-        ///     Retrieve a specific channel by name.
+        ///     Create a new branch in the specified repository.
         /// </summary>
-        /// <param name="channel">Channel name.</param>
-        /// <returns>Channel or null if not found.</returns>
-        Task<Channel> GetChannelAsync(string channel);
+        /// <param name="repoUri">Repository to create a brahc in</param>
+        /// <param name="baseBranch">Branch to create <paramref name="newBranch"/> off of</param>
+        /// <param name="newBranch">New branch name.</param>
+        /// <returns>Async task</returns>
+        Task CreateNewBranchAsync(string repoUri, string baseBranch, string newBranch);
+
+        /// <summary>
+        ///     Delete a branch in a repository.
+        /// </summary>
+        /// <param name="repoUri">Repository to delete a branch in.</param>
+        /// <param name="branch">Branch to delete.</param>
+        /// <returns>Async task.</returns>
+        Task DeleteBranchAsync(string repoUri, string branch);
+
+        /// <summary>
+        ///     Commit a set of updated dependencies to a repository
+        /// </summary>
+        /// <param name="repoUri">Repository to update</param>
+        /// <param name="branch">Branch of <paramref name="repoUri"/> to update.</param>
+        /// <param name="itemsToUpdate">Dependencies that need updating.</param>
+        /// <param name="message">Commit message.</param>
+        /// <returns>Async task.</returns>
+        Task CommitUpdatesAsync(string repoUri, string branch, List<DependencyDetail> itemsToUpdate, string message);
+
+        #endregion
+
+        #region Build/Asset Operations
 
         /// <summary>
         ///     Retrieve the latest build of a repository on a specific channel.
@@ -156,6 +275,14 @@ namespace Microsoft.DotNet.DarcLib
         Task<Build> GetBuildAsync(int buildId);
 
         /// <summary>
+        ///     Get a list of builds for the given repo uri and commit.
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="commit">Commit</param>
+        /// <returns></returns>
+        Task<IEnumerable<Build>> GetBuildsAsync(string repoUri, string commit);
+
+        /// <summary>
         ///     Get assets matching a particular set of properties. All are optional.
         /// </summary>
         /// <param name="name">Name of asset</param>
@@ -163,6 +290,8 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="buildId">ID of build producing the asset</param>
         /// <param name="nonShipping">Only non-shipping</param>
         /// <returns>List of assets.</returns>
-        Task<IList<Asset>> GetAssetsAsync(string name = null, string version = null, int? buildId = null, bool? nonShipping = null);
+        Task<IEnumerable<Asset>> GetAssetsAsync(string name = null, string version = null, int? buildId = null, bool? nonShipping = null);
+
+        #endregion
     }
 }

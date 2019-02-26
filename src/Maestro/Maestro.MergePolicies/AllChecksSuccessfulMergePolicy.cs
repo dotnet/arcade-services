@@ -24,11 +24,10 @@ namespace Maestro.MergePolicies
         {
             var ignoreChecks = new HashSet<string>(properties.Get<string[]>("ignoreChecks") ?? Array.Empty<string>());
 
-            IList<Check> checks = await context.Darc.GetPullRequestChecksAsync(context.PullRequestUrl);
+            IEnumerable<Check> checks = await context.Darc.GetPullRequestChecksAsync(context.PullRequestUrl);
+            IEnumerable<Check> notIgnoredChecks = checks.Where(c => !ignoreChecks.Contains(c.Name));
 
-            List<Check> notIgnoredChecks = checks.Where(c => !ignoreChecks.Contains(c.Name)).ToList();
-
-            if (notIgnoredChecks.Count < 1)
+            if (!notIgnoredChecks.Any())
             {
                 context.Fail("No un-ignored checks.");
                 return;
