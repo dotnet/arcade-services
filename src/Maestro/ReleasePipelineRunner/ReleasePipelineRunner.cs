@@ -164,14 +164,14 @@ namespace ReleasePipelineRunner
         public async Task RunAssociatedReleasePipelinesAsync(int buildId, int channelId, CancellationToken cancellationToken)
         {
             Logger.LogInformation($"Starting release pipeline for {buildId} in {channelId}");
-            Build build = Context.Builds
-                .Where(b => b.Id == buildId).First();
+            Build build = await Context.Builds
+                .Where(b => b.Id == buildId).FirstAsync();
 
-            Channel channel = Context.Channels
+            Channel channel = await Context.Channels
                 .Where(ch => ch.Id == channelId)
                 .Include(ch => ch.ChannelReleasePipelines)
                 .ThenInclude(crp => crp.ReleasePipeline)
-                .First();
+                .FirstAsync();
 
             // If something use the old API version we won't have this information available.
             // This will also be the case if something adds an existing build (created using

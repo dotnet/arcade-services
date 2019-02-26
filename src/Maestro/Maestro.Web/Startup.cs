@@ -47,11 +47,11 @@ namespace Maestro.Web
     {
         static Startup()
         {
-            Triggers<BuildChannel>.Inserting += async entry =>
+            Triggers<BuildChannel>.Inserting += entry =>
             {
                 BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
                 BuildChannel entity = entry.Entity;
-                if (await ChannelHasAssociatedReleasePipelineAsync(entity.ChannelId, context))
+                if (ChannelHasAssociatedReleasePipeline(entity.ChannelId, context))
                 {
                     entry.Cancel = true;
                     var queue = context.GetService<BackgroundQueue>();
@@ -71,13 +71,14 @@ namespace Maestro.Web
             };
         }
 
-        private static async Task<bool> ChannelHasAssociatedReleasePipelineAsync(int channelId, BuildAssetRegistryContext context)
+        private static bool ChannelHasAssociatedReleasePipeline(int channelId, BuildAssetRegistryContext context)
         {
-            return await context.Channels
+            Channel channel = context.Channels
                 .Where(ch => ch.Id == channelId)
                 .Include(ch => ch.ChannelReleasePipelines)
                 .ThenInclude(crp => crp.ReleasePipeline)
-                .AnyAsync();
+                .FirstOrDefaultAsync().GetAwaiter().GetResult();
+            return channel != null && channel.ChannelReleasePipelines.Count > 0;
         }
 
         public Startup(IHostingEnvironment env)
