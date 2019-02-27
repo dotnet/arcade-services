@@ -365,13 +365,19 @@ namespace Microsoft.DotNet.Darc.Operations
                 Console.WriteLine("Filtering toolset dependencies from the graph...");
             }
 
+            DependencyGraphBuildOptions buildOptions = new DependencyGraphBuildOptions()
+            {
+                IncludeToolset = _options.IncludeToolset,
+                LookupBuilds = true,
+                NodeDiff = NodeDiff.None
+            };
+
             Console.WriteLine("Building graph of all dependencies under root build...");
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 remoteFactory,
                 rootBuild.AzureDevOpsRepository ?? rootBuild.GitHubRepository,
                 rootBuild.Commit,
-                _options.IncludeToolset,
-                true, /* lookup builds */
+                buildOptions,
                 Logger);
 
             Dictionary<DependencyDetail, Build> dependencyCache =

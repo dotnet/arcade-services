@@ -13,6 +13,43 @@ using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib
 {
+    public enum NodeDiff
+    {
+        /// <summary>
+        ///     No node diff done
+        /// </summary>
+        None,
+        /// <summary>
+        ///     Diff each node from the latest build of each repo in the graph.
+        ///     The latest build of all nodes is chosen.
+        /// </summary>
+        LatestInGraph,
+        /// <summary>
+        ///     Diff each node from the latest build in the channel that the node's
+        ///     build was applied to.
+        ///     
+        ///     Generally this will give good results, though results may be confusing if some
+        ///     nodes in the graph came from builds applied to different channel.
+        /// </summary>
+        LatestInChannel,
+    }
+
+    public class DependencyGraphBuildOptions
+    {
+        /// <summary>
+        /// Include toolset dependencies in the build.
+        /// </summary>
+        public bool IncludeToolset { get; set; }
+        /// <summary>
+        /// Lookup build information for each node. Only valid for remote builds.
+        /// </summary>
+        public bool LookupBuilds { get; set; }
+        /// <summary>
+        /// Type of node diff to perform. Local build only supports 'None' 
+        /// </summary>
+        public NodeDiff NodeDiff { get; set; } = NodeDiff.None;
+    }
+
     public class DependencyGraph
     {
         private static Dictionary<string, string> _remotesMapping = null;
@@ -77,8 +114,7 @@ namespace Microsoft.DotNet.DarcLib
             IRemoteFactory remoteFactory,
             string repoUri,
             string commit,
-            bool includeToolset,
-            bool lookupBuilds,
+            DependencyGraphBuildOptions options,
             ILogger logger)
         {
             return await BuildDependencyGraphImplAsync(
@@ -86,8 +122,7 @@ namespace Microsoft.DotNet.DarcLib
                 null, /* no initial root dependencies */
                 repoUri,
                 commit,
-                includeToolset,
-                lookupBuilds,
+                options,
                 true,
                 logger,
                 null,
@@ -111,8 +146,7 @@ namespace Microsoft.DotNet.DarcLib
             IEnumerable<DependencyDetail> rootDependencies,
             string repoUri,
             string commit,
-            bool includeToolset,
-            bool lookupBuilds,
+            DependencyGraphBuildOptions options,
             ILogger logger)
         {
             return await BuildDependencyGraphImplAsync(
@@ -120,8 +154,7 @@ namespace Microsoft.DotNet.DarcLib
                 rootDependencies,
                 repoUri,
                 commit,
-                includeToolset,
-                lookupBuilds,
+                options,
                 true,
                 logger,
                 null,
@@ -144,7 +177,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>New dependency graph.</returns>
         public static async Task<DependencyGraph> BuildLocalDependencyGraphAsync(
             IEnumerable<DependencyDetail> rootDependencies,
-            bool includeToolset,
+            DependencyGraphBuildOptions options,
             ILogger logger,
             string rootRepoFolder,
             string rootRepoCommit,
@@ -157,13 +190,179 @@ namespace Microsoft.DotNet.DarcLib
                 rootDependencies,
                 rootRepoFolder,
                 rootRepoCommit,
-                includeToolset,
-                false,
+                options,
                 false,
                 logger,
                 reposFolder,
                 remotesMap,
                 testPath);
+        }
+
+        private static void ValidateBuildOptions(
+            IRemoteFactory remoteFactory,
+            IEnumerable<DependencyDetail> rootDependencies,
+            string repoUri,
+            string commit,
+            DependencyGraphBuildOptions options,
+            bool remote,
+            ILogger logger,
+            string reposFolder,
+            IEnumerable<string> remotesMap,
+            string testPath)
+        {
+            // Fail fast if darcSettings is null in a remote scenario
+            if (remote && remoteFactory == null)
+            {
+                throw new DarcException("Remote graph build requires a remote factory.");
+            }
+
+            if (rootDependencies != null && !rootDependencies.Any())
+            {
+                throw new DarcException("Root dependencies were not supplied.");
+            }
+
+            if (!remote)
+            {
+                if (options.LookupBuilds)
+                {
+                    throw new DarcException("Build lookup only available in remote build mode.");
+                }
+                if (options.NodeDiff != NodeDiff.None)
+                {
+                    throw new DarcException($"Node diff type '{options.NodeDiff}' only available in remote build mode.");
+                }
+            }
+            else
+            {
+                if (options.NodeDiff != NodeDiff.None && !options.LookupBuilds)
+                {
+                    throw new DarcException("Node diff requires build lookup.");
+                }
+            }
+        }
+
+        private static async Task DoLatestInChannelGraphNodeDiffAsync(
+            IRemoteFactory remoteFactory,
+            ILogger logger,
+            Dictionary<string, DependencyGraphNode> nodeCache,
+            Dictionary<string, DependencyGraphNode> visitedRepoUriNodes)
+        {
+            logger.LogInformation("Running latest in channel node diff.");
+
+            IRemote barOnlyRemote = remoteFactory.GetBarOnlyRemote(logger);
+
+            // Walk each node in the graph and diff against the latest build in the channel
+            // that was also applied to the node.
+            Dictionary<string, string> latestCommitCache = new Dictionary<string, string>();
+            foreach (DependencyGraphNode node in nodeCache.Values)
+            {
+                // Start with an unknown diff.
+                node.DiffFromLatestInGraph = null;
+
+                if (node.ContributingBuilds.Any())
+                {
+                    // Choose latest build of node that has a channel.
+                    Build newestBuildWithChannel = node.ContributingBuilds.OrderByDescending(b => b.DateProduced).FirstOrDefault(
+                        b => b.Channels != null && b.Channels.Any());
+                    // If no build was found (e.g. build was flowed without a channel or channel was removed from
+                    // a build, then no diff from latest.
+                    if (newestBuildWithChannel != null)
+                    {
+                        int channelId = newestBuildWithChannel.Channels.First().Id.Value;
+                        // Just choose the first channel. This algorithm is mostly just heuristic.
+                        string latestCommitKey = $"{node.RepoUri}@{channelId}";
+                        string latestCommit = null;
+                        if (!latestCommitCache.TryGetValue(latestCommitKey, out latestCommit))
+                        {
+                            // Look up latest build in the channel
+                            var latestBuild = await barOnlyRemote.GetLatestBuildAsync(node.RepoUri, channelId);
+                            // Could be null, if the only build was removed from the channel
+                            if (latestBuild != null)
+                            {
+                                latestCommit = latestBuild.Commit;
+                            }
+                            // Add to cache
+                            latestCommitCache.Add(latestCommitKey, latestCommit);
+                        }
+
+                        // Perform diff if there is a latest commit.
+                        if (!string.IsNullOrEmpty(latestCommit))
+                        {
+                            IRemote repoRemote = remoteFactory.GetRemote(node.RepoUri, logger);
+                            // This will return a no-diff if latestCommit == node.Commit
+                            node.DiffFromLatestInGraph = await repoRemote.GitDiffAsync(node.RepoUri, latestCommit, node.Commit);
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Diff each node in the graph against the latest build in
+        ///     the graph.
+        /// </summary>
+        /// <param name="remoteFactory"></param>
+        /// <param name="logger"></param>
+        /// <param name="nodeCache"></param>
+        /// <param name="visitedRepoUriNodes"></param>
+        /// <returns></returns>
+        private static async Task DoLatestInGraphNodeDiffAsync(
+            IRemoteFactory remoteFactory,
+            ILogger logger,
+            Dictionary<string, DependencyGraphNode> nodeCache,
+            Dictionary<string, DependencyGraphNode> visitedRepoUriNodes)
+        {
+            logger.LogInformation("Running latest in graph node diff.");
+
+            // Find the build of each repo in the graph, then
+            // get the diff info from the latest
+            Dictionary<string, DependencyGraphNode>.KeyCollection uniqueRepos = visitedRepoUriNodes.Keys;
+            foreach (string repo in uniqueRepos)
+            {
+                // Get all nodes with this value
+                IEnumerable<DependencyGraphNode> nodes = nodeCache.Values.Where(n => n.RepoUri == repo);
+                // If only one, determine latest
+                if (nodes.Count() > 1)
+                {
+                    // Find latest
+                    DependencyGraphNode newestNode = null;
+                    Build newestBuild = null;
+                    foreach (DependencyGraphNode node in nodes)
+                    {
+                        if (newestNode == null)
+                        {
+                            newestNode = node;
+                            if (newestNode.ContributingBuilds.Any())
+                            {
+                                newestBuild = newestNode.ContributingBuilds.OrderByDescending(b => b.DateProduced).First();
+                            }
+                        }
+                        else if (node.ContributingBuilds.Any())
+                        {
+                            // Determine whether any of the builds are newer
+                            if (node.ContributingBuilds.Any(b => newestBuild == null ||
+                                                            b.DateProduced.Value.CompareTo(newestBuild.DateProduced.Value) > 0))
+                            {
+                                newestNode = node;
+                                newestBuild = newestNode.ContributingBuilds.OrderByDescending(b => b.DateProduced).First();
+                            }
+                        }
+                    }
+
+                    // Compare all other nodes to the latest
+                    foreach (DependencyGraphNode node in nodes)
+                    {
+                        IRemote repoRemote = remoteFactory.GetRemote(node.RepoUri, logger);
+                        // If node == newestNode, returns no diff.
+                        node.DiffFromLatestInGraph = await repoRemote.GitDiffAsync(node.RepoUri, newestNode.Commit, node.Commit);
+                    }
+                }
+                else
+                {
+                    DependencyGraphNode singleNode = nodes.Single();
+                    singleNode.DiffFromLatestInGraph = GitDiff.NoDiff(singleNode.Commit);
+                }
+            }
         }
 
         /// <summary>
@@ -186,27 +385,18 @@ namespace Microsoft.DotNet.DarcLib
             IEnumerable<DependencyDetail> rootDependencies,
             string repoUri,
             string commit,
-            bool includeToolset,
-            bool lookupBuilds,
+            DependencyGraphBuildOptions options,
             bool remote,
             ILogger logger,
             string reposFolder,
             IEnumerable<string> remotesMap,
             string testPath)
         {
-            // Fail fast if darcSettings is null in a remote scenario
-            if (remote && remoteFactory == null)
-            {
-                throw new DarcException("Remote graph build requires a remote factory.");
-            }
+            ValidateBuildOptions(remoteFactory, rootDependencies, repoUri, commit, options, 
+                                 remote, logger, reposFolder, remotesMap, testPath);
 
             if (rootDependencies != null)
             {
-                if (!rootDependencies.Any())
-                {
-                    throw new DarcException($"Root dependencies were not supplied.");
-                }
-
                 logger.LogInformation($"Starting build of graph from {rootDependencies.Count()} root dependencies " +
                     $"({repoUri}@{commit})");
                 foreach (DependencyDetail dependency in rootDependencies)
@@ -225,7 +415,7 @@ namespace Microsoft.DotNet.DarcLib
             Dictionary<DependencyDetail, Build> dependencyCache =
                 new Dictionary<DependencyDetail, Build>(new DependencyDetailComparer());
 
-            if (lookupBuilds)
+            if (options.LookupBuilds)
             {
                 allContributingBuilds = new HashSet<Build>(new BuildComparer());
                 dependenciesMissingBuilds = new HashSet<DependencyDetail>(new DependencyDetailComparer());
@@ -306,7 +496,7 @@ namespace Microsoft.DotNet.DarcLib
                         logger,
                         node.RepoUri,
                         node.Commit,
-                        includeToolset,
+                        options.IncludeToolset,
                         remotesMap,
                         reposFolder,
                         testPath);
@@ -351,7 +541,7 @@ namespace Microsoft.DotNet.DarcLib
                         }
 
                         HashSet<Build> nodeContributingBuilds = null;
-                        if (lookupBuilds)
+                        if (options.LookupBuilds)
                         {
                             nodeContributingBuilds = new HashSet<Build>(new BuildComparer());
                             // Look up dependency in cache first
@@ -363,8 +553,8 @@ namespace Microsoft.DotNet.DarcLib
                             else
                             {
                                 // Look up the dependency and get the creating build.
-                                var barOnlyRemote = remoteFactory.GetBarOnlyRemote(logger);
-                                var potentiallyContributingBuilds = await barOnlyRemote.GetBuildsAsync(dependency.RepoUri, dependency.Commit);
+                                IRemote barOnlyRemote = remoteFactory.GetBarOnlyRemote(logger);
+                                IEnumerable<Build> potentiallyContributingBuilds = await barOnlyRemote.GetBuildsAsync(dependency.RepoUri, dependency.Commit);
                                 // Filter by those actually producing the dependency. Most of the time this won't
                                 // actually result in a different set of contributing builds, but should avoid any subtle bugs where
                                 // there might be overlap between repos, or cases where there were multiple builds at the same sha.
@@ -385,7 +575,6 @@ namespace Microsoft.DotNet.DarcLib
                                         AddAssetsToBuildCache(build, dependencyCache);
                                     }
                                 }
-
                             }
                         }
 
@@ -393,8 +582,11 @@ namespace Microsoft.DotNet.DarcLib
                         // Update the list of contributing builds.
                         if (nodeCache.TryGetValue($"{dependency.RepoUri}@{dependency.Commit}", out DependencyGraphNode existingNode))
                         {
-                            if (lookupBuilds)
+                            if (options.LookupBuilds)
                             {
+                                // Add the contributing builds. It's possible that
+                                // different dependencies on a single node (repo/sha) were produced
+                                // from multiple builds
                                 foreach (Build build in nodeContributingBuilds)
                                 {
                                     existingNode.ContributingBuilds.Add(build);
@@ -431,6 +623,19 @@ namespace Microsoft.DotNet.DarcLib
                         }
                     }
                 }
+            }
+
+            switch(options.NodeDiff)
+            {
+                case NodeDiff.None:
+                    // Nothing
+                    break;
+                case NodeDiff.LatestInGraph:
+                    await DoLatestInGraphNodeDiffAsync(remoteFactory, logger, nodeCache, visitedRepoUriNodes);
+                    break;
+                case NodeDiff.LatestInChannel:
+                    await DoLatestInChannelGraphNodeDiffAsync(remoteFactory, logger, nodeCache, visitedRepoUriNodes);
+                    break;
             }
 
             return new DependencyGraph(rootGraphNode,

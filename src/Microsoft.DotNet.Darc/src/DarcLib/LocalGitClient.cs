@@ -252,5 +252,10 @@ namespace Microsoft.DotNet.DarcLib
         {
             throw new NotImplementedException();
         }
+
+        public Task<GitDiff> DiffAsync(string repoUri, string baseVersion, string targetVersion)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

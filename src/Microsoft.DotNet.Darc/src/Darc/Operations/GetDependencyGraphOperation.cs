@@ -10,6 +10,7 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -36,6 +37,23 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 if (!_options.Local)
                 {
+                    NodeDiff diffOption = NodeDiff.None;
+                    // Check node diff options
+                    switch(_options.DeltaFrom.ToLowerInvariant())
+                    {
+                        case "none":
+                            break;
+                        case "newest-in-channel":
+                            diffOption = NodeDiff.LatestInChannel;
+                            break;
+                        case "newest-in-graph":
+                            diffOption = NodeDiff.LatestInGraph;
+                            break;
+                        default:
+                            Console.WriteLine("Unknown --delta-from option, please see help.");
+                            return Constants.ErrorCode;
+                    }
+
                     // If the repo uri and version are set, then call the graph
                     // build operation based on those.  Both should be set in this case.
                     // If they are not set, then gather the initial set based on the local repository,
@@ -45,7 +63,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         if (string.IsNullOrEmpty(_options.Version))
                         {
-                            Logger.LogError("If --repo is set, --version should be supplied");
+                            Console.WriteLine("If --repo is set, --version should be supplied");
                             return Constants.ErrorCode;
                         }
 
@@ -63,7 +81,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         if (!string.IsNullOrEmpty(_options.Version))
                         {
-                            Logger.LogError("If --version is supplied, then --repo is required");
+                            Console.WriteLine("If --version is supplied, then --repo is required");
                             return Constants.ErrorCode;
                         }
 
@@ -85,14 +103,20 @@ namespace Microsoft.DotNet.Darc.Operations
                         return Constants.ErrorCode;
                     }
 
+                    DependencyGraphBuildOptions graphBuildOptions = new DependencyGraphBuildOptions()
+                    {
+                        IncludeToolset = _options.IncludeToolset,
+                        LookupBuilds = !_options.SkipBuildLookup,
+                        NodeDiff = diffOption
+                    };
+
                     // Build graph
                     graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                         remoteFactory,
                         rootDependencies,
                         _options.RepoUri ?? LocalHelpers.GetGitDir(Logger),
                         _options.Version ?? LocalHelpers.GetGitCommit(Logger),
-                        _options.IncludeToolset,
-                        !_options.SkipBuildLookup,
+                        graphBuildOptions,
                         Logger);
                 }
                 else
@@ -113,10 +137,17 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     Console.WriteLine($"Building repository dependency graph from local information...");
 
+                    DependencyGraphBuildOptions graphBuildOptions = new DependencyGraphBuildOptions()
+                    {
+                        IncludeToolset = _options.IncludeToolset,
+                        LookupBuilds = false,
+                        NodeDiff = NodeDiff.None
+                    };
+
                     // Build graph using only local resources
                     graph = await DependencyGraph.BuildLocalDependencyGraphAsync(
                         rootDependencies,
-                        _options.IncludeToolset,
+                        graphBuildOptions,
                         Logger,
                         LocalHelpers.GetGitDir(Logger),
                         LocalHelpers.GetGitCommit(Logger),
@@ -128,13 +159,14 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     LogFlatDependencyGraph(graph);
                 }
-                else if (_options.GraphViz)
-                {
-                    LogGraphViz(graph);
-                }
                 else
                 {
                     LogDependencyGraph(graph);
+                }
+
+                if (!string.IsNullOrEmpty(_options.GraphVizOutputFile))
+                {
+                    LogGraphViz(graph);
                 }
 
                 return Constants.SuccessCode;
@@ -142,7 +174,6 @@ namespace Microsoft.DotNet.Darc.Operations
             catch (Exception exc)
             {
                 Logger.LogError(exc, "Something failed while getting the dependency graph.");
-
                 return Constants.ErrorCode;
             }
         }
@@ -174,14 +205,14 @@ namespace Microsoft.DotNet.Darc.Operations
                     // Because the number of builds is almost always 1, log as just a
                     // single build string in this case.
                     Build singleBuild = node.ContributingBuilds.Single();
-                    Console.WriteLine($"    Build:    {singleBuild.AzureDevOpsBuildNumber} ({singleBuild.DateProduced.Value.ToLocalTime()})");
+                    Console.WriteLine($"    Build:    {singleBuild.AzureDevOpsBuildNumber} ({singleBuild.DateProduced.Value.ToLocalTime().ToString("g")})");
                 }
                 else if (node.ContributingBuilds.Any())
                 {
                     Console.WriteLine("    Builds:");
                     foreach (var build in node.ContributingBuilds)
                     {
-                        Console.WriteLine($"      - {build.AzureDevOpsBuildNumber} ({build.DateProduced.Value.ToLocalTime()})");
+                        Console.WriteLine($"      - {build.AzureDevOpsBuildNumber} ({build.DateProduced.Value.ToLocalTime().ToString("g")})");
                     }
                 }
                 else
@@ -214,20 +245,50 @@ namespace Microsoft.DotNet.Darc.Operations
             return GetSimpleRepoName(node.RepoUri).Replace("-", "") + node.Commit;
         }
 
-        private void LogGraphViz(DependencyGraph graph)
+        private async void LogGraphViz(DependencyGraph graph)
         {
-            Console.WriteLine("digraph repositoryGraph {");
-            Console.WriteLine("    node [shape=record]");
-            foreach (DependencyGraphNode node in graph.Nodes)
+            using (StreamWriter writer = new StreamWriter(_options.GraphVizOutputFile))
             {
-                Console.WriteLine($"    {GetGraphVizNodeName(node)}[label=\"{GetSimpleRepoName(node.RepoUri)}\\n{node.Commit.Substring(0, 5)}\"];");
-                foreach (DependencyGraphNode childNode in node.Children)
+                await writer.WriteLineAsync("digraph repositoryGraph {");
+                await writer.WriteLineAsync("    node [shape=record]");
+                foreach (DependencyGraphNode node in graph.Nodes)
                 {
-                    Console.WriteLine($"    {GetGraphVizNodeName(node)} -> {GetGraphVizNodeName(childNode)}");
-                }
-            }
+                    string buildString = "";
+                    if (node.ContributingBuilds.Any())
+                    {
+                        var newestBuild = node.ContributingBuilds.OrderByDescending(b => b.DateProduced).First();
+                        buildString = $"\\n{newestBuild.DateProduced.Value.ToLocalTime().ToString("g")}";
+                    }
 
-            Console.WriteLine("}");
+                    string diffString = "";
+                    if (node.DiffFromLatestInGraph == null)
+                    {
+                        diffString = "\\nlatest";
+                    }
+                    else if (!node.DiffFromLatestInGraph.Valid)
+                    {
+                        diffString = "\\ndiff unknown";
+                    }
+                    else
+                    {
+                        if (node.DiffFromLatestInGraph.Ahead != 0)
+                        {
+                            diffString += $"\\nahead: {node.DiffFromLatestInGraph.Ahead} commits";
+                        }
+                        if (node.DiffFromLatestInGraph.Behind != 0)
+                        {
+                            diffString += $"\\nbehind: {node.DiffFromLatestInGraph.Behind} commits";
+                        }
+                    }
+                    await writer.WriteLineAsync($"    {GetGraphVizNodeName(node)}[label=\"{GetSimpleRepoName(node.RepoUri)}\\n{node.Commit.Substring(0, 5)}{buildString}{diffString}\"];");
+                    foreach (DependencyGraphNode childNode in node.Children)
+                    {
+                        await writer.WriteLineAsync($"    {GetGraphVizNodeName(node)} -> {GetGraphVizNodeName(childNode)}");
+                    }
+                }
+
+                await writer.WriteLineAsync("}");
+            }
         }
 
         /// <summary>
@@ -270,14 +331,14 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Because the number of builds is almost always 1, log as just a
                 // single build string in this case.
                 Build singleBuild = currentNode.ContributingBuilds.Single();
-                Console.WriteLine($"    Build:   {singleBuild.AzureDevOpsBuildNumber} ({singleBuild.DateProduced.Value.ToLocalTime()})");
+                Console.WriteLine($"    Build:   {singleBuild.AzureDevOpsBuildNumber} ({singleBuild.DateProduced.Value.ToLocalTime().ToString("g")})");
             }
             else if (currentNode.ContributingBuilds.Any())
             {
                 Console.WriteLine("    Builds:");
                 foreach (var build in currentNode.ContributingBuilds)
                 {
-                    Console.WriteLine($"      - {build.AzureDevOpsBuildNumber} ({build.DateProduced.Value.ToLocalTime()})");
+                    Console.WriteLine($"      - {build.AzureDevOpsBuildNumber} ({build.DateProduced.Value.ToLocalTime().ToString("g")})");
                 }
             }
             else
@@ -305,7 +366,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 Console.WriteLine($"{indent}  Builds:");
                 foreach (Build build in node.ContributingBuilds)
                 {
-                    Console.WriteLine($"{indent}    - {build.AzureDevOpsBuildId.Value} ({build.DateProduced.Value.ToLocalTime()})");
+                    Console.WriteLine($"{indent}    - {build.AzureDevOpsBuildId.Value} ({build.DateProduced.Value.ToLocalTime().ToString("g")})");
                 }
             }
             else

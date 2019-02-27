@@ -290,6 +290,23 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Async task.</returns>
         Task CommitUpdatesAsync(string repoUri, string branch, List<DependencyDetail> itemsToUpdate, string message);
 
+        /// <summary>
+        ///     Diff two commits in a repository and return information about them.
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="baseCommit">Base version</param>
+        /// <param name="targetCommit">Target version</param>
+        /// <returns>Diff information</returns>
+        Task<GitDiff> GitDiffAsync(string repoUri, string baseCommit, string targetCommit);
+
+        /// <summary>
+        ///     Get the latest commit in a branch
+        /// </summary>
+        /// <param name="repoUri">Remote repository</param>
+        /// <param name="branch">Branch</param>
+        /// <returns>Latest commit</returns>
+        Task<string> GetLatestCommitAsync(string repoUri, string branch);
+
         #endregion
 
         #region Build/Asset Operations

@@ -316,6 +316,13 @@ namespace Microsoft.DotNet.DarcLib
                 return toUpdate;
             }
 
+            DependencyGraphBuildOptions dependencyGraphBuildOptions = new DependencyGraphBuildOptions()
+            {
+                IncludeToolset = true,
+                LookupBuilds = true,
+                NodeDiff = NodeDiff.None
+            };
+
             // Now make a walk over coherent dependencies. Note that coherent dependencies could make
             // a chain (A->B->C). In all cases we need to walk to the head of the chain, keeping track
             // of all elements in the chain. Also note that we are walking all dependencies here, not
@@ -368,8 +375,7 @@ namespace Microsoft.DotNet.DarcLib
                                                                               null,
                                                                               currentDependency.RepoUri,
                                                                               currentDependency.Commit,
-                                                                              true, /* include toolset */
-                                                                              true, /* lookup builds */
+                                                                              dependencyGraphBuildOptions,
                                                                               _logger);
                     // Cache all nodes in this built graph.
                     foreach (DependencyGraphNode node in dependencyGraph.Nodes)
@@ -630,12 +636,46 @@ namespace Microsoft.DotNet.DarcLib
 
         public Task<PullRequest> GetPullRequestAsync(string pullRequestUri)
         {
+            CheckForValidGitClient();
             return _gitClient.GetPullRequestAsync(pullRequestUri);
         }
 
         public Task<string> CreatePullRequestAsync(string repoUri, PullRequest pullRequest)
         {
+            CheckForValidGitClient();
             return _gitClient.CreatePullRequestAsync(repoUri, pullRequest);
+        }
+
+        /// <summary>
+        ///     Diff two commits in a repository and return information about them.
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="baseVersion">Base version</param>
+        /// <param name="targetVersion">Target version</param>
+        /// <returns>Diff information</returns>
+        public async Task<GitDiff> GitDiffAsync(string repoUri, string baseVersion, string targetVersion)
+        {
+            CheckForValidGitClient();
+            
+            // If base and target are the same, return no diff
+            if (baseVersion.Equals(targetVersion, StringComparison.OrdinalIgnoreCase))
+            {
+                return GitDiff.NoDiff(baseVersion);
+            }
+
+            return await _gitClient.DiffAsync(repoUri, baseVersion, targetVersion);
+        }
+
+        /// <summary>
+        ///     Get the latest commit in a branch
+        /// </summary>
+        /// <param name="repoUri">Remote repository</param>
+        /// <param name="branch">Branch</param>
+        /// <returns>Latest commit</returns>
+        public Task<string> GetLatestCommitAsync(string repoUri, string branch)
+        {
+            CheckForValidGitClient();
+            return _gitClient.GetLastCommitShaAsync(repoUri, branch);
         }
 
         /// <summary>

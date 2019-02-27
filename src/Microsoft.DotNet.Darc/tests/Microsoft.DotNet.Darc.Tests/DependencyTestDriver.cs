@@ -99,9 +99,16 @@ namespace Microsoft.DotNet.Darc.Tests
 
         public async Task<DependencyGraph> GetDependencyGraph(string rootRepoFolder, string rootRepoCommit, bool includeToolset)
         {
+            DependencyGraphBuildOptions dependencyGraphBuildOptions = new DependencyGraphBuildOptions()
+            {
+                IncludeToolset = includeToolset,
+                LookupBuilds = false,
+                NodeDiff = NodeDiff.None
+            };
+
             return await DependencyGraph.BuildLocalDependencyGraphAsync(
                 null,
-                includeToolset,
+                dependencyGraphBuildOptions,
                 NullLogger.Instance,
                 rootRepoFolder,
                 rootRepoCommit,

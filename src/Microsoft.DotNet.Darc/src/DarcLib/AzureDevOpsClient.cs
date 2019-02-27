@@ -568,6 +568,42 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Diff two commits in a repository and return information about them.
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="baseCommit">Base version</param>
+        /// <param name="targetCommit">Target version</param>
+        /// <returns>Diff information</returns>
+        public async Task<GitDiff> DiffAsync(string repoUri, string baseCommit, string targetCommit)
+        {
+            _logger.LogInformation(
+                $"Diffing '{baseCommit}'->'{targetCommit}' in {repoUri}");
+            (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                projectName,
+                $"_apis/git/repositories/{repoName}/diffs/commits?baseVersion={baseCommit}&baseVersionType=commit" +
+                $"&targetVersion={targetCommit}&targetVersionType",
+                _logger);
+
+            if (!content.ContainsKey("baseCommit") || !content.ContainsKey("targetCommit"))
+            {
+                throw new DarcException($"Could not diff {baseCommit} and {targetCommit}");
+            }
+
+            return new GitDiff()
+            {
+                BaseVersion = baseCommit,
+                TargetVersion = targetCommit,
+                Ahead = content["aheadCount"].Value<int>(),
+                Behind = content["behindCount"].Value<int>(),
+                Valid = true
+            };
+        }
+
+        /// <summary>
         /// Retrieve the list of status checks on a PR.
         /// </summary>
         /// <param name="pullRequestUrl">Uri of pull request</param>
