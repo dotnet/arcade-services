@@ -17,6 +17,15 @@ namespace Microsoft.DotNet.DarcLib
                 Valid = true,
             };
         }
+
+        public static GitDiff UnknownDiff()
+        {
+            return new GitDiff()
+            {
+                Valid = false,
+            };
+        }
+
         public string BaseVersion { get; set; }
         public string TargetVersion { get; set; }
         public int Ahead { get; set; }

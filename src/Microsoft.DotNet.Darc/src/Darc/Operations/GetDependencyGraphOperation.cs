@@ -106,7 +106,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     DependencyGraphBuildOptions graphBuildOptions = new DependencyGraphBuildOptions()
                     {
                         IncludeToolset = _options.IncludeToolset,
-                        LookupBuilds = !_options.SkipBuildLookup,
+                        LookupBuilds = diffOption != NodeDiff.None || !_options.SkipBuildLookup,
                         NodeDiff = diffOption
                     };
 
@@ -188,6 +188,58 @@ namespace Microsoft.DotNet.Darc.Operations
             return dependencies;
         }
 
+        private void LogBasicNodeDetails(DependencyGraphNode node, string indent)
+        {
+            Console.WriteLine($"{indent}- Repo:     {node.RepoUri}");
+            Console.WriteLine($"{indent}  Commit:   {node.Commit}");
+            GitDiff diffFrom = node.DiffFrom;
+            // Log the node diff if it was desired.
+            if (diffFrom != null)
+            {
+                string deltaString = "unknown";
+                if (diffFrom.Valid)
+                {
+                    if (diffFrom.Ahead != 0 || diffFrom.Behind != 0)
+                    {
+                        deltaString = "";
+                        if (diffFrom.Ahead != 0)
+                        {
+                            deltaString = $"ahead {diffFrom.Ahead}";
+                        }
+                        if (diffFrom.Behind != 0)
+                        {
+                            if (deltaString != "")
+                            {
+                                deltaString += ", ";
+                            }
+                            deltaString += $"behind {diffFrom.Behind}";
+                        }
+                        deltaString += $" commits vs. {diffFrom.BaseVersion}";
+                    }
+                    else
+                    {
+                        deltaString = "latest";
+                    }
+                }
+                Console.WriteLine($"{indent}  Delta:    {deltaString}");
+            }
+            if (node.ContributingBuilds != null)
+            {
+                if (node.ContributingBuilds.Any())
+                {
+                    Console.WriteLine($"{indent}  Builds:");
+                    foreach (var build in node.ContributingBuilds)
+                    {
+                        Console.WriteLine($"{indent}  - {build.AzureDevOpsBuildNumber} ({build.DateProduced.Value.ToLocalTime().ToString("g")})");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"{indent}  Builds: []");
+                }
+            }
+        }
+
         /// <summary>
         ///     Log the dependency graph as a simple flat list of repo/sha combinations
         ///     that contribute to this graph.
@@ -198,27 +250,7 @@ namespace Microsoft.DotNet.Darc.Operations
             Console.WriteLine($"Repositories:");
             foreach (DependencyGraphNode node in graph.Nodes)
             {
-                Console.WriteLine($"  - Repo:     {node.RepoUri}");
-                Console.WriteLine($"    Commit:   {node.Commit}");
-                if (node.ContributingBuilds.Count() == 1)
-                {
-                    // Because the number of builds is almost always 1, log as just a
-                    // single build string in this case.
-                    Build singleBuild = node.ContributingBuilds.Single();
-                    Console.WriteLine($"    Build:    {singleBuild.AzureDevOpsBuildNumber} ({singleBuild.DateProduced.Value.ToLocalTime().ToString("g")})");
-                }
-                else if (node.ContributingBuilds.Any())
-                {
-                    Console.WriteLine("    Builds:");
-                    foreach (var build in node.ContributingBuilds)
-                    {
-                        Console.WriteLine($"      - {build.AzureDevOpsBuildNumber} ({build.DateProduced.Value.ToLocalTime().ToString("g")})");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"    Build:");
-                }
+                LogBasicNodeDetails(node, "  ");
             }
             LogIncoherencies(graph);
         }
@@ -254,30 +286,34 @@ namespace Microsoft.DotNet.Darc.Operations
                 foreach (DependencyGraphNode node in graph.Nodes)
                 {
                     string buildString = "";
-                    if (node.ContributingBuilds.Any())
+                    if (node.ContributingBuilds != null && node.ContributingBuilds.Any())
                     {
-                        var newestBuild = node.ContributingBuilds.OrderByDescending(b => b.DateProduced).First();
+                        Build newestBuild = node.ContributingBuilds.OrderByDescending(b => b.DateProduced).First();
                         buildString = $"\\n{newestBuild.DateProduced.Value.ToLocalTime().ToString("g")}";
                     }
 
                     string diffString = "";
-                    if (node.DiffFromLatestInGraph == null)
+                    GitDiff diffFrom = node.DiffFrom;
+                    if (diffFrom != null)
                     {
-                        diffString = "\\nlatest";
-                    }
-                    else if (!node.DiffFromLatestInGraph.Valid)
-                    {
-                        diffString = "\\ndiff unknown";
-                    }
-                    else
-                    {
-                        if (node.DiffFromLatestInGraph.Ahead != 0)
+                        if (!diffFrom.Valid)
                         {
-                            diffString += $"\\nahead: {node.DiffFromLatestInGraph.Ahead} commits";
+                            diffString = "\\ndiff unknown";
                         }
-                        if (node.DiffFromLatestInGraph.Behind != 0)
+                        else if (diffFrom.Ahead != 0 || diffFrom.Behind != 0)
                         {
-                            diffString += $"\\nbehind: {node.DiffFromLatestInGraph.Behind} commits";
+                            if (node.DiffFrom.Ahead != 0)
+                            {
+                                diffString += $"\\nahead: {node.DiffFrom.Ahead} commits";
+                            }
+                            if (node.DiffFrom.Behind != 0)
+                            {
+                                diffString += $"\\nbehind: {node.DiffFrom.Behind} commits";
+                            }
+                        }
+                        else
+                        {
+                            diffString = "\\nlatest";
                         }
                     }
                     await writer.WriteLineAsync($"    {GetGraphVizNodeName(node)}[label=\"{GetSimpleRepoName(node.RepoUri)}\\n{node.Commit.Substring(0, 5)}{buildString}{diffString}\"];");
@@ -324,27 +360,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
         private void LogIncoherentPath(DependencyGraphNode currentNode, DependencyGraphNode childNode, string indent)
         {
-            Console.WriteLine($"{indent}- Repo:    {currentNode.RepoUri}");
-            Console.WriteLine($"{indent}  Commit:  {currentNode.Commit}");
-            if (currentNode.ContributingBuilds.Count() == 1)
-            {
-                // Because the number of builds is almost always 1, log as just a
-                // single build string in this case.
-                Build singleBuild = currentNode.ContributingBuilds.Single();
-                Console.WriteLine($"    Build:   {singleBuild.AzureDevOpsBuildNumber} ({singleBuild.DateProduced.Value.ToLocalTime().ToString("g")})");
-            }
-            else if (currentNode.ContributingBuilds.Any())
-            {
-                Console.WriteLine("    Builds:");
-                foreach (var build in currentNode.ContributingBuilds)
-                {
-                    Console.WriteLine($"      - {build.AzureDevOpsBuildNumber} ({build.DateProduced.Value.ToLocalTime().ToString("g")})");
-                }
-            }
-            else
-            {
-                Console.WriteLine("    Build:");
-            }
+            LogBasicNodeDetails(currentNode, indent);
             foreach (DependencyGraphNode parentNode in currentNode.Parents)
             {
                 LogIncoherentPath(parentNode, currentNode, indent + "  ");
@@ -359,20 +375,7 @@ namespace Microsoft.DotNet.Darc.Operations
         private void LogDependencyGraphNode(DependencyGraphNode node, string indent)
         {
             // Log the repository information.
-            Console.WriteLine($"{indent}- Repo:    {node.RepoUri}");
-            Console.WriteLine($"{indent}  Commit:  {node.Commit}");
-            if (node.ContributingBuilds.Any())
-            {
-                Console.WriteLine($"{indent}  Builds:");
-                foreach (Build build in node.ContributingBuilds)
-                {
-                    Console.WriteLine($"{indent}    - {build.AzureDevOpsBuildId.Value} ({build.DateProduced.Value.ToLocalTime().ToString("g")})");
-                }
-            }
-            else
-            {
-                Console.WriteLine($"    Builds: []");
-            }
+            LogBasicNodeDetails(node, indent);
             if (node.Dependencies != null && node.Dependencies.Any())
             {
                 Console.WriteLine($"{indent}  Dependencies:");

@@ -68,7 +68,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <summary>
         /// Diff from another node or commit. If null, diff is unknown.
         /// </summary>
-        public GitDiff DiffFromLatestInGraph { get; set; }
+        public GitDiff DiffFrom { get; set; }
 
         public void AddChild(DependencyGraphNode newChild, DependencyDetail dependency)
         {

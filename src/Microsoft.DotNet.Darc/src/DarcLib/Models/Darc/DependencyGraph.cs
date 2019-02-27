@@ -257,7 +257,7 @@ namespace Microsoft.DotNet.DarcLib
             foreach (DependencyGraphNode node in nodeCache.Values)
             {
                 // Start with an unknown diff.
-                node.DiffFromLatestInGraph = null;
+                node.DiffFrom = GitDiff.UnknownDiff();
 
                 if (node.ContributingBuilds.Any())
                 {
@@ -290,7 +290,7 @@ namespace Microsoft.DotNet.DarcLib
                         {
                             IRemote repoRemote = remoteFactory.GetRemote(node.RepoUri, logger);
                             // This will return a no-diff if latestCommit == node.Commit
-                            node.DiffFromLatestInGraph = await repoRemote.GitDiffAsync(node.RepoUri, latestCommit, node.Commit);
+                            node.DiffFrom = await repoRemote.GitDiffAsync(node.RepoUri, latestCommit, node.Commit);
                         }
                     }
                 }
@@ -354,13 +354,13 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         IRemote repoRemote = remoteFactory.GetRemote(node.RepoUri, logger);
                         // If node == newestNode, returns no diff.
-                        node.DiffFromLatestInGraph = await repoRemote.GitDiffAsync(node.RepoUri, newestNode.Commit, node.Commit);
+                        node.DiffFrom = await repoRemote.GitDiffAsync(node.RepoUri, newestNode.Commit, node.Commit);
                     }
                 }
                 else
                 {
                     DependencyGraphNode singleNode = nodes.Single();
-                    singleNode.DiffFromLatestInGraph = GitDiff.NoDiff(singleNode.Commit);
+                    singleNode.DiffFrom = GitDiff.NoDiff(singleNode.Commit);
                 }
             }
         }
