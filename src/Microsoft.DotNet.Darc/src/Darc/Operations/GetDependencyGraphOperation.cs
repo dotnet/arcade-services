@@ -216,7 +216,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="graph">Graph to log incoherencies for</param>
         private void LogIncoherencies(DependencyGraph graph)
         {
-            if (!graph.IncoherentNodes.Any())
+            if (!graph.IncoherentNodes.Any() || !_options.IncludeCoherency)
             {
                 return;
             }
@@ -260,7 +260,7 @@ namespace Microsoft.DotNet.Darc.Operations
             // Log the repository information.
             Console.WriteLine($"{indent}- Repo:    {node.RepoUri}");
             Console.WriteLine($"{indent}  Commit:  {node.Commit}");
-            if (node.Dependencies.Any())
+            if (node.Dependencies != null && node.Dependencies.Any())
             {
                 Console.WriteLine($"{indent}  Dependencies:");
 

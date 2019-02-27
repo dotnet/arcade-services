@@ -115,55 +115,154 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
+        ///     Returns the repo uri if it's set explicity or one of the shorthand versions is used.
+        /// </summary>
+        /// <returns></returns>
+        private string GetRepoUri()
+        {
+            const string sdkUri = "https://github.com/dotnet/core-sdk";
+            const string runtimeUri = "https://github.com/dotnet/core-setup";
+            const string aspnetUri = "https://github.com/aspnet/AspNetCore";
+            string repoUri = _options.RepoUri;
+
+            if (string.IsNullOrEmpty(repoUri))
+            {
+                if (_options.DownloadSdk)
+                {
+                    repoUri = sdkUri;
+                }
+                else if (_options.DownloadRuntime)
+                {
+                    repoUri = runtimeUri;
+                }
+                else if (_options.DownloadAspNet)
+                {
+                    repoUri = aspnetUri;
+                }
+            }
+            return repoUri;
+        }
+
+        /// <summary>
+        ///     Validate that the root build options are being used
+        ///     properly.
+        ///     
+        ///     This could be partially covered by the SetName attributes, but they aren't
+        ///     quite expressive enough for the options
+        /// </summary>
+        /// <returns>True if they are being used properly, false otherwise.</returns>
+        private bool ValidateRootBuildOptions()
+        {
+            if (_options.RootBuildId != 0)
+            {
+                if (!string.IsNullOrEmpty(_options.RepoUri) ||
+                  !string.IsNullOrEmpty(_options.Channel) ||
+                  !string.IsNullOrEmpty(_options.Commit) ||
+                  _options.DownloadSdk ||
+                  _options.DownloadRuntime ||
+                  _options.DownloadAspNet)
+                {
+                    Console.WriteLine("--id should not be specified with other options.");
+                    return false;
+                }
+                return true;
+            }
+            else
+            {
+                // Should specify a repo uri or shorthand, and only one
+                if (!(!string.IsNullOrEmpty(_options.RepoUri) ^
+                    _options.DownloadSdk ^
+                    _options.DownloadRuntime ^
+                    _options.DownloadAspNet))
+                {
+                    Console.WriteLine("Please specify one of --id, --repo, --sdk, --runtime or --aspnet.");
+                    return false;
+                }
+                // Check that commit or channel was specified but not both
+                if (!(!string.IsNullOrEmpty(_options.Commit) ^
+                    !string.IsNullOrEmpty(_options.Channel)))
+                {
+                    Console.WriteLine("Please specify either --channel or --commit.");
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        /// <summary>
         ///     Obtain the root build.
         /// </summary>
         /// <returns>Root build to start with.</returns>
         private async Task<Build> GetRootBuildAsync()
         {
-            DarcSettings darcSettings = LocalSettings.GetDarcSettings(_options, Logger);
-            // No need to set up a git type or PAT here.
-            Remote remote = new Remote(darcSettings, Logger);
-            Build rootBuild;
-            if (_options.RootBuildId != 0)
+            if (!ValidateRootBuildOptions())
             {
-                Console.WriteLine($"Looking up build by id {_options.RootBuildId}");
-                rootBuild = await remote.GetBuildAsync(_options.RootBuildId);
-            }
-            else if (!string.IsNullOrEmpty(_options.RepoUri))
-            {
-                if (string.IsNullOrEmpty(_options.Commit))
-                {
-                    Console.WriteLine("If --repo is specified, --commit should be supplied");
-                    return null;
-                }
-                Console.WriteLine($"Looking up builds of {_options.RepoUri}@{_options.Commit}");
-                IList <Build> builds = await remote.GetBuildsAsync(_options.RepoUri, _options.Commit);
-                // If more than one is available, print them with their IDs.
-                if (builds.Count > 1)
-                {
-                    Console.WriteLine($"There were {builds.Count} potential root builds.  Please select one and pass it with --id");
-                    foreach (var build in builds)
-                    {
-                        Console.WriteLine($"  {build.Id}: {build.AzureDevOpsBuildNumber} @ {build.DateProduced.Value.ToLocalTime()}");
-                    }
-                    return null;
-                }
-                else
-                {
-                    rootBuild = builds.SingleOrDefault();
-                }
-            }
-            else
-            {
-                Console.WriteLine("Please specify either --id or --repo and --commit");
                 return null;
             }
 
-            if (rootBuild == null)
+            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+
+            string repoUri = GetRepoUri();
+            if (_options.RootBuildId != 0)
             {
-                Console.WriteLine("No build was found matching the specified parameters.");
+                Console.WriteLine($"Looking up build by id {_options.RootBuildId}");
+                Build rootBuild = await remote.GetBuildAsync(_options.RootBuildId);
+                if (rootBuild == null)
+                {
+                    Console.WriteLine($"No build found with id {_options.RootBuildId}");
+                    return null;
+                }
+                return rootBuild;
             }
-            return rootBuild;
+            else if (!string.IsNullOrEmpty(repoUri))
+            {
+                if (!string.IsNullOrEmpty(_options.Channel))
+                {
+                    IEnumerable<Channel> channels = await remote.GetChannelsAsync();
+                    IEnumerable<Channel> desiredChannels = channels.Where(channel => channel.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
+                    if (desiredChannels.Count() != 1)
+                    {
+                        Console.WriteLine($"Channel name {_options.Channel} did not match a unique channel. Available channels:");
+                        foreach (var channel in channels)
+                        {
+                            Console.WriteLine($"  {channel.Name}");
+                        }
+                        return null;
+                    }
+                    Channel targetChannel = desiredChannels.First();
+                    Console.WriteLine($"Looking up latest build of '{repoUri}' on channel '{targetChannel.Name}'");
+                    Build rootBuild = await remote.GetLatestBuildAsync(repoUri, targetChannel.Id.Value);
+                    if (rootBuild == null)
+                    {
+                        Console.WriteLine($"No build of '{repoUri}' found on channel '{targetChannel.Name}'");
+                        return null;
+                    }
+                    return rootBuild;
+                }
+                else if (!string.IsNullOrEmpty(_options.Commit))
+                {
+                    Console.WriteLine($"Looking up builds of {_options.RepoUri}@{_options.Commit}");
+                    IEnumerable<Build> builds = await remote.GetBuildsAsync(_options.RepoUri, _options.Commit);
+                    // If more than one is available, print them with their IDs.
+                    if (builds.Count() > 1)
+                    {
+                        Console.WriteLine($"There were {builds.Count()} potential root builds.  Please select one and pass it with --id");
+                        foreach (var build in builds)
+                        {
+                            Console.WriteLine($"  {build.Id}: {build.AzureDevOpsBuildNumber} @ {build.DateProduced.Value.ToLocalTime()}");
+                        }
+                        return null;
+                    }
+                    Build rootBuild = builds.SingleOrDefault();
+                    if (rootBuild == null)
+                    {
+                        Console.WriteLine($"No builds were found of {_options.RepoUri}@{_options.Commit}");
+                    }
+                    return rootBuild;
+                }
+            }
+            // Shouldn't get here if ValidateRootBuildOptions is correct.
+            throw new DarcException("Options for root builds were not validated properly. Please contact @dnceng");
         }
 
         class BuildComparer : IEqualityComparer<Build>
@@ -270,7 +369,7 @@ namespace Microsoft.DotNet.Darc.Operations
             Console.WriteLine("Building graph of all dependencies under root build...");
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 remoteFactory,
-                rootBuild.AzureDevOpsRepository,
+                rootBuild.AzureDevOpsRepository ?? rootBuild.GitHubRepository,
                 rootBuild.Commit,
                 _options.IncludeToolset,
                 Logger);
@@ -308,7 +407,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     // Look up the asset by name and version.
                     Console.WriteLine($"Looking up {dependency.Name}@{dependency.Version} in Build Asset Registry...");
-                    IList<Asset> matchingAssets = await rootBuildRemote.GetAssetsAsync(dependency.Name, dependency.Version);
+                    IEnumerable<Asset> matchingAssets = await rootBuildRemote.GetAssetsAsync(dependency.Name, dependency.Version);
 
                     // Because the same asset could be produced more than once by different builds (e.g. if you had
                     // a stable asset version), look up the builds by ID until we find one that built the right commit.
@@ -319,14 +418,18 @@ namespace Microsoft.DotNet.Darc.Operations
                         // Do some quick caching after this lookup.
                         foreach (Asset buildAsset in potentialBuild.Assets)
                         {
-                            dependencyCache.Add(
-                                new DependencyDetail() {
-                                    Name = buildAsset.Name,
-                                    Version = buildAsset.Version,
-                                    Commit = potentialBuild.Commit,
-                                    RepoUri = potentialBuild.AzureDevOpsRepository
-                                },
-                                potentialBuild);
+                            DependencyDetail dependencyDetail = new DependencyDetail
+                            {
+                                Name = buildAsset.Name,
+                                Version = buildAsset.Version,
+                                Commit = potentialBuild.Commit,
+                                RepoUri = potentialBuild.AzureDevOpsRepository
+                            };
+
+                            if (!dependencyCache.ContainsKey(dependencyDetail))
+                            {
+                                dependencyCache.Add(dependencyDetail, potentialBuild);
+                            }
                         }
 
                         // Determine whether this build matches. Commit should be enough.  We could
@@ -400,32 +503,31 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="rootOutputDirectory">Output directory. Must exist.</param>
         private async Task<DownloadedBuild> GatherDropForBuildAsync(Build build, string rootOutputDirectory)
         {
-            DarcSettings darcSettings = LocalSettings.GetDarcSettings(_options, Logger);
-            // No need to set up a git type or PAT here.
-            Remote remote = new Remote(darcSettings, Logger);
+            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
             bool success = true;
 
             // If the drop is separated, calculate the directory name based on the last element of the build
             // repo uri plus the build number (to disambiguate overlapping builds)
             string outputDirectory = rootOutputDirectory;
+            string repoUri = build.AzureDevOpsRepository ?? build.GitHubRepository;
             if (_options.Separated)
             {
-                int lastSlash = build.AzureDevOpsRepository.LastIndexOf("/");
-                if (lastSlash != -1 && lastSlash != build.AzureDevOpsRepository.Length - 1)
+                int lastSlash = repoUri.LastIndexOf("/");
+                if (lastSlash != -1 && lastSlash != repoUri.Length - 1)
                 {
-                    outputDirectory = Path.Combine(rootOutputDirectory, build.AzureDevOpsRepository.Substring(lastSlash + 1), build.AzureDevOpsBuildNumber);
+                    outputDirectory = Path.Combine(rootOutputDirectory, repoUri.Substring(lastSlash + 1), build.AzureDevOpsBuildNumber);
                 }
                 else
                 {
                     // Might contain invalid path chars, this is currently unhandled.
-                    outputDirectory = Path.Combine(rootOutputDirectory, build.AzureDevOpsRepository, build.AzureDevOpsBuildNumber);
+                    outputDirectory = Path.Combine(rootOutputDirectory, repoUri, build.AzureDevOpsBuildNumber);
                 }
                 Directory.CreateDirectory(outputDirectory);
             }
 
             List<DownloadedAsset> downloadedAssets = new List<DownloadedAsset>();
 
-            Console.WriteLine($"Gathering drop for build {build.AzureDevOpsBuildNumber} of {build.AzureDevOpsRepository}");
+            Console.WriteLine($"Gathering drop for build {build.AzureDevOpsBuildNumber} of {repoUri}");
             using (HttpClient client = new HttpClient())
             {
                 var assets = await remote.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?)false : null));

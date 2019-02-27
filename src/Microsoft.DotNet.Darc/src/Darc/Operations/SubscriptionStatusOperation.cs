@@ -38,9 +38,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 return Constants.ErrorCode;
             }
 
-            DarcSettings darcSettings = LocalSettings.GetDarcSettings(_options, Logger);
-            // No need to set up a git type or PAT here.
-            Remote remote = new Remote(darcSettings, Logger);
+            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             // First, try to get the subscription. If it doesn't exist the call will throw and the exception will be
             // caught by `RunOperation`
@@ -73,7 +71,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 subscriptionToUpdate.Policy.MergePolicies = subscription.Policy.MergePolicies;
 
                 var updatedSubscription = await remote.UpdateSubscriptionAsync(
-                    subscription.Id.Value,
+                    _options.Id,
                     subscriptionToUpdate);
 
                 Console.WriteLine($"Successfully {statusMessage}d subscription with id '{updatedSubscription.Id}'.");

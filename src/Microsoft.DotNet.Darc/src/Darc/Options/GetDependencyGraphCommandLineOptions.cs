@@ -39,6 +39,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("include-toolset", HelpText = "Include toolset dependencies.")]
         public bool IncludeToolset { get; set; }
 
+        [Option("coherency", HelpText = "Report coherency information.")]
+        public bool IncludeCoherency { get; set; }
+
         public override Operation GetOperation()
         {
             return new GetDependencyGraphOperation(this);

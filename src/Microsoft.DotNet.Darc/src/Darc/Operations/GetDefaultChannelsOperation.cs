@@ -34,9 +34,7 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             try
             {
-                DarcSettings darcSettings = LocalSettings.GetDarcSettings(_options, Logger);
-                // No need to set up a git type or PAT here.
-                Remote remote = new Remote(darcSettings, Logger);
+                IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
                 var defaultChannels = (await remote.GetDefaultChannelsAsync()).Where(defaultChannel =>
                 {
