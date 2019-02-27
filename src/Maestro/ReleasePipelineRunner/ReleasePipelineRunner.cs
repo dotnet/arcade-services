@@ -115,19 +115,13 @@ namespace ReleasePipelineRunner
             Build build = await Context.Builds
                 .Where(b => b.Id == buildId).FirstOrDefaultAsync();
 
-            Channel channel = await Context.Channels
-                .Where(ch => ch.Id == channelId)
-                .Include(ch => ch.ChannelReleasePipelines)
-                .ThenInclude(crp => crp.ReleasePipeline)
-                .FirstOrDefaultAsync();
-
-            if (build == null || channel == null)
+            if (build == null)
             {
-                Logger.LogInformation($"Could not find the specified build {buildId} or channel {channelId} to run a release pipeline on");
+                Logger.LogError($"Could not find the specified BAR Build {buildId} to run a release pipeline.");
                 return;
             }
 
-            // If something use the old API version we won't have this information available.
+            // If something uses the old API version we won't have this information available.
             // This will also be the case if something adds an existing build (created using
             // the old API version) to a channel
             if (build.AzureDevOpsBuildId == null)
@@ -135,6 +129,19 @@ namespace ReleasePipelineRunner
                 Logger.LogInformation($"barBuildInfo.AzureDevOpsBuildId is null for BAR Build.Id {build.Id}.");
                 return;
             }
+
+            Channel channel = await Context.Channels
+                .Where(ch => ch.Id == channelId)
+                .Include(ch => ch.ChannelReleasePipelines)
+                .ThenInclude(crp => crp.ReleasePipeline)
+                .FirstOrDefaultAsync();
+
+            if (channel == null)
+            {
+                Logger.LogInformation($"Could not find the specified channel {channelId} to run a release pipeline on.");
+                return;
+            }
+
 
             if (channel.ChannelReleasePipelines?.Any() != true)
             {

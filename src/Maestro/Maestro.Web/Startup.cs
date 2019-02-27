@@ -73,12 +73,11 @@ namespace Maestro.Web
 
         private static bool ChannelHasAssociatedReleasePipeline(int channelId, BuildAssetRegistryContext context)
         {
-            Channel channel = context.Channels
+            return context.Channels
                 .Where(ch => ch.Id == channelId)
                 .Include(ch => ch.ChannelReleasePipelines)
                 .ThenInclude(crp => crp.ReleasePipeline)
-                .FirstOrDefault();
-            return channel != null && channel.ChannelReleasePipelines.Count > 0;
+                .FirstOrDefault(c => c.ChannelReleasePipelines.Count > 0) != null;
         }
 
         public Startup(IHostingEnvironment env)
