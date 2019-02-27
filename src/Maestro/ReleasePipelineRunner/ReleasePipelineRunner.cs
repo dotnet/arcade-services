@@ -5,7 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,61 +19,9 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Data;
 using Microsoft.ServiceFabric.Data.Collections;
-using Newtonsoft.Json;
 
 namespace ReleasePipelineRunner
 {
-    [DataContract]
-    public sealed class ReleasePipelineRunnerItem
-    {
-        [DataMember]
-        public int BuildId { get; set; }
-
-        [DataMember]
-        public int ChannelId { get; set; }
-    }
-
-    [DataContract]
-    public sealed class ReleasePipelineStatusItem
-    {
-        [DataMember]
-        public int ReleaseId { get; set; }
-
-        [DataMember]
-        public int ChannelId { get; set; }
-
-        [DataMember]
-        public string PipelineOrganization { get; set; }
-
-        [DataMember]
-        public string PipelineProject { get; set; }
-
-        public ReleasePipelineStatusItem()
-        {
-
-        }
-        public ReleasePipelineStatusItem(int releaseId, int channelId, string pipelineOrganization, string pipelineProject)
-        {
-            ReleaseId = releaseId;
-            ChannelId = channelId;
-            PipelineOrganization = pipelineOrganization;
-            PipelineProject = pipelineProject;
-        }
-    }
-
-    sealed class BuildChannelComparer : IEqualityComparer<BuildChannel>
-    {
-        public bool Equals(BuildChannel x, BuildChannel y)
-        {
-            return x.BuildId == y.BuildId && x.ChannelId == y.ChannelId;
-        }
-
-        public int GetHashCode(BuildChannel obj)
-        {
-            return obj.ChannelId * 31 + obj.BuildId;
-        }
-    }
-
     /// <summary>
     /// An instance of this class is created for each service replica by the Service Fabric runtime.
     /// </summary>
@@ -95,7 +42,7 @@ namespace ReleasePipelineRunner
         public BuildAssetRegistryContext Context { get; }
 
         private const string RunningPipelineDictionaryName = "runningPipelines";
-        private static HashSet<string> InProgressStatuses = new HashSet<string>() { "notstarted", "scheduled", "queued", "inprogress" };
+        private static HashSet<string> InProgressStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "notstarted", "scheduled", "queued", "inprogress" };
 
         public async Task StartAssociatedReleasePipelinesAsync(int buildId, int channelId)
         {
@@ -138,11 +85,12 @@ namespace ReleasePipelineRunner
                                 await RunAssociatedReleasePipelinesAsync(item.BuildId, item.ChannelId, cancellationToken);
                             }
                         }
-
+                        else
+                        {
+                            await Task.Delay(1000, cancellationToken);
+                        }
                         await tx.CommitAsync();
                     }
-
-                    await Task.Delay(1000, cancellationToken);
                 }
                 catch (TaskCanceledException tcex) when (tcex.CancellationToken == cancellationToken)
                 {
@@ -165,13 +113,19 @@ namespace ReleasePipelineRunner
         {
             Logger.LogInformation($"Starting release pipeline for {buildId} in {channelId}");
             Build build = await Context.Builds
-                .Where(b => b.Id == buildId).FirstAsync();
+                .Where(b => b.Id == buildId).FirstOrDefaultAsync();
 
             Channel channel = await Context.Channels
                 .Where(ch => ch.Id == channelId)
                 .Include(ch => ch.ChannelReleasePipelines)
                 .ThenInclude(crp => crp.ReleasePipeline)
-                .FirstAsync();
+                .FirstOrDefaultAsync();
+
+            if (build == null || channel == null)
+            {
+                Logger.LogInformation($"Could not find the specified build {buildId} or channel {channelId} to run a release pipeline on");
+                return;
+            }
 
             // If something use the old API version we won't have this information available.
             // This will also be the case if something adds an existing build (created using
@@ -236,7 +190,7 @@ namespace ReleasePipelineRunner
                     {
                         // Some channel already triggered release pipelines for this build. Need to update with the releases for the new channel.
                         releaseList.AddRange(runningPipelinesForBuild.Value);
-                        await runningPipelines.AddOrUpdateAsync(tx, buildId, releaseList, (key, oldValue) => releaseList);
+                        await runningPipelines.TryUpdateAsync(tx, buildId, releaseList, runningPipelinesForBuild.Value);
                     }
                     else
                     {
@@ -245,7 +199,6 @@ namespace ReleasePipelineRunner
                     await tx.CommitAsync();
                 }
             }
-            await ProcessFinishedReleasesAsync(cancellationToken);
         }
 
         /// <summary>
@@ -258,51 +211,50 @@ namespace ReleasePipelineRunner
         public async Task ProcessFinishedReleasesAsync(CancellationToken cancellationToken)
         {
             var runningPipelines =
-                        await StateManager.GetOrAddAsync<IReliableDictionary<int, IList<ReleasePipelineStatusItem>>>(RunningPipelineDictionaryName);
+                await StateManager.GetOrAddAsync<IReliableDictionary<int, IList<ReleasePipelineStatusItem>>>(RunningPipelineDictionaryName);
             try
             {
                 HashSet<BuildChannel> buildChannelsToAdd = new HashSet<BuildChannel>(new BuildChannelComparer());
                 using (ITransaction tx = StateManager.CreateTransaction())
                 {
                     var runningPipelinesEnumerable = await runningPipelines.CreateEnumerableAsync(tx, EnumerationMode.Unordered);
-                    var asyncEnumerator = runningPipelinesEnumerable.GetAsyncEnumerator();
-                    while (await asyncEnumerator.MoveNextAsync(cancellationToken))
+                    using (var asyncEnumerator = runningPipelinesEnumerable.GetAsyncEnumerator())
                     {
                         int buildId = asyncEnumerator.Current.Key;
-                        ConditionalValue<IList<ReleasePipelineStatusItem>> maybeReleaseStatuses = await runningPipelines.TryGetValueAsync(tx, buildId);
-                        if (maybeReleaseStatuses.HasValue)
+                        IList<ReleasePipelineStatusItem> releaseStatuses = asyncEnumerator.Current.Value;
+                        List<ReleasePipelineStatusItem> unfinishedReleases = new List<ReleasePipelineStatusItem>();
+                        foreach (ReleasePipelineStatusItem releaseStatus in releaseStatuses)
                         {
-                            bool allFinished = true;
-                            IList<ReleasePipelineStatusItem> releaseStatuses = maybeReleaseStatuses.Value;
+                            int releaseId = releaseStatus.ReleaseId;
+                            AzureDevOpsClient azdoClient = await GetAzureDevOpsClientForAccount(releaseStatus.PipelineOrganization);
+                            AzureDevOpsRelease release =
+                                await azdoClient.GetReleaseAsync(releaseStatus.PipelineOrganization, releaseStatus.PipelineProject, releaseStatus.ReleaseId);
 
-                            foreach (ReleasePipelineStatusItem releaseStatus in releaseStatuses)
+                            if (HasInProgressEnvironments(release))
                             {
-                                int releaseId = releaseStatus.ReleaseId;
-                                AzureDevOpsClient azdoClient = await GetAzureDevOpsClientForAccount(releaseStatus.PipelineOrganization);
-                                AzureDevOpsRelease release = await azdoClient.GetReleaseAsync(releaseStatus.PipelineOrganization, releaseStatus.PipelineProject, releaseStatus.ReleaseId);
-                                string currentStatus = release.Environments[0].Status;
-                                if (InProgressStatuses.Contains(currentStatus.ToLowerInvariant()))
-                                {
-                                    allFinished = false;
-                                }
-                                else
-                                {
-                                    Logger.LogInformation($"Release {releaseId} finished executing with status: {currentStatus}");
-                                    buildChannelsToAdd.Add(new BuildChannel
-                                    {
-                                        BuildId = buildId,
-                                        ChannelId = releaseStatus.ChannelId
-                                    });
-                                }
+                                unfinishedReleases.Add(releaseStatus);
                             }
-
-                            // Stop tracking releases for builds where every release finished.
-                            if (allFinished)
+                            else
                             {
-                                await runningPipelines.TryRemoveAsync(tx, asyncEnumerator.Current.Key);
+                                Logger.LogInformation($"Release {releaseId} finished executing");
+                                buildChannelsToAdd.Add(new BuildChannel
+                                {
+                                    BuildId = buildId,
+                                    ChannelId = releaseStatus.ChannelId
+                                });
                             }
                         }
+
+                        if (unfinishedReleases.Count > 0)
+                        {
+                            await runningPipelines.TryUpdateAsync(tx, buildId, unfinishedReleases, releaseStatuses);
+                        }
+                        else
+                        {
+                            await runningPipelines.TryRemoveAsync(tx, buildId);
+                        }
                     }
+
                     if (buildChannelsToAdd.Count > 0)
                     {
                         AddFinishedBuildChannelsIfNotPresent(buildChannelsToAdd);
@@ -318,6 +270,11 @@ namespace ReleasePipelineRunner
             {
                 Logger.LogError(ex, "Processing finished releases");
             }
+        }
+
+        private static bool HasInProgressEnvironments(AzureDevOpsRelease release)
+        {
+            return release.Environments.Any(x => InProgressStatuses.Contains(x.Status));
         }
 
         private async Task<AzureDevOpsClient> GetAzureDevOpsClientForAccount(string account)

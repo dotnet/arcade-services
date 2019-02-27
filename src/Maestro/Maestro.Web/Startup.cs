@@ -77,7 +77,7 @@ namespace Maestro.Web
                 .Where(ch => ch.Id == channelId)
                 .Include(ch => ch.ChannelReleasePipelines)
                 .ThenInclude(crp => crp.ReleasePipeline)
-                .FirstOrDefaultAsync().GetAwaiter().GetResult();
+                .FirstOrDefault();
             return channel != null && channel.ChannelReleasePipelines.Count > 0;
         }
 
