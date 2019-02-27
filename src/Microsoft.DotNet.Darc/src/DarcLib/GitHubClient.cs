@@ -789,7 +789,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="baseVersion">Base version</param>
         /// <param name="targetVersion">Target version</param>
         /// <returns>Diff information</returns>
-        public async Task<GitDiff> DiffAsync(string repoUri, string baseVersion, string targetVersion)
+        public async Task<GitDiff> GitDiffAsync(string repoUri, string baseVersion, string targetVersion)
         {
             _logger.LogInformation(
                 $"Diffing '{baseVersion}'->'{targetVersion}' in {repoUri}");
@@ -817,12 +817,7 @@ namespace Microsoft.DotNet.DarcLib
             }
             catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)"))
             {
-                return new GitDiff()
-                {
-                    BaseVersion = baseVersion,
-                    TargetVersion = targetVersion,
-                    Valid = false
-                };
+                return GitDiff.UnknownDiff();
             }
         }
     }

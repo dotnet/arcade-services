@@ -433,7 +433,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="assetName">Name of asset.</param>
         /// <param name="currentNode">Dependency graph node to find the asset in.</param>
-        /// <returns>(Asset, Build), or (null, null) if not found.</returns>
+        /// <returns>(Asset, Build, depth), or (null, null, maxint) if not found.</returns>
         private (Asset, Build, int) FindAssetInBuildTree(string assetName, DependencyGraphNode currentNode, int currentDepth)
         {
             foreach (Build build in currentNode.ContributingBuilds)
@@ -663,7 +663,7 @@ namespace Microsoft.DotNet.DarcLib
                 return GitDiff.NoDiff(baseVersion);
             }
 
-            return await _gitClient.DiffAsync(repoUri, baseVersion, targetVersion);
+            return await _gitClient.GitDiffAsync(repoUri, baseVersion, targetVersion);
         }
 
         /// <summary>

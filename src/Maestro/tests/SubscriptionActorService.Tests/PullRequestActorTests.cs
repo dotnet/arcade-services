@@ -186,13 +186,14 @@ namespace SubscriptionActorService.Tests
                 .ReturnsAsync(
                     (string repo, string branch, string sha, IEnumerable<AssetData> assets) =>
                     {
+                        // Just make from->to identical.
                         return assets.Select(
                                 d => new DependencyDetail
                                 {
                                     Name = d.Name,
                                     Version = d.Version
                                 })
-                            .ToList();
+                            .ToDictionary(d => d);
                     });
         }
 

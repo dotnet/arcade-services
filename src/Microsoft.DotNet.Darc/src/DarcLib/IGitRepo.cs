@@ -137,7 +137,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="baseVersion">Base version</param>
         /// <param name="targetVersion">Target version</param>
         /// <returns>Diff information</returns>
-        Task<GitDiff> DiffAsync(string repoUri, string baseVersion, string targetVersion);
+        Task<GitDiff> GitDiffAsync(string repoUri, string baseVersion, string targetVersion);
     }
 
     public class PullRequest

@@ -40,7 +40,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("include-toolset", HelpText = "Include toolset dependencies.")]
         public bool IncludeToolset { get; set; }
 
-        [Option("skip-builds", HelpText = "Do not look up build or information.")]
+        [Option("skip-builds", HelpText = "Do not look up build information.")]
         public bool SkipBuildLookup { get; set; }
 
         [Option("delta-from", Default = "newest-in-graph", HelpText = "Determine the delta of each node in the graph from a target. " +

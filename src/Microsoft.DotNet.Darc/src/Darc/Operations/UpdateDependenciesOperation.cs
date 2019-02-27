@@ -174,8 +174,8 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     Console.WriteLine($"Checking for coherency updates...");
 
-                    // Now that we have the updated dependencies, update our original dependency list
-                    // with these, then run a coherency update.
+                    // Now run a coherency update based on the current set of dependencies updated
+                    // from the previous pass.
                     Dictionary<DependencyDetail, DependencyDetail> coherencyUpdates =
                         await barOnlyRemote.GetRequiredCoherencyUpdatesAsync(currentDependencies, remoteFactory);
 

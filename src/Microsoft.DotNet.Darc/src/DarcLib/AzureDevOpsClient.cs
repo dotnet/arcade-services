@@ -574,33 +574,35 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="baseCommit">Base version</param>
         /// <param name="targetCommit">Target version</param>
         /// <returns>Diff information</returns>
-        public async Task<GitDiff> DiffAsync(string repoUri, string baseCommit, string targetCommit)
+        public async Task<GitDiff> GitDiffAsync(string repoUri, string baseCommit, string targetCommit)
         {
             _logger.LogInformation(
                 $"Diffing '{baseCommit}'->'{targetCommit}' in {repoUri}");
             (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
 
-            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
-                HttpMethod.Get,
-                accountName,
-                projectName,
-                $"_apis/git/repositories/{repoName}/diffs/commits?baseVersion={baseCommit}&baseVersionType=commit" +
-                $"&targetVersion={targetCommit}&targetVersionType",
-                _logger);
-
-            if (!content.ContainsKey("baseCommit") || !content.ContainsKey("targetCommit"))
+            try
             {
-                throw new DarcException($"Could not diff {baseCommit} and {targetCommit}");
+                JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                    HttpMethod.Get,
+                    accountName,
+                    projectName,
+                    $"_apis/git/repositories/{repoName}/diffs/commits?baseVersion={baseCommit}&baseVersionType=commit" +
+                    $"&targetVersion={targetCommit}&targetVersionType",
+                    _logger);
+
+                return new GitDiff()
+                {
+                    BaseVersion = baseCommit,
+                    TargetVersion = targetCommit,
+                    Ahead = content["aheadCount"].Value<int>(),
+                    Behind = content["behindCount"].Value<int>(),
+                    Valid = true
+                };
             }
-
-            return new GitDiff()
+            catch (HttpRequestException reqEx) when(reqEx.Message.Contains("404 (Not Found)"))
             {
-                BaseVersion = baseCommit,
-                TargetVersion = targetCommit,
-                Ahead = content["aheadCount"].Value<int>(),
-                Behind = content["behindCount"].Value<int>(),
-                Valid = true
-            };
+                return GitDiff.UnknownDiff();
+            }
         }
 
         /// <summary>
