@@ -4,6 +4,7 @@
 using CommandLine;
 using System.Text.RegularExpressions;
 using System;
+using Microsoft.DotNet.Maestro.Client.Models;
 
 namespace Microsoft.DotNet.Darc.Options
 {
@@ -26,6 +27,42 @@ namespace Microsoft.DotNet.Darc.Options
 
         [Option("regex", SetName = "regex", HelpText = "Match subscription parameters using regex (cannot be used with --exact).")]
         public bool RegexMatch { get; set; }
+
+        [Option("disabled", HelpText = "Get only disabled descriptions.")]
+        public bool Disabled { get; set; }
+
+        [Option("enabled", HelpText = "Get only enabled descriptions.")]
+        public bool Enabled { get; set; }
+
+        [Option("batchable", HelpText = "Get only batchable descriptions.")]
+        public bool Batchable { get; set; }
+
+        [Option("not-batchable", HelpText = "Get only non-batchable descriptions.")]
+        public bool NotBatchable { get; set; }
+
+        public bool SubcriptionFilter(Subscription subscription)
+        {
+            return (SubscriptionParameterMatches(TargetRepository, subscription.TargetRepository) &&
+                    SubscriptionParameterMatches(TargetBranch, subscription.TargetBranch) &&
+                    SubscriptionParameterMatches(SourceRepository, subscription.SourceRepository) &&
+                    SubscriptionParameterMatches(Channel, subscription.Channel.Name) &&
+                    SubscriptionEnabledParameterMatches(subscription) &&
+                    SubscriptionBatchableParameterMatches(subscription));
+        }
+
+        public bool SubscriptionEnabledParameterMatches(Subscription subscription)
+        {
+            return (Enabled && (subscription.Enabled ?? false)) ||
+                   (Disabled && (!subscription.Enabled ?? false)) ||
+                   (!Enabled && !Disabled);
+        }
+
+        public bool SubscriptionBatchableParameterMatches(Subscription subscription)
+        {
+            return (Batchable && (subscription.Policy.Batchable ?? false)) ||
+                   (NotBatchable && (!subscription.Policy.Batchable ?? false)) ||
+                   (!Batchable && !NotBatchable);
+        }
 
         /// <summary>
         ///     Compare input command line options against subscription parameters
