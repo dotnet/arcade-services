@@ -38,7 +38,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             {
                 try
                 {
-                    Activity.Current.AddBaggage("CallingServiceName", Context.ServiceName.ToString());
+                    Activity.Current.AddBaggage("CallingServiceName", $"\"{Context.ServiceName.ToString()}\"");
                     op.Telemetry.Type = "ServiceFabricRemoting";
                     op.Telemetry.Target = ServiceUri;
                     op.Telemetry.Data = ServiceUri + methodName;
@@ -66,7 +66,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             {
                 try
                 {
-                    Activity.Current.AddBaggage("CallingServiceName", Context.ServiceName.ToString());
+                    Activity.Current.AddBaggage("CallingServiceName", $"\"{Context.ServiceName.ToString()}\"");
                     op.Telemetry.Type = "ServiceFabricRemoting";
                     op.Telemetry.Target = ServiceUri;
                     op.Telemetry.Data = ServiceUri + methodName;
@@ -97,7 +97,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             {
                 try
                 {
-                    Activity.Current.AddBaggage("CallingServiceName", Context.ServiceName.ToString());
+                    Activity.Current.AddBaggage("CallingServiceName", $"\"{Context.ServiceName.ToString()}\"");
                     op.Telemetry.Type = "ServiceFabricRemoting";
                     op.Telemetry.Target = ServiceUri;
                     op.Telemetry.Data = ServiceUri + methodName;

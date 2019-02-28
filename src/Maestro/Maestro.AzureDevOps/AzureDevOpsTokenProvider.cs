@@ -29,12 +29,16 @@ namespace Maestro.AzureDevOps
             {
                 throw new ArgumentException($"{repositoryUrl} is not a valid Azure DevOps repository URL");
             }
-            string account = m.Groups["account"].Value;
 
-            if (!Options.Tokens.TryGetValue(account, out string pat) || string.IsNullOrEmpty(pat))
+            return GetTokenForAccount(m.Groups["account"].Value);
+        }
+
+        public Task<string> GetTokenForAccount(string accountName)
+        {
+            if (!Options.Tokens.TryGetValue(accountName, out string pat) || string.IsNullOrEmpty(pat))
             {
-                throw new ArgumentOutOfRangeException($"Account {account} (from {repositoryUrl}) does not have a configured PAT. " +
-                    $"Please ensure the 'Tokens' array in the 'AzureDevOps' section of settings.json contains a PAT for {account}");
+                throw new ArgumentOutOfRangeException($"Account {accountName} does not have a configured PAT. " +
+                    $"Please ensure the 'Tokens' array in the 'AzureDevOps' section of settings.json contains a PAT for {accountName}");
             }
 
             return Task.FromResult<string>(pat);
