@@ -213,8 +213,8 @@ namespace ReleasePipelineRunner
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        // Check every 10 minutes for any finished release Pipelines
-        [CronSchedule("0 0/10 * 1/1 * ? *", TimeZones.UTC)]
+        // Check every 5 minutes for any finished release Pipelines
+        [CronSchedule("0 0/5 * 1/1 * ? *", TimeZones.UTC)]
         public async Task ProcessFinishedReleasesAsync(CancellationToken cancellationToken)
         {
             var runningPipelines =
@@ -227,38 +227,42 @@ namespace ReleasePipelineRunner
                     var runningPipelinesEnumerable = await runningPipelines.CreateEnumerableAsync(tx, EnumerationMode.Unordered);
                     using (var asyncEnumerator = runningPipelinesEnumerable.GetAsyncEnumerator())
                     {
-                        int buildId = asyncEnumerator.Current.Key;
-                        IList<ReleasePipelineStatusItem> releaseStatuses = asyncEnumerator.Current.Value;
-                        List<ReleasePipelineStatusItem> unfinishedReleases = new List<ReleasePipelineStatusItem>();
-                        foreach (ReleasePipelineStatusItem releaseStatus in releaseStatuses)
+                        while (await asyncEnumerator.MoveNextAsync(cancellationToken))
                         {
-                            int releaseId = releaseStatus.ReleaseId;
-                            AzureDevOpsClient azdoClient = await GetAzureDevOpsClientForAccount(releaseStatus.PipelineOrganization);
-                            AzureDevOpsRelease release =
-                                await azdoClient.GetReleaseAsync(releaseStatus.PipelineOrganization, releaseStatus.PipelineProject, releaseStatus.ReleaseId);
-
-                            if (HasInProgressEnvironments(release))
+                            int buildId = asyncEnumerator.Current.Key;
+                            IList<ReleasePipelineStatusItem> releaseStatuses = asyncEnumerator.Current.Value;
+                            int channelId = releaseStatuses.First().ChannelId;
+                            List<ReleasePipelineStatusItem> unfinishedReleases = new List<ReleasePipelineStatusItem>();
+                            foreach (ReleasePipelineStatusItem releaseStatus in releaseStatuses)
                             {
-                                unfinishedReleases.Add(releaseStatus);
+                                int releaseId = releaseStatus.ReleaseId;
+                                AzureDevOpsClient azdoClient = await GetAzureDevOpsClientForAccount(releaseStatus.PipelineOrganization);
+                                AzureDevOpsRelease release =
+                                    await azdoClient.GetReleaseAsync(releaseStatus.PipelineOrganization, releaseStatus.PipelineProject, releaseStatus.ReleaseId);
+
+                                if (HasInProgressEnvironments(release))
+                                {
+                                    unfinishedReleases.Add(releaseStatus);
+                                }
+                                else
+                                {
+                                    Logger.LogInformation($"Release {releaseId} finished executing");
+                                }
+                            }
+
+                            if (unfinishedReleases.Count > 0)
+                            {
+                                await runningPipelines.TryUpdateAsync(tx, buildId, unfinishedReleases, releaseStatuses);
                             }
                             else
                             {
-                                Logger.LogInformation($"Release {releaseId} finished executing");
                                 buildChannelsToAdd.Add(new BuildChannel
                                 {
                                     BuildId = buildId,
-                                    ChannelId = releaseStatus.ChannelId
+                                    ChannelId = channelId
                                 });
+                                await runningPipelines.TryRemoveAsync(tx, buildId);
                             }
-                        }
-
-                        if (unfinishedReleases.Count > 0)
-                        {
-                            await runningPipelines.TryUpdateAsync(tx, buildId, unfinishedReleases, releaseStatuses);
-                        }
-                        else
-                        {
-                            await runningPipelines.TryRemoveAsync(tx, buildId);
                         }
                     }
 
