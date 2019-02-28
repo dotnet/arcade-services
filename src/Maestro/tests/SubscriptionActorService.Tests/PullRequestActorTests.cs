@@ -119,7 +119,8 @@ namespace SubscriptionActorService.Tests
                                 a => new DependencyDetail
                                 {
                                     Name = a.Name,
-                                    Version = a.Version
+                                    Version = a.Version,
+                                    BuildId = withUpdatesFromBuild.Id,
                                 })
                             .ToList()
                     });
@@ -349,24 +350,24 @@ namespace SubscriptionActorService.Tests
 
             private void AndPendingUpdates(Build forBuild)
             {
-                var updates = new List<PullRequestActorImplementation.UpdateAssetsParameters>
-                {
-                    new PullRequestActorImplementation.UpdateAssetsParameters
+                AfterDbUpdateActions.Add(
+                    () =>
                     {
-                        SubscriptionId = Subscription.Id,
-                        BuildId = forBuild.Id,
-                        SourceSha = forBuild.Commit,
-                        Assets = forBuild.Assets.Select(
-                                a => new Asset
-                                {
-                                    Name = a.Name,
-                                    Version = a.Version
-                                })
-                            .ToList()
-                    }
-                };
-                StateManager.Data[PullRequestActorImplementation.PullRequestUpdate] = updates;
-                ExpectedActorState[PullRequestActorImplementation.PullRequestUpdate] = updates;
+                        var updates = new List<PullRequestActorImplementation.UpdateAssetsParameters>
+                        {
+                            new PullRequestActorImplementation.UpdateAssetsParameters
+                            {
+                                SubscriptionId = Subscription.Id,
+                                BuildId = forBuild.Id,
+                                SourceSha = forBuild.Commit,
+                                Assets = forBuild.Assets
+                                    .Select(a => new Asset {Name = a.Name, Version = a.Version})
+                                    .ToList()
+                            }
+                        };
+                        StateManager.Data[PullRequestActorImplementation.PullRequestUpdate] = updates;
+                        ExpectedActorState[PullRequestActorImplementation.PullRequestUpdate] = updates;
+                    });
             }
 
             private void ThenUpdateReminderIsRemoved()

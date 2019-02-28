@@ -340,7 +340,8 @@ namespace Microsoft.DotNet.Darc.Tests
                         RepoUri = "https://foo.com/foo/bar",
                         Version = "4.5.6",
                         Pinned = true,
-                        Type = DependencyType.Product
+                        Type = DependencyType.Product,
+                        BuildId = 1,
                     });
                 await driver.UpdateDependenciesAsync(
                     new List<DependencyDetail> {
@@ -349,7 +350,7 @@ namespace Microsoft.DotNet.Darc.Tests
                             Commit = "4",
                             Name = "Existing.Dependency",
                             RepoUri = "https://foo.com/foo/bar",
-                            Version = "4.5.6"
+                            Version = "4.5.6",
                         }
                     });
                 await driver.VerifyAsync();
