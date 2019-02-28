@@ -381,7 +381,13 @@ namespace Microsoft.DotNet.Darc.Operations
             foreach (Asset buildAsset in rootBuild.Assets)
             {
                 dependencyCache.Add(
-                    new DependencyDetail() { Name = buildAsset.Name, Version = buildAsset.Version, Commit = rootBuild.Commit },
+                    new DependencyDetail
+                    {
+                        Name = buildAsset.Name,
+                        Version = buildAsset.Version,
+                        Commit = rootBuild.Commit,
+                        BuildId = rootBuild.Id.GetValueOrDefault(),
+                    },
                     rootBuild);
             }
 
@@ -423,7 +429,8 @@ namespace Microsoft.DotNet.Darc.Operations
                                 Name = buildAsset.Name,
                                 Version = buildAsset.Version,
                                 Commit = potentialBuild.Commit,
-                                RepoUri = potentialBuild.AzureDevOpsRepository
+                                RepoUri = potentialBuild.AzureDevOpsRepository,
+                                BuildId = potentialBuild.Id.GetValueOrDefault(),
                             };
 
                             if (!dependencyCache.ContainsKey(dependencyDetail))

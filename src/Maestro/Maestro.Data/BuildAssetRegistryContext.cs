@@ -3,6 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,6 +59,7 @@ namespace Maestro.Data
         public DbSet<AssetLocation> AssetLocations { get; set; }
         public DbSet<Build> Builds { get; set; }
         public DbSet<BuildChannel> BuildChannels { get; set; }
+        public DbSet<BuildDependency> BuildDependencies { get; set; }
         public DbSet<ChannelReleasePipeline> ChannelReleasePipelines { get; set; }
         public DbSet<ReleasePipeline> ReleasePipelines { get; set; }
         public DbSet<Channel> Channels { get; set; }
@@ -109,13 +112,23 @@ namespace Maestro.Data
                 .WithMany(c => c.BuildChannels)
                 .HasForeignKey(bc => bc.ChannelId);
 
+            builder.Entity<BuildDependency>()
+                .HasKey(d => new {d.BuildId, d.DependentBuildId});
+
+            builder.Entity<BuildDependency>()
+                .HasOne(d => d.Build)
+                .WithMany()
+                .HasForeignKey(d => d.BuildId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<BuildDependency>()
+                .HasOne(d => d.DependentBuild)
+                .WithMany()
+                .HasForeignKey(d => d.DependentBuildId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             builder.Entity<ChannelReleasePipeline>()
-            .HasKey(
-                crp => new
-                {
-                    crp.ChannelId,
-                    crp.ReleasePipelineId
-                });
+                .HasKey(crp => new {crp.ChannelId, crp.ReleasePipelineId});
             
             builder.Entity<ChannelReleasePipeline>()
                 .HasOne(crp => crp.Channel)
@@ -252,6 +265,61 @@ FOR SYSTEM_TIME ALL
             return Repositories.Where(r => r.RepositoryName == repositoryUrl)
                 .Select(r => r.InstallationId)
                 .FirstOrDefaultAsync();
+        }
+
+        public async Task<IList<Build>> GetBuildGraphAsync(int buildId)
+        {
+            var dependencyEntity = Model.FindEntityType(typeof(BuildDependency));
+            var buildIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.BuildId)).Relational().ColumnName;
+            var dependencyIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.DependentBuildId)).Relational().ColumnName;
+            var isProductColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.IsProduct)).Relational().ColumnName;
+            var edgeTable = dependencyEntity.Relational().TableName;
+
+            var edges = BuildDependencies.FromSql($@"
+WITH traverse AS (
+        SELECT
+            {buildIdColumnName},
+            {dependencyIdColumnName},
+            {isProductColumnName},
+            0 as Depth
+        from {edgeTable}
+        WHERE {buildIdColumnName} = @id
+    UNION ALL
+        SELECT
+            {edgeTable}.{buildIdColumnName},
+            {edgeTable}.{dependencyIdColumnName},
+            {edgeTable}.{isProductColumnName},
+            traverse.Depth + 1
+        FROM {edgeTable}
+        INNER JOIN traverse
+        ON {edgeTable}.{buildIdColumnName} = traverse.{dependencyIdColumnName}
+        WHERE traverse.{isProductColumnName} = 1 -- The thing we previously traversed was a product dependency
+            AND traverse.Depth < 10 -- Don't load all the way back because of incorrect isProduct columns
+)
+SELECT DISTINCT {buildIdColumnName}, {dependencyIdColumnName}, {isProductColumnName}
+FROM traverse;",
+               new SqlParameter("id", buildId));
+
+            List<BuildDependency> things = await edges.ToListAsync();
+            var buildIds = new HashSet<int>(things.SelectMany(t => new[] { t.BuildId, t.DependentBuildId }));
+
+            IQueryable<Build> builds = from build in Builds
+                                       where buildIds.Contains(build.Id)
+                                       select build;
+
+            Dictionary<int, Build> dict = await builds.ToDictionaryAsync(b => b.Id,
+               b =>
+               {
+                   b.DependentBuildIds = new List<BuildDependency>();
+                   return b;
+               });
+
+            foreach (var edge in things)
+            {
+                dict[edge.BuildId].DependentBuildIds.Add(edge);
+            }
+
+            return dict.Values.ToList();
         }
     }
 

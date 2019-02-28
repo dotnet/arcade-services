@@ -24,7 +24,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
     [ApiVersion("2018-07-16")]
     public class BuildsController : Controller
     {
-        private readonly BuildAssetRegistryContext _context;
+        protected readonly BuildAssetRegistryContext _context;
 
         public BuildsController(BuildAssetRegistryContext context)
         {
@@ -107,10 +107,10 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             if (loadCollections ?? false)
             {
-                query = query.Include(b => b.BuildChannels)
+                query = query
+                    .Include(b => b.BuildChannels)
                     .ThenInclude(bc => bc.Channel)
-                    .Include(b => b.Assets)
-                    .Include(b => b.Dependencies);
+                    .Include(b => b.Assets);
             }
 
             return query.OrderByDescending(b => b.DateProduced);
@@ -129,7 +129,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 .Include(b => b.BuildChannels)
                 .ThenInclude(bc => bc.Channel)
                 .Include(b => b.Assets)
-                .Include(b => b.Dependencies)
                 .FirstOrDefaultAsync();
 
             if (build == null)
@@ -190,9 +189,10 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         {
             Data.Models.Build buildModel = build.ToDb();
             buildModel.DateProduced = DateTimeOffset.UtcNow;
-            buildModel.Dependencies = build.Dependencies != null
-                ? await _context.Builds.Where(b => build.Dependencies.Contains(b.Id)).ToListAsync()
-                : null;
+            if (build.Dependencies?.Count > 0)
+            {
+                return BadRequest("This api version doesn't support build dependencies.");
+            }
             await _context.Builds.AddAsync(buildModel);
             await _context.SaveChangesAsync();
             return CreatedAtRoute(

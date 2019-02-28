@@ -158,6 +158,7 @@ namespace Microsoft.DotNet.DarcLib
                 XmlNode nodeToUpdate = versionList.Item(0);
                 nodeToUpdate.Attributes["Version"].Value = itemToUpdate.Version;
                 nodeToUpdate.Attributes["Name"].Value = itemToUpdate.Name;
+                nodeToUpdate.Attributes["SourceBuildId"].Value = itemToUpdate.BuildId.ToString();
                 nodeToUpdate.SelectSingleNode("Sha").InnerText = itemToUpdate.Commit;
                 nodeToUpdate.SelectSingleNode("Uri").InnerText = itemToUpdate.RepoUri;
                 UpdateVersionFiles(versionProps, globalJson, itemToUpdate);

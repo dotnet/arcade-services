@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -71,7 +72,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [SwaggerApiResponse(HttpStatusCode.Conflict, Description = "A DefaultChannel matching the data already exists")]
         [ValidateModelState]
         [HandleDuplicateKeyRows("A default channel with the same (repository, branch, channel) already exists.")]
-        public async Task<IActionResult> Create([FromBody] DefaultChannel.PostData data)
+        public async Task<IActionResult> Create([FromBody, Required] DefaultChannel.PostData data)
         {
             int channelId = data.ChannelId;
             Channel channel = await _context.Channels.FindAsync(channelId);

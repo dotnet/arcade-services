@@ -163,7 +163,8 @@ namespace Microsoft.DotNet.Darc.Operations
                             // Keep the same repo uri.  The original build lookup is based on the repo uri,
                             // so no point in changing it.
                             RepoUri = dependency.RepoUri,
-                            Version = buildAsset.Version
+                            Version = buildAsset.Version,
+                            BuildId = build.Id.GetValueOrDefault(),
                         };
 
                         // Print out what we are going to do.	
@@ -252,7 +253,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         Commit = manifestMetedata.Repository.Commit,
                         Name = manifestMetedata.Id,
                         RepoUri = manifestMetedata.Repository.Url,
-                        Version = manifestMetedata.Version.OriginalVersion
+                        Version = manifestMetedata.Version.OriginalVersion,
                     });
                 }
             }
