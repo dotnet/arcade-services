@@ -206,6 +206,17 @@ namespace Microsoft.DotNet.DarcLib
             return _barClient.Subscriptions.DeleteSubscriptionAsync(subscriptionId);
         }
 
+        /// <summary>
+        ///     Get a repository merge policy (for batchable subscriptions)
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="branch">Repository branch</param>
+        /// <returns>List of merge policies</returns>
+        public async Task<IEnumerable<MergePolicy>> GetRepositoryMergePolicies(string repoUri, string branch)
+        {
+            return await _barClient.Repository.GetMergePoliciesAsync(repoUri, branch);
+        }
+
         #endregion
 
         #region Build/Asset Operations

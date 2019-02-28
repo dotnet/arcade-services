@@ -128,6 +128,18 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Get repository merge policies
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="branch">Repository branch</param>
+        /// <returns>List of merge policies</returns>
+        public Task<IEnumerable<MergePolicy>> GetRepositoryMergePoliciesAsync(string repoUri, string branch)
+        {
+            CheckForValidBarClient();
+            return _barClient.GetRepositoryMergePolicies(repoUri, branch);
+        }
+
+        /// <summary>
         /// Trigger a subscription by ID
         /// </summary>
         /// <param name="subscriptionId">ID of subscription to trigger</param>

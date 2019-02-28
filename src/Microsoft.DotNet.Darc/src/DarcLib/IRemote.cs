@@ -134,6 +134,14 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Information on deleted subscription</returns>
         Task<Subscription> DeleteSubscriptionAsync(string subscriptionId);
 
+        /// <summary>
+        ///     Get repository merge policies
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="branch">Repository branch</param>
+        /// <returns>List of merge policies</returns>
+        Task<IEnumerable<MergePolicy>> GetRepositoryMergePoliciesAsync(string repoUri, string branch);
+
         #endregion
 
         #region Pull Request Operations
