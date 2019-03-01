@@ -89,6 +89,11 @@ namespace SubscriptionActorService
             throw new NotImplementedException();
         }
 
+        public Task<IEnumerable<MergePolicy>> GetRepositoryMergePolicies(string repoUri, string branch)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
         public Task<IEnumerable<Asset>> GetAssetsAsync(string name = null, string version = null, int? buildId = null, bool? nonShipping = null)
