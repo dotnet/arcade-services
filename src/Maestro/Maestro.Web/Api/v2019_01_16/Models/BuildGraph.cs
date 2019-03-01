@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 
 namespace Maestro.Web.Api.v2019_01_16.Models
@@ -15,6 +16,7 @@ namespace Maestro.Web.Api.v2019_01_16.Models
             Builds = builds;
         }
 
+        [Required]
         public IDictionary<int, Build> Builds { get; }
     }
 }
