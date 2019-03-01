@@ -228,12 +228,6 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Add a dependency to Versions.props.  This has the form:
-        ///     <!-- Package names -->
-        ///     <PropertyGroup>
-        ///         <MicrosoftDotNetApiCompatPackage>Microsoft.DotNet.ApiCompat</MicrosoftDotNetApiCompatPackage>
-        ///     </PropertyGroup>
-        ///     
         ///     <!-- Package versions -->
         ///     <PropertyGroup>
         ///         <MicrosoftDotNetApiCompatPackageVersion>1.0.0-beta.18478.5</MicrosoftDotNetApiCompatPackageVersion>
@@ -250,7 +244,6 @@ namespace Microsoft.DotNet.DarcLib
             XmlDocument versionProps = await ReadVersionPropsAsync(repo, null);
             string documentNamespaceUri = versionProps.DocumentElement.NamespaceURI;
 
-            string packageNameElementName = VersionFiles.GetVersionPropsPackageElementName(dependency.Name);
             string packageVersionElementName = VersionFiles.GetVersionPropsPackageVersionElementName(dependency.Name);
             string packageVersionAlternateElementName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(
                 dependency.Name);
@@ -259,11 +252,7 @@ namespace Microsoft.DotNet.DarcLib
             // xmlns set.
             XmlNodeList propertyGroupNodes = versionProps.DocumentElement.SelectNodes($"//*[local-name()='PropertyGroup']");
 
-            XmlNode newPackageNameElement = versionProps.CreateElement(packageNameElementName, documentNamespaceUri);
-            newPackageNameElement.InnerText = dependency.Name;
-
             bool addedPackageVersionElement = false;
-            bool addedPackageNameElement = false;
             // There can be more than one property group.  Find the appropriate one containing an existing element of
             // the same type, and add it to the parent.
             foreach (XmlNode propertyGroupNode in propertyGroupNodes)
@@ -297,17 +286,6 @@ namespace Microsoft.DotNet.DarcLib
                             addedPackageVersionElement = true;
                             break;
                         }
-                        else if (!addedPackageNameElement && propertyNode.Name.EndsWith(VersionFiles.VersionPropsPackageElementSuffix))
-                        {
-                            propertyGroupNode.AppendChild(newPackageNameElement);
-                            addedPackageNameElement = true;
-                            break;
-                        }
-                    }
-
-                    if (addedPackageVersionElement && addedPackageNameElement)
-                    {
-                        break;
                     }
                 }
             }
@@ -325,15 +303,6 @@ namespace Microsoft.DotNet.DarcLib
                 versionProps.DocumentElement.AppendChild(propertyGroupCommentElement);
                 versionProps.DocumentElement.AppendChild(propertyGroupElement);
                 propertyGroupElement.AppendChild(newPackageVersionElement);
-            }
-
-            if (!addedPackageNameElement)
-            {
-                XmlNode propertyGroupElement = versionProps.CreateElement("PropertyGroup", documentNamespaceUri);
-                XmlNode propertyGroupCommentElement = versionProps.CreateComment("Package names");
-                versionProps.DocumentElement.AppendChild(propertyGroupCommentElement);
-                versionProps.DocumentElement.AppendChild(propertyGroupElement);
-                propertyGroupElement.AppendChild(newPackageNameElement);
             }
 
             // TODO: This should not be done here.  This should return some kind of generic file container to the caller,
@@ -458,24 +427,7 @@ namespace Microsoft.DotNet.DarcLib
                         newPackageVersionElement.InnerText = itemToUpdate.Version;
                         parentNode.ReplaceChild(newPackageVersionElement, packageVersionNode);
                     }
-                    {
-                        // Update the package name element too.
-                        string packageNameElementName = VersionFiles.GetVersionPropsPackageElementName(itemToUpdate.Name);
-                        XmlNode packageNameNode = versionProps.DocumentElement.SelectSingleNode(
-                            $"//*[translate(local-name(),'ABCDEFGHIJKLMNOPQRSTUVWXYZ','abcdefghijklmnopqrstuvwxyz')=" +
-                            $"'{packageNameElementName.ToLower()}']");
-                        if (packageNameNode != null)
-                        {
-                            XmlNode parentNode = packageNameNode.ParentNode;
-                            XmlNode newPackageNameElement = versionProps.CreateElement(
-                                packageNameElementName, 
-                                versionProps.DocumentElement.NamespaceURI);
-                            newPackageNameElement.InnerText = itemToUpdate.Name;
-                            parentNode.ReplaceChild(newPackageNameElement, packageNameNode);
-                        }
-                    }
                 }
-                
             }
 
             // Update the global json too, even if there was an element in the props file, in case

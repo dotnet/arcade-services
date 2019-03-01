@@ -50,7 +50,7 @@ namespace Microsoft.DotNet.DarcLib
 
         private static string GetIndentedXmlBody(XmlDocument xmlDocument)
         {
-            XDocument doc = XDocument.Parse(xmlDocument.OuterXml);
+            XDocument doc = XDocument.Parse(xmlDocument.OuterXml, LoadOptions.PreserveWhitespace);
             return $"{doc.Declaration}\n{doc}";
         }
     }
