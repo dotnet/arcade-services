@@ -588,7 +588,7 @@ namespace Microsoft.DotNet.DarcLib
                     accountName,
                     projectName,
                     $"_apis/git/repositories/{repoName}/diffs/commits?baseVersion={baseCommit}&baseVersionType=commit" +
-                    $"&targetVersion={targetCommit}&targetVersionType",
+                    $"&targetVersion={targetCommit}&targetVersionType=commit",
                     _logger);
 
                 return new GitDiff()
