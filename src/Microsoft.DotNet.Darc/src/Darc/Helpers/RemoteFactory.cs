@@ -30,7 +30,8 @@ namespace Microsoft.DotNet.Darc.Helpers
         {
             DarcSettings darcSettings = LocalSettings.GetDarcSettings(options, logger, repoUrl);
 
-            if (darcSettings.GitType != GitRepoType.None && string.IsNullOrEmpty(darcSettings.GitRepoPersonalAccessToken))
+            if (darcSettings.GitType != GitRepoType.None &&
+                string.IsNullOrEmpty(darcSettings.GitRepoPersonalAccessToken))
             {
                 throw new DarcException($"No personal access token was provided for repo type '{darcSettings.GitType}'");
             }

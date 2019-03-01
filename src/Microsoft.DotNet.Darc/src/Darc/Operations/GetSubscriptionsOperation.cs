@@ -5,8 +5,10 @@
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -32,10 +34,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 var subscriptions = (await remote.GetSubscriptionsAsync()).Where(subscription =>
                 {
-                    return (_options.SubscriptionParameterMatches(_options.TargetRepository, subscription.TargetRepository) &&
-                                _options.SubscriptionParameterMatches(_options.TargetBranch, subscription.TargetBranch) &&
-                                _options.SubscriptionParameterMatches(_options.SourceRepository, subscription.SourceRepository) &&
-                                _options.SubscriptionParameterMatches(_options.Channel, subscription.Channel.Name));
+                    return _options.SubcriptionFilter(subscription);
                 });
 
                 if (subscriptions.Count() == 0)
@@ -52,40 +51,60 @@ namespace Microsoft.DotNet.Darc.Operations
                     Console.WriteLine($"{subscription.SourceRepository} ({subscription.Channel.Name}) ==> '{subscription.TargetRepository}' ('{subscription.TargetBranch}')");
                     Console.WriteLine($"  - Id: {subscription.Id}");
                     Console.WriteLine($"  - Update Frequency: {subscription.Policy.UpdateFrequency}");
-                    Console.WriteLine($"  - Merge Policies:");
-                    foreach (var mergePolicy in subscription.Policy.MergePolicies)
+                    Console.WriteLine($"  - Enabled: {subscription.Enabled.Value}");
+                    Console.WriteLine($"  - Batchable: {subscription.Policy.Batchable}");
+                    // If batchable, the merge policies come from the repository
+                    IEnumerable<MergePolicy> mergePolicies = subscription.Policy.MergePolicies;
+                    if (subscription.Policy.Batchable == true)
                     {
-                        Console.WriteLine($"    {mergePolicy.Name}");
-                        if (mergePolicy.Properties != null)
+                        mergePolicies = await remote.GetRepositoryMergePoliciesAsync(subscription.TargetRepository, subscription.TargetBranch);
+                    }
+                    if (subscription.Policy.MergePolicies.Any())
+                    {
+                        Console.WriteLine($"  - Merge Policies:");
+                        foreach (var mergePolicy in subscription.Policy.MergePolicies)
                         {
-                            foreach (var mergePolicyProperty in mergePolicy.Properties)
+                            Console.WriteLine($"    {mergePolicy.Name}");
+                            if (mergePolicy.Properties != null)
                             {
-                                // The merge policy property is a key value pair.  For formatting, turn it into a string.
-                                // It's often a JToken, so handle appropriately
-                                // 1. If the number of lines in the string is 1, write on same line as key
-                                // 2. If the number of lines in the string is more than one, start on new
-                                //    line and indent.
-                                string valueString = mergePolicyProperty.Value.ToString();
-                                string[] valueLines = valueString.Split(System.Environment.NewLine);
-                                string keyString = $"      {mergePolicyProperty.Key} = ";
-                                Console.Write(keyString);
-                                if (valueLines.Length == 1)
+                                foreach (var mergePolicyProperty in mergePolicy.Properties)
                                 {
-                                    Console.WriteLine(valueString);
-                                }
-                                else
-                                {
-                                    string indentString = new string(' ', keyString.Length);
-                                    Console.WriteLine();
-                                    foreach (string line in valueLines)
+                                    // The merge policy property is a key value pair.  For formatting, turn it into a string.
+                                    // It's often a JToken, so handle appropriately
+                                    // 1. If the number of lines in the string is 1, write on same line as key
+                                    // 2. If the number of lines in the string is more than one, start on new
+                                    //    line and indent.
+                                    string valueString = mergePolicyProperty.Value.ToString();
+                                    string[] valueLines = valueString.Split(System.Environment.NewLine);
+                                    string keyString = $"      {mergePolicyProperty.Key} = ";
+                                    Console.Write(keyString);
+                                    if (valueLines.Length == 1)
                                     {
-                                        Console.WriteLine($"{indentString}{line}");
+                                        Console.WriteLine(valueString);
+                                    }
+                                    else
+                                    {
+                                        string indentString = new string(' ', keyString.Length);
+                                        Console.WriteLine();
+                                        foreach (string line in valueLines)
+                                        {
+                                            Console.WriteLine($"{indentString}{line}");
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                    Console.WriteLine($"  - Last Build: {(subscription.LastAppliedBuild != null ? subscription.LastAppliedBuild.AzureDevOpsBuildNumber : "N/A")}");
+                    else
+                    {
+                        Console.WriteLine($"  - Merge Policies: []");
+                    }
+                    // Currently the API only returns the last applied build for requests to specific subscriptions.
+                    // This will be fixed, but for now, don't print the last applied build otherwise.
+                    if (subscription.LastAppliedBuild != null)
+                    {
+                        Console.WriteLine($"  - Last Build: {subscription.LastAppliedBuild.AzureDevOpsBuildNumber} ({subscription.LastAppliedBuild.Commit})");
+                    }
                 }
                 return Constants.SuccessCode;
             }

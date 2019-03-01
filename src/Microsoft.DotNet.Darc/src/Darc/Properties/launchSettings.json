@@ -2,7 +2,7 @@
   "profiles": {
     "Microsoft.DotNet.Darc": {
       "commandName": "Project",
-      "commandLineArgs": "get-dependency-graph --repo https://github.com/dotnet/core-sdk --version e94c7952bb7ab83d02eaccef4cee2f40f2961b03 --graphviz out ",
+      "commandLineArgs": "get-subscriptions --batchable",
       "workingDirectory": "D:\\enlistments\\core-sdk"
     }
   }

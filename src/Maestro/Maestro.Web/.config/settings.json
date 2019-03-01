@@ -13,11 +13,11 @@
     "Tokens": [
       {
         "Account": "dnceng",
-        "Token": "[vault(dnceng-code-rw)]"
+        "Token": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]"
       },
       {
         "Account": "devdiv",
-        "Token": "[vault(devdiv-code-rw)]"
+        "Token": "[vault(dn-bot-devdiv-build-rw-code-rw-release-rw)]"
       }
     ]
   },
