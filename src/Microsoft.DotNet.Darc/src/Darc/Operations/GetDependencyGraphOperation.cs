@@ -279,6 +279,12 @@ namespace Microsoft.DotNet.Darc.Operations
 
         private async void LogGraphViz(DependencyGraph graph)
         {
+            string directory = Path.GetDirectoryName(_options.GraphVizOutputFile);
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
             using (StreamWriter writer = new StreamWriter(_options.GraphVizOutputFile))
             {
                 await writer.WriteLineAsync("digraph repositoryGraph {");

@@ -14,8 +14,10 @@ namespace Microsoft.DotNet.DarcLib
     {
         private readonly HttpClient _client;
         private readonly ILogger _logger;
-        private readonly HttpRequestMessage _message;
         private readonly bool _logFailure;
+        private readonly string _body;
+        private readonly string _requestUri;
+        private readonly HttpMethod _method;
 
         public HttpRequestManager(
             HttpClient client,
@@ -28,25 +30,27 @@ namespace Microsoft.DotNet.DarcLib
         {
             _client = client;
             _logger = logger;
-            _message = new HttpRequestMessage(method, requestUri);
             _logFailure = logFailure;
-
-            if (!string.IsNullOrEmpty(body))
-            {
-                _message.Content = new StringContent(body, Encoding.UTF8, "application/json");
-            }
+            _body = body;
+            _requestUri = requestUri;
+            _method = method;
         }
 
         public async Task<HttpResponseMessage> ExecuteAsync()
         {
-            HttpResponseMessage response = await _client.SendAsync(_message);
+            HttpRequestMessage message = new HttpRequestMessage(_method, _requestUri);
+            if (!string.IsNullOrEmpty(_body))
+            {
+                message.Content = new StringContent(_body, Encoding.UTF8, "application/json");
+            }
+            HttpResponseMessage response = await _client.SendAsync(message);
 
             if (!response.IsSuccessStatusCode)
             {
                 if (_logFailure)
                 {
                     _logger.LogError(
-                        $"There was an error executing method '{_message.Method}' against URI '{_message.RequestUri}'. " +
+                        $"There was an error executing method '{message.Method}' against URI '{message.RequestUri}'. " +
                         $"Request failed with error code: '{response.StatusCode}'");
                 }
                 response.EnsureSuccessStatusCode();

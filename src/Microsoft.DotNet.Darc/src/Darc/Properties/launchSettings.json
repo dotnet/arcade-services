@@ -2,7 +2,7 @@
   "profiles": {
     "Microsoft.DotNet.Darc": {
       "commandName": "Project",
-      "commandLineArgs": "get-subscriptions --batchable",
+      "commandLineArgs": "get-dependency-graph --repo https://github.com/dotnet/core-sdk --version 3eded6847087fa2f79f827a059e7f9b6ff261bd1 --graphviz D:\\share\\netcore3.x\\preview3\\20190301-01\\delta-from-newest.dot --flat --delta-from newest-in-channel",
       "workingDirectory": "D:\\enlistments\\core-sdk"
     }
   }

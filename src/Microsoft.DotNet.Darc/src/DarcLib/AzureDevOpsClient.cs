@@ -115,7 +115,8 @@ namespace Microsoft.DotNet.DarcLib
                         $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={versionType}&version={branchOrCommit}&includeContent=true",
                         _logger,
                         // Don't log the failure so users don't get confused by 404 messages popping up in expected circumstances.
-                        logFailure: false);
+                        logFailure: false,
+                        retryCount: 0);
                     return content["content"].ToString();
                 }
                 catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)"))
@@ -673,7 +674,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="body">Optional body if <paramref name="method"/> is Put or Post</param>
         /// <param name="versionOverride">API version override</param>
         /// <param name="baseAddressSubpath">[baseAddressSubPath]dev.azure.com subdomain to make the request</param>
-        /// <param name="maxAttempts">Maximum number of tries to attempt the API request</param>
+        /// <param name="retryCount">Maximum number of tries to attempt the API request</param>
         /// <returns>Http response</returns>
         private async Task<JObject> ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod method,
@@ -685,9 +686,9 @@ namespace Microsoft.DotNet.DarcLib
             string versionOverride = null,
             bool logFailure = true,
             string baseAddressSubpath = null,
-            int maxAttempts = 15)
+            int retryCount = 15)
         {
-            int retryCount = maxAttempts;
+            int retriesRemaining = retryCount;
             // Add a bit of randomness to the retry delay.
             var rng = new Random();
             using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride, baseAddressSubpath))
@@ -711,18 +712,21 @@ namespace Microsoft.DotNet.DarcLib
                     }
                     catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
                     {
-                        if (retryCount <= 0)
+                        if (retriesRemaining <= 0)
                         {
-                            logger.LogError($"Failed to send HttpRequest to Azure DevOps API after {maxAttempts} attempts. Path: {requestPath}. Exception: {ex.ToString()}");
+                            if (logFailure)
+                            {
+                                logger.LogError($"Failed to send HttpRequest to Azure DevOps API after {retriesRemaining} attempts. Path: {requestPath}. Exception: {ex.ToString()}");
+                            }
                             throw;
                         }
-                        else
+                        else if (logFailure)
                         {
-                            logger.LogWarning($"Failed to send HttpRequest to Azure DevOps API: Path:{requestPath}. {retryCount} attempts remaining. Exception: {ex.ToString()}");
+                            logger.LogWarning($"Failed to send HttpRequest to Azure DevOps API: Path:{requestPath}. {retriesRemaining} attempts remaining. Exception: {ex.ToString()}");
                         }
                     }
-                    --retryCount;
-                    int delay = (maxAttempts - retryCount) * rng.Next(1, 7);
+                    --retriesRemaining;
+                    int delay = (retriesRemaining - retriesRemaining) * rng.Next(1, 7);
                     await Task.Delay(delay * 1000);
                 }
             }
