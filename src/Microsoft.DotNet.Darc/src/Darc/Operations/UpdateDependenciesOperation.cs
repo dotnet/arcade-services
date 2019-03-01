@@ -164,7 +164,7 @@ namespace Microsoft.DotNet.Darc.Operations
                             // so no point in changing it.
                             RepoUri = dependency.RepoUri,
                             Version = buildAsset.Version,
-                            BuildId = build.Id.GetValueOrDefault(),
+                            SourceBuildId = build.Id.GetValueOrDefault(),
                         };
 
                         // Print out what we are going to do.	

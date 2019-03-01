@@ -1,17 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Dependencies>
   <ProductDependencies>
-    <Dependency Name="Foo.Bar" Version="1.2.3" SourceBuildId="0">
+    <Dependency Name="Foo.Bar" Version="1.2.3">
+      <SourceBuildId>0</SourceBuildId>
       <Uri>https://foo.com/foo/bar</Uri>
       <Sha>12345</Sha>
     </Dependency>
-    <Dependency Name="Foo.Bar2" Version="1.2.4" SourceBuildId="0" Pinned="True">
+    <Dependency Name="Foo.Bar2" Version="1.2.4" Pinned="True">
+      <SourceBuildId>0</SourceBuildId>
       <Uri>https://foo.com/foo/bar</Uri>
       <Sha>67890</Sha>
     </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
-    <Dependency Name="Foo.Bar3" Version="1.2.4" SourceBuildId="0">
+    <Dependency Name="Foo.Bar3" Version="1.2.4">
+      <SourceBuildId>0</SourceBuildId>
       <Uri>https://foo.com/foo/bar</Uri>
       <Sha>67890</Sha>
     </Dependency>

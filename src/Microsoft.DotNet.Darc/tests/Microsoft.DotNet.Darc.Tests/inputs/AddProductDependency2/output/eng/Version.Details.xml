@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Dependencies>
   <ProductDependencies>
-    <Dependency Name="Foo.Bar" Version="1.2.3" SourceBuildId="0">
+    <Dependency Name="Foo.Bar" Version="1.2.3">
+      <SourceBuildId>0</SourceBuildId>
       <Uri>https://foo.com/foo/bar</Uri>
       <Sha>12345</Sha>
     </Dependency>

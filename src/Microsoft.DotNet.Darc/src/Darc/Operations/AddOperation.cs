@@ -32,7 +32,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 Version = _options.Version ?? string.Empty,
                 RepoUri = _options.RepoUri ?? string.Empty,
                 Commit = _options.Commit ?? string.Empty,
-                BuildId = _options.BuildId,
+                SourceBuildId = _options.BuildId,
                 Pinned = _options.Pinned,
                 Type = type,
             };

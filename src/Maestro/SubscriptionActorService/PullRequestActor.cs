@@ -774,7 +774,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
 
                 foreach (var dep in dependenciesToUpdate)
                 {
-                    dep.BuildId = update.BuildId;
+                    dep.SourceBuildId = update.BuildId;
                 }
 
                 if (dependenciesToUpdate.Count < 1)

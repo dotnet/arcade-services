@@ -120,7 +120,7 @@ namespace SubscriptionActorService.Tests
                                 {
                                     Name = a.Name,
                                     Version = a.Version,
-                                    BuildId = withUpdatesFromBuild.Id,
+                                    SourceBuildId = withUpdatesFromBuild.Id,
                                 })
                             .ToList()
                     });

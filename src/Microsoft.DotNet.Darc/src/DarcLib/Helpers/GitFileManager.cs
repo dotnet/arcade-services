@@ -180,7 +180,7 @@ namespace Microsoft.DotNet.DarcLib
 
                 SetAttribute(versionDetails, nodeToUpdate, "Version", itemToUpdate.Version);
                 SetAttribute(versionDetails, nodeToUpdate, "Name", itemToUpdate.Name);
-                SetAttribute(versionDetails, nodeToUpdate, "SourceBuildId", itemToUpdate.BuildId.ToString());
+                SetElement(versionDetails, nodeToUpdate, "SourceBuildId", itemToUpdate.SourceBuildId.ToString());
                 SetElement(versionDetails, nodeToUpdate, "Sha", itemToUpdate.Commit);
                 SetElement(versionDetails, nodeToUpdate, "Uri", itemToUpdate.RepoUri);
                 UpdateVersionFiles(versionProps, globalJson, itemToUpdate);
@@ -207,7 +207,7 @@ namespace Microsoft.DotNet.DarcLib
 
             SetAttribute(versionDetails, newDependency, "Name", dependency.Name);
             SetAttribute(versionDetails, newDependency, "Version", dependency.Version);
-            SetAttribute(versionDetails, newDependency, "SourceBuildId", dependency.BuildId.ToString());
+            SetElement(versionDetails, newDependency, "SourceBuildId", dependency.SourceBuildId.ToString());
 
             // Only add the pinned attribute if the pinned option is set to true
             if (dependency.Pinned)
@@ -810,12 +810,15 @@ namespace Microsoft.DotNet.DarcLib
                                     }
                                 }
 
+                                var buildId = dependency.SelectSingleNode("SourceBuildId")?.InnerText;
+
                                 DependencyDetail dependencyDetail = new DependencyDetail
                                 {
                                     Branch = branch,
                                     Name = dependency.Attributes["Name"].Value,
                                     RepoUri = dependency.SelectSingleNode("Uri").InnerText,
                                     Commit = dependency.SelectSingleNode("Sha").InnerText,
+                                    SourceBuildId = buildId == null ? 0 : int.Parse(buildId),
                                     Version = dependency.Attributes["Version"].Value,
                                     Pinned = isPinned,
                                     Type = type

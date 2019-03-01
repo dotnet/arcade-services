@@ -5,7 +5,8 @@
       <Uri>https://foo.com/foo/baz</Uri>
       <Sha>szdfsdfsdf</Sha>
     </Dependency>
-    <Dependency Name="Foo.Bar" Version="4.5.6" SourceBuildId="0" Pinned="True">
+    <Dependency Name="Foo.Bar" Version="4.5.6" Pinned="True">
+      <SourceBuildId>0</SourceBuildId>
       <Uri>https://foo.com/foo/bar</Uri>
       <Sha>12345</Sha>
     </Dependency>

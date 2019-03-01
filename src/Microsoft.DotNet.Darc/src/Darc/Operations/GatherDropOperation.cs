@@ -386,7 +386,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         Name = buildAsset.Name,
                         Version = buildAsset.Version,
                         Commit = rootBuild.Commit,
-                        BuildId = rootBuild.Id.GetValueOrDefault(),
+                        SourceBuildId = rootBuild.Id.GetValueOrDefault(),
                     },
                     rootBuild);
             }
@@ -430,7 +430,7 @@ namespace Microsoft.DotNet.Darc.Operations
                                 Version = buildAsset.Version,
                                 Commit = potentialBuild.Commit,
                                 RepoUri = potentialBuild.AzureDevOpsRepository,
-                                BuildId = potentialBuild.Id.GetValueOrDefault(),
+                                SourceBuildId = potentialBuild.Id.GetValueOrDefault(),
                             };
 
                             if (!dependencyCache.ContainsKey(dependencyDetail))

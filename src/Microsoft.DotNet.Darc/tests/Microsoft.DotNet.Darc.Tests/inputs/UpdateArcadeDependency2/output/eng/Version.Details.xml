@@ -5,9 +5,10 @@
       <Uri>https://foo.com/foo/baz</Uri>
       <Sha>szdfsdfsdf</Sha>
     </Dependency>
-    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="2.0" SourceBuildId="0">
+    <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="2.0">
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>456</Sha>
+      <SourceBuildId>0</SourceBuildId>
     </Dependency>
   </ProductDependencies>
 </Dependencies>

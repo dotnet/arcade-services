@@ -341,7 +341,7 @@ namespace Microsoft.DotNet.Darc.Tests
                         Version = "4.5.6",
                         Pinned = true,
                         Type = DependencyType.Product,
-                        BuildId = 1,
+                        SourceBuildId = 1,
                     });
                 await driver.UpdateDependenciesAsync(
                     new List<DependencyDetail> {
