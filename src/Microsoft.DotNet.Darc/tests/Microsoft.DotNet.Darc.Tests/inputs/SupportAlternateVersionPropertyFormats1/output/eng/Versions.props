@@ -16,6 +16,5 @@
   <!--Package names-->
   <PropertyGroup>
     <ExistingDependencyPackage>Existing.Dependency</ExistingDependencyPackage>
-    <FooBarPackage>Foo.Bar</FooBarPackage>
   </PropertyGroup>
 </Project>

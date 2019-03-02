@@ -2,7 +2,7 @@
   "profiles": {
     "Microsoft.DotNet.Darc": {
       "commandName": "Project",
-      "commandLineArgs": "update-dependencies --password AAAAObAcTT2LdZcbVoq5wfWXn98 --github-pat 19b3b55e85c7184059d48027c7aecc0aa6d1ffff --channel \".NET Tools - Latest\"",
+      "commandLineArgs": "add-dependency -n a -t toolset -v 123 -r lkmlsldfl",
       "workingDirectory": "G:\\Code\\jcagme\\arcade-services"
     }
   }

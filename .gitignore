@@ -330,6 +330,3 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder
 .mfractor/
-
-# Do not account for changes in launchSettings.json
-**/Properties/launchSettings.json
