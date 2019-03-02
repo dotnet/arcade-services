@@ -2,8 +2,8 @@
   "profiles": {
     "Microsoft.DotNet.Darc": {
       "commandName": "Project",
-      "commandLineArgs": "get-subscriptions --batchable",
-      "workingDirectory": "D:\\enlistments\\core-sdk"
+      "commandLineArgs": "add-dependency -n a -t toolset -v 123 -r lkmlsldfl",
+      "workingDirectory": "G:\\Code\\jcagme\\arcade-services"
     }
   }
 }

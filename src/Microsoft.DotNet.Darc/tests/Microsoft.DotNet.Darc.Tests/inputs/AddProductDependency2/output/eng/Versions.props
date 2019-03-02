@@ -4,8 +4,4 @@
   <PropertyGroup>
     <FooBarPackageVersion>1.2.3</FooBarPackageVersion>
   </PropertyGroup>
-  <!--Package names-->
-  <PropertyGroup>
-    <FooBarPackage>Foo.Bar</FooBarPackage>
-  </PropertyGroup>
 </Project>

@@ -4,8 +4,4 @@
   <PropertyGroup>
     <dotnetefPackageVersion>1.2.3</dotnetefPackageVersion>
   </PropertyGroup>
-  <!--Package names-->
-  <PropertyGroup>
-    <dotnetefPackage>dotnet-ef</dotnetefPackage>
-  </PropertyGroup>
 </Project>
