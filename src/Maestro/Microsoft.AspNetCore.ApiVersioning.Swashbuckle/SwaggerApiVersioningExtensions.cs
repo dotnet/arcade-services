@@ -23,6 +23,13 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
                     configureVersionInfo));
         }
 
+        public static void FilterSchemas(
+            this SwaggerGenOptions options,
+            Action<Schema, SchemaFilterContext> filter)
+        {
+            options.SchemaFilter<FunctionSchemaFilter>(filter);
+        }
+
         public static void FilterOperations(
             this SwaggerGenOptions options,
             Action<Operation, OperationFilterContext> filter)
@@ -35,6 +42,21 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
             Action<SwaggerDocument, DocumentFilterContext> filter)
         {
             options.DocumentFilter<FunctionDocumentFilter>(filter);
+        }
+
+        private class FunctionSchemaFilter : ISchemaFilter
+        {
+            public FunctionSchemaFilter(Action<Schema, SchemaFilterContext> filter)
+            {
+                Filter = filter;
+            }
+
+            public Action<Schema, SchemaFilterContext> Filter { get; }
+
+            public void Apply(Schema schema, SchemaFilterContext context)
+            {
+                Filter(schema, context);
+            }
         }
 
 

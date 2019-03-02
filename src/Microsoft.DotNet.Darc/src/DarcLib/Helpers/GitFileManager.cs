@@ -121,6 +121,27 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
+        private static void SetAttribute(XmlDocument document, XmlNode node, string name, string value)
+        {
+            XmlAttribute attribute = node.Attributes[name];
+            if (attribute == null)
+            {
+                node.Attributes.Append(attribute = document.CreateAttribute(name));
+            }
+            attribute.Value = value;
+        }
+
+        private static void SetElement(XmlDocument document, XmlNode node, string name, string value)
+        {
+            XmlNode element = node.SelectSingleNode(name);
+            if (element == null)
+            {
+                element = node.AppendChild(document.CreateElement(name));
+            }
+
+            element.InnerText = value;
+        }
+
         public async Task<GitFileContentContainer> UpdateDependencyFiles(
             IEnumerable<DependencyDetail> itemsToUpdate,
             string repoUri,
@@ -156,10 +177,12 @@ namespace Microsoft.DotNet.DarcLib
                 }
 
                 XmlNode nodeToUpdate = versionList.Item(0);
-                nodeToUpdate.Attributes["Version"].Value = itemToUpdate.Version;
-                nodeToUpdate.Attributes["Name"].Value = itemToUpdate.Name;
-                nodeToUpdate.SelectSingleNode("Sha").InnerText = itemToUpdate.Commit;
-                nodeToUpdate.SelectSingleNode("Uri").InnerText = itemToUpdate.RepoUri;
+
+                SetAttribute(versionDetails, nodeToUpdate, "Version", itemToUpdate.Version);
+                SetAttribute(versionDetails, nodeToUpdate, "Name", itemToUpdate.Name);
+                SetElement(versionDetails, nodeToUpdate, "SourceBuildId", itemToUpdate.SourceBuildId.ToString());
+                SetElement(versionDetails, nodeToUpdate, "Sha", itemToUpdate.Commit);
+                SetElement(versionDetails, nodeToUpdate, "Uri", itemToUpdate.RepoUri);
                 UpdateVersionFiles(versionProps, globalJson, itemToUpdate);
             }
 
@@ -182,29 +205,18 @@ namespace Microsoft.DotNet.DarcLib
 
             XmlNode newDependency = versionDetails.CreateElement("Dependency");
 
-            XmlAttribute nameAttribute = versionDetails.CreateAttribute("Name");
-            nameAttribute.Value = dependency.Name;
-            newDependency.Attributes.Append(nameAttribute);
-
-            XmlAttribute versionAttribute = versionDetails.CreateAttribute("Version");
-            versionAttribute.Value = dependency.Version;
-            newDependency.Attributes.Append(versionAttribute);
+            SetAttribute(versionDetails, newDependency, "Name", dependency.Name);
+            SetAttribute(versionDetails, newDependency, "Version", dependency.Version);
+            SetElement(versionDetails, newDependency, "SourceBuildId", dependency.SourceBuildId.ToString());
 
             // Only add the pinned attribute if the pinned option is set to true
             if (dependency.Pinned)
             {
-                XmlAttribute pinnedAttribute = versionDetails.CreateAttribute("Pinned");
-                pinnedAttribute.Value = dependency.Pinned.ToString();
-                newDependency.Attributes.Append(pinnedAttribute);
+                SetAttribute(versionDetails, newDependency, "Pinned", "True");
             }
 
-            XmlNode uri = versionDetails.CreateElement("Uri");
-            uri.InnerText = dependency.RepoUri;
-            newDependency.AppendChild(uri);
-
-            XmlNode sha = versionDetails.CreateElement("Sha");
-            sha.InnerText = dependency.Commit;
-            newDependency.AppendChild(sha);
+            SetElement(versionDetails, newDependency, "Uri", dependency.RepoUri);
+            SetElement(versionDetails, newDependency, "Sha", dependency.Commit);
 
             XmlNode dependenciesNode = versionDetails.SelectSingleNode($"//{dependency.Type}Dependencies");
             if (dependenciesNode == null)
@@ -798,12 +810,15 @@ namespace Microsoft.DotNet.DarcLib
                                     }
                                 }
 
+                                var buildId = dependency.SelectSingleNode("SourceBuildId")?.InnerText;
+
                                 DependencyDetail dependencyDetail = new DependencyDetail
                                 {
                                     Branch = branch,
                                     Name = dependency.Attributes["Name"].Value,
                                     RepoUri = dependency.SelectSingleNode("Uri").InnerText,
                                     Commit = dependency.SelectSingleNode("Sha").InnerText,
+                                    SourceBuildId = buildId == null ? 0 : int.Parse(buildId),
                                     Version = dependency.Attributes["Version"].Value,
                                     Pinned = isPinned,
                                     Type = type
