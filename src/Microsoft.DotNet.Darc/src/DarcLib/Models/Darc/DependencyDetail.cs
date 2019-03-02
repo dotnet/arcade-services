@@ -6,6 +6,10 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class DependencyDetail
     {
+        public DependencyDetail()
+        {
+        }
+
         public string Branch { get; set; }
 
         public string Name { get; set; }
@@ -17,6 +21,8 @@ namespace Microsoft.DotNet.DarcLib
         public string Commit { get; set; }
 
         public bool Pinned { get; set; }
+
+        public int SourceBuildId { get; set; }
 
         public DependencyType Type { get; set; }
     }

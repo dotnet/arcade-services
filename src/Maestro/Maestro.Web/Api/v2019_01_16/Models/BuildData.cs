@@ -17,7 +17,7 @@ namespace Maestro.Web.Api.v2019_01_16.Models
 
         public List<v2018_07_16.Models.AssetData> Assets { get; set; }
 
-        public List<int> Dependencies { get; set; }
+        public List<BuildRef> Dependencies { get; set; }
 
         public int? AzureDevOpsBuildId { get; set; }
 
@@ -56,8 +56,20 @@ namespace Maestro.Web.Api.v2019_01_16.Models
                 AzureDevOpsRepository = AzureDevOpsRepository,
                 AzureDevOpsBranch = AzureDevOpsBranch,
                 Commit = Commit,
-                Assets = Assets.Select(a => a.ToDb()).ToList()
+                Assets = Assets?.Select(a => a.ToDb()).ToList()
             };
         }
+    }
+
+    public class BuildRef
+    {
+        public BuildRef(int buildId, bool isProduct)
+        {
+            BuildId = buildId;
+            IsProduct = isProduct;
+        }
+
+        public int BuildId { get; }
+        public bool IsProduct { get; }
     }
 }

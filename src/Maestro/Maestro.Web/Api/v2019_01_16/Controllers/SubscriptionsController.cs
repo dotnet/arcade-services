@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -233,7 +234,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         [HttpPost]
         [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Subscription), Description = "New Subscription successfully created")]
         [ValidateModelState]
-        public override async Task<IActionResult> Create([FromBody] v2018_07_16.Models.SubscriptionData subscription)
+        public override async Task<IActionResult> Create([FromBody, Required] v2018_07_16.Models.SubscriptionData subscription)
         {
             Data.Models.Channel channel = await _context.Channels.Where(c => c.Name == subscription.ChannelName)
                 .FirstOrDefaultAsync();

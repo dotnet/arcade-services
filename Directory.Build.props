@@ -6,4 +6,8 @@
     <Copyright>$(CopyrightNetFoundation)</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <NoWarn>$(NoWarn);NU5125</NoWarn>
+  </PropertyGroup>
 </Project>
