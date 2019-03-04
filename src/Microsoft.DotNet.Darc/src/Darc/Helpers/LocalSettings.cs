@@ -102,7 +102,10 @@ namespace Microsoft.DotNet.Darc.Helpers
                         if (parsedUri.Host == "github.com")
                         {
                             darcSettings.GitType = GitRepoType.GitHub;
-                            darcSettings.GitRepoPersonalAccessToken = localSettings != null ? localSettings.GitHubToken : options.GitHubPat;
+                            darcSettings.GitRepoPersonalAccessToken = 
+                                localSettings != null ?
+                                (string.IsNullOrEmpty(localSettings.GitHubToken) ? options.GitHubPat : localSettings.GitHubToken) :
+                                options.GitHubPat;
                         }
                         else if (parsedUri.Host == "dev.azure.com" || parsedUri.Host.EndsWith("visualstudio.com"))
                         {
