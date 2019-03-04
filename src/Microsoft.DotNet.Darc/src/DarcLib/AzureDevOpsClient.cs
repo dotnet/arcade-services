@@ -654,18 +654,18 @@ namespace Microsoft.DotNet.DarcLib
             var rng = new Random();
             using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride, baseAddressSubpath))
             {
-                HttpRequestManager requestManager = new HttpRequestManager(client,
-                                                                           method,
-                                                                           requestPath,
-                                                                           logger,
-                                                                           body,
-                                                                           versionOverride,
-                                                                           logFailure);
 
                 while (true)
                 {
                     try
                     {
+                        HttpRequestManager requestManager = new HttpRequestManager(client,
+                                                                                   method,
+                                                                                   requestPath,
+                                                                                   logger,
+                                                                                   body,
+                                                                                   versionOverride,
+                                                                                   logFailure);
                         using (var response = await requestManager.ExecuteAsync())
                         {
                             return JObject.Parse(await response.Content.ReadAsStringAsync());
