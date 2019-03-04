@@ -19,6 +19,7 @@ namespace Microsoft.DotNet.Darc.Helpers
     {
         private readonly string _editorPath;
         private readonly string _gitDir;
+        private readonly string _rootDir;
         private readonly ILogger _logger;
         private bool _popUpClosed = false;
 
@@ -26,6 +27,7 @@ namespace Microsoft.DotNet.Darc.Helpers
         {
             _editorPath = LocalHelpers.GetEditorPath(logger);
             _gitDir = LocalHelpers.GetGitDir(logger);
+            _rootDir = LocalHelpers.GetRootDir(logger);
             _logger = logger;
         }
 

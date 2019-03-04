@@ -374,8 +374,7 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     // If a repo folder or a mapping was not set we use the current parent's 
                     // parent folder.
-                    string gitDir = LocalHelpers.GetGitDir(logger);
-                    string parent = Directory.GetParent(gitDir).FullName;
+                    string parent = LocalHelpers.GetRootDir(logger);
                     folder = Directory.GetParent(parent).FullName;
                 }
 
