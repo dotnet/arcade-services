@@ -34,7 +34,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option('f', "flat", HelpText = @"Returns a unique set of repository+sha combination.")]
         public bool Flat { get; set; }
 
-        [Option("graphviz", HelpText = @"Writes the repository graph in GraphViz form, in the specified file")]
+        [Option("graphviz", HelpText = @"Writes the repository graph in GraphViz (dot) form, into the specified file.")]
         public string GraphVizOutputFile { get; set; }
 
         [Option("include-toolset", HelpText = "Include toolset dependencies.")]

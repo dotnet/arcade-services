@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
@@ -188,40 +189,63 @@ namespace Microsoft.DotNet.Darc.Operations
             return dependencies;
         }
 
+        /// <summary>
+        ///     Log basic node details that are common to flat/normal and coherency
+        ///     path views
+        /// </summary>
+        /// <param name="node">Node</param>
+        /// <param name="indent">Indentation</param>
+        /// <example>
+        ///       - Repo:     https://github.com/dotnet/wpf
+        ///         Commit:   99112590688a44837276e20e9c91ef41fd54c64b
+        ///         Delta:    latest
+        ///         Builds:
+        ///         - 20190228.4 (2/28/2019 12:57 PM)
+        /// </example>
         private void LogBasicNodeDetails(DependencyGraphNode node, string indent)
         {
             Console.WriteLine($"{indent}- Repo:     {node.RepoUri}");
             Console.WriteLine($"{indent}  Commit:   {node.Commit}");
+
+            StringBuilder deltaString = new StringBuilder($"{indent}  Delta:    ");
             GitDiff diffFrom = node.DiffFrom;
-            // Log the node diff if it was desired.
+
+            // Log the delta. Depending on user options, deltas from latest build,
+            // other builds in the graph, etc. may have been calculated as part of the
+            // graph build.  The delta is a diff in a node commit and another commit.
+            // For the purposes of the user display for the dependency graph, we really
+            // only care about the ahead/behind information.
+
             if (diffFrom != null)
             {
-                string deltaString = "unknown";
                 if (diffFrom.Valid)
                 {
                     if (diffFrom.Ahead != 0 || diffFrom.Behind != 0)
                     {
-                        deltaString = "";
                         if (diffFrom.Ahead != 0)
                         {
-                            deltaString = $"ahead {diffFrom.Ahead}";
+                            deltaString.Append($"ahead {diffFrom.Ahead}");
                         }
                         if (diffFrom.Behind != 0)
                         {
-                            if (deltaString != "")
+                            if (deltaString.Length != 0)
                             {
-                                deltaString += ", ";
+                                deltaString.Append(", ");
                             }
-                            deltaString += $"behind {diffFrom.Behind}";
+                            deltaString.Append($"behind {diffFrom.Behind}");
                         }
-                        deltaString += $" commits vs. {diffFrom.BaseVersion}";
+                        deltaString.Append($" commits vs. {diffFrom.BaseVersion}");
                     }
                     else
                     {
-                        deltaString = "latest";
+                        deltaString.Append("latest");
                     }
                 }
-                Console.WriteLine($"{indent}  Delta:    {deltaString}");
+                else
+                {
+                    deltaString.Append("unknown");
+                }
+                Console.WriteLine(deltaString);
             }
             if (node.ContributingBuilds != null)
             {
@@ -272,7 +296,7 @@ namespace Microsoft.DotNet.Darc.Operations
             return repoUri;
         }
 
-        private string GetGraphVizNodeName(DependencyGraphNode node)
+        private string CalculateGraphVizNodeName(DependencyGraphNode node)
         {
             return GetSimpleRepoName(node.RepoUri).Replace("-", "") + node.Commit;
         }
@@ -291,41 +315,63 @@ namespace Microsoft.DotNet.Darc.Operations
                 await writer.WriteLineAsync("    node [shape=record]");
                 foreach (DependencyGraphNode node in graph.Nodes)
                 {
-                    string buildString = "";
+                    StringBuilder nodeBuilder = new StringBuilder();
+                    
+                    // First add the node name
+                    nodeBuilder.Append($"    {CalculateGraphVizNodeName(node)}");
+                    
+                    // Then add the label.  label looks like [label="<info here>"]
+                    nodeBuilder.Append("[label=\"");
+                    
+                    // Append friendly repo name
+                    nodeBuilder.Append(GetSimpleRepoName(node.RepoUri));
+                    nodeBuilder.Append(@"\n");
+                    
+                    // Append short commit sha
+                    nodeBuilder.Append(node.Commit.Substring(0, 10));
+                    
+                    // Append a build string (with newline) if available
                     if (node.ContributingBuilds != null && node.ContributingBuilds.Any())
                     {
                         Build newestBuild = node.ContributingBuilds.OrderByDescending(b => b.DateProduced).First();
-                        buildString = $"\\n{newestBuild.DateProduced.Value.ToLocalTime().ToString("g")}";
+                        nodeBuilder.Append($"\\n{newestBuild.DateProduced.Value.ToString("g")} (UTC)");
                     }
 
-                    string diffString = "";
+                    // Append a diff string if the graph contains diff info.
                     GitDiff diffFrom = node.DiffFrom;
                     if (diffFrom != null)
                     {
                         if (!diffFrom.Valid)
                         {
-                            diffString = "\\ndiff unknown";
+                            nodeBuilder.Append("\\ndiff unknown");
                         }
                         else if (diffFrom.Ahead != 0 || diffFrom.Behind != 0)
                         {
                             if (node.DiffFrom.Ahead != 0)
                             {
-                                diffString += $"\\nahead: {node.DiffFrom.Ahead} commits";
+                                nodeBuilder.Append($"\\nahead: {node.DiffFrom.Ahead} commits");
                             }
                             if (node.DiffFrom.Behind != 0)
                             {
-                                diffString += $"\\nbehind: {node.DiffFrom.Behind} commits";
+                                nodeBuilder.Append($"\\nbehind: {node.DiffFrom.Behind} commits");
                             }
                         }
                         else
                         {
-                            diffString = "\\nlatest";
+                            nodeBuilder.Append("\\nlatest");
                         }
                     }
-                    await writer.WriteLineAsync($"    {GetGraphVizNodeName(node)}[label=\"{GetSimpleRepoName(node.RepoUri)}\\n{node.Commit.Substring(0, 5)}{buildString}{diffString}\"];");
+
+                    // Append end of label and end of node.
+                    nodeBuilder.Append("\"];");
+
+                    // Write it out.
+                    await writer.WriteLineAsync(nodeBuilder.ToString());
+
+                    // Now write the edges
                     foreach (DependencyGraphNode childNode in node.Children)
                     {
-                        await writer.WriteLineAsync($"    {GetGraphVizNodeName(node)} -> {GetGraphVizNodeName(childNode)}");
+                        await writer.WriteLineAsync($"    {CalculateGraphVizNodeName(node)} -> {CalculateGraphVizNodeName(childNode)}");
                     }
                 }
 

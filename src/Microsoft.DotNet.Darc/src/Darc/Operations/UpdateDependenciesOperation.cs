@@ -113,9 +113,10 @@ namespace Microsoft.DotNet.Darc.Operations
                     // Limit the number of BAR queries by grabbing the repo URIs and making a hash set.
                     // We gather the latest build for any dependencies that aren't marked with coherent parent
                     // dependencies, as those will be updated based on additional queries.
-                    HashSet<string> repositoryUrisForQuery =
-                        currentDependencies.Where(dependency => string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
-                                           .Select(dependency => dependency.RepoUri).ToHashSet();
+                    HashSet<string> repositoryUrisForQuery = currentDependencies
+                        .Where(dependency => string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
+                        .Select(dependency => dependency.RepoUri)
+                        .ToHashSet();
 
                     ConcurrentDictionary<string, Task<Build>> getLatestBuildTaskDictionary = new ConcurrentDictionary<string, Task<Build>>();
 
