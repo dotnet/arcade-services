@@ -38,25 +38,28 @@ namespace Microsoft.DotNet.DarcLib
 
         public async Task<HttpResponseMessage> ExecuteAsync()
         {
-            HttpRequestMessage message = new HttpRequestMessage(_method, _requestUri);
-            if (!string.IsNullOrEmpty(_body))
+            using (HttpRequestMessage message = new HttpRequestMessage(_method, _requestUri))
             {
-                message.Content = new StringContent(_body, Encoding.UTF8, "application/json");
-            }
-            HttpResponseMessage response = await _client.SendAsync(message);
-
-            if (!response.IsSuccessStatusCode)
-            {
-                if (_logFailure)
+                if (!string.IsNullOrEmpty(_body))
                 {
-                    _logger.LogError(
-                        $"There was an error executing method '{message.Method}' against URI '{message.RequestUri}'. " +
-                        $"Request failed with error code: '{response.StatusCode}'");
+                    message.Content = new StringContent(_body, Encoding.UTF8, "application/json");
                 }
-                response.EnsureSuccessStatusCode();
-            }
 
-            return response;
+                HttpResponseMessage response = await _client.SendAsync(message);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    if (_logFailure)
+                    {
+                        _logger.LogError(
+                            $"There was an error executing method '{message.Method}' against URI '{message.RequestUri}'. " +
+                            $"Request failed with error code: '{response.StatusCode}'");
+                    }
+                    response.EnsureSuccessStatusCode();
+                }
+
+                return response;
+            }
         }
     }
 }

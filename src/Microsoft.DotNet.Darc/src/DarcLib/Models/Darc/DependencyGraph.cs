@@ -97,8 +97,15 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         public IEnumerable<DependencyGraphNode> IncoherentNodes { get; set; }
 
+        /// <summary>
+        ///     Builds that contributed dependencies to the graph.
+        /// </summary>
         public IEnumerable<Build> ContributingBuilds { get; set; }
 
+        /// <summary>
+        ///     Dependencies in the graph for which a corresponding build could not
+        ///     be found.
+        /// </summary>
         public IEnumerable<DependencyDetail> DependenciesMissingBuilds { get; set; }
 
         /// <summary>
@@ -107,7 +114,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="remoteFactory">Factory that can create remotes based on repo uris</param>
         /// <param name="repoUri">Root repository URI</param>
         /// <param name="commit">Root commit</param>
-        /// <param name="includeToolset">If true, toolset dependencies are included.</param>
+        /// <param name="options">Graph build options.</param>
         /// <param name="logger">Logger</param>
         /// <returns>New dependency graph.</returns>
         public static async Task<DependencyGraph> BuildRemoteDependencyGraphAsync(
@@ -137,8 +144,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="rootDependencies">Root set of dependencies</param>
         /// <param name="repoUri">Root repository URI</param>
         /// <param name="commit">Root commit</param>
-        /// <param name="includeToolset">If true, toolset dependencies are included.</param>
-        /// <param name="lookupBuilds">If true, the builds contributing to each node are looked up. Must be a remote build.</param>
+        /// <param name="options">Graph build options.</param>
         /// <param name="logger">Logger</param>
         /// <returns>New dependency graph.</returns>
         public static async Task<DependencyGraph> BuildRemoteDependencyGraphAsync(
@@ -169,7 +175,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="rootDependencies">Root set of dependencies</param>
         /// <param name="rootRepoFolder">Root repository folder</param>
         /// <param name="rootRepoCommit">Root commit</param>
-        /// <param name="includeToolset">If true, toolset dependencies are included.</param>
+        /// <param name="options">Graph build options</param>
         /// <param name="logger">Logger</param>
         /// <param name="testPath">If running unit tests, commits will be looked up as folders under this path</param>
         /// <param name="remotesMap">Map of remote uris to local paths</param>
@@ -198,6 +204,19 @@ namespace Microsoft.DotNet.DarcLib
                 testPath);
         }
 
+        /// <summary>
+        ///     Validate that the graph build options are correct.
+        /// </summary>
+        /// <param name="remoteFactory"></param>
+        /// <param name="rootDependencies"></param>
+        /// <param name="repoUri"></param>
+        /// <param name="commit"></param>
+        /// <param name="options"></param>
+        /// <param name="remote"></param>
+        /// <param name="logger"></param>
+        /// <param name="reposFolder"></param>
+        /// <param name="remotesMap"></param>
+        /// <param name="testPath"></param>
         private static void ValidateBuildOptions(
             IRemoteFactory remoteFactory,
             IEnumerable<DependencyDetail> rootDependencies,
@@ -316,13 +335,12 @@ namespace Microsoft.DotNet.DarcLib
 
             // Find the build of each repo in the graph, then
             // get the diff info from the latest
-            Dictionary<string, DependencyGraphNode>.KeyCollection uniqueRepos = visitedRepoUriNodes.Keys;
-            foreach (string repo in uniqueRepos)
+            foreach (string repo in visitedRepoUriNodes.Keys)
             {
                 // Get all nodes with this value
-                IEnumerable<DependencyGraphNode> nodes = nodeCache.Values.Where(n => n.RepoUri == repo);
+                List<DependencyGraphNode> nodes = nodeCache.Values.Where(n => n.RepoUri == repo).ToList();
                 // If only one, determine latest
-                if (nodes.Count() > 1)
+                if (nodes.Count > 1)
                 {
                     // Find latest
                     DependencyGraphNode newestNode = null;
@@ -337,15 +355,10 @@ namespace Microsoft.DotNet.DarcLib
                                 newestBuild = newestNode.ContributingBuilds.OrderByDescending(b => b.DateProduced).First();
                             }
                         }
-                        else if (node.ContributingBuilds.Any())
+                        else if (node.ContributingBuilds.Any(b => b.DateProduced.Value > newestBuild?.DateProduced.Value))
                         {
-                            // Determine whether any of the builds are newer
-                            if (node.ContributingBuilds.Any(b => newestBuild == null ||
-                                                            b.DateProduced.Value.CompareTo(newestBuild.DateProduced.Value) > 0))
-                            {
-                                newestNode = node;
-                                newestBuild = newestNode.ContributingBuilds.OrderByDescending(b => b.DateProduced).First();
-                            }
+                            newestNode = node;
+                            newestBuild = newestNode.ContributingBuilds.OrderByDescending(b => b.DateProduced).First();
                         }
                     }
 
@@ -392,8 +405,8 @@ namespace Microsoft.DotNet.DarcLib
             IEnumerable<string> remotesMap,
             string testPath)
         {
-            ValidateBuildOptions(remoteFactory, rootDependencies, repoUri, commit, options, 
-                                 remote, logger, reposFolder, remotesMap, testPath);
+            ValidateBuildOptions(remoteFactory, rootDependencies, repoUri, commit, 
+                options, remote, logger, reposFolder, remotesMap, testPath);
 
             if (rootDependencies != null)
             {
@@ -409,6 +422,7 @@ namespace Microsoft.DotNet.DarcLib
                 logger.LogInformation($"Starting build of graph from ({repoUri}@{commit})");
             }
 
+            AssetComparer assetEqualityComparer = new AssetComparer();
             HashSet<Build> allContributingBuilds = null;
             HashSet<DependencyDetail> dependenciesMissingBuilds = null;
             HashSet<Build> rootNodeBuilds = null;
@@ -428,8 +442,7 @@ namespace Microsoft.DotNet.DarcLib
                 if (rootDependencies != null)
                 {
                     potentialRootNodeBuilds = potentialRootNodeBuilds.Where(b =>
-                        b.Assets.Any(a => rootDependencies.Any(d => a.Name.Equals(d.Name, StringComparison.OrdinalIgnoreCase) &&
-                                          a.Version == d.Version)));
+                        b.Assets.Any(a => rootDependencies.Any(d => assetEqualityComparer.Equals(a, d))));
                 }
                 // It's entirely possible that the root has no builds (e.g. change just checked in).
                 // Don't record those. Instead, users of the graph should just look at the
@@ -559,8 +572,7 @@ namespace Microsoft.DotNet.DarcLib
                                 // actually result in a different set of contributing builds, but should avoid any subtle bugs where
                                 // there might be overlap between repos, or cases where there were multiple builds at the same sha.
                                 potentiallyContributingBuilds = potentiallyContributingBuilds.Where(b =>
-                                    b.Assets.Any(a => a.Name.Equals(dependency.Name, StringComparison.OrdinalIgnoreCase) &&
-                                                      a.Version == dependency.Version));
+                                    b.Assets.Any(a => assetEqualityComparer.Equals(a, dependency)));
                                 if (!potentiallyContributingBuilds.Any())
                                 {
                                     // Couldn't find a build that produced the dependency.

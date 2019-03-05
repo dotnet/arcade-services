@@ -154,22 +154,22 @@ namespace Microsoft.DotNet.Darc.Operations
                             });
                         
                         // Now determine what needs to be updated.
-                        Dictionary<DependencyDetail, DependencyDetail> updates =
-                            barOnlyRemote.GetRequiredNonCoherencyUpdatesAsync(repoUri, build.Commit, assetData, currentDependencies);
+                        List<DependencyUpdate> updates = await barOnlyRemote.GetRequiredNonCoherencyUpdatesAsync(
+                            repoUri, build.Commit, assetData, currentDependencies);
 
-                        foreach (KeyValuePair<DependencyDetail, DependencyDetail> updatedDependencyPair in updates)
+                        foreach (var update in updates)
                         {
-                            DependencyDetail before = updatedDependencyPair.Key;
-                            DependencyDetail after = updatedDependencyPair.Value;
+                            DependencyDetail from = update.From;
+                            DependencyDetail to = update.To;
                             // Print out what we are going to do.	
-                            Console.WriteLine($"Updating '{before.Name}': '{before.Version}' => '{after.Version}'" +
+                            Console.WriteLine($"Updating '{from.Name}': '{from.Version}' => '{to.Version}'" +
                                 $" (from build '{build.AzureDevOpsBuildNumber}' of '{repoUri}')");
 
                             // Final list of dependencies to update
-                            dependenciesToUpdate.Add(after);
+                            dependenciesToUpdate.Add(to);
                             // Replace in the current dependencies list so the correct data is fed into the coherency pass.
-                            currentDependencies.Remove(before);
-                            currentDependencies.Add(after);
+                            currentDependencies.Remove(from);
+                            currentDependencies.Add(to);
                         }
                     }
 
@@ -177,21 +177,21 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     // Now run a coherency update based on the current set of dependencies updated
                     // from the previous pass.
-                    Dictionary<DependencyDetail, DependencyDetail> coherencyUpdates =
+                    List<DependencyUpdate> coherencyUpdates =
                         await barOnlyRemote.GetRequiredCoherencyUpdatesAsync(currentDependencies, remoteFactory);
 
-                    foreach (KeyValuePair<DependencyDetail, DependencyDetail> updatedDependencyPair in coherencyUpdates)
+                    foreach (DependencyUpdate dependencyUpdate in coherencyUpdates)
                     {
-                        DependencyDetail before = updatedDependencyPair.Key;
-                        DependencyDetail after = updatedDependencyPair.Value;
+                        DependencyDetail from = dependencyUpdate.From;
+                        DependencyDetail to = dependencyUpdate.To;
                         DependencyDetail coherencyParent = currentDependencies.First(d =>
-                            d.Name.Equals(before.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
+                            d.Name.Equals(from.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
                         // Print out what we are going to do.	
-                        Console.WriteLine($"Updating '{before.Name}': '{before.Version}' => '{after.Version}' " +
-                            $"to ensure coherency with {before.CoherentParentDependencyName}@{coherencyParent.Version}");
+                        Console.WriteLine($"Updating '{from.Name}': '{from.Version}' => '{to.Version}' " +
+                            $"to ensure coherency with {from.CoherentParentDependencyName}@{coherencyParent.Version}");
 
                         // Final list of dependencies to update
-                        dependenciesToUpdate.Add(after);
+                        dependenciesToUpdate.Add(to);
                     }
                 }
 

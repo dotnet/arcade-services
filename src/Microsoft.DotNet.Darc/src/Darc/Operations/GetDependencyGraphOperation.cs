@@ -167,7 +167,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 if (!string.IsNullOrEmpty(_options.GraphVizOutputFile))
                 {
-                    LogGraphViz(graph);
+                    await LogGraphViz(graph);
                 }
 
                 return Constants.SuccessCode;
@@ -301,7 +301,22 @@ namespace Microsoft.DotNet.Darc.Operations
             return GetSimpleRepoName(node.RepoUri).Replace("-", "") + node.Commit;
         }
 
-        private async void LogGraphViz(DependencyGraph graph)
+        /// <summary>
+        ///     Log the graph in graphviz (dot) format.
+        /// </summary>
+        /// <param name="graph">Graph to log</param>
+        /// <remarks>
+        /// Example of a graphviz graph description
+        ///  
+        /// digraph graphname {
+        ///    a -> b -> c;
+        ///    b -> d;
+        /// }
+        ///  
+        /// For more info see https://www.graphviz.org/
+        /// </remarks>
+        /// <returns>Async task</returns>
+        private async Task LogGraphViz(DependencyGraph graph)
         {
             string directory = Path.GetDirectoryName(_options.GraphVizOutputFile);
             if (!Directory.Exists(directory))

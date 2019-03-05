@@ -188,12 +188,20 @@ namespace SubscriptionActorService.Tests
                     {
                         // Just make from->to identical.
                         return assets.Select(
-                                d => new DependencyDetail
+                                d => new DependencyUpdate
                                 {
-                                    Name = d.Name,
-                                    Version = d.Version
+                                    From = new DependencyDetail
+                                    {
+                                        Name = d.Name,
+                                        Version = d.Version
+                                    },
+                                    To = new DependencyDetail
+                                    {
+                                        Name = d.Name,
+                                        Version = d.Version
+                                    },
                                 })
-                            .ToDictionary(d => d);
+                            .ToList();
                     });
         }
 

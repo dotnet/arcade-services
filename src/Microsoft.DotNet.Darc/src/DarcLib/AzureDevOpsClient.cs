@@ -726,7 +726,7 @@ namespace Microsoft.DotNet.DarcLib
                         }
                     }
                     --retriesRemaining;
-                    int delay = (retriesRemaining - retriesRemaining) * rng.Next(1, 7);
+                    int delay = (retryCount - retriesRemaining) * rng.Next(1, 7);
                     await Task.Delay(delay * 1000);
                 }
             }

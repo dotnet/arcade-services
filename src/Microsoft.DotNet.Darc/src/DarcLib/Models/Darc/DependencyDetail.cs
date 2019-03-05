@@ -68,7 +68,20 @@ namespace Microsoft.DotNet.DarcLib
         ///     in core-setup, also update Microsoft.NETCore.Runtime.CoreCLR to the version used to produce that
         ///     Microsoft.Private.CoreFx.NETCoreApp. By corrolary, that means Microsoft.NETCore.Runtime.CoreCLR cannot
         ///     be updated unless that version exists in the subtree of Microsoft.Private.CoreFx.NETCoreApp.
+        ///     
+        ///     Coherent parent dependencies are specified in Version.Details.xml as follows:
+        ///     <![CDATA[
+        ///         <Dependency Name="Microsoft.NETCore.App" Version="1.0.0-beta.19151.1" >
+        ///             <Uri>https://github.com/dotnet/core-setup</Uri>
+        ///             <Sha>abcd</Sha>
+        ///         </Dependency>
+        ///         <Dependency Name="Microsoft.Private.CoreFx.NETCoreApp" Version="1.2.3" CoherentParentDependency="Microsoft.NETCore.App">
+        ///             <Uri>https://github.com/dotnet/corefx</Uri>
+        ///             <Sha>defg</Sha>
+        ///         </Dependency>
+        ///      ]]>
         /// </summary>
+        /// 
         public string CoherentParentDependencyName { get; set; }
     }
 }

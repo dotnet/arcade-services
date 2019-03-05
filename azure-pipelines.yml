@@ -25,8 +25,7 @@ jobs:
       timeoutInMinutes: 90
       pool:
         ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
-          name: NetCorePublic-Int-Pool
-          queue: Windows.10.Amd64.Open
+          name: Hosted VS2017
         ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
           name: dotnet-internal-temp
 
