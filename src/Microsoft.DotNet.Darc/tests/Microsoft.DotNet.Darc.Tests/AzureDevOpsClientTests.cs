@@ -26,7 +26,6 @@ namespace Microsoft.DotNet.Darc.Tests
 
         [Theory]
         [InlineData("https://dev.azure.com/dcn-eng/public-s/_git/foo-23bar")]
-        [InlineData("https://dnceng@dev.azure.com/dnceng/public/_git/foo-core")]
         private void ParseInvalidRepoUriTests(string inputUri)
         {
             Xunit.Assert.Throws<ArgumentException>(() => AzureDevOpsClient.ParseRepoUri(inputUri));
