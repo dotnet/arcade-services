@@ -32,6 +32,8 @@ namespace SubscriptionActorService.Tests
         protected readonly List<Action<BuildAssetRegistryContext>> ContextUpdates =
             new List<Action<BuildAssetRegistryContext>>();
 
+        protected readonly List<Action> AfterDbUpdateActions = new List<Action>();
+
         protected readonly Mock<IHostingEnvironment> HostingEnvironment;
 
         protected Channel Channel;
@@ -61,6 +63,11 @@ namespace SubscriptionActorService.Tests
             }
 
             await dbContext.SaveChangesAsync();
+
+            foreach (Action update in AfterDbUpdateActions)
+            {
+                update();
+            }
         }
 
         internal void GivenATestChannel()

@@ -17,9 +17,7 @@ namespace Microsoft.DotNet.DarcLib
             Type = other.Type;
             CoherentParentDependencyName = other.CoherentParentDependencyName;
         }
-        /// <summary>
-        ///     Name of dependency.
-        /// </summary>
+
         public string Name { get; set; }
 
         /// <summary>
@@ -41,6 +39,8 @@ namespace Microsoft.DotNet.DarcLib
         ///     True if the dependency should not be updated, false otherwise.
         /// </summary>
         public bool Pinned { get; set; }
+
+        public int SourceBuildId { get; set; }
 
         /// <summary>
         ///     Type of dependency (e.g. Product or Toolset).

@@ -387,7 +387,13 @@ namespace Microsoft.DotNet.Darc.Operations
             foreach (Asset buildAsset in rootBuild.Assets)
             {
                 dependencyCache.Add(
-                    new DependencyDetail() { Name = buildAsset.Name, Version = buildAsset.Version, Commit = rootBuild.Commit },
+                    new DependencyDetail
+                    {
+                        Name = buildAsset.Name,
+                        Version = buildAsset.Version,
+                        Commit = rootBuild.Commit,
+                        SourceBuildId = rootBuild.Id.GetValueOrDefault(),
+                    },
                     rootBuild);
             }
 

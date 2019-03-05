@@ -17,7 +17,6 @@ namespace Microsoft.DotNet.DarcLib
         public const string GlobalJson = "global.json";
         public const string VersionPropsVersionElementSuffix = "PackageVersion";
         public const string VersionPropsAlternateVersionElementSuffix = "Version";
-        public const string VersionPropsPackageElementSuffix = "Package";
 
         private static string GetVersionPropsElementBaseName(string dependencyName)
         {
@@ -45,16 +44,6 @@ namespace Microsoft.DotNet.DarcLib
         public static string GetVersionPropsAlternatePackageVersionElementName(string dependencyName)
         {
             return $"{GetVersionPropsElementBaseName(dependencyName)}{VersionPropsAlternateVersionElementSuffix}";
-        }
-
-        /// <summary>
-        ///     Determine the Versions.props package element name for a specific dependency.
-        /// </summary>
-        /// <param name="dependencyName">Dependency</param>
-        /// <returns>Element name</returns>
-        public static string GetVersionPropsPackageElementName(string dependencyName)
-        {
-            return $"{GetVersionPropsElementBaseName(dependencyName)}{VersionPropsPackageElementSuffix}";
         }
 
         public static string CalculateGlobalJsonElementName(string dependencyName)

@@ -7,14 +7,15 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
-    internal class AddOperation : Operation
+    internal class AddDependencyOperation : Operation
     {
-        AddCommandLineOptions _options;
-        public AddOperation(AddCommandLineOptions options)
+        AddDependencyCommandLineOptions _options;
+        public AddDependencyOperation(AddDependencyCommandLineOptions options)
             : base(options)
         {
             _options = options;
@@ -32,14 +33,21 @@ namespace Microsoft.DotNet.Darc.Operations
                 Version = _options.Version ?? string.Empty,
                 RepoUri = _options.RepoUri ?? string.Empty,
                 Commit = _options.Commit ?? string.Empty,
+                SourceBuildId = _options.BuildId,
                 Pinned = _options.Pinned,
-                Type = type
+                Type = type,
             };
 
             try
             {
                 await local.AddDependencyAsync(dependency);
                 return Constants.SuccessCode;
+            }
+            catch (FileNotFoundException exc)
+            {
+                Logger.LogError(exc, $"One of the version files is missing. Please make sure to add all files " +
+                    "included in https://github.com/dotnet/arcade/blob/master/Documentation/DependencyDescriptionFormat.md#dependency-description-details");
+                return Constants.ErrorCode;
             }
             catch (Exception exc)
             {

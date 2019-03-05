@@ -51,7 +51,7 @@ namespace Microsoft.DotNet.Darc
             return new Type[]
                 {
                     typeof(AddChannelCommandLineOptions),
-                    typeof(AddCommandLineOptions),
+                    typeof(AddDependencyCommandLineOptions),
                     typeof(AddDefaultChannelCommandLineOptions),
                     typeof(AddSubscriptionCommandLineOptions),
                     typeof(AuthenticateCommandLineOptions),

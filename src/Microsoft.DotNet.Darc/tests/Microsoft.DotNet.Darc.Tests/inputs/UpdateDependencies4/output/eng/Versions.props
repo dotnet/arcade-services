@@ -12,6 +12,6 @@
     <FooBarPackage>Foo.Bar</FooBarPackage>
     <FooBar2Package>Foo.Bar2</FooBar2Package>
     <FooBar3Package>Foo.Bar3</FooBar3Package>
-    <ExistingDEPendencyPackage>Existing.DEPendency</ExistingDEPendencyPackage>
+    <ExistingDependencyPackage>Existing.Dependency</ExistingDependencyPackage>
   </PropertyGroup>
 </Project>

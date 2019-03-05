@@ -163,7 +163,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [HttpPost("retry/{timestamp}")]
         [SwaggerApiResponse(HttpStatusCode.Accepted, Description = "Retry successfully requested")]
         [SwaggerApiResponse(HttpStatusCode.NotAcceptable, Description = "The requested history item was successful and cannot be retried")]
-        public async Task<IActionResult> RetryActionAsync(string repository, string branch, long timestamp)
+        public async Task<IActionResult> RetryActionAsync([Required] string repository, [Required] string branch, long timestamp)
         {
             if (string.IsNullOrEmpty(repository))
             {

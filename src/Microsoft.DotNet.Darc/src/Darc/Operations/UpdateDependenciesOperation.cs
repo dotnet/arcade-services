@@ -268,7 +268,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         Commit = manifestMetedata.Repository.Commit,
                         Name = manifestMetedata.Id,
                         RepoUri = manifestMetedata.Repository.Url,
-                        Version = manifestMetedata.Version.OriginalVersion
+                        Version = manifestMetedata.Version.OriginalVersion,
                     });
                 }
             }
