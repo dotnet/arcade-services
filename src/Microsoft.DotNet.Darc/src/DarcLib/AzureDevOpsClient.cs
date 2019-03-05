@@ -768,6 +768,16 @@ namespace Microsoft.DotNet.DarcLib
         /// </remarks>
         public static (string accountName, string projectName, string repoName) ParseRepoUri(string repoUri)
         {
+            // If repoUri includes the user in the account we remove it otherwise Regex matching would fail for URIs like
+            // https://dnceng@dev.azure.com/dnceng/internal/_git/repo
+            if (Uri.TryCreate(repoUri, UriKind.Absolute, out Uri parsedUri))
+            {
+                if (!string.IsNullOrEmpty(parsedUri.UserInfo))
+                {
+                    repoUri = repoUri.Replace($"{parsedUri.UserInfo}@", string.Empty);
+                }
+            }
+
             Match m = RepositoryUriPattern.Match(repoUri);
             if (!m.Success)
             {
