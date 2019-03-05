@@ -85,7 +85,7 @@ namespace SubscriptionActorService.Tests
                     new List<List<AssetData>>
                     {
                         withBuild.Assets.Select(
-                                a => new AssetData
+                                a => new AssetData(false)
                                 {
                                     Name = a.Name,
                                     Version = a.Version
@@ -120,7 +120,6 @@ namespace SubscriptionActorService.Tests
                                 {
                                     Name = a.Name,
                                     Version = a.Version,
-                                    SourceBuildId = withUpdatesFromBuild.Id,
                                 })
                             .ToList()
                     });

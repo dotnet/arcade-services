@@ -4,25 +4,22 @@ using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Maestro.Client.Models
 {
-    public partial class AssetLocationData
+    public partial class BuildGraph
     {
-        public AssetLocationData(AssetLocationDataType type)
+        public BuildGraph(IImmutableDictionary<string, Build> builds)
         {
-            Type = type;
+            Builds = builds;
         }
 
-        [JsonProperty("location")]
-        public string Location { get; set; }
-
-        [JsonProperty("type")]
-        public AssetLocationDataType Type { get; set; }
+        [JsonProperty("builds")]
+        public IImmutableDictionary<string, Build> Builds { get; }
 
         [JsonIgnore]
         public bool IsValid
         {
             get
             {
-                if (Type == default)
+                if (Builds == default)
                 {
                     return false;
                 }

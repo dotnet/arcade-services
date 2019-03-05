@@ -4,7 +4,6 @@
     <Dependency Name="Existing.Dependency" Version="4.5.6">
       <Uri>https://foo.com/foo/bar</Uri>
       <Sha>4</Sha>
-      <SourceBuildId>0</SourceBuildId>
     </Dependency>
   </ProductDependencies>
 </Dependencies>

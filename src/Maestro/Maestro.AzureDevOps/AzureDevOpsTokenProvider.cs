@@ -12,7 +12,6 @@ namespace Maestro.AzureDevOps
     public class AzureDevOpsTokenProvider : IAzureDevOpsTokenProvider
     {
         private readonly IOptions<AzureDevOpsTokenProviderOptions> _options;
-        private readonly Regex accountNameRegex = new Regex(@"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/");
 
         public AzureDevOpsTokenProvider(IOptions<AzureDevOpsTokenProviderOptions> options)
         {
@@ -21,24 +20,12 @@ namespace Maestro.AzureDevOps
 
         public AzureDevOpsTokenProviderOptions Options => _options.Value;
 
-        public Task<string> GetTokenForRepository(string repositoryUrl)
+        public Task<string> GetTokenForAccount(string account)
         {
-            // Identify the instance name, then look up in 
-            Match m = accountNameRegex.Match(repositoryUrl);
-            if (!m.Success)
+            if (!Options.Tokens.TryGetValue(account, out string pat) || string.IsNullOrEmpty(pat))
             {
-                throw new ArgumentException($"{repositoryUrl} is not a valid Azure DevOps repository URL");
-            }
-
-            return GetTokenForAccount(m.Groups["account"].Value);
-        }
-
-        public Task<string> GetTokenForAccount(string accountName)
-        {
-            if (!Options.Tokens.TryGetValue(accountName, out string pat) || string.IsNullOrEmpty(pat))
-            {
-                throw new ArgumentOutOfRangeException($"Account {accountName} does not have a configured PAT. " +
-                    $"Please ensure the 'Tokens' array in the 'AzureDevOps' section of settings.json contains a PAT for {accountName}");
+                throw new ArgumentOutOfRangeException($"Azure DevOps account {account} does not have a configured PAT. " +
+                    $"Please ensure the 'Tokens' array in the 'AzureDevOps' section of settings.json contains a PAT for {account}");
             }
 
             return Task.FromResult<string>(pat);

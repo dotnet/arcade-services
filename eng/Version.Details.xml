@@ -14,5 +14,9 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>72de932bc52858fec2cec4fd29663d163c122f66</Sha>
     </Dependency>
+    <Dependency Name="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="1.0.0-beta.19154.3">
+      <Uri>https://github.com/dotnet/arcade</Uri>
+      <Sha></Sha>
+    </Dependency>
   </ToolsetDependencies>
 </Dependencies>

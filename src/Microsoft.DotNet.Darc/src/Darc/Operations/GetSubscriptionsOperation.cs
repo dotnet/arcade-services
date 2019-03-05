@@ -51,7 +51,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     Console.WriteLine($"{subscription.SourceRepository} ({subscription.Channel.Name}) ==> '{subscription.TargetRepository}' ('{subscription.TargetBranch}')");
                     Console.WriteLine($"  - Id: {subscription.Id}");
                     Console.WriteLine($"  - Update Frequency: {subscription.Policy.UpdateFrequency}");
-                    Console.WriteLine($"  - Enabled: {subscription.Enabled.Value}");
+                    Console.WriteLine($"  - Enabled: {subscription.Enabled}");
                     Console.WriteLine($"  - Batchable: {subscription.Policy.Batchable}");
                     // If batchable, the merge policies come from the repository
                     IEnumerable<MergePolicy> mergePolicies = subscription.Policy.MergePolicies;

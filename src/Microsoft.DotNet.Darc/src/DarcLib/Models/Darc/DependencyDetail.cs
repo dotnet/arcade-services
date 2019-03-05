@@ -22,8 +22,6 @@ namespace Microsoft.DotNet.DarcLib
 
         public bool Pinned { get; set; }
 
-        public int SourceBuildId { get; set; }
-
         public DependencyType Type { get; set; }
     }
 }

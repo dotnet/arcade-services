@@ -10,8 +10,11 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Maestro.Client;
+using ApiError = Microsoft.DotNet.Maestro.Client.Models.ApiError;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -72,11 +75,11 @@ namespace Microsoft.DotNet.Darc.Operations
                     ChannelName = channel ?? subscription.Channel.Name,
                     SourceRepository = sourceRepository ?? subscription.SourceRepository,
                     Enabled = enabled,
-                    Policy = subscription.Policy
+                    Policy = subscription.Policy,
                 };
                 subscriptionToUpdate.Policy.Batchable = batchable;
-                subscriptionToUpdate.Policy.UpdateFrequency = updateFrequency;
-                subscriptionToUpdate.Policy.MergePolicies = mergePolicies;
+                subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<SubscriptionPolicyUpdateFrequency>(updateFrequency);
+                subscriptionToUpdate.Policy.MergePolicies = mergePolicies.ToImmutableList();
 
                 var updatedSubscription = await remote.UpdateSubscriptionAsync(
                     _options.Id,
@@ -86,7 +89,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 return Constants.SuccessCode;
             }
-            catch (ApiErrorException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            catch (RestApiException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.BadRequest)
             {
                 // Could have been some kind of validation error (e.g. channel doesn't exist)
                 Logger.LogError($"Failed to update subscription: {e.Response.Content}");

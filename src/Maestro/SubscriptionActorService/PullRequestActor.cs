@@ -761,7 +761,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             foreach (UpdateAssetsParameters update in updates)
             {
                 IEnumerable<AssetData> assetData = update.Assets.Select(
-                    a => new AssetData
+                    a => new AssetData(false)
                     {
                         Name = a.Name,
                         Version = a.Version
@@ -771,11 +771,6 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     branch,
                     update.SourceSha,
                     assetData);
-
-                foreach (var dep in dependenciesToUpdate)
-                {
-                    dep.SourceBuildId = update.BuildId;
-                }
 
                 if (dependenciesToUpdate.Count < 1)
                 {
