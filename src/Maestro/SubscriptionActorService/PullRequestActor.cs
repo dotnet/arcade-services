@@ -772,9 +772,9 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     update.SourceSha,
                     assetData);
 
-                foreach (var dep in dependenciesToUpdate)
+                foreach (DependencyUpdate dep in dependenciesToUpdate)
                 {
-                    dep.SourceBuildId = update.BuildId;
+                    dep.To.SourceBuildId = update.BuildId;
                 }
 
                 if (dependenciesToUpdate.Count < 1)
