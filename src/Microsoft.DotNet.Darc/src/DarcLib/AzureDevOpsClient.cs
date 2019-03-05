@@ -768,6 +768,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </remarks>
         public static (string accountName, string projectName, string repoName) ParseRepoUri(string repoUri)
         {
+            // TODO: remove the if block below once https://github.com/dotnet/arcade/issues/2121 is closed
             // If repoUri includes the user in the account we remove it otherwise Regex matching would fail for URIs like
             // https://dnceng@dev.azure.com/dnceng/internal/_git/repo
             if (Uri.TryCreate(repoUri, UriKind.Absolute, out Uri parsedUri))
