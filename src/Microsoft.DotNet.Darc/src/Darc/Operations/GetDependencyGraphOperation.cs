@@ -158,11 +158,11 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 if (_options.Flat)
                 {
-                    LogFlatDependencyGraph(graph);
+                    await LogFlatDependencyGraph(graph);
                 }
                 else
                 {
-                    LogDependencyGraph(graph);
+                    await LogDependencyGraph(graph);
                 }
 
                 if (!string.IsNullOrEmpty(_options.GraphVizOutputFile))
@@ -202,10 +202,10 @@ namespace Microsoft.DotNet.Darc.Operations
         ///         Builds:
         ///         - 20190228.4 (2/28/2019 12:57 PM)
         /// </example>
-        private void LogBasicNodeDetails(DependencyGraphNode node, string indent)
+        private async Task LogBasicNodeDetails(StreamWriter writer, DependencyGraphNode node, string indent)
         {
-            Console.WriteLine($"{indent}- Repo:     {node.RepoUri}");
-            Console.WriteLine($"{indent}  Commit:   {node.Commit}");
+            await writer.WriteLineAsync($"{indent}- Repo:     {node.RepoUri}");
+            await writer.WriteLineAsync($"{indent}  Commit:   {node.Commit}");
 
             StringBuilder deltaString = new StringBuilder($"{indent}  Delta:    ");
             GitDiff diffFrom = node.DiffFrom;
@@ -228,7 +228,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         }
                         if (diffFrom.Behind != 0)
                         {
-                            if (deltaString.Length != 0)
+                            if (diffFrom.Ahead != 0)
                             {
                                 deltaString.Append(", ");
                             }
@@ -245,23 +245,54 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     deltaString.Append("unknown");
                 }
-                Console.WriteLine(deltaString);
+                await writer.WriteLineAsync(deltaString.ToString());
             }
             if (node.ContributingBuilds != null)
             {
                 if (node.ContributingBuilds.Any())
                 {
-                    Console.WriteLine($"{indent}  Builds:");
+                    await writer.WriteLineAsync($"{indent}  Builds:");
                     foreach (var build in node.ContributingBuilds)
                     {
-                        Console.WriteLine($"{indent}  - {build.AzureDevOpsBuildNumber} ({build.DateProduced.Value.ToLocalTime().ToString("g")})");
+                        await writer.WriteLineAsync($"{indent}  - {build.AzureDevOpsBuildNumber} ({build.DateProduced.Value.ToLocalTime().ToString("g")})");
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"{indent}  Builds: []");
+                    await writer.WriteLineAsync($"{indent}  Builds: []");
                 }
             }
+        }
+
+        /// <summary>
+        ///     Retrieve either a new StreamWriter for the specified output file,
+        ///     or if the output file name is empty, create a new StreamWriter
+        ///     wrapping standard out.
+        /// </summary>
+        /// <param name="outputFile">Output file name.</param>
+        /// <returns>New stream writer</returns>
+        /// <remarks>
+        ///     The StreamWriter can be disposed of even if it's wrapping Console.Out.
+        ///     The underlying stream is only disposed of if the stream writer owns it.
+        /// </remarks>
+        private StreamWriter GetOutputFileStreamOrConsole(string outputFile)
+        {
+            StreamWriter outputStream = null;
+            if (!string.IsNullOrEmpty(outputFile))
+            {
+                string fullPath = Path.GetFullPath(outputFile);
+                string directory = Path.GetDirectoryName(fullPath);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+                outputStream = new StreamWriter(fullPath);
+            }
+            else
+            {
+                outputStream = new StreamWriter(Console.OpenStandardOutput());
+            }
+            return outputStream;
         }
 
         /// <summary>
@@ -269,21 +300,27 @@ namespace Microsoft.DotNet.Darc.Operations
         ///     that contribute to this graph.
         /// </summary>
         /// <param name="graph">Graph to log</param>
-        private void LogFlatDependencyGraph(DependencyGraph graph)
+        private async Task LogFlatDependencyGraph(DependencyGraph graph)
         {
-            Console.WriteLine($"Repositories:");
-            foreach (DependencyGraphNode node in graph.Nodes)
+            using (StreamWriter writer = GetOutputFileStreamOrConsole(_options.OutputFile))
             {
-                LogBasicNodeDetails(node, "  ");
+                await writer.WriteLineAsync($"Repositories:");
+                foreach (DependencyGraphNode node in graph.Nodes)
+                {
+                    await LogBasicNodeDetails(writer, node, "  ");
+                }
+                await LogIncoherencies(writer, graph);
             }
-            LogIncoherencies(graph);
         }
 
-        private void LogDependencyGraph(DependencyGraph graph)
+        private async Task LogDependencyGraph(DependencyGraph graph)
         {
-            Console.WriteLine($"Repositories:");
-            LogDependencyGraphNode(graph.Root, "  ");
-            LogIncoherencies(graph);
+            using (StreamWriter writer = GetOutputFileStreamOrConsole(_options.OutputFile))
+            {
+                await writer.WriteLineAsync($"Repositories:");
+                await LogDependencyGraphNode(writer, graph.Root, "  ");
+                await LogIncoherencies(writer, graph);
+            }
         }
 
         private string GetSimpleRepoName(string repoUri)
@@ -318,13 +355,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <returns>Async task</returns>
         private async Task LogGraphViz(DependencyGraph graph)
         {
-            string directory = Path.GetDirectoryName(_options.GraphVizOutputFile);
-            if (!Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-
-            using (StreamWriter writer = new StreamWriter(_options.GraphVizOutputFile))
+            using (StreamWriter writer = GetOutputFileStreamOrConsole(_options.GraphVizOutputFile))
             {
                 await writer.WriteLineAsync("digraph repositoryGraph {");
                 await writer.WriteLineAsync("    node [shape=record]");
@@ -343,7 +374,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     nodeBuilder.Append(@"\n");
                     
                     // Append short commit sha
-                    nodeBuilder.Append(node.Commit.Substring(0, 10));
+                    nodeBuilder.Append(node.Commit.Substring(0, node.Commit.Length < 10 ? node.Commit.Length : 10));
                     
                     // Append a build string (with newline) if available
                     if (node.ContributingBuilds != null && node.ContributingBuilds.Any())
@@ -399,38 +430,38 @@ namespace Microsoft.DotNet.Darc.Operations
         ///     or dependencies appear at different version numbers.
         /// </summary>
         /// <param name="graph">Graph to log incoherencies for</param>
-        private void LogIncoherencies(DependencyGraph graph)
+        private async Task LogIncoherencies(StreamWriter writer, DependencyGraph graph)
         {
             if (!graph.IncoherentNodes.Any() || !_options.IncludeCoherency)
             {
                 return;
             }
-            Console.WriteLine("Incoherent Dependencies:");
+            await writer.WriteLineAsync("Incoherent Dependencies:");
             foreach (DependencyDetail incoherentDependency in graph.IncoherentDependencies)
             {
-                Console.WriteLine($"  - Repo:    {incoherentDependency.RepoUri}");
-                Console.WriteLine($"    Commit:  {incoherentDependency.Commit}");
-                Console.WriteLine($"    Name:    {incoherentDependency.Name}");
-                Console.WriteLine($"    Version: {incoherentDependency.Version}");
+                await writer.WriteLineAsync($"  - Repo:    {incoherentDependency.RepoUri}");
+                await writer.WriteLineAsync($"    Commit:  {incoherentDependency.Commit}");
+                await writer.WriteLineAsync($"    Name:    {incoherentDependency.Name}");
+                await writer.WriteLineAsync($"    Version: {incoherentDependency.Version}");
                 if (_options.IncludeToolset)
                 {
-                    Console.WriteLine($"    Type:    {incoherentDependency.Type}");
+                    await writer.WriteLineAsync($"    Type:    {incoherentDependency.Type}");
                 }
             }
 
-            Console.WriteLine("Incoherent Repositories:");
+            await writer.WriteLineAsync("Incoherent Repositories:");
             foreach (DependencyGraphNode incoherentRoot in graph.IncoherentNodes)
             {
-                LogIncoherentPath(incoherentRoot, null, "  ");
+                await LogIncoherentPath(writer, incoherentRoot, null, "  ");
             }
         }
 
-        private void LogIncoherentPath(DependencyGraphNode currentNode, DependencyGraphNode childNode, string indent)
+        private async Task LogIncoherentPath(StreamWriter writer, DependencyGraphNode currentNode, DependencyGraphNode childNode, string indent)
         {
-            LogBasicNodeDetails(currentNode, indent);
+            await LogBasicNodeDetails(writer, currentNode, indent);
             foreach (DependencyGraphNode parentNode in currentNode.Parents)
             {
-                LogIncoherentPath(parentNode, currentNode, indent + "  ");
+                await LogIncoherentPath(writer, parentNode, currentNode, indent + "  ");
             }
         }
 
@@ -439,34 +470,34 @@ namespace Microsoft.DotNet.Darc.Operations
         /// </summary>
         /// <param name="node">Node to log</param>
         /// <param name="indent">Current indentation level.</param>
-        private void LogDependencyGraphNode(DependencyGraphNode node, string indent)
+        private async Task LogDependencyGraphNode(StreamWriter writer, DependencyGraphNode node, string indent)
         {
             // Log the repository information.
-            LogBasicNodeDetails(node, indent);
+            await LogBasicNodeDetails(writer, node, indent);
             if (node.Dependencies != null && node.Dependencies.Any())
             {
-                Console.WriteLine($"{indent}  Dependencies:");
+                await writer.WriteLineAsync($"{indent}  Dependencies:");
 
                 // Log the dependencies at this repository.
                 foreach (DependencyDetail dependency in node.Dependencies)
                 {
-                    Console.WriteLine($"{indent}  - Name:    {dependency.Name}");
-                    Console.WriteLine($"{indent}    Version: {dependency.Version}");
+                    await writer.WriteLineAsync($"{indent}  - Name:    {dependency.Name}");
+                    await writer.WriteLineAsync($"{indent}    Version: {dependency.Version}");
                     if (_options.IncludeToolset)
                     {
-                        Console.WriteLine($"{indent}    Type:    {dependency.Type}");
+                        await writer.WriteLineAsync($"{indent}    Type:    {dependency.Type}");
                     }
                 }
             }
 
             if (node.Children.Any())
             {
-                Console.WriteLine($"{indent}  Input Repositories:");
+                await writer.WriteLineAsync($"{indent}  Input Repositories:");
 
                 // Walk children
                 foreach (DependencyGraphNode childNode in node.Children)
                 {
-                    LogDependencyGraphNode(childNode, $"{indent}  ");
+                    await LogDependencyGraphNode(writer, childNode, $"{indent}  ");
                 }
             }
         }
