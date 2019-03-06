@@ -231,7 +231,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     }
                     Channel targetChannel = desiredChannels.First();
                     Console.WriteLine($"Looking up latest build of '{repoUri}' on channel '{targetChannel.Name}'");
-                    Build rootBuild = await remote.GetLatestBuildAsync(repoUri, targetChannel.Id.Value);
+                    Build rootBuild = await remote.GetLatestBuildAsync(repoUri, targetChannel.Id);
                     if (rootBuild == null)
                     {
                         Console.WriteLine($"No build of '{repoUri}' found on channel '{targetChannel.Name}'");
@@ -249,7 +249,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         Console.WriteLine($"There were {builds.Count()} potential root builds.  Please select one and pass it with --id");
                         foreach (var build in builds)
                         {
-                            Console.WriteLine($"  {build.Id}: {build.AzureDevOpsBuildNumber} @ {build.DateProduced.Value.ToLocalTime()}");
+                            Console.WriteLine($"  {build.Id}: {build.AzureDevOpsBuildNumber} @ {build.DateProduced.ToLocalTime()}");
                         }
                         return null;
                     }
@@ -269,12 +269,12 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             public bool Equals(Build x, Build y)
             {
-                return x.Id.Value == y.Id.Value;
+                return x.Id== y.Id;
             }
 
             public int GetHashCode(Build obj)
             {
-                return obj.Id.Value;
+                return obj.Id;
             }
         }
 
@@ -303,7 +303,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     await writer.WriteLineAsync($"  - Repo:         {build.Build.AzureDevOpsRepository}");
                     await writer.WriteLineAsync($"    Commit:       {build.Build.Commit}");
                     await writer.WriteLineAsync($"    Branch:       {build.Build.AzureDevOpsBranch}");
-                    await writer.WriteLineAsync($"    Produced:     {build.Build.DateProduced.Value}");
+                    await writer.WriteLineAsync($"    Produced:     {build.Build.DateProduced}");
                     await writer.WriteLineAsync($"    Build Number: {build.Build.AzureDevOpsBuildNumber}");
                     await writer.WriteLineAsync($"    BAR Build ID: {build.Build.Id}");
                     await writer.WriteLineAsync($"    Assets:");
@@ -311,7 +311,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         await writer.WriteLineAsync($"      - Name:          {asset.Asset.Name}");
                         await writer.WriteLineAsync($"        Version:       {asset.Asset.Version}");
-                        await writer.WriteLineAsync($"        NonShipping:   {asset.Asset.NonShipping.Value}");
+                        await writer.WriteLineAsync($"        NonShipping:   {asset.Asset.NonShipping}");
                         await writer.WriteLineAsync($"        Source:        {asset.SourceLocation}");
                         await writer.WriteLineAsync($"        Target:        {asset.TargetLocation}");
                         await writer.WriteLineAsync($"        BAR Asset ID:  {asset.Asset.Id}");
@@ -392,7 +392,6 @@ namespace Microsoft.DotNet.Darc.Operations
                         Name = buildAsset.Name,
                         Version = buildAsset.Version,
                         Commit = rootBuild.Commit,
-                        SourceBuildId = rootBuild.Id.GetValueOrDefault(),
                     },
                     rootBuild);
             }
@@ -538,7 +537,7 @@ namespace Microsoft.DotNet.Darc.Operations
                                                                             string rootOutputDirectory)
         {
             string assetNameAndVersion = GetAssetNameForLogging(asset);
-            if (_options.IncludeNonShipping || !asset.NonShipping.Value)
+            if (_options.IncludeNonShipping || !asset.NonShipping)
             {
                 Console.WriteLine($"  Downloading asset {assetNameAndVersion}");
             }
@@ -561,12 +560,12 @@ namespace Microsoft.DotNet.Darc.Operations
             }
             else
             {
-                string subPath = Path.Combine(rootOutputDirectory, asset.NonShipping.Value ? nonShippingSubPath : shippingSubPath);
+                string subPath = Path.Combine(rootOutputDirectory, asset.NonShipping? nonShippingSubPath : shippingSubPath);
 
                 // Walk the locations and attempt to gather the asset at each one, setting the output
                 // path based on the type. Note that if there are multiple locations and their types don't
                 // match, consider this an error.
-                string locationType = asset.Locations[0].Type;
+                AssetLocationType locationType = asset.Locations[0].Type;
                 foreach (AssetLocation location in asset.Locations)
                 {
                     if (locationType != location.Type)
@@ -577,10 +576,10 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     switch (locationType)
                     {
-                        case "nugetFeed":
+                        case AssetLocationType.NugetFeed:
                             downloadedAsset = await DownloadNugetPackageAsync(client, build, asset, location, subPath, errors);
                             break;
-                        case "container":
+                        case AssetLocationType.Container:
                             downloadedAsset = await DownloadBlobAsync(client, build, asset, location, subPath, errors);
                             break;
                         default:
@@ -798,7 +797,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         symbolPackageName = asset.Name.Substring(lastSlash);
                     }
-                    string shippingNonShippingFolder = asset.NonShipping.Value ? "NonShipping" : "Shipping";
+                    string shippingNonShippingFolder = asset.NonShipping? "NonShipping" : "Shipping";
                     string aspnetciSymbolSharePath = $@"\\aspnetci\drops\AspNetCore\master\{build.AzureDevOpsBuildNumber}\packages\Release\{shippingNonShippingFolder}\{symbolPackageName}";
                     if (await DownloadFromShareAsync(aspnetciSymbolSharePath, fullTargetPath, errors))
                     {

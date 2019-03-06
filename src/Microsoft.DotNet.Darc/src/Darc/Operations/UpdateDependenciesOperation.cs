@@ -130,7 +130,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     foreach (string repoToQuery in repositoryUrisForQuery)
                     {
                         Console.WriteLine($"Looking up latest build of {repoToQuery} on {_options.Channel}");
-                        var latestBuild = barOnlyRemote.GetLatestBuildAsync(repoToQuery, channelInfo.Id.Value);
+                        var latestBuild = barOnlyRemote.GetLatestBuildAsync(repoToQuery, channelInfo.Id);
                         getLatestBuildTaskDictionary.TryAdd(repoToQuery, latestBuild);
                     }
 

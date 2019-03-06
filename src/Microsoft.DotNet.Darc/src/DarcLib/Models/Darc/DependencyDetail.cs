@@ -40,8 +40,6 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         public bool Pinned { get; set; }
 
-        public int SourceBuildId { get; set; }
-
         /// <summary>
         ///     Type of dependency (e.g. Product or Toolset).
         /// </summary>

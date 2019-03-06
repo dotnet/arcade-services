@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Xml.Serialization;
 
 namespace Microsoft.DotNet.Maestro.Tasks
@@ -36,11 +37,28 @@ namespace Microsoft.DotNet.Maestro.Tasks
         [XmlAttribute(AttributeName = "InitialAssetsLocation")]
         public string InitialAssetsLocation { get; set; }
 
-        [XmlAttribute(AttributeName = "AzureDevOpsBuildId")]
+        // XmlSerializer can't handle nullable fields
+        [XmlIgnore]
         public int? AzureDevOpsBuildId { get; set; }
 
-        [XmlAttribute(AttributeName = "AzureDevOpsBuildDefinitionId")]
+        [XmlAttribute(AttributeName = "AzureDevOpsBuildId")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public string AzureDevOpsBuildIdString
+        {
+            get => AzureDevOpsBuildId?.ToString();
+            set => AzureDevOpsBuildId = !string.IsNullOrEmpty(value) ? int.Parse(value) : default(int?);
+        }
+
+        [XmlIgnore]
         public int? AzureDevOpsBuildDefinitionId { get; set; }
+
+        [XmlAttribute(AttributeName = "AzureDevOpsBuildDefinitionId")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public string AzureDevOpsBuildDefinitionIdString
+        {
+            get => AzureDevOpsBuildDefinitionId?.ToString();
+            set => AzureDevOpsBuildDefinitionId = !string.IsNullOrEmpty(value) ? int.Parse(value) : default(int?);
+        }
 
         [XmlAttribute(AttributeName = "AzureDevOpsAccount")]
         public string AzureDevOpsAccount { get; set; }

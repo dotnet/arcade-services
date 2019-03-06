@@ -28,9 +28,6 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("pinned", HelpText = "Whether the dependency is pinned or not.")]
         public bool Pinned { get; set; }
 
-        [Option('b', "build-id", HelpText = "Maestro Build ID that produced this dependency.")]
-        public int BuildId { get; set; }
-
         public override Operation GetOperation()
         {
             return new AddDependencyOperation(this);

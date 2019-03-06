@@ -7,8 +7,10 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.Darc.Models.PopUps
@@ -52,14 +54,14 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                     MergePolicy policy = new MergePolicy
                     {
                         Name = mergePolicy.Name,
-                        Properties = new Dictionary<string, object>()
+                        Properties = ImmutableDictionary.Create<string, JToken>(),
                     };
 
                     foreach (string key in mergePolicy.Properties.Keys)
                     {
-                        IEnumerable<object> items = JsonConvert.DeserializeObject<IEnumerable<object>>(
+                        JToken value = JsonConvert.DeserializeObject<JToken>(
                             mergePolicy.Properties[key].ToString());
-                        policy.Properties.Add(key, items);
+                        policy.Properties = policy.Properties.Add(key, value);
                     }
 
                     mergePolicies.Add(policy);
@@ -77,7 +79,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 Channel = GetCurrentSettingForDisplay(subscription.Channel.Name, subscription.Channel.Name, false),
                 SourceRepository = GetCurrentSettingForDisplay(subscription.SourceRepository, subscription.SourceRepository, false),
                 Batchable = GetCurrentSettingForDisplay(subscription.Policy.Batchable.ToString(), subscription.Policy.Batchable.ToString(), false),
-                UpdateFrequency = GetCurrentSettingForDisplay(subscription.Policy.UpdateFrequency, subscription.Policy.UpdateFrequency, false),
+                UpdateFrequency = GetCurrentSettingForDisplay(subscription.Policy.UpdateFrequency.ToString(), subscription.Policy.UpdateFrequency.ToString(), false),
                 Enabled = GetCurrentSettingForDisplay(subscription.Enabled.ToString(), subscription.Enabled.ToString(), false),
                 MergePolicies = mergePolicies
             };

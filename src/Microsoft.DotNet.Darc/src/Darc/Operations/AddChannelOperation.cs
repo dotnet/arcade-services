@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Maestro.Client;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -45,7 +46,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 return Constants.SuccessCode;
             }
-            catch (ApiErrorException e) when (e.Response.StatusCode == HttpStatusCode.Conflict)
+            catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.Conflict)
             {
                 Logger.LogError($"An existing channel with name '{_options.Name}' already exists");
                 return Constants.ErrorCode;
