@@ -52,15 +52,15 @@ namespace Microsoft.DotNet.Darc.Options
 
         public bool SubscriptionEnabledParameterMatches(Subscription subscription)
         {
-            return (Enabled && (subscription.Enabled ?? false)) ||
-                   (Disabled && (!subscription.Enabled ?? false)) ||
+            return (Enabled && subscription.Enabled) ||
+                   (Disabled && !subscription.Enabled) ||
                    (!Enabled && !Disabled);
         }
 
         public bool SubscriptionBatchableParameterMatches(Subscription subscription)
         {
-            return (Batchable && (subscription.Policy.Batchable ?? false)) ||
-                   (NotBatchable && (!subscription.Policy.Batchable ?? false)) ||
+            return (Batchable && subscription.Policy.Batchable) ||
+                   (NotBatchable && !subscription.Policy.Batchable) ||
                    (!Batchable && !NotBatchable);
         }
 

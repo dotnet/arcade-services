@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Maestro.Client;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -45,7 +46,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         Subscription subscription = await remote.GetSubscriptionAsync(_options.Id);
                         subscriptionsToTrigger.Add(subscription);
                     }
-                    catch (ApiErrorException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+                    catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
                     {
                         Console.WriteLine($"Subscription with id '{_options.Id}' was not found.");
                         return Constants.ErrorCode;
@@ -110,7 +111,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         Console.WriteLine($"  {GetSubscriptionDescription(subscription)}");
                     }
-                    await remote.TriggerSubscriptionAsync(subscription.Id.Value.ToString());
+                    await remote.TriggerSubscriptionAsync(subscription.Id.ToString());
                 }
                 Console.WriteLine($"done");
 
