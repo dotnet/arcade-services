@@ -8,11 +8,15 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using EntityFrameworkCore.Triggers;
+using Maestro.Data.Helpers;
 
 namespace Maestro.Data.Models
 {
     public class Build
     {
+        private string _azureDevOpsRepository;
+        private string _gitHubRepository;
+
         static Build()
         {
             Triggers<Build>.Inserting += entry =>
@@ -48,11 +52,33 @@ namespace Maestro.Data.Models
 
         public string AzureDevOpsBuildNumber { get; set; }
 
-        public string AzureDevOpsRepository { get; set; }
+        public string AzureDevOpsRepository
+        {
+            get
+            {
+                return _azureDevOpsRepository;
+            }
+
+            set
+            {
+                _azureDevOpsRepository = NormalizationOperation.RemoveUserFromUrl(value);
+            }
+        }
 
         public string AzureDevOpsBranch { get; set; }
       
-        public string GitHubRepository { get; set; }
+        public string GitHubRepository
+        {
+            get
+            {
+                return _gitHubRepository;
+            }
+
+            set
+            {
+                _gitHubRepository = NormalizationOperation.RemoveUserFromUrl(value);
+            }
+        }
 
         public string GitHubBranch { get; set; }
 

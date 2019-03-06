@@ -5,12 +5,16 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Maestro.Data.Helpers;
 using Newtonsoft.Json;
 
 namespace Maestro.Data.Models
 {
     public class Subscription
     {
+        private string _sourceRepository;
+        private string _targetRepository;
+
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public Guid Id { get; set; }
@@ -19,9 +23,31 @@ namespace Maestro.Data.Models
 
         public Channel Channel { get; set; }
 
-        public string SourceRepository { get; set; }
+        public string SourceRepository
+        {
+            get
+            {
+                return _sourceRepository;
+            }
 
-        public string TargetRepository { get; set; }
+            set
+            {
+                _sourceRepository = NormalizationOperation.RemoveUserFromUrl(value);
+            }
+        }
+
+        public string TargetRepository
+        {
+            get
+            {
+                return _targetRepository;
+            }
+
+            set
+            {
+                _targetRepository = NormalizationOperation.RemoveUserFromUrl(value);
+            }
+        }
 
         public string TargetBranch { get; set; }
 
