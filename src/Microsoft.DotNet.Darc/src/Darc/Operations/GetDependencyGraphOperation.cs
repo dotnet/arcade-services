@@ -254,7 +254,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     await writer.WriteLineAsync($"{indent}  Builds:");
                     foreach (var build in node.ContributingBuilds)
                     {
-                        await writer.WriteLineAsync($"{indent}  - {build.AzureDevOpsBuildNumber} ({build.DateProduced.Value.ToLocalTime().ToString("g")})");
+                        await writer.WriteLineAsync($"{indent}  - {build.AzureDevOpsBuildNumber} ({build.DateProduced.ToLocalTime().ToString("g")})");
                     }
                 }
                 else
@@ -380,7 +380,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     if (node.ContributingBuilds != null && node.ContributingBuilds.Any())
                     {
                         Build newestBuild = node.ContributingBuilds.OrderByDescending(b => b.DateProduced).First();
-                        nodeBuilder.Append($"\\n{newestBuild.DateProduced.Value.ToString("g")} (UTC)");
+                        nodeBuilder.Append($"\\n{newestBuild.DateProduced.ToString("g")} (UTC)");
                     }
 
                     // Append a diff string if the graph contains diff info.
