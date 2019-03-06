@@ -79,7 +79,7 @@ namespace Microsoft.DotNet.Maestro.Client
             :base(handlers)
         {
             HttpClientHandler.SslProtocols = SslProtocols.Tls12;
-            BaseUri = baseUri ?? new Uri("https://maestro-int.westus2.cloudapp.azure.com/");
+            BaseUri = baseUri ?? new Uri("https://maestro-prod.westus2.cloudapp.azure.com/");
             Credentials = credentials;
             Assets = new Assets(this);
             Builds = new Builds(this);
