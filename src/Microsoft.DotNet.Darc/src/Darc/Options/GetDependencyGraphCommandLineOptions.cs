@@ -37,6 +37,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("graphviz", HelpText = @"Writes the repository graph in GraphViz (dot) form, into the specified file.")]
         public string GraphVizOutputFile { get; set; }
 
+        [Option("output-file", HelpText = @"Writes the non-GraphViz (dot) output to the specified file into the specified file.")]
+        public string OutputFile { get; set; }
+
         [Option("include-toolset", HelpText = "Include toolset dependencies.")]
         public bool IncludeToolset { get; set; }
 

@@ -287,7 +287,7 @@ namespace Microsoft.DotNet.DarcLib
                     // a build, then no diff from latest.
                     if (newestBuildWithChannel != null)
                     {
-                        int channelId = newestBuildWithChannel.Channels.First().Id.Value;
+                        int channelId = newestBuildWithChannel.Channels.First().Id;
                         // Just choose the first channel. This algorithm is mostly just heuristic.
                         string latestCommitKey = $"{node.RepoUri}@{channelId}";
                         string latestCommit = null;
@@ -355,7 +355,7 @@ namespace Microsoft.DotNet.DarcLib
                                 newestBuild = newestNode.ContributingBuilds.OrderByDescending(b => b.DateProduced).First();
                             }
                         }
-                        else if (node.ContributingBuilds.Any(b => b.DateProduced.Value > newestBuild?.DateProduced.Value))
+                        else if (node.ContributingBuilds.Any(b => b.DateProduced > newestBuild?.DateProduced))
                         {
                             newestNode = node;
                             newestBuild = newestNode.ContributingBuilds.OrderByDescending(b => b.DateProduced).First();

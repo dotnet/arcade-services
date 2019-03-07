@@ -11,12 +11,12 @@ namespace Microsoft.DotNet.DarcLib
     {
         public bool Equals(Build x, Build y)
         {
-            return x.Id.Value == y.Id.Value;
+            return x.Id == y.Id;
         }
 
         public int GetHashCode(Build obj)
         {
-            return obj.Id.Value;
+            return obj.Id;
         }
     }
 }

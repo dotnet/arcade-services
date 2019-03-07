@@ -7,18 +7,22 @@ using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions.Logging.Abstractions;
 using MSBuild = Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Maestro.Tasks
 {
-    public class PushMetadataToBuildAssetRegistry : MSBuild.Task
+    public class PushMetadataToBuildAssetRegistry : MSBuild.Task, ICancelableTask
     {
         [Required]
         public string ManifestsPath { get; set; }
@@ -29,8 +33,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
         [Required]
         public string MaestroApiEndpoint { get; set; }
 
-        private static readonly CancellationTokenSource s_tokenSource = new CancellationTokenSource();
-        private static readonly CancellationToken s_cancellationToken = s_tokenSource.Token;
+        private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
+
+        public void Cancel()
+        {
+            _tokenSource.Cancel();
+        }
 
         public override bool Execute()
         {
@@ -40,19 +48,15 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         public async Task ExecuteAsync()
         {
-            if (s_cancellationToken.IsCancellationRequested)
-            {
-                Log.LogError("Task PushMetadataToBuildAssetRegistry was cancelled...");
-                s_cancellationToken.ThrowIfCancellationRequested();
-            }
-
-            await PushMetadataAsync();
+            await PushMetadataAsync(_tokenSource.Token);
         }
 
-        public async Task<bool> PushMetadataAsync()
+        public async Task<bool> PushMetadataAsync(CancellationToken cancellationToken)
         {
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 Log.LogMessage(MessageImportance.High, "Starting build metadata push to the Build Asset Registry...");
 
                 if (!Directory.Exists(ManifestsPath))
@@ -61,22 +65,73 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
                 else
                 {
-                    List<BuildData> buildsManifestMetadata = GetBuildManifestsMetadata(ManifestsPath);
+                    List<BuildData> buildsManifestMetadata = GetBuildManifestsMetadata(ManifestsPath, cancellationToken);
 
                     BuildData finalBuild = MergeBuildManifests(buildsManifestMetadata);
 
                     IMaestroApi client = ApiFactory.GetAuthenticated(MaestroApiEndpoint, BuildAssetRegistryToken);
-                    Client.Models.Build recordedBuild = await client.Builds.CreateAsync(finalBuild, s_cancellationToken);
+
+                    var deps = await GetBuildDependenciesAsync(client, cancellationToken);
+                    Log.LogMessage(MessageImportance.High, "Calculated Dependencies:");
+                    foreach (var dep in deps)
+                    {
+                        Log.LogMessage(MessageImportance.High, $"    {dep.BuildId}, IsProduct: {dep.IsProduct}");
+                    }
+                    finalBuild.Dependencies = await GetBuildDependenciesAsync(client, cancellationToken);
+
+                    Client.Models.Build recordedBuild = await client.Builds.CreateAsync(finalBuild, cancellationToken);
 
                     Log.LogMessage(MessageImportance.High, $"Metadata has been pushed. Build id in the Build Asset Registry is '{recordedBuild.Id}'");
                 }
             }
             catch (Exception exc)
             {
-                Log.LogErrorFromException(exc, true);
+                Log.LogErrorFromException(exc, true, true, null);
             }
 
             return !Log.HasLoggedErrors;
+        }
+
+        private async Task<IImmutableList<BuildRef>> GetBuildDependenciesAsync(
+            IMaestroApi client,
+            CancellationToken cancellationToken)
+        {
+            var logger = new MSBuildLogger(Log);
+            var local = new Local(LocalHelpers.GetGitDir(logger), logger);
+            IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync();
+            var builds = new Dictionary<int, bool>();
+            foreach (var dep in dependencies)
+            {
+                var buildId = await GetBuildId(dep, client, cancellationToken);
+                if (buildId == null)
+                {
+                    Log.LogWarning($"Asset '{dep.Name}@{dep.Version}' not found in BAR, ignoring.");
+                    continue;
+                }
+
+                Log.LogMessage(
+                    MessageImportance.Normal,
+                    $"Dependency '{dep.Name}@{dep.Version}' found in build {buildId.Value}");
+
+                var isProduct = dep.Type == DependencyType.Product;
+
+                if (!builds.ContainsKey(buildId.Value))
+                {
+                    builds[buildId.Value] = isProduct;
+                }
+                else
+                {
+                    builds[buildId.Value] = isProduct || builds[buildId.Value];
+                }
+            }
+
+            return builds.Select(t => new BuildRef(t.Key, t.Value)).ToImmutableList();
+        }
+
+        private async Task<int?> GetBuildId(DependencyDetail dep, IMaestroApi client, CancellationToken cancellationToken)
+        {
+            var assets = await client.Assets.ListAssetsAsync(name: dep.Name, version: dep.Version, cancellationToken: cancellationToken);
+            return assets.OrderByDescending(a => a.Id).FirstOrDefault()?.BuildId;
         }
 
         private string GetVersion(string assetId)
@@ -84,19 +139,22 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return VersionManager.GetVersion(assetId);
         }
 
-        private List<BuildData> GetBuildManifestsMetadata(string manifestsFolderPath)
+        private List<BuildData> GetBuildManifestsMetadata(
+            string manifestsFolderPath,
+            CancellationToken cancellationToken)
         {
-            List<BuildData> buildsManifestMetadata = new List<BuildData>();
+            var buildsManifestMetadata = new List<BuildData>();
 
             foreach (string manifestPath in Directory.GetFiles(manifestsFolderPath))
             {
-                XmlSerializer xmlSerializer = new XmlSerializer(typeof(Manifest));
+                cancellationToken.ThrowIfCancellationRequested();
 
-                using (FileStream stream = new FileStream(manifestPath, FileMode.Open))
+                var xmlSerializer = new XmlSerializer(typeof(Manifest));
+                using (var stream = new FileStream(manifestPath, FileMode.Open))
                 {
-                    Manifest manifest = (Manifest)xmlSerializer.Deserialize(stream);
+                    var manifest = (Manifest)xmlSerializer.Deserialize(stream);
 
-                    List<AssetData> assets = new List<AssetData>();
+                    var assets = new List<AssetData>();
 
                     foreach (Package package in manifest.Packages)
                     {
@@ -105,7 +163,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             package.Id, 
                             package.Version, 
                             manifest.InitialAssetsLocation ?? manifest.Location,
-                            (manifest.InitialAssetsLocation == null) ? "NugetFeed" : "Container",
+                            (manifest.InitialAssetsLocation == null) ? AssetLocationDataType.NugetFeed : AssetLocationDataType.Container,
                             package.NonShipping);
                     }
 
@@ -124,29 +182,83 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             blob.Id, 
                             version, 
                             manifest.InitialAssetsLocation ?? manifest.Location, 
-                            "Container", 
+                            AssetLocationDataType.Container, 
                             blob.NonShipping);
                     }
 
+                    // The AzureDevOps properties can be null in the Manifest, but maestro needs them. Read them from the environment if they are null in the manifest.
                     var buildInfo = new BuildData(
-                        manifest.Commit,
-                        manifest.AzureDevOpsAccount,
-                        manifest.AzureDevOpsProject,
-                        manifest.AzureDevOpsBuildNumber,
-                        manifest.AzureDevOpsRepository,
-                        manifest.AzureDevOpsBranch,
-                        assets,
-                        new List<int?>(),
-                        manifest.AzureDevOpsBuildId,
-                        manifest.AzureDevOpsBuildDefinitionId,
-                        manifest.Name, 
-                        manifest.Branch);
+                        commit: manifest.Commit,
+                        azureDevOpsAccount: manifest.AzureDevOpsAccount ?? GetAzDevAccount(),
+                        azureDevOpsProject: manifest.AzureDevOpsProject ?? GetAzDevProject(),
+                        azureDevOpsBuildNumber: manifest.AzureDevOpsBuildNumber ?? GetAzDevBuildNumber(),
+                        azureDevOpsRepository: manifest.AzureDevOpsRepository ?? GetAzDevRepository(),
+                        azureDevOpsBranch: manifest.AzureDevOpsBranch ?? GetAzDevBranch())
+                    {
+                        Assets = assets.ToImmutableList(),
+                        AzureDevOpsBuildId = manifest.AzureDevOpsBuildId ?? GetAzDevBuildId(),
+                        AzureDevOpsBuildDefinitionId = manifest.AzureDevOpsBuildDefinitionId ?? GetAzDevBuildDefinitionId(),
+                        GitHubRepository = manifest.Name,
+                        GitHubBranch = manifest.Branch,
+                    };
 
                     buildsManifestMetadata.Add(buildInfo);
                 }
             }
 
             return buildsManifestMetadata;
+        }
+
+        private string GetEnv(string key)
+        {
+            var value = Environment.GetEnvironmentVariable(key);
+            if (string.IsNullOrEmpty(value))
+            {
+                throw new InvalidOperationException($"Required Environment variable {key} not found.");
+            }
+
+            return value;
+        }
+
+        private string GetAzDevAccount()
+        {
+            var uri = new Uri(GetEnv("SYSTEM_TEAMFOUNDATIONCOLLECTIONURI"));
+            if (uri.Host == "dev.azure.com")
+            {
+                return uri.AbsolutePath.Split(new[] {'/', '\\'}, StringSplitOptions.RemoveEmptyEntries).First();
+            }
+
+            return uri.Host.Split(new[] {'.'}, StringSplitOptions.RemoveEmptyEntries).First();
+        }
+
+        private string GetAzDevProject()
+        {
+            return GetEnv("SYSTEM_TEAMPROJECT");
+        }
+
+        private string GetAzDevBuildNumber()
+        {
+            return GetEnv("BUILD_BUILDNUMBER");
+        }
+
+        private string GetAzDevRepository()
+        {
+            return GetEnv("BUILD_REPOSITORY_URI");
+        }
+
+        private string GetAzDevBranch()
+        {
+            return GetEnv("BUILD_SOURCEBRANCH");
+        }
+
+        private int GetAzDevBuildId()
+        {
+            return int.Parse(GetEnv("BUILD_BUILDID"));
+        }
+
+        private int GetAzDevBuildDefinitionId()
+        {
+            return int.Parse(GetEnv("SYSTEM_DEFINITIONID"));
         }
 
         /// <summary>
@@ -158,17 +270,22 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <param name="location">Location of asset</param>
         /// <param name="assetLocationType">Type of location</param>
         /// <param name="nonShipping">If true, the asset is not intended for end customers</param>
-        private void AddAsset(List<AssetData> assets, string assetName, string version, string location, string assetLocationType, bool nonShipping)
+        private void AddAsset(List<AssetData> assets, string assetName, string version, string location, AssetLocationDataType assetLocationType, bool nonShipping)
         {
-            assets.Add(new AssetData
+            var locations = ImmutableList.Create<AssetLocationData>();
+            if (location != null)
             {
-                Locations = new List<AssetLocationData>
-                                    {
-                                        new AssetLocationData(location, assetLocationType)
-                                    },
+                locations.Add(new AssetLocationData(assetLocationType)
+                {
+                    Location = location,
+                });
+            }
+
+            assets.Add(new AssetData(nonShipping)
+            {
+                Locations = locations,
                 Name = assetName,
                 Version = version,
-                NonShipping = nonShipping
             });
         }
 
@@ -188,7 +305,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     throw new Exception("Can't merge if one or more manifests have different branch, build number, commit or repository values.");
                 }
 
-                ((List<AssetData>)mergedBuild.Assets).AddRange(build.Assets);
+                mergedBuild.Assets = mergedBuild.Assets.AddRange(build.Assets);
             }
 
             LookupForMatchingGitHubRepository(mergedBuild);
@@ -203,12 +320,15 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// GitHub to determine if the source is GitHub or not. If the commit exists in the repo we transform the Url from 
         /// Azure DevOps to GitHub. If not we continue to work with the original Url.
         /// </summary>
-        /// <param name="repoUrl">The repo Url.</param>
-        /// <param name="lastCommitHash">The hash of the last commit.</param>
         /// <returns></returns>
         private void LookupForMatchingGitHubRepository(BuildData mergedBuild)
         {
-            using (HttpClient client = new HttpClient())
+            if (mergedBuild == null)
+            {
+                throw new ArgumentNullException(nameof(mergedBuild));
+            }
+
+            using (var client = new HttpClient())
             {
                 string[] segments = mergedBuild.AzureDevOpsRepository.Split('/');
                 string repoName = segments[segments.Length - 1];

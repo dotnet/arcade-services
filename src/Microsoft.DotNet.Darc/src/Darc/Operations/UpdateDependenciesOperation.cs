@@ -130,7 +130,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     foreach (string repoToQuery in repositoryUrisForQuery)
                     {
                         Console.WriteLine($"Looking up latest build of {repoToQuery} on {_options.Channel}");
-                        var latestBuild = barOnlyRemote.GetLatestBuildAsync(repoToQuery, channelInfo.Id.Value);
+                        var latestBuild = barOnlyRemote.GetLatestBuildAsync(repoToQuery, channelInfo.Id);
                         getLatestBuildTaskDictionary.TryAdd(repoToQuery, latestBuild);
                     }
 
@@ -147,7 +147,7 @@ namespace Microsoft.DotNet.Darc.Operations
                             continue;
                         }
                         IEnumerable<AssetData> assetData = build.Assets.Select(
-                            a => new AssetData
+                            a => new AssetData(a.NonShipping)
                             {
                                 Name = a.Name,
                                 Version = a.Version
@@ -173,7 +173,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         }
                     }
 
-                    Console.WriteLine($"Checking for coherency updates...");
+                    Console.WriteLine("Checking for coherency updates...");
 
                     // Now run a coherency update based on the current set of dependencies updated
                     // from the previous pass.

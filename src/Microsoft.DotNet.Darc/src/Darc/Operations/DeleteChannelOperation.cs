@@ -41,7 +41,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     return Constants.ErrorCode;
                 }
 
-                await remote.DeleteChannelAsync(existingChannel.Id.Value);
+                await remote.DeleteChannelAsync(existingChannel.Id);
                 Console.WriteLine($"Successfully deleted channel '{existingChannel.Name}'.");
 
                 return Constants.SuccessCode;

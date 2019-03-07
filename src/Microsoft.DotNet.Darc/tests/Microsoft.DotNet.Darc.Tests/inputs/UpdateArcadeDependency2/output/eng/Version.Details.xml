@@ -8,7 +8,6 @@
     <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="2.0">
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>456</Sha>
-      <SourceBuildId>0</SourceBuildId>
     </Dependency>
   </ProductDependencies>
 </Dependencies>
