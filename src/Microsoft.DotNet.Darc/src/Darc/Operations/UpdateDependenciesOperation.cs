@@ -157,7 +157,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         List<DependencyUpdate> updates = await barOnlyRemote.GetRequiredNonCoherencyUpdatesAsync(
                             repoUri, build.Commit, assetData, currentDependencies);
 
-                        foreach (var update in updates)
+                        foreach (DependencyUpdate update in updates)
                         {
                             DependencyDetail from = update.From;
                             DependencyDetail to = update.To;
