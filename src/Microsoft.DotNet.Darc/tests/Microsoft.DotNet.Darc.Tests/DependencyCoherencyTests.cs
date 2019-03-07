@@ -432,11 +432,15 @@ namespace Microsoft.DotNet.Darc.Tests
 
             var repoBBuildAssets = new List<Asset>
             {
-                new Asset(2, 2, true, "depZ", "v10", null),
+                new Asset(2, 2, true, "depC", "v10", null),
                 // This is the asset that should be pulled forward
                 new Asset(2, 2, true, "depB", "v101", null)
             };
-            var repoBBuild = new Build(2, DateTimeOffset.Now, "commit64", null, repoBBuildAssets.ToImmutableList(), null);
+            var repoBBuild = new Build(2, DateTimeOffset.Now, "commit64", null, repoBBuildAssets.ToImmutableList(), null)
+            {
+                AzureDevOpsRepository = "repoB",
+                GitHubRepository = "repoB"
+            };
             barClientMock.Setup(m => m.GetBuildsAsync("repoB", "commit5")).ReturnsAsync(new List<Build> { repoBBuild });
 
             List<DependencyUpdate> nonCoherencyUpdates =
@@ -463,6 +467,227 @@ namespace Microsoft.DotNet.Darc.Tests
                 Assert.Equal("commit64", u.To.Commit);
                 Assert.Equal("repoB", u.To.RepoUri);
             });
+        }
+
+        /// <summary>
+        ///     Test a simple coherency update
+        ///     B tied to A, but B is pinned.
+        /// </summary>
+        [Fact]
+        public async void CoherencyUpdateTests7()
+        {
+            // Initialize
+            var barClientMock = new Mock<IBarClient>();
+            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+
+            // Mock the remote used by build dependency graph to gather dependency details.
+            var dependencyGraphRemoteMock = new Mock<IRemote>();
+
+            // Always return the main remote.
+            var remoteFactoryMock = new Mock<IRemoteFactory>();
+            remoteFactoryMock.Setup(m => m.GetRemote(It.IsAny<string>(), It.IsAny<ILogger>())).Returns(dependencyGraphRemoteMock.Object);
+            remoteFactoryMock.Setup(m => m.GetBarOnlyRemote(It.IsAny<ILogger>())).Returns(remote);
+
+            // Pin head.
+            DependencyDetail depA = new DependencyDetail
+            {
+                Name = "depA",
+                Version = "v1",
+                Commit = "commit1",
+                Pinned = false,
+                RepoUri = "repoA",
+                Type = DependencyType.Product
+            };
+
+            DependencyDetail depB = new DependencyDetail
+            {
+                Name = "depB",
+                Version = "v3",
+                Commit = "commit1",
+                Pinned = true,
+                RepoUri = "repoB",
+                Type = DependencyType.Product,
+                CoherentParentDependencyName = "depA"
+            };
+
+            List<DependencyDetail> existingDetails = new List<DependencyDetail>
+            { depA, depB };
+
+            // Attempt to update all 3, only A should move.
+            List<AssetData> assets = new List<AssetData>()
+            {
+                new AssetData(false)
+                {
+                    Name = "depA",
+                    Version = "v2"
+                },
+                new AssetData(false)
+                {
+                    Name = "depB",
+                    Version = "v5"
+                }
+            };
+
+            // Builds
+            var repoABuildAssets = new List<Asset>
+            {
+                new Asset(1, 1, true, "depA", "v2", null)
+            };
+            var repoABuild = new Build(1, DateTimeOffset.Now, "commit2", null, repoABuildAssets.ToImmutableList(), null);
+            barClientMock.Setup(m => m.GetBuildsAsync("repoA", "commit2")).ReturnsAsync(new List<Build> { repoABuild });
+
+            // This should return dependencies from repoB, but not a depB directly
+            // which should be looked up in the assets.
+            DependencyDetail depC = new DependencyDetail
+            {
+                Name = "depC",
+                Version = "v10",
+                Commit = "commit5",
+                Pinned = false,
+                RepoUri = "repoB",
+                Type = DependencyType.Product
+            };
+            dependencyGraphRemoteMock.Setup(m => m.GetDependenciesAsync("repoA", "commit2", null)).ReturnsAsync(new List<DependencyDetail> { depC });
+
+            var repoBBuildAssets = new List<Asset>
+            {
+                new Asset(2, 2, true, "depC", "v10", null),
+                // This is the asset that should be pulled forward
+                new Asset(2, 2, true, "depB", "v101", null)
+            };
+            var repoBBuild = new Build(2, DateTimeOffset.Now, "commit64", null, repoBBuildAssets.ToImmutableList(), null)
+            {
+                AzureDevOpsRepository = "repoB",
+                GitHubRepository = "repoB"
+            };
+            barClientMock.Setup(m => m.GetBuildsAsync("repoB", "commit5")).ReturnsAsync(new List<Build> { repoBBuild });
+
+            List<DependencyUpdate> nonCoherencyUpdates =
+                await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
+
+            Assert.Collection(nonCoherencyUpdates,
+            u =>
+            {
+                Assert.Equal(depA, u.From);
+                Assert.Equal("v2", u.To.Version);
+            });
+
+            // Update the current dependency details with the non coherency updates
+            UpdateCurrentDependencies(existingDetails, nonCoherencyUpdates);
+
+            List<DependencyUpdate> coherencyUpdates =
+                await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
+
+            Assert.Empty(coherencyUpdates);
+        }
+
+        /// <summary>
+        ///     Test a simple coherency update
+        ///     B tied to A, but no B asset is produced.
+        ///     Should throw.
+        /// </summary>
+        [Fact]
+        public async void CoherencyUpdateTests8()
+        {
+            // Initialize
+            var barClientMock = new Mock<IBarClient>();
+            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+
+            // Mock the remote used by build dependency graph to gather dependency details.
+            var dependencyGraphRemoteMock = new Mock<IRemote>();
+
+            // Always return the main remote.
+            var remoteFactoryMock = new Mock<IRemoteFactory>();
+            remoteFactoryMock.Setup(m => m.GetRemote(It.IsAny<string>(), It.IsAny<ILogger>())).Returns(dependencyGraphRemoteMock.Object);
+            remoteFactoryMock.Setup(m => m.GetBarOnlyRemote(It.IsAny<ILogger>())).Returns(remote);
+
+            // Pin head.
+            DependencyDetail depA = new DependencyDetail
+            {
+                Name = "depA",
+                Version = "v1",
+                Commit = "commit1",
+                Pinned = false,
+                RepoUri = "repoA",
+                Type = DependencyType.Product
+            };
+
+            DependencyDetail depB = new DependencyDetail
+            {
+                Name = "depB",
+                Version = "v3",
+                Commit = "commit1",
+                Pinned = true,
+                RepoUri = "repoB",
+                Type = DependencyType.Product,
+                CoherentParentDependencyName = "depA"
+            };
+
+            List<DependencyDetail> existingDetails = new List<DependencyDetail>
+            { depA, depB };
+
+            // Attempt to update all 3, only A should move.
+            List<AssetData> assets = new List<AssetData>()
+            {
+                new AssetData(false)
+                {
+                    Name = "depA",
+                    Version = "v2"
+                },
+                new AssetData(false)
+                {
+                    Name = "depB",
+                    Version = "v5"
+                }
+            };
+
+            // Builds
+            var repoABuildAssets = new List<Asset>
+            {
+                new Asset(1, 1, true, "depA", "v2", null)
+            };
+            var repoABuild = new Build(1, DateTimeOffset.Now, "commit2", null, repoABuildAssets.ToImmutableList(), null);
+            barClientMock.Setup(m => m.GetBuildsAsync("repoA", "commit2")).ReturnsAsync(new List<Build> { repoABuild });
+
+            // This should return dependencies from repoB, but not a depB directly
+            // which should be looked up in the assets.
+            DependencyDetail depC = new DependencyDetail
+            {
+                Name = "depC",
+                Version = "v10",
+                Commit = "commit5",
+                Pinned = false,
+                RepoUri = "repoB",
+                Type = DependencyType.Product
+            };
+            dependencyGraphRemoteMock.Setup(m => m.GetDependenciesAsync("repoA", "commit2", null)).ReturnsAsync(new List<DependencyDetail> { depC });
+
+            var repoBBuildAssets = new List<Asset>
+            {
+                new Asset(2, 2, true, "depC", "v10", null)
+            };
+            var repoBBuild = new Build(2, DateTimeOffset.Now, "commit64", null, repoBBuildAssets.ToImmutableList(), null)
+            {
+                AzureDevOpsRepository = "repoB",
+                GitHubRepository = "repoB"
+            };
+            barClientMock.Setup(m => m.GetBuildsAsync("repoB", "commit5")).ReturnsAsync(new List<Build> { repoBBuild });
+
+            List<DependencyUpdate> nonCoherencyUpdates =
+                await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
+
+            Assert.Collection(nonCoherencyUpdates,
+            u =>
+            {
+                Assert.Equal(depA, u.From);
+                Assert.Equal("v2", u.To.Version);
+            });
+
+            // Update the current dependency details with the non coherency updates
+            UpdateCurrentDependencies(existingDetails, nonCoherencyUpdates);
+
+            await Assert.ThrowsAsync<DarcException>(() => remote.GetRequiredCoherencyUpdatesAsync(
+                existingDetails, remoteFactoryMock.Object));
         }
 
         /// <summary>
