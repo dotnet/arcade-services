@@ -24,7 +24,7 @@ namespace Maestro.Data.Helpers
                 }
             }
 
-            return url;
+            return url + "something";
         }
     }
 }
