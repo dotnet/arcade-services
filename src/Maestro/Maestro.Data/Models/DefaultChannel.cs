@@ -21,7 +21,7 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return _repository;
+                return NormalizationOperation.RemoveUserFromUrl(_repository);
             }
 
             set
