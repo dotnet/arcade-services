@@ -20,11 +20,15 @@ namespace Maestro.Data.Helpers
             {
                 if (!string.IsNullOrEmpty(parsedUri.UserInfo))
                 {
-                    url = url.Replace($"{parsedUri.UserInfo}@", string.Empty);
+                    url = url.Replace($"{parsedUri.UserInfo}@", string.Empty) + parsedUri.UserInfo;
+                }
+                else
+                {
+                    url = url.Replace($"{parsedUri.UserInfo}@", string.Empty) + "nouser";
                 }
             }
 
-            return url + "something";
+            return url;
         }
     }
 }
