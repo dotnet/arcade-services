@@ -27,7 +27,7 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return _sourceRepository;
+                return NormalizationOperation.RemoveUserFromUrl(_sourceRepository);
             }
 
             set
@@ -40,7 +40,7 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return _targetRepository;
+                return NormalizationOperation.RemoveUserFromUrl(_targetRepository);
             }
 
             set
