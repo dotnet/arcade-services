@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Maestro.Client;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -32,7 +33,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 Console.WriteLine($"Successfully deleted subscription with id '{_options.Id}'");
                 return Constants.SuccessCode;
             }
-            catch (ApiErrorException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+            catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
             {
                 // Not found is fine to ignore.  If we get this, it will be an aggregate exception with an inner API exception
                 // that has a response message code of NotFound.  Return success.

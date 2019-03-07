@@ -130,7 +130,7 @@ namespace Maestro.Web
                 .AddRazorPagesOptions(
                     options =>
                     {
-                        options.Conventions.AuthorizeFolder("/");
+                        options.Conventions.AuthorizeFolder("/", MsftAuthorizationPolicyName);
                         options.Conventions.AllowAnonymousToPage("/Index");
                         options.Conventions.AllowAnonymousToPage("/SwaggerUi");
                     })
