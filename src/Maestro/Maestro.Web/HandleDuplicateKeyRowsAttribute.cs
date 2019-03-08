@@ -27,7 +27,7 @@ namespace Maestro.Web
             var executedContext = await next();
             if (executedContext.Exception is DbUpdateException dbEx &&
                 dbEx.InnerException is SqlException sqlEx &&
-                sqlEx.Message.Contains("Cannot insert duplicate key row"))
+                sqlEx.Message.Contains("Cannot insert duplicate key"))
             {
                 executedContext.Exception = null;
 
