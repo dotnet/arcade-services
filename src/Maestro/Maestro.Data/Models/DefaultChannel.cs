@@ -21,12 +21,12 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return NormalizationOperation.RemoveUserFromUrl(_repository);
+                return NormalizationOperation.NormalizeUrl(_repository);
             }
 
             set
             {
-                _repository = NormalizationOperation.RemoveUserFromUrl(value);
+                _repository = NormalizationOperation.NormalizeUrl(value);
             }
         }
 

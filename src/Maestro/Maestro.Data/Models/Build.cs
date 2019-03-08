@@ -56,12 +56,12 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return NormalizationOperation.RemoveUserFromUrl(_azureDevOpsRepository);
+                return NormalizationOperation.NormalizeUrl(_azureDevOpsRepository);
             }
 
             set
             {
-                _azureDevOpsRepository = NormalizationOperation.RemoveUserFromUrl(value);
+                _azureDevOpsRepository = NormalizationOperation.NormalizeUrl(value);
             }
         }
 
@@ -71,12 +71,12 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return NormalizationOperation.RemoveUserFromUrl(_gitHubRepository);
+                return NormalizationOperation.NormalizeUrl(_gitHubRepository);
             }
 
             set
             {
-                _gitHubRepository = NormalizationOperation.RemoveUserFromUrl(value);
+                _gitHubRepository = NormalizationOperation.NormalizeUrl(value);
             }
         }
 

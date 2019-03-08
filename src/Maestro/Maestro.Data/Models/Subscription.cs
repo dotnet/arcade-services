@@ -27,12 +27,12 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return NormalizationOperation.RemoveUserFromUrl(_sourceRepository);
+                return NormalizationOperation.NormalizeUrl(_sourceRepository);
             }
 
             set
             {
-                _sourceRepository = NormalizationOperation.RemoveUserFromUrl(value);
+                _sourceRepository = NormalizationOperation.NormalizeUrl(value);
             }
         }
 
@@ -40,12 +40,12 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return NormalizationOperation.RemoveUserFromUrl(_targetRepository);
+                return NormalizationOperation.NormalizeUrl(_targetRepository);
             }
 
             set
             {
-                _targetRepository = NormalizationOperation.RemoveUserFromUrl(value);
+                _targetRepository = NormalizationOperation.NormalizeUrl(value);
             }
         }
 
