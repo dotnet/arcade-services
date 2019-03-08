@@ -143,7 +143,8 @@ namespace Microsoft.DotNet.DarcLib
                     false,
                     (SubscriptionPolicyUpdateFrequency) Enum.Parse(
                         typeof(SubscriptionPolicyUpdateFrequency),
-                        updateFrequency))
+                        updateFrequency,
+                        ignoreCase: true))
                 {
                     MergePolicies = mergePolicies.ToImmutableList(),
                 });

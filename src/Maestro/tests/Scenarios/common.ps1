@@ -9,7 +9,7 @@
 [string]$azdoAccount = if (-not $azdoAccount) { "dnceng" } else { $azdoAccount }
 [string]$azdoProject = if (-not $azdoProject) { "internal" } else { $azdoProject }
 [string]$azdoApiVersion = if (-not $azdoApiVersion) { "5.0-preview.1" } else { $azdoApiVersion }
-[string]$barApiVersion = "2018-07-16"
+[string]$barApiVersion = "2019-01-16"
 $gitHubPRsToClose = @()
 $githubBranchesToDelete = @()
 $azdoPRsToClose = @()
@@ -21,10 +21,11 @@ $channelsToDelete = @()
 $testRoot = Join-Path -Path $([System.IO.Path]::GetTempPath()) -ChildPath $([System.IO.Path]::GetRandomFileName())
 New-Item -Path $testRoot -ItemType Directory | Out-Null
 
-Write-Host "Temporary testing location located at $testRoot"
-Write-Host "Installing Darc: dotnet tool install --tool-path $testRoot --version ${darcVersion} Microsoft.DotNet.Darc"
-& dotnet tool install --tool-path $testRoot --version $darcVersion "Microsoft.DotNet.Darc"
-$darcTool = Join-Path -Path $testRoot -ChildPath "darc"
+# Write-Host "Temporary testing location located at $testRoot"
+# Write-Host "Installing Darc: dotnet tool install --tool-path $testRoot --version ${darcVersion} Microsoft.DotNet.Darc"
+# & dotnet tool install --tool-path $testRoot --version $darcVersion "Microsoft.DotNet.Darc"
+# $darcTool = Join-Path -Path $testRoot -ChildPath "darc"
+$darcTool = "dotnet E:\eng\dotnet\arcade-services\artifacts\bin\Microsoft.DotNet.Darc\Debug\netcoreapp2.1\publish\Microsoft.DotNet.Darc.dll"
 Write-Host
 
 # Set auth parameters
@@ -171,11 +172,15 @@ function Add-Build-To-Channel ($buildId, $channelName) {
 function New-Build($repository, $branch, $commit, $buildNumber, $assets) {
     $headers = Get-Bar-Headers 'text/plain'
     $body = @{
-        repository = $repository;
-        branch = $branch;
+        gitHubRepository = $repository;
+        azureDevOpsRepository = $repository;
+        gitHubBranch = $branch;
+        azureDevOpsBranch = $branch;
+        azureDevOpsAccount = "dnceng";
+        azureDevOpsProject = "internal";
+        azureDevOpsBuildNumber = $buildNumber;
         commit = $commit;
-        buildNumber = $buildNumber;
-        assets = $assets
+        assets = $assets;
     }
     $bodyJson = ConvertTo-Json $body
     Write-Host "Creating Build:"

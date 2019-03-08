@@ -146,6 +146,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="buildId">The id of the <see cref="Build"/></param>
         [HttpPost("{channelId}/builds/{buildId}")]
         [SwaggerApiResponse(HttpStatusCode.Created, Description = "Build successfully added to the Channel")]
+        [HandleDuplicateKeyRows("Build {buildId} is already in channel {channelId}")]
         public async Task<IActionResult> AddBuildToChannel(int channelId, int buildId)
         {
             Data.Models.Channel channel = await _context.Channels.FindAsync(channelId);
