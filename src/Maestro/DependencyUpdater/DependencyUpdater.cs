@@ -148,26 +148,37 @@ namespace DependencyUpdater
         [CronSchedule("0 0 5 1/1 * ? *", TimeZones.PST)]
         public async Task CheckDailySubscriptionsAsync(CancellationToken cancellationToken)
         {
-            var subscriptionsToUpdate = from sub in Context.Subscriptions
-                where sub.Enabled
-                let updateFrequency = JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency")
-                where updateFrequency == ((int) UpdateFrequency.EveryDay).ToString()
-                let latestBuild =
-                    sub.Channel.BuildChannels.Select(bc => bc.Build)
-                        .Where(b => (sub.SourceRepository == b.GitHubRepository || sub.SourceRepository == b.AzureDevOpsRepository))
-                        .OrderByDescending(b => b.DateProduced)
-                        .FirstOrDefault()
-                where latestBuild != null
-                where sub.LastAppliedBuildId == null || sub.LastAppliedBuildId != latestBuild.Id
-                select new
-                {
-                    subscription = sub.Id,
-                    latestBuild = latestBuild.Id
-                };
-
-            foreach (var s in await subscriptionsToUpdate.ToListAsync(cancellationToken))
+            using (Logger.BeginScope(
+                "Updating daily subscriptions"))
             {
-                await UpdateSubscriptionAsync(s.subscription, s.latestBuild);
+                var subscriptionsToUpdate = from sub in Context.Subscriptions
+                                            where sub.Enabled
+                                            let updateFrequency = JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency")
+                                            where updateFrequency == ((int)UpdateFrequency.EveryDay).ToString()
+                                            let latestBuild =
+                                                sub.Channel.BuildChannels.Select(bc => bc.Build)
+                                                    .Where(b => (sub.SourceRepository == b.GitHubRepository || sub.SourceRepository == b.AzureDevOpsRepository))
+                                                    .OrderByDescending(b => b.DateProduced)
+                                                    .FirstOrDefault()
+                                            where latestBuild != null
+                                            where sub.LastAppliedBuildId == null || sub.LastAppliedBuildId != latestBuild.Id
+                                            select new
+                                            {
+                                                subscription = sub.Id,
+                                                latestBuild = latestBuild.Id
+                                            };
+
+                var subscriptionsAndBuilds = await subscriptionsToUpdate.ToListAsync(cancellationToken);
+                Logger.LogInformation($"Will update '{subscriptionsAndBuilds.Count}' subscriptions");
+                foreach (var s in subscriptionsAndBuilds)
+                {
+                    Logger.LogInformation($"Will update {s.subscription} to build {s.latestBuild}");
+                }
+
+                foreach (var s in subscriptionsAndBuilds)
+                {
+                    await UpdateSubscriptionAsync(s.subscription, s.latestBuild);
+                }
             }
         }
 
