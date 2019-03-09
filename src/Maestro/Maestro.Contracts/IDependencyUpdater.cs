@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.ServiceFabric.Services.Remoting;
 
@@ -13,5 +14,12 @@ namespace Maestro.Contracts
         Task StartUpdateDependenciesAsync(int buildId, int channelId);
 
         Task StartSubscriptionUpdateAsync(Guid subscription);
+
+        /// <summary>
+        ///     Temporary method for debugging daily update issues
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        Task CheckDailySubscriptionsAsync(CancellationToken cancellationToken);
     }
 }

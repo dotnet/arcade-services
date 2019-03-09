@@ -146,7 +146,7 @@ namespace DependencyUpdater
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [CronSchedule("0 0 5 1/1 * ? *", TimeZones.PST)]
-        public async Task CheckSubscriptionsAsync(CancellationToken cancellationToken)
+        public async Task CheckDailySubscriptionsAsync(CancellationToken cancellationToken)
         {
             var subscriptionsToUpdate = from sub in Context.Subscriptions
                 where sub.Enabled
@@ -202,8 +202,15 @@ namespace DependencyUpdater
                 subscriptionId,
                 buildId))
             {
-                ISubscriptionActor actor = SubscriptionActorFactory(new ActorId(subscriptionId));
-                await actor.UpdateAsync(buildId);
+                try
+                {
+                    ISubscriptionActor actor = SubscriptionActorFactory(new ActorId(subscriptionId));
+                    await actor.UpdateAsync(buildId);
+                }
+                catch (Exception e)
+                {
+                    Logger.LogError(e, "Failed to update subscription '{subscriptionId}' with build '{buildId}'");
+                }
             }
         }
     }

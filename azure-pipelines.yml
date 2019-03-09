@@ -9,6 +9,7 @@ trigger:
 - production
 pr:
 - master
+- production
 
 # Three phases for each of the three OSes we want to run on
 jobs:
