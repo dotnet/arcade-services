@@ -138,7 +138,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <summary>
         ///   Trigger daily update
         /// </summary>
-        /// <param name="id">The id of the <see cref="Subscription"/> to trigger.</param>
         [HttpPost("triggerDaily")]
         [SwaggerApiResponse(HttpStatusCode.Accepted, Description = "Trigger all subscriptions normally updated daily.")]
         [ValidateModelState]
