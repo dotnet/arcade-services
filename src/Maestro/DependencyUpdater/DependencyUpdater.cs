@@ -175,10 +175,7 @@ namespace DependencyUpdater
                     Logger.LogInformation($"Will update {s.subscription} to build {s.latestBuild}");
                 }
 
-                foreach (var s in subscriptionsAndBuilds)
-                {
-                    await UpdateSubscriptionAsync(s.subscription, s.latestBuild);
-                }
+                await Task.WhenAll(subscriptionsAndBuilds.Select(sub => UpdateSubscriptionAsync(sub.subscription, sub.latestBuild)));
             }
         }
 
