@@ -63,8 +63,8 @@ try {
     # Add the foo and bar dependencies
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        Darc-Command add --name 'Foo' --type product --repo $sourceRepoUri
-        Darc-Command add --name 'Bar' --type product --repo $sourceRepoUri
+        Darc-Command add-dependency --name 'Foo' --type product --repo $sourceRepoUri
+        Darc-Command add-dependency --name 'Bar' --type product --repo $sourceRepoUri
     }
     finally {
         Pop-Location
@@ -97,9 +97,9 @@ try {
             $azdoBranchesToDelete += @{ branch = $pullRequestBaseBranch; repo = $targetRepoName}
             $azdoPRsToClose += @{ number = $pullRequest.pullRequestId; repo = $targetRepoName }
 
-            $expectedPRTitle = "Update dependencies from ${azdoAccount}/${azdoProject}/${sourceRepoName}"
+            $expectedPRTitle = "[$targetBranch] Update dependencies from $azdoAccount/$azdoProject/$sourceRepoName"
             if ($pullRequest.title -ne $expectedPRTitle) {
-                throw "Expected PR title to be $expectedPRTitle, was ${pullrequest.title}"
+                throw "Expected PR title to be $expectedPRTitle, was $($pullrequest.title)"
             }
             
             # Check out the merge commit sha, then use darc to get and verify the
@@ -110,22 +110,29 @@ try {
             try {
                 Push-Location -Path $(Get-Repo-Location $targetRepoName)
                 $dependencies = Darc-Command get-dependencies
-                $dependencies = $dependencies -join "`r`n"
-                $expectedDependencies =
-@"
-Name:    Foo
-Version: 1.1.0
-Repo:    $sourceRepoUri
-Commit:  $sourceCommit
-
-Name:    Bar
-Version: 2.1.0
-Repo:    $sourceRepoUri
-Commit:  $sourceCommit
-"@
-                if (-not ($dependencies -match $expectedDependencies)) {
-                    Write-Error "Expected $expectedDependencies, got $dependencies"
+                $expectedDependencies =@(
+                    "Name:    Foo"
+                    "Version: 1.1.0",
+                    "Repo:    $sourceRepoUri",
+                    "Commit:  $sourceCommit",
+                    "Type:    Product",
+                    "",
+                    "Name:    Bar",
+                    "Version: 2.1.0",
+                    "Repo:    $sourceRepoUri",
+                    "Commit:  $sourceCommit",
+                    "Type:    Product",
+                    ""
+                )
+                if ($dependencies.Count -ne $expectedDependencies.Count) {
+                    Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."
                     throw "PR did not have expected dependency updates."
+                }
+                for ($i = 0; $i -lt $expectedDependencies.Count; $i++) {
+                    if ($dependencies[$i] -notmatch $expectedDependencies[$i]) {
+                        Write-Error "Dependencies Line $i not matched`nExpected $($expectedDependencies[$i])`nActual $($dependencies[$i])"
+                        throw "PR did not have expected dependency updates."
+                    }
                 }
             } finally {
                 Pop-Location

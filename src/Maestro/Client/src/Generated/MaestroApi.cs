@@ -144,6 +144,12 @@ namespace Microsoft.DotNet.Maestro.Client
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public string Serialize(Guid value)
+        {
+            return value.ToString("D", CultureInfo.InvariantCulture);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public string Serialize<T>(T value)
         {
             return JsonConvert.SerializeObject(value, SerializerSettings);
