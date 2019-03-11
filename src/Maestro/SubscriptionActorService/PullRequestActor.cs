@@ -128,6 +128,7 @@ namespace SubscriptionActorService
 
     public abstract class PullRequestActorImplementation : IPullRequestActor, IActionTracker
     {
+        private const string PullRequestDescriptionEntryLine = "This pull request updates the following dependencies:";
         public const string PullRequestCheck = "pullRequestCheck";
         public const string PullRequestUpdate = "pullRequestUpdate";
         public const string PullRequest = "pullRequest";
@@ -610,7 +611,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             {
                 using (var description = new StringWriter())
                 {
-                    description.WriteLine("This pull request updates the following dependencies");
+                    description.WriteLine(PullRequestDescriptionEntryLine);
                     description.WriteLine();
 
                     await CommitUpdatesAsync(requiredUpdates, description, darc, targetRepository, newBranchName);
@@ -740,7 +741,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                         BuildId = u.update.BuildId
                     }));
 
-            using (var description = new StringWriter(new StringBuilder(pullRequest.Description)))
+            using (var description = new StringWriter(new StringBuilder(PullRequestDescriptionEntryLine)))
             {
                 await CommitUpdatesAsync(requiredUpdates, description, darc, targetRepository, headBranch);
 
