@@ -27,6 +27,8 @@ namespace Microsoft.DotNet.DarcLib
     {
         private const string DefaultApiVersion = "5.0-preview.1";
 
+        private static readonly string AzureDevOpsHostPattern = @"dev\.azure\.com\";
+
         private static readonly string CommentMarker =
             "\n\n[//]: # (This identifies this comment as a Maestro++ comment)\n";
 
@@ -41,8 +43,6 @@ namespace Microsoft.DotNet.DarcLib
 
         // Azure DevOps uses this id when creating a new branch as well as when deleting a branch
         private static readonly string BaseObjectId = "0000000000000000000000000000000000000000";
-
-        private static readonly string AzureDevOpsHostPattern = @"dev\.azure\.com/";
 
         private readonly ILogger _logger;
         private readonly string _personalAccessToken;
@@ -1017,7 +1017,7 @@ namespace Microsoft.DotNet.DarcLib
 
                 if (m.Success)
                 {
-                    string replacementUri = $"{Regex.Unescape(AzureDevOpsHostPattern)}{m.Groups["account"].Value}";
+                    string replacementUri = $"{Regex.Unescape(AzureDevOpsHostPattern)}/{m.Groups["account"].Value}";
                     repoUri = repoUri.Replace(parsedUri.Host, replacementUri);
                 }
             }
