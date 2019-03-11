@@ -46,7 +46,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
 
             if (string.IsNullOrEmpty(dir))
             {
-                throw new Exception("Root directory of the repo was not found. Check if git is installed and that a .git directory exists in the root of your repository.");
+                throw new Exception("Root directory of the repo was not found. Check that git is installed and that you are in a folder which is a git repo (.git folder should be present).");
             }
 
             return dir;
