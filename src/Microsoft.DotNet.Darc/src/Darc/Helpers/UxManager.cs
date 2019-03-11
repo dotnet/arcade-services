@@ -37,12 +37,6 @@ namespace Microsoft.DotNet.Darc.Helpers
                 return Constants.ErrorCode;
             }
 
-            if (string.IsNullOrEmpty(_rootDir))
-            {
-                _logger.LogError("Failed to get git root directory...");
-                return Constants.ErrorCode;
-            }
-
             int result = Constants.ErrorCode;
             int tries = Constants.MaxPopupTries;
 
@@ -50,7 +44,7 @@ namespace Microsoft.DotNet.Darc.Helpers
 
             try
             {
-                string path = Path.Combine(Path.GetTempPath(), Path.GetTempFileName(), popUp.Path);
+                string path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName(), popUp.Path);
                 string dirPath = Path.GetDirectoryName(path);
 
                 Directory.CreateDirectory(dirPath);
