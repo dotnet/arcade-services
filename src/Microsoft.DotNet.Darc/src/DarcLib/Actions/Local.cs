@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.DarcLib
         // TODO: Make these not constants and instead attempt to give more accurate information commit, branch, repo name, etc.)
         private readonly string _repo;
 
-        public Local(string gitPath, ILogger logger)
+        public Local(ILogger logger)
         {
             _repo = LocalHelpers.GetRootDir(logger);
             _logger = logger;

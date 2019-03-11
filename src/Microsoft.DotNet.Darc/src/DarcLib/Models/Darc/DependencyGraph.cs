@@ -415,11 +415,7 @@ namespace Microsoft.DotNet.DarcLib
 
                     if (Directory.Exists(testPath))
                     {
-                        Local local = new Local(
-                            Path.Combine(
-                                testPath,
-                                ".git"),
-                            logger);
+                        Local local = new Local(logger);
                         dependencies = await local.GetDependenciesAsync();
                     }
                 }
@@ -436,10 +432,7 @@ namespace Microsoft.DotNet.DarcLib
 
                     if (!string.IsNullOrEmpty(repoPath))
                     {
-                        // Local's constructor expects the repo's .git folder to be passed in. In this 
-                        // particular case we could pass any folder under 'repoPath' or even a fake one 
-                        // but we use .git to keep things consistent to what Local expects
-                        Local local = new Local($"{repoPath}/.git", logger);
+                        Local local = new Local(logger);
                         string fileContents = LocalHelpers.GitShow(
                             repoPath,
                             commit,

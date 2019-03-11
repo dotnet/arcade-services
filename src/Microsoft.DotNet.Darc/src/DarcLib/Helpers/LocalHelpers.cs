@@ -40,25 +40,13 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             return editor;
         }
 
-        public static string GetGitDir(ILogger logger)
-        {
-            string dir = ExecuteCommand("git", "rev-parse --absolute-git-dir", logger);
-
-            if (string.IsNullOrEmpty(dir))
-            {
-                throw new Exception("'.git' directory was not found. Check if git is installed and that a .git directory exists in the root of your repository.");
-            }
-
-            return dir;
-        }
-
         public static string GetRootDir(ILogger logger)
         {
             string dir = ExecuteCommand("git", "rev-parse --show-toplevel", logger);
 
             if (string.IsNullOrEmpty(dir))
             {
-                throw new Exception("'.git' directory was not found. Check if git is installed and that a .git directory exists in the root of your repository.");
+                throw new Exception("Root directory of the repo was not found. Check if git is installed and that a .git directory exists in the root of your repository.");
             }
 
             return dir;

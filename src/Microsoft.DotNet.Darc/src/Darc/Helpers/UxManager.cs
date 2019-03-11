@@ -18,7 +18,6 @@ namespace Microsoft.DotNet.Darc.Helpers
     public class UxManager
     {
         private readonly string _editorPath;
-        private readonly string _gitDir;
         private readonly string _rootDir;
         private readonly ILogger _logger;
         private bool _popUpClosed = false;
@@ -26,7 +25,6 @@ namespace Microsoft.DotNet.Darc.Helpers
         public UxManager(ILogger logger)
         {
             _editorPath = LocalHelpers.GetEditorPath(logger);
-            _gitDir = LocalHelpers.GetGitDir(logger);
             _rootDir = LocalHelpers.GetRootDir(logger);
             _logger = logger;
         }
@@ -39,9 +37,9 @@ namespace Microsoft.DotNet.Darc.Helpers
                 return Constants.ErrorCode;
             }
 
-            if (string.IsNullOrEmpty(_gitDir))
+            if (string.IsNullOrEmpty(_rootDir))
             {
-                _logger.LogError("Failed to get git's directory...");
+                _logger.LogError("Failed to get git root directory...");
                 return Constants.ErrorCode;
             }
 
@@ -52,7 +50,7 @@ namespace Microsoft.DotNet.Darc.Helpers
 
             try
             {
-                string path = Path.Combine(_gitDir, popUp.Path);
+                string path = Path.Combine(Path.GetTempPath(), Path.GetTempFileName(), popUp.Path);
                 string dirPath = Path.GetDirectoryName(path);
 
                 Directory.CreateDirectory(dirPath);
