@@ -108,6 +108,7 @@ namespace SubscriptionActorService
 
         public async Task UpdateForMergedPullRequestAsync(int updateBuildId)
         {
+            Logger.LogInformation($"Updating {SubscriptionId} with latest build id {updateBuildId}");
             Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);
             subscription.LastAppliedBuildId = updateBuildId;
             Context.Subscriptions.Update(subscription);
@@ -119,6 +120,8 @@ namespace SubscriptionActorService
         public async Task<ActionResult<bool>> UpdateAsync(int buildId)
         {
             Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);
+
+            Logger.LogInformation($"Looking up build {buildId}");
 
             Build build = await Context.Builds.Include(b => b.Assets)
                 .ThenInclude(a => a.Locations)
@@ -137,6 +140,8 @@ namespace SubscriptionActorService
                 pullRequestActorId = PullRequestActorId.Create(SubscriptionId);
             }
 
+            Logger.LogInformation($"Creating pull request actor for '{pullRequestActorId}'");
+
             IPullRequestActor pullRequestActor = PullRequestActorFactory(pullRequestActorId);
 
             List<Asset> assets = build.Assets.Select(
@@ -147,7 +152,11 @@ namespace SubscriptionActorService
                     })
                 .ToList();
 
+            Logger.LogInformation($"Running asset update for {SubscriptionId}");
+
             await pullRequestActor.UpdateAssetsAsync(SubscriptionId, build.Id, build.Commit, assets);
+
+            Logger.LogInformation($"Asset update complete for {SubscriptionId}");
 
             return ActionResult.Create(true, "Update Sent");
         }
