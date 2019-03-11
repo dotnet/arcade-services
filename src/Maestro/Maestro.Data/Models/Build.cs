@@ -19,7 +19,7 @@ namespace Maestro.Data.Models
 
         static Build()
         {
-            Triggers<Build>.Inserting += entry =>
+            Triggers<Build>.Inserted += entry =>
             {
                 Build build = entry.Entity;
                 var context = (BuildAssetRegistryContext) entry.Context;
@@ -33,6 +33,7 @@ namespace Maestro.Data.Models
                         Channel = dc.Channel,
                         Build = build
                     });
+                context.SaveChangesAsync();
             };
         }
 

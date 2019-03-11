@@ -87,7 +87,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             return Ok(new Build(build));
         }
 
-        [HttpGet("{id}/tree")]
+        [HttpGet("{id}/graph")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(BuildGraph), Description = "The tree of build dependencies")]
         [ValidateModelState]
         public async Task<IActionResult> GetBuildGraph(int id)

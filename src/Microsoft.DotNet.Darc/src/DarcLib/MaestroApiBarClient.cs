@@ -102,7 +102,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Newly created channel</returns>
         public Task<Channel> CreateChannelAsync(string name, string classification)
         {
-            return _barClient.Channels.CreateChannelAsync(name, classification);
+            return _barClient.Channels.CreateChannelAsync(name: name, classification: classification);
         }
 
         /// <summary>
@@ -143,7 +143,8 @@ namespace Microsoft.DotNet.DarcLib
                     false,
                     (SubscriptionPolicyUpdateFrequency) Enum.Parse(
                         typeof(SubscriptionPolicyUpdateFrequency),
-                        updateFrequency))
+                        updateFrequency,
+                        ignoreCase: true))
                 {
                     MergePolicies = mergePolicies.ToImmutableList(),
                 });
@@ -214,7 +215,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>List of merge policies</returns>
         public async Task<IEnumerable<MergePolicy>> GetRepositoryMergePolicies(string repoUri, string branch)
         {
-            return await _barClient.Repository.GetMergePoliciesAsync(repoUri, branch);
+            return await _barClient.Repository.GetMergePoliciesAsync(repository: repoUri, branch: branch);
         }
 
         #endregion
