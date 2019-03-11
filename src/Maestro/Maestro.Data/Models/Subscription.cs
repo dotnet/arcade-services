@@ -5,7 +5,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Maestro.Data.Helpers;
+using Microsoft.DotNet.DarcLib;
 using Newtonsoft.Json;
 
 namespace Maestro.Data.Models
@@ -27,12 +27,12 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return NormalizationOperation.NormalizeUrl(_sourceRepository);
+                return AzureDevOpsClient.NormalizeUrl(_sourceRepository);
             }
 
             set
             {
-                _sourceRepository = NormalizationOperation.NormalizeUrl(value);
+                _sourceRepository = AzureDevOpsClient.NormalizeUrl(value);
             }
         }
 
@@ -40,12 +40,12 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return NormalizationOperation.NormalizeUrl(_targetRepository);
+                return AzureDevOpsClient.NormalizeUrl(_targetRepository);
             }
 
             set
             {
-                _targetRepository = NormalizationOperation.NormalizeUrl(value);
+                _targetRepository = AzureDevOpsClient.NormalizeUrl(value);
             }
         }
 

@@ -8,7 +8,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using EntityFrameworkCore.Triggers;
-using Maestro.Data.Helpers;
+using Microsoft.DotNet.DarcLib;
 
 namespace Maestro.Data.Models
 {
@@ -57,12 +57,12 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return NormalizationOperation.NormalizeUrl(_azureDevOpsRepository);
+                return AzureDevOpsClient.NormalizeUrl(_azureDevOpsRepository);
             }
 
             set
             {
-                _azureDevOpsRepository = NormalizationOperation.NormalizeUrl(value);
+                _azureDevOpsRepository = AzureDevOpsClient.NormalizeUrl(value);
             }
         }
 
@@ -72,12 +72,12 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return NormalizationOperation.NormalizeUrl(_gitHubRepository);
+                return AzureDevOpsClient.NormalizeUrl(_gitHubRepository);
             }
 
             set
             {
-                _gitHubRepository = NormalizationOperation.NormalizeUrl(value);
+                _gitHubRepository = AzureDevOpsClient.NormalizeUrl(value);
             }
         }
 
