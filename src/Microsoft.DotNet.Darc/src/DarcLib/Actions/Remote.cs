@@ -382,7 +382,7 @@ namespace Microsoft.DotNet.DarcLib
                 DependencyDetail currentDependency = dependency;
                 while (!string.IsNullOrEmpty(currentDependency.CoherentParentDependencyName) && !currentDependency.Pinned)
                 {
-                    updateList.Add(dependency);
+                    updateList.Add(currentDependency);
                     DependencyDetail parentCoherentDependency = dependencies.FirstOrDefault(d =>
                         d.Name.Equals(currentDependency.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
                     // If the coherent dependency is not found, this is non-valid.
