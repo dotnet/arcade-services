@@ -415,7 +415,7 @@ namespace Microsoft.DotNet.DarcLib
 
                     if (Directory.Exists(testPath))
                     {
-                        Local local = new Local(logger);
+                        Local local = new Local(logger, testPath);
                         dependencies = await local.GetDependenciesAsync();
                     }
                 }

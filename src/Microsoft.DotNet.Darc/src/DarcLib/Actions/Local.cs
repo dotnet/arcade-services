@@ -23,9 +23,9 @@ namespace Microsoft.DotNet.DarcLib
         // TODO: Make these not constants and instead attempt to give more accurate information commit, branch, repo name, etc.)
         private readonly string _repo;
 
-        public Local(ILogger logger)
+        public Local(ILogger logger, string overrideRootPath = null)
         {
-            _repo = LocalHelpers.GetRootDir(logger);
+            _repo = overrideRootPath ?? LocalHelpers.GetRootDir(logger);
             _logger = logger;
             _gitClient = new LocalGitClient(_logger);
             _fileManager = new GitFileManager(_gitClient, _logger);
