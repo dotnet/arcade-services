@@ -16,6 +16,8 @@ namespace Microsoft.DotNet.Darc.Tests
         [InlineData("https://borkbork.visualstudio.com/borky/_git/foo2", "borkbork", "borky", "foo2")]
         [InlineData("https://dev.azure.com/dcn2eng/public-s/_git/foo-23bar", "dcn2eng", "public-s", "foo-23bar")]
         [InlineData("https://dev.azure.com/foo/bar/_git/baz-bop/pullrequest/11?_a=overview", "foo", "bar", "baz-bop")]
+        [InlineData("https://dnceng@dev.azure.com/foo/bar/_git/bebop/pullrequest/11?_a=overview", "foo", "bar", "bebop")]
+        [InlineData("https://dnceng.visualstudio.com/int/_git/bebop", "dnceng", "int", "bebop")]
         private void ParseValidRepoUriTests(string inputUri, string expectedAccount, string expectedProject, string expectedRepo)
         {
             (string account, string project, string repo) = AzureDevOpsClient.ParseRepoUri(inputUri);
