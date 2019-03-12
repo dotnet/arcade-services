@@ -15,8 +15,8 @@ namespace Microsoft.DotNet.Darc.Tests
         [InlineData("https://dev.azure.com/dnceng/public/_git/foo", "dnceng", "public", "foo")]
         [InlineData("https://borkbork.visualstudio.com/borky/_git/foo2", "borkbork", "borky", "foo2")]
         [InlineData("https://dev.azure.com/dcn2eng/public-s/_git/foo-23bar", "dcn2eng", "public-s", "foo-23bar")]
-        [InlineData("https://dev.azure.com/foo/bar/_git/baz-bop/pullrequest/11?_a=overview", "foo", "bar", "baz-bop")]
-        [InlineData("https://dnceng@dev.azure.com/foo/bar/_git/bebop/pullrequest/11?_a=overview", "foo", "bar", "bebop")]
+        [InlineData("https://dev.azure.com/foo/bar/_git/baz-bop", "foo", "bar", "baz-bop")]
+        [InlineData("https://dnceng@dev.azure.com/foo/bar/_git/bebop", "foo", "bar", "bebop")]
         [InlineData("https://dnceng.visualstudio.com/int/_git/bebop", "dnceng", "int", "bebop")]
         private void ParseValidRepoUriTests(string inputUri, string expectedAccount, string expectedProject, string expectedRepo)
         {
@@ -28,6 +28,7 @@ namespace Microsoft.DotNet.Darc.Tests
 
         [Theory]
         [InlineData("https://dev.azure.com/dcn-eng/public-s/_git/foo-23bar")]
+        [InlineData("https://github.com/account/bar")]
         private void ParseInvalidRepoUriTests(string inputUri)
         {
             Xunit.Assert.Throws<ArgumentException>(() => AzureDevOpsClient.ParseRepoUri(inputUri));
@@ -52,6 +53,16 @@ namespace Microsoft.DotNet.Darc.Tests
         private void ParseInvalidPullRequestUriTests(string inputUri)
         {
             Xunit.Assert.Throws<ArgumentException>(() => AzureDevOpsClient.ParsePullRequestUri(inputUri));
+        }
+
+        [Theory]
+        [InlineData("https://dev.azure.com/dnceng/public/_git/foo", "https://dev.azure.com/dnceng/public/_git/foo")]
+        [InlineData("https://dnceng@dev.azure.com/foo/bar/_git/bebop/pullrequest/11?_a=overview", "https://dev.azure.com/foo/bar/_git/bebop/pullrequest/11?_a=overview")]
+        [InlineData("https://dnceng.visualstudio.com/int/_git/bebop", "https://dev.azure.com/dnceng/int/_git/bebop")]
+        private void NormalizeRepoUriTests(string inputUri, string expectedUri)
+        {
+            string normalizedUri = AzureDevOpsClient.NormalizeUrl(inputUri);
+            Xunit.Assert.Equal(expectedUri, normalizedUri);
         }
     }
 }
