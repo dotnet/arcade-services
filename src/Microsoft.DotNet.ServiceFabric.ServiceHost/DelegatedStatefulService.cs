@@ -90,7 +90,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 RunAsyncLoop(cancellationToken));
         }
 
-        private async Task RunSchedule(CancellationToken cancellationToken)
+        private async Task RunAsyncLoop(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -113,7 +113,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             }
         }
 
-        private async Task RunAsyncLoop(CancellationToken cancellationToken)
+        private async Task RunSchedule(CancellationToken cancellationToken)
         {
             using (ILifetimeScope scope = _container.BeginLifetimeScope(
                             builder => builder.RegisterInstance(StateManager).As<IReliableStateManager>()))
