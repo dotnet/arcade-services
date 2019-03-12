@@ -374,8 +374,7 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     // If a repo folder or a mapping was not set we use the current parent's 
                     // parent folder.
-                    string gitDir = LocalHelpers.GetGitDir(logger);
-                    string parent = Directory.GetParent(gitDir).FullName;
+                    string parent = LocalHelpers.GetRootDir(logger);
                     folder = Directory.GetParent(parent).FullName;
                 }
 
@@ -416,11 +415,7 @@ namespace Microsoft.DotNet.DarcLib
 
                     if (Directory.Exists(testPath))
                     {
-                        Local local = new Local(
-                            Path.Combine(
-                                testPath,
-                                ".git"),
-                            logger);
+                        Local local = new Local(logger, testPath);
                         dependencies = await local.GetDependenciesAsync();
                     }
                 }
@@ -437,10 +432,7 @@ namespace Microsoft.DotNet.DarcLib
 
                     if (!string.IsNullOrEmpty(repoPath))
                     {
-                        // Local's constructor expects the repo's .git folder to be passed in. In this 
-                        // particular case we could pass any folder under 'repoPath' or even a fake one 
-                        // but we use .git to keep things consistent to what Local expects
-                        Local local = new Local($"{repoPath}/.git", logger);
+                        Local local = new Local(logger);
                         string fileContents = LocalHelpers.GitShow(
                             repoPath,
                             commit,

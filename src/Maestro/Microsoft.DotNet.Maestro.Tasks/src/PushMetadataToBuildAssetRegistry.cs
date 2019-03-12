@@ -97,7 +97,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             CancellationToken cancellationToken)
         {
             var logger = new MSBuildLogger(Log);
-            var local = new Local(LocalHelpers.GetGitDir(logger), logger);
+            var local = new Local(logger);
             IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync();
             var builds = new Dictionary<int, bool>();
             foreach (var dep in dependencies)
