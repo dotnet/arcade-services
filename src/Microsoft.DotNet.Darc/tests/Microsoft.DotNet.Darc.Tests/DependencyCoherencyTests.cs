@@ -10,6 +10,7 @@ using Moq;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -21,40 +22,17 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     Test that a simple set of non-coherency updates works.
         /// </summary>
         [Fact]
-        public async void CoherencyUpdateTests1()
+        public async Task CoherencyUpdateTests1()
         {
             Remote remote = new Remote(null, null, NullLogger.Instance);
 
-            DependencyDetail depA = new DependencyDetail
-            {
-                Name = "depA",
-                Version = "v1",
-                Commit = "commit1",
-                Pinned = false,
-                RepoUri = "repoA",
-                Type = DependencyType.Product
-            };
-
-            DependencyDetail depB = new DependencyDetail
-            {
-                Name = "depB",
-                Version = "v1",
-                Commit = "commit1",
-                Pinned = false,
-                RepoUri = "repoA",
-                Type = DependencyType.Product
-            };
-
-            List<DependencyDetail> existingDetails = new List<DependencyDetail>
-            { depA, depB };
+            List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+            DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
+            DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false);
 
             List<AssetData> assets = new List<AssetData>()
             {
-                new AssetData(false)
-                {
-                    Name = "depA",
-                    Version = "v2"
-                }
+                new AssetData(false) { Name = "depA", Version = "v2"}
             };
 
             List<DependencyUpdate> updates =
@@ -71,45 +49,18 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     Test that a simple set of non-coherency updates works.
         /// </summary>
         [Fact]
-        public async void CoherencyUpdateTests2()
+        public async Task CoherencyUpdateTests2()
         {
             Remote remote = new Remote(null, null, NullLogger.Instance);
 
-            DependencyDetail depA = new DependencyDetail
-            {
-                Name = "depA",
-                Version = "v1",
-                Commit = "commit1",
-                Pinned = false,
-                RepoUri = "repoA",
-                Type = DependencyType.Product
-            };
-
-            DependencyDetail depB = new DependencyDetail
-            {
-                Name = "depB",
-                Version = "v3",
-                Commit = "commit1",
-                Pinned = false,
-                RepoUri = "repoA",
-                Type = DependencyType.Product
-            };
-
-            List<DependencyDetail> existingDetails = new List<DependencyDetail>
-            { depA, depB };
+            List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+            DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
+            DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: false);
 
             List<AssetData> assets = new List<AssetData>()
             {
-                new AssetData(false)
-                {
-                    Name = "depA",
-                    Version = "v2"
-                },
-                new AssetData(false)
-                {
-                    Name = "depB",
-                    Version = "v5"
-                }
+                new AssetData(false) { Name = "depA", Version = "v2"},
+                new AssetData(false) { Name = "depB", Version = "v5"}
             };
 
             List<DependencyUpdate> updates =
@@ -134,46 +85,18 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     depB is tied to depA and should not move.
         /// </summary>
         [Fact]
-        public async void CoherencyUpdateTests3()
+        public async Task CoherencyUpdateTests3()
         {
             Remote remote = new Remote(null, null, NullLogger.Instance);
 
-            DependencyDetail depA = new DependencyDetail
-            {
-                Name = "depA",
-                Version = "v1",
-                Commit = "commit1",
-                Pinned = false,
-                RepoUri = "repoA",
-                Type = DependencyType.Product
-            };
-
-            DependencyDetail depB = new DependencyDetail
-            {
-                Name = "depB",
-                Version = "v3",
-                Commit = "commit1",
-                Pinned = false,
-                RepoUri = "repoA",
-                Type = DependencyType.Product,
-                CoherentParentDependencyName = "depA"
-            };
-
-            List<DependencyDetail> existingDetails = new List<DependencyDetail>
-            { depA, depB };
+            List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+            DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
+            DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
             List<AssetData> assets = new List<AssetData>()
             {
-                new AssetData(false)
-                {
-                    Name = "depA",
-                    Version = "v2"
-                },
-                new AssetData(false)
-                {
-                    Name = "depB",
-                    Version = "v5"
-                }
+                new AssetData(false) { Name = "depA", Version = "v2"},
+                new AssetData(false) { Name = "depB", Version = "v5"}
             };
 
             List<DependencyUpdate> updates =
@@ -191,67 +114,22 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     Test a chain with a pinned middle.
         /// </summary>
         [Fact]
-        public async void CoherencyUpdateTests4()
+        public async Task CoherencyUpdateTests4()
         {
             Remote remote = new Remote(null, null, NullLogger.Instance);
 
-            DependencyDetail depA = new DependencyDetail
-            {
-                Name = "depA",
-                Version = "v1",
-                Commit = "commit1",
-                Pinned = false,
-                RepoUri = "repoA",
-                Type = DependencyType.Product
-            };
+            List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+            DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
+            DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: true, coherentParent: "depA");
+            DependencyDetail depC = AddDependency(existingDetails, "depC", "v7", "repoC", "commit1", pinned: false, coherentParent: "depB");
 
-            // depB is tied to A, but pinned (head of coherent tree)
-            DependencyDetail depB = new DependencyDetail
-            {
-                Name = "depB",
-                Version = "v3",
-                Commit = "commit1",
-                Pinned = true,
-                RepoUri = "repoB",
-                Type = DependencyType.Product,
-                CoherentParentDependencyName = "depA"
-            };
-
-            // depC is tied to depB
-            DependencyDetail depC = new DependencyDetail
-            {
-                Name = "depC",
-                Version = "v7",
-                Commit = "commit1",
-                Pinned = false,
-                RepoUri = "repoC",
-                Type = DependencyType.Product,
-                CoherentParentDependencyName = "depB"
-            };
-
-            List<DependencyDetail> existingDetails = new List<DependencyDetail>
-            { depA, depB, depC };
-
-            // Attempt to update all 3, only A should move.
             List<AssetData> assets = new List<AssetData>()
             {
-                new AssetData(false)
-                {
-                    Name = "depA",
-                    Version = "v2"
-                },
-                new AssetData(false)
-                {
-                    Name = "depB",
-                    Version = "v5"
-                },
-                new AssetData(false)
-                {
-                    Name = "depC",
-                    Version = "v7"
-                }
+                new AssetData(false) { Name = "depA", Version = "v2"},
+                new AssetData(false) { Name = "depB", Version = "v5"},
+                new AssetData(false) { Name = "depC", Version = "v7"}
             };
-
+            
             List<DependencyUpdate> updates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
 
@@ -264,84 +142,26 @@ namespace Microsoft.DotNet.Darc.Tests
         }
 
         /// <summary>
-        ///     Test a tree with a pinned head (nothing moves)
+        ///     Test a tree with a pinned head (nothing moves in non-coherency update)
         ///     Test different casings
         /// </summary>
         [Fact]
-        public async void CoherencyUpdateTests5()
+        public async Task CoherencyUpdateTests5()
         {
             Remote remote = new Remote(null, null, NullLogger.Instance);
 
-            // Pin head.
-            DependencyDetail depA = new DependencyDetail
-            {
-                Name = "depA",
-                Version = "v1",
-                Commit = "commit1",
-                Pinned = true,
-                RepoUri = "repoA",
-                Type = DependencyType.Product
-            };
+            List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+            DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: true);
+            DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: false, coherentParent: "depA");
+            DependencyDetail depC = AddDependency(existingDetails, "depC", "v3", "repoC", "commit1", pinned: false, coherentParent: "depA");
+            DependencyDetail depD = AddDependency(existingDetails, "depD", "v3", "REPOC", "commit1", pinned: false, coherentParent: "DEPA");
 
-            DependencyDetail depB = new DependencyDetail
-            {
-                Name = "depB",
-                Version = "v3",
-                Commit = "commit1",
-                Pinned = false,
-                RepoUri = "repoB",
-                Type = DependencyType.Product,
-                CoherentParentDependencyName = "depA"
-            };
-
-            DependencyDetail depC = new DependencyDetail
-            {
-                Name = "depC",
-                Version = "v3",
-                Commit = "commit1",
-                Pinned = false,
-                RepoUri = "repoC",
-                Type = DependencyType.Product,
-                CoherentParentDependencyName = "depA"
-            };
-
-            DependencyDetail depD = new DependencyDetail
-            {
-                Name = "depD",
-                Version = "v3",
-                Commit = "commit1",
-                Pinned = false,
-                RepoUri = "REPOC",
-                Type = DependencyType.Product,
-                CoherentParentDependencyName = "DEPA"
-            };
-
-            List<DependencyDetail> existingDetails = new List<DependencyDetail>
-            { depA, depB, depC, depD };
-
-            // Attempt to update all 3, only A should move.
             List<AssetData> assets = new List<AssetData>()
             {
-                new AssetData(false)
-                {
-                    Name = "depA",
-                    Version = "v2"
-                },
-                new AssetData(false)
-                {
-                    Name = "depB",
-                    Version = "v5"
-                },
-                new AssetData(false)
-                {
-                    Name = "depC",
-                    Version = "v7"
-                },
-                new AssetData(false)
-                {
-                    Name = "depD",
-                    Version = "v11"
-                }
+                new AssetData(false) { Name = "depA", Version = "v2"},
+                new AssetData(false) { Name = "depB", Version = "v5"},
+                new AssetData(false) { Name = "depC", Version = "v7"},
+                new AssetData(false) { Name = "depD", Version = "v11"}
             };
 
             List<DependencyUpdate> updates =
@@ -352,10 +172,10 @@ namespace Microsoft.DotNet.Darc.Tests
 
         /// <summary>
         ///     Test a simple coherency update
-        ///     B tied to A.
+        ///     B and C are tied to A, both should update
         /// </summary>
         [Fact]
-        public async void CoherencyUpdateTests6()
+        public async Task CoherencyUpdateTests6()
         {
             // Initialize
             var barClientMock = new Mock<IBarClient>();
@@ -369,79 +189,40 @@ namespace Microsoft.DotNet.Darc.Tests
             remoteFactoryMock.Setup(m => m.GetRemote(It.IsAny<string>(), It.IsAny<ILogger>())).Returns(dependencyGraphRemoteMock.Object);
             remoteFactoryMock.Setup(m => m.GetBarOnlyRemote(It.IsAny<ILogger>())).Returns(remote);
 
-            // Pin head.
-            DependencyDetail depA = new DependencyDetail
-            {
-                Name = "depA",
-                Version = "v1",
-                Commit = "commit1",
-                Pinned = false,
-                RepoUri = "repoA",
-                Type = DependencyType.Product
-            };
+            List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+            DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
+            DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: false, coherentParent: "depA");
+            DependencyDetail depC = AddDependency(existingDetails, "depC", "v0", "repoC", "commit3", pinned: false, coherentParent: "depA");
 
-            DependencyDetail depB = new DependencyDetail
-            {
-                Name = "depB",
-                Version = "v3",
-                Commit = "commit1",
-                Pinned = false,
-                RepoUri = "repoB",
-                Type = DependencyType.Product,
-                CoherentParentDependencyName = "depA"
-            };
-
-            List<DependencyDetail> existingDetails = new List<DependencyDetail>
-            { depA, depB };
-            
             // Attempt to update all 3, only A should move.
             List<AssetData> assets = new List<AssetData>()
             {
-                new AssetData(false)
-                {
-                    Name = "depA",
-                    Version = "v2"
-                },
-                new AssetData(false)
-                {
-                    Name = "depB",
-                    Version = "v5"
-                }
+                new AssetData(false) { Name = "depA", Version = "v2"},
+                new AssetData(false) { Name = "depB", Version = "v5"},
+                new AssetData(false) { Name = "depC", Version = "v10324"}
             };
 
-            // Builds
-            var repoABuildAssets = new List<Asset>
+            BuildProducesAssets(barClientMock, "repoA", "commit2", new List<(string name, string version)>
             {
-                new Asset(1, 1, true, "depA", "v2", null)
-            };
-            var repoABuild = new Build(1, DateTimeOffset.Now, "commit2", null, repoABuildAssets.ToImmutableList(), null);
-            barClientMock.Setup(m => m.GetBuildsAsync("repoA", "commit2")).ReturnsAsync(new List<Build> { repoABuild });
+                ("depA", "v2")
+            });
 
-            // This should return dependencies from repoB, but not a depB directly
-            // which should be looked up in the assets.
-            DependencyDetail depC = new DependencyDetail
-            {
-                Name = "depC",
-                Version = "v10",
-                Commit = "commit5",
-                Pinned = false,
-                RepoUri = "repoB",
-                Type = DependencyType.Product
-            };
-            dependencyGraphRemoteMock.Setup(m => m.GetDependenciesAsync("repoA", "commit2", null)).ReturnsAsync(new List<DependencyDetail> { depC });
+            List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+            AddDependency(repoADeps, "depY", "v42", "repoB", "commit5", pinned: false);
+            AddDependency(repoADeps, "depZ", "v43", "repoC", "commit6", pinned: false);
+            RepoHasDependencies(dependencyGraphRemoteMock, "repoA", "commit2", repoADeps);
 
-            var repoBBuildAssets = new List<Asset>
+            BuildProducesAssets(barClientMock, "repoB", "commit5", new List<(string name, string version)>
             {
-                new Asset(2, 2, true, "depC", "v10", null),
-                // This is the asset that should be pulled forward
-                new Asset(2, 2, true, "depB", "v101", null)
-            };
-            var repoBBuild = new Build(2, DateTimeOffset.Now, "commit64", null, repoBBuildAssets.ToImmutableList(), null)
+                ("depB", "v10"),
+                ("depY", "v42"),
+            });
+
+            BuildProducesAssets(barClientMock, "repoC", "commit6", new List<(string name, string version)>
             {
-                AzureDevOpsRepository = "repoB",
-                GitHubRepository = "repoB"
-            };
-            barClientMock.Setup(m => m.GetBuildsAsync("repoB", "commit5")).ReturnsAsync(new List<Build> { repoBBuild });
+                ("depC", "v1000"),
+                ("depZ", "v43"),
+            });
 
             List<DependencyUpdate> nonCoherencyUpdates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
@@ -463,18 +244,25 @@ namespace Microsoft.DotNet.Darc.Tests
             u =>
             {
                 Assert.Equal(depB, u.From);
-                Assert.Equal("v101", u.To.Version);
-                Assert.Equal("commit64", u.To.Commit);
+                Assert.Equal("v10", u.To.Version);
+                Assert.Equal("commit5", u.To.Commit);
                 Assert.Equal("repoB", u.To.RepoUri);
+            },
+            u =>
+            {
+                Assert.Equal(depC, u.From);
+                Assert.Equal("v1000", u.To.Version);
+                Assert.Equal("commit6", u.To.Commit);
+                Assert.Equal("repoC", u.To.RepoUri);
             });
         }
 
         /// <summary>
         ///     Test a simple coherency update
-        ///     B tied to A, but B is pinned.
+        ///     B tied to A, but B is pinned. Nothing moves.
         /// </summary>
         [Fact]
-        public async void CoherencyUpdateTests7()
+        public async Task CoherencyUpdateTests7()
         {
             // Initialize
             var barClientMock = new Mock<IBarClient>();
@@ -488,79 +276,30 @@ namespace Microsoft.DotNet.Darc.Tests
             remoteFactoryMock.Setup(m => m.GetRemote(It.IsAny<string>(), It.IsAny<ILogger>())).Returns(dependencyGraphRemoteMock.Object);
             remoteFactoryMock.Setup(m => m.GetBarOnlyRemote(It.IsAny<ILogger>())).Returns(remote);
 
-            // Pin head.
-            DependencyDetail depA = new DependencyDetail
-            {
-                Name = "depA",
-                Version = "v1",
-                Commit = "commit1",
-                Pinned = false,
-                RepoUri = "repoA",
-                Type = DependencyType.Product
-            };
+            List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+            DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
+            DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: true, coherentParent: "depA");
 
-            DependencyDetail depB = new DependencyDetail
-            {
-                Name = "depB",
-                Version = "v3",
-                Commit = "commit1",
-                Pinned = true,
-                RepoUri = "repoB",
-                Type = DependencyType.Product,
-                CoherentParentDependencyName = "depA"
-            };
-
-            List<DependencyDetail> existingDetails = new List<DependencyDetail>
-            { depA, depB };
-
-            // Attempt to update all 3, only A should move.
             List<AssetData> assets = new List<AssetData>()
             {
-                new AssetData(false)
-                {
-                    Name = "depA",
-                    Version = "v2"
-                },
-                new AssetData(false)
-                {
-                    Name = "depB",
-                    Version = "v5"
-                }
+                new AssetData(false) { Name = "depA", Version = "v2"},
+                new AssetData(false) { Name = "depB", Version = "v5"}
             };
 
-            // Builds
-            var repoABuildAssets = new List<Asset>
+            BuildProducesAssets(barClientMock, "repoA", "commit2", new List<(string name, string version)>
             {
-                new Asset(1, 1, true, "depA", "v2", null)
-            };
-            var repoABuild = new Build(1, DateTimeOffset.Now, "commit2", null, repoABuildAssets.ToImmutableList(), null);
-            barClientMock.Setup(m => m.GetBuildsAsync("repoA", "commit2")).ReturnsAsync(new List<Build> { repoABuild });
+                ("depA", "v2")
+            });
 
-            // This should return dependencies from repoB, but not a depB directly
-            // which should be looked up in the assets.
-            DependencyDetail depC = new DependencyDetail
-            {
-                Name = "depC",
-                Version = "v10",
-                Commit = "commit5",
-                Pinned = false,
-                RepoUri = "repoB",
-                Type = DependencyType.Product
-            };
-            dependencyGraphRemoteMock.Setup(m => m.GetDependenciesAsync("repoA", "commit2", null)).ReturnsAsync(new List<DependencyDetail> { depC });
+            List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+            AddDependency(repoADeps, "depC", "v10", "repoB", "commit5", pinned: false);
+            RepoHasDependencies(dependencyGraphRemoteMock, "repoA", "commit2", repoADeps);
 
-            var repoBBuildAssets = new List<Asset>
+            BuildProducesAssets(barClientMock, "repoB", "commit5", new List<(string name, string version)>
             {
-                new Asset(2, 2, true, "depC", "v10", null),
-                // This is the asset that should be pulled forward
-                new Asset(2, 2, true, "depB", "v101", null)
-            };
-            var repoBBuild = new Build(2, DateTimeOffset.Now, "commit64", null, repoBBuildAssets.ToImmutableList(), null)
-            {
-                AzureDevOpsRepository = "repoB",
-                GitHubRepository = "repoB"
-            };
-            barClientMock.Setup(m => m.GetBuildsAsync("repoB", "commit5")).ReturnsAsync(new List<Build> { repoBBuild });
+                ("depC", "v10"),
+                ("depB", "v101"),
+            });
 
             List<DependencyUpdate> nonCoherencyUpdates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
@@ -587,7 +326,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     Should throw.
         /// </summary>
         [Fact]
-        public async void CoherencyUpdateTests8()
+        public async Task CoherencyUpdateTests8()
         {
             // Initialize
             var barClientMock = new Mock<IBarClient>();
@@ -601,77 +340,29 @@ namespace Microsoft.DotNet.Darc.Tests
             remoteFactoryMock.Setup(m => m.GetRemote(It.IsAny<string>(), It.IsAny<ILogger>())).Returns(dependencyGraphRemoteMock.Object);
             remoteFactoryMock.Setup(m => m.GetBarOnlyRemote(It.IsAny<ILogger>())).Returns(remote);
 
-            // Pin head.
-            DependencyDetail depA = new DependencyDetail
-            {
-                Name = "depA",
-                Version = "v1",
-                Commit = "commit1",
-                Pinned = false,
-                RepoUri = "repoA",
-                Type = DependencyType.Product
-            };
+            List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+            DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
+            DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-            DependencyDetail depB = new DependencyDetail
-            {
-                Name = "depB",
-                Version = "v3",
-                Commit = "commit1",
-                Pinned = true,
-                RepoUri = "repoB",
-                Type = DependencyType.Product,
-                CoherentParentDependencyName = "depA"
-            };
-
-            List<DependencyDetail> existingDetails = new List<DependencyDetail>
-            { depA, depB };
-
-            // Attempt to update all 3, only A should move.
             List<AssetData> assets = new List<AssetData>()
             {
-                new AssetData(false)
-                {
-                    Name = "depA",
-                    Version = "v2"
-                },
-                new AssetData(false)
-                {
-                    Name = "depB",
-                    Version = "v5"
-                }
+                new AssetData(false) { Name = "depA", Version = "v2"},
+                new AssetData(false) { Name = "depB", Version = "v5"}
             };
 
-            // Builds
-            var repoABuildAssets = new List<Asset>
+            BuildProducesAssets(barClientMock, "repoA", "commit2", new List<(string name, string version)>
             {
-                new Asset(1, 1, true, "depA", "v2", null)
-            };
-            var repoABuild = new Build(1, DateTimeOffset.Now, "commit2", null, repoABuildAssets.ToImmutableList(), null);
-            barClientMock.Setup(m => m.GetBuildsAsync("repoA", "commit2")).ReturnsAsync(new List<Build> { repoABuild });
+                ("depA", "v2")
+            });
 
-            // This should return dependencies from repoB, but not a depB directly
-            // which should be looked up in the assets.
-            DependencyDetail depC = new DependencyDetail
-            {
-                Name = "depC",
-                Version = "v10",
-                Commit = "commit5",
-                Pinned = false,
-                RepoUri = "repoB",
-                Type = DependencyType.Product
-            };
-            dependencyGraphRemoteMock.Setup(m => m.GetDependenciesAsync("repoA", "commit2", null)).ReturnsAsync(new List<DependencyDetail> { depC });
+            List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+            AddDependency(repoADeps, "depC", "v10", "repoB", "commit5", pinned: false);
+            RepoHasDependencies(dependencyGraphRemoteMock, "repoA", "commit2", repoADeps);
 
-            var repoBBuildAssets = new List<Asset>
+            BuildProducesAssets(barClientMock, "repoB", "commit5", new List<(string name, string version)>
             {
-                new Asset(2, 2, true, "depC", "v10", null)
-            };
-            var repoBBuild = new Build(2, DateTimeOffset.Now, "commit64", null, repoBBuildAssets.ToImmutableList(), null)
-            {
-                AzureDevOpsRepository = "repoB",
-                GitHubRepository = "repoB"
-            };
-            barClientMock.Setup(m => m.GetBuildsAsync("repoB", "commit5")).ReturnsAsync(new List<Build> { repoBBuild });
+                ("depC", "v10")
+            });
 
             List<DependencyUpdate> nonCoherencyUpdates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
@@ -688,6 +379,122 @@ namespace Microsoft.DotNet.Darc.Tests
 
             await Assert.ThrowsAsync<DarcException>(() => remote.GetRequiredCoherencyUpdatesAsync(
                 existingDetails, remoteFactoryMock.Object));
+        }
+
+        /// <summary>
+        ///     Coherent dependency test with a 3 repo chain
+        /// </summary>
+        /// <returns></returns>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CoherencyUpdateTests9(bool pinHead)
+        {
+            // Initialize
+            Mock<IBarClient> barClientMock = new Mock<IBarClient>();
+            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+
+            // Mock the remote used by build dependency graph to gather dependency details.
+            Mock<IRemote> dependencyGraphRemoteMock = new Mock<IRemote>();
+
+            // Always return the main remote.
+            var remoteFactoryMock = new Mock<IRemoteFactory>();
+            remoteFactoryMock.Setup(m => m.GetRemote(It.IsAny<string>(), It.IsAny<ILogger>())).Returns(dependencyGraphRemoteMock.Object);
+            remoteFactoryMock.Setup(m => m.GetBarOnlyRemote(It.IsAny<ILogger>())).Returns(remote);
+
+            List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+            DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: pinHead);
+            DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit2", pinned: false, coherentParent: "depA");
+            DependencyDetail depC = AddDependency(existingDetails, "depC", "v0", "repoC", "commit3", pinned: false, coherentParent: "depB");
+
+            BuildProducesAssets(barClientMock, "repoA", "commit1", new List<(string name, string version)>
+            {
+                ("depA", "v1")
+            });
+
+            List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+            AddDependency(repoADeps, "depY", "v42", "repoB", "commit5", pinned: false);
+            RepoHasDependencies(dependencyGraphRemoteMock, "repoA", "commit1", repoADeps);
+
+            BuildProducesAssets(barClientMock, "repoB", "commit5", new List<(string name, string version)>
+            {
+                ("depB", "v10"),
+                ("depY", "v42"),
+            });
+
+            List<DependencyDetail> repoBDeps = new List<DependencyDetail>();
+            AddDependency(repoBDeps, "depZ", "v64", "repoC", "commit7", pinned: false);
+            RepoHasDependencies(dependencyGraphRemoteMock, "repoB", "commit5", repoBDeps);
+
+            BuildProducesAssets(barClientMock, "repoC", "commit7", new List<(string name, string version)>
+            {
+                ("depC", "v1000"),
+                ("depZ", "v64"),
+            });
+
+            // This should bring B and C in line.
+            List<DependencyUpdate> coherencyUpdates =
+                await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
+
+            Assert.Collection(coherencyUpdates,
+            u =>
+            {
+                Assert.Equal(depC, u.From);
+                Assert.Equal("v1000", u.To.Version);
+                Assert.Equal("commit7", u.To.Commit);
+                Assert.Equal("repoC", u.To.RepoUri);
+            },
+            u =>
+            {
+                Assert.Equal(depB, u.From);
+                Assert.Equal("v10", u.To.Version);
+                Assert.Equal("commit5", u.To.Commit);
+                Assert.Equal("repoB", u.To.RepoUri);
+            });
+        }
+
+        private DependencyDetail AddDependency(List<DependencyDetail> details, string name,
+            string version, string repo, string commit, bool pinned = false, string coherentParent = null)
+        {
+            DependencyDetail dep = new DependencyDetail
+            {
+                Name = name,
+                Version = version,
+                RepoUri = repo,
+                Commit = commit,
+                Pinned = pinned,
+                Type = DependencyType.Product,
+                CoherentParentDependencyName = coherentParent
+            };
+            details.Add(dep);
+            return dep;
+        }
+
+        private void RepoHasDependencies(Mock<IRemote> dependencyGraphRemoteMock, 
+            string repo, string commit, List<DependencyDetail> dependencies)
+        {
+            dependencyGraphRemoteMock.Setup(m => m.GetDependenciesAsync(repo, commit, null)).ReturnsAsync(dependencies);
+        }
+
+        private void BuildProducesAssets(Mock<IBarClient> barClientMock, string repo,
+            string commit, List<(string name, string version)> assets)
+        {
+            int buildId = GetRandomId();
+            var buildAssets = assets.Select<(string, string), Asset>(a =>
+            new Asset(GetRandomId(), buildId, true, a.Item1, a.Item2, null));
+
+            var build = new Build(buildId, DateTimeOffset.Now, commit, null, buildAssets.ToImmutableList(), null)
+            {
+                AzureDevOpsRepository = repo,
+                GitHubRepository = repo
+            };
+            barClientMock.Setup(m => m.GetBuildsAsync(repo, commit)).ReturnsAsync(new List<Build> { build });
+        }
+
+        private Random _randomIdGenerator = new Random();
+        private int GetRandomId()
+        {
+            return _randomIdGenerator.Next();
         }
 
         /// <summary>
