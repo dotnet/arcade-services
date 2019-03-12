@@ -1,5 +1,5 @@
 <ng-template #failure>
-  No builds avaliable for {{repository}} from {{(channel$ | async).name}}.
+  No builds avaliable for {{repository}} from {{(channel$ | async)?.name}}.
 </ng-template>
 <ng-template #loading>
   <progress-ring width="200" height="200"></progress-ring>

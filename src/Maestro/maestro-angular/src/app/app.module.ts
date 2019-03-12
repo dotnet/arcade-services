@@ -30,7 +30,6 @@ import { StatefulModule } from "src/stateful";
 
 import { AppRoutingModule } from "./app-routing.module";
 import { AppComponent } from "./app.component";
-import { CircleDirective } from "./directives/attribute/circle.directive";
 import { BuildComponent } from "./page/build/build.component";
 import { MainComponent } from "./page/main/main.component";
 import { SideBarChannelComponent } from "./widget/side-bar-channel/side-bar-channel.component";
@@ -45,7 +44,6 @@ import { UriEncodePipe } from './uri-encode.pipe';
   declarations: [
     AppComponent,
     MainComponent,
-    CircleDirective,
     SideBarComponent,
     SideBarChannelComponent,
     BuildComponent,

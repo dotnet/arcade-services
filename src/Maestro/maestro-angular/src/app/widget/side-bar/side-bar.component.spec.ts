@@ -1,6 +1,9 @@
 import { async, ComponentFixture, TestBed } from "@angular/core/testing";
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { of } from 'rxjs';
 
 import { SideBarComponent } from "./side-bar.component";
+import { ChannelService } from 'src/app/services/channel.service';
 
 describe("SideBarComponent", () => {
   let component: SideBarComponent;
@@ -8,7 +11,22 @@ describe("SideBarComponent", () => {
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ SideBarComponent ],
+      declarations: [
+        SideBarComponent,
+      ],
+      providers: [
+        {
+          provide: ChannelService,
+          useValue: {
+            getChannels() {
+              return of();
+            },
+          },
+        },
+      ],
+      schemas: [
+        NO_ERRORS_SCHEMA,
+      ],
     })
     .compileComponents();
   }));
