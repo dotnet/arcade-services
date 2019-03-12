@@ -745,6 +745,16 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             {
                 await CommitUpdatesAsync(requiredUpdates, description, darc, targetRepository, headBranch);
 
+                string descriptionContent = description.ToString();
+
+                // At least in AzDO the description character limit for a pull request is 4000 so even though
+                // we just include the contents of the last commit we just play it safe and make the description comply
+                // in case it doesn't
+                if (descriptionContent.Length > 3999)
+                {
+                    descriptionContent = $"{descriptionContent.Substring(0, 3996)}...";
+                }
+
                 pullRequest.Description = description.ToString();
                 pullRequest.Title = await ComputePullRequestTitleAsync(pr, targetBranch);
                 await darc.UpdatePullRequestAsync(pr.Url, pullRequest);
