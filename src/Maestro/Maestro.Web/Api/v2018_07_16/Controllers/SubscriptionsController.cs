@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data;
@@ -133,6 +134,23 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 });
 
             return Accepted(new Subscription(subscription));
+        }
+
+        /// <summary>
+        ///   Trigger daily update
+        /// </summary>
+        [HttpPost("triggerDaily")]
+        [SwaggerApiResponse(HttpStatusCode.Accepted, Description = "Trigger all subscriptions normally updated daily.")]
+        [ValidateModelState]
+        public virtual IActionResult TriggerDailyUpdate()
+        {
+            _queue.Post(
+                async () =>
+                {
+                    await _dependencyUpdater.CheckDailySubscriptionsAsync(CancellationToken.None);
+                });
+
+            return Accepted();
         }
 
         /// <summary>
