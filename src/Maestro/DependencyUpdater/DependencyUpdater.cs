@@ -128,7 +128,7 @@ namespace DependencyUpdater
             }
             catch (TaskCanceledException tcex) when (tcex.CancellationToken == cancellationToken)
             {
-                // ignore
+                return TimeSpan.MaxValue;
             }
             catch (Exception ex)
             {

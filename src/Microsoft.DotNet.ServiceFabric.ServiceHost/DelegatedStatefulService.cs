@@ -103,6 +103,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
                     var shouldWaitFor = await impl.RunAsync(cancellationToken);
 
+                    if (shouldWaitFor.Equals(TimeSpan.MaxValue))
+                    {
+                        return;
+                    }
+
                     await Task.Delay(shouldWaitFor, cancellationToken);
                 }
             }
