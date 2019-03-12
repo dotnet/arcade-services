@@ -27,17 +27,19 @@ namespace Microsoft.DotNet.DarcLib
     {
         private const string DefaultApiVersion = "5.0-preview.1";
 
+        private static readonly string AzureDevOpsHostPattern = @"dev\.azure\.com\";
+
         private static readonly string CommentMarker =
             "\n\n[//]: # (This identifies this comment as a Maestro++ comment)\n";
 
         private static readonly Regex RepositoryUriPattern = new Regex(
-            @"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\.]+)");
+            $"^https://{AzureDevOpsHostPattern}/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\\.]+)");
 
         private static readonly Regex LegacyRepositoryUriPattern = new Regex(
             @"^https://(?<account>[a-zA-Z0-9]+)\.visualstudio\.com/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\.]+)");
 
         private static readonly Regex PullRequestApiUriPattern = new Regex(
-            @"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_apis/git/repositories/(?<repo>[a-zA-Z0-9-\.]+)/pullRequests/(?<id>\d+)");
+            $"^https://{AzureDevOpsHostPattern}/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_apis/git/repositories/(?<repo>[a-zA-Z0-9-\\.]+)/pullRequests/(?<id>\\d+)");
 
         // Azure DevOps uses this id when creating a new branch as well as when deleting a branch
         private static readonly string BaseObjectId = "0000000000000000000000000000000000000000";
@@ -768,16 +770,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </remarks>
         public static (string accountName, string projectName, string repoName) ParseRepoUri(string repoUri)
         {
-            // TODO: remove the if block below once https://github.com/dotnet/arcade/issues/2121 is closed
-            // If repoUri includes the user in the account we remove it otherwise Regex matching would fail for URIs like
-            // https://dnceng@dev.azure.com/dnceng/internal/_git/repo
-            if (Uri.TryCreate(repoUri, UriKind.Absolute, out Uri parsedUri))
-            {
-                if (!string.IsNullOrEmpty(parsedUri.UserInfo))
-                {
-                    repoUri = repoUri.Replace($"{parsedUri.UserInfo}@", string.Empty);
-                }
-            }
+            repoUri = NormalizeUrl(repoUri);
 
             Match m = RepositoryUriPattern.Match(repoUri);
             if (!m.Success)
@@ -1000,6 +993,36 @@ namespace Microsoft.DotNet.DarcLib
                 baseAddressSubpath: "vsrm.");
 
             return content.ToObject<AzureDevOpsReleaseDefinition>();
+        }
+
+        /// <summary>
+        // If repoUri includes the user in the account we remove it from URIs like
+        // https://dnceng@dev.azure.com/dnceng/internal/_git/repo
+        // If the URL host is of the form "dnceng.visualstudio.com" like
+        // https://dnceng.visualstudio.com/internal/_git/repo we replace it to "dev.azure.com/dnceng"
+        // for consistency
+        /// </summary>
+        /// <param name="url">The original url</param>
+        /// <returns>Transformed url</returns>
+        public static string NormalizeUrl(string repoUri)
+        {
+            if (Uri.TryCreate(repoUri, UriKind.Absolute, out Uri parsedUri))
+            {
+                if (!string.IsNullOrEmpty(parsedUri.UserInfo))
+                {
+                    repoUri = repoUri.Replace($"{parsedUri.UserInfo}@", string.Empty);
+                }
+
+                Match m = LegacyRepositoryUriPattern.Match(repoUri);
+
+                if (m.Success)
+                {
+                    string replacementUri = $"{Regex.Unescape(AzureDevOpsHostPattern)}/{m.Groups["account"].Value}";
+                    repoUri = repoUri.Replace(parsedUri.Host, replacementUri);
+                }
+            }
+
+            return repoUri;
         }
     }
 }

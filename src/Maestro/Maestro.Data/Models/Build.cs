@@ -8,11 +8,15 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using EntityFrameworkCore.Triggers;
+using Microsoft.DotNet.DarcLib;
 
 namespace Maestro.Data.Models
 {
     public class Build
     {
+        private string _azureDevOpsRepository;
+        private string _gitHubRepository;
+
         static Build()
         {
             Triggers<Build>.Inserted += entry =>
@@ -49,11 +53,33 @@ namespace Maestro.Data.Models
 
         public string AzureDevOpsBuildNumber { get; set; }
 
-        public string AzureDevOpsRepository { get; set; }
+        public string AzureDevOpsRepository
+        {
+            get
+            {
+                return AzureDevOpsClient.NormalizeUrl(_azureDevOpsRepository);
+            }
+
+            set
+            {
+                _azureDevOpsRepository = AzureDevOpsClient.NormalizeUrl(value);
+            }
+        }
 
         public string AzureDevOpsBranch { get; set; }
       
-        public string GitHubRepository { get; set; }
+        public string GitHubRepository
+        {
+            get
+            {
+                return AzureDevOpsClient.NormalizeUrl(_gitHubRepository);
+            }
+
+            set
+            {
+                _gitHubRepository = AzureDevOpsClient.NormalizeUrl(value);
+            }
+        }
 
         public string GitHubBranch { get; set; }
 
