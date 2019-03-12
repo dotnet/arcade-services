@@ -39,6 +39,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Rewrite.Internal;
 using IHostingEnvironment = Microsoft.AspNetCore.Hosting.IHostingEnvironment;
 
 namespace Maestro.Web
@@ -242,7 +243,27 @@ namespace Maestro.Web
                 });
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+        // The whole api, only allowing GET requests, with all urls prefixed with _
+        private void ConfigureCookieAuthedApi(IApplicationBuilder app)
+        {
+            app.UseExceptionHandler(ConfigureApiExceptions);
+            app.UseAuthentication();
+
+            app.UseRewriter(new RewriteOptions
+            {
+                Rules =
+                {
+                    new RewriteRule("^_/(.*)", "$1", true),
+                },
+            });
+            app.UseMvc();
+        }
+
+        private static bool IsGet(HttpContext context)
+        {
+            return string.Equals(context.Request.Method, "get", StringComparison.OrdinalIgnoreCase);
+        }
+
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
             if (env.IsDevelopment())
@@ -256,12 +277,28 @@ namespace Maestro.Web
             }
 
             app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/api"), ConfigureApi);
+            app.MapWhen(
+                ctx => ctx.Request.Path.StartsWithSegments("/_/api") && IsGet(ctx),
+                ConfigureCookieAuthedApi);
 
             app.UseRewriter(new RewriteOptions().AddRedirect("^swagger(/ui)?/?$", "/swagger/ui/index.html"));
             app.UseStatusCodePages();
             app.UseCookiePolicy();
             app.UseStaticFiles();
             app.UseAuthentication();
+            app.UseMvc();
+            app.MapWhen(IsGet, AngularIndexHtmlRedirect);
+        }
+
+        private static void AngularIndexHtmlRedirect(IApplicationBuilder app)
+        {
+            app.UseRewriter(new RewriteOptions
+            {
+                Rules =
+                {
+                    new RewriteRule(".*", "Index", true),
+                },
+            });
             app.UseMvc();
         }
     }

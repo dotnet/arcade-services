@@ -1,0 +1,20 @@
+/* You can add global styles to this file, and also import other style files */
+
+@import "~bootstrap/scss/bootstrap";
+@import "~bootstrap/scss/bootstrap-reboot";
+
+html, body {height: 100%;}
+
+.custom-nav {
+  display: block;
+  background: $gray-100;
+  z-index: 100;
+  line-height: 35px;
+
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  border-bottom: solid 1px $gray-300;
+}
