@@ -21,20 +21,24 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Text;
+using System.Threading.Tasks;
 using IHostingEnvironment = Microsoft.AspNetCore.Hosting.IHostingEnvironment;
 
 namespace Maestro.Web
@@ -43,14 +47,37 @@ namespace Maestro.Web
     {
         static Startup()
         {
+            Triggers<BuildChannel>.Inserting += entry =>
+            {
+                BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
+                BuildChannel entity = entry.Entity;
+                if (ChannelHasAssociatedReleasePipeline(entity.ChannelId, context))
+                {
+                    entry.Cancel = true;
+                    var queue = context.GetService<BackgroundQueue>();
+                    var releasePipelineRunner = context.GetService<IReleasePipelineRunner>();
+                    queue.Post(() => releasePipelineRunner.StartAssociatedReleasePipelinesAsync(entity.BuildId, entity.ChannelId));
+                }
+            };
+
             Triggers<BuildChannel>.Inserted += entry =>
             {
-                BuildChannel entity = entry.Entity;
                 DbContext context = entry.Context;
+                BuildChannel entity = entry.Entity;
+
                 var queue = context.GetService<BackgroundQueue>();
                 var dependencyUpdater = context.GetService<IDependencyUpdater>();
                 queue.Post(() => dependencyUpdater.StartUpdateDependenciesAsync(entity.BuildId, entity.ChannelId));
             };
+        }
+
+        private static bool ChannelHasAssociatedReleasePipeline(int channelId, BuildAssetRegistryContext context)
+        {
+            return context.Channels
+                .Where(ch => ch.Id == channelId)
+                .Include(ch => ch.ChannelReleasePipelines)
+                .ThenInclude(crp => crp.ReleasePipeline)
+                .FirstOrDefault(c => c.ChannelReleasePipelines.Count > 0) != null;
         }
 
         public Startup(IHostingEnvironment env)
@@ -103,7 +130,7 @@ namespace Maestro.Web
                 .AddRazorPagesOptions(
                     options =>
                     {
-                        options.Conventions.AuthorizeFolder("/");
+                        options.Conventions.AuthorizeFolder("/", MsftAuthorizationPolicyName);
                         options.Conventions.AllowAnonymousToPage("/Index");
                         options.Conventions.AllowAnonymousToPage("/SwaggerUi");
                     })
@@ -125,6 +152,7 @@ namespace Maestro.Web
             services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BackgroundQueue>());
 
             services.AddServiceFabricService<IDependencyUpdater>("fabric:/MaestroApplication/DependencyUpdater");
+            services.AddServiceFabricService<IReleasePipelineRunner>("fabric:/MaestroApplication/ReleasePipelineRunner");
 
             services.AddGitHubTokenProvider();
             services.Configure<GitHubTokenProviderOptions>(
@@ -141,7 +169,7 @@ namespace Maestro.Web
             services.Configure<AzureDevOpsTokenProviderOptions>(
                 (options, provider) =>
                 {
-                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                    var config = provider.GetRequiredService<IConfiguration>();
                     var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
                     foreach (IConfigurationSection token in tokenMap)
                     {

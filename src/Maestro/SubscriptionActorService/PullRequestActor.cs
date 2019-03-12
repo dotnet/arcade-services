@@ -724,6 +724,14 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             PullRequest pullRequest = await darc.GetPullRequestAsync(pr.Url);
             string headBranch = pullRequest.HeadBranch;
 
+            // Update the list of contained subscriptions with the new subscription update.
+            // Replace all existing updates for the subscription id with the new update.
+            // This avoids a potential issue where we may update the last applied build id
+            // on the subscription to an older build id.
+            foreach ((UpdateAssetsParameters update, List<DependencyDetail> deps) update in requiredUpdates)
+            {
+                pr.ContainedSubscriptions.RemoveAll(s => s.SubscriptionId == update.update.SubscriptionId);
+            }
             pr.ContainedSubscriptions.AddRange(
                 requiredUpdates.Select(
                     u => new SubscriptionPullRequestUpdate
@@ -761,7 +769,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             foreach (UpdateAssetsParameters update in updates)
             {
                 IEnumerable<AssetData> assetData = update.Assets.Select(
-                    a => new AssetData
+                    a => new AssetData(false)
                     {
                         Name = a.Name,
                         Version = a.Version

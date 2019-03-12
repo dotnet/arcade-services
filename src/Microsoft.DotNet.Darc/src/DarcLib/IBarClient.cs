@@ -63,6 +63,14 @@ namespace Microsoft.DotNet.DarcLib
         Task<Subscription> GetSubscriptionAsync(Guid subscriptionId);
 
         /// <summary>
+        ///     Get a repository merge policy (for batchable subscriptions)
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="branch">Repository branch</param>
+        /// <returns>List of merge policies</returns>
+        Task<IEnumerable<MergePolicy>> GetRepositoryMergePolicies(string repoUri, string branch);
+
+        /// <summary>
         /// Trigger a subscription by ID
         /// </summary>
         /// <param name="subscriptionId">ID of subscription to trigger</param>

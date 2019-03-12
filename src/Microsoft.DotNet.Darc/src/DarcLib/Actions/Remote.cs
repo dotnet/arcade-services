@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 
@@ -125,6 +126,18 @@ namespace Microsoft.DotNet.DarcLib
         {
             CheckForValidBarClient();
             return _barClient.GetSubscriptionAsync(GetSubscriptionGuid(subscriptionId));
+        }
+
+        /// <summary>
+        ///     Get repository merge policies
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="branch">Repository branch</param>
+        /// <returns>List of merge policies</returns>
+        public Task<IEnumerable<MergePolicy>> GetRepositoryMergePoliciesAsync(string repoUri, string branch)
+        {
+            CheckForValidBarClient();
+            return _barClient.GetRepositoryMergePolicies(repoUri, branch);
         }
 
         /// <summary>
@@ -402,7 +415,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 return await _barClient.GetLatestBuildAsync(repoUri: repoUri, channelId: channelId);
             }
-            catch (ApiErrorException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+            catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
             {
                 return null;
             }

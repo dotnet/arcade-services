@@ -2,7 +2,7 @@
   "profiles": {
     "Microsoft.DotNet.Darc": {
       "commandName": "Project",
-      "commandLineArgs": "get-dependency-graph --repo https://github.com/dotnet/core-sdk -v 3fa1e2c5cfa5142c7b9c4f10ab1d0d74a8111f34",
+      "commandLineArgs": "add-dependency -n a -t toolset -v 123 -r lkmlsldfl",
       "workingDirectory": "G:\\Code\\jcagme\\arcade-services"
     }
   }

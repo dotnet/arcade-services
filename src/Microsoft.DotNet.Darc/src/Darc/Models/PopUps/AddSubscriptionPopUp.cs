@@ -6,8 +6,10 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.Darc.Models.PopUps
@@ -21,7 +23,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
         public string TargetRepository => _yamlData.TargetRepository;
         public string TargetBranch => _yamlData.TargetBranch;
         public string UpdateFrequency => _yamlData.UpdateFrequency;
-        public List<MergePolicy> MergePolicies => _yamlData.MergePolicies;
+        public List<MergePolicy> MergePolicies => _yamlData.GetMergePolicies();
 
         public AddSubscriptionPopUp(string path,
                                     ILogger logger,
@@ -45,8 +47,8 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 TargetRepository = GetCurrentSettingForDisplay(targetRepository, "<required>", false),
                 TargetBranch = GetCurrentSettingForDisplay(targetBranch, "<required>", false),
                 UpdateFrequency = GetCurrentSettingForDisplay(updateFrequency, $"<'{string.Join("', '", Constants.AvailableFrequencies)}'>", false),
-                MergePolicies = new List<MergePolicy>(mergePolicies)
             };
+            _yamlData.SetMergePolicies(mergePolicies);
 
             ISerializer serializer = new SerializerBuilder().Build();
             string yaml = serializer.Serialize(_yamlData);
@@ -107,7 +109,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             }
 
             // Validate the merge policies
-            if (!ValidateMergePolicies(outputYamlData.MergePolicies))
+            if (!ValidateMergePolicies(outputYamlData.GetMergePolicies()))
             {
                 return Constants.ErrorCode;
             }
@@ -179,7 +181,38 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             [YamlMember(Alias = updateFrequencyElement, ApplyNamingConventions = false)]
             public string UpdateFrequency { get; set; }
             [YamlMember(Alias = mergePolicyElement, ApplyNamingConventions = false)]
-            public List<MergePolicy> MergePolicies { get; set; }
+            public List<MergePolicyData> MergePolicies { get; set; }
+
+            public List<MergePolicy> GetMergePolicies()
+            {
+                return MergePolicies.Select(
+                        d => new MergePolicy
+                        {
+                            Name = d.Name,
+                            Properties =
+                                d.Properties.ToImmutableDictionary(p => p.Key, p => JToken.FromObject(p.Value)),
+                        })
+                    .ToList();
+            }
+
+            public void SetMergePolicies(List<MergePolicy> value)
+            {
+                MergePolicies = value.Select(
+                        d => new MergePolicyData
+                        {
+                            Name = d.Name,
+                            Properties = d.Properties.ToDictionary(p => p.Key, p => (object) p.Value)
+                        })
+                    .ToList();
+            }
+        }
+
+        class MergePolicyData
+        {
+            [YamlMember(Alias = "Name")]
+            public string Name { get; set; }
+            [YamlMember(Alias = "Properties")]
+            public Dictionary<string, object> Properties { get; set; }
         }
     }
 }

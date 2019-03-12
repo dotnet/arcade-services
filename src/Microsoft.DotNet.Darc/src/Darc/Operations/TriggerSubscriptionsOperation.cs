@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Maestro.Client;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -45,7 +46,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         Subscription subscription = await remote.GetSubscriptionAsync(_options.Id);
                         subscriptionsToTrigger.Add(subscription);
                     }
-                    catch (ApiErrorException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+                    catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
                     {
                         Console.WriteLine($"Subscription with id '{_options.Id}' was not found.");
                         return Constants.ErrorCode;
@@ -64,10 +65,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     IEnumerable<Subscription> subscriptions = (await remote.GetSubscriptionsAsync()).Where(subscription =>
                     {
-                        return (_options.SubscriptionParameterMatches(_options.TargetRepository, subscription.TargetRepository) &&
-                                _options.SubscriptionParameterMatches(_options.TargetBranch, subscription.TargetBranch) &&
-                                _options.SubscriptionParameterMatches(_options.SourceRepository, subscription.SourceRepository) &&
-                                _options.SubscriptionParameterMatches(_options.Channel, subscription.Channel.Name));
+                        return _options.SubcriptionFilter(subscription);
                     });
 
                     if (subscriptions.Count() == 0)
@@ -113,7 +111,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         Console.WriteLine($"  {GetSubscriptionDescription(subscription)}");
                     }
-                    await remote.TriggerSubscriptionAsync(subscription.Id.Value.ToString());
+                    await remote.TriggerSubscriptionAsync(subscription.Id.ToString());
                 }
                 Console.WriteLine($"done");
 

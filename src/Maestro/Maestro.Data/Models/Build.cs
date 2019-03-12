@@ -15,7 +15,7 @@ namespace Maestro.Data.Models
     {
         static Build()
         {
-            Triggers<Build>.Inserting += entry =>
+            Triggers<Build>.Inserted += entry =>
             {
                 Build build = entry.Entity;
                 var context = (BuildAssetRegistryContext) entry.Context;
@@ -29,6 +29,7 @@ namespace Maestro.Data.Models
                         Channel = dc.Channel,
                         Build = build
                     });
+                context.SaveChangesAsync();
             };
         }
 
@@ -60,10 +61,10 @@ namespace Maestro.Data.Models
 
         public List<Asset> Assets { get; set; }
 
-        [ForeignKey("DependencyBuildId")]
-        public List<Build> Dependencies { get; set; }
-
         public List<BuildChannel> BuildChannels { get; set; }
+
+        [NotMapped]
+        public List<BuildDependency> DependentBuildIds { get; set; }
     }
 
     public class BuildChannel
@@ -72,5 +73,14 @@ namespace Maestro.Data.Models
         public Build Build { get; set; }
         public int ChannelId { get; set; }
         public Channel Channel { get; set; }
+    }
+
+    public class BuildDependency
+    {
+        public int BuildId { get; set; }
+        public Build Build { get; set; }
+        public int DependentBuildId { get; set; }
+        public Build DependentBuild { get; set; }
+        public bool IsProduct { get; set; }
     }
 }

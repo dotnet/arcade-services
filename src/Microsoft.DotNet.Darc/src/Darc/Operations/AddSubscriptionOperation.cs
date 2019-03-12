@@ -10,8 +10,11 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Maestro.Client;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -42,21 +45,27 @@ namespace Microsoft.DotNet.Darc.Operations
             List<MergePolicy> mergePolicies = new List<MergePolicy>();
             if (_options.NoExtraCommitsMergePolicy)
             {
-                mergePolicies.Add(new MergePolicy("NoExtraCommits", null));
+                mergePolicies.Add(new MergePolicy {Name = "NoExtraCommits" });
             }
             if (_options.AllChecksSuccessfulMergePolicy)
             {
-                mergePolicies.Add(new MergePolicy("AllChecksSuccessful", new Dictionary<string, object>
-                {
-                    { "ignoreChecks", _options.IgnoreChecks }
-                }));
+                mergePolicies.Add(
+                    new MergePolicy
+                    {
+                        Name = "AllChecksSuccessful",
+                        Properties = ImmutableDictionary.Create<string, JToken>()
+                            .Add("ignoreChecks", JToken.FromObject(_options.IgnoreChecks))
+                    });
             }
             if (_options.RequireChecksMergePolicy.Count() > 0)
             {
-                mergePolicies.Add(new MergePolicy("RequireChecks", new Dictionary<string, object>
-                {
-                    { "checks", _options.RequireChecksMergePolicy }
-                }));
+                mergePolicies.Add(
+                    new MergePolicy
+                    {
+                        Name = "RequireChecks",
+                        Properties = ImmutableDictionary.Create<string, JToken>()
+                            .Add("checks", JToken.FromObject(_options.RequireChecksMergePolicy)), 
+                    });
             }
 
             string channel = _options.Channel;
@@ -129,7 +138,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 Console.WriteLine($"Successfully created new subscription with id '{newSubscription.Id}'.");
                 return Constants.SuccessCode;
             }
-            catch (ApiErrorException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            catch (RestApiException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.BadRequest)
             {
                 // Could have been some kind of validation error (e.g. channel doesn't exist)
                 Logger.LogError($"Failed to create subscription: {e.Response.Content}");

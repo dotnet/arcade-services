@@ -11,6 +11,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
@@ -634,6 +635,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="body">Optional body if <paramref name="method"/> is Put or Post</param>
         /// <param name="versionOverride">API version override</param>
         /// <param name="baseAddressSubpath">[baseAddressSubPath]dev.azure.com subdomain to make the request</param>
+        /// <param name="maxAttempts">Maximum number of tries to attempt the API request</param>
         /// <returns>Http response</returns>
         private async Task<JObject> ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod method,
@@ -644,21 +646,46 @@ namespace Microsoft.DotNet.DarcLib
             string body = null,
             string versionOverride = null,
             bool logFailure = true,
-            string baseAddressSubpath = null)
+            string baseAddressSubpath = null,
+            int maxAttempts = 15)
         {
+            int retryCount = maxAttempts;
+            // Add a bit of randomness to the retry delay.
+            var rng = new Random();
             using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride, baseAddressSubpath))
             {
-                HttpRequestManager requestManager = new HttpRequestManager(client,
-                                                                           method,
-                                                                           requestPath,
-                                                                           logger,
-                                                                           body,
-                                                                           versionOverride,
-                                                                           logFailure);
 
-                using (var response = await requestManager.ExecuteAsync())
+                while (true)
                 {
-                    return JObject.Parse(await response.Content.ReadAsStringAsync());
+                    try
+                    {
+                        HttpRequestManager requestManager = new HttpRequestManager(client,
+                                                                                   method,
+                                                                                   requestPath,
+                                                                                   logger,
+                                                                                   body,
+                                                                                   versionOverride,
+                                                                                   logFailure);
+                        using (var response = await requestManager.ExecuteAsync())
+                        {
+                            return JObject.Parse(await response.Content.ReadAsStringAsync());
+                        }
+                    }
+                    catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
+                    {
+                        if (retryCount <= 0)
+                        {
+                            logger.LogError($"Failed to send HttpRequest to Azure DevOps API after {maxAttempts} attempts. Path: {requestPath}. Exception: {ex.ToString()}");
+                            throw;
+                        }
+                        else
+                        {
+                            logger.LogWarning($"Failed to send HttpRequest to Azure DevOps API: Path:{requestPath}. {retryCount} attempts remaining. Exception: {ex.ToString()}");
+                        }
+                    }
+                    --retryCount;
+                    int delay = (maxAttempts - retryCount) * rng.Next(1, 7);
+                    await Task.Delay(delay * 1000);
                 }
             }
         }
@@ -741,6 +768,17 @@ namespace Microsoft.DotNet.DarcLib
         /// </remarks>
         public static (string accountName, string projectName, string repoName) ParseRepoUri(string repoUri)
         {
+            // TODO: remove the if block below once https://github.com/dotnet/arcade/issues/2121 is closed
+            // If repoUri includes the user in the account we remove it otherwise Regex matching would fail for URIs like
+            // https://dnceng@dev.azure.com/dnceng/internal/_git/repo
+            if (Uri.TryCreate(repoUri, UriKind.Absolute, out Uri parsedUri))
+            {
+                if (!string.IsNullOrEmpty(parsedUri.UserInfo))
+                {
+                    repoUri = repoUri.Replace($"{parsedUri.UserInfo}@", string.Empty);
+                }
+            }
+
             Match m = RepositoryUriPattern.Match(repoUri);
             if (!m.Success)
             {
@@ -859,7 +897,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="accountName">Azure DevOps account name</param>
         /// <param name="projectName">Project name</param>
         /// <param name="releaseDefinition">Release definition to be modified</param>
-        public async void RemoveAllArtifactSourcesAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition)
+        public async Task<AzureDevOpsReleaseDefinition> RemoveAllArtifactSourcesAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition)
         {
             releaseDefinition.Artifacts = new AzureDevOpsArtifact[0];
 
@@ -874,6 +912,8 @@ namespace Microsoft.DotNet.DarcLib
                 body,
                 versionOverride: "5.0-preview.3",
                 baseAddressSubpath: "vsrm.");
+
+            return content.ToObject<AzureDevOpsReleaseDefinition>();
         }
 
         /// <summary>
@@ -883,9 +923,9 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="accountName">Azure DevOps account name</param>
         /// <param name="projectName">Project name</param>
         /// <param name="releaseDefinition">Release definition to be updated</param>
-        public async void StartNewReleaseAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition)
+        public async Task<int> StartNewReleaseAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, int barBuildId)
         {
-            var body = $"{{ \"definitionId\": {releaseDefinition.Id} }}";
+            var body = $"{{ \"definitionId\": {releaseDefinition.Id}, \"variables\": {{ \"BARBuildId\": {{ \"value\": \"{barBuildId}\" }} }} }}";
 
             JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Post,
@@ -896,6 +936,29 @@ namespace Microsoft.DotNet.DarcLib
                 body,
                 versionOverride: "5.0-preview.3",
                 baseAddressSubpath: "vsrm.");
+
+            return content.GetValue("id").ToObject<int>();
+        }
+
+        /// <summary>
+        /// Return the description of the release with ID informed.
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account name</param>
+        /// <param name="projectName">Project name</param>
+        /// <param name="releaseId">ID of the release that should be looked up for</param>
+        /// <returns></returns>
+        public async Task<AzureDevOpsRelease> GetReleaseAsync(string accountName, string projectName, int releaseId)
+        {
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                projectName,
+                $"_apis/release/releases/{releaseId}",
+                _logger,
+                versionOverride: "5.1-preview.8",
+                baseAddressSubpath: "vsrm.");
+
+            return content.ToObject<AzureDevOpsRelease>();
         }
 
         /// <summary>

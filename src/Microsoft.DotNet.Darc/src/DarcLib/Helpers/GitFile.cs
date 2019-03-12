@@ -3,8 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.IO;
+using System.Text;
 using System.Xml;
-using System.Xml.Linq;
 using Newtonsoft.Json.Linq;
 using Formatting = Newtonsoft.Json.Formatting;
 
@@ -50,8 +51,27 @@ namespace Microsoft.DotNet.DarcLib
 
         private static string GetIndentedXmlBody(XmlDocument xmlDocument)
         {
-            XDocument doc = XDocument.Parse(xmlDocument.OuterXml);
-            return $"{doc.Declaration}\n{doc}";
+            MemoryStream mStream = new MemoryStream();
+            XmlTextWriter writer = new XmlTextWriter(mStream, Encoding.Unicode);
+            XmlDocument document = new XmlDocument();
+
+            try
+            {
+                document.LoadXml(xmlDocument.OuterXml);
+                writer.Formatting = System.Xml.Formatting.Indented;
+                document.WriteContentTo(writer);
+                writer.Flush();
+                mStream.Flush();
+                mStream.Position = 0;
+
+                StreamReader sReader = new StreamReader(mStream);
+
+                return sReader.ReadToEnd();
+            }
+            catch (XmlException)
+            {
+                throw;
+            }
         }
     }
 

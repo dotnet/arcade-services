@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -41,7 +42,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Collection of default channels.</returns>
         public async Task<IEnumerable<DefaultChannel>> GetDefaultChannelsAsync(string repository = null, string branch = null, string channel = null)
         {
-            IList<DefaultChannel> channels = await _barClient.DefaultChannels.ListAsync(repository, branch);
+            IReadOnlyList<DefaultChannel> channels = await _barClient.DefaultChannels.ListAsync(repository: repository, branch: branch);
             if (!string.IsNullOrEmpty(channel))
             {
                 return channels.Where(c => c.Channel.Name.Equals(channel, StringComparison.OrdinalIgnoreCase));
@@ -61,7 +62,7 @@ namespace Microsoft.DotNet.DarcLib
         public async Task AddDefaultChannelAsync(string repository, string branch, string channel)
         {
             // Look up channel to translate to channel id.
-            Channel foundChannel = (await _barClient.Channels.GetAsync())
+            Channel foundChannel = (await _barClient.Channels.ListChannelsAsync())
                 .Where(c => c.Name.Equals(channel, StringComparison.OrdinalIgnoreCase))
                 .SingleOrDefault();
             if (foundChannel == null)
@@ -69,12 +70,7 @@ namespace Microsoft.DotNet.DarcLib
                 throw new ArgumentException($"Channel {channel} is not a valid channel.");
             }
 
-            var defaultChannelsData = new PostData
-            {
-                Branch = branch,
-                Repository = repository,
-                ChannelId = foundChannel.Id.Value
-            };
+            var defaultChannelsData = new PostData(repository: repository, branch: branch, channelId: foundChannel.Id);
 
             await _barClient.DefaultChannels.CreateAsync(defaultChannelsData);
         }
@@ -94,7 +90,7 @@ namespace Microsoft.DotNet.DarcLib
             if (existingDefaultChannel != null)
             {
                 // Find the existing default channel.  If none found then nothing to do.
-                await _barClient.DefaultChannels.DeleteAsync(existingDefaultChannel.Id.Value);
+                await _barClient.DefaultChannels.DeleteAsync(existingDefaultChannel.Id);
             }
         }
 
@@ -106,7 +102,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Newly created channel</returns>
         public Task<Channel> CreateChannelAsync(string name, string classification)
         {
-            return _barClient.Channels.CreateChannelAsync(name, classification);
+            return _barClient.Channels.CreateChannelAsync(name: name, classification: classification);
         }
 
         /// <summary>
@@ -138,18 +134,20 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Newly created subscription, if successful</returns>
         public Task<Subscription> CreateSubscriptionAsync(string channelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency, List<MergePolicy> mergePolicies)
         {
-            var subscriptionData = new SubscriptionData
-            {
-                ChannelName = channelName,
-                SourceRepository = sourceRepo,
-                TargetRepository = targetRepo,
-                TargetBranch = targetBranch,
-                Policy = new SubscriptionPolicy
+            var subscriptionData = new SubscriptionData(
+                channelName: channelName,
+                sourceRepository: sourceRepo,
+                targetRepository: targetRepo,
+                targetBranch: targetBranch,
+                policy: new SubscriptionPolicy(
+                    false,
+                    (SubscriptionPolicyUpdateFrequency) Enum.Parse(
+                        typeof(SubscriptionPolicyUpdateFrequency),
+                        updateFrequency,
+                        ignoreCase: true))
                 {
-                    UpdateFrequency = updateFrequency,
-                    MergePolicies = mergePolicies
-                }
-            };
+                    MergePolicies = mergePolicies.ToImmutableList(),
+                });
             return _barClient.Subscriptions.CreateAsync(subscriptionData);
         }
 
@@ -173,7 +171,10 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Set of subscription.</returns>
         public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(string sourceRepo = null, string targetRepo = null, int? channelId = null)
         {
-            return await _barClient.Subscriptions.GetAllSubscriptionsAsync(sourceRepo, targetRepo, channelId);
+            return await _barClient.Subscriptions.ListSubscriptionsAsync(
+                sourceRepository: sourceRepo,
+                targetRepository: targetRepo,
+                channelId: channelId);
         }
 
         /// <summary>
@@ -206,6 +207,17 @@ namespace Microsoft.DotNet.DarcLib
             return _barClient.Subscriptions.DeleteSubscriptionAsync(subscriptionId);
         }
 
+        /// <summary>
+        ///     Get a repository merge policy (for batchable subscriptions)
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="branch">Repository branch</param>
+        /// <returns>List of merge policies</returns>
+        public async Task<IEnumerable<MergePolicy>> GetRepositoryMergePolicies(string repoUri, string branch)
+        {
+            return await _barClient.Repository.GetMergePoliciesAsync(repository: repoUri, branch: branch);
+        }
+
         #endregion
 
         #region Build/Asset Operations
@@ -230,10 +242,16 @@ namespace Microsoft.DotNet.DarcLib
             {
                 try
                 {
-                    IList<Asset> assetPage = await _barClient.Assets.GetAsync(name, version, buildId, nonShipping, loadLocations: true, page: ++page);
+                    IReadOnlyList<Asset> assetPage = await _barClient.Assets.ListAssetsAsync(
+                        name: name,
+                        version: version,
+                        buildId: buildId,
+                        nonShipping: nonShipping,
+                        loadLocations: true,
+                        page: ++page);
                     assets.AddRange(assetPage);
                 }
-                catch (ApiErrorException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+                catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
                 {
                     break;
                 }
@@ -260,9 +278,9 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public async Task<IEnumerable<Build>> GetBuildsAsync(string repoUri, string commit)
         {
-            return await _barClient.Builds.GetAllBuildsAsync(repository: repoUri,
-                                                       commit: commit,
-                                                       loadCollections: true);
+            return await _barClient.Builds.ListBuildsAsync(repository: repoUri,
+                                                           commit: commit,
+                                                           loadCollections: true);
         }
 
         #endregion
@@ -274,8 +292,8 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Channel or null if not found.</returns>
         public async Task<Channel> GetChannelAsync(string channel)
         {
-            return (await _barClient.Channels.GetAsync()).Where(c => 
-            c.Name.Equals(channel, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+            return (await _barClient.Channels.ListChannelsAsync())
+                .FirstOrDefault(c => c.Name.Equals(channel, StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>
@@ -285,7 +303,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public async Task<IEnumerable<Channel>> GetChannelsAsync(string classification = null)
         {
-            return await _barClient.Channels.GetAsync(classification);
+            return await _barClient.Channels.ListChannelsAsync(classification);
         }
 
         /// <summary>

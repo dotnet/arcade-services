@@ -72,6 +72,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 query = query.Include(asset => asset.Locations);
             }
 
+            query = query.OrderByDescending(a => a.Id);
             return Ok(query);
         }
 

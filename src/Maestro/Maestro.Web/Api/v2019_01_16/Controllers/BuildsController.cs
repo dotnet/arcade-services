@@ -2,11 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.Web.Api.v2019_01_16.Models;
 using Microsoft.AspNetCore.ApiPagination;
@@ -14,6 +9,12 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 
 namespace Maestro.Web.Api.v2019_01_16.Controllers
 {
@@ -24,12 +25,9 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
     [ApiVersion("2019-01-16")]
     public class BuildsController : v2018_07_16.Controllers.BuildsController
     {
-        private readonly BuildAssetRegistryContext _context;
-
         public BuildsController(BuildAssetRegistryContext context)
             : base(context)
         {
-            _context = context;
         }
 
         /// <summary>
@@ -79,7 +77,6 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                 .Include(b => b.BuildChannels)
                 .ThenInclude(bc => bc.Channel)
                 .Include(b => b.Assets)
-                .Include(b => b.Dependencies)
                 .FirstOrDefaultAsync();
 
             if (build == null)
@@ -88,6 +85,23 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             }
 
             return Ok(new Build(build));
+        }
+
+        [HttpGet("{id}/graph")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(BuildGraph), Description = "The tree of build dependencies")]
+        [ValidateModelState]
+        public async Task<IActionResult> GetBuildGraph(int id)
+        {
+            Data.Models.Build build = await _context.Builds.FirstOrDefaultAsync(b => b.Id == id);
+
+            if (build == null)
+            {
+                return NotFound();
+            }
+
+            var builds = await _context.GetBuildGraphAsync(build.Id);
+
+            return Ok(BuildGraph.Create(builds.Select(b => new Build(b))));
         }
 
         /// <summary>
@@ -142,13 +156,20 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         [HttpPost]
         [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Build), Description = "The created build")]
         [ValidateModelState]
-        public async Task<IActionResult> Create([FromBody] BuildData build)
+        public async Task<IActionResult> Create([FromBody, Required] BuildData build)
         {
             Data.Models.Build buildModel = build.ToDb();
             buildModel.DateProduced = DateTimeOffset.UtcNow;
-            buildModel.Dependencies = build.Dependencies != null
-                ? await _context.Builds.Where(b => build.Dependencies.Contains(b.Id)).ToListAsync()
-                : null;
+            if (build.Dependencies != null)
+            {
+                await _context.BuildDependencies.AddRangeAsync(
+                    build.Dependencies.Select(
+                        b => new Data.Models.BuildDependency
+                        {
+                            Build = buildModel, DependentBuildId = b.BuildId, IsProduct = b.IsProduct,
+                        }));
+            }
+
             await _context.Builds.AddAsync(buildModel);
             await _context.SaveChangesAsync();
             return CreatedAtRoute(
