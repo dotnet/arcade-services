@@ -87,7 +87,7 @@ jobs:
 
       - task: NodeTool@0
         inputs:
-          versionSpec: '>=11.11.00'
+          versionSpec: '>=11'
 
       - task: NuGetCommand@2
         displayName: Restore Packages
