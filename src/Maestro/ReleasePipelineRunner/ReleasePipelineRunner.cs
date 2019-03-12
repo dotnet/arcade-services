@@ -61,46 +61,43 @@ namespace ReleasePipelineRunner
             }
         }
 
-        public async Task RunAsync(CancellationToken cancellationToken)
+        public async Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
         {
             IReliableConcurrentQueue<ReleasePipelineRunnerItem> queue =
                 await StateManager.GetOrAddAsync<IReliableConcurrentQueue<ReleasePipelineRunnerItem>>("queue");
-            while (!cancellationToken.IsCancellationRequested)
+
+            try
             {
-                try
+                using (ITransaction tx = StateManager.CreateTransaction())
                 {
-                    using (ITransaction tx = StateManager.CreateTransaction())
+                    ConditionalValue<ReleasePipelineRunnerItem> maybeItem = await queue.TryDequeueAsync(
+                        tx,
+                        cancellationToken);
+                    if (maybeItem.HasValue)
                     {
-                        ConditionalValue<ReleasePipelineRunnerItem> maybeItem = await queue.TryDequeueAsync(
-                            tx,
-                            cancellationToken);
-                        if (maybeItem.HasValue)
+                        ReleasePipelineRunnerItem item = maybeItem.Value;
+                        using (Logger.BeginScope(
+                            "Triggering release pipelines associated with channel {channelId} for build {buildId}.",
+                            item.BuildId,
+                            item.ChannelId))
                         {
-                            ReleasePipelineRunnerItem item = maybeItem.Value;
-                            using (Logger.BeginScope(
-                                "Triggering release pipelines associated with channel {channelId} for build {buildId}.",
-                                item.BuildId,
-                                item.ChannelId))
-                            {
-                                await RunAssociatedReleasePipelinesAsync(item.BuildId, item.ChannelId, cancellationToken);
-                            }
+                            await RunAssociatedReleasePipelinesAsync(item.BuildId, item.ChannelId, cancellationToken);
                         }
-                        else
-                        {
-                            await Task.Delay(1000, cancellationToken);
-                        }
-                        await tx.CommitAsync();
                     }
-                }
-                catch (TaskCanceledException tcex) when (tcex.CancellationToken == cancellationToken)
-                {
-                    // ignore
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Processing queue messages");
+
+                    await tx.CommitAsync();
                 }
             }
+            catch (TaskCanceledException tcex) when (tcex.CancellationToken == cancellationToken)
+            {
+                // ignore
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Processing queue messages");
+            }
+
+            return TimeSpan.FromSeconds(1);
         }
 
         /// <summary>
