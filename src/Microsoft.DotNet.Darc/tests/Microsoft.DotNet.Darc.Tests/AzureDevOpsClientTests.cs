@@ -59,6 +59,7 @@ namespace Microsoft.DotNet.Darc.Tests
         [InlineData("https://dev.azure.com/dnceng/public/_git/foo", "https://dev.azure.com/dnceng/public/_git/foo")]
         [InlineData("https://dnceng@dev.azure.com/foo/bar/_git/bebop/pullrequest/11?_a=overview", "https://dev.azure.com/foo/bar/_git/bebop/pullrequest/11?_a=overview")]
         [InlineData("https://dnceng.visualstudio.com/int/_git/bebop", "https://dev.azure.com/dnceng/int/_git/bebop")]
+        [InlineData("https://github.com/account/bar", "https://github.com/account/bar")]
         private void NormalizeRepoUriTests(string inputUri, string expectedUri)
         {
             string normalizedUri = AzureDevOpsClient.NormalizeUrl(inputUri);
