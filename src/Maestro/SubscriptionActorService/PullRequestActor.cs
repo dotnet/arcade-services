@@ -545,38 +545,48 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         /// <returns>Pull request title</returns>
         private async Task<string> ComputePullRequestTitleAsync(InProgressPullRequest inProgressPr, string targetBranch)
         {
-            // Get the unique subscription IDs.
-            var uniqueSubscriptionIds = inProgressPr.ContainedSubscriptions.Select(subscription => subscription.SubscriptionId).ToHashSet();
+            // Get the unique subscription IDs. It may be possible for a coherency update
+            // to not have any contained subscription.  In this case
+            // we return a different title.
+            var uniqueSubscriptionIds = inProgressPr.ContainedSubscriptions.Select(
+                subscription => subscription.SubscriptionId).ToHashSet();
 
-            // We'll either list out the repos involved (in a shortened form)
-            // or we'll list out the number of repos that are involved.
-            // Start building up the list. If we reach a max length, then backtrack and
-            // just note the number of input subscriptions.
-            string baseTitle = $"[{targetBranch}] Update dependencies from ";
-            StringBuilder titleBuilder = new StringBuilder(baseTitle);
-            bool prefixComma = false;
-            const int maxTitleLength = 80;
-            foreach (Guid subscriptionId in uniqueSubscriptionIds)
+            if (uniqueSubscriptionIds.Count > 0)
             {
-                string repoName = await GetSourceRepositoryAsync(subscriptionId);
-
-                // Strip down repo name.
-                repoName = repoName?.Replace("https://github.com/", "");
-                repoName = repoName?.Replace("https://dev.azure.com/", "");
-                repoName = repoName?.Replace("_git/", "");
-                string repoNameForTitle = prefixComma ? $", {repoName}" : repoName;
-
-                if (titleBuilder.Length + repoNameForTitle?.Length > maxTitleLength)
+                // We'll either list out the repos involved (in a shortened form)
+                // or we'll list out the number of repos that are involved.
+                // Start building up the list. If we reach a max length, then backtrack and
+                // just note the number of input subscriptions.
+                string baseTitle = $"[{targetBranch}] Update dependencies from ";
+                StringBuilder titleBuilder = new StringBuilder(baseTitle);
+                bool prefixComma = false;
+                const int maxTitleLength = 80;
+                foreach (Guid subscriptionId in uniqueSubscriptionIds)
                 {
-                    return $"{baseTitle} {uniqueSubscriptionIds.Count} repositories";
+                    string repoName = await GetSourceRepositoryAsync(subscriptionId);
+
+                    // Strip down repo name.
+                    repoName = repoName?.Replace("https://github.com/", "");
+                    repoName = repoName?.Replace("https://dev.azure.com/", "");
+                    repoName = repoName?.Replace("_git/", "");
+                    string repoNameForTitle = prefixComma ? $", {repoName}" : repoName;
+
+                    if (titleBuilder.Length + repoNameForTitle?.Length > maxTitleLength)
+                    {
+                        return $"{baseTitle} {uniqueSubscriptionIds.Count} repositories";
+                    }
+                    else
+                    {
+                        titleBuilder.Append(repoNameForTitle);
+                    }
                 }
-                else
-                {
-                    titleBuilder.Append(repoNameForTitle);
-                }
+
+                return titleBuilder.ToString();
             }
-
-            return titleBuilder.ToString();
+            else
+            {
+                return $"[{targetBranch}] Update dependencies to ensure coherency";
+            }
         }
 
         /// <summary>
@@ -611,7 +621,11 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
 
                     var inProgressPr = new InProgressPullRequest
                     {
-                        ContainedSubscriptions = requiredUpdates.Select(
+                        // Calculate the subscriptions contained within the
+                        // update. Coherency updates do not have subscription info.
+                        ContainedSubscriptions = requiredUpdates
+                                .Where (u => !u.update.IsCoherencyUpdate)
+                                .Select(
                                 u => new SubscriptionPullRequestUpdate
                                 {
                                     SubscriptionId = u.update.SubscriptionId,
@@ -676,7 +690,15 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             string targetRepository,
             string newBranchName)
         {
-            foreach ((UpdateAssetsParameters update, List<DependencyDetail> deps) in requiredUpdates)
+            // First run through non-coherency and then do a coherency
+            // message if one exists.
+            List<(UpdateAssetsParameters update, List<DependencyDetail> deps)> nonCoherencyUpdates =
+                requiredUpdates.Where(u => !u.update.IsCoherencyUpdate).ToList();
+            // Should max one coherency update
+            (UpdateAssetsParameters update, List<DependencyDetail> deps) coherencyUpdate =
+                requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
+
+            foreach ((UpdateAssetsParameters update, List<DependencyDetail> deps) in nonCoherencyUpdates)
             {
                 string sourceRepository = await GetSourceRepositoryAsync(update.SubscriptionId);
                 string buildNumber = await GetBuildNumberAsync(update.BuildId);
@@ -697,6 +719,45 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     description.WriteLine();
 
                     await darc.CommitUpdatesAsync(targetRepository, newBranchName, deps, message.ToString());
+                }
+            }
+
+            if (coherencyUpdate.update != null)
+            {
+                using (var message = new StringWriter())
+                {
+                    message.WriteLine("Coherency updates");
+                    message.WriteLine();
+
+                    // Sort out the coherency updates into a list for each repo
+                    Dictionary<string, List<DependencyDetail>> updatesPerRepo =
+                        new Dictionary<string, List<DependencyDetail>>();
+                    foreach (DependencyDetail dep in coherencyUpdate.deps)
+                    {
+                        if (updatesPerRepo.TryGetValue(dep.RepoUri, out List<DependencyDetail> existingList))
+                        {
+                            existingList.Add(dep);
+                        }
+                        else
+                        {
+                            updatesPerRepo.Add(dep.RepoUri, new List<DependencyDetail> { dep });
+                        }
+                    }
+                    foreach (KeyValuePair<string, List<DependencyDetail>> perRepoUpdate in updatesPerRepo)
+                    {
+                        description.WriteLine($"Updates from {perRepoUpdate.Key}");
+                        description.WriteLine();
+                        foreach (DependencyDetail dep in perRepoUpdate.Value)
+                        {
+                            message.WriteLine($"- {dep.Name} - {dep.Version}");
+                            description.WriteLine($"- {dep.Name} - {dep.Version}");
+                        }
+                    }
+
+                    message.WriteLine();
+                    description.WriteLine();
+
+                    await darc.CommitUpdatesAsync(targetRepository, newBranchName, coherencyUpdate.deps, message.ToString());
                 }
             }
         }
@@ -820,12 +881,18 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             // Once we have applied all of non coherent updates, then we need to run a coherency check on the
             // dependencies.
             List<DependencyUpdate> coherencyUpdates =
-                await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies,remoteFactory);
+                await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory);
 
-            // For the update asset parameters, we don't have any information on the source of the update,
-            // since coherency can be run even without any updates.
-            UpdateAssetsParameters coherencyUpdateParameters = new UpdateAssetsParameters();
-            requiredUpdates.Add((coherencyUpdateParameters, coherencyUpdates.Select(u => u.To).ToList()));
+            if (coherencyUpdates.Any())
+            {
+                // For the update asset parameters, we don't have any information on the source of the update,
+                // since coherency can be run even without any updates.
+                UpdateAssetsParameters coherencyUpdateParameters = new UpdateAssetsParameters
+                {
+                    IsCoherencyUpdate = true
+                };
+                requiredUpdates.Add((coherencyUpdateParameters, coherencyUpdates.Select(u => u.To).ToList()));
+            }
 
             return requiredUpdates;
         }
@@ -883,6 +950,10 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             [DataMember]
             public List<Asset> Assets { get; set; }
 
+            /// <summary>
+            ///     If true, this is a coherency update and not driven by specific
+            ///     subscription ids (e.g. could be multiple if driven by a batched subscription)
+            /// </summary>
             [DataMember]
             public bool IsCoherencyUpdate { get; set; }
         }
