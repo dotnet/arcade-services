@@ -55,13 +55,11 @@ namespace SubscriptionActorService
                     }
 
                     gitClient = new GitHubClient(await GitHubTokenProvider.GetTokenForInstallation(installationId),
-                                                 logger,
-                                                 temporaryRepositoryRoot);
+                        logger, temporaryRepositoryRoot);
                     break;
                 case "dev.azure.com":
                     gitClient = new AzureDevOpsClient(await AzureDevOpsTokenProvider.GetTokenForRepository(repoUrl),
-                                                      logger,
-                                                      temporaryRepositoryRoot);
+                        logger, temporaryRepositoryRoot);
                     break;
                 default:
                     throw new NotImplementedException($"Unknown repo url type {repoUrl}");

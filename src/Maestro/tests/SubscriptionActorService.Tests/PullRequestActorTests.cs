@@ -15,6 +15,7 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
@@ -31,8 +32,8 @@ namespace SubscriptionActorService.Tests
         private const string InProgressPrHeadBranch = "pr.head.branch";
         private const string PrUrl = "https://git.com/pr/123";
 
-        private readonly Dictionary<(string repo, long installationId), Mock<IRemote>> DarcRemotes =
-            new Dictionary<(string repo, long installationId), Mock<IRemote>>();
+        private readonly Dictionary<string, Mock<IRemote>> DarcRemotes =
+            new Dictionary<string, Mock<IRemote>>();
 
         private readonly Mock<IMergePolicyEvaluator> MergePolicyEvaluator;
 
@@ -55,11 +56,11 @@ namespace SubscriptionActorService.Tests
             MergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
             Builder.RegisterInstance(MergePolicyEvaluator.Object);
 
-            var remoteFactory = new Mock<IDarcRemoteFactory>(MockBehavior.Strict);
-            remoteFactory.Setup(f => f.CreateAsync(It.IsAny<string>(), It.IsAny<long>()))
+            var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
+            remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
                 .ReturnsAsync(
-                    (string repo, long installationId) =>
-                        DarcRemotes.GetOrAddValue((repo, installationId), CreateMock<IRemote>).Object);
+                    (string repo) =>
+                        DarcRemotes.GetOrAddValue(repo, CreateMock<IRemote>).Object);
             Builder.RegisterInstance(remoteFactory.Object);
         }
 
@@ -78,7 +79,7 @@ namespace SubscriptionActorService.Tests
         private void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild)
         {
             var assets = new List<IEnumerable<AssetData>>();
-            DarcRemotes[(TargetRepo, InstallationId)]
+            DarcRemotes[TargetRepo]
                 .Verify(r => r.GetRequiredNonCoherencyUpdatesAsync(TargetRepo, TargetBranch, NewCommit, Capture.In(assets)));
             assets.Should()
                 .BeEquivalentTo(
@@ -97,14 +98,14 @@ namespace SubscriptionActorService.Tests
         private void AndCreateNewBranchShouldHaveBeenCalled()
         {
             var captureNewBranch = new CaptureMatch<string>(newBranch => NewBranch = newBranch);
-            DarcRemotes[(TargetRepo, InstallationId)]
+            DarcRemotes[TargetRepo]
                 .Verify(r => r.CreateNewBranchAsync(TargetRepo, TargetBranch, Capture.With(captureNewBranch)));
         }
 
         private void AndCommitUpdatesShouldHaveBeenCalled(Build withUpdatesFromBuild)
         {
             var updatedDependencies = new List<List<DependencyDetail>>();
-            DarcRemotes[(TargetRepo, InstallationId)]
+            DarcRemotes[TargetRepo]
                 .Verify(
                     r => r.CommitUpdatesAsync(
                         TargetRepo,
@@ -128,7 +129,7 @@ namespace SubscriptionActorService.Tests
         private void AndCreatePullRequestShouldHaveBeenCalled()
         {
             var pullRequests = new List<PullRequest>();
-            DarcRemotes[(TargetRepo, InstallationId)]
+            DarcRemotes[TargetRepo]
                 .Verify(r => r.CreatePullRequestAsync(TargetRepo, Capture.In(pullRequests)));
             pullRequests.Should()
             .BeEquivalentTo(
@@ -145,7 +146,7 @@ namespace SubscriptionActorService.Tests
 
         private void CreatePullRequestShouldReturnAValidValue()
         {
-            DarcRemotes[(TargetRepo, InstallationId)]
+            DarcRemotes[TargetRepo]
                 .Setup(s => s.CreatePullRequestAsync(It.IsAny<string>(), It.IsAny<PullRequest>()))
                 .ReturnsAsync(() => PrUrl);
         }
@@ -153,7 +154,7 @@ namespace SubscriptionActorService.Tests
         private void AndUpdatePullRequestShouldHaveBeenCalled()
         {
             var pullRequests = new List<PullRequest>();
-            DarcRemotes[(TargetRepo, InstallationId)]
+            DarcRemotes[TargetRepo]
                 .Verify(r => r.UpdatePullRequestAsync(InProgressPrUrl, Capture.In(pullRequests)));
             pullRequests.Should()
             .BeEquivalentTo(
@@ -176,7 +177,7 @@ namespace SubscriptionActorService.Tests
 
         private void WithRequiredUpdates(Build fromBuild)
         {
-            DarcRemotes.GetOrAddValue((TargetRepo, InstallationId), CreateMock<IRemote>)
+            DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
                 .Setup(
                     r => r.GetRequiredNonCoherencyUpdatesAsync(
                         TargetRepo,
@@ -227,7 +228,7 @@ namespace SubscriptionActorService.Tests
 
             if (updatable)
             {
-                DarcRemotes.GetOrAddValue((TargetRepo, InstallationId), CreateMock<IRemote>)
+                DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
                     .Setup(r => r.GetPullRequestAsync(InProgressPrUrl))
                     .ReturnsAsync(
                         new PullRequest
@@ -243,7 +244,7 @@ namespace SubscriptionActorService.Tests
                     ActionRunner.Verify(r => r.ExecuteAction(It.IsAny<Expression<Func<Task<ActionResult<bool?>>>>>()));
                     if (updatable)
                     {
-                        DarcRemotes[(TargetRepo, InstallationId)].Verify(r => r.GetPullRequestAsync(InProgressPrUrl));
+                        DarcRemotes[TargetRepo].Verify(r => r.GetPullRequestAsync(InProgressPrUrl));
                     }
                 });
         }
