@@ -72,7 +72,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                         // Grab root dependency set. The graph build can do this, but
                         // if an original asset name is passed, then this will do the initial filtering.
-                        IRemote rootRepoRemote = remoteFactory.GetRemote(_options.RepoUri, Logger);
+                        IRemote rootRepoRemote = await  remoteFactory.GetRemoteAsync(_options.RepoUri, Logger);
                         rootDependencies = await rootRepoRemote.GetDependenciesAsync(
                             _options.RepoUri,
                             _options.Version,

@@ -268,7 +268,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             logger.LogInformation("Running latest in channel node diff.");
 
-            IRemote barOnlyRemote = remoteFactory.GetBarOnlyRemote(logger);
+            IRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(logger);
 
             // Walk each node in the graph and diff against the latest build in the channel
             // that was also applied to the node.
@@ -307,7 +307,7 @@ namespace Microsoft.DotNet.DarcLib
                         // Perform diff if there is a latest commit.
                         if (!string.IsNullOrEmpty(latestCommit))
                         {
-                            IRemote repoRemote = remoteFactory.GetRemote(node.RepoUri, logger);
+                            IRemote repoRemote = await remoteFactory.GetRemoteAsync(node.RepoUri, logger);
                             // This will return a no-diff if latestCommit == node.Commit
                             node.DiffFrom = await repoRemote.GitDiffAsync(node.RepoUri, latestCommit, node.Commit);
                         }
@@ -365,7 +365,7 @@ namespace Microsoft.DotNet.DarcLib
                     // Compare all other nodes to the latest
                     foreach (DependencyGraphNode node in nodes)
                     {
-                        IRemote repoRemote = remoteFactory.GetRemote(node.RepoUri, logger);
+                        IRemote repoRemote = await remoteFactory.GetRemoteAsync(node.RepoUri, logger);
                         // If node == newestNode, returns no diff.
                         node.DiffFrom = await repoRemote.GitDiffAsync(node.RepoUri, newestNode.Commit, node.Commit);
                     }
@@ -436,7 +436,7 @@ namespace Microsoft.DotNet.DarcLib
                 rootNodeBuilds = new HashSet<Build>(new BuildComparer());
 
                 // Look up the dependency and get the creating build.
-                var barOnlyRemote = remoteFactory.GetBarOnlyRemote(logger);
+                IRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(logger);
                 IEnumerable<Build> potentialRootNodeBuilds = await barOnlyRemote.GetBuildsAsync(repoUri, commit);
                 // Filter by those actually producing the root dependencies, if they were supplied
                 if (rootDependencies != null)
@@ -566,7 +566,7 @@ namespace Microsoft.DotNet.DarcLib
                             else
                             {
                                 // Look up the dependency and get the creating build.
-                                IRemote barOnlyRemote = remoteFactory.GetBarOnlyRemote(logger);
+                                IRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(logger);
                                 IEnumerable<Build> potentiallyContributingBuilds = await barOnlyRemote.GetBuildsAsync(dependency.RepoUri, dependency.Commit);
                                 // Filter by those actually producing the dependency. Most of the time this won't
                                 // actually result in a different set of contributing builds, but should avoid any subtle bugs where
@@ -762,7 +762,7 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 else if (remote)
                 {
-                    IRemote remoteClient = remoteFactory.GetRemote(repoUri, logger);
+                    IRemote remoteClient = await remoteFactory.GetRemoteAsync(repoUri, logger);
                     dependencies = await remoteClient.GetDependenciesAsync(
                         repoUri, 
                         commit);

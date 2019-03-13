@@ -353,9 +353,9 @@ namespace Microsoft.DotNet.Darc.Operations
 
             HashSet<Build> builds = new HashSet<Build>(new BuildComparer());
             builds.Add(rootBuild);
-            RemoteFactory remoteFactory = new RemoteFactory(_options);
+            IRemoteFactory remoteFactory = new RemoteFactory(_options);
             // Grab dependencies
-            IRemote rootBuildRemote = remoteFactory.GetRemote(rootBuild.AzureDevOpsRepository, Logger);
+            IRemote rootBuildRemote = await remoteFactory.GetRemoteAsync(rootBuild.AzureDevOpsRepository, Logger);
 
             Console.WriteLine($"Getting dependencies of root build...");
 

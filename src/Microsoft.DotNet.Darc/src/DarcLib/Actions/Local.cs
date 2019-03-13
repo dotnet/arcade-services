@@ -77,7 +77,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 try
                 {
-                    IRemote remote = remoteFactory.GetRemote(arcadeItem.RepoUri, _logger);
+                    IRemote remote = await remoteFactory.GetRemoteAsync(arcadeItem.RepoUri, _logger);
                     List<GitFile> engCommonFiles = await remote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit);
                     filesToUpdate.AddRange(engCommonFiles);
 

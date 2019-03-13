@@ -186,8 +186,8 @@ namespace Microsoft.DotNet.Darc.Tests
 
             // Always return the main remote.
             var remoteFactoryMock = new Mock<IRemoteFactory>();
-            remoteFactoryMock.Setup(m => m.GetRemote(It.IsAny<string>(), It.IsAny<ILogger>())).Returns(dependencyGraphRemoteMock.Object);
-            remoteFactoryMock.Setup(m => m.GetBarOnlyRemote(It.IsAny<ILogger>())).Returns(remote);
+            remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
+            remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
             List<DependencyDetail> existingDetails = new List<DependencyDetail>();
             DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -273,8 +273,8 @@ namespace Microsoft.DotNet.Darc.Tests
 
             // Always return the main remote.
             var remoteFactoryMock = new Mock<IRemoteFactory>();
-            remoteFactoryMock.Setup(m => m.GetRemote(It.IsAny<string>(), It.IsAny<ILogger>())).Returns(dependencyGraphRemoteMock.Object);
-            remoteFactoryMock.Setup(m => m.GetBarOnlyRemote(It.IsAny<ILogger>())).Returns(remote);
+            remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
+            remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
             List<DependencyDetail> existingDetails = new List<DependencyDetail>();
             DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -337,8 +337,8 @@ namespace Microsoft.DotNet.Darc.Tests
 
             // Always return the main remote.
             var remoteFactoryMock = new Mock<IRemoteFactory>();
-            remoteFactoryMock.Setup(m => m.GetRemote(It.IsAny<string>(), It.IsAny<ILogger>())).Returns(dependencyGraphRemoteMock.Object);
-            remoteFactoryMock.Setup(m => m.GetBarOnlyRemote(It.IsAny<ILogger>())).Returns(remote);
+            remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
+            remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
             List<DependencyDetail> existingDetails = new List<DependencyDetail>();
             DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
@@ -399,8 +399,8 @@ namespace Microsoft.DotNet.Darc.Tests
 
             // Always return the main remote.
             var remoteFactoryMock = new Mock<IRemoteFactory>();
-            remoteFactoryMock.Setup(m => m.GetRemote(It.IsAny<string>(), It.IsAny<ILogger>())).Returns(dependencyGraphRemoteMock.Object);
-            remoteFactoryMock.Setup(m => m.GetBarOnlyRemote(It.IsAny<ILogger>())).Returns(remote);
+            remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
+            remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
 
             List<DependencyDetail> existingDetails = new List<DependencyDetail>();
             DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: pinHead);

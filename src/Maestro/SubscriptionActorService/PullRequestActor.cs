@@ -138,7 +138,7 @@ namespace SubscriptionActorService
             IActorStateManager stateManager,
             IMergePolicyEvaluator mergePolicyEvaluator,
             BuildAssetRegistryContext context,
-            IDarcRemoteFactory darcFactory,
+            IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
             Func<ActorId, ISubscriptionActor> subscriptionActorFactory)
@@ -148,7 +148,7 @@ namespace SubscriptionActorService
             StateManager = stateManager;
             MergePolicyEvaluator = mergePolicyEvaluator;
             Context = context;
-            DarcFactory = darcFactory;
+            DarcRemoteFactory = darcFactory;
             ActionRunner = actionRunner;
             SubscriptionActorFactory = subscriptionActorFactory;
             Logger = loggerFactory.CreateLogger(TypeNameHelper.GetTypeDisplayName(GetType()));
@@ -160,7 +160,7 @@ namespace SubscriptionActorService
         public IActorStateManager StateManager { get; }
         public IMergePolicyEvaluator MergePolicyEvaluator { get; }
         public BuildAssetRegistryContext Context { get; }
-        public IDarcRemoteFactory DarcFactory { get; }
+        public IRemoteFactory DarcRemoteFactory { get; }
         public IActionRunner ActionRunner { get; }
         public Func<ActorId, ISubscriptionActor> SubscriptionActorFactory { get; }
 
@@ -338,8 +338,10 @@ namespace SubscriptionActorService
                     $"Not Applicable: Pull Request '{prUrl}' is not tracked by maestro anymore.");
             }
 
+            (string targetRepository, string targetBranch) = await GetTargetAsync();
+            IRemote darc = await DarcRemoteFactory.GetRemoteAsync(targetRepository, Logger);
+
             InProgressPullRequest pr = maybePr.Value;
-            IRemote darc = await GetDarc();
             PrStatus status = await darc.GetPullRequestStatusAsync(prUrl);
             ActionResult<bool?> checkPolicyResult = null;
             switch (status)
@@ -585,11 +587,10 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         private async Task<string> CreatePullRequestAsync(List<UpdateAssetsParameters> updates)
         {
             (string targetRepository, string targetBranch) = await GetTargetAsync();
-            IRemote darc = await GetDarc();
-
+            IRemote darcRemote = await DarcRemoteFactory.GetRemoteAsync(targetRepository, Logger);
 
             List<(UpdateAssetsParameters update, List<DependencyDetail> deps)> requiredUpdates =
-                await GetRequiredUpdates(updates, darc, targetRepository, targetBranch);
+                await GetRequiredUpdates(updates, DarcRemoteFactory, targetRepository, targetBranch);
 
             if (requiredUpdates.Count < 1)
             {
@@ -597,7 +598,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             }
 
             string newBranchName = $"darc-{targetBranch}-{Guid.NewGuid()}";
-            await darc.CreateNewBranchAsync(targetRepository, targetBranch, newBranchName);
+            await darcRemote.CreateNewBranchAsync(targetRepository, targetBranch, newBranchName);
 
             try
             {
@@ -606,7 +607,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     description.WriteLine("This pull request updates the following dependencies");
                     description.WriteLine();
 
-                    await CommitUpdatesAsync(requiredUpdates, description, darc, targetRepository, newBranchName);
+                    await CommitUpdatesAsync(requiredUpdates, description, darcRemote, targetRepository, newBranchName);
 
                     var inProgressPr = new InProgressPullRequest
                     {
@@ -619,7 +620,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                             .ToList()
                     };
 
-                    string prUrl = await darc.CreatePullRequestAsync(
+                    string prUrl = await darcRemote.CreatePullRequestAsync(
                         targetRepository,
                         new PullRequest
                         {
@@ -645,13 +646,13 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
 
                     // Something wrong happened when trying to create the PR but didn't throw an exception (probably there was no diff). 
                     // We need to delete the branch also in this case.
-                    await darc.DeleteBranchAsync(targetRepository, newBranchName);
+                    await darcRemote.DeleteBranchAsync(targetRepository, newBranchName);
                     return null;
                 }
             }
             catch
             {
-                await darc.DeleteBranchAsync(targetRepository, newBranchName);
+                await darcRemote.DeleteBranchAsync(targetRepository, newBranchName);
                 throw;
             }
         }
@@ -703,18 +704,17 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         private async Task UpdatePullRequestAsync(InProgressPullRequest pr, List<UpdateAssetsParameters> updates)
         {
             (string targetRepository, string targetBranch) = await GetTargetAsync();
-            IRemote darc = await GetDarc();
-
+            IRemote darcRemote = await DarcRemoteFactory.GetRemoteAsync(targetRepository, Logger);
 
             List<(UpdateAssetsParameters update, List<DependencyDetail> deps)> requiredUpdates =
-                await GetRequiredUpdates(updates, darc, targetRepository, targetBranch);
+                await GetRequiredUpdates(updates, DarcRemoteFactory, targetRepository, targetBranch);
 
             if (requiredUpdates.Count < 1)
             {
                 return;
             }
 
-            PullRequest pullRequest = await darc.GetPullRequestAsync(pr.Url);
+            PullRequest pullRequest = await darcRemote.GetPullRequestAsync(pr.Url);
             string headBranch = pullRequest.HeadBranch;
 
             // Update the list of contained subscriptions with the new subscription update.
@@ -735,11 +735,11 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
 
             using (var description = new StringWriter(new StringBuilder(pullRequest.Description)))
             {
-                await CommitUpdatesAsync(requiredUpdates, description, darc, targetRepository, headBranch);
+                await CommitUpdatesAsync(requiredUpdates, description, darcRemote, targetRepository, headBranch);
 
                 pullRequest.Description = description.ToString();
                 pullRequest.Title = await ComputePullRequestTitleAsync(pr, targetBranch);
-                await darc.UpdatePullRequestAsync(pr.Url, pullRequest);
+                await darcRemote.UpdatePullRequestAsync(pr.Url, pullRequest);
             }
 
             await StateManager.SetStateAsync(PullRequest, pr);
@@ -772,7 +772,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             string branch)
         {
             // Get a remote factory for the target repo
-            IRemote darc = remoteFactory.GetRemote(targetRepository, Logger);
+            IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
 
             var requiredUpdates = new List<(UpdateAssetsParameters update, List<DependencyDetail> deps)>();
             // Existing details 
@@ -821,9 +821,11 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             // dependencies.
             List<DependencyUpdate> coherencyUpdates =
                 await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies,remoteFactory);
+
             // For the update asset parameters, we don't have any information on the source of the update,
             // since coherency can be run even without any updates.
-            requiredUpdates.Add((update, coherencyUpdates.Select(u => u.To).ToList()));
+            UpdateAssetsParameters coherencyUpdateParameters = new UpdateAssetsParameters();
+            requiredUpdates.Add((coherencyUpdateParameters, coherencyUpdates.Select(u => u.To).ToList()));
 
             return requiredUpdates;
         }
@@ -880,6 +882,9 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
 
             [DataMember]
             public List<Asset> Assets { get; set; }
+
+            [DataMember]
+            public bool IsCoherencyUpdate { get; set; }
         }
     }
 
@@ -897,7 +902,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             IActorStateManager stateManager,
             IMergePolicyEvaluator mergePolicyEvaluator,
             BuildAssetRegistryContext context,
-            IDarcRemoteFactory darcFactory,
+            IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
             Func<ActorId, ISubscriptionActor> subscriptionActorFactory) : base(
@@ -973,7 +978,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             IActorStateManager stateManager,
             IMergePolicyEvaluator mergePolicyEvaluator,
             BuildAssetRegistryContext context,
-            IDarcRemoteFactory darcFactory,
+            IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
             Func<ActorId, ISubscriptionActor> subscriptionActorFactory) : base(

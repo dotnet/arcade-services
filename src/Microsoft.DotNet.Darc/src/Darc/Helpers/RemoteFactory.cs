@@ -7,6 +7,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Helpers
 {
@@ -85,14 +86,14 @@ namespace Microsoft.DotNet.Darc.Helpers
         /// <param name="repoUrl">Repository url to get a remote for</param>
         /// <param name="logger">Logger</param>
         /// <returns>New remote</returns>
-        public IRemote GetRemote(string repoUrl, ILogger logger)
+        public Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
         {
-            return GetRemote(this._options, repoUrl, logger);
+            return Task.FromResult(GetRemote(this._options, repoUrl, logger));
         }
 
-        public IRemote GetBarOnlyRemote(ILogger logger)
+        public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
         {
-            return GetRemote(this._options, null, logger);
+            return Task.FromResult(GetRemote(this._options, null, logger));
         }
     }
 }

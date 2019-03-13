@@ -13,8 +13,8 @@ namespace Microsoft.DotNet.DarcLib
     /// </summary>
     public interface IRemoteFactory
     {
-        Task<IRemote> GetRemote(string repoUrl, ILogger logger);
+        Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger);
 
-        Task<IRemote> GetBarOnlyRemote(ILogger logger);
+        Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger);
     }
 }

@@ -31,44 +31,12 @@ namespace SubscriptionActorService
         public IAzureDevOpsTokenProvider AzureDevOpsTokenProvider { get; }
         public BuildAssetRegistryContext Context { get; }
 
-        private async Task<IRemote> CreateAsync(string repoUrl, long installationId)
+        public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
         {
-            Uri repoUri = new Uri(repoUrl);
-            // Look up the setting for where the repo root should be held.  Default to empty,
-            // which will use the temp directory.
-            string temporaryRepositoryRoot = Configuration.GetValue<string>("DarcTemporaryRepoRoot", null);
-            IGitRepo gitClient;
-
-            switch (repoUri.Host)
-            {
-                case "github.com":
-                    if (installationId == default)
-                    {
-                        throw new SubscriptionException($"No installation is avaliable for repository '{repoUrl}'");
-                    }
-
-                    gitClient = new GitHubClient(await GitHubTokenProvider.GetTokenForInstallation(installationId),
-                                                 logger,
-                                                 temporaryRepositoryRoot);
-                    break;
-                case "dev.azure.com":
-                    gitClient = new AzureDevOpsClient(await AzureDevOpsTokenProvider.GetTokenForRepository(repoUrl),
-                                                      logger,
-                                                      temporaryRepositoryRoot);
-                    break;
-                default:
-                    throw new NotImplementedException($"Unknown repo url type {repoUrl}");
-            };
-
-            return new Remote(gitClient, null, logger);
+            return Task.FromResult((IRemote)new Remote(null, new MaestroBarClient(Context), logger));
         }
 
-        public Task<IRemote> GetBarOnlyRemote(ILogger logger)
-        {
-            Task.CompletedTask(new Remote(null, new MaestroBarClient(Context), logger));
-        }
-
-        public async Task<IRemote> GetRemote(string repoUrl, ILogger logger)
+        public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
         {
             Uri repoUri = new Uri(repoUrl);
             // Look up the setting for where the repo root should be held.  Default to empty,
