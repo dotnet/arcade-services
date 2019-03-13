@@ -27,17 +27,19 @@ namespace Microsoft.DotNet.DarcLib
     {
         private const string DefaultApiVersion = "5.0-preview.1";
 
+        private static readonly string AzureDevOpsHostPattern = @"dev\.azure\.com\";
+
         private static readonly string CommentMarker =
             "\n\n[//]: # (This identifies this comment as a Maestro++ comment)\n";
 
         private static readonly Regex RepositoryUriPattern = new Regex(
-            @"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\.]+)");
+            $"^https://{AzureDevOpsHostPattern}/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\\.]+)");
 
         private static readonly Regex LegacyRepositoryUriPattern = new Regex(
             @"^https://(?<account>[a-zA-Z0-9]+)\.visualstudio\.com/(?<project>[a-zA-Z0-9-]+)/_git/(?<repo>[a-zA-Z0-9-\.]+)");
 
         private static readonly Regex PullRequestApiUriPattern = new Regex(
-            @"^https://dev\.azure\.com/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_apis/git/repositories/(?<repo>[a-zA-Z0-9-\.]+)/pullRequests/(?<id>\d+)");
+            $"^https://{AzureDevOpsHostPattern}/(?<account>[a-zA-Z0-9]+)/(?<project>[a-zA-Z0-9-]+)/_apis/git/repositories/(?<repo>[a-zA-Z0-9-\\.]+)/pullRequests/(?<id>\\d+)");
 
         // Azure DevOps uses this id when creating a new branch as well as when deleting a branch
         private static readonly string BaseObjectId = "0000000000000000000000000000000000000000";
@@ -115,7 +117,8 @@ namespace Microsoft.DotNet.DarcLib
                         $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={versionType}&version={branchOrCommit}&includeContent=true",
                         _logger,
                         // Don't log the failure so users don't get confused by 404 messages popping up in expected circumstances.
-                        logFailure: false);
+                        logFailure: false,
+                        retryCount: 0);
                     return content["content"].ToString();
                 }
                 catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)"))
@@ -635,7 +638,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="body">Optional body if <paramref name="method"/> is Put or Post</param>
         /// <param name="versionOverride">API version override</param>
         /// <param name="baseAddressSubpath">[baseAddressSubPath]dev.azure.com subdomain to make the request</param>
-        /// <param name="maxAttempts">Maximum number of tries to attempt the API request</param>
+        /// <param name="retryCount">Maximum number of tries to attempt the API request</param>
         /// <returns>Http response</returns>
         private async Task<JObject> ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod method,
@@ -647,9 +650,9 @@ namespace Microsoft.DotNet.DarcLib
             string versionOverride = null,
             bool logFailure = true,
             string baseAddressSubpath = null,
-            int maxAttempts = 15)
+            int retryCount = 15)
         {
-            int retryCount = maxAttempts;
+            int retriesRemaining = retryCount;
             // Add a bit of randomness to the retry delay.
             var rng = new Random();
             using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride, baseAddressSubpath))
@@ -673,18 +676,21 @@ namespace Microsoft.DotNet.DarcLib
                     }
                     catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
                     {
-                        if (retryCount <= 0)
+                        if (retriesRemaining <= 0)
                         {
-                            logger.LogError($"Failed to send HttpRequest to Azure DevOps API after {maxAttempts} attempts. Path: {requestPath}. Exception: {ex.ToString()}");
+                            if (logFailure)
+                            {
+                                logger.LogError($"Failed to send HttpRequest to Azure DevOps API after {retriesRemaining} attempts. Path: {requestPath}. Exception: {ex.ToString()}");
+                            }
                             throw;
                         }
-                        else
+                        else if (logFailure)
                         {
-                            logger.LogWarning($"Failed to send HttpRequest to Azure DevOps API: Path:{requestPath}. {retryCount} attempts remaining. Exception: {ex.ToString()}");
+                            logger.LogWarning($"Failed to send HttpRequest to Azure DevOps API: Path:{requestPath}. {retriesRemaining} attempts remaining. Exception: {ex.ToString()}");
                         }
                     }
-                    --retryCount;
-                    int delay = (maxAttempts - retryCount) * rng.Next(1, 7);
+                    --retriesRemaining;
+                    int delay = (retryCount - retriesRemaining) * rng.Next(1, 7);
                     await Task.Delay(delay * 1000);
                 }
             }
@@ -768,16 +774,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </remarks>
         public static (string accountName, string projectName, string repoName) ParseRepoUri(string repoUri)
         {
-            // TODO: remove the if block below once https://github.com/dotnet/arcade/issues/2121 is closed
-            // If repoUri includes the user in the account we remove it otherwise Regex matching would fail for URIs like
-            // https://dnceng@dev.azure.com/dnceng/internal/_git/repo
-            if (Uri.TryCreate(repoUri, UriKind.Absolute, out Uri parsedUri))
-            {
-                if (!string.IsNullOrEmpty(parsedUri.UserInfo))
-                {
-                    repoUri = repoUri.Replace($"{parsedUri.UserInfo}@", string.Empty);
-                }
-            }
+            repoUri = NormalizeUrl(repoUri);
 
             Match m = RepositoryUriPattern.Match(repoUri);
             if (!m.Success)
@@ -1000,6 +997,36 @@ namespace Microsoft.DotNet.DarcLib
                 baseAddressSubpath: "vsrm.");
 
             return content.ToObject<AzureDevOpsReleaseDefinition>();
+        }
+
+        /// <summary>
+        // If repoUri includes the user in the account we remove it from URIs like
+        // https://dnceng@dev.azure.com/dnceng/internal/_git/repo
+        // If the URL host is of the form "dnceng.visualstudio.com" like
+        // https://dnceng.visualstudio.com/internal/_git/repo we replace it to "dev.azure.com/dnceng"
+        // for consistency
+        /// </summary>
+        /// <param name="url">The original url</param>
+        /// <returns>Transformed url</returns>
+        public static string NormalizeUrl(string repoUri)
+        {
+            if (Uri.TryCreate(repoUri, UriKind.Absolute, out Uri parsedUri))
+            {
+                if (!string.IsNullOrEmpty(parsedUri.UserInfo))
+                {
+                    repoUri = repoUri.Replace($"{parsedUri.UserInfo}@", string.Empty);
+                }
+
+                Match m = LegacyRepositoryUriPattern.Match(repoUri);
+
+                if (m.Success)
+                {
+                    string replacementUri = $"{Regex.Unescape(AzureDevOpsHostPattern)}/{m.Groups["account"].Value}";
+                    repoUri = repoUri.Replace(parsedUri.Host, replacementUri);
+                }
+            }
+
+            return repoUri;
         }
     }
 }

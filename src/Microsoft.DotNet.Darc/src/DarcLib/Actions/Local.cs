@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -22,9 +23,9 @@ namespace Microsoft.DotNet.DarcLib
         // TODO: Make these not constants and instead attempt to give more accurate information commit, branch, repo name, etc.)
         private readonly string _repo;
 
-        public Local(string gitPath, ILogger logger)
+        public Local(ILogger logger, string overrideRootPath = null)
         {
-            _repo = Directory.GetParent(gitPath).FullName;
+            _repo = overrideRootPath ?? LocalHelpers.GetRootDir(logger);
             _logger = logger;
             _gitClient = new LocalGitClient(_logger);
             _fileManager = new GitFileManager(_gitClient, _logger);

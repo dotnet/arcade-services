@@ -28,7 +28,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <returns>Process exit code.</returns>
         public override async Task<int> ExecuteAsync()
         {
-            Local local = new Local(LocalHelpers.GetGitDir(Logger), Logger);
+            Local local = new Local(Logger);
 
             try
             {

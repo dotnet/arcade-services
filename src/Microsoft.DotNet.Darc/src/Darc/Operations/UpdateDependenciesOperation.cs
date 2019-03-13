@@ -49,7 +49,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 IRemoteFactory remoteFactory = new RemoteFactory(_options);
                 IRemote barOnlyRemote = remoteFactory.GetBarOnlyRemote(Logger);
-                Local local = new Local(LocalHelpers.GetGitDir(Logger), Logger);
+                Local local = new Local(Logger);
                 List<DependencyDetail> dependenciesToUpdate = new List<DependencyDetail>();
                 bool someUpToDate = false;
                 string finalMessage = $"Local dependencies updated from channel '{_options.Channel}'.";

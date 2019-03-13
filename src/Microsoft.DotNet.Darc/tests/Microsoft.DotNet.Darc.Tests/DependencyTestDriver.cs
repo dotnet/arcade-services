@@ -267,8 +267,8 @@ namespace Microsoft.DotNet.Darc.Tests
             using (StreamReader expectedOutputsReader = new StreamReader(expectedOutputFilePath))
             using (StreamReader actualOutputsReader = new StreamReader(actualOutputFilePath))
             {
-                string expectedOutput = await expectedOutputsReader.ReadToEndAsync();
-                string actualOutput = await actualOutputsReader.ReadToEndAsync();
+                string expectedOutput = TestHelpers.NormalizeLineEndings(await expectedOutputsReader.ReadToEndAsync());
+                string actualOutput = TestHelpers.NormalizeLineEndings(await actualOutputsReader.ReadToEndAsync());
                 Assert.Equal(
                     expectedOutput,
                     actualOutput);
