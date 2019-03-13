@@ -2,10 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -17,6 +21,13 @@ namespace SubscriptionActorService
     /// </summary>
     internal class MaestroBarClient : IBarClient
     {
+        private readonly BuildAssetRegistryContext _context;
+
+        public MaestroBarClient(BuildAssetRegistryContext context)
+        {
+            _context = context;
+        }
+
         #region Unneeded APIs
 
         public Task AddDefaultChannelAsync(string repository, string branch, string channel)
@@ -94,21 +105,69 @@ namespace SubscriptionActorService
             throw new NotImplementedException();
         }
 
+        public Task<IEnumerable<Asset>> GetAssetsAsync(string name = null,
+            string version = null, int? buildId = null, bool? nonShipping = null)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
-        public Task<IEnumerable<Asset>> GetAssetsAsync(string name = null, string version = null, int? buildId = null, bool? nonShipping = null)
+        /// <summary>
+        ///     Get a list of builds for the given repo uri and commit.
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="commit">Commit</param>
+        /// <returns>Build with specific Id</returns>
+        /// <remarks>This only implements the narrow needs of the dependency graph
+        /// builder in context of coherency.  For example channels are not included./remarks>
+        public async Task<Build> GetBuildAsync(int buildId)
         {
-            throw new NotImplementedException();
+            Maestro.Data.Models.Build build = await _context.Builds.Where(b => b.Id == buildId)
+                .Include(b => b.Assets)
+                .FirstOrDefaultAsync();
+
+            if (build == null)
+            {
+                throw new DarcException($"Could not find a build with id '{buildId}'");
+            }
+
+            return ToClientModelBuild(build);
         }
 
-        public Task<Build> GetBuildAsync(int buildId)
+        /// <summary>
+        ///     Get a list of builds for the given repo uri and commit.
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="commit">Commit</param>
+        /// <returns>List of builds</returns>
+        public async Task<IEnumerable<Build>> GetBuildsAsync(string repoUri, string commit)
         {
-            throw new NotImplementedException();
+            List<Maestro.Data.Models.Build> builds = await _context.Builds.Where(b =>
+                (repoUri == b.AzureDevOpsRepository || repoUri == b.GitHubRepository) && (commit == b.Commit))
+                .Include(b => b.Assets)
+                .OrderByDescending(b => b.DateProduced)
+                .ToListAsync();
+
+            return builds.Select(b => ToClientModelBuild(b))
         }
 
-        public Task<IEnumerable<Build>> GetBuildsAsync(string repoUri, string commit)
+        private Asset ToClientModelAsset(Maestro.Data.Models.Asset other)
         {
-            throw new NotImplementedException();
+            return new Asset(other.Id, other.BuildId, other.NonShipping,
+                other.Name, other.Version, null);
+        }
+
+        private Build ToClientModelBuild(Maestro.Data.Models.Build other)
+        {
+            return new Build(other.Id, other.DateProduced, other.Commit,
+                null, other.Assets?.Select(a => ToClientModelAsset(a)).ToImmutableList(), null)
+            {
+                AzureDevOpsBranch = other.AzureDevOpsBranch,
+                GitHubBranch = other.GitHubBranch,
+                GitHubRepository = other.GitHubRepository,
+                AzureDevOpsRepository = other.AzureDevOpsRepository,
+            };
         }
     }
 }

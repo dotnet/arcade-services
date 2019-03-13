@@ -758,6 +758,20 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 TimeSpan.FromMinutes(5));
         }
 
+        /// <summary>
+        /// Given a set of input updates from builds, determine what updates
+        /// are required in the target repository.
+        /// </summary>
+        /// <param name="updates">Updates</param>
+        /// <param name="darc">Darc remote</param>
+        /// <param name="targetRepository">Target repository to calculate updates for</param>
+        /// <param name="branch">Target branch</param>
+        /// <returns>List of updates and dependencies that need updates.</returns>
+        /// <remarks>
+        ///     This is done in two passes.  The first pass runs through and determines the non-coherency
+        ///     updates required based on the input updates.  The second pass uses the repo state + the
+        ///     updates from the first pass to determine what else needs to change based on the coherency metadata.
+        /// </remarks>
         private async Task<List<(UpdateAssetsParameters update, List<DependencyDetail> deps)>> GetRequiredUpdates(
             List<UpdateAssetsParameters> updates,
             IRemote darc,
@@ -765,6 +779,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             string branch)
         {
             var requiredUpdates = new List<(UpdateAssetsParameters update, List<DependencyDetail> deps)>();
+            // Existing details 
+            List<DependencyDetail> existingDependencies = (await darc.GetDependenciesAsync(targetRepository, branch)).ToList();
 
             foreach (UpdateAssetsParameters update in updates)
             {
@@ -776,9 +792,9 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     });
                 List<DependencyUpdate> dependenciesToUpdate = await darc.GetRequiredNonCoherencyUpdatesAsync(
                     targetRepository,
-                    branch,
                     update.SourceSha,
-                    assetData);
+                    assetData,
+                    existingDependencies);
 
                 if (dependenciesToUpdate.Count < 1)
                 {
@@ -796,8 +812,21 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 }
 
                 List<DependencyDetail> targetOfUpdates = dependenciesToUpdate.Select(u => u.To).ToList();
+                // Update the existing details list
+                foreach (DependencyUpdate dependencyUpdate in dependenciesToUpdate)
+                {
+                    existingDependencies.Remove(dependencyUpdate.From);
+                    existingDependencies.Add(dependencyUpdate.To);
+                }
                 requiredUpdates.Add((update, targetOfUpdates));
             }
+
+            // Once we have applied all of non coherent updates, then we need to run a coherency check on the
+            // dependencies.
+            List<DependencyUpdate> coherencyUpdates = await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, null);
+            // For the update asset parameters, we don't have any information on the source of the update,
+            // since coherency can be run even without any updates.
+            requiredUpdates.Add((update, coherencyUpdates.Select(u => u.To).ToList()));
 
             return requiredUpdates;
         }
