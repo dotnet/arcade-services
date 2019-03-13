@@ -139,7 +139,6 @@ namespace ReleasePipelineRunner
                 return;
             }
 
-
             if (channel.ChannelReleasePipelines?.Any() != true)
             {
                 Logger.LogInformation($"Channel {channel.Id}, which build with BAR ID {build.Id} is attached to, doesn't have an associated publishing pipeline.");
@@ -157,6 +156,8 @@ namespace ReleasePipelineRunner
                 await StateManager.GetOrAddAsync<IReliableDictionary<int, IList<ReleasePipelineStatusItem>>>(RunningPipelineDictionaryName);
             List<ReleasePipelineStatusItem> releaseList = new List<ReleasePipelineStatusItem>();
 
+            Logger.LogInformation($"Found {channel.ChannelReleasePipelines.Count} pipeline(s) for channel {channelId}");
+
             foreach (ChannelReleasePipeline pipeline in channel.ChannelReleasePipelines)
             {
                 try
@@ -164,6 +165,8 @@ namespace ReleasePipelineRunner
                     string organization = pipeline.ReleasePipeline.Organization;
                     string project = pipeline.ReleasePipeline.Project;
                     int pipelineId = pipeline.ReleasePipeline.PipelineIdentifier;
+
+                    Logger.LogInformation($"Going to create a release using pipeline {organization}/{project}/{pipelineId}");
 
                     AzureDevOpsReleaseDefinition pipeDef = await azdoClient.GetReleaseDefinitionAsync(organization, project, pipelineId);
                     pipeDef = await azdoClient.RemoveAllArtifactSourcesAsync(organization, project, pipeDef);
@@ -175,6 +178,7 @@ namespace ReleasePipelineRunner
                     var item = new ReleasePipelineStatusItem(releaseId, channelId, organization, project);
                     releaseList.Add(item);
 
+                    Logger.LogInformation($"Created release {releaseId} using pipeline {organization}/{project}/{pipelineId}");
                 }
                 catch (Exception e)
                 {
@@ -214,6 +218,8 @@ namespace ReleasePipelineRunner
         [CronSchedule("0 0/5 * 1/1 * ? *", TimeZones.UTC)]
         public async Task ProcessFinishedReleasesAsync(CancellationToken cancellationToken)
         {
+            Logger.LogInformation($"Starting ProcessFinishedReleasesAsync.");
+
             var runningPipelines =
                 await StateManager.GetOrAddAsync<IReliableDictionary<int, IList<ReleasePipelineStatusItem>>>(RunningPipelineDictionaryName);
             try
@@ -240,10 +246,11 @@ namespace ReleasePipelineRunner
                                 if (HasInProgressEnvironments(release))
                                 {
                                     unfinishedReleases.Add(releaseStatus);
+                                    Logger.LogInformation($"Build {buildId}, channel {channelId}, still has unfinished release {releaseId} with status {release.Environments[0].Status}");
                                 }
                                 else
                                 {
-                                    Logger.LogInformation($"Release {releaseId} finished executing");
+                                    Logger.LogInformation($"Release {releaseId}, channel {channelId} finished executing");
                                 }
                             }
 
@@ -253,6 +260,8 @@ namespace ReleasePipelineRunner
                             }
                             else
                             {
+                                Logger.LogInformation($"All releases for build {buildId} for channel {channelId} finished. Creating BuildChannel.");
+
                                 buildChannelsToAdd.Add(new BuildChannel
                                 {
                                     BuildId = buildId,
