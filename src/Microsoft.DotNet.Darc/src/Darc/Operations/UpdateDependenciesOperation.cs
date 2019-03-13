@@ -48,7 +48,7 @@ namespace Microsoft.DotNet.Darc.Operations
                                                     _options.GitHubPat;
 
                 IRemoteFactory remoteFactory = new RemoteFactory(_options);
-                IRemote barOnlyRemote = remoteFactory.GetBarOnlyRemoteAsync(Logger);
+                IRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(Logger);
                 Local local = new Local(Logger);
                 List<DependencyDetail> dependenciesToUpdate = new List<DependencyDetail>();
                 bool someUpToDate = false;

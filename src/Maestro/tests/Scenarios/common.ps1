@@ -21,10 +21,16 @@ $channelsToDelete = @()
 $testRoot = Join-Path -Path $([System.IO.Path]::GetTempPath()) -ChildPath $([System.IO.Path]::GetRandomFileName())
 New-Item -Path $testRoot -ItemType Directory | Out-Null
 
-Write-Host "Temporary testing location located at $testRoot"
-Write-Host "Installing Darc: dotnet tool install --tool-path $testRoot --version ${darcVersion} Microsoft.DotNet.Darc"
-& dotnet tool install --tool-path $testRoot --version $darcVersion "Microsoft.DotNet.Darc"
-$darcTool = Join-Path -Path $testRoot -ChildPath "darc"
+$darcTool = ""
+if (Test-Path $darcVersion) {
+    $darcTool = "dotnet $darcVersion"
+    Write-Host "Using local darc binary $darcTool"
+} else {
+    Write-Host "Temporary testing location located at $testRoot"
+    Write-Host "Installing Darc: dotnet tool install --tool-path $testRoot --version ${darcVersion} Microsoft.DotNet.Darc"
+    & dotnet tool install --tool-path $testRoot --version $darcVersion "Microsoft.DotNet.Darc"
+    $darcTool = Join-Path -Path $testRoot -ChildPath "darc"
+}
 Write-Host
 
 # Set auth parameters
