@@ -83,6 +83,8 @@ namespace Maestro.Data.Models
 
         public string GitHubBranch { get; set; }
 
+        public bool PublishUsingPipelines { get; set; }
+
         public DateTimeOffset DateProduced { get; set; }
 
         public List<Asset> Assets { get; set; }

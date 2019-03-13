@@ -23,6 +23,7 @@ namespace Maestro.Web.Api.v2019_01_16.Models
             Commit = other.Commit;
             GitHubRepository = other.GitHubRepository;
             GitHubBranch = other.GitHubBranch;
+            PublishUsingPipelines = other.PublishUsingPipelines;
             AzureDevOpsBuildId = other.AzureDevOpsBuildId;
             AzureDevOpsBuildDefinitionId = other.AzureDevOpsBuildDefinitionId;
             AzureDevOpsAccount = other.AzureDevOpsAccount;
@@ -60,6 +61,8 @@ namespace Maestro.Web.Api.v2019_01_16.Models
         public string GitHubRepository { get; set; }
 
         public string GitHubBranch { get; set; }
+
+        public bool PublishUsingPipelines { get; set; }
 
         public DateTimeOffset DateProduced { get; }
 
