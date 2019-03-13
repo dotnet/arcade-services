@@ -202,13 +202,6 @@ namespace SubscriptionActorService
 
         protected abstract Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions();
 
-        protected async Task<IRemote> GetDarc()
-        {
-            (string targetRepository, string targetBranch) = await GetTargetAsync();
-            long installationId = await Context.GetInstallationId(targetRepository);
-            return await DarcFactory.CreateAsync(targetRepository, installationId);
-        }
-
         private async Task<string> GetSourceRepositoryAsync(Guid subscriptionId)
         {
             Subscription subscription = await Context.Subscriptions.FindAsync(subscriptionId);
@@ -763,9 +756,9 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         /// are required in the target repository.
         /// </summary>
         /// <param name="updates">Updates</param>
-        /// <param name="darc">Darc remote</param>
         /// <param name="targetRepository">Target repository to calculate updates for</param>
         /// <param name="branch">Target branch</param>
+        /// <param name="remoteFactory">Darc remote factory</param>
         /// <returns>List of updates and dependencies that need updates.</returns>
         /// <remarks>
         ///     This is done in two passes.  The first pass runs through and determines the non-coherency
@@ -774,10 +767,13 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         /// </remarks>
         private async Task<List<(UpdateAssetsParameters update, List<DependencyDetail> deps)>> GetRequiredUpdates(
             List<UpdateAssetsParameters> updates,
-            IRemote darc,
+            IRemoteFactory remoteFactory,
             string targetRepository,
             string branch)
         {
+            // Get a remote factory for the target repo
+            IRemote darc = remoteFactory.GetRemote(targetRepository, Logger);
+
             var requiredUpdates = new List<(UpdateAssetsParameters update, List<DependencyDetail> deps)>();
             // Existing details 
             List<DependencyDetail> existingDependencies = (await darc.GetDependenciesAsync(targetRepository, branch)).ToList();
@@ -823,7 +819,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
 
             // Once we have applied all of non coherent updates, then we need to run a coherency check on the
             // dependencies.
-            List<DependencyUpdate> coherencyUpdates = await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, null);
+            List<DependencyUpdate> coherencyUpdates =
+                await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies,remoteFactory);
             // For the update asset parameters, we don't have any information on the source of the update,
             // since coherency can be run even without any updates.
             requiredUpdates.Add((update, coherencyUpdates.Select(u => u.To).ToList()));

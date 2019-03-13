@@ -149,7 +149,7 @@ namespace SubscriptionActorService
                 .OrderByDescending(b => b.DateProduced)
                 .ToListAsync();
 
-            return builds.Select(b => ToClientModelBuild(b))
+            return builds.Select(b => ToClientModelBuild(b));
         }
 
         private Asset ToClientModelAsset(Maestro.Data.Models.Asset other)
