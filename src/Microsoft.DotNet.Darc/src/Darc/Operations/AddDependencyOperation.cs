@@ -25,7 +25,7 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             DependencyType type = _options.Type.ToLower() == "toolset" ? DependencyType.Toolset : DependencyType.Product;
 
-            Local local = new Local(LocalHelpers.GetGitDir(Logger), Logger);
+            Local local = new Local(Logger);
 
             DependencyDetail dependency = new DependencyDetail
             {
@@ -33,6 +33,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 Version = _options.Version ?? string.Empty,
                 RepoUri = _options.RepoUri ?? string.Empty,
                 Commit = _options.Commit ?? string.Empty,
+                CoherentParentDependencyName = _options.CoherentParentDependency ?? string.Empty,
                 Pinned = _options.Pinned,
                 Type = type,
             };

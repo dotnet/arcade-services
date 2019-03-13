@@ -68,8 +68,7 @@ namespace Microsoft.DotNet.DarcLib
 
         public Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path)
         {
-            string gitDir = LocalHelpers.GetGitDir(_logger);
-            string repoDir = Directory.GetParent(gitDir).FullName;
+            string repoDir = LocalHelpers.GetRootDir(_logger);
             string sourceFolder = Path.Combine(repoDir, path);
             return Task.Run(() => Directory.GetFiles(
                 sourceFolder,

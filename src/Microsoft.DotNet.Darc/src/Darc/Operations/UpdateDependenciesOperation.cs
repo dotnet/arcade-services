@@ -48,8 +48,8 @@ namespace Microsoft.DotNet.Darc.Operations
                                                     _options.GitHubPat;
 
                 IRemoteFactory remoteFactory = new RemoteFactory(_options);
-                IRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(Logger);
-                Local local = new Local(LocalHelpers.GetGitDir(Logger), Logger);
+                IRemote barOnlyRemote = remoteFactory.GetBarOnlyRemoteAsync(Logger);
+                Local local = new Local(Logger);
                 List<DependencyDetail> dependenciesToUpdate = new List<DependencyDetail>();
                 bool someUpToDate = false;
                 string finalMessage = $"Local dependencies updated from channel '{_options.Channel}'.";
