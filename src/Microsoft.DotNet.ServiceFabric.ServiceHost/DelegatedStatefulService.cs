@@ -86,17 +86,44 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
+            await Task.WhenAll(RunSchedule(cancellationToken),
+                RunAsyncLoop(cancellationToken));
+        }
+
+        private async Task RunAsyncLoop(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                using (ILifetimeScope scope = _container.BeginLifetimeScope(
+                                builder => builder.RegisterInstance(StateManager).As<IReliableStateManager>()))
+                {
+                    var impl = scope.Resolve<TServiceImplementation>();
+                    var telemetryClient = scope.Resolve<TelemetryClient>();
+                    var logger = scope.Resolve<ILogger<DelegatedStatefulService<TServiceImplementation>>>();
+
+                    var shouldWaitFor = await impl.RunAsync(cancellationToken);
+
+                    if (shouldWaitFor.Equals(TimeSpan.MaxValue))
+                    {
+                        return;
+                    }
+
+                    await Task.Delay(shouldWaitFor, cancellationToken);
+                }
+            }
+        }
+
+        private async Task RunSchedule(CancellationToken cancellationToken)
+        {
             using (ILifetimeScope scope = _container.BeginLifetimeScope(
-                builder => { builder.RegisterInstance(StateManager).As<IReliableStateManager>(); }))
+                            builder => builder.RegisterInstance(StateManager).As<IReliableStateManager>()))
             {
                 var impl = scope.Resolve<TServiceImplementation>();
                 var telemetryClient = scope.Resolve<TelemetryClient>();
                 var logger = scope.Resolve<ILogger<DelegatedStatefulService<TServiceImplementation>>>();
 
-                await Task.WhenAll(
-                    impl.RunAsync(cancellationToken),
-                    ScheduledService.RunScheduleAsync(impl, telemetryClient, cancellationToken, logger));
+                await ScheduledService.RunScheduleAsync(impl, telemetryClient, cancellationToken, logger);
             }
         }
-    }
+     }
 }
