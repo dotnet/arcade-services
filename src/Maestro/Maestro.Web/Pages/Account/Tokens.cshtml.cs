@@ -102,12 +102,10 @@ namespace Maestro.Web.Pages.Account
                 Error = "Unable to create token.";
             }
 
-            if (Error != null)
+            if (Error == null)
             {
-                return Page();
+                Message = "Make sure to copy your new personal access token now. You won't be able to see it again!";
             }
-
-            Message = "Make sure to copy your new personal access token now. You won't be able to see it again!";
 
             return RedirectToPage();
         }

@@ -119,7 +119,9 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 catch (Exception exc)
                 {
-                    throw new DarcException($"Something went wrong when pushing the files to repo {repoUri} in branch {branch}", exc);
+                    // This was originally a DarcException. Making it an actual Exception so we get to see in AppInsights if something failed while
+                    // commiting the changes
+                    throw new Exception($"Something went wrong when pushing the files to repo {repoUri} in branch {branch}", exc);
                 }
                 finally
                 {
