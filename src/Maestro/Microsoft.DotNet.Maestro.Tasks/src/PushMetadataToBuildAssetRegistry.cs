@@ -33,6 +33,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
         [Required]
         public string MaestroApiEndpoint { get; set; }
 
+        public bool PublishUsingPipelines { get; set; } = false;
+
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
         public void Cancel()
@@ -193,7 +195,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         azureDevOpsProject: manifest.AzureDevOpsProject ?? GetAzDevProject(),
                         azureDevOpsBuildNumber: manifest.AzureDevOpsBuildNumber ?? GetAzDevBuildNumber(),
                         azureDevOpsRepository: manifest.AzureDevOpsRepository ?? GetAzDevRepository(),
-                        azureDevOpsBranch: manifest.AzureDevOpsBranch ?? GetAzDevBranch())
+                        azureDevOpsBranch: manifest.AzureDevOpsBranch ?? GetAzDevBranch(),
+                        publishUsingPipelines: PublishUsingPipelines)
                     {
                         Assets = assets.ToImmutableList(),
                         AzureDevOpsBuildId = manifest.AzureDevOpsBuildId ?? GetAzDevBuildId(),
