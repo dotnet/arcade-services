@@ -33,7 +33,7 @@ namespace Maestro.Data.Models
                         Channel = dc.Channel,
                         Build = build
                     });
-                context.SaveChangesAsync();
+                context.SaveChanges();
             };
         }
 

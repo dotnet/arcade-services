@@ -652,46 +652,18 @@ namespace Microsoft.DotNet.DarcLib
             string baseAddressSubpath = null,
             int retryCount = 15)
         {
-            int retriesRemaining = retryCount;
-            // Add a bit of randomness to the retry delay.
-            var rng = new Random();
             using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride, baseAddressSubpath))
             {
-
-                while (true)
+                HttpRequestManager requestManager = new HttpRequestManager(client,
+                                                                            method,
+                                                                            requestPath,
+                                                                            logger,
+                                                                            body,
+                                                                            versionOverride,
+                                                                            logFailure);
+                using (var response = await requestManager.ExecuteAsync(retryCount))
                 {
-                    try
-                    {
-                        HttpRequestManager requestManager = new HttpRequestManager(client,
-                                                                                   method,
-                                                                                   requestPath,
-                                                                                   logger,
-                                                                                   body,
-                                                                                   versionOverride,
-                                                                                   logFailure);
-                        using (var response = await requestManager.ExecuteAsync())
-                        {
-                            return JObject.Parse(await response.Content.ReadAsStringAsync());
-                        }
-                    }
-                    catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
-                    {
-                        if (retriesRemaining <= 0)
-                        {
-                            if (logFailure)
-                            {
-                                logger.LogError($"Failed to send HttpRequest to Azure DevOps API after {retriesRemaining} attempts. Path: {requestPath}. Exception: {ex.ToString()}");
-                            }
-                            throw;
-                        }
-                        else if (logFailure)
-                        {
-                            logger.LogWarning($"Failed to send HttpRequest to Azure DevOps API: Path:{requestPath}. {retriesRemaining} attempts remaining. Exception: {ex.ToString()}");
-                        }
-                    }
-                    --retriesRemaining;
-                    int delay = (retryCount - retriesRemaining) * rng.Next(1, 7);
-                    await Task.Delay(delay * 1000);
+                    return JObject.Parse(await response.Content.ReadAsStringAsync());
                 }
             }
         }

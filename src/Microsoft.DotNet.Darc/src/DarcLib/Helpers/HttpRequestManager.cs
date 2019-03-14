@@ -16,6 +16,7 @@ namespace Microsoft.DotNet.DarcLib
         private readonly ILogger _logger;
         private readonly HttpRequestMessage _message;
         private readonly bool _logFailure;
+        private readonly string _requestUri;
 
         public HttpRequestManager(
             HttpClient client,
@@ -30,6 +31,7 @@ namespace Microsoft.DotNet.DarcLib
             _logger = logger;
             _message = new HttpRequestMessage(method, requestUri);
             _logFailure = logFailure;
+            _requestUri = requestUri;
 
             if (!string.IsNullOrEmpty(body))
             {
@@ -37,22 +39,41 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
-        public async Task<HttpResponseMessage> ExecuteAsync()
+        public async Task<HttpResponseMessage> ExecuteAsync(int retryCount = 15)
         {
-            HttpResponseMessage response = await _client.SendAsync(_message);
+            int retriesRemaining = retryCount;
+            // Add a bit of randomness to the retry delay.
+            var rng = new Random();
 
-            if (!response.IsSuccessStatusCode)
+            while (true)
             {
-                if (_logFailure)
+                try
                 {
-                    _logger.LogError(
-                        $"There was an error executing method '{_message.Method}' against URI '{_message.RequestUri}'. " +
-                        $"Request failed with error code: '{response.StatusCode}'");
+                    HttpResponseMessage response = await _client.SendAsync(_message);
+                    response.EnsureSuccessStatusCode();
+                    return response;
                 }
-                response.EnsureSuccessStatusCode();
+                catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
+                {
+                    if (retriesRemaining <= 0)
+                    {
+                        if (_logFailure)
+                        {
+                            _logger.LogError($"There was an error executing method '{_message.Method}' against URI '{_message.RequestUri}' " +
+                                $"after {retriesRemaining} attempts. Exception: {ex.ToString()}");
+                        }
+                        throw;
+                    }
+                    else if (_logFailure)
+                    {
+                        _logger.LogWarning($"There was an error executing method '{_message.Method}' against URI '{_message.RequestUri}'. " +
+                            $"{retriesRemaining} attempts remaining. Exception: {ex.ToString()}");
+                    }
+                }
+                --retriesRemaining;
+                int delay = (retryCount - retriesRemaining) * rng.Next(1, 7);
+                await Task.Delay(delay * 1000);
             }
-
-            return response;
         }
     }
 }
