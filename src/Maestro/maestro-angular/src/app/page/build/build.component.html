@@ -1,0 +1,79 @@
+<ng-template #loadingBuild>
+  <div class="d-flex flex-column" style="height: 100%;">
+    <div style="margin: auto;">
+      <progress-ring width="200" height="200"></progress-ring>
+    </div>
+  </div>
+</ng-template>
+<div class="d-flex flex-column" *stateful="let build from build$; loadingTemplate: loadingBuild">
+  <ng-template #loadingBuildInfo>
+    <div class="flex-grow-0 mr-3" style="font-size: 6em">
+      <fa-icon class="text-info" icon="question-circle"></fa-icon>
+    </div>
+    <div class="flex-grow-1">
+      <h4>{{build.gitHubRepository}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
+      <div>
+        <span>Loading Build Information From Azure Pipelines</span>
+        <div style="display:inline-block; vertical-align: middle;">
+          <progress-ring width="50" height="50" color="#777"></progress-ring>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+  <div class="d-flex flex-row p-3 header align-items-center">
+    <ng-container *stateful="let azDevInfo from azDevBuildInfo$; loadingTemplate: loadingBuildInfo;">
+      <div class="flex-grow-0 mr-3" style="font-size: 6em">
+        <fa-icon class="text-info" icon="info-circle"
+          *ngIf="!azDevInfo.isMostRecent && !azDevInfo.mostRecentFailureLink"></fa-icon>
+        <fa-icon class="text-success" icon="check-circle" *ngIf="azDevInfo.isMostRecent"></fa-icon>
+        <fa-icon class="text-warning" icon="exclamation-circle" *ngIf="azDevInfo.mostRecentFailureLink"></fa-icon>
+      </div>
+      <div class="flex-grow-1">
+        <div class="float-right">
+          <div>
+            <a class="btn btn-sm btn-primary" [href]="getBuildLink(build)" target="_blank">
+              Go to build in Azure DevOps <fa-icon icon="external-link-alt"></fa-icon>
+            </a>
+          </div>
+          <div *ngIf="azDevInfo.mostRecentFailureLink">
+            <a class="btn btn-danger btn-sm float-right text-light" [href]="azDevInfo.mostRecentFailureLink" target="_blank">
+              Latest Failed Build <fa-icon icon="external-link-alt"></fa-icon>
+            </a>
+          </div>
+        </div>
+        <h4>{{build.gitHubRepository}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
+        <div><a class="btn btn-sm btn-info" [href]="getCommitLink(build)" target="_blank">{{build.commit}} <fa-icon
+              icon="external-link-alt"></fa-icon></a></div>
+        <div>{{build.dateProduced | amCalendar}}</div>
+        <div>
+          <span class="text-info" *ngIf="!azDevInfo.isMostRecent && !azDevInfo.mostRecentFailureLink">This is not the
+            most recent successful
+            build</span>
+          <span class="text-success" *ngIf="azDevInfo.isMostRecent">This is the most recent build</span>
+          <span class="text-warning" *ngIf="azDevInfo.mostRecentFailureLink">This is the most recent successful build,
+            more recent
+            builds are failing</span>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+  <div class="container-fluid">
+    <ng-template #loadingData>
+      <div class="card mt-3">
+       <progress-ring></progress-ring>
+      </div>
+    </ng-template>
+    <ng-container *stateful="let graph from graph$; loadingTemplate: loadingData">
+      <mc-build-graph-table [graph]="graph"></mc-build-graph-table>
+    </ng-container>
+    <div class="card mt-3" *ngIf="build.assets && build.assets.length">
+      <div class="card-body">
+        <h5 class="card-title">Assets Produced</h5>
+      </div>
+      <ul class="list-group list-group-flush">
+        <li *ngFor="let asset of build.assets" class="list-group-item">{{asset.name}} <span
+            class="badge badge-info">{{asset.version}}</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
