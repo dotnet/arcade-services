@@ -1,0 +1,108 @@
+<div class="card mt-3">
+  <div class="card-body">
+    <h5 class="card-title">
+      Dependencies
+    </h5>
+  </div>
+  <ng-template #popContent>
+    <table class="table table-sm">
+      <tbody>
+        <tr>
+          <td>
+            <span class="align-self-center"><fa-icon icon="ellipsis-v"></fa-icon></span>
+          </td>
+          <td>
+            <span>This node is an ancestor of the focused node.</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+          <span class="align-self-center" style="padding-right: 1rem;"><fa-icon icon="angle-up"></fa-icon></span>
+          </td>
+          <td>
+          <span>This node is a parent of the focused node.</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+          <span class="align-self-center" style="padding-right: 1rem;"><fa-icon icon="angle-right"></fa-icon></span>
+          </td>
+          <td>
+          <span>This node is a child of the focused node.</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+          <span class="align-self-center" style="padding-right: 1rem;"><fa-icon icon="exclamation"></fa-icon></span>
+          </td>
+          <td>
+          <span>This node is a different build of the same repository as the focused node.</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      Focus a node by hovering over it. Lock the focus by clicking the <fa-icon icon="lock"></fa-icon>/<fa-icon icon="lock-open"></fa-icon> icon.
+    </p>
+  </ng-template>
+  <table class="table table-sm table-hover mb-0">
+    <thead>
+      <th style="min-width: 0">
+        <span style="float: right; cursor: help;" [ngbPopover]="popContent" popoverTitle="Help" placement="right"><fa-icon [icon]="['far', 'question-circle']"></fa-icon></span>
+      </th>
+      <th>Repository</th>
+      <th>Date Produced</th>
+      <th>Build Number</th>
+      <th>Commit</th>
+      <th>Link</th>
+    </thead>
+    <tbody>
+      <tr *ngFor="let node of sortedBuilds"
+        [ngClass]="{'table-warning': !node.coherent, 'table-info': node.isSameRepository}"
+        (mouseenter)="hover(node.build.id)"
+        (mouseleave)="hover(undefined)">
+        <td style="width: 2em; text-align: center"
+            (click)="node.isFocused && toggleLock()">
+          <div style="display: inline-block">
+            <span *ngIf="node.isAncestor">
+              <fa-icon icon="ellipsis-v" alt="ancestor is"></fa-icon>
+            </span>
+            <span *ngIf="node.isParent">
+              <fa-icon icon="angle-up" alt="parent"></fa-icon>
+            </span>
+            <span *ngIf="node.isSameRepository">
+              <fa-icon icon="exclamation" alt="conflicting build"></fa-icon>
+            </span>
+            <span *ngIf="node.isDependent">
+              <fa-icon icon="angle-right" alt="child"></fa-icon>
+            </span>
+            <span *ngIf="node.isFocused">
+              <fa-icon icon="lock" *ngIf="node.isLocked" alt="locked"></fa-icon>
+              <fa-icon icon="lock-open" *ngIf="!node.isLocked" alt="unlocked"></fa-icon>
+            </span>
+          </div>
+        </td>
+        <td>
+          <a [routerLink]="['../..', node.build.gitHubRepository, node.build.id]">{{node.build.gitHubRepository}}</a>
+        </td>
+        <td>
+          {{node.build.dateProduced | amTimeAgo}}
+        </td>
+        <td>
+          <fa-icon icon="exclamation-circle" *ngIf="!node.coherent"></fa-icon>
+          {{node.build.azureDevOpsBuildNumber}}
+        </td>
+        <td>
+          <a [href]="getCommitLink(node.build)" target="_blank">
+            <fa-icon icon="exclamation-circle" *ngIf="!node.coherent"></fa-icon> {{node.build.commit}} <fa-icon
+              icon="external-link-alt"></fa-icon>
+          </a>
+        </td>
+        <td>
+          <a class="btn btn-sm btn-primary" [href]="getBuildLink(node.build)" target="_blank">Build <fa-icon
+              icon="external-link-alt"></fa-icon></a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,67 @@
+<Project DefaultTargets="Build">
+  <PropertyGroup>
+    <!-- Must match projects.maestro-angular.architect.build.options.outputPath in angular.json  -->
+    <OutputPath>dist\maestro-angular\</OutputPath>
+  </PropertyGroup>
+  <Target Name="_CalculateInputsOutputsForRestore">
+    <ItemGroup>
+      <RestoreInput Include="package.json"/>
+      <RestoreInput Include="package-lock.json"/>
+      <RestoreOutput Include="node_modules\.restore-successful"/>
+    </ItemGroup>
+  </Target>
+  <Target Name="Restore"
+          DependsOnTargets="_CalculateInputsOutputsForRestore"
+          Inputs="@(RestoreInput)"
+          Outputs="@(RestoreOutput)">
+    <Exec Command="npm install"
+          WorkingDirectory="$(MSBuildProjectDirectory)"/>
+    <Touch AlwaysCreate="true" Files="@(RestoreOutput)"/>
+  </Target>
+
+  <Target Name="_CalculateInputsOutputsForBuild">
+    <ItemGroup>
+      <BuildInput Include="src\**\*"/>
+      <BuildInput Include="node_modules\**\*"/>
+      <BuildInput Include="angular.json"/>
+      <BuildInput Include="package.json"/>
+      <BuildInput Include="tsconfig.json"/>
+      <BuildOutput Include="$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(OutputPath)')).build-successful"/>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="CoreBuild"
+          DependsOnTargets="_CalculateInputsOutputsForBuild"
+          Inputs="@(BuildInput)"
+          Outputs="@(BuildOutput)">
+    <Exec Command="npm run build -- --prod"
+          WorkingDirectory="$(MSBuildProjectDirectory)"/>
+    <Touch AlwaysCreate="true" Files="@(BuildOutput)"/>
+  </Target>
+
+  <Target Name="Build"
+          DependsOnTargets="Restore;CoreBuild"
+          Returns="@(BuildOutput)">
+  </Target>
+
+  <Target Name="GetCopyToPublishDirectoryItems"
+          DependsOnTargets="Build"
+          Returns="@(CopyToPublishDirectoryItem)">
+    <ItemGroup>
+      <_OutputFile
+        Include="$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(OutputPath)'))**\*"
+        Exclude="$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(OutputPath)')).build-successful">
+      </_OutputFile>
+      <CopyToPublishDirectoryItem
+        Include="@(_OutputFile)"
+        Condition="'%(Filename)%(Extension)' != 'favicon.ico'">
+        <TargetPath Condition="'%(Filename)%(Extension)' != 'index.html'">wwwroot\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+        <TargetPath Condition="'%(Filename)%(Extension)' == 'index.html'">angular-bundle.html</TargetPath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </CopyToPublishDirectoryItem>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="GetTargetPath">
+  </Target>
+</Project>

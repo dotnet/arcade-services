@@ -1,0 +1,10 @@
+<ng-template #failure>
+  No builds avaliable for {{repository}} from {{(channel$ | async)?.name}}.
+</ng-template>
+<ng-template #loading>
+  <progress-ring width="200" height="200"></progress-ring>
+</ng-template>
+<div style="width: 100%; height: 100%; align-items: center; justify-content: center;" class="d-flex">
+  <div *stateful="let r from this.navigation$; errorTemplate: failure; loadingTemplate: loading;">
+  </div>
+</div>

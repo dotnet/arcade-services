@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -101,20 +102,18 @@ namespace Maestro.Web
                             },
                             OnValidatePrincipal = async context =>
                             {
-                                if (ShouldUpdateUser(context.User))
-                                {
-                                    var dbContext = context.HttpContext.RequestServices
-                                        .GetRequiredService<BuildAssetRegistryContext>();
-                                    var userManager = context.HttpContext.RequestServices
-                                        .GetRequiredService<UserManager<ApplicationUser>>();
-                                    var signInManager = context.HttpContext.RequestServices
-                                        .GetRequiredService<SignInManager<ApplicationUser>>();
+                                ApplicationUser user = context.User;
+                                var dbContext = context.HttpContext.RequestServices
+                                    .GetRequiredService<BuildAssetRegistryContext>();
+                                var userManager = context.HttpContext.RequestServices
+                                    .GetRequiredService<UserManager<ApplicationUser>>();
+                                var signInManager = context.HttpContext.RequestServices
+                                    .GetRequiredService<SignInManager<ApplicationUser>>();
 
-                                    await UpdateUserAsync(context.User, dbContext, userManager, signInManager);
+                                await UpdateUserIfNeededAsync(user, dbContext, userManager, signInManager);
 
-                                    context.ReplacePrincipal(
-                                        await signInManager.CreateUserPrincipalAsync(context.User));
-                                }
+                                ClaimsPrincipal principal = await signInManager.CreateUserPrincipalAsync(user);
+                                context.ReplacePrincipal(principal);
                             }
                         };
                     });
@@ -184,10 +183,7 @@ namespace Maestro.Web
                             }
                             else
                             {
-                                if (ShouldUpdateUser(user))
-                                {
-                                    await UpdateUserAsync(user, dbContext, userManager, signInManager);
-                                }
+                                await UpdateUserIfNeededAsync(user, dbContext, userManager, signInManager);
 
                                 ClaimsPrincipal principal = await signInManager.CreateUserPrincipalAsync(user);
                                 ctx.ReplacePrincipal(principal);
@@ -216,6 +212,34 @@ namespace Maestro.Web
                 {
                     options.Conventions.Add(new DefaultAuthorizeActionModelConvention(MsftAuthorizationPolicyName));
                 });
+        }
+
+        private async Task UpdateUserIfNeededAsync(
+            ApplicationUser user,
+            BuildAssetRegistryContext dbContext,
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager)
+        {
+            while (true)
+            {
+                try
+                {
+                    if (ShouldUpdateUser(user))
+                    {
+                        await UpdateUserAsync(user, dbContext, userManager, signInManager);
+                    }
+
+                    break;
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    // If we have a concurrent modification exception reload the data from the DB and try again
+                    foreach (EntityEntry entry in dbContext.ChangeTracker.Entries())
+                    {
+                        await entry.ReloadAsync();
+                    }
+                }
+            }
         }
 
         private bool ShouldUpdateUser(ApplicationUser user)
