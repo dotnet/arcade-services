@@ -190,30 +190,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 builder => { builder.RegisterType<TActor>().As<TActor>().InstancePerDependency(); });
         }
 
-        public ServiceHost RegisterStatefulActorService<
-            [MeansImplicitUse(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
-            TService, [MeansImplicitUse(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
-            TActor>(string actorName) where TService : IServiceImplementation where TActor : IActor
-        {
-            RegisterStatefulActorService<TActor>(
-                actorName,
-                (context, info, actorFactory) =>
-                {
-                    return new DelegatedActorService<TService, TActor>(
-                        context,
-                        info,
-                        ApplyConfigurationToServices,
-                        ApplyConfigurationToContainer,
-                        actorFactory);
-                });
-            return ConfigureContainer(
-                builder =>
-                {
-                    builder.RegisterType<TActor>().As<TActor>().InstancePerDependency();
-                    builder.RegisterType<TService>().As<TService>().InstancePerDependency();
-                });
-        }
-
         public ServiceHost RegisterStatelessWebService<TStartup>(string serviceTypeName) where TStartup : class
         {
             RegisterStatelessService(
