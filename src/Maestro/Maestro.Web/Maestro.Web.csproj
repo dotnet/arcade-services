@@ -76,6 +76,10 @@
       <OutputItemType>Analyzer</OutputItemType>
       <SetPlatform>Platform=AnyCPU</SetPlatform>
     </ProjectReferenceWithConfiguration>
-  </ItemGroup>
 
+    <ProjectReferenceWithConfiguration Include="..\maestro-angular\maestro-angular.proj">
+      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+      <SkipGetTargetFrameworkProperties>true</SkipGetTargetFrameworkProperties>
+    </ProjectReferenceWithConfiguration>
+  </ItemGroup>
 </Project>
