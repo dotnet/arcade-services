@@ -52,7 +52,8 @@ namespace Maestro.Web
             {
                 BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
                 BuildChannel entity = entry.Entity;
-                if (ChannelHasAssociatedReleasePipeline(entity.ChannelId, context))
+                Build build = entity.Build;
+                if (build.PublishUsingPipelines && ChannelHasAssociatedReleasePipeline(entity.ChannelId, context))
                 {
                     entry.Cancel = true;
                     var queue = context.GetService<BackgroundQueue>();
