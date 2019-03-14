@@ -25,7 +25,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
         public override async Task<int> ExecuteAsync()
         {
-            Local local = new Local(LocalHelpers.GetGitDir(Logger), Logger);
+            Local local = new Local(Logger);
 
             try
             {

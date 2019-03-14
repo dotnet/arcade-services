@@ -69,7 +69,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         Console.WriteLine($"Getting root dependencies from local repository...");
 
                         // Grab root dependency set from local repo
-                        Local local = new Local(LocalHelpers.GetGitDir(Logger), Logger);
+                        Local local = new Local(Logger);
                         rootDependencies = await local.GetDependenciesAsync(
                             _options.AssetName);
                     }
@@ -88,7 +88,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                         remoteFactory,
                         rootDependencies,
-                        _options.RepoUri ?? LocalHelpers.GetGitDir(Logger),
+                        _options.RepoUri ?? LocalHelpers.GetRootDir(Logger),
                         _options.Version ?? LocalHelpers.GetGitCommit(Logger),
                         _options.IncludeToolset,
                         Logger);
@@ -97,7 +97,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     Console.WriteLine($"Getting root dependencies from local repository...");
 
-                    Local local = new Local(LocalHelpers.GetGitDir(Logger), Logger);
+                    Local local = new Local(Logger);
                     rootDependencies = await local.GetDependenciesAsync(
                         _options.AssetName);
 
@@ -116,7 +116,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         rootDependencies,
                         _options.IncludeToolset,
                         Logger,
-                        LocalHelpers.GetGitDir(Logger),
+                        LocalHelpers.GetRootDir(Logger),
                         LocalHelpers.GetGitCommit(Logger),
                         _options.ReposFolder,
                         _options.RemotesMap);

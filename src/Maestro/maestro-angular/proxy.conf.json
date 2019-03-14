@@ -1,0 +1,10 @@
+{
+  "/_/*": {
+    "target": "http://localhost:8080",
+    "secure": false,
+    "pathRewrite": {
+      "^/_": ""
+    },
+    "logLevel": "debug"
+  }
+}

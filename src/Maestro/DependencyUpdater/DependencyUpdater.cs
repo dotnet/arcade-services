@@ -99,45 +99,43 @@ namespace DependencyUpdater
             return Task.CompletedTask;
         }
 
-        public async Task RunAsync(CancellationToken cancellationToken)
+        public async Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
         {
             IReliableConcurrentQueue<DependencyUpdateItem> queue =
                 await StateManager.GetOrAddAsync<IReliableConcurrentQueue<DependencyUpdateItem>>("queue");
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                try
-                {
-                    using (ITransaction tx = StateManager.CreateTransaction())
-                    {
-                        ConditionalValue<DependencyUpdateItem> maybeItem = await queue.TryDequeueAsync(
-                            tx,
-                            cancellationToken);
-                        if (maybeItem.HasValue)
-                        {
-                            DependencyUpdateItem item = maybeItem.Value;
-                            using (Logger.BeginScope(
-                                "Processing dependency update for build {buildId} in channel {channelId}",
-                                item.BuildId,
-                                item.ChannelId))
-                            {
-                                await UpdateDependenciesAsync(item.BuildId, item.ChannelId);
-                            }
-                        }
 
-                        await tx.CommitAsync();
+            try
+            {
+                using (ITransaction tx = StateManager.CreateTransaction())
+                {
+                    ConditionalValue<DependencyUpdateItem> maybeItem = await queue.TryDequeueAsync(
+                        tx,
+                        cancellationToken);
+                    if (maybeItem.HasValue)
+                    {
+                        DependencyUpdateItem item = maybeItem.Value;
+                        using (Logger.BeginScope(
+                            "Processing dependency update for build {buildId} in channel {channelId}",
+                            item.BuildId,
+                            item.ChannelId))
+                        {
+                            await UpdateDependenciesAsync(item.BuildId, item.ChannelId);
+                        }
                     }
 
-                    await Task.Delay(1000, cancellationToken);
-                }
-                catch (TaskCanceledException tcex) when (tcex.CancellationToken == cancellationToken)
-                {
-                    // ignore
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex, "Processing queue messages");
+                    await tx.CommitAsync();
                 }
             }
+            catch (TaskCanceledException tcex) when (tcex.CancellationToken == cancellationToken)
+            {
+                return TimeSpan.MaxValue;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Processing queue messages");
+            }
+            
+            return TimeSpan.FromSeconds(1);
         }
 
         /// <summary>
@@ -170,12 +168,12 @@ namespace DependencyUpdater
 
                 var subscriptionsAndBuilds = await subscriptionsToUpdate.ToListAsync(cancellationToken);
                 Logger.LogInformation($"Will update '{subscriptionsAndBuilds.Count}' subscriptions");
+
                 foreach (var s in subscriptionsAndBuilds)
                 {
                     Logger.LogInformation($"Will update {s.subscription} to build {s.latestBuild}");
+                    await UpdateSubscriptionAsync(s.subscription, s.latestBuild);
                 }
-
-                await Task.WhenAll(subscriptionsAndBuilds.Select(sub => UpdateSubscriptionAsync(sub.subscription, sub.latestBuild)));
             }
         }
 

@@ -5,12 +5,16 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.DotNet.DarcLib;
 using Newtonsoft.Json;
 
 namespace Maestro.Data.Models
 {
     public class Subscription
     {
+        private string _sourceRepository;
+        private string _targetRepository;
+
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public Guid Id { get; set; }
@@ -19,9 +23,31 @@ namespace Maestro.Data.Models
 
         public Channel Channel { get; set; }
 
-        public string SourceRepository { get; set; }
+        public string SourceRepository
+        {
+            get
+            {
+                return AzureDevOpsClient.NormalizeUrl(_sourceRepository);
+            }
 
-        public string TargetRepository { get; set; }
+            set
+            {
+                _sourceRepository = AzureDevOpsClient.NormalizeUrl(value);
+            }
+        }
+
+        public string TargetRepository
+        {
+            get
+            {
+                return AzureDevOpsClient.NormalizeUrl(_targetRepository);
+            }
+
+            set
+            {
+                _targetRepository = AzureDevOpsClient.NormalizeUrl(value);
+            }
+        }
 
         public string TargetBranch { get; set; }
 

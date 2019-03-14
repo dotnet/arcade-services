@@ -1,0 +1,7 @@
+<div>
+  <ng-container *ngIf="channels$ | async as channels">
+    <ng-container *ngFor="let channel of channels">
+      <mc-side-bar-channel [channel]="channel"></mc-side-bar-channel>
+    </ng-container>
+  </ng-container>
+</div>

@@ -1,0 +1,16 @@
+.header{
+  border-bottom: solid 1px #DDD;
+}
+
+tr:hover .dependent-hover {
+  display: inline;
+}
+
+.dependent-hover {
+  display: none;
+}
+
+.smush {
+  position: relative;
+  margin-left: -100%
+}
