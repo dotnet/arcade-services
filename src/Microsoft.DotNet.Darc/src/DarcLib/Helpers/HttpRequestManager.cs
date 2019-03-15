@@ -46,9 +46,17 @@ namespace Microsoft.DotNet.DarcLib
             {
                 try
                 {
-                    HttpResponseMessage response = await _client.SendAsync(_message);
-                    response.EnsureSuccessStatusCode();
-                    return response;
+                    using (HttpRequestMessage message = new HttpRequestMessage(_method, _requestUri))
+                    {
+                        if (!string.IsNullOrEmpty(_body))
+                        {
+                            message.Content = new StringContent(_body);
+                        }
+
+                        HttpResponseMessage response = await _client.SendAsync(message);
+                        response.EnsureSuccessStatusCode();
+                        return response;
+                    }
                 }
                 catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
                 {
