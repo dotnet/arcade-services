@@ -77,7 +77,7 @@ namespace ReleasePipelineRunner
                     {
                         ReleasePipelineRunnerItem item = maybeItem.Value;
                         using (Logger.BeginScope(
-                            "Triggering release pipelines associated with channel {channelId} for build {buildId}.",
+                            $"Triggering release pipelines associated with channel {item.ChannelId} for build {item.BuildId}.",
                             item.BuildId,
                             item.ChannelId))
                         {
