@@ -33,7 +33,7 @@ namespace Maestro.Data.Models
                         Channel = dc.Channel,
                         Build = build
                     });
-                context.SaveChangesAsync();
+                context.SaveChangesWithTriggers(b => context.SaveChanges(b));
             };
         }
 
@@ -82,6 +82,8 @@ namespace Maestro.Data.Models
         }
 
         public string GitHubBranch { get; set; }
+
+        public bool PublishUsingPipelines { get; set; }
 
         public DateTimeOffset DateProduced { get; set; }
 

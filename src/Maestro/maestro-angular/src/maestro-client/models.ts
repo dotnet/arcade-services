@@ -1,0 +1,1949 @@
+import moment, { Moment } from "moment";
+
+import { Helper } from "./helper";
+
+
+export enum AddAssetLocationToAssetAssetLocationType {
+    None = "none",
+    NugetFeed = "nugetFeed",
+    Container = "container",
+}
+
+export class ApiError {
+    public constructor(
+        message?: string,
+        errors?: string[],
+    ) {
+        this._message = message;
+        this._errors = errors;
+    }
+
+    private _message?: string;
+
+    public get message(): string | undefined {
+        return this._message;
+    }
+
+    private _errors?: string[];
+
+    public get errors(): string[] | undefined {
+        return this._errors;
+    }
+
+    public static fromRawObject(value: any): ApiError {
+        let result = new ApiError(
+            value["message"] == null ? undefined : value["message"],
+            value["errors"] == null ? undefined : value["errors"].map((e: any) => e),
+        );
+        for (let key of Object.keys(value))
+        {
+        }
+        return result;
+    }
+
+    public static toRawObject(value: ApiError): any {
+        let result: any = {};
+        if (value._message) {
+            result["message"] = value._message;
+        }
+        if (value._errors) {
+            result["errors"] = value._errors.map((e: any) => e);
+        }
+        return result;
+    }
+}
+
+export class Asset {
+    public constructor(
+        id: number,
+        buildId: number,
+        nonShipping: boolean,
+        name?: string,
+        version?: string,
+        locations?: AssetLocation[],
+    ) {
+        this._id = id;
+        this._buildId = buildId;
+        this._nonShipping = nonShipping;
+        this._name = name;
+        this._version = version;
+        this._locations = locations;
+    }
+
+    private _id: number;
+
+    public get id(): number {
+        return this._id;
+    }
+
+    private _name?: string;
+
+    public get name(): string | undefined {
+        return this._name;
+    }
+
+    private _version?: string;
+
+    public get version(): string | undefined {
+        return this._version;
+    }
+
+    private _buildId: number;
+
+    public get buildId(): number {
+        return this._buildId;
+    }
+
+    public set buildId(__value: number) {
+        this._buildId = __value;
+    }
+
+    private _nonShipping: boolean;
+
+    public get nonShipping(): boolean {
+        return this._nonShipping;
+    }
+
+    public set nonShipping(__value: boolean) {
+        this._nonShipping = __value;
+    }
+
+    private _locations?: AssetLocation[];
+
+    public get locations(): AssetLocation[] | undefined {
+        return this._locations;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._id !== undefined &&
+            this._buildId !== undefined &&
+            this._nonShipping !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): Asset {
+        let result = new Asset(
+            value["id"],
+            value["buildId"],
+            value["nonShipping"],
+            value["name"] == null ? undefined : value["name"],
+            value["version"] == null ? undefined : value["version"],
+            value["locations"] == null ? undefined : value["locations"].map((e: any) => AssetLocation.fromRawObject(e)),
+        );
+        for (let key of Object.keys(value))
+        {
+        }
+        return result;
+    }
+
+    public static toRawObject(value: Asset): any {
+        let result: any = {};
+        result["id"] = value._id;
+        if (value._name) {
+            result["name"] = value._name;
+        }
+        if (value._version) {
+            result["version"] = value._version;
+        }
+        result["buildId"] = value._buildId;
+        result["nonShipping"] = value._nonShipping;
+        if (value._locations) {
+            result["locations"] = value._locations.map((e: any) => AssetLocation.toRawObject(e));
+        }
+        return result;
+    }
+}
+
+export class AssetData {
+    public constructor(
+        nonShipping: boolean,
+    ) {
+        this._nonShipping = nonShipping;
+    }
+
+    private _name?: string;
+
+    public get name(): string | undefined {
+        return this._name;
+    }
+
+    public set name(__value: string | undefined) {
+        this._name = __value;
+    }
+
+    private _version?: string;
+
+    public get version(): string | undefined {
+        return this._version;
+    }
+
+    public set version(__value: string | undefined) {
+        this._version = __value;
+    }
+
+    private _nonShipping: boolean;
+
+    public get nonShipping(): boolean {
+        return this._nonShipping;
+    }
+
+    public set nonShipping(__value: boolean) {
+        this._nonShipping = __value;
+    }
+
+    private _locations?: AssetLocationData[];
+
+    public get locations(): AssetLocationData[] | undefined {
+        return this._locations;
+    }
+
+    public set locations(__value: AssetLocationData[] | undefined) {
+        this._locations = __value;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._nonShipping !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): AssetData {
+        let result = new AssetData(
+            value["nonShipping"],
+        );
+        for (let key of Object.keys(value))
+        {
+            if (key === "name")
+            {
+                result._name = value[key];
+                continue;
+            }
+            if (key === "version")
+            {
+                result._version = value[key];
+                continue;
+            }
+            if (key === "locations")
+            {
+                result._locations = value[key].map((e: any) => AssetLocationData.fromRawObject(e));
+                continue;
+            }
+        }
+        return result;
+    }
+
+    public static toRawObject(value: AssetData): any {
+        let result: any = {};
+        if (value._name) {
+            result["name"] = value._name;
+        }
+        if (value._version) {
+            result["version"] = value._version;
+        }
+        result["nonShipping"] = value._nonShipping;
+        if (value._locations) {
+            result["locations"] = value._locations.map((e: any) => AssetLocationData.toRawObject(e));
+        }
+        return result;
+    }
+}
+
+export class AssetLocation {
+    public constructor(
+        id: number,
+        type: AssetLocationType,
+        location?: string,
+    ) {
+        this._id = id;
+        this._type = type;
+        this._location = location;
+    }
+
+    private _id: number;
+
+    public get id(): number {
+        return this._id;
+    }
+
+    private _location?: string;
+
+    public get location(): string | undefined {
+        return this._location;
+    }
+
+    private _type: AssetLocationType;
+
+    public get type(): AssetLocationType {
+        return this._type;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._id !== undefined &&
+            this._type !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): AssetLocation {
+        let result = new AssetLocation(
+            value["id"],
+            value["type"],
+            value["location"] == null ? undefined : value["location"],
+        );
+        for (let key of Object.keys(value))
+        {
+        }
+        return result;
+    }
+
+    public static toRawObject(value: AssetLocation): any {
+        let result: any = {};
+        result["id"] = value._id;
+        if (value._location) {
+            result["location"] = value._location;
+        }
+        result["type"] = value._type;
+        return result;
+    }
+}
+
+export class AssetLocationData {
+    public constructor(
+        type: AssetLocationDataType,
+    ) {
+        this._type = type;
+    }
+
+    private _location?: string;
+
+    public get location(): string | undefined {
+        return this._location;
+    }
+
+    public set location(__value: string | undefined) {
+        this._location = __value;
+    }
+
+    private _type: AssetLocationDataType;
+
+    public get type(): AssetLocationDataType {
+        return this._type;
+    }
+
+    public set type(__value: AssetLocationDataType) {
+        this._type = __value;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._type !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): AssetLocationData {
+        let result = new AssetLocationData(
+            value["type"],
+        );
+        for (let key of Object.keys(value))
+        {
+            if (key === "location")
+            {
+                result._location = value[key];
+                continue;
+            }
+        }
+        return result;
+    }
+
+    public static toRawObject(value: AssetLocationData): any {
+        let result: any = {};
+        if (value._location) {
+            result["location"] = value._location;
+        }
+        result["type"] = value._type;
+        return result;
+    }
+}
+
+export enum AssetLocationDataType {
+    None = "none",
+    NugetFeed = "nugetFeed",
+    Container = "container",
+}
+
+export enum AssetLocationType {
+    None = "none",
+    NugetFeed = "nugetFeed",
+    Container = "container",
+}
+
+export class Build {
+    public constructor(
+        id: number,
+        dateProduced: Moment,
+        commit?: string,
+        channels?: Channel[],
+        assets?: Asset[],
+        dependencies?: BuildRef[],
+    ) {
+        this._id = id;
+        this._dateProduced = dateProduced;
+        this._commit = commit;
+        this._channels = channels;
+        this._assets = assets;
+        this._dependencies = dependencies;
+    }
+
+    private _id: number;
+
+    public get id(): number {
+        return this._id;
+    }
+
+    private _commit?: string;
+
+    public get commit(): string | undefined {
+        return this._commit;
+    }
+
+    private _azureDevOpsBuildId?: number;
+
+    public get azureDevOpsBuildId(): number | undefined {
+        return this._azureDevOpsBuildId;
+    }
+
+    public set azureDevOpsBuildId(__value: number | undefined) {
+        this._azureDevOpsBuildId = __value;
+    }
+
+    private _azureDevOpsBuildDefinitionId?: number;
+
+    public get azureDevOpsBuildDefinitionId(): number | undefined {
+        return this._azureDevOpsBuildDefinitionId;
+    }
+
+    public set azureDevOpsBuildDefinitionId(__value: number | undefined) {
+        this._azureDevOpsBuildDefinitionId = __value;
+    }
+
+    private _azureDevOpsAccount?: string;
+
+    public get azureDevOpsAccount(): string | undefined {
+        return this._azureDevOpsAccount;
+    }
+
+    public set azureDevOpsAccount(__value: string | undefined) {
+        this._azureDevOpsAccount = __value;
+    }
+
+    private _azureDevOpsProject?: string;
+
+    public get azureDevOpsProject(): string | undefined {
+        return this._azureDevOpsProject;
+    }
+
+    public set azureDevOpsProject(__value: string | undefined) {
+        this._azureDevOpsProject = __value;
+    }
+
+    private _azureDevOpsBuildNumber?: string;
+
+    public get azureDevOpsBuildNumber(): string | undefined {
+        return this._azureDevOpsBuildNumber;
+    }
+
+    public set azureDevOpsBuildNumber(__value: string | undefined) {
+        this._azureDevOpsBuildNumber = __value;
+    }
+
+    private _azureDevOpsRepository?: string;
+
+    public get azureDevOpsRepository(): string | undefined {
+        return this._azureDevOpsRepository;
+    }
+
+    public set azureDevOpsRepository(__value: string | undefined) {
+        this._azureDevOpsRepository = __value;
+    }
+
+    private _azureDevOpsBranch?: string;
+
+    public get azureDevOpsBranch(): string | undefined {
+        return this._azureDevOpsBranch;
+    }
+
+    public set azureDevOpsBranch(__value: string | undefined) {
+        this._azureDevOpsBranch = __value;
+    }
+
+    private _gitHubRepository?: string;
+
+    public get gitHubRepository(): string | undefined {
+        return this._gitHubRepository;
+    }
+
+    public set gitHubRepository(__value: string | undefined) {
+        this._gitHubRepository = __value;
+    }
+
+    private _gitHubBranch?: string;
+
+    public get gitHubBranch(): string | undefined {
+        return this._gitHubBranch;
+    }
+
+    public set gitHubBranch(__value: string | undefined) {
+        this._gitHubBranch = __value;
+    }
+
+    private _dateProduced: Moment;
+
+    public get dateProduced(): Moment {
+        return this._dateProduced;
+    }
+
+    private _channels?: Channel[];
+
+    public get channels(): Channel[] | undefined {
+        return this._channels;
+    }
+
+    private _assets?: Asset[];
+
+    public get assets(): Asset[] | undefined {
+        return this._assets;
+    }
+
+    private _dependencies?: BuildRef[];
+
+    public get dependencies(): BuildRef[] | undefined {
+        return this._dependencies;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._id !== undefined &&
+            this._dateProduced !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): Build {
+        let result = new Build(
+            value["id"],
+            moment(value["dateProduced"]),
+            value["commit"] == null ? undefined : value["commit"],
+            value["channels"] == null ? undefined : value["channels"].map((e: any) => Channel.fromRawObject(e)),
+            value["assets"] == null ? undefined : value["assets"].map((e: any) => Asset.fromRawObject(e)),
+            value["dependencies"] == null ? undefined : value["dependencies"].map((e: any) => BuildRef.fromRawObject(e)),
+        );
+        for (let key of Object.keys(value))
+        {
+            if (key === "azureDevOpsBuildId")
+            {
+                result._azureDevOpsBuildId = value[key];
+                continue;
+            }
+            if (key === "azureDevOpsBuildDefinitionId")
+            {
+                result._azureDevOpsBuildDefinitionId = value[key];
+                continue;
+            }
+            if (key === "azureDevOpsAccount")
+            {
+                result._azureDevOpsAccount = value[key];
+                continue;
+            }
+            if (key === "azureDevOpsProject")
+            {
+                result._azureDevOpsProject = value[key];
+                continue;
+            }
+            if (key === "azureDevOpsBuildNumber")
+            {
+                result._azureDevOpsBuildNumber = value[key];
+                continue;
+            }
+            if (key === "azureDevOpsRepository")
+            {
+                result._azureDevOpsRepository = value[key];
+                continue;
+            }
+            if (key === "azureDevOpsBranch")
+            {
+                result._azureDevOpsBranch = value[key];
+                continue;
+            }
+            if (key === "gitHubRepository")
+            {
+                result._gitHubRepository = value[key];
+                continue;
+            }
+            if (key === "gitHubBranch")
+            {
+                result._gitHubBranch = value[key];
+                continue;
+            }
+        }
+        return result;
+    }
+
+    public static toRawObject(value: Build): any {
+        let result: any = {};
+        result["id"] = value._id;
+        if (value._commit) {
+            result["commit"] = value._commit;
+        }
+        if (value._azureDevOpsBuildId) {
+            result["azureDevOpsBuildId"] = value._azureDevOpsBuildId;
+        }
+        if (value._azureDevOpsBuildDefinitionId) {
+            result["azureDevOpsBuildDefinitionId"] = value._azureDevOpsBuildDefinitionId;
+        }
+        if (value._azureDevOpsAccount) {
+            result["azureDevOpsAccount"] = value._azureDevOpsAccount;
+        }
+        if (value._azureDevOpsProject) {
+            result["azureDevOpsProject"] = value._azureDevOpsProject;
+        }
+        if (value._azureDevOpsBuildNumber) {
+            result["azureDevOpsBuildNumber"] = value._azureDevOpsBuildNumber;
+        }
+        if (value._azureDevOpsRepository) {
+            result["azureDevOpsRepository"] = value._azureDevOpsRepository;
+        }
+        if (value._azureDevOpsBranch) {
+            result["azureDevOpsBranch"] = value._azureDevOpsBranch;
+        }
+        if (value._gitHubRepository) {
+            result["gitHubRepository"] = value._gitHubRepository;
+        }
+        if (value._gitHubBranch) {
+            result["gitHubBranch"] = value._gitHubBranch;
+        }
+        result["dateProduced"] = value._dateProduced.format();
+        if (value._channels) {
+            result["channels"] = value._channels.map((e: any) => Channel.toRawObject(e));
+        }
+        if (value._assets) {
+            result["assets"] = value._assets.map((e: any) => Asset.toRawObject(e));
+        }
+        if (value._dependencies) {
+            result["dependencies"] = value._dependencies.map((e: any) => BuildRef.toRawObject(e));
+        }
+        return result;
+    }
+}
+
+export class BuildData {
+    public constructor(
+        commit: string,
+        azureDevOpsAccount: string,
+        azureDevOpsProject: string,
+        azureDevOpsBuildNumber: string,
+        azureDevOpsRepository: string,
+        azureDevOpsBranch: string,
+    ) {
+        this._commit = commit;
+        this._azureDevOpsAccount = azureDevOpsAccount;
+        this._azureDevOpsProject = azureDevOpsProject;
+        this._azureDevOpsBuildNumber = azureDevOpsBuildNumber;
+        this._azureDevOpsRepository = azureDevOpsRepository;
+        this._azureDevOpsBranch = azureDevOpsBranch;
+    }
+
+    private _commit: string;
+
+    public get commit(): string {
+        return this._commit;
+    }
+
+    public set commit(__value: string) {
+        this._commit = __value;
+    }
+
+    private _assets?: AssetData[];
+
+    public get assets(): AssetData[] | undefined {
+        return this._assets;
+    }
+
+    public set assets(__value: AssetData[] | undefined) {
+        this._assets = __value;
+    }
+
+    private _dependencies?: BuildRef[];
+
+    public get dependencies(): BuildRef[] | undefined {
+        return this._dependencies;
+    }
+
+    public set dependencies(__value: BuildRef[] | undefined) {
+        this._dependencies = __value;
+    }
+
+    private _azureDevOpsBuildId?: number;
+
+    public get azureDevOpsBuildId(): number | undefined {
+        return this._azureDevOpsBuildId;
+    }
+
+    public set azureDevOpsBuildId(__value: number | undefined) {
+        this._azureDevOpsBuildId = __value;
+    }
+
+    private _azureDevOpsBuildDefinitionId?: number;
+
+    public get azureDevOpsBuildDefinitionId(): number | undefined {
+        return this._azureDevOpsBuildDefinitionId;
+    }
+
+    public set azureDevOpsBuildDefinitionId(__value: number | undefined) {
+        this._azureDevOpsBuildDefinitionId = __value;
+    }
+
+    private _azureDevOpsAccount: string;
+
+    public get azureDevOpsAccount(): string {
+        return this._azureDevOpsAccount;
+    }
+
+    public set azureDevOpsAccount(__value: string) {
+        this._azureDevOpsAccount = __value;
+    }
+
+    private _azureDevOpsProject: string;
+
+    public get azureDevOpsProject(): string {
+        return this._azureDevOpsProject;
+    }
+
+    public set azureDevOpsProject(__value: string) {
+        this._azureDevOpsProject = __value;
+    }
+
+    private _azureDevOpsBuildNumber: string;
+
+    public get azureDevOpsBuildNumber(): string {
+        return this._azureDevOpsBuildNumber;
+    }
+
+    public set azureDevOpsBuildNumber(__value: string) {
+        this._azureDevOpsBuildNumber = __value;
+    }
+
+    private _azureDevOpsRepository: string;
+
+    public get azureDevOpsRepository(): string {
+        return this._azureDevOpsRepository;
+    }
+
+    public set azureDevOpsRepository(__value: string) {
+        this._azureDevOpsRepository = __value;
+    }
+
+    private _azureDevOpsBranch: string;
+
+    public get azureDevOpsBranch(): string {
+        return this._azureDevOpsBranch;
+    }
+
+    public set azureDevOpsBranch(__value: string) {
+        this._azureDevOpsBranch = __value;
+    }
+
+    private _gitHubRepository?: string;
+
+    public get gitHubRepository(): string | undefined {
+        return this._gitHubRepository;
+    }
+
+    public set gitHubRepository(__value: string | undefined) {
+        this._gitHubRepository = __value;
+    }
+
+    private _gitHubBranch?: string;
+
+    public get gitHubBranch(): string | undefined {
+        return this._gitHubBranch;
+    }
+
+    public set gitHubBranch(__value: string | undefined) {
+        this._gitHubBranch = __value;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._commit !== undefined &&
+            this._azureDevOpsAccount !== undefined &&
+            this._azureDevOpsProject !== undefined &&
+            this._azureDevOpsBuildNumber !== undefined &&
+            this._azureDevOpsRepository !== undefined &&
+            this._azureDevOpsBranch !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): BuildData {
+        let result = new BuildData(
+            value["commit"],
+            value["azureDevOpsAccount"],
+            value["azureDevOpsProject"],
+            value["azureDevOpsBuildNumber"],
+            value["azureDevOpsRepository"],
+            value["azureDevOpsBranch"],
+        );
+        for (let key of Object.keys(value))
+        {
+            if (key === "assets")
+            {
+                result._assets = value[key].map((e: any) => AssetData.fromRawObject(e));
+                continue;
+            }
+            if (key === "dependencies")
+            {
+                result._dependencies = value[key].map((e: any) => BuildRef.fromRawObject(e));
+                continue;
+            }
+            if (key === "azureDevOpsBuildId")
+            {
+                result._azureDevOpsBuildId = value[key];
+                continue;
+            }
+            if (key === "azureDevOpsBuildDefinitionId")
+            {
+                result._azureDevOpsBuildDefinitionId = value[key];
+                continue;
+            }
+            if (key === "gitHubRepository")
+            {
+                result._gitHubRepository = value[key];
+                continue;
+            }
+            if (key === "gitHubBranch")
+            {
+                result._gitHubBranch = value[key];
+                continue;
+            }
+        }
+        return result;
+    }
+
+    public static toRawObject(value: BuildData): any {
+        let result: any = {};
+        result["commit"] = value._commit;
+        if (value._assets) {
+            result["assets"] = value._assets.map((e: any) => AssetData.toRawObject(e));
+        }
+        if (value._dependencies) {
+            result["dependencies"] = value._dependencies.map((e: any) => BuildRef.toRawObject(e));
+        }
+        if (value._azureDevOpsBuildId) {
+            result["azureDevOpsBuildId"] = value._azureDevOpsBuildId;
+        }
+        if (value._azureDevOpsBuildDefinitionId) {
+            result["azureDevOpsBuildDefinitionId"] = value._azureDevOpsBuildDefinitionId;
+        }
+        result["azureDevOpsAccount"] = value._azureDevOpsAccount;
+        result["azureDevOpsProject"] = value._azureDevOpsProject;
+        result["azureDevOpsBuildNumber"] = value._azureDevOpsBuildNumber;
+        result["azureDevOpsRepository"] = value._azureDevOpsRepository;
+        result["azureDevOpsBranch"] = value._azureDevOpsBranch;
+        if (value._gitHubRepository) {
+            result["gitHubRepository"] = value._gitHubRepository;
+        }
+        if (value._gitHubBranch) {
+            result["gitHubBranch"] = value._gitHubBranch;
+        }
+        return result;
+    }
+}
+
+export class BuildGraph {
+    public constructor(
+        builds: Record<string, Build>,
+    ) {
+        this._builds = builds;
+    }
+
+    private _builds: Record<string, Build>;
+
+    public get builds(): Record<string, Build> {
+        return this._builds;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._builds !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): BuildGraph {
+        let result = new BuildGraph(
+            Helper.mapValues(value["builds"], (v: any) => Build.fromRawObject(v)),
+        );
+        for (let key of Object.keys(value))
+        {
+        }
+        return result;
+    }
+
+    public static toRawObject(value: BuildGraph): any {
+        let result: any = {};
+        result["builds"] = Helper.mapValues(value._builds, (v: any) => Build.toRawObject(v));
+        return result;
+    }
+}
+
+export class BuildRef {
+    public constructor(
+        buildId: number,
+        isProduct: boolean,
+    ) {
+        this._buildId = buildId;
+        this._isProduct = isProduct;
+    }
+
+    private _buildId: number;
+
+    public get buildId(): number {
+        return this._buildId;
+    }
+
+    private _isProduct: boolean;
+
+    public get isProduct(): boolean {
+        return this._isProduct;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._buildId !== undefined &&
+            this._isProduct !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): BuildRef {
+        let result = new BuildRef(
+            value["buildId"],
+            value["isProduct"],
+        );
+        for (let key of Object.keys(value))
+        {
+        }
+        return result;
+    }
+
+    public static toRawObject(value: BuildRef): any {
+        let result: any = {};
+        result["buildId"] = value._buildId;
+        result["isProduct"] = value._isProduct;
+        return result;
+    }
+}
+
+export class Channel {
+    public constructor(
+        id: number,
+        name?: string,
+        classification?: string,
+        releasePipelines?: ReleasePipeline[],
+    ) {
+        this._id = id;
+        this._name = name;
+        this._classification = classification;
+        this._releasePipelines = releasePipelines;
+    }
+
+    private _id: number;
+
+    public get id(): number {
+        return this._id;
+    }
+
+    private _name?: string;
+
+    public get name(): string | undefined {
+        return this._name;
+    }
+
+    private _classification?: string;
+
+    public get classification(): string | undefined {
+        return this._classification;
+    }
+
+    private _releasePipelines?: ReleasePipeline[];
+
+    public get releasePipelines(): ReleasePipeline[] | undefined {
+        return this._releasePipelines;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._id !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): Channel {
+        let result = new Channel(
+            value["id"],
+            value["name"] == null ? undefined : value["name"],
+            value["classification"] == null ? undefined : value["classification"],
+            value["releasePipelines"] == null ? undefined : value["releasePipelines"].map((e: any) => ReleasePipeline.fromRawObject(e)),
+        );
+        for (let key of Object.keys(value))
+        {
+        }
+        return result;
+    }
+
+    public static toRawObject(value: Channel): any {
+        let result: any = {};
+        result["id"] = value._id;
+        if (value._name) {
+            result["name"] = value._name;
+        }
+        if (value._classification) {
+            result["classification"] = value._classification;
+        }
+        if (value._releasePipelines) {
+            result["releasePipelines"] = value._releasePipelines.map((e: any) => ReleasePipeline.toRawObject(e));
+        }
+        return result;
+    }
+}
+
+export class DefaultChannel {
+    public constructor(
+        id: number,
+        repository: string,
+    ) {
+        this._id = id;
+        this._repository = repository;
+    }
+
+    private _id: number;
+
+    public get id(): number {
+        return this._id;
+    }
+
+    public set id(__value: number) {
+        this._id = __value;
+    }
+
+    private _repository: string;
+
+    public get repository(): string {
+        return this._repository;
+    }
+
+    public set repository(__value: string) {
+        this._repository = __value;
+    }
+
+    private _branch?: string;
+
+    public get branch(): string | undefined {
+        return this._branch;
+    }
+
+    public set branch(__value: string | undefined) {
+        this._branch = __value;
+    }
+
+    private _channel?: Channel;
+
+    public get channel(): Channel | undefined {
+        return this._channel;
+    }
+
+    public set channel(__value: Channel | undefined) {
+        this._channel = __value;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._id !== undefined &&
+            this._repository !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): DefaultChannel {
+        let result = new DefaultChannel(
+            value["id"],
+            value["repository"],
+        );
+        for (let key of Object.keys(value))
+        {
+            if (key === "branch")
+            {
+                result._branch = value[key];
+                continue;
+            }
+            if (key === "channel")
+            {
+                result._channel = Channel.fromRawObject(value[key]);
+                continue;
+            }
+        }
+        return result;
+    }
+
+    public static toRawObject(value: DefaultChannel): any {
+        let result: any = {};
+        result["id"] = value._id;
+        result["repository"] = value._repository;
+        if (value._branch) {
+            result["branch"] = value._branch;
+        }
+        if (value._channel) {
+            result["channel"] = Channel.toRawObject(value._channel);
+        }
+        return result;
+    }
+}
+
+export class MergePolicy {
+    public constructor(
+    ) {
+    }
+
+    private _name?: string;
+
+    public get name(): string | undefined {
+        return this._name;
+    }
+
+    public set name(__value: string | undefined) {
+        this._name = __value;
+    }
+
+    private _properties?: Record<string, any>;
+
+    public get properties(): Record<string, any> | undefined {
+        return this._properties;
+    }
+
+    public set properties(__value: Record<string, any> | undefined) {
+        this._properties = __value;
+    }
+
+    public static fromRawObject(value: any): MergePolicy {
+        let result = new MergePolicy(
+        );
+        for (let key of Object.keys(value))
+        {
+            if (key === "name")
+            {
+                result._name = value[key];
+                continue;
+            }
+            if (key === "properties")
+            {
+                result._properties = Helper.mapValues(value[key], (v: any) => v);
+                continue;
+            }
+        }
+        return result;
+    }
+
+    public static toRawObject(value: MergePolicy): any {
+        let result: any = {};
+        if (value._name) {
+            result["name"] = value._name;
+        }
+        if (value._properties) {
+            result["properties"] = Helper.mapValues(value._properties, (v: any) => v);
+        }
+        return result;
+    }
+}
+
+export class PostData {
+    public constructor(
+        repository: string,
+        branch: string,
+        channelId: number,
+    ) {
+        this._repository = repository;
+        this._branch = branch;
+        this._channelId = channelId;
+    }
+
+    private _repository: string;
+
+    public get repository(): string {
+        return this._repository;
+    }
+
+    public set repository(__value: string) {
+        this._repository = __value;
+    }
+
+    private _branch: string;
+
+    public get branch(): string {
+        return this._branch;
+    }
+
+    public set branch(__value: string) {
+        this._branch = __value;
+    }
+
+    private _channelId: number;
+
+    public get channelId(): number {
+        return this._channelId;
+    }
+
+    public set channelId(__value: number) {
+        this._channelId = __value;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._repository !== undefined &&
+            this._branch !== undefined &&
+            this._channelId !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): PostData {
+        let result = new PostData(
+            value["repository"],
+            value["branch"],
+            value["channelId"],
+        );
+        for (let key of Object.keys(value))
+        {
+        }
+        return result;
+    }
+
+    public static toRawObject(value: PostData): any {
+        let result: any = {};
+        result["repository"] = value._repository;
+        result["branch"] = value._branch;
+        result["channelId"] = value._channelId;
+        return result;
+    }
+}
+
+export class ReleasePipeline {
+    public constructor(
+        id: number,
+        pipelineIdentifier: number,
+    ) {
+        this._id = id;
+        this._pipelineIdentifier = pipelineIdentifier;
+    }
+
+    private _id: number;
+
+    public get id(): number {
+        return this._id;
+    }
+
+    public set id(__value: number) {
+        this._id = __value;
+    }
+
+    private _pipelineIdentifier: number;
+
+    public get pipelineIdentifier(): number {
+        return this._pipelineIdentifier;
+    }
+
+    public set pipelineIdentifier(__value: number) {
+        this._pipelineIdentifier = __value;
+    }
+
+    private _organization?: string;
+
+    public get organization(): string | undefined {
+        return this._organization;
+    }
+
+    public set organization(__value: string | undefined) {
+        this._organization = __value;
+    }
+
+    private _project?: string;
+
+    public get project(): string | undefined {
+        return this._project;
+    }
+
+    public set project(__value: string | undefined) {
+        this._project = __value;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._id !== undefined &&
+            this._pipelineIdentifier !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): ReleasePipeline {
+        let result = new ReleasePipeline(
+            value["id"],
+            value["pipelineIdentifier"],
+        );
+        for (let key of Object.keys(value))
+        {
+            if (key === "organization")
+            {
+                result._organization = value[key];
+                continue;
+            }
+            if (key === "project")
+            {
+                result._project = value[key];
+                continue;
+            }
+        }
+        return result;
+    }
+
+    public static toRawObject(value: ReleasePipeline): any {
+        let result: any = {};
+        result["id"] = value._id;
+        result["pipelineIdentifier"] = value._pipelineIdentifier;
+        if (value._organization) {
+            result["organization"] = value._organization;
+        }
+        if (value._project) {
+            result["project"] = value._project;
+        }
+        return result;
+    }
+}
+
+export class RepositoryHistoryItem {
+    public constructor(
+        timestamp: Moment,
+        success: boolean,
+        repositoryName?: string,
+        branchName?: string,
+        errorMessage?: string,
+        action?: string,
+        retryUrl?: string,
+    ) {
+        this._timestamp = timestamp;
+        this._success = success;
+        this._repositoryName = repositoryName;
+        this._branchName = branchName;
+        this._errorMessage = errorMessage;
+        this._action = action;
+        this._retryUrl = retryUrl;
+    }
+
+    private _repositoryName?: string;
+
+    public get repositoryName(): string | undefined {
+        return this._repositoryName;
+    }
+
+    private _branchName?: string;
+
+    public get branchName(): string | undefined {
+        return this._branchName;
+    }
+
+    private _timestamp: Moment;
+
+    public get timestamp(): Moment {
+        return this._timestamp;
+    }
+
+    private _errorMessage?: string;
+
+    public get errorMessage(): string | undefined {
+        return this._errorMessage;
+    }
+
+    private _success: boolean;
+
+    public get success(): boolean {
+        return this._success;
+    }
+
+    private _action?: string;
+
+    public get action(): string | undefined {
+        return this._action;
+    }
+
+    private _retryUrl?: string;
+
+    public get retryUrl(): string | undefined {
+        return this._retryUrl;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._timestamp !== undefined &&
+            this._success !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): RepositoryHistoryItem {
+        let result = new RepositoryHistoryItem(
+            moment(value["timestamp"]),
+            value["success"],
+            value["repositoryName"] == null ? undefined : value["repositoryName"],
+            value["branchName"] == null ? undefined : value["branchName"],
+            value["errorMessage"] == null ? undefined : value["errorMessage"],
+            value["action"] == null ? undefined : value["action"],
+            value["retryUrl"] == null ? undefined : value["retryUrl"],
+        );
+        for (let key of Object.keys(value))
+        {
+        }
+        return result;
+    }
+
+    public static toRawObject(value: RepositoryHistoryItem): any {
+        let result: any = {};
+        if (value._repositoryName) {
+            result["repositoryName"] = value._repositoryName;
+        }
+        if (value._branchName) {
+            result["branchName"] = value._branchName;
+        }
+        result["timestamp"] = value._timestamp.format();
+        if (value._errorMessage) {
+            result["errorMessage"] = value._errorMessage;
+        }
+        result["success"] = value._success;
+        if (value._action) {
+            result["action"] = value._action;
+        }
+        if (value._retryUrl) {
+            result["retryUrl"] = value._retryUrl;
+        }
+        return result;
+    }
+}
+
+export class Subscription {
+    public constructor(
+        id: string,
+        enabled: boolean,
+        sourceRepository?: string,
+        targetRepository?: string,
+        targetBranch?: string,
+    ) {
+        this._id = id;
+        this._enabled = enabled;
+        this._sourceRepository = sourceRepository;
+        this._targetRepository = targetRepository;
+        this._targetBranch = targetBranch;
+    }
+
+    private _id: string;
+
+    public get id(): string {
+        return this._id;
+    }
+
+    private _channel?: Channel;
+
+    public get channel(): Channel | undefined {
+        return this._channel;
+    }
+
+    public set channel(__value: Channel | undefined) {
+        this._channel = __value;
+    }
+
+    private _sourceRepository?: string;
+
+    public get sourceRepository(): string | undefined {
+        return this._sourceRepository;
+    }
+
+    private _targetRepository?: string;
+
+    public get targetRepository(): string | undefined {
+        return this._targetRepository;
+    }
+
+    private _targetBranch?: string;
+
+    public get targetBranch(): string | undefined {
+        return this._targetBranch;
+    }
+
+    private _policy?: SubscriptionPolicy;
+
+    public get policy(): SubscriptionPolicy | undefined {
+        return this._policy;
+    }
+
+    public set policy(__value: SubscriptionPolicy | undefined) {
+        this._policy = __value;
+    }
+
+    private _lastAppliedBuild?: Build;
+
+    public get lastAppliedBuild(): Build | undefined {
+        return this._lastAppliedBuild;
+    }
+
+    public set lastAppliedBuild(__value: Build | undefined) {
+        this._lastAppliedBuild = __value;
+    }
+
+    private _enabled: boolean;
+
+    public get enabled(): boolean {
+        return this._enabled;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._id !== undefined &&
+            this._enabled !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): Subscription {
+        let result = new Subscription(
+            value["id"],
+            value["enabled"],
+            value["sourceRepository"] == null ? undefined : value["sourceRepository"],
+            value["targetRepository"] == null ? undefined : value["targetRepository"],
+            value["targetBranch"] == null ? undefined : value["targetBranch"],
+        );
+        for (let key of Object.keys(value))
+        {
+            if (key === "channel")
+            {
+                result._channel = Channel.fromRawObject(value[key]);
+                continue;
+            }
+            if (key === "policy")
+            {
+                result._policy = SubscriptionPolicy.fromRawObject(value[key]);
+                continue;
+            }
+            if (key === "lastAppliedBuild")
+            {
+                result._lastAppliedBuild = Build.fromRawObject(value[key]);
+                continue;
+            }
+        }
+        return result;
+    }
+
+    public static toRawObject(value: Subscription): any {
+        let result: any = {};
+        result["id"] = value._id;
+        if (value._channel) {
+            result["channel"] = Channel.toRawObject(value._channel);
+        }
+        if (value._sourceRepository) {
+            result["sourceRepository"] = value._sourceRepository;
+        }
+        if (value._targetRepository) {
+            result["targetRepository"] = value._targetRepository;
+        }
+        if (value._targetBranch) {
+            result["targetBranch"] = value._targetBranch;
+        }
+        if (value._policy) {
+            result["policy"] = SubscriptionPolicy.toRawObject(value._policy);
+        }
+        if (value._lastAppliedBuild) {
+            result["lastAppliedBuild"] = Build.toRawObject(value._lastAppliedBuild);
+        }
+        result["enabled"] = value._enabled;
+        return result;
+    }
+}
+
+export class SubscriptionData {
+    public constructor(
+        channelName: string,
+        sourceRepository: string,
+        targetRepository: string,
+        targetBranch: string,
+        policy: SubscriptionPolicy,
+    ) {
+        this._channelName = channelName;
+        this._sourceRepository = sourceRepository;
+        this._targetRepository = targetRepository;
+        this._targetBranch = targetBranch;
+        this._policy = policy;
+    }
+
+    private _channelName: string;
+
+    public get channelName(): string {
+        return this._channelName;
+    }
+
+    public set channelName(__value: string) {
+        this._channelName = __value;
+    }
+
+    private _sourceRepository: string;
+
+    public get sourceRepository(): string {
+        return this._sourceRepository;
+    }
+
+    public set sourceRepository(__value: string) {
+        this._sourceRepository = __value;
+    }
+
+    private _targetRepository: string;
+
+    public get targetRepository(): string {
+        return this._targetRepository;
+    }
+
+    public set targetRepository(__value: string) {
+        this._targetRepository = __value;
+    }
+
+    private _targetBranch: string;
+
+    public get targetBranch(): string {
+        return this._targetBranch;
+    }
+
+    public set targetBranch(__value: string) {
+        this._targetBranch = __value;
+    }
+
+    private _enabled?: boolean;
+
+    public get enabled(): boolean | undefined {
+        return this._enabled;
+    }
+
+    public set enabled(__value: boolean | undefined) {
+        this._enabled = __value;
+    }
+
+    private _policy: SubscriptionPolicy;
+
+    public get policy(): SubscriptionPolicy {
+        return this._policy;
+    }
+
+    public set policy(__value: SubscriptionPolicy) {
+        this._policy = __value;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._channelName !== undefined &&
+            this._sourceRepository !== undefined &&
+            this._targetRepository !== undefined &&
+            this._targetBranch !== undefined &&
+            this._policy !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): SubscriptionData {
+        let result = new SubscriptionData(
+            value["channelName"],
+            value["sourceRepository"],
+            value["targetRepository"],
+            value["targetBranch"],
+            SubscriptionPolicy.fromRawObject(value["policy"]),
+        );
+        for (let key of Object.keys(value))
+        {
+            if (key === "enabled")
+            {
+                result._enabled = value[key];
+                continue;
+            }
+        }
+        return result;
+    }
+
+    public static toRawObject(value: SubscriptionData): any {
+        let result: any = {};
+        result["channelName"] = value._channelName;
+        result["sourceRepository"] = value._sourceRepository;
+        result["targetRepository"] = value._targetRepository;
+        result["targetBranch"] = value._targetBranch;
+        if (value._enabled) {
+            result["enabled"] = value._enabled;
+        }
+        result["policy"] = SubscriptionPolicy.toRawObject(value._policy);
+        return result;
+    }
+}
+
+export class SubscriptionHistoryItem {
+    public constructor(
+        timestamp: Moment,
+        success: boolean,
+        subscriptionId: string,
+        errorMessage?: string,
+        action?: string,
+        retryUrl?: string,
+    ) {
+        this._timestamp = timestamp;
+        this._success = success;
+        this._subscriptionId = subscriptionId;
+        this._errorMessage = errorMessage;
+        this._action = action;
+        this._retryUrl = retryUrl;
+    }
+
+    private _timestamp: Moment;
+
+    public get timestamp(): Moment {
+        return this._timestamp;
+    }
+
+    private _errorMessage?: string;
+
+    public get errorMessage(): string | undefined {
+        return this._errorMessage;
+    }
+
+    private _success: boolean;
+
+    public get success(): boolean {
+        return this._success;
+    }
+
+    private _subscriptionId: string;
+
+    public get subscriptionId(): string {
+        return this._subscriptionId;
+    }
+
+    private _action?: string;
+
+    public get action(): string | undefined {
+        return this._action;
+    }
+
+    private _retryUrl?: string;
+
+    public get retryUrl(): string | undefined {
+        return this._retryUrl;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._timestamp !== undefined &&
+            this._success !== undefined &&
+            this._subscriptionId !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): SubscriptionHistoryItem {
+        let result = new SubscriptionHistoryItem(
+            moment(value["timestamp"]),
+            value["success"],
+            value["subscriptionId"],
+            value["errorMessage"] == null ? undefined : value["errorMessage"],
+            value["action"] == null ? undefined : value["action"],
+            value["retryUrl"] == null ? undefined : value["retryUrl"],
+        );
+        for (let key of Object.keys(value))
+        {
+        }
+        return result;
+    }
+
+    public static toRawObject(value: SubscriptionHistoryItem): any {
+        let result: any = {};
+        result["timestamp"] = value._timestamp.format();
+        if (value._errorMessage) {
+            result["errorMessage"] = value._errorMessage;
+        }
+        result["success"] = value._success;
+        result["subscriptionId"] = value._subscriptionId;
+        if (value._action) {
+            result["action"] = value._action;
+        }
+        if (value._retryUrl) {
+            result["retryUrl"] = value._retryUrl;
+        }
+        return result;
+    }
+}
+
+export class SubscriptionPolicy {
+    public constructor(
+        batchable: boolean,
+        updateFrequency: SubscriptionPolicyUpdateFrequency,
+    ) {
+        this._batchable = batchable;
+        this._updateFrequency = updateFrequency;
+    }
+
+    private _batchable: boolean;
+
+    public get batchable(): boolean {
+        return this._batchable;
+    }
+
+    public set batchable(__value: boolean) {
+        this._batchable = __value;
+    }
+
+    private _updateFrequency: SubscriptionPolicyUpdateFrequency;
+
+    public get updateFrequency(): SubscriptionPolicyUpdateFrequency {
+        return this._updateFrequency;
+    }
+
+    public set updateFrequency(__value: SubscriptionPolicyUpdateFrequency) {
+        this._updateFrequency = __value;
+    }
+
+    private _mergePolicies?: MergePolicy[];
+
+    public get mergePolicies(): MergePolicy[] | undefined {
+        return this._mergePolicies;
+    }
+
+    public set mergePolicies(__value: MergePolicy[] | undefined) {
+        this._mergePolicies = __value;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._batchable !== undefined &&
+            this._updateFrequency !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): SubscriptionPolicy {
+        let result = new SubscriptionPolicy(
+            value["batchable"],
+            value["updateFrequency"],
+        );
+        for (let key of Object.keys(value))
+        {
+            if (key === "mergePolicies")
+            {
+                result._mergePolicies = value[key].map((e: any) => MergePolicy.fromRawObject(e));
+                continue;
+            }
+        }
+        return result;
+    }
+
+    public static toRawObject(value: SubscriptionPolicy): any {
+        let result: any = {};
+        result["batchable"] = value._batchable;
+        result["updateFrequency"] = value._updateFrequency;
+        if (value._mergePolicies) {
+            result["mergePolicies"] = value._mergePolicies.map((e: any) => MergePolicy.toRawObject(e));
+        }
+        return result;
+    }
+}
+
+export enum SubscriptionPolicyUpdateFrequency {
+    None = "none",
+    EveryDay = "everyDay",
+    EveryBuild = "everyBuild",
+}
+
+export class SubscriptionUpdate {
+    public constructor(
+    ) {
+    }
+
+    private _channelName?: string;
+
+    public get channelName(): string | undefined {
+        return this._channelName;
+    }
+
+    public set channelName(__value: string | undefined) {
+        this._channelName = __value;
+    }
+
+    private _sourceRepository?: string;
+
+    public get sourceRepository(): string | undefined {
+        return this._sourceRepository;
+    }
+
+    public set sourceRepository(__value: string | undefined) {
+        this._sourceRepository = __value;
+    }
+
+    private _policy?: SubscriptionPolicy;
+
+    public get policy(): SubscriptionPolicy | undefined {
+        return this._policy;
+    }
+
+    public set policy(__value: SubscriptionPolicy | undefined) {
+        this._policy = __value;
+    }
+
+    private _enabled?: boolean;
+
+    public get enabled(): boolean | undefined {
+        return this._enabled;
+    }
+
+    public set enabled(__value: boolean | undefined) {
+        this._enabled = __value;
+    }
+
+    public static fromRawObject(value: any): SubscriptionUpdate {
+        let result = new SubscriptionUpdate(
+        );
+        for (let key of Object.keys(value))
+        {
+            if (key === "channelName")
+            {
+                result._channelName = value[key];
+                continue;
+            }
+            if (key === "sourceRepository")
+            {
+                result._sourceRepository = value[key];
+                continue;
+            }
+            if (key === "policy")
+            {
+                result._policy = SubscriptionPolicy.fromRawObject(value[key]);
+                continue;
+            }
+            if (key === "enabled")
+            {
+                result._enabled = value[key];
+                continue;
+            }
+        }
+        return result;
+    }
+
+    public static toRawObject(value: SubscriptionUpdate): any {
+        let result: any = {};
+        if (value._channelName) {
+            result["channelName"] = value._channelName;
+        }
+        if (value._sourceRepository) {
+            result["sourceRepository"] = value._sourceRepository;
+        }
+        if (value._policy) {
+            result["policy"] = SubscriptionPolicy.toRawObject(value._policy);
+        }
+        if (value._enabled) {
+            result["enabled"] = value._enabled;
+        }
+        return result;
+    }
+}

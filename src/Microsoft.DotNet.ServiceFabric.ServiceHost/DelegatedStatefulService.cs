@@ -94,12 +94,9 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                using (ILifetimeScope scope = _container.BeginLifetimeScope(
-                                builder => builder.RegisterInstance(StateManager).As<IReliableStateManager>()))
+                using (ILifetimeScope scope = _container.BeginLifetimeScope())
                 {
                     var impl = scope.Resolve<TServiceImplementation>();
-                    var telemetryClient = scope.Resolve<TelemetryClient>();
-                    var logger = scope.Resolve<ILogger<DelegatedStatefulService<TServiceImplementation>>>();
 
                     var shouldWaitFor = await impl.RunAsync(cancellationToken);
 
@@ -115,15 +112,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         private async Task RunSchedule(CancellationToken cancellationToken)
         {
-            using (ILifetimeScope scope = _container.BeginLifetimeScope(
-                            builder => builder.RegisterInstance(StateManager).As<IReliableStateManager>()))
-            {
-                var impl = scope.Resolve<TServiceImplementation>();
-                var telemetryClient = scope.Resolve<TelemetryClient>();
-                var logger = scope.Resolve<ILogger<DelegatedStatefulService<TServiceImplementation>>>();
-
-                await ScheduledService.RunScheduleAsync(impl, telemetryClient, cancellationToken, logger);
-            }
+            await ScheduledService<TServiceImplementation>.RunScheduleAsync(_container, cancellationToken);
         }
      }
 }

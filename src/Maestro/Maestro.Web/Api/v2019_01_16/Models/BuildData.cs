@@ -42,12 +42,15 @@ namespace Maestro.Web.Api.v2019_01_16.Models
 
         public string GitHubBranch { get; set; }
 
+        public bool PublishUsingPipelines { get; set; }
+
         public Data.Models.Build ToDb()
         {
             return new Data.Models.Build
             {
                 GitHubRepository = GitHubRepository,
                 GitHubBranch = GitHubBranch,
+                PublishUsingPipelines = PublishUsingPipelines,
                 AzureDevOpsBuildId = AzureDevOpsBuildId,
                 AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId,
                 AzureDevOpsAccount = AzureDevOpsAccount,
