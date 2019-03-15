@@ -781,7 +781,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             {
                 description.WriteLine("## Coherency Updates");
                 description.WriteLine();
-                description.WriteLine("The following updates ensure that dependencies with a \"CoherentParentDependency\"");
+                description.WriteLine("The following updates ensure that dependencies with a *CoherentParentDependency*");
                 description.WriteLine("attribute were produced in a build used as input to the parent dependency's build.");
                 description.WriteLine("See [Dependency Description Format](https://github.com/dotnet/arcade/blob/master/Documentation/DependencyDescriptionFormat.md#dependency-description-overview)");
                 description.WriteLine();
@@ -797,7 +797,6 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 string sourceRepository = update.SourceRepo;
                 Build build = await GetBuildAsync(update.BuildId);
                 description.WriteLine($"## From {sourceRepository}");
-                description.WriteLine();
                 description.WriteLine($"- **Build**: {build.AzureDevOpsBuildNumber}");
                 description.WriteLine($"- **Date Produced**: {build.DateProduced.ToString("g")}");
                 // This is duplicated from the files changed, but is easier to read here.
@@ -808,7 +807,6 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     description.WriteLine($"- **Branch**: {branch}");
                 }
                 description.WriteLine($"- **Updates**:");
-                description.WriteLine();
 
                 foreach (DependencyDetail dep in deps)
                 {
