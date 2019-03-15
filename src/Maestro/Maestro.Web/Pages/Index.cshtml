@@ -1,7 +1,7 @@
 @page
 @model Maestro.Web.Pages.IndexModel
+@using System.Web
 @using Maestro.Data
-@using Microsoft.AspNetCore.Http
 @using Microsoft.AspNetCore.Identity
 @{
     ViewBag.Title = "Index";
@@ -81,7 +81,7 @@
     <script type="text/javascript">
         window.applicationData = {
           brand: '@Html.Raw(ViewBag.Brand)',
-          userName: '@await GetUserNameAsync()',
+          userName: '@Html.Raw(HttpUtility.JavaScriptStringEncode(await GetUserNameAsync()))',
         };
     </script>
     @Model.GetStyleBundles()

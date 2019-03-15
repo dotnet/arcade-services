@@ -13,6 +13,21 @@ interface BuildData {
   isLocked?: boolean;
 }
 
+function getRepo(build: Build) {
+  return build.gitHubRepository || build.azureDevOpsRepository;
+}
+
+function buildNumber(b : Build): number | string {
+  let result: number | string = 0;
+  if (b.azureDevOpsBuildNumber) {
+    result = +b.azureDevOpsBuildNumber;
+    if (isNaN(result)) {
+      result = b.azureDevOpsBuildNumber;
+    }
+  }
+  return result;
+}
+
 function sortBuilds(graph: BuildGraph): BuildData[] {
   const sortedBuilds = topologicalSort(Object.values(graph.builds), build => {
     if (build.dependencies) {
@@ -21,15 +36,9 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
     return [];
   }, build => build.id);
 
-  function buildNumber(b : Build) {
-    if (b.azureDevOpsBuildNumber) {
-      return +b.azureDevOpsBuildNumber;
-    }
-    return NaN;
-  }
 
   const result = sortedBuilds.map<BuildData>(build => {
-      const sameRepo = sortedBuilds.filter(b => b.gitHubRepository === build.gitHubRepository);
+      const sameRepo = sortedBuilds.filter(b => getRepo(b) === getRepo(build));
       const coherent = sameRepo.every(b => buildNumber(b) <= buildNumber(build));
       return {
         build: build,
@@ -52,6 +61,8 @@ export class BuildGraphTableComponent implements OnChanges {
 
   public locked: boolean = false;
   public focusedBuildId?: number;
+
+  getRepo = getRepo;
 
   constructor() { }
 

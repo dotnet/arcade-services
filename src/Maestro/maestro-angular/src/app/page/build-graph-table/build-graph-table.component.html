@@ -83,7 +83,7 @@
           </div>
         </td>
         <td>
-          <a [routerLink]="['../..', node.build.gitHubRepository, node.build.id]">{{node.build.gitHubRepository}}</a>
+          <a [routerLink]="['../..', getRepo(node.build), node.build.id]">{{getRepo(node.build)}}</a>
         </td>
         <td>
           {{node.build.dateProduced | amTimeAgo}}

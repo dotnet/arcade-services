@@ -10,6 +10,7 @@ import { Observable } from 'rxjs';
 import { BuildStatusService } from 'src/app/services/build-status.service';
 import { BuildStatus } from 'src/app/model/build-status';
 import { statefulSwitchMap, StatefulResult, statefulPipe } from 'src/stateful';
+import { WrappedError } from 'src/stateful/helpers';
 
 interface AzDevBuildInfo {
   isMostRecent: boolean;
@@ -49,7 +50,12 @@ export class BuildComponent implements OnInit, OnChanges {
     );
     this.build$ = data$.pipe(
       statefulPipe(
-        map(t => t.graph.builds[t.buildId]),
+        map(({graph, buildId}) => {
+          if (buildId in graph.builds) {
+            return graph.builds[buildId];
+          }
+          return new WrappedError(new Error("That build has no graph."));
+        })
       ),
     );
 
