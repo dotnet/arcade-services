@@ -52,12 +52,12 @@ namespace Maestro.Web
             {
                 BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
                 BuildChannel entity = entry.Entity;
-                Build build = context.Builds.Where(a => a.Id == entity.BuildId).FirstOrDefault();
+                Build build = context.Builds.Find(entity.BuildId);
 
                 if (build == null)
                 {
                     ILogger<Startup> logger = context.GetService<ILogger<Startup>>();
-                    logger.LogError($"Could not find build with id {entity.BuildId} in BAR.");
+                    logger.LogError($"Could not find build with id {entity.BuildId} in BAR. Skipping pipeline triggering.");
                 }
                 else
                 {
