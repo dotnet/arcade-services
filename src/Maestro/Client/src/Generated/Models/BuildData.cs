@@ -6,7 +6,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class BuildData
     {
-        public BuildData(string commit, string azureDevOpsAccount, string azureDevOpsProject, string azureDevOpsBuildNumber, string azureDevOpsRepository, string azureDevOpsBranch)
+        public BuildData(string commit, string azureDevOpsAccount, string azureDevOpsProject, string azureDevOpsBuildNumber, string azureDevOpsRepository, string azureDevOpsBranch, bool publishUsingPipelines)
         {
             Commit = commit;
             AzureDevOpsAccount = azureDevOpsAccount;
@@ -14,6 +14,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
             AzureDevOpsBuildNumber = azureDevOpsBuildNumber;
             AzureDevOpsRepository = azureDevOpsRepository;
             AzureDevOpsBranch = azureDevOpsBranch;
+            PublishUsingPipelines = publishUsingPipelines;
         }
 
         [JsonProperty("commit")]
@@ -51,6 +52,9 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 
         [JsonProperty("gitHubBranch")]
         public string GitHubBranch { get; set; }
+
+        [JsonProperty("publishUsingPipelines")]
+        public bool PublishUsingPipelines { get; set; }
 
         [JsonIgnore]
         public bool IsValid

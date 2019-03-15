@@ -47,6 +47,10 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
+        Task TriggerDailyUpdateAsync(
+            CancellationToken cancellationToken = default
+        );
+
         Task<IImmutableList<SubscriptionHistoryItem>> GetSubscriptionHistoryAsync(
             Guid id,
             int? page = default,
@@ -601,6 +605,77 @@ namespace Microsoft.DotNet.Maestro.Client
                     Request = _req,
                     Response = _res,
                     Body = Client.Deserialize<Subscription>(_responseContent),
+                };
+            }
+            catch (Exception)
+            {
+                _req?.Dispose();
+                _res?.Dispose();
+                throw;
+            }
+        }
+
+        partial void HandleFailedTriggerDailyUpdateRequest(RestApiException ex);
+
+        public async Task TriggerDailyUpdateAsync(
+            CancellationToken cancellationToken = default
+        )
+        {
+            using (await TriggerDailyUpdateInternalAsync(
+                cancellationToken
+            ).ConfigureAwait(false))
+            {
+                return;
+            }
+        }
+
+        internal async Task<HttpOperationResponse> TriggerDailyUpdateInternalAsync(
+            CancellationToken cancellationToken = default
+        )
+        {
+            const string apiVersion = "2019-01-16";
+
+            var _path = "/api/subscriptions/triggerDaily";
+
+            var _query = new QueryBuilder();
+            _query.Add("api-version", Client.Serialize(apiVersion));
+
+            var _uriBuilder = new UriBuilder(Client.BaseUri);
+            _uriBuilder.Path = _uriBuilder.Path.TrimEnd('/') + _path;
+            _uriBuilder.Query = _query.ToString();
+            var _url = _uriBuilder.Uri;
+
+            HttpRequestMessage _req = null;
+            HttpResponseMessage _res = null;
+            try
+            {
+                _req = new HttpRequestMessage(HttpMethod.Post, _url);
+
+                if (Client.Credentials != null)
+                {
+                    await Client.Credentials.ProcessHttpRequestAsync(_req, cancellationToken).ConfigureAwait(false);
+                }
+
+                _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
+                string _responseContent;
+                if (!_res.IsSuccessStatusCode)
+                {
+                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    var ex = new RestApiException<ApiError>(
+                        new HttpRequestMessageWrapper(_req, null),
+                        new HttpResponseMessageWrapper(_res, _responseContent),
+                        Client.Deserialize<ApiError>(_responseContent)
+);
+                    HandleFailedTriggerDailyUpdateRequest(ex);
+                    HandleFailedRequest(ex);
+                    Client.OnFailedRequest(ex);
+                    throw ex;
+                }
+                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return new HttpOperationResponse
+                {
+                    Request = _req,
+                    Response = _res,
                 };
             }
             catch (Exception)

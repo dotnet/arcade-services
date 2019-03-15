@@ -6,10 +6,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class Build
     {
-        public Build(int id, DateTimeOffset dateProduced, string commit, IImmutableList<Channel> channels, IImmutableList<Asset> assets, IImmutableList<BuildRef> dependencies)
+        public Build(int id, DateTimeOffset dateProduced, bool publishUsingPipelines, string commit, IImmutableList<Channel> channels, IImmutableList<Asset> assets, IImmutableList<BuildRef> dependencies)
         {
             Id = id;
             DateProduced = dateProduced;
+            PublishUsingPipelines = publishUsingPipelines;
             Commit = commit;
             Channels = channels;
             Assets = assets;
@@ -48,6 +49,9 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 
         [JsonProperty("gitHubBranch")]
         public string GitHubBranch { get; set; }
+
+        [JsonProperty("publishUsingPipelines")]
+        public bool PublishUsingPipelines { get; set; }
 
         [JsonProperty("dateProduced")]
         public DateTimeOffset DateProduced { get; }

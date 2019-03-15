@@ -226,17 +226,20 @@ namespace Microsoft.DotNet.DarcLib
 
         public async Task DeleteBranchAsync(string repoUri, string branch)
         {
-            await _gitClient.DeleteBranchAsync(repoUri, branch);
+            using (_logger.BeginScope($"Deleting branch '{branch}' from repo '{repoUri}'"))
+            {
+                await _gitClient.DeleteBranchAsync(repoUri, branch);
+            }
         }
 
         public async Task<IEnumerable<Check>> GetPullRequestChecksAsync(string pullRequestUrl)
         {
             CheckForValidGitClient();
-            _logger.LogInformation($"Getting status checks for pull request '{pullRequestUrl}'...");
-
-            IEnumerable<Check> checks = await _gitClient.GetPullRequestChecksAsync(pullRequestUrl);
-
-            return checks;
+            using (_logger.BeginScope($"Getting status checks for pull request '{pullRequestUrl}'..."))
+            {
+                IEnumerable<Check> checks = await _gitClient.GetPullRequestChecksAsync(pullRequestUrl);
+                return checks;
+            }
         }
 
         public async Task<IEnumerable<int>> SearchPullRequestsAsync(

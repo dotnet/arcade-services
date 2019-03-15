@@ -7,7 +7,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Autofac;
 using Microsoft.ApplicationInsights;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
 using Quartz.Impl;
@@ -15,14 +17,27 @@ using Quartz.Simpl;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
-    internal static class ScheduledService
+    internal class ScheduledService<TService>
     {
-        private static IEnumerable<(IJobDetail job, ITrigger trigger)> GetCronJobs(
-            object service,
-            TelemetryClient telemetryClient,
-            ILogger logger)
+        public ILogger<ScheduledService<TService>> Logger { get; }
+        public ILifetimeScope Scope { get; }
+
+        public static async Task RunScheduleAsync(ILifetimeScope container, CancellationToken cancellationToken)
         {
-            Type type = service.GetType();
+            var provider = container.Resolve<IServiceProvider>();
+            var scheduler = ActivatorUtilities.CreateInstance<ScheduledService<TService>>(provider);
+            await scheduler.RunAsync(cancellationToken);
+        }
+
+        public ScheduledService(ILogger<ScheduledService<TService>> logger, ILifetimeScope scope)
+        {
+            Logger = logger;
+            Scope = scope;
+        }
+
+        private IEnumerable<(IJobDetail job, ITrigger trigger)> GetCronJobs(CancellationToken cancellationToken)
+        {
+            Type type = typeof(TService);
 
             foreach (MethodInfo method in type.GetRuntimeMethods())
             {
@@ -47,15 +62,12 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     continue;
                 }
 
-                IJobDetail job = JobBuilder.Create<MethodInvokingJob>()
+                IJobDetail job = JobBuilder.Create<FuncInvokingJob>()
                     .WithIdentity(method.Name, type.Name)
-                    .UsingJobData(
-                        new JobDataMap
-                        {
-                            ["service"] = service,
-                            ["method"] = method,
-                            ["telemetryClient"] = telemetryClient
-                        })
+                    .UsingJobData(new JobDataMap
+                    {
+                        ["func"] = (Func<Task>) (() => InvokeMethodAsync(method, cancellationToken)),
+                    })
                     .Build();
 
                 TimeZoneInfo scheduleTimeZone = TimeZoneInfo.Utc;
@@ -66,13 +78,13 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 }
                 catch (TimeZoneNotFoundException)
                 {
-                    logger.LogWarning(
+                    Logger.LogWarning(
                         "TimeZoneNotFoundException occurred for timezone string: {requestedTimeZoneName}",
                         attr.TimeZone);
                 }
                 catch (InvalidTimeZoneException)
                 {
-                    logger.LogWarning(
+                    Logger.LogWarning(
                         "InvalidTimeZoneException occurred for timezone string: {requestedTimeZoneName}",
                         attr.TimeZone);
                 }
@@ -87,38 +99,41 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             }
         }
 
-        private static IEnumerable<(IJobDetail job, ITrigger trigger)> GetRunnableJobs(
-            IScheduledService svc,
-            TelemetryClient telemetryClient)
+        private async Task InvokeMethodAsync(MethodInfo method, CancellationToken cancellationToken)
         {
-            foreach ((Func<Task> func, string schedule) in svc.GetScheduledJobs())
+            using (Logger.BeginScope("Invoking scheduled method {scheduledMethod}", method.ToString()))
             {
-                string id = Guid.NewGuid().ToString();
-                IJobDetail job = JobBuilder.Create<FuncInvokingJob>()
-                    .WithIdentity(id)
-                    .UsingJobData(
-                        new JobDataMap
+                try
+                {
+                    using (ILifetimeScope scope = Scope.BeginLifetimeScope())
+                    {
+                        var impl = scope.Resolve<TService>();
+                        var parameters = method.GetParameters();
+                        Task result;
+                        if (parameters.Length == 1 && parameters[0].ParameterType == typeof(CancellationToken))
                         {
-                            ["func"] = func,
-                            ["telemetryClient"] = telemetryClient
-                        })
-                    .Build();
+                            result = (Task) method.Invoke(impl, new object[] {cancellationToken});
+                        }
+                        else
+                        {
+                            result = (Task) method.Invoke(impl, Array.Empty<object>());
+                        }
 
-                ITrigger trigger = TriggerBuilder.Create()
-                    .WithIdentity(id + "-Trigger")
-                    .WithCronSchedule(schedule)
-                    .StartNow()
-                    .Build();
-
-                yield return (job, trigger);
+                        await result;
+                    }
+                }
+                catch (OperationCanceledException ocex) when (ocex.CancellationToken == cancellationToken)
+                {
+                    //ignore
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Exception processing scheduled method {scheduledMethod}", method.ToString());
+                }
             }
         }
 
-        public static async Task RunScheduleAsync(
-            object service,
-            TelemetryClient telemetryClient,
-            CancellationToken cancellationToken,
-            ILogger logger)
+        private async Task RunAsync(CancellationToken cancellationToken)
         {
             IScheduler scheduler = null;
             string name = Guid.NewGuid().ToString();
@@ -126,17 +141,9 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             {
                 DirectSchedulerFactory.Instance.CreateScheduler(name, name, new DefaultThreadPool(), new RAMJobStore());
                 scheduler = await DirectSchedulerFactory.Instance.GetScheduler(name, cancellationToken);
-                foreach ((IJobDetail job, ITrigger trigger) in GetCronJobs(service, telemetryClient, logger))
+                foreach ((IJobDetail job, ITrigger trigger) in GetCronJobs(cancellationToken))
                 {
                     await scheduler.ScheduleJob(job, trigger, cancellationToken);
-                }
-
-                if (service is IScheduledService svc)
-                {
-                    foreach ((IJobDetail job, ITrigger trigger) in GetRunnableJobs(svc, telemetryClient))
-                    {
-                        await scheduler.ScheduleJob(job, trigger, cancellationToken);
-                    }
                 }
 
                 await scheduler.Start(cancellationToken);
@@ -144,7 +151,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             }
             catch (OperationCanceledException)
             {
-                logger.LogWarning("OperationCanceledException while processing schedule job.");
+                //ignore
             }
 
             if (scheduler != null)

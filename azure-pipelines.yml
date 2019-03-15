@@ -85,6 +85,10 @@ jobs:
         inputs:
           versionSpec: 4.4.1
 
+      - task: NodeTool@0
+        inputs:
+          versionSpec: '>=11'
+
       - task: NuGetCommand@2
         displayName: Restore Packages
         inputs:

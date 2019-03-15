@@ -168,12 +168,12 @@ namespace DependencyUpdater
 
                 var subscriptionsAndBuilds = await subscriptionsToUpdate.ToListAsync(cancellationToken);
                 Logger.LogInformation($"Will update '{subscriptionsAndBuilds.Count}' subscriptions");
+
                 foreach (var s in subscriptionsAndBuilds)
                 {
                     Logger.LogInformation($"Will update {s.subscription} to build {s.latestBuild}");
+                    await UpdateSubscriptionAsync(s.subscription, s.latestBuild);
                 }
-
-                await Task.WhenAll(subscriptionsAndBuilds.Select(sub => UpdateSubscriptionAsync(sub.subscription, sub.latestBuild)));
             }
         }
 

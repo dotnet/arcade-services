@@ -438,13 +438,13 @@ namespace Microsoft.DotNet.DarcLib
             string requestUri,
             ILogger logger,
             string body = null,
-            string versionOverride = null)
+            string versionOverride = null,
+            int retryCount = 15)
         {
             using (HttpClient client = CreateHttpClient())
             {
                 var requestManager = new HttpRequestManager(client, method, requestUri, logger, body, versionOverride);
-
-                return await requestManager.ExecuteAsync();
+                return await requestManager.ExecuteAsync(retryCount);
             }
         }
 

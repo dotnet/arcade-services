@@ -407,7 +407,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
             const string apiVersion = "2019-01-16";
 
-            var _path = "/api/builds/{id}/tree";
+            var _path = "/api/builds/{id}/graph";
             _path = _path.Replace("{id}", Client.Serialize(id));
 
             var _query = new QueryBuilder();
