@@ -64,14 +64,14 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         if (_logFailure)
                         {
-                            _logger.LogError($"There was an error executing method '{_message.Method}' against URI '{_message.RequestUri}' " +
+                            _logger.LogError($"There was an error executing method '{_method}' against URI '{_requestUri}' " +
                                 $"after {retriesRemaining} attempts. Exception: {ex.ToString()}");
                         }
                         throw;
                     }
                     else if (_logFailure)
                     {
-                        _logger.LogWarning($"There was an error executing method '{_message.Method}' against URI '{_message.RequestUri}'. " +
+                        _logger.LogWarning($"There was an error executing method '{_method}' against URI '{_requestUri}'. " +
                             $"{retriesRemaining} attempts remaining. Exception: {ex.ToString()}");
                     }
                 }
