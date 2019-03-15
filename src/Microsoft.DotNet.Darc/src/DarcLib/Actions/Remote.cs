@@ -519,10 +519,10 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="sourceCommit">Commit the assets come from.</param>
         /// <param name="assets">Assets as inputs for the update.</param>
         /// <param name="dependencies">Current set of the dependencies.</param>
-        /// <param name="repoUri">Repository the assets came from.</param>
+        /// <param name="sourceRepoUri">Repository the assets came from.</param>
         /// <returns>Map of existing dependency->updated dependency</returns>
         public Task<List<DependencyUpdate>> GetRequiredNonCoherencyUpdatesAsync(
-            string repoUri,
+            string sourceRepoUri,
             string sourceCommit,
             IEnumerable<AssetData> assets,
             IEnumerable<DependencyDetail> dependencies)
@@ -559,7 +559,7 @@ namespace Microsoft.DotNet.DarcLib
                 if (matchingDependencyByName.Name == asset.Name &&
                     matchingDependencyByName.Version == asset.Version &&
                     matchingDependencyByName.Commit == sourceCommit &&
-                    matchingDependencyByName.RepoUri == repoUri)
+                    matchingDependencyByName.RepoUri == sourceRepoUri)
                 {
                     continue;
                 }
@@ -567,7 +567,7 @@ namespace Microsoft.DotNet.DarcLib
                 DependencyDetail newDependency = new DependencyDetail(matchingDependencyByName)
                 {
                     Commit = sourceCommit,
-                    RepoUri = repoUri,
+                    RepoUri = sourceRepoUri,
                     Version = asset.Version,
                     Name = asset.Name
                 };
@@ -590,12 +590,14 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="repoUri">Repository</param>
         /// <param name="branch">Branch</param>
+        /// <param name="sourceRepoUri">Repository the assets come from.</param>
         /// <param name="sourceCommit">Commit the assets come from.</param>
         /// <param name="assets">Assets as inputs for the update.</param>
         /// <returns>Map of existing dependency->updated dependency</returns>
         public async Task<List<DependencyUpdate>> GetRequiredNonCoherencyUpdatesAsync(
             string repoUri,
             string branch,
+            string sourceRepoUri,
             string sourceCommit,
             IEnumerable<AssetData> assets)
         {
@@ -604,7 +606,7 @@ namespace Microsoft.DotNet.DarcLib
 
             IEnumerable<DependencyDetail> dependencyDetails =
                 await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branch);
-            return await GetRequiredNonCoherencyUpdatesAsync(repoUri, sourceCommit, assets, dependencyDetails);
+            return await GetRequiredNonCoherencyUpdatesAsync(sourceRepoUri, sourceCommit, assets, dependencyDetails);
         }
 
         /// <summary>

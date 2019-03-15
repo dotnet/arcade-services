@@ -238,13 +238,13 @@ namespace Microsoft.DotNet.DarcLib
         ///     Given a current set of dependencies, determine what non-coherency updates
         ///     are required.
         /// </summary>
-        /// <param name="repoUri">Repository uri.</param>
+        /// <param name="sourceRepoUri">Repository that <paramref name="assets"/> came from.</param>
         /// <param name="sourceCommit">Commit that <paramref name="assets"/> came from.</param>
         /// <param name="assets">Assets to apply</param>
         /// <param name="dependencies">Current set of dependencies.</param>
         /// <returns>List of dependency updates.</returns>
         Task<List<DependencyUpdate>> GetRequiredNonCoherencyUpdatesAsync(
-            string repoUri,
+            string sourceRepoUri,
             string sourceCommit,
             IEnumerable<AssetData> assets,
             IEnumerable<DependencyDetail> dependencies);
@@ -260,6 +260,7 @@ namespace Microsoft.DotNet.DarcLib
         Task<List<DependencyUpdate>> GetRequiredNonCoherencyUpdatesAsync(
             string repoUri,
             string branch,
+            string sourceRepoUri,
             string sourceCommit,
             IEnumerable<AssetData> assets);
 

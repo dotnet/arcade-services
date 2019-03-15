@@ -12,6 +12,6 @@ namespace Maestro.Contracts
     public interface IPullRequestActor : IActor
     {
         Task<string> RunActionAsync(string method, string arguments);
-        Task UpdateAssetsAsync(Guid subscriptionId, int buildId, string sourceSha, List<Asset> assets);
+        Task UpdateAssetsAsync(Guid subscriptionId, int buildId, string sourceRepo, string sourceSha, List<Asset> assets);
     }
 }

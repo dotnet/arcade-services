@@ -35,6 +35,8 @@ namespace SubscriptionActorService.Tests
         private readonly Dictionary<string, Mock<IRemote>> DarcRemotes =
             new Dictionary<string, Mock<IRemote>>();
 
+        private readonly Mock<IRemoteFactory> RemoteFactory;
+
         private readonly Mock<IMergePolicyEvaluator> MergePolicyEvaluator;
 
         private readonly Dictionary<ActorId, Mock<ISubscriptionActor>> SubscriptionActors =
@@ -56,12 +58,12 @@ namespace SubscriptionActorService.Tests
             MergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
             Builder.RegisterInstance(MergePolicyEvaluator.Object);
 
-            var remoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
-            remoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
+            RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
+            RemoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
                 .ReturnsAsync(
-                    (string repo) =>
+                    (string repo, ILogger logger) =>
                         DarcRemotes.GetOrAddValue(repo, CreateMock<IRemote>).Object);
-            Builder.RegisterInstance(remoteFactory.Object);
+            Builder.RegisterInstance(RemoteFactory.Object);
         }
 
         protected override Task BeforeExecute(IComponentContext context)
@@ -79,8 +81,13 @@ namespace SubscriptionActorService.Tests
         private void ThenGetRequiredUpdatesShouldHaveBeenCalled(Build withBuild)
         {
             var assets = new List<IEnumerable<AssetData>>();
+            var dependencies = new List<IEnumerable<DependencyDetail>>();
             DarcRemotes[TargetRepo]
-                .Verify(r => r.GetRequiredNonCoherencyUpdatesAsync(TargetRepo, TargetBranch, NewCommit, Capture.In(assets)));
+                .Verify(r => r.GetRequiredNonCoherencyUpdatesAsync(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
+            DarcRemotes[TargetRepo]
+                .Verify(r => r.GetDependenciesAsync(TargetRepo, TargetBranch, null));
+            DarcRemotes[TargetRepo]
+                .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object));
             assets.Should()
                 .BeEquivalentTo(
                     new List<List<AssetData>>
@@ -175,17 +182,17 @@ namespace SubscriptionActorService.Tests
                 .Verify(s => s.UpdateForMergedPullRequestAsync(withBuild.Id));
         }
 
-        private void WithRequiredUpdates(Build fromBuild)
+        private void WithRequireNonCoherencyUpdates(Build fromBuild)
         {
             DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
                 .Setup(
                     r => r.GetRequiredNonCoherencyUpdatesAsync(
-                        TargetRepo,
-                        TargetBranch,
+                        SourceRepo,
                         NewCommit,
-                        It.IsAny<IEnumerable<AssetData>>()))
+                        It.IsAny<IEnumerable<AssetData>>(),
+                        It.IsAny<IEnumerable<DependencyDetail>>()))
                 .ReturnsAsync(
-                    (string repo, string branch, string sha, IEnumerable<AssetData> assets) =>
+                    (string sourceRepo, string sourceSha, IEnumerable<AssetData> assets, IEnumerable<DependencyDetail> dependencies) =>
                     {
                         // Just make from->to identical.
                         return assets.Select(
@@ -203,6 +210,20 @@ namespace SubscriptionActorService.Tests
                                     },
                                 })
                             .ToList();
+                    });
+        }
+
+        private void WithNoRequiredCoherencyUpdates()
+        {
+            DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
+                .Setup(
+                    r => r.GetRequiredCoherencyUpdatesAsync(
+                        It.IsAny<IEnumerable<DependencyDetail>>(),
+                        It.IsAny<IRemoteFactory>()))
+                .ReturnsAsync(
+                    (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory) =>
+                    {
+                        return new List<DependencyUpdate>();
                     });
         }
 
@@ -300,13 +321,15 @@ namespace SubscriptionActorService.Tests
                         SubscriptionId = Subscription.Id,
                         BuildId = forBuild.Id,
                         SourceSha = forBuild.Commit,
+                        SourceRepo = forBuild.AzureDevOpsRepository ?? forBuild.GitHubRepository,
                         Assets = forBuild.Assets.Select(
                                 a => new Asset
                                 {
                                     Name = a.Name,
                                     Version = a.Version
                                 })
-                            .ToList()
+                            .ToList(),
+                        IsCoherencyUpdate = false
                     }
                 });
         }
@@ -368,10 +391,12 @@ namespace SubscriptionActorService.Tests
                             {
                                 SubscriptionId = Subscription.Id,
                                 BuildId = forBuild.Id,
+                                SourceRepo = forBuild.GitHubRepository ?? forBuild.AzureDevOpsRepository,
                                 SourceSha = forBuild.Commit,
                                 Assets = forBuild.Assets
                                     .Select(a => new Asset {Name = a.Name, Version = a.Version})
-                                    .ToList()
+                                    .ToList(),
+                                IsCoherencyUpdate = false
                             }
                         };
                         StateManager.Data[PullRequestActorImplementation.PullRequestUpdate] = updates;
@@ -442,7 +467,8 @@ namespace SubscriptionActorService.Tests
 
                 GivenAPendingUpdateReminder();
                 AndPendingUpdates(b);
-                WithRequiredUpdates(b);
+                WithRequireNonCoherencyUpdates(b);
+                WithNoRequiredCoherencyUpdates();
                 using (WithExistingPullRequest(true))
                 {
                     await WhenProcessPendingUpdatesAsyncIsCalled();
@@ -467,6 +493,7 @@ namespace SubscriptionActorService.Tests
                         await actor.Implementation.UpdateAssetsAsync(
                             Subscription.Id,
                             forBuild.Id,
+                            SourceRepo,
                             NewCommit,
                             forBuild.Assets.Select(
                                     a => new Asset
@@ -492,7 +519,8 @@ namespace SubscriptionActorService.Tests
                     });
                 Build b = GivenANewBuild();
 
-                WithRequiredUpdates(b);
+                WithRequireNonCoherencyUpdates(b);
+                WithNoRequiredCoherencyUpdates();
 
                 CreatePullRequestShouldReturnAValidValue();
 
@@ -520,7 +548,8 @@ namespace SubscriptionActorService.Tests
                     });
                 Build b = GivenANewBuild();
 
-                WithRequiredUpdates(b);
+                WithRequireNonCoherencyUpdates(b);
+                WithNoRequiredCoherencyUpdates();
                 using (WithExistingPullRequest(true))
                 {
                     await WhenUpdateAssetsAsyncIsCalled(b);
@@ -546,7 +575,8 @@ namespace SubscriptionActorService.Tests
                     });
                 Build b = GivenANewBuild();
 
-                WithRequiredUpdates(b);
+                WithRequireNonCoherencyUpdates(b);
+                WithNoRequiredCoherencyUpdates();
                 using (WithExistingPullRequest(false))
                 {
                     await WhenUpdateAssetsAsyncIsCalled(b);
@@ -570,7 +600,8 @@ namespace SubscriptionActorService.Tests
                     });
                 Build b = GivenANewBuild(Array.Empty<(string, string, bool)>());
 
-                WithRequiredUpdates(b);
+                WithRequireNonCoherencyUpdates(b);
+                WithNoRequiredCoherencyUpdates();
 
                 await WhenUpdateAssetsAsyncIsCalled(b);
 

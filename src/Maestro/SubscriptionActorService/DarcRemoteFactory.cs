@@ -10,6 +10,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Maestro.Data;
+using System.IO;
 
 namespace SubscriptionActorService
 {
@@ -24,6 +25,7 @@ namespace SubscriptionActorService
             Configuration = configuration;
             GitHubTokenProvider = gitHubTokenProvider;
             AzureDevOpsTokenProvider = azureDevOpsTokenProvider;
+            Context = context;
         }
         
         public IConfigurationRoot Configuration { get; }
@@ -42,6 +44,10 @@ namespace SubscriptionActorService
             // Look up the setting for where the repo root should be held.  Default to empty,
             // which will use the temp directory.
             string temporaryRepositoryRoot = Configuration.GetValue<string>("DarcTemporaryRepoRoot", null);
+            if (string.IsNullOrEmpty(temporaryRepositoryRoot))
+            {
+                temporaryRepositoryRoot = Path.GetTempPath();
+            }
             IGitRepo gitClient;
 
             long installationId = await Context.GetInstallationId(repoUrl);
