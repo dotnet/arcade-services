@@ -52,13 +52,22 @@ namespace Maestro.Web
             {
                 BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
                 BuildChannel entity = entry.Entity;
-                Build build = entity.Build;
-                if (build.PublishUsingPipelines && ChannelHasAssociatedReleasePipeline(entity.ChannelId, context))
+                Build build = context.Builds.Where(a => a.Id == entity.BuildId).FirstOrDefault();
+
+                if (build == null)
                 {
-                    entry.Cancel = true;
-                    var queue = context.GetService<BackgroundQueue>();
-                    var releasePipelineRunner = context.GetService<IReleasePipelineRunner>();
-                    queue.Post(() => releasePipelineRunner.StartAssociatedReleasePipelinesAsync(entity.BuildId, entity.ChannelId));
+                    ILogger<Startup> logger = context.GetService<ILogger<Startup>>();
+                    logger.LogError($"Could not find build with id {entity.BuildId} in BAR.");
+                }
+                else
+                {
+                    if (build.PublishUsingPipelines && ChannelHasAssociatedReleasePipeline(entity.ChannelId, context))
+                    {
+                        entry.Cancel = true;
+                        var queue = context.GetService<BackgroundQueue>();
+                        var releasePipelineRunner = context.GetService<IReleasePipelineRunner>();
+                        queue.Post(() => releasePipelineRunner.StartAssociatedReleasePipelinesAsync(entity.BuildId, entity.ChannelId));
+                    }
                 }
             };
 
