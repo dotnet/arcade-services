@@ -139,7 +139,8 @@ namespace Microsoft.DotNet.DarcLib
                 using (await this.ExecuteRemoteGitCommandAsync(
                     HttpMethod.Get,
                     $"repos/{owner}/{repo}/branches/{newBranch}",
-                    _logger)) { }
+                    _logger,
+                    retryCount: 0)) { }
 
                 githubRef.Force = true;
                 body = JsonConvert.SerializeObject(githubRef, _serializerSettings);

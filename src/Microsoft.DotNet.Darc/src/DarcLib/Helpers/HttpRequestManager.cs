@@ -12,11 +12,12 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class HttpRequestManager
     {
-        private readonly HttpClient _client;
+        private HttpClient _client;
         private readonly ILogger _logger;
-        private readonly HttpRequestMessage _message;
         private readonly bool _logFailure;
+        private readonly string _body;
         private readonly string _requestUri;
+        private readonly HttpMethod _method;
 
         public HttpRequestManager(
             HttpClient client,
@@ -29,14 +30,10 @@ namespace Microsoft.DotNet.DarcLib
         {
             _client = client;
             _logger = logger;
-            _message = new HttpRequestMessage(method, requestUri);
             _logFailure = logFailure;
+            _body = body;
             _requestUri = requestUri;
-
-            if (!string.IsNullOrEmpty(body))
-            {
-                _message.Content = new StringContent(body, Encoding.UTF8, "application/json");
-            }
+            _method = method;
         }
 
         public async Task<HttpResponseMessage> ExecuteAsync(int retryCount = 15)
@@ -49,9 +46,17 @@ namespace Microsoft.DotNet.DarcLib
             {
                 try
                 {
-                    HttpResponseMessage response = await _client.SendAsync(_message);
-                    response.EnsureSuccessStatusCode();
-                    return response;
+                    using (HttpRequestMessage message = new HttpRequestMessage(_method, _requestUri))
+                    {
+                        if (!string.IsNullOrEmpty(_body))
+                        {
+                            message.Content = new StringContent(_body);
+                        }
+
+                        HttpResponseMessage response = await _client.SendAsync(message);
+                        response.EnsureSuccessStatusCode();
+                        return response;
+                    }
                 }
                 catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
                 {
@@ -59,14 +64,14 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         if (_logFailure)
                         {
-                            _logger.LogError($"There was an error executing method '{_message.Method}' against URI '{_message.RequestUri}' " +
+                            _logger.LogError($"There was an error executing method '{_method}' against URI '{_requestUri}' " +
                                 $"after {retriesRemaining} attempts. Exception: {ex.ToString()}");
                         }
                         throw;
                     }
                     else if (_logFailure)
                     {
-                        _logger.LogWarning($"There was an error executing method '{_message.Method}' against URI '{_message.RequestUri}'. " +
+                        _logger.LogWarning($"There was an error executing method '{_method}' against URI '{_requestUri}'. " +
                             $"{retriesRemaining} attempts remaining. Exception: {ex.ToString()}");
                     }
                 }
