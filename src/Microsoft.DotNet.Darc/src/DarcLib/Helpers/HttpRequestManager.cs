@@ -50,7 +50,7 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         if (!string.IsNullOrEmpty(_body))
                         {
-                            message.Content = new StringContent(_body);
+                            message.Content = new StringContent(_body, Encoding.UTF8, "application/json");
                         }
 
                         HttpResponseMessage response = await _client.SendAsync(message);
