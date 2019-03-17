@@ -13,15 +13,28 @@
     <div class="flex-grow-1">
       <h4>{{build.gitHubRepository}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
       <div>
-        <span>Loading Build Information From Azure Pipelines</span>
+        <span>Loading build information from Azure Pipelines</span>
         <div style="display:inline-block; vertical-align: middle;">
           <progress-ring width="50" height="50" color="#777"></progress-ring>
         </div>
       </div>
     </div>
   </ng-template>
+  <ng-template #errorBuildInfo>
+    <div class="flex-grow-0 mr-3" style="font-size: 6em">
+      <fa-icon class="text-warning" icon="exclamation-circle"></fa-icon>
+    </div>
+    <div class="flex-grow-1">
+      <h4>{{build.gitHubRepository}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
+      <div>
+        <span class="text-warning">Error loading build information from Azure Pipelines</span>
+        <div style="display:inline-block; vertical-align: middle; width: 50px; height: 50px;">
+        </div>
+      </div>
+    </div>
+  </ng-template>
   <div class="d-flex flex-row p-3 header align-items-center">
-    <ng-container *stateful="let azDevInfo from azDevBuildInfo$; loadingTemplate: loadingBuildInfo;">
+    <ng-container *stateful="let azDevInfo from azDevBuildInfo$; loadingTemplate: loadingBuildInfo; errorTemplate: errorBuildInfo;">
       <div class="flex-grow-0 mr-3" style="font-size: 6em">
         <fa-icon class="text-info" icon="info-circle"
           *ngIf="!azDevInfo.isMostRecent && !azDevInfo.mostRecentFailureLink"></fa-icon>
