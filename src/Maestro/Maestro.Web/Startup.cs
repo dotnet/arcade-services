@@ -36,9 +36,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Rewrite.Internal;
 using IHostingEnvironment = Microsoft.AspNetCore.Hosting.IHostingEnvironment;
 
@@ -211,11 +214,54 @@ namespace Maestro.Web
                 });
         }
 
+        private bool DoApiRedirect => !string.IsNullOrEmpty(Configuration.GetSection("ApiRedirect")["uri"]);
+        private string ApiRedirectTarget => Configuration.GetSection("ApiRedirect")["uri"];
+        private string ApiRedirectToken => Configuration.GetSection("ApiRedirect")["token"];
+
+        private async Task ApiRedirectHandler(HttpContext ctx)
+        {
+            if (ctx.User == null)
+            {
+                return;
+            }
+
+            var authService = ctx.RequestServices.GetRequiredService<IAuthorizationService>();
+            AuthorizationResult result = await authService.AuthorizeAsync(ctx.User, MsftAuthorizationPolicyName);
+            if (!result.Succeeded)
+            {
+                return;
+            }
+
+
+            using (var client = new HttpClient())
+            {
+                var uri = new UriBuilder(ApiRedirectTarget) {Path = ctx.Request.Path, Query = ctx.Request.QueryString.ToUriComponent(),};
+                await ctx.ProxyRequestAsync(client, uri.Uri.AbsoluteUri,
+                    req =>
+                    {
+                        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ApiRedirectToken);
+                    });
+            }
+        }
+
         private void ConfigureApi(IApplicationBuilder app)
         {
             app.UseExceptionHandler(ConfigureApiExceptions);
 
             app.UseAuthentication();
+
+            if (HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric())
+            {
+                // Redirect api requests to prod when running locally outside of service fabric
+                // This is for the `ng serve` local debugging case for the website
+                app.MapWhen(
+                    ctx => IsGet(ctx) && ctx.Request.Path.StartsWithSegments("/api"),
+                    a =>
+                    {
+                        a.Run(ApiRedirectHandler);
+                    });
+            }
+
             app.UseMvc();
 
             app.Use(
@@ -266,7 +312,17 @@ namespace Maestro.Web
                     new RewriteRule("^_/(.*)", "$1", true),
                 },
             });
-            app.UseMvc();
+
+            // Redirect the entire cookie-authed api if it is in settings.
+            if (DoApiRedirect)
+            {
+                app.Run(ApiRedirectHandler);
+            }
+            else
+            {
+                app.UseMvc();
+            }
+
         }
 
         private static bool IsGet(HttpContext context)
@@ -286,16 +342,32 @@ namespace Maestro.Web
                 app.UseHttpsRedirection();
             }
 
+            if (env.IsDevelopment() && !Program.RunningInServiceFabric())
+            {
+                // In local dev with the `ng serve` scenario, just redirect /_/api to /api
+                app.UseRewriter(new RewriteOptions
+                {
+                    Rules =
+                    {
+                        new RewriteRule("^_/(.*)", "$1", true),
+                    },
+                });
+            }
+
             app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/api"), ConfigureApi);
-            app.MapWhen(
-                ctx => ctx.Request.Path.StartsWithSegments("/_/api") && IsGet(ctx),
-                ConfigureCookieAuthedApi);
+            if (Program.RunningInServiceFabric())
+            {
+                app.MapWhen(
+                    ctx => ctx.Request.Path.StartsWithSegments("/_/api") && IsGet(ctx),
+                    ConfigureCookieAuthedApi);
+            }
 
             app.UseRewriter(new RewriteOptions().AddRedirect("^swagger(/ui)?/?$", "/swagger/ui/index.html"));
             app.UseStatusCodePages();
             app.UseCookiePolicy();
             app.UseStaticFiles();
             app.UseAuthentication();
+
             app.UseMvc();
             app.MapWhen(IsGet, AngularIndexHtmlRedirect);
         }
