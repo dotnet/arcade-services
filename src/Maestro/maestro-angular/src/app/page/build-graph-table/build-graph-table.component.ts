@@ -145,6 +145,6 @@ export class BuildGraphTableComponent implements OnChanges {
       `/${build.azureDevOpsAccount}` +
       `/${build.azureDevOpsProject}` +
       `/_build/results` +
-      `?_a=history&buildId=${build.azureDevOpsBuildId}`;
+      `?view=results&buildId=${build.azureDevOpsBuildId}`;
   }
 }
