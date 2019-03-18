@@ -1,6 +1,7 @@
 import { NgModule } from "@angular/core";
 import { BrowserModule } from "@angular/platform-browser";
 import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
+import { FormsModule } from '@angular/forms';
 import { FontAwesomeModule } from "@fortawesome/angular-fontawesome";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import {
@@ -39,6 +40,7 @@ import { maestroOptions } from "src/environments/environment";
 import { RecentBuildComponent } from './page/recent-build/recent-build.component';
 import { BuildGraphTableComponent } from './page/build-graph-table/build-graph-table.component';
 import { UriEncodePipe } from './uri-encode.pipe';
+import { SwitchComponent } from './widget/switch/switch.component';
 
 @NgModule({
   declarations: [
@@ -50,6 +52,7 @@ import { UriEncodePipe } from './uri-encode.pipe';
     RecentBuildComponent,
     BuildGraphTableComponent,
     UriEncodePipe,
+    SwitchComponent,
   ],
   imports: [
     BrowserModule,
@@ -61,6 +64,7 @@ import { UriEncodePipe } from './uri-encode.pipe';
     MomentModule,
     MaestroModule.forRoot(maestroOptions),
     StatefulModule,
+    FormsModule,
   ],
   providers: [],
   bootstrap: [AppComponent],
