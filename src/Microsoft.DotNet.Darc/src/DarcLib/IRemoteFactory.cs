@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -12,8 +13,8 @@ namespace Microsoft.DotNet.DarcLib
     /// </summary>
     public interface IRemoteFactory
     {
-        IRemote GetRemote(string repoUrl, ILogger logger);
+        Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger);
 
-        IRemote GetBarOnlyRemote(ILogger logger);
+        Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger);
     }
 }

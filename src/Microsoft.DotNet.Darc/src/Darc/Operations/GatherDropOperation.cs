@@ -30,12 +30,12 @@ namespace Microsoft.DotNet.Darc.Operations
     {
         public Build Build { get; set; }
         public bool Successful { get; set; }
-        public List<DownloadedAsset> DownloadedAssets { get; set; }
+        public IEnumerable<DownloadedAsset> DownloadedAssets { get; set; }
     }
 
     internal class InputBuilds
     {
-        public List<Build> Builds { get; set; }
+        public IEnumerable<Build> Builds { get; set; }
         public bool Successful { get; set; }
     }
 
@@ -332,8 +332,7 @@ namespace Microsoft.DotNet.Darc.Operations
         private async Task<InputBuilds> GatherBuildsToDownloadAsync()
         {
             Console.WriteLine("Determining what builds to download...");
-            List<string> errors = new List<string>();
-
+            
             // Gather the root build 
             Build rootBuild = await GetRootBuildAsync();
             if (rootBuild == null)
@@ -347,16 +346,16 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 return new InputBuilds()
                 {
-                    Successful = (errors.Count == 0),
+                    Successful = true,
                     Builds = new List<Build>() { rootBuild }
                 };
             }
 
             HashSet<Build> builds = new HashSet<Build>(new BuildComparer());
             builds.Add(rootBuild);
-            RemoteFactory remoteFactory = new RemoteFactory(_options);
+            IRemoteFactory remoteFactory = new RemoteFactory(_options);
             // Grab dependencies
-            IRemote rootBuildRemote = remoteFactory.GetRemote(rootBuild.AzureDevOpsRepository, Logger);
+            IRemote rootBuildRemote = await remoteFactory.GetRemoteAsync(rootBuild.AzureDevOpsRepository, Logger);
 
             Console.WriteLine($"Getting dependencies of root build...");
 
@@ -366,12 +365,19 @@ namespace Microsoft.DotNet.Darc.Operations
                 Console.WriteLine("Filtering toolset dependencies from the graph...");
             }
 
+            DependencyGraphBuildOptions buildOptions = new DependencyGraphBuildOptions()
+            {
+                IncludeToolset = _options.IncludeToolset,
+                LookupBuilds = true,
+                NodeDiff = NodeDiff.None
+            };
+
             Console.WriteLine("Building graph of all dependencies under root build...");
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 remoteFactory,
                 rootBuild.AzureDevOpsRepository ?? rootBuild.GitHubRepository,
                 rootBuild.Commit,
-                _options.IncludeToolset,
+                buildOptions,
                 Logger);
 
             Dictionary<DependencyDetail, Build> dependencyCache =
@@ -391,97 +397,33 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             Console.WriteLine($"There are {graph.UniqueDependencies.Count()} unique dependencies in the graph.");
-            Console.WriteLine($"Finding builds for all dependencies...");
-
-            // Now go through the list of dependency graphs and look up builds for each one.
-            foreach (DependencyDetail dependency in graph.UniqueDependencies)
-            {
-                Console.WriteLine($"Finding build for {dependency.Name}@{dependency.Version}...");
-                Build assetBuild = null;
-
-                // Figure out whether we've seen this dependency before by looking it up in the dependency
-                // detail map.
-                if (dependencyCache.TryGetValue(dependency, out Build existingBuild))
-                {
-                    assetBuild = existingBuild;
-                }
-                else
-                {
-                    // Go to the BAR to find out where the asset came from.  Every time we look up a new build,
-                    // cache its assets in the map.
-
-                    // Look up the asset by name and version.
-                    Console.WriteLine($"Looking up {dependency.Name}@{dependency.Version} in Build Asset Registry...");
-                    IEnumerable<Asset> matchingAssets = await rootBuildRemote.GetAssetsAsync(dependency.Name, dependency.Version);
-
-                    // Because the same asset could be produced more than once by different builds (e.g. if you had
-                    // a stable asset version), look up the builds by ID until we find one that built the right commit.
-                    foreach (var asset in matchingAssets)
-                    {
-                        Console.WriteLine($"Looking up build {asset.BuildId} in Build Asset Registry...");
-                        Build potentialBuild = await rootBuildRemote.GetBuildAsync(asset.BuildId);
-                        // Do some quick caching after this lookup.
-                        foreach (Asset buildAsset in potentialBuild.Assets)
-                        {
-                            DependencyDetail dependencyDetail = new DependencyDetail
-                            {
-                                Name = buildAsset.Name,
-                                Version = buildAsset.Version,
-                                Commit = potentialBuild.Commit,
-                                RepoUri = potentialBuild.AzureDevOpsRepository,
-                            };
-
-                            if (!dependencyCache.ContainsKey(dependencyDetail))
-                            {
-                                dependencyCache.Add(dependencyDetail, potentialBuild);
-                            }
-                        }
-
-                        // Determine whether this build matches. Commit should be enough.  We could
-                        // also test for repo uri here but I don't think its necessary.
-                        if (potentialBuild.Commit == dependency.Commit)
-                        {
-                            assetBuild = potentialBuild;
-                            break;
-                        }
-                    }
-                }
-
-                    
-                if (assetBuild == null)
-                {
-                    errors.Add($"Could not find build that produced {dependency.Name}@{dependency.Version} @ {dependency.Commit}");
-                    if (!_options.ContinueOnError)
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    builds.Add(assetBuild);
-                }
-            }
-
-            List<Build> buildList = builds.ToList();
-
             Console.WriteLine("Full set of builds in graph:");
-            foreach (var build in buildList)
+            foreach (var build in graph.ContributingBuilds)
             {
-                Console.WriteLine($"  Build - {build.AzureDevOpsBuildNumber} of {build.AzureDevOpsRepository} @ {build.Commit}");
+                Console.WriteLine($"  Build - {build.AzureDevOpsBuildNumber} of {build.AzureDevOpsRepository ?? build.GitHubRepository} @ {build.Commit}");
+                builds.Add(build);
             }
 
-            if (errors.Any())
+            if (graph.DependenciesMissingBuilds.Any())
             {
-                Console.WriteLine($"Failed to obtain full list of builds.  See errors:");
-                foreach (string error in errors)
+                Console.WriteLine("Dependencies missing builds:");
+                foreach (DependencyDetail dependency in graph.DependenciesMissingBuilds)
                 {
-                    Console.WriteLine($" {error}");
+                    Console.WriteLine($"  {dependency.Name}@{dependency.Version} @ ({dependency.RepoUri}@{dependency.Commit})");
+                }
+                if (!_options.ContinueOnError)
+                {
+                    return new InputBuilds()
+                    {
+                        Successful = false,
+                        Builds = builds
+                    };
                 }
             }
 
             return new InputBuilds()
             {
-                Successful = (errors.Count == 0),
+                Successful = true,
                 Builds = builds.ToList()
             };
         }
