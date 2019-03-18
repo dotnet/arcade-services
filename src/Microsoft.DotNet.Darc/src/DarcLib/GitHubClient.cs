@@ -782,5 +782,44 @@ namespace Microsoft.DotNet.DarcLib
         {
             return this.CommitFilesAsync(filesToCommit, repoUri, branch, commitMessage, _logger, Client.Credentials.Password);
         }
+
+        /// <summary>
+        ///     Diff two commits in a repository and return information about them.
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="baseVersion">Base version</param>
+        /// <param name="targetVersion">Target version</param>
+        /// <returns>Diff information</returns>
+        public async Task<GitDiff> GitDiffAsync(string repoUri, string baseVersion, string targetVersion)
+        {
+            _logger.LogInformation(
+                $"Diffing '{baseVersion}'->'{targetVersion}' in {repoUri}");
+            (string owner, string repo) = ParseRepoUri(repoUri);
+
+            try
+            {
+                JObject content;
+                using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(
+                    HttpMethod.Get,
+                    $"repos/{owner}/{repo}/compare/{baseVersion}...{targetVersion}",
+                    _logger))
+                {
+                    content = JObject.Parse(await response.Content.ReadAsStringAsync());
+                }
+
+                return new GitDiff()
+                {
+                    BaseVersion = baseVersion,
+                    TargetVersion = targetVersion,
+                    Ahead = content["ahead_by"].Value<int>(),
+                    Behind = content["behind_by"].Value<int>(),
+                    Valid = true
+                };
+            }
+            catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)"))
+            {
+                return GitDiff.UnknownDiff();
+            }
+        }
     }
 }

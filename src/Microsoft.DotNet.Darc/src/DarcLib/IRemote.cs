@@ -212,16 +212,55 @@ namespace Microsoft.DotNet.DarcLib
         Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri, string branchOrCommit, string name = null);
 
         /// <summary>
+        ///     Given a repo and branch, determine what updates are required to satisfy
+        ///     coherency constraints.
+        /// </summary>
+        /// <param name="repoUri">Repository uri to check for updates in.</param>
+        /// <param name="branch">Branch to check for updates in.</param>
+        /// <param name="remoteFactory">Remote factory use in walking the repo dependency graph.</param>
+        /// <returns>List of dependency updates.</returns>
+        Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(
+            string repoUri,
+            string branch,
+            IRemoteFactory remoteFactory);
+
+        /// <summary>
+        ///     Get updates required by coherency constraints.
+        /// </summary>
+        /// <param name="dependencies">Current set of dependencies.</param>
+        /// <param name="remoteFactory">Remote factory for remote queries.</param>
+        /// <returns>List of dependency updates.</returns>
+        Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(
+            IEnumerable<DependencyDetail> dependencies,
+            IRemoteFactory remoteFactory);
+
+        /// <summary>
+        ///     Given a current set of dependencies, determine what non-coherency updates
+        ///     are required.
+        /// </summary>
+        /// <param name="sourceRepoUri">Repository that <paramref name="assets"/> came from.</param>
+        /// <param name="sourceCommit">Commit that <paramref name="assets"/> came from.</param>
+        /// <param name="assets">Assets to apply</param>
+        /// <param name="dependencies">Current set of dependencies.</param>
+        /// <returns>List of dependency updates.</returns>
+        Task<List<DependencyUpdate>> GetRequiredNonCoherencyUpdatesAsync(
+            string sourceRepoUri,
+            string sourceCommit,
+            IEnumerable<AssetData> assets,
+            IEnumerable<DependencyDetail> dependencies);
+
+        /// <summary>
         ///     Get the list of dependencies that need updates given an input set of asset data.
         /// </summary>
         /// <param name="repoUri">Repository that may need updates.</param>
         /// <param name="branch">Branch in <paramref name="repoUri"/> that may need updates.</param>
         /// <param name="sourceCommit">Source commit the assets came from.</param>
         /// <param name="assets">Set of updated assets.</param>
-        /// <returns>List of dependencies in <paramref name="repoUri"/> that need updates.</returns>
-        Task<List<DependencyDetail>> GetRequiredUpdatesAsync(
+        /// <returns>List of dependency updates.</returns>
+        Task<List<DependencyUpdate>> GetRequiredNonCoherencyUpdatesAsync(
             string repoUri,
             string branch,
+            string sourceRepoUri,
             string sourceCommit,
             IEnumerable<AssetData> assets);
 
@@ -259,6 +298,23 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="message">Commit message.</param>
         /// <returns>Async task.</returns>
         Task CommitUpdatesAsync(string repoUri, string branch, List<DependencyDetail> itemsToUpdate, string message);
+
+        /// <summary>
+        ///     Diff two commits in a repository and return information about them.
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="baseCommit">Base version</param>
+        /// <param name="targetCommit">Target version</param>
+        /// <returns>Diff information</returns>
+        Task<GitDiff> GitDiffAsync(string repoUri, string baseCommit, string targetCommit);
+
+        /// <summary>
+        ///     Get the latest commit in a branch
+        /// </summary>
+        /// <param name="repoUri">Remote repository</param>
+        /// <param name="branch">Branch</param>
+        /// <returns>Latest commit</returns>
+        Task<string> GetLatestCommitAsync(string repoUri, string branch);
 
         #endregion
 

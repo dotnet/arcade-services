@@ -154,7 +154,8 @@ namespace SubscriptionActorService
 
             Logger.LogInformation($"Running asset update for {SubscriptionId}");
 
-            await pullRequestActor.UpdateAssetsAsync(SubscriptionId, build.Id, build.Commit, assets);
+            await pullRequestActor.UpdateAssetsAsync(SubscriptionId, build.Id, 
+                build.AzureDevOpsRepository ?? build.GitHubRepository, build.Commit, assets);
 
             Logger.LogInformation($"Asset update complete for {SubscriptionId}");
 

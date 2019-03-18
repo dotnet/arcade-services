@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.Linq;
+using Microsoft.DotNet.DarcLib;
 
 namespace SubscriptionActorService
 {
@@ -40,7 +41,7 @@ namespace SubscriptionActorService
                         {
                             services.AddSingleton<IActionRunner, ActionRunner>();
                             services.AddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
-                            services.AddSingleton<IDarcRemoteFactory, DarcRemoteFactory>();
+                            services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
                             services.AddGitHubTokenProvider();
                             services.AddAzureDevOpsTokenProvider();
                             services.AddSingleton(
