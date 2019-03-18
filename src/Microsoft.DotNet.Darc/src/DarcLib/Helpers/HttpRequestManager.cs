@@ -36,7 +36,7 @@ namespace Microsoft.DotNet.DarcLib
             _method = method;
         }
 
-        public async Task<HttpResponseMessage> ExecuteAsync(int retryCount = 15)
+        public async Task<HttpResponseMessage> ExecuteAsync(int retryCount = 3)
         {
             int retriesRemaining = retryCount;
             // Add a bit of randomness to the retry delay.
@@ -57,6 +57,12 @@ namespace Microsoft.DotNet.DarcLib
                         response.EnsureSuccessStatusCode();
                         return response;
                     }
+                }
+                catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)"))
+                {
+                    _logger.LogError($"There was a 'Not Found' exception executing method '{_method}' against URI '{_requestUri}'. " +
+                        $"Not retrying in this case.");
+                    throw;
                 }
                 catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
                 {
