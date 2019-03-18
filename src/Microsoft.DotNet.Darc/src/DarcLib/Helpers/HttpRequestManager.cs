@@ -12,7 +12,7 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class HttpRequestManager
     {
-        private readonly HttpClient _client;
+        private HttpClient _client;
         private readonly ILogger _logger;
         private readonly bool _logFailure;
         private readonly string _body;
@@ -50,7 +50,7 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         if (!string.IsNullOrEmpty(_body))
                         {
-                            message.Content = new StringContent(_body);
+                            message.Content = new StringContent(_body, Encoding.UTF8, "application/json");
                         }
 
                         HttpResponseMessage response = await _client.SendAsync(message);

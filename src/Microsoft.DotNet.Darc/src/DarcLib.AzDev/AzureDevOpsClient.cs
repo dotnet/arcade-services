@@ -150,7 +150,8 @@ namespace Microsoft.DotNet.DarcLib
                 accountName,
                 projectName,
                 $"_apis/git/repositories/{repoName}/refs/heads/{newBranch}",
-                _logger);
+                _logger,
+                retryCount: 0);
 
             AzureDevOpsRef azureDevOpsRef;
 
