@@ -60,8 +60,11 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)"))
                 {
-                    _logger.LogError($"There was a 'Not Found' exception executing method '{_method}' against URI '{_requestUri}'. " +
+                    if (_logFailure)
+                    {
+                        _logger.LogError($"There was a 'Not Found' exception executing method '{_method}' against URI '{_requestUri}'. " +
                         $"Not retrying in this case.");
+                    }
                     throw;
                 }
                 catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
