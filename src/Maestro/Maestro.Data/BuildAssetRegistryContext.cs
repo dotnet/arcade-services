@@ -29,7 +29,7 @@ namespace Maestro.Data
             var connectionString =
                 @"Data Source=localhost\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true";
 
-            var envVarConnectionString = "Server=tcp:maestro-prod.database.windows.net,1433;Initial Catalog=BuildAssetRegistry;Persist Security Info=False;User ID=Maestro_Admin;Password=janIhRwVg4g@pw>nugnW|<1{msFT7_&#$!~<utilfgx>y|{B;MultipleActiveResultSets=True;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
+            var envVarConnectionString = Environment.GetEnvironmentVariable("BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING");
             if (!string.IsNullOrEmpty(envVarConnectionString))
             {
                 Console.WriteLine("Using Connection String from environment.");
@@ -40,7 +40,7 @@ namespace Maestro.Data
                 .UseSqlServer(connectionString)
                 .Options;
             return new BuildAssetRegistryContext(
-                new HostingEnvironment {EnvironmentName = EnvironmentName.Development},
+                new HostingEnvironment { EnvironmentName = EnvironmentName.Development },
                 options);
         }
     }
