@@ -40,7 +40,7 @@ namespace Microsoft.DotNet.DarcLib
             string pat)
         {
             string dotnetMaestro = "dotnet-maestro";
-            using (_logger.BeginScope("Pushing files to {branch}", branch))
+            using (_logger.BeginScope($"Pushing {filesToCommit.Count} files to '{branch}'"))
             {
                 string tempRepoFolder = Path.Combine(TemporaryRepositoryPath, Path.GetRandomFileName());
 
@@ -86,7 +86,7 @@ namespace Microsoft.DotNet.DarcLib
                             }
                             else
                             {
-                                File.Delete(Path.Combine(tempRepoFolder, file.FilePath));
+                                File.Delete(filePath);
                             }
                         }
 
