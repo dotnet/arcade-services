@@ -40,7 +40,7 @@ namespace Maestro.Data
                 .UseSqlServer(connectionString)
                 .Options;
             return new BuildAssetRegistryContext(
-                new HostingEnvironment { EnvironmentName = EnvironmentName.Development },
+                new HostingEnvironment {EnvironmentName = EnvironmentName.Development},
                 options);
         }
     }
@@ -302,6 +302,8 @@ FROM traverse;",
 
             List<BuildDependency> things = await edges.ToListAsync();
             var buildIds = new HashSet<int>(things.SelectMany(t => new[] { t.BuildId, t.DependentBuildId }));
+
+            buildIds.Add(buildId); // Make sure we always include the requested build, even if it has no edges.
 
             IQueryable<Build> builds = from build in Builds
                                        where buildIds.Contains(build.Id)
