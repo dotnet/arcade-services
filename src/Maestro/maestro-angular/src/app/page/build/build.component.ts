@@ -17,33 +17,6 @@ interface AzDevBuildInfo {
   mostRecentFailureLink?: string;
 }
 
-function copy(graph: BuildGraph): BuildGraph {
-  return BuildGraph.fromRawObject(BuildGraph.toRawObject(graph));
-}
-
-function removeToolsets(graph: BuildGraph): BuildGraph {
-  graph = copy(graph);
-  const removedDeps: BuildRef[] = [];
-  for (const b of Object.values(graph.builds)) {
-    if (b.dependencies) {
-      const productDeps = b.dependencies.filter(d => d.isProduct);
-      const toolsetDeps = b.dependencies.filter(d => !d.isProduct);
-      (b as any)._dependencies = productDeps;
-      for (const dep of toolsetDeps) {
-        removedDeps.push(dep);
-      }
-    }
-  }
-  const allDeps: BuildRef[] = Array.prototype.concat.apply([], Object.values(graph.builds).filter(b => b.dependencies).map(b => b.dependencies as BuildRef[]));
-  const buildsToCheck = removedDeps.map(d => d.buildId);
-  for (const id of buildsToCheck) {
-    if (!allDeps.some(d => d.buildId === id)) {
-      delete graph.builds[id];
-    }
-  }
-  return graph;
-}
-
 @Component({
   selector: "mc-build",
   templateUrl: "./build.component.html",
@@ -59,39 +32,17 @@ export class BuildComponent implements OnInit, OnChanges {
   public azDevBuildInfo$!: Observable<StatefulResult<AzDevBuildInfo>>;
 
   public includeToolsets: boolean = false;
-  public includeToolsets$: Subject<boolean> = new Subject();
-
-  public includeToolsetsChange(value: boolean) {
-    if (value !== this.includeToolsets) {
-      this.includeToolsets = value;
-      this.includeToolsets$.next(this.includeToolsets);
-    }
-  }
 
   public ngOnInit() {
     const buildId$ = this.route.paramMap.pipe(
       map(params => +(params.get("buildId") as string)),
     );
-    const rawGraph$ = buildId$.pipe(
+    this.graph$ = buildId$.pipe(
       statefulSwitchMap(buildId => {
         return this.maestro.builds.getBuildGraphAsync(buildId);
       }),
       shareReplay(1),
     );
-    this.graph$ = combineLatest(
-      rawGraph$,
-      of(this.includeToolsets).pipe(concat(this.includeToolsets$))
-    ).pipe(
-      map(([r, includeToolsets]) => {
-        if (r instanceof WrappedError || r instanceof Loading) {
-          return r;
-        }
-        if (!includeToolsets) {
-          return removeToolsets(r);
-        }
-        return r;
-      })
-    )
     this.build$ = buildId$.pipe(
       statefulSwitchMap(buildId => {
         return this.maestro.builds.getBuildAsync(buildId);
