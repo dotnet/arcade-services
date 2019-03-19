@@ -71,8 +71,6 @@ namespace Microsoft.DotNet.DarcLib
 
                             if (file.Operation == GitFileOperation.Add)
                             {
-                                _logger.LogInformation($"Will add file '{filePath}'...");
-
                                 if (!File.Exists(filePath))
                                 {
                                     string parentFolder = Directory.GetParent(filePath).FullName;
@@ -88,8 +86,6 @@ namespace Microsoft.DotNet.DarcLib
                             }
                             else
                             {
-                                _logger.LogInformation($"Will delete file '{filePath}'...");
-
                                 File.Delete(filePath);
                             }
                         }
