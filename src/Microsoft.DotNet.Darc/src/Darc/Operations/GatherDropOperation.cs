@@ -375,7 +375,7 @@ namespace Microsoft.DotNet.Darc.Operations
             Console.WriteLine("Building graph of all dependencies under root build...");
             DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                 remoteFactory,
-                rootBuild.AzureDevOpsRepository ?? rootBuild.GitHubRepository,
+                rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository,
                 rootBuild.Commit,
                 buildOptions,
                 Logger);
@@ -400,7 +400,7 @@ namespace Microsoft.DotNet.Darc.Operations
             Console.WriteLine("Full set of builds in graph:");
             foreach (var build in graph.ContributingBuilds)
             {
-                Console.WriteLine($"  Build - {build.AzureDevOpsBuildNumber} of {build.AzureDevOpsRepository ?? build.GitHubRepository} @ {build.Commit}");
+                Console.WriteLine($"  Build - {build.AzureDevOpsBuildNumber} of {build.GitHubRepository ?? build.AzureDevOpsRepository} @ {build.Commit}");
                 builds.Add(build);
             }
 
@@ -456,7 +456,7 @@ namespace Microsoft.DotNet.Darc.Operations
             // If the drop is separated, calculate the directory name based on the last element of the build
             // repo uri plus the build number (to disambiguate overlapping builds)
             string outputDirectory = rootOutputDirectory;
-            string repoUri = build.AzureDevOpsRepository ?? build.GitHubRepository;
+            string repoUri = build.GitHubRepository ?? build.AzureDevOpsRepository;
             if (_options.Separated)
             {
                 int lastSlash = repoUri.LastIndexOf("/");

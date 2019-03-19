@@ -36,7 +36,7 @@ namespace Microsoft.DotNet.DarcLib
             _method = method;
         }
 
-        public async Task<HttpResponseMessage> ExecuteAsync(int retryCount = 15)
+        public async Task<HttpResponseMessage> ExecuteAsync(int retryCount = 3)
         {
             int retriesRemaining = retryCount;
             // Add a bit of randomness to the retry delay.
