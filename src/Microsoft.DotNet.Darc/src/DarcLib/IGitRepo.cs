@@ -129,6 +129,15 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="pullRequestUrl">Uri of pull request</param>
         /// <returns>List of status checks.</returns>
         Task<IList<Check>> GetPullRequestChecksAsync(string pullRequestUrl);
+
+        /// <summary>
+        ///     Diff two commits in a repository and return information about them.
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="baseVersion">Base version</param>
+        /// <param name="targetVersion">Target version</param>
+        /// <returns>Diff information</returns>
+        Task<GitDiff> GitDiffAsync(string repoUri, string baseVersion, string targetVersion);
     }
 
     public class PullRequest

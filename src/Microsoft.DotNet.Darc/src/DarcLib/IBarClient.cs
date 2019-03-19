@@ -174,7 +174,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="repoUri">Repository uri</param>
         /// <param name="commit">Commit</param>
-        /// <returns></returns>
+        /// <returns>List of builds</returns>
         Task<IEnumerable<Build>> GetBuildsAsync(string repoUri, string commit);
 
         /// <summary>

@@ -16,15 +16,22 @@ $azdoPRsToClose = @()
 $azdoBranchesToDelete = @()
 $subscriptionsToDelete = @()
 $channelsToDelete = @()
+$defaultChannelsToDelete = @()
 
 # Get a temporary directory for a test root
 $testRoot = Join-Path -Path $([System.IO.Path]::GetTempPath()) -ChildPath $([System.IO.Path]::GetRandomFileName())
 New-Item -Path $testRoot -ItemType Directory | Out-Null
 
-Write-Host "Temporary testing location located at $testRoot"
-Write-Host "Installing Darc: dotnet tool install --tool-path $testRoot --version ${darcVersion} Microsoft.DotNet.Darc"
-& dotnet tool install --tool-path $testRoot --version $darcVersion "Microsoft.DotNet.Darc"
-$darcTool = Join-Path -Path $testRoot -ChildPath "darc"
+$darcTool = ""
+if (Test-Path $darcVersion) {
+    $darcTool = "dotnet $darcVersion"
+    Write-Host "Using local darc binary $darcTool"
+} else {
+    Write-Host "Temporary testing location located at $testRoot"
+    Write-Host "Installing Darc: dotnet tool install --tool-path $testRoot --version ${darcVersion} Microsoft.DotNet.Darc"
+    & dotnet tool install --tool-path $testRoot --version $darcVersion "Microsoft.DotNet.Darc"
+    $darcTool = Join-Path -Path $testRoot -ChildPath "darc"
+}
 Write-Host
 
 # Set auth parameters
@@ -44,6 +51,17 @@ function Teardown() {
             Darc-Command delete-subscription --id $subscriptionId
         } catch {
             Write-Warning "Failed to delete subscription with id $subscriptionId"
+            Write-Warning $_
+        }
+    }
+
+    Write-Host "Cleaning $($defaultChannelsToDelete.Count) default channels"
+    foreach ($defaultChannel in $defaultChannelsToDelete) {
+        try {
+            Write-Host "Deleting default channel $($defaultChannel.repo)@$($defaultChannel.branch) -> $($defaultChannel.channel)"
+            Darc-Delete-Default-Channel $defaultChannel.channel $defaultChannel.repo $defaultChannel.branch
+        } catch {
+            Write-Warning "Failed to delete default channel $($defaultChannel.repo)@$($defaultChannel.branch) -> $($defaultChannel.channel)"
             Write-Warning $_
         }
     }
@@ -125,6 +143,22 @@ function Darc-Add-Channel($channelName, $classification) {
     Darc-Command-Impl $darcParams
 }
 
+function Darc-Delete-Channel($channelName) {
+    $darcParams = "delete-channel --name '$channelName'"
+    Darc-Command-Impl $darcParams
+}
+
+# Run darc add-channel and record the channel for later deletion
+function Darc-Add-Default-Channel($channelName, $repoUri, $branch) {
+    $darcParams = "add-default-channel --channel '$channelName' --repo '$repoUri' --branch '$branch'"
+    Darc-Command-Impl $darcParams
+}
+
+function Darc-Delete-Default-Channel($channelName, $repoUri, $branch) {
+    $darcParams = "delete-default-channel --channel '$channelName' --repo '$repoUri' --branch '$branch'"
+    Darc-Command-Impl $darcParams
+}
+
 # Run darc add-subscription with the specified parameters, extract out the subscription id,
 # and record it for teardown later. Implicitly passes -q
 function Darc-Add-Subscription() {
@@ -195,6 +229,16 @@ function New-Build($repository, $branch, $commit, $buildNumber, $assets) {
     Write-Host "Successfully created build with id $newBuildId"
 
     $newBuildId
+}
+
+function Get-Build($id) {
+    $headers = Get-Bar-Headers 'application/json'
+    Write-Host "Getting Build $id"
+    
+    $uri = "$maestroInstallation/api/builds/${id}?api-version=$barApiVersion"
+
+    $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Get | ConvertFrom-Json
+    $response
 }
 
 function Get-Bar-Headers([string]$accept) {

@@ -8,7 +8,9 @@ param(
 
 $testScripts = (
     'channels.ps1',
+    'default-channels.ps1',
     'githubflow-nonbatched.ps1',
+    'githubflow-nonbatched-with-coherency.ps1',
     'azdoflow-nonbatched.ps1'
 )
 

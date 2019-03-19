@@ -16,6 +16,9 @@ namespace SubscriptionActorService
 
         [DataMember]
         public List<SubscriptionPullRequestUpdate> ContainedSubscriptions { get; set; }
+
+        [DataMember]
+        public List<SubscriptionPullRequestUpdate> Contained { get; set; }
     }
 
     [DataContract]
