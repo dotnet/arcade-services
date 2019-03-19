@@ -29,7 +29,7 @@ namespace Maestro.Data
             var connectionString =
                 @"Data Source=localhost\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true";
 
-            var envVarConnectionString = Environment.GetEnvironmentVariable("BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING");
+            var envVarConnectionString = "Server=tcp:maestro-prod.database.windows.net,1433;Initial Catalog=BuildAssetRegistry;Persist Security Info=False;User ID=Maestro_Admin;Password=janIhRwVg4g@pw>nugnW|<1{msFT7_&#$!~<utilfgx>y|{B;MultipleActiveResultSets=True;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
             if (!string.IsNullOrEmpty(envVarConnectionString))
             {
                 Console.WriteLine("Using Connection String from environment.");
@@ -302,8 +302,6 @@ FROM traverse;",
 
             List<BuildDependency> things = await edges.ToListAsync();
             var buildIds = new HashSet<int>(things.SelectMany(t => new[] { t.BuildId, t.DependentBuildId }));
-
-            buildIds.Add(buildId); // Make sure we always include the requested build, even if it has no edges.
 
             IQueryable<Build> builds = from build in Builds
                                        where buildIds.Contains(build.Id)
