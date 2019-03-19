@@ -1,0 +1,81 @@
+@import "src/variables";
+
+$width: 3em;
+$height: 1.5em;
+
+$switchPadding: 0.2em;
+$switchSize: $height - $switchPadding - $switchPadding;
+
+$translate: $width - $switchSize - $switchPadding - $switchPadding;
+
+@each $name, $color in $theme-colors {
+  .switch-#{$name} {
+    input {
+      &:checked + .slider {
+        background-color: $color;
+      }
+
+      &:focus + .slider {
+        box-shadow: 0 0 5px rgba($color, 0.70);
+      }
+    }
+
+    &:hover {
+      .slider {
+        box-shadow: 0 0 5px rgba($color, 0.70);
+      }
+    }
+  }
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: $width;
+  height: $height;
+  margin: 0.25em;
+
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+
+    &:checked + .slider {
+      &:before {
+        -webkit-transform: translateX($translate);
+        -ms-transform: translateX($translate);
+        transform: translateX($translate);
+      }
+    }
+
+    &:focus + .slider {
+      box-shadow: 0 0 1px #2196F3;
+    }
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+    border-radius: $width;
+
+    &:before {
+      position: absolute;
+      content: "";
+      height: $switchSize;
+      width: $switchSize;
+      left: $switchPadding;
+      bottom: $switchPadding;
+      background-color: white;
+      -webkit-transition: .4s;
+      transition: .4s;
+      border-radius: 50%;
+    }
+  }
+}
