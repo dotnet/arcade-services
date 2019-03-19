@@ -1,20 +1,47 @@
 import { Component, OnInit, OnChanges } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
 import { prettyRepository } from "src/app/util/names";
-import { map, tap, shareReplay } from 'rxjs/operators';
+import { map, tap, shareReplay, delay, concat } from 'rxjs/operators';
 import moment from 'moment';
 
-import { BuildGraph, Build } from 'src/maestro-client/models';
+import { BuildGraph, Build, BuildRef } from 'src/maestro-client/models';
 import { MaestroService } from 'src/maestro-client';
-import { Observable } from 'rxjs';
+import { Observable, Subject, combineLatest, of } from 'rxjs';
 import { BuildStatusService } from 'src/app/services/build-status.service';
 import { BuildStatus } from 'src/app/model/build-status';
 import { statefulSwitchMap, StatefulResult, statefulPipe } from 'src/stateful';
-import { WrappedError } from 'src/stateful/helpers';
+import { WrappedError, Loading } from 'src/stateful/helpers';
 
 interface AzDevBuildInfo {
   isMostRecent: boolean;
   mostRecentFailureLink?: string;
+}
+
+function copy(graph: BuildGraph): BuildGraph {
+  return BuildGraph.fromRawObject(BuildGraph.toRawObject(graph));
+}
+
+function removeToolsets(graph: BuildGraph): BuildGraph {
+  graph = copy(graph);
+  const removedDeps: BuildRef[] = [];
+  for (const b of Object.values(graph.builds)) {
+    if (b.dependencies) {
+      const productDeps = b.dependencies.filter(d => d.isProduct);
+      const toolsetDeps = b.dependencies.filter(d => !d.isProduct);
+      (b as any)._dependencies = productDeps;
+      for (const dep of toolsetDeps) {
+        removedDeps.push(dep);
+      }
+    }
+  }
+  const allDeps: BuildRef[] = Array.prototype.concat.apply([], Object.values(graph.builds).filter(b => b.dependencies).map(b => b.dependencies as BuildRef[]));
+  const buildsToCheck = removedDeps.map(d => d.buildId);
+  for (const id of buildsToCheck) {
+    if (!allDeps.some(d => d.buildId === id)) {
+      delete graph.builds[id];
+    }
+  }
+  return graph;
 }
 
 @Component({
@@ -31,32 +58,44 @@ export class BuildComponent implements OnInit, OnChanges {
   public build$!: Observable<StatefulResult<Build>>;
   public azDevBuildInfo$!: Observable<StatefulResult<AzDevBuildInfo>>;
 
+  public includeToolsets: boolean = false;
+  public includeToolsets$: Subject<boolean> = new Subject();
+
+  public includeToolsetsChange(value: boolean) {
+    if (value !== this.includeToolsets) {
+      this.includeToolsets = value;
+      this.includeToolsets$.next(this.includeToolsets);
+    }
+  }
+
   public ngOnInit() {
     const buildId$ = this.route.paramMap.pipe(
       map(params => +(params.get("buildId") as string)),
     );
-    const data$ = buildId$.pipe(
+    const rawGraph$ = buildId$.pipe(
       statefulSwitchMap(buildId => {
-        return this.maestro.builds.getBuildGraphAsync(buildId).pipe(
-          map(graph => ({ graph, buildId })),
-        );
+        return this.maestro.builds.getBuildGraphAsync(buildId);
       }),
       shareReplay(1),
     );
-    this.graph$ = data$.pipe(
-      statefulPipe(
-        map(t => t.graph),
-      ),
-    );
-    this.build$ = data$.pipe(
-      statefulPipe(
-        map(({graph, buildId}) => {
-          if (buildId in graph.builds) {
-            return graph.builds[buildId];
-          }
-          return new WrappedError(new Error("That build has no graph."));
-        })
-      ),
+    this.graph$ = combineLatest(
+      rawGraph$,
+      of(this.includeToolsets).pipe(concat(this.includeToolsets$))
+    ).pipe(
+      map(([r, includeToolsets]) => {
+        if (r instanceof WrappedError || r instanceof Loading) {
+          return r;
+        }
+        if (!includeToolsets) {
+          return removeToolsets(r);
+        }
+        return r;
+      })
+    )
+    this.build$ = buildId$.pipe(
+      statefulSwitchMap(buildId => {
+        return this.maestro.builds.getBuildAsync(buildId);
+      }),
     );
 
     this.azDevBuildInfo$ = this.build$.pipe(

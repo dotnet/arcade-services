@@ -58,7 +58,6 @@ export class BuildGraphTableComponent implements OnChanges {
 
   @Input() public graph?: BuildGraph;
   public sortedBuilds?: BuildData[];
-
   public locked: boolean = false;
   public focusedBuildId?: number;
 
@@ -127,25 +126,25 @@ export class BuildGraphTableComponent implements OnChanges {
     }
   }
 
-  public getCommitLink(build: Build): string {
-    if (!build) {
-      return "nothing";
+  public getCommitLink(build: Build): string | undefined {
+    if (!build ||
+        !build.azureDevOpsRepository) {
+      return;
     }
-    return `https://dev.azure.com/${build.azureDevOpsAccount}` +
-      `/${build.azureDevOpsProject}` +
-      `/_git` +
-      `/${build.azureDevOpsRepository}` +
+    return `${build.azureDevOpsRepository}` +
       `?_a=history&version=GC${build.commit}`;
   }
 
-  public getBuildLink(build: Build): string {
-    if (!build) {
-      return "nothing";
+  public getBuildLink(build: Build): string | undefined {
+    if (!build ||
+        !build.azureDevOpsAccount ||
+        !build.azureDevOpsProject) {
+      return;
     }
     return `https://dev.azure.com` +
       `/${build.azureDevOpsAccount}` +
       `/${build.azureDevOpsProject}` +
       `/_build/results` +
-      `?_a=history&buildId=${build.azureDevOpsBuildId}`;
+      `?view=results&buildId=${build.azureDevOpsBuildId}`;
   }
 }

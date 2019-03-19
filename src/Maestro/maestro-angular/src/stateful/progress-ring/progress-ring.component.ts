@@ -3,7 +3,7 @@ import { Component, Input } from '@angular/core';
 @Component({
   selector: 'progress-ring',
   template: `
-    <div class="loading" [ngStyle]="{'width.px': width, 'height.px': height}">
+    <div class="loading" [ngStyle]="style || {'width.px': width, 'height.px': height}">
       <svg class="spinner" viewBox="25 25 50 50">
         <circle class="path" cx="50" cy="50" r="20" fill="none" stroke-width="2" stroke-miterlimit="10" [attr.stroke]="color" />
       </svg>
@@ -64,6 +64,7 @@ import { Component, Input } from '@angular/core';
     `]
 })
 export class ProgressRingComponent {
+  @Input() public style?: object;
   @Input() public width: number = 50;
   @Input() public height: number = 50;
   @Input() public color: string = "#ddd";
