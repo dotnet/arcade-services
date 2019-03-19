@@ -77,14 +77,14 @@
           Dependencies
         </h5>
         <span class="form-check float-right">
-          <mc-switch [style]="" [value]="includeToolsets" (valueChange)="includeToolsetsChange($event)"></mc-switch>
+          <mc-switch [style]="" [(value)]="includeToolsets"></mc-switch>
           <label class="form-check-label">
             Include Toolsets
           </label>
         </span>
       </div>
       <ng-container *stateful="let graph from graph$; loadingTemplate: loadingData">
-        <mc-build-graph-table [graph]="graph"></mc-build-graph-table>
+        <mc-build-graph-table [graph]="graph" [includeToolsets]="includeToolsets"></mc-build-graph-table>
       </ng-container>
       <ng-template #loadingData>
         <progress-ring [style]="{ 'width.px': 150, 'height.px': 150 }"></progress-ring>
