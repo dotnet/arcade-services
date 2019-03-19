@@ -55,7 +55,7 @@ namespace SubscriptionActorService.Tests
             PullRequestActors.Should()
                 .ContainKey(forActor)
                 .WhichValue.Verify(
-                    a => a.UpdateAssetsAsync(Subscription.Id, withBuild.Id, NewCommit, Capture.In(updatedAssets)));
+                    a => a.UpdateAssetsAsync(Subscription.Id, withBuild.Id, SourceRepo, NewCommit, Capture.In(updatedAssets)));
             updatedAssets.Should()
                 .BeEquivalentTo(
                     new List<List<Asset>>

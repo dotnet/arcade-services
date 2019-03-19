@@ -71,14 +71,26 @@
     </ng-container>
   </div>
   <div class="container-fluid">
-    <ng-template #loadingData>
-      <div class="card mt-3">
-       <progress-ring></progress-ring>
+    <div class="card mt-3">
+      <div class="card-body">
+        <h5 class="card-title float-left">
+          Dependencies
+        </h5>
+        <span class="form-check float-right">
+          <mc-switch [style]="" [value]="includeToolsets" (valueChange)="includeToolsetsChange($event)"></mc-switch>
+          <label class="form-check-label">
+            Include Toolsets
+          </label>
+        </span>
       </div>
-    </ng-template>
-    <ng-container *stateful="let graph from graph$; loadingTemplate: loadingData">
-      <mc-build-graph-table [graph]="graph"></mc-build-graph-table>
-    </ng-container>
+      <ng-container *stateful="let graph from graph$; loadingTemplate: loadingData">
+        <mc-build-graph-table [graph]="graph"></mc-build-graph-table>
+      </ng-container>
+      <ng-template #loadingData>
+        <progress-ring [style]="{ 'width.px': 150, 'height.px': 150 }"></progress-ring>
+      </ng-template>
+    </div>
+
     <div class="card mt-3" *ngIf="build.assets && build.assets.length">
       <div class="card-body">
         <h5 class="card-title">Assets Produced</h5>

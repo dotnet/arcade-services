@@ -34,5 +34,9 @@
         "default": "[vault(github-webhook-secret)]"
       }
     }
+  },
+  "ApiRedirect": {
+    "uri": "https://maestro-prod.westus2.cloudapp.azure.com",
+    "token": "[vault(prod-maestro-token)]" 
   }
 }
