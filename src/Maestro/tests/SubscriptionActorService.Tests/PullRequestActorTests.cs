@@ -321,7 +321,7 @@ namespace SubscriptionActorService.Tests
                         SubscriptionId = Subscription.Id,
                         BuildId = forBuild.Id,
                         SourceSha = forBuild.Commit,
-                        SourceRepo = forBuild.AzureDevOpsRepository ?? forBuild.GitHubRepository,
+                        SourceRepo = forBuild.GitHubRepository ?? forBuild.AzureDevOpsRepository,
                         Assets = forBuild.Assets.Select(
                                 a => new Asset
                                 {
