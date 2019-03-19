@@ -40,7 +40,7 @@ namespace Maestro.Data
                 .UseSqlServer(connectionString)
                 .Options;
             return new BuildAssetRegistryContext(
-                new HostingEnvironment { EnvironmentName = EnvironmentName.Development },
+                new HostingEnvironment {EnvironmentName = EnvironmentName.Development},
                 options);
         }
     }
