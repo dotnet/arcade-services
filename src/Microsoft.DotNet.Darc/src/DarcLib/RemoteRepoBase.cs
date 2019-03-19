@@ -86,7 +86,7 @@ namespace Microsoft.DotNet.DarcLib
                             }
                             else
                             {
-                                File.Delete(Path.Combine(tempRepoFolder, file.FilePath));
+                                File.Delete(filePath);
                             }
                         }
 
