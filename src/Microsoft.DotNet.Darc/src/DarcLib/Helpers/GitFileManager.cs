@@ -160,7 +160,7 @@ namespace Microsoft.DotNet.DarcLib
                 }
 
                 // Use a case-insensitive update.
-                XmlNodeList versionList = versionDetails.SelectNodes($"//Dependency[translate(@Name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ'," +
+                XmlNodeList versionList = versionDetails.SelectNodes($"//{VersionFiles.DependencyElementName}[translate(@Name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ'," +
                     $"'abcdefghijklmnopqrstuvwxyz')='{itemToUpdate.Name.ToLower()}']");
 
                 if (versionList.Count != 1)
@@ -178,10 +178,10 @@ namespace Microsoft.DotNet.DarcLib
 
                 XmlNode nodeToUpdate = versionList.Item(0);
 
-                SetAttribute(versionDetails, nodeToUpdate, "Version", itemToUpdate.Version);
-                SetAttribute(versionDetails, nodeToUpdate, "Name", itemToUpdate.Name);
-                SetElement(versionDetails, nodeToUpdate, "Sha", itemToUpdate.Commit);
-                SetElement(versionDetails, nodeToUpdate, "Uri", itemToUpdate.RepoUri);
+                SetAttribute(versionDetails, nodeToUpdate, VersionFiles.VersionAttributeName, itemToUpdate.Version);
+                SetAttribute(versionDetails, nodeToUpdate, VersionFiles.NameAttributeName, itemToUpdate.Name);
+                SetElement(versionDetails, nodeToUpdate, VersionFiles.ShaElementName, itemToUpdate.Commit);
+                SetElement(versionDetails, nodeToUpdate, VersionFiles.UriElementName, itemToUpdate.RepoUri);
                 UpdateVersionFiles(versionProps, globalJson, itemToUpdate);
             }
 
@@ -202,24 +202,30 @@ namespace Microsoft.DotNet.DarcLib
         {
             XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repo, null);
 
-            XmlNode newDependency = versionDetails.CreateElement("Dependency");
+            XmlNode newDependency = versionDetails.CreateElement(VersionFiles.DependencyElementName);
 
-            SetAttribute(versionDetails, newDependency, "Name", dependency.Name);
-            SetAttribute(versionDetails, newDependency, "Version", dependency.Version);
+            SetAttribute(versionDetails, newDependency, VersionFiles.NameAttributeName, dependency.Name);
+            SetAttribute(versionDetails, newDependency, VersionFiles.VersionAttributeName, dependency.Version);
 
             // Only add the pinned attribute if the pinned option is set to true
             if (dependency.Pinned)
             {
-                SetAttribute(versionDetails, newDependency, "Pinned", "True");
+                SetAttribute(versionDetails, newDependency, VersionFiles.PinnedAttributeName, "True");
             }
 
-            SetElement(versionDetails, newDependency, "Uri", dependency.RepoUri);
-            SetElement(versionDetails, newDependency, "Sha", dependency.Commit);
+            // Only add the coherent parent attribute if it is set
+            if (!string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
+            {
+                SetAttribute(versionDetails, newDependency, VersionFiles.CoherentParentAttributeName, dependency.CoherentParentDependencyName);
+            }
 
-            XmlNode dependenciesNode = versionDetails.SelectSingleNode($"//{dependency.Type}Dependencies");
+            SetElement(versionDetails, newDependency, VersionFiles.UriElementName, dependency.RepoUri);
+            SetElement(versionDetails, newDependency, VersionFiles.ShaElementName, dependency.Commit);
+
+            XmlNode dependenciesNode = versionDetails.SelectSingleNode($"//{dependency.Type}{VersionFiles.DependenciesElementName}");
             if (dependenciesNode == null)
             {
-                dependenciesNode = versionDetails.CreateElement($"{dependency.Type}Dependencies");
+                dependenciesNode = versionDetails.CreateElement($"{dependency.Type}{VersionFiles.DependenciesElementName}");
                 versionDetails.DocumentElement.AppendChild(dependenciesNode);
             }
             dependenciesNode.AppendChild(newDependency);
@@ -751,22 +757,23 @@ namespace Microsoft.DotNet.DarcLib
                                 bool isPinned = false;
 
                                 // If the 'Pinned' attribute does not exist or if it is set to false we just not update it 
-                                if (dependency.Attributes["Pinned"] != null)
+                                if (dependency.Attributes[VersionFiles.PinnedAttributeName] != null)
                                 {
-                                    if (!bool.TryParse(dependency.Attributes["Pinned"].Value, out isPinned))
+                                    if (!bool.TryParse(dependency.Attributes[VersionFiles.PinnedAttributeName].Value, out isPinned))
                                     {
-                                        throw new DarcException($"The 'Pinned' attribute is set but the value '{dependency.Attributes["Pinned"].Value}' " +
+                                        throw new DarcException($"The '{VersionFiles.PinnedAttributeName}' attribute is set but the value " +
+                                            $"'{dependency.Attributes[VersionFiles.PinnedAttributeName].Value}' " +
                                             $"is not a valid boolean...");
                                     }
                                 }
 
                                 DependencyDetail dependencyDetail = new DependencyDetail
                                 {
-                                    Branch = branch,
-                                    Name = dependency.Attributes["Name"].Value,
-                                    RepoUri = dependency.SelectSingleNode("Uri").InnerText,
-                                    Commit = dependency.SelectSingleNode("Sha").InnerText,
-                                    Version = dependency.Attributes["Version"].Value,
+                                    Name = dependency.Attributes[VersionFiles.NameAttributeName].Value,
+                                    RepoUri = dependency.SelectSingleNode(VersionFiles.UriElementName).InnerText,
+                                    Commit = dependency.SelectSingleNode(VersionFiles.ShaElementName).InnerText,
+                                    Version = dependency.Attributes[VersionFiles.VersionAttributeName].Value,
+                                    CoherentParentDependencyName = dependency.Attributes[VersionFiles.CoherentParentAttributeName]?.Value,
                                     Pinned = isPinned,
                                     Type = type
                                 };
@@ -774,10 +781,6 @@ namespace Microsoft.DotNet.DarcLib
                                 dependencyDetails.Add(dependencyDetail);
                             }
                         }
-                    }
-                    else
-                    {
-                        _logger.LogWarning("No dependencies defined in file.");
                     }
                 }
             }

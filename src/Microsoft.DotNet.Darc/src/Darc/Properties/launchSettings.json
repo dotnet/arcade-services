@@ -1,9 +1,0 @@
-{
-  "profiles": {
-    "Microsoft.DotNet.Darc": {
-      "commandName": "Project",
-      "commandLineArgs": "add-dependency -n a -t toolset -v 123 -r lkmlsldfl",
-      "workingDirectory": "G:\\Code\\jcagme\\arcade-services"
-    }
-  }
-}

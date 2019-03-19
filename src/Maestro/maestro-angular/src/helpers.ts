@@ -31,7 +31,7 @@ export function topologicalSort<TNode, TKey>(nodes: TNode[], getChildren: (node:
       log("new edges: " + edges.map(e => e.from + "->" + e.to).join(", "))
       const m = nodes.find(n => edge.to == getKey(n)) as TNode;
       if (!hasIncommingEdges(m)) {
-        toProcess.push(m);
+        toProcess.unshift(m);
       }
     }
   }

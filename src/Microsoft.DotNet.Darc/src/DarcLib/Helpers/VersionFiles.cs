@@ -17,6 +17,14 @@ namespace Microsoft.DotNet.DarcLib
         public const string GlobalJson = "global.json";
         public const string VersionPropsVersionElementSuffix = "PackageVersion";
         public const string VersionPropsAlternateVersionElementSuffix = "Version";
+        public const string ShaElementName = "Sha";
+        public const string UriElementName = "Uri";
+        public const string DependencyElementName = "Dependency";
+        public const string DependenciesElementName = "Dependencies";
+        public const string NameAttributeName = "Name";
+        public const string VersionAttributeName = "Version";
+        public const string CoherentParentAttributeName = "CoherentParentDependency";
+        public const string PinnedAttributeName = "Pinned";
 
         private static string GetVersionPropsElementBaseName(string dependencyName)
         {

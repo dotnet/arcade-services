@@ -4,6 +4,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.DotNet.DarcLib;
 using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Darc.Options
@@ -30,14 +31,24 @@ namespace Microsoft.DotNet.Darc.Options
            + @"https://github.com/dotnet/corefx,C:\repos\corefx.")]
         public IEnumerable<string> RemotesMap { get; set; }
 
-        [Option('f', "flat", SetName = "output", HelpText = @"Returns a unique set of repository+sha combination.")]
+        [Option('f', "flat", HelpText = @"Returns a unique set of repository+sha combination.")]
         public bool Flat { get; set; }
 
-        [Option("graphviz", SetName = "output", HelpText = @"Returns the repository graph in GraphViz form.")]
-        public bool GraphViz { get; set; }
+        [Option("graphviz", HelpText = @"Writes the repository graph in GraphViz (dot) form, into the specified file.")]
+        public string GraphVizOutputFile { get; set; }
+
+        [Option("output-file", HelpText = @"Writes the non-GraphViz (dot) output to the specified file into the specified file.")]
+        public string OutputFile { get; set; }
 
         [Option("include-toolset", HelpText = "Include toolset dependencies.")]
         public bool IncludeToolset { get; set; }
+
+        [Option("skip-builds", HelpText = "Do not look up build information.")]
+        public bool SkipBuildLookup { get; set; }
+
+        [Option("delta-from", Default = "newest-in-graph", HelpText = "Determine the delta of each node in the graph from a target. " +
+            "Valid values: [none, newest-in-channel, newest-in-graph]")]
+        public string DeltaFrom { get; set; }
 
         [Option("coherency", HelpText = "Report coherency information.")]
         public bool IncludeCoherency { get; set; }
