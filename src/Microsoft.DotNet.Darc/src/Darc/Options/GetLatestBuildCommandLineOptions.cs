@@ -8,7 +8,7 @@ using Microsoft.DotNet.Darc.Operations;
 namespace Microsoft.DotNet.Darc.Options
 {
     [Verb("get-latest-build", HelpText = "Retrieves the latest builds matching the specified criteria. " +
-        "If more than one build matches then multiple build are returned.")]
+        "If more than one build matches then multiple builds are returned.")]
     internal class GetLatestBuildCommandLineOptions : CommandLineOptions
     {
         [Option("repo", Required = true, HelpText = "Name of repository to determine the latest build for. Match on substring")]
