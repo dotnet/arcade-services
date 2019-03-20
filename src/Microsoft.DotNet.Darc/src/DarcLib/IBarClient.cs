@@ -187,6 +187,14 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>List of assets.</returns>
         Task<IEnumerable<Asset>> GetAssetsAsync(string name = null, string version = null, int? buildId = null, bool? nonShipping = null);
 
+        /// <summary>
+        ///     Assign a particular build to a channel.
+        /// </summary>
+        /// <param name="buildId">Build id</param>
+        /// <param name="channelId">Channel id</param>
+        /// <returns>Async task</returns>
+        Task AssignBuildToChannel(int buildId, int channelId);
+
         #endregion
     }
 }

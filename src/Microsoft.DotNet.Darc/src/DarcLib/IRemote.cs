@@ -347,6 +347,14 @@ namespace Microsoft.DotNet.DarcLib
         Task<IEnumerable<Build>> GetBuildsAsync(string repoUri, string commit);
 
         /// <summary>
+        ///     Assign a particular build to a channel
+        /// </summary>
+        /// <param name="buildId">Build id</param>
+        /// <param name="channelId">Channel id</param>
+        /// <returns>Async task</returns>
+        Task AssignBuildToChannel(int buildId, int channelId);
+
+        /// <summary>
         ///     Get assets matching a particular set of properties. All are optional.
         /// </summary>
         /// <param name="name">Name of asset</param>
