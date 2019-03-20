@@ -5,6 +5,14 @@
       TODO: Make SIGN001 suppressable.
     -->
     <FileSignInfo Include="Microsoft.VisualStudio.OLE.Interop.dll" CertificateName="None" />
+    <FileSignInfo Include="Microsoft.AspNetCore.ApiVersioning.dll" CertificateName="None" />
+    <FileSignInfo Include="Microsoft.AspNetCore.ApiVersioning.Analyzers.dll" CertificateName="None" />
+    <FileSignInfo Include="Microsoft.AspNetCore.ApiVersioning.Swashbuckle.dll" CertificateName="None" />
+    <FileSignInfo Include="Microsoft.DotNet.Darc.dll" CertificateName="None" />
+    <FileSignInfo Include="Microsoft.DotNet.DarcLib.AzDev.dll" CertificateName="None" />
+    <FileSignInfo Include="Microsoft.DotNet.DarcLib.dll" CertificateName="None" />
+    <FileSignInfo Include="Microsoft.DotNet.Maestro.Client.dll" CertificateName="None" />
+    <FileSignInfo Include="Microsoft.DotNet.Maestro.Tasks.dll" CertificateName="None" />
   </ItemGroup>
 
   <!--
