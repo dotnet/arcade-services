@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -36,7 +37,7 @@ namespace Microsoft.DotNet.DarcLib
             _method = method;
         }
 
-        public async Task<HttpResponseMessage> ExecuteAsync(int retryCount = 15)
+        public async Task<HttpResponseMessage> ExecuteAsync(int retryCount = 3)
         {
             int retriesRemaining = retryCount;
             // Add a bit of randomness to the retry delay.
@@ -54,6 +55,17 @@ namespace Microsoft.DotNet.DarcLib
                         }
 
                         HttpResponseMessage response = await _client.SendAsync(message);
+
+                        if (response.StatusCode == HttpStatusCode.NotFound)
+                        {
+                            if (_logFailure)
+                            {
+                                _logger.LogError("A 404 (Not Found) was returned. We'll set the retries amount to 0.");
+                            }
+
+                            retriesRemaining = 0;
+                        }
+
                         response.EnsureSuccessStatusCode();
                         return response;
                     }
