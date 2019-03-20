@@ -24,7 +24,7 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        /// Adds a new channel with the specified name.
+        ///     Get a specific build of a repository
         /// </summary>
         /// <returns>Process exit code.</returns>
         public override async Task<int> ExecuteAsync()
@@ -40,7 +40,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
                 else
                 {
-                    Console.WriteLine("Could not find build with id '{_options.Id}'");
+                    Console.WriteLine($"Could not find build with id '{_options.Id}'");
                     return Constants.ErrorCode;
                 }
 
@@ -48,7 +48,7 @@ namespace Microsoft.DotNet.Darc.Operations
             }
             catch (Exception e)
             {
-                Logger.LogError(e, "Error: Failed to retrieve latest build.");
+                Logger.LogError(e, $"Error: Failed to retrieve build with id '{_options.Id}'");
                 return Constants.ErrorCode;
             }
         }

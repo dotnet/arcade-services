@@ -24,7 +24,7 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        /// Adds a new channel with the specified name.
+        ///     Gets the latest build for a repo
         /// </summary>
         /// <returns>Process exit code.</returns>
         public override async Task<int> ExecuteAsync()

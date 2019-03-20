@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options
 {
-    [Verb("get-build", HelpText = "Retrieves the latest build of a repository")]
+    [Verb("get-build", HelpText = "Retrieves a specific build of a repository")]
     internal class GetBuildCommandLineOptions : CommandLineOptions
     {
         [Option("id", Required = true, HelpText = "Build id.")]
