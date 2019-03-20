@@ -14,5 +14,8 @@
   <Section Name="PullRequestActorServiceReplicatorSecurityConfig">
     <Parameter Name="CredentialType" Value="None" />
   </Section>
+  <Section Name="TransportSettings">
+    <Parameter Name="OperationTimeoutInSeconds" Value="600" />
+  </Section>
   <!-- The content will be generated during build -->
 </Settings>
