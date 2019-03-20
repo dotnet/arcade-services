@@ -161,9 +161,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     foreach (Package package in manifest.Packages)
                     {
                         AddAsset(
-                            assets, 
-                            package.Id, 
-                            package.Version, 
+                            assets,
+                            package.Id,
+                            package.Version,
                             manifest.InitialAssetsLocation ?? manifest.Location,
                             (manifest.InitialAssetsLocation == null) ? AssetLocationDataType.NugetFeed : AssetLocationDataType.Container,
                             package.NonShipping);
@@ -180,11 +180,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         }
 
                         AddAsset(
-                            assets, 
-                            blob.Id, 
-                            version, 
-                            manifest.InitialAssetsLocation ?? manifest.Location, 
-                            AssetLocationDataType.Container, 
+                            assets,
+                            blob.Id,
+                            version,
+                            manifest.InitialAssetsLocation ?? manifest.Location,
+                            AssetLocationDataType.Container,
                             blob.NonShipping);
                     }
 
@@ -228,10 +228,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
             var uri = new Uri(GetEnv("SYSTEM_TEAMFOUNDATIONCOLLECTIONURI"));
             if (uri.Host == "dev.azure.com")
             {
-                return uri.AbsolutePath.Split(new[] {'/', '\\'}, StringSplitOptions.RemoveEmptyEntries).First();
+                return uri.AbsolutePath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries).First();
             }
 
-            return uri.Host.Split(new[] {'.'}, StringSplitOptions.RemoveEmptyEntries).First();
+            return uri.Host.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries).First();
         }
 
         private string GetAzDevProject()
