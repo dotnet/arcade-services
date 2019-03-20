@@ -333,23 +333,33 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
             using (var client = new HttpClient())
             {
-                string[] segments = mergedBuild.AzureDevOpsRepository.Split('/');
-                string repoName = segments[segments.Length - 1];
-                int index = repoName.IndexOf('-');
+                Uri repoAddr = new Uri(mergedBuild.AzureDevOpsRepository);
+                string repoIdentity = string.Empty;
 
-                StringBuilder builder = new StringBuilder(repoName);
-                builder[index] = '/';
+                if (repoAddr.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase))
+                {
+                    repoIdentity = repoAddr.AbsolutePath.TrimStart('/').TrimEnd('/');
+                }
+                else
+                {
+                    string[] segments = mergedBuild.AzureDevOpsRepository.Split('/');
+                    string repoName = segments[segments.Length - 1];
+                    int index = repoName.IndexOf('-');
 
-                repoName = builder.ToString();
+                    StringBuilder builder = new StringBuilder(repoName);
+                    builder[index] = '/';
+
+                    repoIdentity = builder.ToString();
+                }
 
                 client.BaseAddress = new Uri("https://api.github.com");
                 client.DefaultRequestHeaders.Add("User-Agent", "PushToBarTask");
 
-                HttpResponseMessage response = client.GetAsync($"/repos/{repoName}/commits/{mergedBuild.Commit}").Result;
+                HttpResponseMessage response = client.GetAsync($"/repos/{repoIdentity}/commits/{mergedBuild.Commit}").Result;
 
                 if (response.IsSuccessStatusCode)
                 {
-                    mergedBuild.GitHubRepository = $"https://github.com/{repoName}";
+                    mergedBuild.GitHubRepository = $"https://github.com/{repoIdentity}";
                     mergedBuild.GitHubBranch = mergedBuild.AzureDevOpsBranch;
                 }
                 else
