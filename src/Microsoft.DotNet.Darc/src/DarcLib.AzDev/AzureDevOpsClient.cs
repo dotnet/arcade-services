@@ -522,7 +522,7 @@ namespace Microsoft.DotNet.DarcLib
                     if (!GitFileManager.DependencyFiles.Contains(item.Path))
                     {
                         string fileContent = await GetFileContentsAsync(accountName, projectName, repoName, item.Path, commit);
-                        var gitCommit = new GitFile(item.Path, fileContent);
+                        var gitCommit = new GitFile(item.Path.TrimStart('/'), fileContent);
                         files.Add(gitCommit);
                     }
                 }

@@ -434,7 +434,7 @@ namespace Microsoft.DotNet.DarcLib
                             $"Either remove the coherency attribute or mark as pinned.");
                     }
 
-                    string buildRepoUri = buildForAsset.AzureDevOpsRepository ?? buildForAsset.GitHubRepository;
+                    string buildRepoUri = buildForAsset.GitHubRepository ?? buildForAsset.AzureDevOpsRepository;
 
                     if (dependencyInUpdateChain.Name == coherentAsset.Name &&
                         dependencyInUpdateChain.Version == coherentAsset.Version &&
@@ -448,7 +448,7 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         Name = coherentAsset.Name,
                         Version = coherentAsset.Version,
-                        RepoUri = buildForAsset.AzureDevOpsRepository ?? buildForAsset.GitHubRepository,
+                        RepoUri = buildRepoUri,
                         Commit = buildForAsset.Commit
                     };
 
