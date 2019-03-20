@@ -333,12 +333,17 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
             using (var client = new HttpClient())
             {
-                Uri repoAddr = new Uri(mergedBuild.AzureDevOpsRepository);
                 string repoIdentity = string.Empty;
+                string gitHubHost = "github.com";
 
-                if (repoAddr.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase))
+                if (!Uri.TryCreate(mergedBuild.AzureDevOpsRepository, UriKind.Absolute, out Uri repoAddr))
                 {
-                    repoIdentity = repoAddr.AbsolutePath.TrimStart('/').TrimEnd('/');
+                    throw new Exception($"Can't parse the repository URL: {mergedBuild.AzureDevOpsRepository}");
+                }
+
+                if (repoAddr.Host.Equals(gitHubHost, StringComparison.OrdinalIgnoreCase))
+                {
+                    repoIdentity = repoAddr.AbsolutePath.Trim('/');
                 }
                 else
                 {
@@ -352,7 +357,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     repoIdentity = builder.ToString();
                 }
 
-                client.BaseAddress = new Uri("https://api.github.com");
+                client.BaseAddress = new Uri($"https://api.{gitHubHost}");
                 client.DefaultRequestHeaders.Add("User-Agent", "PushToBarTask");
 
                 HttpResponseMessage response = client.GetAsync($"/repos/{repoIdentity}/commits/{mergedBuild.Commit}").Result;
