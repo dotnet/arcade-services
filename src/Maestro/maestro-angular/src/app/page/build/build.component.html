@@ -27,7 +27,12 @@
     <div class="flex-grow-1">
       <h4>{{build.gitHubRepository}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
       <div>
-        <span class="text-warning">Error loading build information from Azure Pipelines</span>
+        <span class="text-warning" *ngIf="!haveAzDevInfo(build)">
+          Cannot lookup build in Azure Pipelines. Missing required data. Update to the latest Arcade SDK to collect this data.
+        </span>
+        <span class="text-warning" *ngIf="haveAzDevInfo(build)">
+          Error loading build information from Azure Pipelines
+        </span>
         <div style="display:inline-block; vertical-align: middle; width: 50px; height: 50px;">
         </div>
       </div>
