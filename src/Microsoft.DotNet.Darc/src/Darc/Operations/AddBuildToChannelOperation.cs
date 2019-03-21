@@ -26,7 +26,7 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        /// Adds a new channel with the specified name.
+        ///     Assigns a build to a channel.
         /// </summary>
         /// <returns>Process exit code.</returns>
         public override async Task<int> ExecuteAsync()
@@ -86,49 +86,55 @@ namespace Microsoft.DotNet.Darc.Operations
                 string buildRepo = build.GitHubRepository ?? build.AzureDevOpsRepository;
                 List<Subscription> applicableSubscriptions = (await remote.GetSubscriptionsAsync(
                     sourceRepo: buildRepo, channelId: targetChannel.Id)).ToList();
-                IEnumerable<Subscription> subscriptionsThatWillFlowImmediately = applicableSubscriptions.Where(s => s.Enabled &&
-                    s.Policy.UpdateFrequency == SubscriptionPolicyUpdateFrequency.EveryBuild);
-                IEnumerable<Subscription> subscriptionsThatWillFlowTomorrowOrNotAtAll = applicableSubscriptions.Where(s => s.Enabled &&
-                    (s.Policy.UpdateFrequency == SubscriptionPolicyUpdateFrequency.EveryDay ||
-                    s.Policy.UpdateFrequency == SubscriptionPolicyUpdateFrequency.None));
-                IEnumerable<Subscription> disabledSubscriptions = applicableSubscriptions.Where(s => !s.Enabled);
 
-                // Print out info
-                if (subscriptionsThatWillFlowImmediately.Any())
-                {
-                    Console.WriteLine("The following repos/branches will apply this build immediately:");
-                    foreach (var sub in subscriptionsThatWillFlowImmediately)
-                    {
-                        Console.WriteLine($"  {sub.TargetRepository} @ {sub.TargetBranch}");
-                    }
-                }
-
-                if (subscriptionsThatWillFlowTomorrowOrNotAtAll.Any())
-                {
-                    Console.WriteLine("The following repos/branches will apply this change at a later time, or not by default.");
-                    Console.WriteLine("To flow immediately, run the specified command");
-                    foreach (var sub in subscriptionsThatWillFlowTomorrowOrNotAtAll)
-                    {
-                        Console.WriteLine($"  {sub.TargetRepository} @ {sub.TargetBranch} (update freq: {sub.Policy.UpdateFrequency})");
-                        Console.WriteLine($"    darc trigger-subscriptions --id {sub.Id}");
-                    }
-                }
-
-                if (disabledSubscriptions.Any())
-                {
-                    Console.WriteLine("The following repos/branches will not get this change because their subscriptions are disabled.");
-                    foreach (var sub in disabledSubscriptions)
-                    {
-                        Console.WriteLine($"  {sub.TargetRepository} @ {sub.TargetBranch}");
-                    }
-                }
+                PrintSubscriptionInfo(applicableSubscriptions);
 
                 return Constants.SuccessCode;
             }
             catch (Exception e)
             {
-                Logger.LogError(e, $"Error: Failed assign build '{_options.Id}' to channel '{_options.Channel}'.");
+                Logger.LogError(e, $"Error: Failed to assign build '{_options.Id}' to channel '{_options.Channel}'.");
                 return Constants.ErrorCode;
+            }
+        }
+
+        private void PrintSubscriptionInfo(List<Subscription> applicableSubscriptions)
+        {
+            IEnumerable<Subscription> subscriptionsThatWillFlowImmediately = applicableSubscriptions.Where(s => s.Enabled &&
+                    s.Policy.UpdateFrequency == SubscriptionPolicyUpdateFrequency.EveryBuild);
+            IEnumerable<Subscription> subscriptionsThatWillFlowTomorrowOrNotAtAll = applicableSubscriptions.Where(s => s.Enabled &&
+                (s.Policy.UpdateFrequency == SubscriptionPolicyUpdateFrequency.EveryDay ||
+                s.Policy.UpdateFrequency == SubscriptionPolicyUpdateFrequency.None));
+            IEnumerable<Subscription> disabledSubscriptions = applicableSubscriptions.Where(s => !s.Enabled);
+
+            // Print out info
+            if (subscriptionsThatWillFlowImmediately.Any())
+            {
+                Console.WriteLine("The following repos/branches will apply this build immediately:");
+                foreach (var sub in subscriptionsThatWillFlowImmediately)
+                {
+                    Console.WriteLine($"  {sub.TargetRepository} @ {sub.TargetBranch}");
+                }
+            }
+
+            if (subscriptionsThatWillFlowTomorrowOrNotAtAll.Any())
+            {
+                Console.WriteLine("The following repos/branches will apply this change at a later time, or not by default.");
+                Console.WriteLine("To flow immediately, run the specified command");
+                foreach (var sub in subscriptionsThatWillFlowTomorrowOrNotAtAll)
+                {
+                    Console.WriteLine($"  {sub.TargetRepository} @ {sub.TargetBranch} (update freq: {sub.Policy.UpdateFrequency})");
+                    Console.WriteLine($"    darc trigger-subscriptions --id {sub.Id}");
+                }
+            }
+
+            if (disabledSubscriptions.Any())
+            {
+                Console.WriteLine("The following repos/branches will not get this change because their subscriptions are disabled.");
+                foreach (var sub in disabledSubscriptions)
+                {
+                    Console.WriteLine($"  {sub.TargetRepository} @ {sub.TargetBranch}");
+                }
             }
         }
     }
