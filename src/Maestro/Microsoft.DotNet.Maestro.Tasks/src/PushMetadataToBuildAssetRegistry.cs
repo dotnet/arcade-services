@@ -161,9 +161,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     foreach (Package package in manifest.Packages)
                     {
                         AddAsset(
-                            assets, 
-                            package.Id, 
-                            package.Version, 
+                            assets,
+                            package.Id,
+                            package.Version,
                             manifest.InitialAssetsLocation ?? manifest.Location,
                             (manifest.InitialAssetsLocation == null) ? AssetLocationDataType.NugetFeed : AssetLocationDataType.Container,
                             package.NonShipping);
@@ -180,11 +180,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         }
 
                         AddAsset(
-                            assets, 
-                            blob.Id, 
-                            version, 
-                            manifest.InitialAssetsLocation ?? manifest.Location, 
-                            AssetLocationDataType.Container, 
+                            assets,
+                            blob.Id,
+                            version,
+                            manifest.InitialAssetsLocation ?? manifest.Location,
+                            AssetLocationDataType.Container,
                             blob.NonShipping);
                     }
 
@@ -228,10 +228,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
             var uri = new Uri(GetEnv("SYSTEM_TEAMFOUNDATIONCOLLECTIONURI"));
             if (uri.Host == "dev.azure.com")
             {
-                return uri.AbsolutePath.Split(new[] {'/', '\\'}, StringSplitOptions.RemoveEmptyEntries).First();
+                return uri.AbsolutePath.Split(new[] { '/', '\\' }, StringSplitOptions.RemoveEmptyEntries).First();
             }
 
-            return uri.Host.Split(new[] {'.'}, StringSplitOptions.RemoveEmptyEntries).First();
+            return uri.Host.Split(new[] { '.' }, StringSplitOptions.RemoveEmptyEntries).First();
         }
 
         private string GetAzDevProject()
@@ -333,23 +333,38 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
             using (var client = new HttpClient())
             {
-                string[] segments = mergedBuild.AzureDevOpsRepository.Split('/');
-                string repoName = segments[segments.Length - 1];
-                int index = repoName.IndexOf('-');
+                string repoIdentity = string.Empty;
+                string gitHubHost = "github.com";
 
-                StringBuilder builder = new StringBuilder(repoName);
-                builder[index] = '/';
+                if (!Uri.TryCreate(mergedBuild.AzureDevOpsRepository, UriKind.Absolute, out Uri repoAddr))
+                {
+                    throw new Exception($"Can't parse the repository URL: {mergedBuild.AzureDevOpsRepository}");
+                }
 
-                repoName = builder.ToString();
+                if (repoAddr.Host.Equals(gitHubHost, StringComparison.OrdinalIgnoreCase))
+                {
+                    repoIdentity = repoAddr.AbsolutePath.Trim('/');
+                }
+                else
+                {
+                    string[] segments = mergedBuild.AzureDevOpsRepository.Split('/');
+                    string repoName = segments[segments.Length - 1];
+                    int index = repoName.IndexOf('-');
 
-                client.BaseAddress = new Uri("https://api.github.com");
+                    StringBuilder builder = new StringBuilder(repoName);
+                    builder[index] = '/';
+
+                    repoIdentity = builder.ToString();
+                }
+
+                client.BaseAddress = new Uri($"https://api.{gitHubHost}");
                 client.DefaultRequestHeaders.Add("User-Agent", "PushToBarTask");
 
-                HttpResponseMessage response = client.GetAsync($"/repos/{repoName}/commits/{mergedBuild.Commit}").Result;
+                HttpResponseMessage response = client.GetAsync($"/repos/{repoIdentity}/commits/{mergedBuild.Commit}").Result;
 
                 if (response.IsSuccessStatusCode)
                 {
-                    mergedBuild.GitHubRepository = $"https://github.com/{repoName}";
+                    mergedBuild.GitHubRepository = $"https://github.com/{repoIdentity}";
                     mergedBuild.GitHubBranch = mergedBuild.AzureDevOpsBranch;
                 }
                 else
