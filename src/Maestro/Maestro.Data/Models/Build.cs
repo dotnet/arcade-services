@@ -24,7 +24,7 @@ namespace Maestro.Data.Models
                 Build build = entry.Entity;
                 var context = (BuildAssetRegistryContext) entry.Context;
 
-                context.BuildChannels.AddRange(
+                context.BuildChannels.AddRange((
                     from dc in context.DefaultChannels
                     where (dc.Repository == build.GitHubRepository || dc.Repository == build.AzureDevOpsRepository)
                     where (dc.Branch == build.GitHubBranch || dc.Branch == build.AzureDevOpsBranch)
@@ -32,7 +32,8 @@ namespace Maestro.Data.Models
                     {
                         Channel = dc.Channel,
                         Build = build
-                    });
+                    }).Distinct());
+
                 context.SaveChangesWithTriggers(b => context.SaveChanges(b));
             };
         }
@@ -101,6 +102,18 @@ namespace Maestro.Data.Models
         public Build Build { get; set; }
         public int ChannelId { get; set; }
         public Channel Channel { get; set; }
+
+        public override bool Equals(object obj)
+        {
+            return obj is BuildChannel buildChannel &&
+                   BuildId == buildChannel.BuildId &&
+                   ChannelId == buildChannel.ChannelId;
+        }
+
+        public override int GetHashCode()
+        {
+            return (BuildId, ChannelId).GetHashCode();
+        }
     }
 
     public class BuildDependency
