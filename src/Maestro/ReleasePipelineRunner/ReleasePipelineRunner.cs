@@ -277,7 +277,7 @@ namespace ReleasePipelineRunner
 
                     if (buildChannelsToAdd.Count > 0)
                     {
-                        List<BuildChannel> addedBuildChannels = AddFinishedBuildChannelsIfNotPresent(buildChannelsToAdd);
+                        List<BuildChannel> addedBuildChannels = await AddFinishedBuildChannelsIfNotPresent(buildChannelsToAdd);
                         await TriggerDependencyUpdates(addedBuildChannels);
                     }
                     await tx.CommitAsync();
@@ -313,11 +313,11 @@ namespace ReleasePipelineRunner
             return new AzureDevOpsClient(accessToken, Logger, null);
         }
 
-        private List<BuildChannel> AddFinishedBuildChannelsIfNotPresent(HashSet<BuildChannel> buildChannelsToAdd)
+        private async Task<List<BuildChannel>> AddFinishedBuildChannelsIfNotPresent(HashSet<BuildChannel> buildChannelsToAdd)
         {
             var missingBuildChannels = buildChannelsToAdd.Where(x => !Context.BuildChannels.Any(y => y.ChannelId == x.ChannelId && y.BuildId == x.BuildId)).ToList();
             Context.BuildChannels.AddRange(missingBuildChannels);
-            Context.SaveChanges();
+            await Context.SaveChangesAsync();
             return missingBuildChannels;
         }
     }
