@@ -113,6 +113,12 @@
           <fa-icon icon="external-link-alt"></fa-icon>
         </a>
         <ng-template #noBuildLink>
+          <div title="This build used a version of Arcade SDK that is too old to report data required to fully populate this table.">
+          <a class="btn btn-sm btn-primary disabled" aria-disabled="true" disabled>
+            Build
+            <fa-icon icon="external-link-alt"></fa-icon>
+          </a>
+          </div>
         </ng-template>
       </td>
     </tr>

@@ -5,13 +5,27 @@
       {{channel.name}}
     </a>
   </div>
-  <div [ngbCollapse]="isCollapsed" id="channel-body-{{channel.id}}"
+  <div *ngIf="!isCollapsed" id="channel-body-{{channel.id}}"
+    [@expandCollapse]="state"
+    style="overflow: hidden;"
     attr.aria-labelledby="channel-header-{{channel.id}}">
-    <div class="list-group list-group-flush" *ngIf="branches$ | async as branches">
-      <a class="list-group-item" *ngFor="let branch of branches" [routerLink]="['/', channel.id, branch.repository]"
-        routerLinkActive="active">
-        {{trimName(branch.repository)}}
-      </a>
-    </div>
+    <ng-template #loadingBranches>
+      <div style="margin: 5px;">
+        <ngb-progressbar striped="true" type="info" animated="true" value="100" height="20px">
+          Loading Repositories...
+        </ngb-progressbar>
+      </div>
+    </ng-template>
+    <ng-template stateful [statefulFrom]="branches$" let-branches [statefulLoadingTemplate]="loadingBranches" (statefulState)="state = $event">
+      <div class="list-group list-group-flush">
+        <a class="list-group-item" *ngFor="let branch of branches" [routerLink]="['/', channel.id, branch.repository]"
+          routerLinkActive="active">
+          {{trimName(branch.repository)}}
+        </a>
+        <div class="list-group-item" *ngIf="!branches.length">
+          No repositories avaliable.
+        </div>
+      </div>
+    </ng-template>
   </div>
 </div>

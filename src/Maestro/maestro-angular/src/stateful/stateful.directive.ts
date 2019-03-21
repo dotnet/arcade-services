@@ -1,4 +1,4 @@
-import { ComponentFactoryResolver, EmbeddedViewRef, Directive, DoCheck, TemplateRef, ViewContainerRef, Input, Type, ComponentRef, OnDestroy } from "@angular/core";
+import { ComponentFactoryResolver, EmbeddedViewRef, Directive, DoCheck, TemplateRef, ViewContainerRef, Input, Type, ComponentRef, OnDestroy, Output, EventEmitter } from "@angular/core";
 import { Observable, SubscriptionLike } from 'rxjs';
 import { GenericErrorComponent } from './generic-error/generic-error.component';
 import { ProgressRingComponent } from './progress-ring/progress-ring.component';
@@ -114,6 +114,7 @@ export class StatefulDirective<T> implements DoCheck, OnDestroy {
   private _subscriber?: Subscriber;
   private _subscription?: SubscriptionLike | Promise<any>;
 
+  @Output("statefulState") public state = new EventEmitter<string>();
   @Input("statefulKind") public kind: string = "general";
   @Input("statefulErrorTemplate") public errorTemplate?: TemplateRef<StatefulErrorContext>;
   @Input("statefulLoadingTemplate") public loadingTemplate?: TemplateRef<{}>;
@@ -133,16 +134,20 @@ export class StatefulDirective<T> implements DoCheck, OnDestroy {
     }
     this._value = undefined;
     this._error = undefined;
+    this.state.emit("loading");
     this._subscription = this._subscriber.subscribe(promiseOrObservable, r => {
       if (r instanceof WrappedError) {
         this._value = undefined;
         this._error = r.error;
+        this.state.emit("error");
       } else if (r instanceof Loading) {
         this._value = undefined;
         this._error = undefined;
+        this.state.emit("loading");
       } else {
         this._value = r;
         this._error = undefined;
+        this.state.emit("loaded");
       }
     }, e => {
       this._value = undefined;
