@@ -50,36 +50,38 @@
     <th>Commit</th>
     <th>Link</th>
   </thead>
-  <tbody>
-    <tr *ngFor="let node of sortedBuilds"
-      [ngClass]="{'table-warning': !node.coherent}"
+  <tbody @noop>
+    <ng-container *ngFor="let node of sortedBuilds; trackBy getBuildId">
+    <tr *ngIf="includeToolsets || !node.isToolset"
+      @insertRemove
+      [ngClass]="{'table-warning': !isCoherent(node)}"
       (mouseenter)="hover(node.build.id)"
       (mouseleave)="hover(undefined)">
       <td style="width: 2em; text-align: center"
           (click)="node.isFocused && toggleLock()">
         <div style="display: inline-block">
           <span *ngIf="node.isFocused; else first">
-            <fa-icon icon="lock" *ngIf="node.isLocked" alt="locked"></fa-icon>
-            <fa-icon icon="lock-open" *ngIf="!node.isLocked" alt="unlocked"></fa-icon>
+            <fa-icon icon="lock" *ngIf="node.isLocked" title="locked"></fa-icon>
+            <fa-icon icon="lock-open" *ngIf="!node.isLocked" title="unlocked"></fa-icon>
           </span>
           <ng-template #first>
             <span *ngIf="node.isSameRepository; else second" class="text-danger">
-              <fa-icon icon="exclamation-triangle" alt="conflicting build"></fa-icon>
+              <fa-icon icon="exclamation-triangle" title="conflicting build"></fa-icon>
             </span>
           </ng-template>
           <ng-template #second>
             <span *ngIf="node.isAncestor; else third">
-              <fa-icon icon="ellipsis-v" alt="ancestor is"></fa-icon>
+              <fa-icon icon="ellipsis-v" title="ancestor"></fa-icon>
             </span>
           </ng-template>
           <ng-template #third>
             <span *ngIf="node.isParent; else fourth">
-              <fa-icon icon="angle-up" alt="parent"></fa-icon>
+              <fa-icon icon="angle-up" title="parent"></fa-icon>
             </span>
           </ng-template>
           <ng-template #fourth>
             <span *ngIf="node.isDependent">
-              <fa-icon icon="angle-right" alt="child"></fa-icon>
+              <fa-icon icon="angle-right" title="child"></fa-icon>
             </span>
           </ng-template>
         </div>
@@ -91,17 +93,17 @@
         {{node.build.dateProduced | amTimeAgo}}
       </td>
       <td>
-        <fa-icon icon="exclamation-circle" *ngIf="!node.coherent"></fa-icon>
+        <fa-icon icon="exclamation-circle" title="A newer build of this same repository is in the tree" *ngIf="!isCoherent(node)"></fa-icon>
         {{node.build.azureDevOpsBuildNumber}}
       </td>
       <td>
         <a *ngIf="getCommitLink(node.build) as link; else noCommitLink" [href]="link" target="_blank">
-          <fa-icon icon="exclamation-circle" *ngIf="!node.coherent"></fa-icon>
+          <fa-icon icon="exclamation-circle" *ngIf="!isCoherent(node)"></fa-icon>
           {{node.build.commit}}
           <fa-icon icon="external-link-alt"></fa-icon>
         </a>
         <ng-template #noCommitLink>
-          <fa-icon icon="exclamation-circle" *ngIf="!node.coherent"></fa-icon>
+          <fa-icon icon="exclamation-circle" *ngIf="!isCoherent(node)"></fa-icon>
           {{node.build.commit}}
         </ng-template>
       </td>
@@ -114,5 +116,6 @@
         </ng-template>
       </td>
     </tr>
+    </ng-container>
   </tbody>
 </table>
