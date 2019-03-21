@@ -1,11 +1,12 @@
 import { animate, state, style, transition, trigger } from "@angular/animations";
 import { Component, EventEmitter, Input, OnInit, Output } from "@angular/core";
 import { ActivationStart } from "@angular/router";
-import { Observable } from "rxjs";
+import { Observable, of } from "rxjs";
 
 import { MaestroService } from 'src/maestro-client';
 import { Channel } from 'src/maestro-client/models';
 import { ChannelService } from 'src/app/services/channel.service';
+import { StatefulResult, statefulSwitchMap } from 'src/stateful';
 
 @Component({
   selector: "mc-side-bar",
@@ -26,13 +27,17 @@ export class SideBarComponent implements OnInit {
   @Input() public dockedSize = "";
   @Output() public openedChange = new EventEmitter<boolean>();
 
-  public channels$!: Observable<Channel[]>;
+  public channels$!: Observable<StatefulResult<Channel[]>>;
 
   public constructor(private channels: ChannelService) {
   }
 
   public ngOnInit(): void {
-    this.channels$ = this.channels.getChannels();
+    this.channels$ = of(false).pipe(
+      statefulSwitchMap(() => {
+        return this.channels.getChannels();
+      }),
+    );
   }
 
   public toggleOpened(): void {

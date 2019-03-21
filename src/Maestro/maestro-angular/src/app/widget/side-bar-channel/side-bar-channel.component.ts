@@ -1,32 +1,62 @@
 import { Component, Input, OnInit, OnDestroy } from "@angular/core";
-import { NavigationEnd, Router, ActivatedRoute } from "@angular/router";
+import { NavigationEnd, Router } from "@angular/router";
 import { Observable, SubscriptionLike, of } from "rxjs";
-import { filter, map, switchMap, concat } from "rxjs/operators";
+import { filter, map, switchMap, concat, shareReplay, tap } from "rxjs/operators";
 
 import { prettyRepository } from "../../util/names";
-import { MaestroService } from 'src/maestro-client';
 import { Channel, DefaultChannel } from 'src/maestro-client/models';
+import { ChannelService } from 'src/app/services/channel.service';
+import { statefulSwitchMap, StatefulResult, statefulPipe } from 'src/stateful';
+import { transition, trigger, animate, style } from '@angular/animations';
 
 @Component({
   selector: "mc-side-bar-channel",
   templateUrl: "./side-bar-channel.component.html",
   styleUrls: ["./side-bar-channel.component.scss"],
+  animations: [
+    trigger("expandCollapse", [
+      transition("void => loading", [
+        style({ height: 0 }),
+        animate("400ms ease-out", style({ height: "*" })),
+      ]),
+      transition("void => loaded", [
+        style({ height: 0 }),
+        animate("400ms ease-out", style({ height: "*" })),
+      ]),
+      transition("loading => loaded", [
+        style({ height: "30px" }),
+        animate("400ms ease-out", style({ height: "*" })),
+      ]),
+      transition("* => void", [
+        style({ height: "*" }),
+        animate("400ms ease-in", style({ height: 0 })),
+      ]),
+    ]),
+  ]
 })
 export class SideBarChannelComponent implements OnInit, OnDestroy {
 
-  public constructor(private maestro: MaestroService, private router: Router) { }
+  public constructor(private channelService: ChannelService, private router: Router) { }
+
   @Input() public channel!: Channel;
 
   public isCollapsed = true;
 
-  public branches$!: Observable<DefaultChannel[]>;
+  public branches$!: Observable<StatefulResult<DefaultChannel[]>>;
 
   public trimName = prettyRepository;
 
   private routeSubscription?: SubscriptionLike;
 
+  public state?: string;
+
   public ngOnInit() {
-    this.branches$ = this.maestro.defaultChannels.listAsync(undefined, this.channel.id);
+    this.branches$ = of(this.channel.id).pipe(
+      statefulSwitchMap(channelId => {
+        return this.channelService.getRepositories(channelId);
+      }),
+      shareReplay(1),
+    );
 
     // Get the current route state, and concat it with any changes
     this.routeSubscription =
