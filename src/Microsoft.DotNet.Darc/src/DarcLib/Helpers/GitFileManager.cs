@@ -787,14 +787,6 @@ namespace Microsoft.DotNet.DarcLib
                                     Type = type
                                 };
 
-                                if (string.IsNullOrEmpty(dependencyDetail.Version) ||
-                                    string.IsNullOrEmpty(dependencyDetail.Name) ||
-                                    string.IsNullOrEmpty(dependencyDetail.Commit) ||
-                                    string.IsNullOrEmpty(dependencyDetail.RepoUri))
-                                {
-                                    throw new DarcException("Either the name, version, commit or repo uri of a dependency was empty.");
-                                }
-
                                 dependencyDetails.Add(dependencyDetail);
                             }
                         }
