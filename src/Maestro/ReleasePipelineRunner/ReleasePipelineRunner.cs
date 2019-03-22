@@ -297,6 +297,7 @@ namespace ReleasePipelineRunner
         {
             foreach (BuildChannel buildChannel in addedBuildChannels)
             {
+                Logger.LogInformation($"Calling DependencyUpdater to process dependency updates for build {buildChannel.BuildId} and channel {buildChannel.ChannelId}.");
                 await DependencyUpdater.StartUpdateDependenciesAsync(buildChannel.BuildId, buildChannel.ChannelId);
             }
         }
