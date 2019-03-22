@@ -79,7 +79,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     {
                         Log.LogMessage(MessageImportance.High, $"    {dep.BuildId}, IsProduct: {dep.IsProduct}");
                     }
-                    finalBuild.Dependencies = await GetBuildDependenciesAsync(client, cancellationToken);
+                    finalBuild.Dependencies = deps;
 
                     Client.Models.Build recordedBuild = await client.Builds.CreateAsync(finalBuild, cancellationToken);
 
