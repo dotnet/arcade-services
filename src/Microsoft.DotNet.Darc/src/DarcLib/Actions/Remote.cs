@@ -489,7 +489,7 @@ namespace Microsoft.DotNet.DarcLib
             int shallowestBuildDepth = int.MaxValue;
             foreach (DependencyGraphNode childNode in currentNode.Children)
             {
-                (Asset asset, Build build, int buildDepth) = FindAssetInBuildTree(assetName, childNode, currentDepth++);
+                (Asset asset, Build build, int buildDepth) = FindAssetInBuildTree(assetName, childNode, currentDepth + 1);
                 if (asset != null)
                 {
                     if (buildDepth < shallowestBuildDepth)
@@ -769,6 +769,18 @@ namespace Microsoft.DotNet.DarcLib
             {
                 return null;
             }
+        }
+
+        /// <summary>
+        ///     Assign a particular build to a channel
+        /// </summary>
+        /// <param name="buildId">Build id</param>
+        /// <param name="channelId">Channel id</param>
+        /// <returns>Async task</returns>
+        public Task AssignBuildToChannel(int buildId, int channelId)
+        {
+            CheckForValidBarClient();
+            return _barClient.AssignBuildToChannel(buildId, channelId);
         }
 
         /// <summary>

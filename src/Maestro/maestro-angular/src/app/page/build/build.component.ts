@@ -1,16 +1,15 @@
 import { Component, OnInit, OnChanges } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
 import { prettyRepository } from "src/app/util/names";
-import { map, tap, shareReplay, delay, concat } from 'rxjs/operators';
+import { map, shareReplay } from 'rxjs/operators';
 import moment from 'moment';
 
-import { BuildGraph, Build, BuildRef } from 'src/maestro-client/models';
+import { BuildGraph, Build } from 'src/maestro-client/models';
 import { MaestroService } from 'src/maestro-client';
-import { Observable, Subject, combineLatest, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { BuildStatusService } from 'src/app/services/build-status.service';
 import { BuildStatus } from 'src/app/model/build-status';
 import { statefulSwitchMap, StatefulResult, statefulPipe } from 'src/stateful';
-import { WrappedError, Loading } from 'src/stateful/helpers';
 
 interface AzDevBuildInfo {
   isMostRecent: boolean;
@@ -57,6 +56,13 @@ export class BuildComponent implements OnInit, OnChanges {
   }
 
   public ngOnChanges() {
+  }
+
+  public haveAzDevInfo(build: Build): boolean {
+    return !!build.azureDevOpsAccount &&
+           !!build.azureDevOpsProject &&
+           !!build.azureDevOpsBuildDefinitionId &&
+           !!build.azureDevOpsBranch;
   }
 
 

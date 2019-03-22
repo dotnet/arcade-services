@@ -283,6 +283,11 @@ namespace Microsoft.DotNet.DarcLib
                                                            loadCollections: true);
         }
 
+        public async Task AssignBuildToChannel(int buildId, int channelId)
+        {
+            await _barClient.Channels.AddBuildToChannelAsync(buildId, channelId);
+        }
+
         #endregion
 
         /// <summary>

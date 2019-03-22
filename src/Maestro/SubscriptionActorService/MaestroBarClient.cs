@@ -111,6 +111,11 @@ namespace SubscriptionActorService
             throw new NotImplementedException();
         }
 
+        public Task AssignBuildToChannel(int buildId, int channelId)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
         /// <summary>

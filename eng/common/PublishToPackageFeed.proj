@@ -17,7 +17,7 @@
     https://github.com/dotnet/arcade/issues/2266
   -->
   <Import Project="$(MSBuildThisFileDirectory)ArtifactsCategory.props" Condition="Exists('$(MSBuildThisFileDirectory)ArtifactsCategory.props')" />
-
+  
   <Import Project="$(NuGetPackageRoot)microsoft.dotnet.build.tasks.feed\$(MicrosoftDotNetBuildTasksFeedVersion)\build\Microsoft.DotNet.Build.Tasks.Feed.targets" />
 
   <Target Name="PublishToFeed">
@@ -43,8 +43,8 @@
       <TargetStaticFeed Condition="'$(ArtifactsCategory.ToUpper())' == '.NETCOREVALIDATION'">https://dotnetfeed.blob.core.windows.net/arcade-validation/index.json</TargetStaticFeed>
     </PropertyGroup>
 
-    <Error
-      Condition="'$(TargetStaticFeed)' == ''"
+    <Error 
+      Condition="'$(TargetStaticFeed)' == ''" 
       Text="'$(ArtifactsCategory)' wasn't recognized as a valid artifact category. Valid categories are: '.NetCore' and '.NetCoreValidation'" />
 
     <!-- Iterate publishing assets from each manifest file. -->
