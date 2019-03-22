@@ -158,9 +158,8 @@ namespace Microsoft.DotNet.DarcLib
                     string.IsNullOrEmpty(itemToUpdate.Commit) ||
                     string.IsNullOrEmpty(itemToUpdate.RepoUri))
                 {
-                    _logger.LogError("Either the name, version, commit or repo uri of a dependency in " +
-                        $"repo '{repoUri}' and branch '{branch}' was empty...skipping.");
-                    continue;
+                    throw new DarcException("Either the name, version, commit or repo uri of a dependency in " +
+                        $"repo '{repoUri}' and branch '{branch}' was empty.");
                 }
 
                 // Double check that the dependency is not pinned
@@ -788,6 +787,14 @@ namespace Microsoft.DotNet.DarcLib
                                     Type = type
                                 };
 
+                                if (string.IsNullOrEmpty(dependencyDetail.Version) ||
+                                    string.IsNullOrEmpty(dependencyDetail.Name) ||
+                                    string.IsNullOrEmpty(dependencyDetail.Commit) ||
+                                    string.IsNullOrEmpty(dependencyDetail.RepoUri))
+                                {
+                                    throw new DarcException("Either the name, version, commit or repo uri of a dependency was empty.");
+                                }
+
                                 dependencyDetails.Add(dependencyDetail);
                             }
                         }
@@ -805,7 +812,7 @@ namespace Microsoft.DotNet.DarcLib
                 return dependencyDetails;
             }
 
-            return dependencyDetails.Where(d => !d.Pinned && !string.IsNullOrEmpty(d.RepoUri));
+            return dependencyDetails.Where(d => !d.Pinned);
         }
     }
 }
