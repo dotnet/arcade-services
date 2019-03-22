@@ -1,4 +1,4 @@
-import moment, { Moment } from "moment";
+import { parseISO } from "date-fns";
 
 import { Helper } from "./helper";
 
@@ -11,8 +11,13 @@ export enum AddAssetLocationToAssetAssetLocationType {
 
 export class ApiError {
     public constructor(
-        message?: string,
-        errors?: string[],
+        {
+            message,
+            errors,
+        }: {
+            message?: string,
+            errors?: string[],
+        }
     ) {
         this._message = message;
         this._errors = errors;
@@ -31,13 +36,10 @@ export class ApiError {
     }
 
     public static fromRawObject(value: any): ApiError {
-        let result = new ApiError(
-            value["message"] == null ? undefined : value["message"],
-            value["errors"] == null ? undefined : value["errors"].map((e: any) => e),
-        );
-        for (let key of Object.keys(value))
-        {
-        }
+        let result = new ApiError({
+            message: value["message"] == null ? undefined : value["message"] as any,
+            errors: value["errors"] == null ? undefined : value["errors"].map((e: any) => e) as any,
+        });
         return result;
     }
 
@@ -55,18 +57,27 @@ export class ApiError {
 
 export class Asset {
     public constructor(
-        id: number,
-        buildId: number,
-        nonShipping: boolean,
-        name?: string,
-        version?: string,
-        locations?: AssetLocation[],
+        {
+            id,
+            name,
+            version,
+            buildId,
+            nonShipping,
+            locations,
+        }: {
+            id: number,
+            name?: string,
+            version?: string,
+            buildId: number,
+            nonShipping: boolean,
+            locations?: AssetLocation[],
+        }
     ) {
         this._id = id;
-        this._buildId = buildId;
-        this._nonShipping = nonShipping;
         this._name = name;
         this._version = version;
+        this._buildId = buildId;
+        this._nonShipping = nonShipping;
         this._locations = locations;
     }
 
@@ -123,17 +134,14 @@ export class Asset {
     }
 
     public static fromRawObject(value: any): Asset {
-        let result = new Asset(
-            value["id"],
-            value["buildId"],
-            value["nonShipping"],
-            value["name"] == null ? undefined : value["name"],
-            value["version"] == null ? undefined : value["version"],
-            value["locations"] == null ? undefined : value["locations"].map((e: any) => AssetLocation.fromRawObject(e)),
-        );
-        for (let key of Object.keys(value))
-        {
-        }
+        let result = new Asset({
+            id: value["id"] == null ? undefined : value["id"] as any,
+            name: value["name"] == null ? undefined : value["name"] as any,
+            version: value["version"] == null ? undefined : value["version"] as any,
+            buildId: value["buildId"] == null ? undefined : value["buildId"] as any,
+            nonShipping: value["nonShipping"] == null ? undefined : value["nonShipping"] as any,
+            locations: value["locations"] == null ? undefined : value["locations"].map((e: any) => AssetLocation.fromRawObject(e)) as any,
+        });
         return result;
     }
 
@@ -157,9 +165,22 @@ export class Asset {
 
 export class AssetData {
     public constructor(
-        nonShipping: boolean,
+        {
+            name,
+            version,
+            nonShipping,
+            locations,
+        }: {
+            name?: string,
+            version?: string,
+            nonShipping: boolean,
+            locations?: AssetLocationData[],
+        }
     ) {
+        this._name = name;
+        this._version = version;
         this._nonShipping = nonShipping;
+        this._locations = locations;
     }
 
     private _name?: string;
@@ -209,27 +230,12 @@ export class AssetData {
     }
 
     public static fromRawObject(value: any): AssetData {
-        let result = new AssetData(
-            value["nonShipping"],
-        );
-        for (let key of Object.keys(value))
-        {
-            if (key === "name")
-            {
-                result._name = value[key];
-                continue;
-            }
-            if (key === "version")
-            {
-                result._version = value[key];
-                continue;
-            }
-            if (key === "locations")
-            {
-                result._locations = value[key].map((e: any) => AssetLocationData.fromRawObject(e));
-                continue;
-            }
-        }
+        let result = new AssetData({
+            name: value["name"] == null ? undefined : value["name"] as any,
+            version: value["version"] == null ? undefined : value["version"] as any,
+            nonShipping: value["nonShipping"] == null ? undefined : value["nonShipping"] as any,
+            locations: value["locations"] == null ? undefined : value["locations"].map((e: any) => AssetLocationData.fromRawObject(e)) as any,
+        });
         return result;
     }
 
@@ -251,13 +257,19 @@ export class AssetData {
 
 export class AssetLocation {
     public constructor(
-        id: number,
-        type: AssetLocationType,
-        location?: string,
+        {
+            id,
+            location,
+            type,
+        }: {
+            id: number,
+            location?: string,
+            type: AssetLocationType,
+        }
     ) {
         this._id = id;
-        this._type = type;
         this._location = location;
+        this._type = type;
     }
 
     private _id: number;
@@ -286,14 +298,11 @@ export class AssetLocation {
     }
 
     public static fromRawObject(value: any): AssetLocation {
-        let result = new AssetLocation(
-            value["id"],
-            value["type"],
-            value["location"] == null ? undefined : value["location"],
-        );
-        for (let key of Object.keys(value))
-        {
-        }
+        let result = new AssetLocation({
+            id: value["id"] == null ? undefined : value["id"] as any,
+            location: value["location"] == null ? undefined : value["location"] as any,
+            type: value["type"] == null ? undefined : value["type"] as any,
+        });
         return result;
     }
 
@@ -310,8 +319,15 @@ export class AssetLocation {
 
 export class AssetLocationData {
     public constructor(
-        type: AssetLocationDataType,
+        {
+            location,
+            type,
+        }: {
+            location?: string,
+            type: AssetLocationDataType,
+        }
     ) {
+        this._location = location;
         this._type = type;
     }
 
@@ -342,17 +358,10 @@ export class AssetLocationData {
     }
 
     public static fromRawObject(value: any): AssetLocationData {
-        let result = new AssetLocationData(
-            value["type"],
-        );
-        for (let key of Object.keys(value))
-        {
-            if (key === "location")
-            {
-                result._location = value[key];
-                continue;
-            }
-        }
+        let result = new AssetLocationData({
+            location: value["location"] == null ? undefined : value["location"] as any,
+            type: value["type"] == null ? undefined : value["type"] as any,
+        });
         return result;
     }
 
@@ -380,16 +389,55 @@ export enum AssetLocationType {
 
 export class Build {
     public constructor(
-        id: number,
-        dateProduced: Moment,
-        commit?: string,
-        channels?: Channel[],
-        assets?: Asset[],
-        dependencies?: BuildRef[],
+        {
+            id,
+            commit,
+            azureDevOpsBuildId,
+            azureDevOpsBuildDefinitionId,
+            azureDevOpsAccount,
+            azureDevOpsProject,
+            azureDevOpsBuildNumber,
+            azureDevOpsRepository,
+            azureDevOpsBranch,
+            gitHubRepository,
+            gitHubBranch,
+            publishUsingPipelines,
+            dateProduced,
+            channels,
+            assets,
+            dependencies,
+        }: {
+            id: number,
+            commit?: string,
+            azureDevOpsBuildId?: number,
+            azureDevOpsBuildDefinitionId?: number,
+            azureDevOpsAccount?: string,
+            azureDevOpsProject?: string,
+            azureDevOpsBuildNumber?: string,
+            azureDevOpsRepository?: string,
+            azureDevOpsBranch?: string,
+            gitHubRepository?: string,
+            gitHubBranch?: string,
+            publishUsingPipelines: boolean,
+            dateProduced: Date,
+            channels?: Channel[],
+            assets?: Asset[],
+            dependencies?: BuildRef[],
+        }
     ) {
         this._id = id;
-        this._dateProduced = dateProduced;
         this._commit = commit;
+        this._azureDevOpsBuildId = azureDevOpsBuildId;
+        this._azureDevOpsBuildDefinitionId = azureDevOpsBuildDefinitionId;
+        this._azureDevOpsAccount = azureDevOpsAccount;
+        this._azureDevOpsProject = azureDevOpsProject;
+        this._azureDevOpsBuildNumber = azureDevOpsBuildNumber;
+        this._azureDevOpsRepository = azureDevOpsRepository;
+        this._azureDevOpsBranch = azureDevOpsBranch;
+        this._gitHubRepository = gitHubRepository;
+        this._gitHubBranch = gitHubBranch;
+        this._publishUsingPipelines = publishUsingPipelines;
+        this._dateProduced = dateProduced;
         this._channels = channels;
         this._assets = assets;
         this._dependencies = dependencies;
@@ -497,9 +545,19 @@ export class Build {
         this._gitHubBranch = __value;
     }
 
-    private _dateProduced: Moment;
+    private _publishUsingPipelines: boolean;
 
-    public get dateProduced(): Moment {
+    public get publishUsingPipelines(): boolean {
+        return this._publishUsingPipelines;
+    }
+
+    public set publishUsingPipelines(__value: boolean) {
+        this._publishUsingPipelines = __value;
+    }
+
+    private _dateProduced: Date;
+
+    public get dateProduced(): Date {
         return this._dateProduced;
     }
 
@@ -524,67 +582,30 @@ export class Build {
     public isValid(): boolean {
         return (
             this._id !== undefined &&
+            this._publishUsingPipelines !== undefined &&
             this._dateProduced !== undefined
         );
     }
 
     public static fromRawObject(value: any): Build {
-        let result = new Build(
-            value["id"],
-            moment(value["dateProduced"]),
-            value["commit"] == null ? undefined : value["commit"],
-            value["channels"] == null ? undefined : value["channels"].map((e: any) => Channel.fromRawObject(e)),
-            value["assets"] == null ? undefined : value["assets"].map((e: any) => Asset.fromRawObject(e)),
-            value["dependencies"] == null ? undefined : value["dependencies"].map((e: any) => BuildRef.fromRawObject(e)),
-        );
-        for (let key of Object.keys(value))
-        {
-            if (key === "azureDevOpsBuildId")
-            {
-                result._azureDevOpsBuildId = value[key];
-                continue;
-            }
-            if (key === "azureDevOpsBuildDefinitionId")
-            {
-                result._azureDevOpsBuildDefinitionId = value[key];
-                continue;
-            }
-            if (key === "azureDevOpsAccount")
-            {
-                result._azureDevOpsAccount = value[key];
-                continue;
-            }
-            if (key === "azureDevOpsProject")
-            {
-                result._azureDevOpsProject = value[key];
-                continue;
-            }
-            if (key === "azureDevOpsBuildNumber")
-            {
-                result._azureDevOpsBuildNumber = value[key];
-                continue;
-            }
-            if (key === "azureDevOpsRepository")
-            {
-                result._azureDevOpsRepository = value[key];
-                continue;
-            }
-            if (key === "azureDevOpsBranch")
-            {
-                result._azureDevOpsBranch = value[key];
-                continue;
-            }
-            if (key === "gitHubRepository")
-            {
-                result._gitHubRepository = value[key];
-                continue;
-            }
-            if (key === "gitHubBranch")
-            {
-                result._gitHubBranch = value[key];
-                continue;
-            }
-        }
+        let result = new Build({
+            id: value["id"] == null ? undefined : value["id"] as any,
+            commit: value["commit"] == null ? undefined : value["commit"] as any,
+            azureDevOpsBuildId: value["azureDevOpsBuildId"] == null ? undefined : value["azureDevOpsBuildId"] as any,
+            azureDevOpsBuildDefinitionId: value["azureDevOpsBuildDefinitionId"] == null ? undefined : value["azureDevOpsBuildDefinitionId"] as any,
+            azureDevOpsAccount: value["azureDevOpsAccount"] == null ? undefined : value["azureDevOpsAccount"] as any,
+            azureDevOpsProject: value["azureDevOpsProject"] == null ? undefined : value["azureDevOpsProject"] as any,
+            azureDevOpsBuildNumber: value["azureDevOpsBuildNumber"] == null ? undefined : value["azureDevOpsBuildNumber"] as any,
+            azureDevOpsRepository: value["azureDevOpsRepository"] == null ? undefined : value["azureDevOpsRepository"] as any,
+            azureDevOpsBranch: value["azureDevOpsBranch"] == null ? undefined : value["azureDevOpsBranch"] as any,
+            gitHubRepository: value["gitHubRepository"] == null ? undefined : value["gitHubRepository"] as any,
+            gitHubBranch: value["gitHubBranch"] == null ? undefined : value["gitHubBranch"] as any,
+            publishUsingPipelines: value["publishUsingPipelines"] == null ? undefined : value["publishUsingPipelines"] as any,
+            dateProduced: value["dateProduced"] == null ? undefined : parseISO(value["dateProduced"]) as any,
+            channels: value["channels"] == null ? undefined : value["channels"].map((e: any) => Channel.fromRawObject(e)) as any,
+            assets: value["assets"] == null ? undefined : value["assets"].map((e: any) => Asset.fromRawObject(e)) as any,
+            dependencies: value["dependencies"] == null ? undefined : value["dependencies"].map((e: any) => BuildRef.fromRawObject(e)) as any,
+        });
         return result;
     }
 
@@ -621,7 +642,8 @@ export class Build {
         if (value._gitHubBranch) {
             result["gitHubBranch"] = value._gitHubBranch;
         }
-        result["dateProduced"] = value._dateProduced.format();
+        result["publishUsingPipelines"] = value._publishUsingPipelines;
+        result["dateProduced"] = value._dateProduced.toISOString();
         if (value._channels) {
             result["channels"] = value._channels.map((e: any) => Channel.toRawObject(e));
         }
@@ -637,19 +659,49 @@ export class Build {
 
 export class BuildData {
     public constructor(
-        commit: string,
-        azureDevOpsAccount: string,
-        azureDevOpsProject: string,
-        azureDevOpsBuildNumber: string,
-        azureDevOpsRepository: string,
-        azureDevOpsBranch: string,
+        {
+            commit,
+            assets,
+            dependencies,
+            azureDevOpsBuildId,
+            azureDevOpsBuildDefinitionId,
+            azureDevOpsAccount,
+            azureDevOpsProject,
+            azureDevOpsBuildNumber,
+            azureDevOpsRepository,
+            azureDevOpsBranch,
+            gitHubRepository,
+            gitHubBranch,
+            publishUsingPipelines,
+        }: {
+            commit: string,
+            assets?: AssetData[],
+            dependencies?: BuildRef[],
+            azureDevOpsBuildId?: number,
+            azureDevOpsBuildDefinitionId?: number,
+            azureDevOpsAccount: string,
+            azureDevOpsProject: string,
+            azureDevOpsBuildNumber: string,
+            azureDevOpsRepository: string,
+            azureDevOpsBranch: string,
+            gitHubRepository?: string,
+            gitHubBranch?: string,
+            publishUsingPipelines: boolean,
+        }
     ) {
         this._commit = commit;
+        this._assets = assets;
+        this._dependencies = dependencies;
+        this._azureDevOpsBuildId = azureDevOpsBuildId;
+        this._azureDevOpsBuildDefinitionId = azureDevOpsBuildDefinitionId;
         this._azureDevOpsAccount = azureDevOpsAccount;
         this._azureDevOpsProject = azureDevOpsProject;
         this._azureDevOpsBuildNumber = azureDevOpsBuildNumber;
         this._azureDevOpsRepository = azureDevOpsRepository;
         this._azureDevOpsBranch = azureDevOpsBranch;
+        this._gitHubRepository = gitHubRepository;
+        this._gitHubBranch = gitHubBranch;
+        this._publishUsingPipelines = publishUsingPipelines;
     }
 
     private _commit: string;
@@ -771,6 +823,16 @@ export class BuildData {
     public set gitHubBranch(__value: string | undefined) {
         this._gitHubBranch = __value;
     }
+
+    private _publishUsingPipelines: boolean;
+
+    public get publishUsingPipelines(): boolean {
+        return this._publishUsingPipelines;
+    }
+
+    public set publishUsingPipelines(__value: boolean) {
+        this._publishUsingPipelines = __value;
+    }
     
     public isValid(): boolean {
         return (
@@ -779,52 +841,27 @@ export class BuildData {
             this._azureDevOpsProject !== undefined &&
             this._azureDevOpsBuildNumber !== undefined &&
             this._azureDevOpsRepository !== undefined &&
-            this._azureDevOpsBranch !== undefined
+            this._azureDevOpsBranch !== undefined &&
+            this._publishUsingPipelines !== undefined
         );
     }
 
     public static fromRawObject(value: any): BuildData {
-        let result = new BuildData(
-            value["commit"],
-            value["azureDevOpsAccount"],
-            value["azureDevOpsProject"],
-            value["azureDevOpsBuildNumber"],
-            value["azureDevOpsRepository"],
-            value["azureDevOpsBranch"],
-        );
-        for (let key of Object.keys(value))
-        {
-            if (key === "assets")
-            {
-                result._assets = value[key].map((e: any) => AssetData.fromRawObject(e));
-                continue;
-            }
-            if (key === "dependencies")
-            {
-                result._dependencies = value[key].map((e: any) => BuildRef.fromRawObject(e));
-                continue;
-            }
-            if (key === "azureDevOpsBuildId")
-            {
-                result._azureDevOpsBuildId = value[key];
-                continue;
-            }
-            if (key === "azureDevOpsBuildDefinitionId")
-            {
-                result._azureDevOpsBuildDefinitionId = value[key];
-                continue;
-            }
-            if (key === "gitHubRepository")
-            {
-                result._gitHubRepository = value[key];
-                continue;
-            }
-            if (key === "gitHubBranch")
-            {
-                result._gitHubBranch = value[key];
-                continue;
-            }
-        }
+        let result = new BuildData({
+            commit: value["commit"] == null ? undefined : value["commit"] as any,
+            assets: value["assets"] == null ? undefined : value["assets"].map((e: any) => AssetData.fromRawObject(e)) as any,
+            dependencies: value["dependencies"] == null ? undefined : value["dependencies"].map((e: any) => BuildRef.fromRawObject(e)) as any,
+            azureDevOpsBuildId: value["azureDevOpsBuildId"] == null ? undefined : value["azureDevOpsBuildId"] as any,
+            azureDevOpsBuildDefinitionId: value["azureDevOpsBuildDefinitionId"] == null ? undefined : value["azureDevOpsBuildDefinitionId"] as any,
+            azureDevOpsAccount: value["azureDevOpsAccount"] == null ? undefined : value["azureDevOpsAccount"] as any,
+            azureDevOpsProject: value["azureDevOpsProject"] == null ? undefined : value["azureDevOpsProject"] as any,
+            azureDevOpsBuildNumber: value["azureDevOpsBuildNumber"] == null ? undefined : value["azureDevOpsBuildNumber"] as any,
+            azureDevOpsRepository: value["azureDevOpsRepository"] == null ? undefined : value["azureDevOpsRepository"] as any,
+            azureDevOpsBranch: value["azureDevOpsBranch"] == null ? undefined : value["azureDevOpsBranch"] as any,
+            gitHubRepository: value["gitHubRepository"] == null ? undefined : value["gitHubRepository"] as any,
+            gitHubBranch: value["gitHubBranch"] == null ? undefined : value["gitHubBranch"] as any,
+            publishUsingPipelines: value["publishUsingPipelines"] == null ? undefined : value["publishUsingPipelines"] as any,
+        });
         return result;
     }
 
@@ -854,13 +891,18 @@ export class BuildData {
         if (value._gitHubBranch) {
             result["gitHubBranch"] = value._gitHubBranch;
         }
+        result["publishUsingPipelines"] = value._publishUsingPipelines;
         return result;
     }
 }
 
 export class BuildGraph {
     public constructor(
-        builds: Record<string, Build>,
+        {
+            builds,
+        }: {
+            builds: Record<string, Build>,
+        }
     ) {
         this._builds = builds;
     }
@@ -878,12 +920,9 @@ export class BuildGraph {
     }
 
     public static fromRawObject(value: any): BuildGraph {
-        let result = new BuildGraph(
-            Helper.mapValues(value["builds"], (v: any) => Build.fromRawObject(v)),
-        );
-        for (let key of Object.keys(value))
-        {
-        }
+        let result = new BuildGraph({
+            builds: value["builds"] == null ? undefined : Helper.mapValues(value["builds"], (v: any) => Build.fromRawObject(v)) as any,
+        });
         return result;
     }
 
@@ -896,8 +935,13 @@ export class BuildGraph {
 
 export class BuildRef {
     public constructor(
-        buildId: number,
-        isProduct: boolean,
+        {
+            buildId,
+            isProduct,
+        }: {
+            buildId: number,
+            isProduct: boolean,
+        }
     ) {
         this._buildId = buildId;
         this._isProduct = isProduct;
@@ -923,13 +967,10 @@ export class BuildRef {
     }
 
     public static fromRawObject(value: any): BuildRef {
-        let result = new BuildRef(
-            value["buildId"],
-            value["isProduct"],
-        );
-        for (let key of Object.keys(value))
-        {
-        }
+        let result = new BuildRef({
+            buildId: value["buildId"] == null ? undefined : value["buildId"] as any,
+            isProduct: value["isProduct"] == null ? undefined : value["isProduct"] as any,
+        });
         return result;
     }
 
@@ -943,10 +984,17 @@ export class BuildRef {
 
 export class Channel {
     public constructor(
-        id: number,
-        name?: string,
-        classification?: string,
-        releasePipelines?: ReleasePipeline[],
+        {
+            id,
+            name,
+            classification,
+            releasePipelines,
+        }: {
+            id: number,
+            name?: string,
+            classification?: string,
+            releasePipelines?: ReleasePipeline[],
+        }
     ) {
         this._id = id;
         this._name = name;
@@ -985,15 +1033,12 @@ export class Channel {
     }
 
     public static fromRawObject(value: any): Channel {
-        let result = new Channel(
-            value["id"],
-            value["name"] == null ? undefined : value["name"],
-            value["classification"] == null ? undefined : value["classification"],
-            value["releasePipelines"] == null ? undefined : value["releasePipelines"].map((e: any) => ReleasePipeline.fromRawObject(e)),
-        );
-        for (let key of Object.keys(value))
-        {
-        }
+        let result = new Channel({
+            id: value["id"] == null ? undefined : value["id"] as any,
+            name: value["name"] == null ? undefined : value["name"] as any,
+            classification: value["classification"] == null ? undefined : value["classification"] as any,
+            releasePipelines: value["releasePipelines"] == null ? undefined : value["releasePipelines"].map((e: any) => ReleasePipeline.fromRawObject(e)) as any,
+        });
         return result;
     }
 
@@ -1015,11 +1060,22 @@ export class Channel {
 
 export class DefaultChannel {
     public constructor(
-        id: number,
-        repository: string,
+        {
+            id,
+            repository,
+            branch,
+            channel,
+        }: {
+            id: number,
+            repository: string,
+            branch?: string,
+            channel?: Channel,
+        }
     ) {
         this._id = id;
         this._repository = repository;
+        this._branch = branch;
+        this._channel = channel;
     }
 
     private _id: number;
@@ -1070,23 +1126,12 @@ export class DefaultChannel {
     }
 
     public static fromRawObject(value: any): DefaultChannel {
-        let result = new DefaultChannel(
-            value["id"],
-            value["repository"],
-        );
-        for (let key of Object.keys(value))
-        {
-            if (key === "branch")
-            {
-                result._branch = value[key];
-                continue;
-            }
-            if (key === "channel")
-            {
-                result._channel = Channel.fromRawObject(value[key]);
-                continue;
-            }
-        }
+        let result = new DefaultChannel({
+            id: value["id"] == null ? undefined : value["id"] as any,
+            repository: value["repository"] == null ? undefined : value["repository"] as any,
+            branch: value["branch"] == null ? undefined : value["branch"] as any,
+            channel: value["channel"] == null ? undefined : Channel.fromRawObject(value["channel"]) as any,
+        });
         return result;
     }
 
@@ -1106,7 +1151,16 @@ export class DefaultChannel {
 
 export class MergePolicy {
     public constructor(
+        {
+            name,
+            properties,
+        }: {
+            name?: string,
+            properties?: Record<string, any>,
+        }
     ) {
+        this._name = name;
+        this._properties = properties;
     }
 
     private _name?: string;
@@ -1130,21 +1184,10 @@ export class MergePolicy {
     }
 
     public static fromRawObject(value: any): MergePolicy {
-        let result = new MergePolicy(
-        );
-        for (let key of Object.keys(value))
-        {
-            if (key === "name")
-            {
-                result._name = value[key];
-                continue;
-            }
-            if (key === "properties")
-            {
-                result._properties = Helper.mapValues(value[key], (v: any) => v);
-                continue;
-            }
-        }
+        let result = new MergePolicy({
+            name: value["name"] == null ? undefined : value["name"] as any,
+            properties: value["properties"] == null ? undefined : Helper.mapValues(value["properties"], (v: any) => v) as any,
+        });
         return result;
     }
 
@@ -1162,9 +1205,15 @@ export class MergePolicy {
 
 export class PostData {
     public constructor(
-        repository: string,
-        branch: string,
-        channelId: number,
+        {
+            repository,
+            branch,
+            channelId,
+        }: {
+            repository: string,
+            branch: string,
+            channelId: number,
+        }
     ) {
         this._repository = repository;
         this._branch = branch;
@@ -1210,14 +1259,11 @@ export class PostData {
     }
 
     public static fromRawObject(value: any): PostData {
-        let result = new PostData(
-            value["repository"],
-            value["branch"],
-            value["channelId"],
-        );
-        for (let key of Object.keys(value))
-        {
-        }
+        let result = new PostData({
+            repository: value["repository"] == null ? undefined : value["repository"] as any,
+            branch: value["branch"] == null ? undefined : value["branch"] as any,
+            channelId: value["channelId"] == null ? undefined : value["channelId"] as any,
+        });
         return result;
     }
 
@@ -1232,11 +1278,22 @@ export class PostData {
 
 export class ReleasePipeline {
     public constructor(
-        id: number,
-        pipelineIdentifier: number,
+        {
+            id,
+            pipelineIdentifier,
+            organization,
+            project,
+        }: {
+            id: number,
+            pipelineIdentifier: number,
+            organization?: string,
+            project?: string,
+        }
     ) {
         this._id = id;
         this._pipelineIdentifier = pipelineIdentifier;
+        this._organization = organization;
+        this._project = project;
     }
 
     private _id: number;
@@ -1287,23 +1344,12 @@ export class ReleasePipeline {
     }
 
     public static fromRawObject(value: any): ReleasePipeline {
-        let result = new ReleasePipeline(
-            value["id"],
-            value["pipelineIdentifier"],
-        );
-        for (let key of Object.keys(value))
-        {
-            if (key === "organization")
-            {
-                result._organization = value[key];
-                continue;
-            }
-            if (key === "project")
-            {
-                result._project = value[key];
-                continue;
-            }
-        }
+        let result = new ReleasePipeline({
+            id: value["id"] == null ? undefined : value["id"] as any,
+            pipelineIdentifier: value["pipelineIdentifier"] == null ? undefined : value["pipelineIdentifier"] as any,
+            organization: value["organization"] == null ? undefined : value["organization"] as any,
+            project: value["project"] == null ? undefined : value["project"] as any,
+        });
         return result;
     }
 
@@ -1323,19 +1369,29 @@ export class ReleasePipeline {
 
 export class RepositoryHistoryItem {
     public constructor(
-        timestamp: Moment,
-        success: boolean,
-        repositoryName?: string,
-        branchName?: string,
-        errorMessage?: string,
-        action?: string,
-        retryUrl?: string,
+        {
+            repositoryName,
+            branchName,
+            timestamp,
+            errorMessage,
+            success,
+            action,
+            retryUrl,
+        }: {
+            repositoryName?: string,
+            branchName?: string,
+            timestamp: Date,
+            errorMessage?: string,
+            success: boolean,
+            action?: string,
+            retryUrl?: string,
+        }
     ) {
-        this._timestamp = timestamp;
-        this._success = success;
         this._repositoryName = repositoryName;
         this._branchName = branchName;
+        this._timestamp = timestamp;
         this._errorMessage = errorMessage;
+        this._success = success;
         this._action = action;
         this._retryUrl = retryUrl;
     }
@@ -1352,9 +1408,9 @@ export class RepositoryHistoryItem {
         return this._branchName;
     }
 
-    private _timestamp: Moment;
+    private _timestamp: Date;
 
-    public get timestamp(): Moment {
+    public get timestamp(): Date {
         return this._timestamp;
     }
 
@@ -1390,18 +1446,15 @@ export class RepositoryHistoryItem {
     }
 
     public static fromRawObject(value: any): RepositoryHistoryItem {
-        let result = new RepositoryHistoryItem(
-            moment(value["timestamp"]),
-            value["success"],
-            value["repositoryName"] == null ? undefined : value["repositoryName"],
-            value["branchName"] == null ? undefined : value["branchName"],
-            value["errorMessage"] == null ? undefined : value["errorMessage"],
-            value["action"] == null ? undefined : value["action"],
-            value["retryUrl"] == null ? undefined : value["retryUrl"],
-        );
-        for (let key of Object.keys(value))
-        {
-        }
+        let result = new RepositoryHistoryItem({
+            repositoryName: value["repositoryName"] == null ? undefined : value["repositoryName"] as any,
+            branchName: value["branchName"] == null ? undefined : value["branchName"] as any,
+            timestamp: value["timestamp"] == null ? undefined : parseISO(value["timestamp"]) as any,
+            errorMessage: value["errorMessage"] == null ? undefined : value["errorMessage"] as any,
+            success: value["success"] == null ? undefined : value["success"] as any,
+            action: value["action"] == null ? undefined : value["action"] as any,
+            retryUrl: value["retryUrl"] == null ? undefined : value["retryUrl"] as any,
+        });
         return result;
     }
 
@@ -1413,7 +1466,7 @@ export class RepositoryHistoryItem {
         if (value._branchName) {
             result["branchName"] = value._branchName;
         }
-        result["timestamp"] = value._timestamp.format();
+        result["timestamp"] = value._timestamp.toISOString();
         if (value._errorMessage) {
             result["errorMessage"] = value._errorMessage;
         }
@@ -1430,17 +1483,34 @@ export class RepositoryHistoryItem {
 
 export class Subscription {
     public constructor(
-        id: string,
-        enabled: boolean,
-        sourceRepository?: string,
-        targetRepository?: string,
-        targetBranch?: string,
+        {
+            id,
+            channel,
+            sourceRepository,
+            targetRepository,
+            targetBranch,
+            policy,
+            lastAppliedBuild,
+            enabled,
+        }: {
+            id: string,
+            channel?: Channel,
+            sourceRepository?: string,
+            targetRepository?: string,
+            targetBranch?: string,
+            policy?: SubscriptionPolicy,
+            lastAppliedBuild?: Build,
+            enabled: boolean,
+        }
     ) {
         this._id = id;
-        this._enabled = enabled;
+        this._channel = channel;
         this._sourceRepository = sourceRepository;
         this._targetRepository = targetRepository;
         this._targetBranch = targetBranch;
+        this._policy = policy;
+        this._lastAppliedBuild = lastAppliedBuild;
+        this._enabled = enabled;
     }
 
     private _id: string;
@@ -1511,31 +1581,16 @@ export class Subscription {
     }
 
     public static fromRawObject(value: any): Subscription {
-        let result = new Subscription(
-            value["id"],
-            value["enabled"],
-            value["sourceRepository"] == null ? undefined : value["sourceRepository"],
-            value["targetRepository"] == null ? undefined : value["targetRepository"],
-            value["targetBranch"] == null ? undefined : value["targetBranch"],
-        );
-        for (let key of Object.keys(value))
-        {
-            if (key === "channel")
-            {
-                result._channel = Channel.fromRawObject(value[key]);
-                continue;
-            }
-            if (key === "policy")
-            {
-                result._policy = SubscriptionPolicy.fromRawObject(value[key]);
-                continue;
-            }
-            if (key === "lastAppliedBuild")
-            {
-                result._lastAppliedBuild = Build.fromRawObject(value[key]);
-                continue;
-            }
-        }
+        let result = new Subscription({
+            id: value["id"] == null ? undefined : value["id"] as any,
+            channel: value["channel"] == null ? undefined : Channel.fromRawObject(value["channel"]) as any,
+            sourceRepository: value["sourceRepository"] == null ? undefined : value["sourceRepository"] as any,
+            targetRepository: value["targetRepository"] == null ? undefined : value["targetRepository"] as any,
+            targetBranch: value["targetBranch"] == null ? undefined : value["targetBranch"] as any,
+            policy: value["policy"] == null ? undefined : SubscriptionPolicy.fromRawObject(value["policy"]) as any,
+            lastAppliedBuild: value["lastAppliedBuild"] == null ? undefined : Build.fromRawObject(value["lastAppliedBuild"]) as any,
+            enabled: value["enabled"] == null ? undefined : value["enabled"] as any,
+        });
         return result;
     }
 
@@ -1567,16 +1622,27 @@ export class Subscription {
 
 export class SubscriptionData {
     public constructor(
-        channelName: string,
-        sourceRepository: string,
-        targetRepository: string,
-        targetBranch: string,
-        policy: SubscriptionPolicy,
+        {
+            channelName,
+            sourceRepository,
+            targetRepository,
+            targetBranch,
+            enabled,
+            policy,
+        }: {
+            channelName: string,
+            sourceRepository: string,
+            targetRepository: string,
+            targetBranch: string,
+            enabled?: boolean,
+            policy: SubscriptionPolicy,
+        }
     ) {
         this._channelName = channelName;
         this._sourceRepository = sourceRepository;
         this._targetRepository = targetRepository;
         this._targetBranch = targetBranch;
+        this._enabled = enabled;
         this._policy = policy;
     }
 
@@ -1651,21 +1717,14 @@ export class SubscriptionData {
     }
 
     public static fromRawObject(value: any): SubscriptionData {
-        let result = new SubscriptionData(
-            value["channelName"],
-            value["sourceRepository"],
-            value["targetRepository"],
-            value["targetBranch"],
-            SubscriptionPolicy.fromRawObject(value["policy"]),
-        );
-        for (let key of Object.keys(value))
-        {
-            if (key === "enabled")
-            {
-                result._enabled = value[key];
-                continue;
-            }
-        }
+        let result = new SubscriptionData({
+            channelName: value["channelName"] == null ? undefined : value["channelName"] as any,
+            sourceRepository: value["sourceRepository"] == null ? undefined : value["sourceRepository"] as any,
+            targetRepository: value["targetRepository"] == null ? undefined : value["targetRepository"] as any,
+            targetBranch: value["targetBranch"] == null ? undefined : value["targetBranch"] as any,
+            enabled: value["enabled"] == null ? undefined : value["enabled"] as any,
+            policy: value["policy"] == null ? undefined : SubscriptionPolicy.fromRawObject(value["policy"]) as any,
+        });
         return result;
     }
 
@@ -1685,24 +1744,33 @@ export class SubscriptionData {
 
 export class SubscriptionHistoryItem {
     public constructor(
-        timestamp: Moment,
-        success: boolean,
-        subscriptionId: string,
-        errorMessage?: string,
-        action?: string,
-        retryUrl?: string,
+        {
+            timestamp,
+            errorMessage,
+            success,
+            subscriptionId,
+            action,
+            retryUrl,
+        }: {
+            timestamp: Date,
+            errorMessage?: string,
+            success: boolean,
+            subscriptionId: string,
+            action?: string,
+            retryUrl?: string,
+        }
     ) {
         this._timestamp = timestamp;
+        this._errorMessage = errorMessage;
         this._success = success;
         this._subscriptionId = subscriptionId;
-        this._errorMessage = errorMessage;
         this._action = action;
         this._retryUrl = retryUrl;
     }
 
-    private _timestamp: Moment;
+    private _timestamp: Date;
 
-    public get timestamp(): Moment {
+    public get timestamp(): Date {
         return this._timestamp;
     }
 
@@ -1745,23 +1813,20 @@ export class SubscriptionHistoryItem {
     }
 
     public static fromRawObject(value: any): SubscriptionHistoryItem {
-        let result = new SubscriptionHistoryItem(
-            moment(value["timestamp"]),
-            value["success"],
-            value["subscriptionId"],
-            value["errorMessage"] == null ? undefined : value["errorMessage"],
-            value["action"] == null ? undefined : value["action"],
-            value["retryUrl"] == null ? undefined : value["retryUrl"],
-        );
-        for (let key of Object.keys(value))
-        {
-        }
+        let result = new SubscriptionHistoryItem({
+            timestamp: value["timestamp"] == null ? undefined : parseISO(value["timestamp"]) as any,
+            errorMessage: value["errorMessage"] == null ? undefined : value["errorMessage"] as any,
+            success: value["success"] == null ? undefined : value["success"] as any,
+            subscriptionId: value["subscriptionId"] == null ? undefined : value["subscriptionId"] as any,
+            action: value["action"] == null ? undefined : value["action"] as any,
+            retryUrl: value["retryUrl"] == null ? undefined : value["retryUrl"] as any,
+        });
         return result;
     }
 
     public static toRawObject(value: SubscriptionHistoryItem): any {
         let result: any = {};
-        result["timestamp"] = value._timestamp.format();
+        result["timestamp"] = value._timestamp.toISOString();
         if (value._errorMessage) {
             result["errorMessage"] = value._errorMessage;
         }
@@ -1779,11 +1844,19 @@ export class SubscriptionHistoryItem {
 
 export class SubscriptionPolicy {
     public constructor(
-        batchable: boolean,
-        updateFrequency: SubscriptionPolicyUpdateFrequency,
+        {
+            batchable,
+            updateFrequency,
+            mergePolicies,
+        }: {
+            batchable: boolean,
+            updateFrequency: SubscriptionPolicyUpdateFrequency,
+            mergePolicies?: MergePolicy[],
+        }
     ) {
         this._batchable = batchable;
         this._updateFrequency = updateFrequency;
+        this._mergePolicies = mergePolicies;
     }
 
     private _batchable: boolean;
@@ -1824,18 +1897,11 @@ export class SubscriptionPolicy {
     }
 
     public static fromRawObject(value: any): SubscriptionPolicy {
-        let result = new SubscriptionPolicy(
-            value["batchable"],
-            value["updateFrequency"],
-        );
-        for (let key of Object.keys(value))
-        {
-            if (key === "mergePolicies")
-            {
-                result._mergePolicies = value[key].map((e: any) => MergePolicy.fromRawObject(e));
-                continue;
-            }
-        }
+        let result = new SubscriptionPolicy({
+            batchable: value["batchable"] == null ? undefined : value["batchable"] as any,
+            updateFrequency: value["updateFrequency"] == null ? undefined : value["updateFrequency"] as any,
+            mergePolicies: value["mergePolicies"] == null ? undefined : value["mergePolicies"].map((e: any) => MergePolicy.fromRawObject(e)) as any,
+        });
         return result;
     }
 
@@ -1858,7 +1924,22 @@ export enum SubscriptionPolicyUpdateFrequency {
 
 export class SubscriptionUpdate {
     public constructor(
+        {
+            channelName,
+            sourceRepository,
+            policy,
+            enabled,
+        }: {
+            channelName?: string,
+            sourceRepository?: string,
+            policy?: SubscriptionPolicy,
+            enabled?: boolean,
+        }
     ) {
+        this._channelName = channelName;
+        this._sourceRepository = sourceRepository;
+        this._policy = policy;
+        this._enabled = enabled;
     }
 
     private _channelName?: string;
@@ -1902,31 +1983,12 @@ export class SubscriptionUpdate {
     }
 
     public static fromRawObject(value: any): SubscriptionUpdate {
-        let result = new SubscriptionUpdate(
-        );
-        for (let key of Object.keys(value))
-        {
-            if (key === "channelName")
-            {
-                result._channelName = value[key];
-                continue;
-            }
-            if (key === "sourceRepository")
-            {
-                result._sourceRepository = value[key];
-                continue;
-            }
-            if (key === "policy")
-            {
-                result._policy = SubscriptionPolicy.fromRawObject(value[key]);
-                continue;
-            }
-            if (key === "enabled")
-            {
-                result._enabled = value[key];
-                continue;
-            }
-        }
+        let result = new SubscriptionUpdate({
+            channelName: value["channelName"] == null ? undefined : value["channelName"] as any,
+            sourceRepository: value["sourceRepository"] == null ? undefined : value["sourceRepository"] as any,
+            policy: value["policy"] == null ? undefined : SubscriptionPolicy.fromRawObject(value["policy"]) as any,
+            enabled: value["enabled"] == null ? undefined : value["enabled"] as any,
+        });
         return result;
     }
 

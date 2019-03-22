@@ -2,7 +2,7 @@ import { NgModule, Injectable, Inject, InjectionToken } from "@angular/core";
 import { HttpClientModule, HttpClient, HttpHeaders, HttpParams } from "@angular/common/http";
 import { Observable } from "rxjs";
 import { map } from "rxjs/operators";
-import moment, { Moment } from "moment";
+import { parseISO } from "date-fns";
 
 import * as models from "./models";
 import { Helper } from "./helper";
@@ -80,7 +80,7 @@ export class MaestroService {
 })
 export class MaestroModule {
     public static defaultOptions: MaestroOptions = {
-        baseUrl: "http://localhost:8080/",
+        baseUrl: "https://maestro-prod.westus2.cloudapp.azure.com/",
         defaultHeaders: {},
     };
 
@@ -97,28 +97,36 @@ export class MaestroModule {
 export interface IAssetsApi {
 
     listAssetsAsync(
-        buildId?: number,
-        loadLocations?: boolean,
-        name?: string,
-        nonShipping?: boolean,
-        page?: number,
-        perPage?: number,
-        version?: string,
+        parameters: {
+            buildId?: number,
+            loadLocations?: boolean,
+            name?: string,
+            nonShipping?: boolean,
+            page?: number,
+            perPage?: number,
+            version?: string,
+        }
     ): Observable<models.Asset[]>;
 
     getAssetAsync(
-        id: number,
+        parameters: {
+            id: number,
+        }
     ): Observable<models.Asset>;
 
     addAssetLocationToAssetAsync(
-        assetId: number,
-        assetLocationType: models.AddAssetLocationToAssetAssetLocationType,
-        location: string,
+        parameters: {
+            assetId: number,
+            assetLocationType: models.AddAssetLocationToAssetAssetLocationType,
+            location: string,
+        }
     ): Observable<models.AssetLocation>;
 
     removeAssetLocationFromAssetAsync(
-        assetId: number,
-        assetLocationId: number,
+        parameters: {
+            assetId: number,
+            assetLocationId: number,
+        }
     ): Observable<void>;
 }
 
@@ -129,13 +137,23 @@ export class AssetsApiService implements IAssetsApi {
     }
 
     public listAssetsAsync(
-        buildId?: number,
-        loadLocations?: boolean,
-        name?: string,
-        nonShipping?: boolean,
-        page?: number,
-        perPage?: number,
-        version?: string,
+        {
+            buildId,
+            loadLocations,
+            name,
+            nonShipping,
+            page,
+            perPage,
+            version,
+        }: {
+            buildId?: number,
+            loadLocations?: boolean,
+            name?: string,
+            nonShipping?: boolean,
+            page?: number,
+            perPage?: number,
+            version?: string,
+        }
     ): Observable<models.Asset[]> {
         const apiVersion = "2019-01-16";
         let _path = this.options.baseUrl;
@@ -201,7 +219,11 @@ export class AssetsApiService implements IAssetsApi {
     }
 
     public getAssetAsync(
-        id: number,
+        {
+            id,
+        }: {
+            id: number,
+        }
     ): Observable<models.Asset> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
@@ -237,9 +259,15 @@ export class AssetsApiService implements IAssetsApi {
     }
 
     public addAssetLocationToAssetAsync(
-        assetId: number,
-        assetLocationType: models.AddAssetLocationToAssetAssetLocationType,
-        location: string,
+        {
+            assetId,
+            assetLocationType,
+            location,
+        }: {
+            assetId: number,
+            assetLocationType: models.AddAssetLocationToAssetAssetLocationType,
+            location: string,
+        }
     ): Observable<models.AssetLocation> {
         if (assetId === undefined) {
             throw new Error("Required parameter assetId is undefined.");
@@ -293,8 +321,13 @@ export class AssetsApiService implements IAssetsApi {
     }
 
     public removeAssetLocationFromAssetAsync(
-        assetId: number,
-        assetLocationId: number,
+        {
+            assetId,
+            assetLocationId,
+        }: {
+            assetId: number,
+            assetLocationId: number,
+        }
     ): Observable<void> {
         if (assetId === undefined) {
             throw new Error("Required parameter assetId is undefined.");
@@ -336,37 +369,47 @@ export class AssetsApiService implements IAssetsApi {
 export interface IBuildsApi {
 
     listBuildsAsync(
-        buildNumber?: string,
-        channelId?: number,
-        commit?: string,
-        loadCollections?: boolean,
-        notAfter?: Moment,
-        notBefore?: Moment,
-        page?: number,
-        perPage?: number,
-        repository?: string,
+        parameters: {
+            buildNumber?: string,
+            channelId?: number,
+            commit?: string,
+            loadCollections?: boolean,
+            notAfter?: Date,
+            notBefore?: Date,
+            page?: number,
+            perPage?: number,
+            repository?: string,
+        }
     ): Observable<models.Build[]>;
 
     createAsync(
-        body: models.BuildData,
+        parameters: {
+            body: models.BuildData,
+        }
     ): Observable<models.Build>;
 
     getBuildAsync(
-        id: number,
+        parameters: {
+            id: number,
+        }
     ): Observable<models.Build>;
 
     getBuildGraphAsync(
-        id: number,
+        parameters: {
+            id: number,
+        }
     ): Observable<models.BuildGraph>;
 
     getLatestAsync(
-        buildNumber?: string,
-        channelId?: number,
-        commit?: string,
-        loadCollections?: boolean,
-        notAfter?: Moment,
-        notBefore?: Moment,
-        repository?: string,
+        parameters: {
+            buildNumber?: string,
+            channelId?: number,
+            commit?: string,
+            loadCollections?: boolean,
+            notAfter?: Date,
+            notBefore?: Date,
+            repository?: string,
+        }
     ): Observable<models.Build>;
 }
 
@@ -377,15 +420,27 @@ export class BuildsApiService implements IBuildsApi {
     }
 
     public listBuildsAsync(
-        buildNumber?: string,
-        channelId?: number,
-        commit?: string,
-        loadCollections?: boolean,
-        notAfter?: Moment,
-        notBefore?: Moment,
-        page?: number,
-        perPage?: number,
-        repository?: string,
+        {
+            buildNumber,
+            channelId,
+            commit,
+            loadCollections,
+            notAfter,
+            notBefore,
+            page,
+            perPage,
+            repository,
+        }: {
+            buildNumber?: string,
+            channelId?: number,
+            commit?: string,
+            loadCollections?: boolean,
+            notAfter?: Date,
+            notBefore?: Date,
+            page?: number,
+            perPage?: number,
+            repository?: string,
+        }
     ): Observable<models.Build[]> {
         const apiVersion = "2019-01-16";
         let _path = this.options.baseUrl;
@@ -420,12 +475,12 @@ export class BuildsApiService implements IBuildsApi {
 
         if (notBefore)
         {
-            queryParameters = queryParameters.set("notBefore", notBefore.format());
+            queryParameters = queryParameters.set("notBefore", notBefore.toISOString());
         }
 
         if (notAfter)
         {
-            queryParameters = queryParameters.set("notAfter", notAfter.format());
+            queryParameters = queryParameters.set("notAfter", notAfter.toISOString());
         }
 
         if (loadCollections)
@@ -461,7 +516,11 @@ export class BuildsApiService implements IBuildsApi {
     }
 
     public createAsync(
-        body: models.BuildData,
+        {
+            body,
+        }: {
+            body: models.BuildData,
+        }
     ): Observable<models.Build> {
         if (body === undefined) {
             throw new Error("Required parameter body is undefined.");
@@ -497,7 +556,11 @@ export class BuildsApiService implements IBuildsApi {
     }
 
     public getBuildAsync(
-        id: number,
+        {
+            id,
+        }: {
+            id: number,
+        }
     ): Observable<models.Build> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
@@ -533,7 +596,11 @@ export class BuildsApiService implements IBuildsApi {
     }
 
     public getBuildGraphAsync(
-        id: number,
+        {
+            id,
+        }: {
+            id: number,
+        }
     ): Observable<models.BuildGraph> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
@@ -569,13 +636,23 @@ export class BuildsApiService implements IBuildsApi {
     }
 
     public getLatestAsync(
-        buildNumber?: string,
-        channelId?: number,
-        commit?: string,
-        loadCollections?: boolean,
-        notAfter?: Moment,
-        notBefore?: Moment,
-        repository?: string,
+        {
+            buildNumber,
+            channelId,
+            commit,
+            loadCollections,
+            notAfter,
+            notBefore,
+            repository,
+        }: {
+            buildNumber?: string,
+            channelId?: number,
+            commit?: string,
+            loadCollections?: boolean,
+            notAfter?: Date,
+            notBefore?: Date,
+            repository?: string,
+        }
     ): Observable<models.Build> {
         const apiVersion = "2019-01-16";
         let _path = this.options.baseUrl;
@@ -610,12 +687,12 @@ export class BuildsApiService implements IBuildsApi {
 
         if (notBefore)
         {
-            queryParameters = queryParameters.set("notBefore", notBefore.format());
+            queryParameters = queryParameters.set("notBefore", notBefore.toISOString());
         }
 
         if (notAfter)
         {
-            queryParameters = queryParameters.set("notAfter", notAfter.format());
+            queryParameters = queryParameters.set("notAfter", notAfter.toISOString());
         }
 
         if (loadCollections)
@@ -644,35 +721,49 @@ export class BuildsApiService implements IBuildsApi {
 export interface IChannelsApi {
 
     listChannelsAsync(
-        classification?: string,
+        parameters: {
+            classification?: string,
+        }
     ): Observable<models.Channel[]>;
 
     createChannelAsync(
-        classification: string,
-        name: string,
+        parameters: {
+            classification: string,
+            name: string,
+        }
     ): Observable<models.Channel>;
 
     getChannelAsync(
-        id: number,
+        parameters: {
+            id: number,
+        }
     ): Observable<models.Channel>;
 
     deleteChannelAsync(
-        id: number,
+        parameters: {
+            id: number,
+        }
     ): Observable<models.Channel>;
 
     addBuildToChannelAsync(
-        buildId: number,
-        channelId: number,
+        parameters: {
+            buildId: number,
+            channelId: number,
+        }
     ): Observable<void>;
 
     addPipelineToChannelAsync(
-        channelId: number,
-        pipelineId: number,
+        parameters: {
+            channelId: number,
+            pipelineId: number,
+        }
     ): Observable<void>;
 
     deletePipelineFromChannelAsync(
-        channelId: number,
-        pipelineId: number,
+        parameters: {
+            channelId: number,
+            pipelineId: number,
+        }
     ): Observable<void>;
 }
 
@@ -683,7 +774,11 @@ export class ChannelsApiService implements IChannelsApi {
     }
 
     public listChannelsAsync(
-        classification?: string,
+        {
+            classification,
+        }: {
+            classification?: string,
+        }
     ): Observable<models.Channel[]> {
         const apiVersion = "2019-01-16";
         let _path = this.options.baseUrl;
@@ -719,8 +814,13 @@ export class ChannelsApiService implements IChannelsApi {
     }
 
     public createChannelAsync(
-        classification: string,
-        name: string,
+        {
+            classification,
+            name,
+        }: {
+            classification: string,
+            name: string,
+        }
     ): Observable<models.Channel> {
         if (classification === undefined) {
             throw new Error("Required parameter classification is undefined.");
@@ -769,7 +869,11 @@ export class ChannelsApiService implements IChannelsApi {
     }
 
     public getChannelAsync(
-        id: number,
+        {
+            id,
+        }: {
+            id: number,
+        }
     ): Observable<models.Channel> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
@@ -805,7 +909,11 @@ export class ChannelsApiService implements IChannelsApi {
     }
 
     public deleteChannelAsync(
-        id: number,
+        {
+            id,
+        }: {
+            id: number,
+        }
     ): Observable<models.Channel> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
@@ -841,8 +949,13 @@ export class ChannelsApiService implements IChannelsApi {
     }
 
     public addBuildToChannelAsync(
-        buildId: number,
-        channelId: number,
+        {
+            buildId,
+            channelId,
+        }: {
+            buildId: number,
+            channelId: number,
+        }
     ): Observable<void> {
         if (buildId === undefined) {
             throw new Error("Required parameter buildId is undefined.");
@@ -881,8 +994,13 @@ export class ChannelsApiService implements IChannelsApi {
     }
 
     public addPipelineToChannelAsync(
-        channelId: number,
-        pipelineId: number,
+        {
+            channelId,
+            pipelineId,
+        }: {
+            channelId: number,
+            pipelineId: number,
+        }
     ): Observable<void> {
         if (channelId === undefined) {
             throw new Error("Required parameter channelId is undefined.");
@@ -921,8 +1039,13 @@ export class ChannelsApiService implements IChannelsApi {
     }
 
     public deletePipelineFromChannelAsync(
-        channelId: number,
-        pipelineId: number,
+        {
+            channelId,
+            pipelineId,
+        }: {
+            channelId: number,
+            pipelineId: number,
+        }
     ): Observable<void> {
         if (channelId === undefined) {
             throw new Error("Required parameter channelId is undefined.");
@@ -964,21 +1087,29 @@ export class ChannelsApiService implements IChannelsApi {
 export interface IDefaultChannelsApi {
 
     listAsync(
-        branch?: string,
-        channelId?: number,
-        repository?: string,
+        parameters: {
+            branch?: string,
+            channelId?: number,
+            repository?: string,
+        }
     ): Observable<models.DefaultChannel[]>;
 
     createAsync(
-        body: models.PostData,
+        parameters: {
+            body: models.PostData,
+        }
     ): Observable<void>;
 
     getAsync(
-        id: number,
+        parameters: {
+            id: number,
+        }
     ): Observable<models.DefaultChannel>;
 
     deleteAsync(
-        id: number,
+        parameters: {
+            id: number,
+        }
     ): Observable<void>;
 }
 
@@ -989,9 +1120,15 @@ export class DefaultChannelsApiService implements IDefaultChannelsApi {
     }
 
     public listAsync(
-        branch?: string,
-        channelId?: number,
-        repository?: string,
+        {
+            branch,
+            channelId,
+            repository,
+        }: {
+            branch?: string,
+            channelId?: number,
+            repository?: string,
+        }
     ): Observable<models.DefaultChannel[]> {
         const apiVersion = "2019-01-16";
         let _path = this.options.baseUrl;
@@ -1037,7 +1174,11 @@ export class DefaultChannelsApiService implements IDefaultChannelsApi {
     }
 
     public createAsync(
-        body: models.PostData,
+        {
+            body,
+        }: {
+            body: models.PostData,
+        }
     ): Observable<void> {
         if (body === undefined) {
             throw new Error("Required parameter body is undefined.");
@@ -1071,7 +1212,11 @@ export class DefaultChannelsApiService implements IDefaultChannelsApi {
     }
 
     public getAsync(
-        id: number,
+        {
+            id,
+        }: {
+            id: number,
+        }
     ): Observable<models.DefaultChannel> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
@@ -1107,7 +1252,11 @@ export class DefaultChannelsApiService implements IDefaultChannelsApi {
     }
 
     public deleteAsync(
-        id: number,
+        {
+            id,
+        }: {
+            id: number,
+        }
     ): Observable<void> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
@@ -1144,23 +1293,31 @@ export class DefaultChannelsApiService implements IDefaultChannelsApi {
 export interface IPipelinesApi {
 
     listAsync(
-        organization?: string,
-        pipelineIdentifier?: number,
-        project?: string,
+        parameters: {
+            organization?: string,
+            pipelineIdentifier?: number,
+            project?: string,
+        }
     ): Observable<models.ReleasePipeline[]>;
 
     createPipelineAsync(
-        organization: string,
-        pipelineIdentifier: number,
-        project: string,
+        parameters: {
+            organization: string,
+            pipelineIdentifier: number,
+            project: string,
+        }
     ): Observable<models.ReleasePipeline>;
 
     getPipelineAsync(
-        id: number,
+        parameters: {
+            id: number,
+        }
     ): Observable<models.ReleasePipeline>;
 
     deletePipelineAsync(
-        id: number,
+        parameters: {
+            id: number,
+        }
     ): Observable<models.ReleasePipeline>;
 }
 
@@ -1171,9 +1328,15 @@ export class PipelinesApiService implements IPipelinesApi {
     }
 
     public listAsync(
-        organization?: string,
-        pipelineIdentifier?: number,
-        project?: string,
+        {
+            organization,
+            pipelineIdentifier,
+            project,
+        }: {
+            organization?: string,
+            pipelineIdentifier?: number,
+            project?: string,
+        }
     ): Observable<models.ReleasePipeline[]> {
         const apiVersion = "2019-01-16";
         let _path = this.options.baseUrl;
@@ -1219,9 +1382,15 @@ export class PipelinesApiService implements IPipelinesApi {
     }
 
     public createPipelineAsync(
-        organization: string,
-        pipelineIdentifier: number,
-        project: string,
+        {
+            organization,
+            pipelineIdentifier,
+            project,
+        }: {
+            organization: string,
+            pipelineIdentifier: number,
+            project: string,
+        }
     ): Observable<models.ReleasePipeline> {
         if (organization === undefined) {
             throw new Error("Required parameter organization is undefined.");
@@ -1279,7 +1448,11 @@ export class PipelinesApiService implements IPipelinesApi {
     }
 
     public getPipelineAsync(
-        id: number,
+        {
+            id,
+        }: {
+            id: number,
+        }
     ): Observable<models.ReleasePipeline> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
@@ -1315,7 +1488,11 @@ export class PipelinesApiService implements IPipelinesApi {
     }
 
     public deletePipelineAsync(
-        id: number,
+        {
+            id,
+        }: {
+            id: number,
+        }
     ): Observable<models.ReleasePipeline> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
@@ -1354,27 +1531,35 @@ export class PipelinesApiService implements IPipelinesApi {
 export interface IRepositoryApi {
 
     getMergePoliciesAsync(
-        branch: string,
-        repository: string,
+        parameters: {
+            branch: string,
+            repository: string,
+        }
     ): Observable<models.MergePolicy[]>;
 
     setMergePoliciesAsync(
-        branch: string,
-        repository: string,
-        body?: models.MergePolicy[],
+        parameters: {
+            branch: string,
+            repository: string,
+            body?: models.MergePolicy[],
+        }
     ): Observable<void>;
 
     getHistoryAsync(
-        branch?: string,
-        page?: number,
-        perPage?: number,
-        repository?: string,
+        parameters: {
+            branch?: string,
+            page?: number,
+            perPage?: number,
+            repository?: string,
+        }
     ): Observable<models.RepositoryHistoryItem[]>;
 
     retryActionAsyncAsync(
-        branch: string,
-        repository: string,
-        timestamp: number,
+        parameters: {
+            branch: string,
+            repository: string,
+            timestamp: number,
+        }
     ): Observable<void>;
 }
 
@@ -1385,8 +1570,13 @@ export class RepositoryApiService implements IRepositoryApi {
     }
 
     public getMergePoliciesAsync(
-        branch: string,
-        repository: string,
+        {
+            branch,
+            repository,
+        }: {
+            branch: string,
+            repository: string,
+        }
     ): Observable<models.MergePolicy[]> {
         if (branch === undefined) {
             throw new Error("Required parameter branch is undefined.");
@@ -1435,9 +1625,15 @@ export class RepositoryApiService implements IRepositoryApi {
     }
 
     public setMergePoliciesAsync(
-        branch: string,
-        repository: string,
-        body?: models.MergePolicy[],
+        {
+            branch,
+            repository,
+            body,
+        }: {
+            branch: string,
+            repository: string,
+            body?: models.MergePolicy[],
+        }
     ): Observable<void> {
         if (branch === undefined) {
             throw new Error("Required parameter branch is undefined.");
@@ -1485,10 +1681,17 @@ export class RepositoryApiService implements IRepositoryApi {
     }
 
     public getHistoryAsync(
-        branch?: string,
-        page?: number,
-        perPage?: number,
-        repository?: string,
+        {
+            branch,
+            page,
+            perPage,
+            repository,
+        }: {
+            branch?: string,
+            page?: number,
+            perPage?: number,
+            repository?: string,
+        }
     ): Observable<models.RepositoryHistoryItem[]> {
         const apiVersion = "2019-01-16";
         let _path = this.options.baseUrl;
@@ -1539,9 +1742,15 @@ export class RepositoryApiService implements IRepositoryApi {
     }
 
     public retryActionAsyncAsync(
-        branch: string,
-        repository: string,
-        timestamp: number,
+        {
+            branch,
+            repository,
+            timestamp,
+        }: {
+            branch: string,
+            repository: string,
+            timestamp: number,
+        }
     ): Observable<void> {
         if (branch === undefined) {
             throw new Error("Required parameter branch is undefined.");
@@ -1596,42 +1805,61 @@ export class RepositoryApiService implements IRepositoryApi {
 export interface ISubscriptionsApi {
 
     listSubscriptionsAsync(
-        channelId?: number,
-        enabled?: boolean,
-        sourceRepository?: string,
-        targetRepository?: string,
+        parameters: {
+            channelId?: number,
+            enabled?: boolean,
+            sourceRepository?: string,
+            targetRepository?: string,
+        }
     ): Observable<models.Subscription[]>;
 
     createAsync(
-        body: models.SubscriptionData,
+        parameters: {
+            body: models.SubscriptionData,
+        }
     ): Observable<models.Subscription>;
 
     getSubscriptionAsync(
-        id: string,
+        parameters: {
+            id: string,
+        }
     ): Observable<models.Subscription>;
 
     deleteSubscriptionAsync(
-        id: string,
+        parameters: {
+            id: string,
+        }
     ): Observable<models.Subscription>;
 
     updateSubscriptionAsync(
-        id: string,
-        body?: models.SubscriptionUpdate,
+        parameters: {
+            id: string,
+            body?: models.SubscriptionUpdate,
+        }
     ): Observable<models.Subscription>;
 
     triggerSubscriptionAsync(
-        id: string,
+        parameters: {
+            id: string,
+        }
     ): Observable<models.Subscription>;
 
+    triggerDailyUpdateAsync(
+    ): Observable<void>;
+
     getSubscriptionHistoryAsync(
-        id: string,
-        page?: number,
-        perPage?: number,
+        parameters: {
+            id: string,
+            page?: number,
+            perPage?: number,
+        }
     ): Observable<models.SubscriptionHistoryItem[]>;
 
     retrySubscriptionActionAsyncAsync(
-        id: string,
-        timestamp: number,
+        parameters: {
+            id: string,
+            timestamp: number,
+        }
     ): Observable<void>;
 }
 
@@ -1642,10 +1870,17 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
     }
 
     public listSubscriptionsAsync(
-        channelId?: number,
-        enabled?: boolean,
-        sourceRepository?: string,
-        targetRepository?: string,
+        {
+            channelId,
+            enabled,
+            sourceRepository,
+            targetRepository,
+        }: {
+            channelId?: number,
+            enabled?: boolean,
+            sourceRepository?: string,
+            targetRepository?: string,
+        }
     ): Observable<models.Subscription[]> {
         const apiVersion = "2019-01-16";
         let _path = this.options.baseUrl;
@@ -1696,7 +1931,11 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
     }
 
     public createAsync(
-        body: models.SubscriptionData,
+        {
+            body,
+        }: {
+            body: models.SubscriptionData,
+        }
     ): Observable<models.Subscription> {
         if (body === undefined) {
             throw new Error("Required parameter body is undefined.");
@@ -1732,7 +1971,11 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
     }
 
     public getSubscriptionAsync(
-        id: string,
+        {
+            id,
+        }: {
+            id: string,
+        }
     ): Observable<models.Subscription> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
@@ -1768,7 +2011,11 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
     }
 
     public deleteSubscriptionAsync(
-        id: string,
+        {
+            id,
+        }: {
+            id: string,
+        }
     ): Observable<models.Subscription> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
@@ -1804,8 +2051,13 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
     }
 
     public updateSubscriptionAsync(
-        id: string,
-        body?: models.SubscriptionUpdate,
+        {
+            id,
+            body,
+        }: {
+            id: string,
+            body?: models.SubscriptionUpdate,
+        }
     ): Observable<models.Subscription> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
@@ -1842,7 +2094,11 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
     }
 
     public triggerSubscriptionAsync(
-        id: string,
+        {
+            id,
+        }: {
+            id: string,
+        }
     ): Observable<models.Subscription> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
@@ -1877,10 +2133,44 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
 
     }
 
+    public triggerDailyUpdateAsync(
+    ): Observable<void> {
+        const apiVersion = "2019-01-16";
+        let _path = this.options.baseUrl;
+        if (_path.endsWith("/"))
+        {
+            _path = _path.slice(0, -1);
+        }
+        _path = _path + "/api/subscriptions/triggerDaily";
+
+        let queryParameters = new HttpParams();
+        let headerParameters = new HttpHeaders(this.options.defaultHeaders);
+
+        queryParameters = queryParameters.set("api-version", apiVersion);
+
+
+        return this.client.request(
+            "post",
+            _path,
+            {
+                headers: headerParameters,
+                params: queryParameters,
+                responseType: "text",
+            }
+        );
+
+    }
+
     public getSubscriptionHistoryAsync(
-        id: string,
-        page?: number,
-        perPage?: number,
+        {
+            id,
+            page,
+            perPage,
+        }: {
+            id: string,
+            page?: number,
+            perPage?: number,
+        }
     ): Observable<models.SubscriptionHistoryItem[]> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
@@ -1926,8 +2216,13 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
     }
 
     public retrySubscriptionActionAsyncAsync(
-        id: string,
-        timestamp: number,
+        {
+            id,
+            timestamp,
+        }: {
+            id: string,
+            timestamp: number,
+        }
     ): Observable<void> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
