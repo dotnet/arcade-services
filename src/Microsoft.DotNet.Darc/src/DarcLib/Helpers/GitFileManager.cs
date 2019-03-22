@@ -153,6 +153,16 @@ namespace Microsoft.DotNet.DarcLib
 
             foreach (DependencyDetail itemToUpdate in itemsToUpdate)
             {
+                if (string.IsNullOrEmpty(itemToUpdate.Version) ||
+                    string.IsNullOrEmpty(itemToUpdate.Name) ||
+                    string.IsNullOrEmpty(itemToUpdate.Commit) ||
+                    string.IsNullOrEmpty(itemToUpdate.RepoUri))
+                {
+                    _logger.LogError("Either the name, version, commit or repo uri of a dependency in " +
+                        $"repo '{repoUri}' and branch '{branch}' was empty...skipping.");
+                    continue;
+                }
+
                 // Double check that the dependency is not pinned
                 if (itemToUpdate.Pinned)
                 {
@@ -795,7 +805,7 @@ namespace Microsoft.DotNet.DarcLib
                 return dependencyDetails;
             }
 
-            return dependencyDetails.Where(d => !d.Pinned);
+            return dependencyDetails.Where(d => !d.Pinned && !string.IsNullOrEmpty(d.RepoUri));
         }
     }
 }
