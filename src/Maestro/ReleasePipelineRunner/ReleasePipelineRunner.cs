@@ -30,16 +30,19 @@ namespace ReleasePipelineRunner
         public ReleasePipelineRunner(
             IReliableStateManager stateManager,
             ILogger<ReleasePipelineRunner> logger,
-            BuildAssetRegistryContext context)
+            BuildAssetRegistryContext context,
+            IDependencyUpdater dependencyUpdater)
         {
             StateManager = stateManager;
             Logger = logger;
             Context = context;
+            DependencyUpdater = dependencyUpdater;
         }
 
         public IReliableStateManager StateManager { get; }
         public ILogger<ReleasePipelineRunner> Logger { get; }
         public BuildAssetRegistryContext Context { get; }
+        public IDependencyUpdater DependencyUpdater { get; }
 
         private const string RunningPipelineDictionaryName = "runningPipelines";
         private static HashSet<string> InProgressStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "notstarted", "scheduled", "queued", "inprogress" };
@@ -274,7 +277,8 @@ namespace ReleasePipelineRunner
 
                     if (buildChannelsToAdd.Count > 0)
                     {
-                        AddFinishedBuildChannelsIfNotPresent(buildChannelsToAdd);
+                        List<BuildChannel> addedBuildChannels = await AddFinishedBuildChannelsIfNotPresent(buildChannelsToAdd);
+                        await TriggerDependencyUpdates(addedBuildChannels);
                     }
                     await tx.CommitAsync();
                 }
@@ -286,6 +290,15 @@ namespace ReleasePipelineRunner
             catch (Exception ex)
             {
                 Logger.LogError(ex, "Processing finished releases");
+            }
+        }
+
+        private async Task TriggerDependencyUpdates(List<BuildChannel> addedBuildChannels)
+        {
+            foreach (BuildChannel buildChannel in addedBuildChannels)
+            {
+                Logger.LogInformation($"Calling DependencyUpdater to process dependency updates for build {buildChannel.BuildId} and channel {buildChannel.ChannelId}.");
+                await DependencyUpdater.StartUpdateDependenciesAsync(buildChannel.BuildId, buildChannel.ChannelId);
             }
         }
 
@@ -301,11 +314,12 @@ namespace ReleasePipelineRunner
             return new AzureDevOpsClient(accessToken, Logger, null);
         }
 
-        private void AddFinishedBuildChannelsIfNotPresent(HashSet<BuildChannel> buildChannelsToAdd)
+        private async Task<List<BuildChannel>> AddFinishedBuildChannelsIfNotPresent(HashSet<BuildChannel> buildChannelsToAdd)
         {
             var missingBuildChannels = buildChannelsToAdd.Where(x => !Context.BuildChannels.Any(y => y.ChannelId == x.ChannelId && y.BuildId == x.BuildId)).ToList();
             Context.BuildChannels.AddRange(missingBuildChannels);
-            Context.SaveChanges();
+            await Context.SaveChangesAsync();
+            return missingBuildChannels;
         }
     }
 }
