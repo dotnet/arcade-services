@@ -1,6 +1,6 @@
 import { Component, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { Build, BuildGraph } from 'src/maestro-client/models';
-import { topologicalSort } from 'src/helpers';
+import { topologicalSort, getCommitLink, getBuildLink } from 'src/helpers';
 import { trigger, transition, style, animate } from '@angular/animations';
 
 interface BuildData {
@@ -186,27 +186,9 @@ export class BuildGraphTableComponent implements OnChanges {
     }
   }
 
-  public getCommitLink(build: Build): string | undefined {
-    if (!build ||
-        !build.azureDevOpsRepository) {
-      return;
-    }
-    return `${build.azureDevOpsRepository}` +
-      `?_a=history&version=GC${build.commit}`;
-  }
+  public getCommitLink = getCommitLink;
 
-  public getBuildLink(build: Build): string | undefined {
-    if (!build ||
-        !build.azureDevOpsAccount ||
-        !build.azureDevOpsProject) {
-      return;
-    }
-    return `https://dev.azure.com` +
-      `/${build.azureDevOpsAccount}` +
-      `/${build.azureDevOpsProject}` +
-      `/_build/results` +
-      `?view=results&buildId=${build.azureDevOpsBuildId}`;
-  }
+  public getBuildLink = getBuildLink;
 
   public getBuildId(node: BuildData) {
     return node && node.build && node.build.id;
