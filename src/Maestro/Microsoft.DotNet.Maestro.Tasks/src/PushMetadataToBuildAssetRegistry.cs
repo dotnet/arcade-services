@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Build.Framework;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using System;
@@ -15,9 +16,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.Logging.Abstractions;
 using MSBuild = Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Maestro.Tasks
@@ -34,6 +32,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
         public string MaestroApiEndpoint { get; set; }
 
         public bool PublishUsingPipelines { get; set; } = false;
+
+        public string RepoRoot { get; set; }
 
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
@@ -99,7 +99,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             CancellationToken cancellationToken)
         {
             var logger = new MSBuildLogger(Log);
-            var local = new Local(logger);
+            var local = new Local(logger, RepoRoot);
             IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync();
             var builds = new Dictionary<int, bool>();
             foreach (var dep in dependencies)
