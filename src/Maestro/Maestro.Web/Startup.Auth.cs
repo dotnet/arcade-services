@@ -61,7 +61,7 @@ namespace Maestro.Web
                                     context.Identity.AddClaim(
                                         new Claim(ClaimTypes.Role, role, ClaimValueTypes.String, GitHubScheme));
                                 }
-                            }
+                            },
                         };
                     })
                 .AddPersonalAccessToken<ApplicationUser>(
@@ -140,7 +140,7 @@ namespace Maestro.Web
                         {
                             ctx.Response.StatusCode = 403;
                             return Task.CompletedTask;
-                        }
+                        },
                     };
                 });
             services.ConfigureApplicationCookie(
@@ -150,8 +150,19 @@ namespace Maestro.Web
                     options.SlidingExpiration = true;
                     options.Events = new CookieAuthenticationEvents
                     {
-                        OnSigningIn = ctx =>
+                        OnSigningIn = async ctx =>
                         {
+                            var dbContext = ctx.HttpContext.RequestServices
+                                .GetRequiredService<BuildAssetRegistryContext>();
+                            var signInManager = ctx.HttpContext.RequestServices
+                                .GetRequiredService<SignInManager<ApplicationUser>>();
+                            var userManager = ctx.HttpContext.RequestServices
+                                .GetRequiredService<UserManager<ApplicationUser>>();
+                            ExternalLoginInfo info = await signInManager.GetExternalLoginInfoAsync();
+
+                            var user = await userManager.GetUserAsync(ctx.Principal);
+                            await UpdateUserTokenAsync(dbContext, userManager, user, info);
+
                             IdentityOptions identityOptions = ctx.HttpContext.RequestServices
                                 .GetRequiredService<IOptions<IdentityOptions>>()
                                 .Value;
@@ -162,8 +173,6 @@ namespace Maestro.Web
                             Claim[] claims = {claim};
                             var identity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
                             ctx.Principal = new ClaimsPrincipal(identity);
-
-                            return Task.CompletedTask;
                         },
                         OnValidatePrincipal = async ctx =>
                         {
@@ -212,6 +221,27 @@ namespace Maestro.Web
                 {
                     options.Conventions.Add(new DefaultAuthorizeActionModelConvention(MsftAuthorizationPolicyName));
                 });
+        }
+
+        private static async Task UpdateUserTokenAsync(BuildAssetRegistryContext dbContext,
+            UserManager<ApplicationUser> userManager, ApplicationUser user, ExternalLoginInfo info)
+        {
+            try
+            {
+                await userManager.SetAuthenticationTokenAsync(
+                    user,
+                    info.LoginProvider,
+                    "access_token",
+                    info.AuthenticationTokens.First(t => t.Name == "access_token").Value);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                // If we have a concurrent modification exception that means another request updated this token, we can abandon our update and reload the data from the DB
+                foreach (EntityEntry entry in dbContext.ChangeTracker.Entries())
+                {
+                    await entry.ReloadAsync();
+                }
+            }
         }
 
         private async Task UpdateUserIfNeededAsync(
