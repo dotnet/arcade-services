@@ -2,7 +2,7 @@ import { Component, OnInit, OnChanges } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
 import { prettyRepository } from "src/app/util/names";
 import { map, shareReplay } from 'rxjs/operators';
-import moment from 'moment';
+import { isAfter, compareAsc, parseISO } from "date-fns";
 
 import { BuildGraph, Build } from 'src/maestro-client/models';
 import { MaestroService } from 'src/maestro-client';
@@ -38,13 +38,13 @@ export class BuildComponent implements OnInit, OnChanges {
     );
     this.graph$ = buildId$.pipe(
       statefulSwitchMap(buildId => {
-        return this.maestro.builds.getBuildGraphAsync(buildId);
+        return this.maestro.builds.getBuildGraphAsync({id: buildId});
       }),
       shareReplay(1),
     );
     this.build$ = buildId$.pipe(
       statefulSwitchMap(buildId => {
-        return this.maestro.builds.getBuildAsync(buildId);
+        return this.maestro.builds.getBuildAsync({id: buildId});
       }),
     );
 
@@ -89,13 +89,13 @@ export class BuildComponent implements OnInit, OnChanges {
             if (b.id === build.azureDevOpsBuildId) {
               return false;
             }
-            return moment(b.finishTime).isAfter(build.dateProduced);
+            return isAfter(parseISO(b.finishTime), build.dateProduced);
           }
 
           let isMostRecent: boolean;
           let mostRecentFailureLink: string | undefined;
 
-          const newerBuilds = builds.value.filter(isNewer).sort((l, r) => moment(l.finishTime).diff(moment(r.finishTime)));
+          const newerBuilds = builds.value.filter(isNewer).sort((l, r) => compareAsc(parseISO(l.finishTime), parseISO(r.finishTime)));
           if (!newerBuilds.length) {
             isMostRecent = true;
             mostRecentFailureLink = undefined;

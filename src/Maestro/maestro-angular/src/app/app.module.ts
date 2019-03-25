@@ -25,7 +25,6 @@ import {
   faQuestionCircle as farQuestionCircle,
 } from "@fortawesome/free-regular-svg-icons";
 import { NgbCollapseModule, NgbModule } from "@ng-bootstrap/ng-bootstrap";
-import { MomentModule } from "ngx-moment";
 
 import { MaestroModule } from "src/maestro-client";
 import { StatefulModule } from "src/stateful";
@@ -42,6 +41,8 @@ import { RecentBuildComponent } from './page/recent-build/recent-build.component
 import { BuildGraphTableComponent } from './page/build-graph-table/build-graph-table.component';
 import { UriEncodePipe } from './uri-encode.pipe';
 import { SwitchComponent } from './widget/switch/switch.component';
+import { RelativeDatePipe } from './pipes/relative-date.pipe';
+import { TimeAgoPipe } from './pipes/time-ago.pipe';
 
 @NgModule({
   declarations: [
@@ -54,6 +55,8 @@ import { SwitchComponent } from './widget/switch/switch.component';
     BuildGraphTableComponent,
     UriEncodePipe,
     SwitchComponent,
+    RelativeDatePipe,
+    TimeAgoPipe,
   ],
   imports: [
     BrowserModule,
@@ -62,7 +65,6 @@ import { SwitchComponent } from './widget/switch/switch.component';
     FontAwesomeModule,
     BrowserAnimationsModule,
     NgbCollapseModule,
-    MomentModule,
     MaestroModule.forRoot(maestroOptions),
     StatefulModule,
     FormsModule,

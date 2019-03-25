@@ -21,7 +21,7 @@ export class ChannelService {
   private channels$: Observable<Channel[]>;
 
   public constructor(private maestro: MaestroService) {
-    this.channels$ = maestro.channels.listChannelsAsync().pipe(
+    this.channels$ = maestro.channels.listChannelsAsync({}).pipe(
       shareReplay(1),
       map(channels => channels.filter(c => c.classification !== "test").sort(channelSorter)),
     );
@@ -32,6 +32,6 @@ export class ChannelService {
   }
 
   public getRepositories(channelId: number): Observable<DefaultChannel[]> {
-    return this.maestro.defaultChannels.listAsync(undefined, channelId);
+    return this.maestro.defaultChannels.listAsync({ channelId: channelId });
   }
 }
