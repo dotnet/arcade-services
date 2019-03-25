@@ -772,6 +772,18 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Assign a particular build to a channel
+        /// </summary>
+        /// <param name="buildId">Build id</param>
+        /// <param name="channelId">Channel id</param>
+        /// <returns>Async task</returns>
+        public Task AssignBuildToChannel(int buildId, int channelId)
+        {
+            CheckForValidBarClient();
+            return _barClient.AssignBuildToChannel(buildId, channelId);
+        }
+
+        /// <summary>
         ///     Retrieve information about the specified build.
         /// </summary>
         /// <param name="buildId">Id of build.</param>

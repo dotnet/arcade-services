@@ -40,7 +40,10 @@ export class RecentBuildComponent implements OnInit {
           map(channels => channels.find(c => c.id === +channelId) as Channel),
         );
 
-        return this.maestro.builds.getLatestAsync(undefined, +channelId, undefined, undefined, undefined, undefined, repository).pipe(
+        return this.maestro.builds.getLatestAsync({
+          channelId: +channelId,
+          repository: repository,
+        }).pipe(
           map(b => [+channelId, repository, b] as [number, string, Build]),
         );
       }),

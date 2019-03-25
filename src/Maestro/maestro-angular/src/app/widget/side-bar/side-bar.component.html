@@ -1,5 +1,8 @@
-<div style="overflow-y: auto;">
-  <ng-container *ngIf="channels$ | async as channels">
+<div style="overflow-y: scroll; width: 280px;">
+  <ng-template #loadingChannels>
+    <progress-ring [style]="{ 'width.px': 200, 'height.px': 200, margin: 'auto' }"></progress-ring>
+  </ng-template>
+  <ng-container *stateful="let channels from channels$; loadingTemplate: loadingChannels">
     <ng-container *ngFor="let channel of channels">
       <mc-side-bar-channel [channel]="channel"></mc-side-bar-channel>
     </ng-container>

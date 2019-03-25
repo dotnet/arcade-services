@@ -335,7 +335,9 @@ namespace Microsoft.DotNet.Darc.Operations
 
         private string CalculateGraphVizNodeName(DependencyGraphNode node)
         {
-            return GetSimpleRepoName(node.RepoUri).Replace("-", "") + node.Commit;
+            return GetSimpleRepoName(node.RepoUri)
+                .Replace(".", "")
+                .Replace("-", "") + node.Commit;
         }
 
         /// <summary>

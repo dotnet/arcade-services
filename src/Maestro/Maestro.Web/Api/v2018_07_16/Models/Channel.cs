@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using JetBrains.Annotations;
 
@@ -30,8 +31,10 @@ namespace Maestro.Web.Api.v2018_07_16.Models
 
         public int Id { get; }
 
+        [Required]
         public string Name { get; }
 
+        [Required]
         public string Classification { get; }
 
         public List<ReleasePipeline> ReleasePipelines { get; }

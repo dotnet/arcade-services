@@ -10,6 +10,7 @@ using System.Xml.XPath;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Newtonsoft.Json.Linq;
 
 namespace Maestro.Web.Pages
 {
@@ -29,22 +30,24 @@ namespace Maestro.Web.Pages
 
         public HtmlString GetStyleBundles()
         {
-            var angularGeneratedIndex = Path.Join(Environment.ContentRootPath, "angular-bundle.html");
-            var fileText = System.IO.File.ReadAllText(angularGeneratedIndex);
-            var firstLink = fileText.IndexOf("<link", StringComparison.Ordinal);
-            var endOfHead = fileText.IndexOf("</head>", StringComparison.Ordinal);
-            var links = fileText.Substring(firstLink, endOfHead - firstLink);
-            return new HtmlString(links);
+            var assetsJson = Path.Join(Environment.WebRootPath, "assets.json");
+            var assets = JObject.Parse(System.IO.File.ReadAllText(assetsJson));
+
+            var links = assets["styles"].ToObject<JArray>()
+                .Select(s => $"<link rel=\"stylesheet\" href=\"{s["file"]}\">");
+
+            return new HtmlString(string.Join("", links));
         }
 
         public HtmlString GetScriptBundles()
         {
-            var angularGeneratedIndex = Path.Join(Environment.ContentRootPath, "angular-bundle.html");
-            var fileText = System.IO.File.ReadAllText(angularGeneratedIndex);
-            var firstScript = fileText.IndexOf("<script", StringComparison.Ordinal);
-            var endOfBody = fileText.IndexOf("</body>", StringComparison.Ordinal);
-            var scripts = fileText.Substring(firstScript, endOfBody - firstScript);
-            return new HtmlString(scripts);
+            var assetsJson = Path.Join(Environment.WebRootPath, "assets.json");
+            var assets = JObject.Parse(System.IO.File.ReadAllText(assetsJson));
+
+            var scripts = assets["scripts"].ToObject<JArray>()
+                .Select(s => $"<script type=\"text/javascript\" src=\"{s["file"]}\"></script>");
+
+            return new HtmlString(string.Join("", scripts));
         }
     }
 }

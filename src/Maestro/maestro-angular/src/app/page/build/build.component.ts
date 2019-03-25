@@ -1,47 +1,19 @@
 import { Component, OnInit, OnChanges } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
 import { prettyRepository } from "src/app/util/names";
-import { map, tap, shareReplay, delay, concat } from 'rxjs/operators';
-import moment from 'moment';
+import { map, shareReplay } from 'rxjs/operators';
+import { isAfter, compareAsc, parseISO } from "date-fns";
 
-import { BuildGraph, Build, BuildRef } from 'src/maestro-client/models';
+import { BuildGraph, Build } from 'src/maestro-client/models';
 import { MaestroService } from 'src/maestro-client';
-import { Observable, Subject, combineLatest, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { BuildStatusService } from 'src/app/services/build-status.service';
 import { BuildStatus } from 'src/app/model/build-status';
 import { statefulSwitchMap, StatefulResult, statefulPipe } from 'src/stateful';
-import { WrappedError, Loading } from 'src/stateful/helpers';
 
 interface AzDevBuildInfo {
   isMostRecent: boolean;
   mostRecentFailureLink?: string;
-}
-
-function copy(graph: BuildGraph): BuildGraph {
-  return BuildGraph.fromRawObject(BuildGraph.toRawObject(graph));
-}
-
-function removeToolsets(graph: BuildGraph): BuildGraph {
-  graph = copy(graph);
-  const removedDeps: BuildRef[] = [];
-  for (const b of Object.values(graph.builds)) {
-    if (b.dependencies) {
-      const productDeps = b.dependencies.filter(d => d.isProduct);
-      const toolsetDeps = b.dependencies.filter(d => !d.isProduct);
-      (b as any)._dependencies = productDeps;
-      for (const dep of toolsetDeps) {
-        removedDeps.push(dep);
-      }
-    }
-  }
-  const allDeps: BuildRef[] = Array.prototype.concat.apply([], Object.values(graph.builds).filter(b => b.dependencies).map(b => b.dependencies as BuildRef[]));
-  const buildsToCheck = removedDeps.map(d => d.buildId);
-  for (const id of buildsToCheck) {
-    if (!allDeps.some(d => d.buildId === id)) {
-      delete graph.builds[id];
-    }
-  }
-  return graph;
 }
 
 @Component({
@@ -59,42 +31,20 @@ export class BuildComponent implements OnInit, OnChanges {
   public azDevBuildInfo$!: Observable<StatefulResult<AzDevBuildInfo>>;
 
   public includeToolsets: boolean = false;
-  public includeToolsets$: Subject<boolean> = new Subject();
-
-  public includeToolsetsChange(value: boolean) {
-    if (value !== this.includeToolsets) {
-      this.includeToolsets = value;
-      this.includeToolsets$.next(this.includeToolsets);
-    }
-  }
 
   public ngOnInit() {
     const buildId$ = this.route.paramMap.pipe(
       map(params => +(params.get("buildId") as string)),
     );
-    const rawGraph$ = buildId$.pipe(
+    this.graph$ = buildId$.pipe(
       statefulSwitchMap(buildId => {
-        return this.maestro.builds.getBuildGraphAsync(buildId);
+        return this.maestro.builds.getBuildGraphAsync({id: buildId});
       }),
       shareReplay(1),
     );
-    this.graph$ = combineLatest(
-      rawGraph$,
-      of(this.includeToolsets).pipe(concat(this.includeToolsets$))
-    ).pipe(
-      map(([r, includeToolsets]) => {
-        if (r instanceof WrappedError || r instanceof Loading) {
-          return r;
-        }
-        if (!includeToolsets) {
-          return removeToolsets(r);
-        }
-        return r;
-      })
-    )
     this.build$ = buildId$.pipe(
       statefulSwitchMap(buildId => {
-        return this.maestro.builds.getBuildAsync(buildId);
+        return this.maestro.builds.getBuildAsync({id: buildId});
       }),
     );
 
@@ -106,6 +56,13 @@ export class BuildComponent implements OnInit, OnChanges {
   }
 
   public ngOnChanges() {
+  }
+
+  public haveAzDevInfo(build: Build): boolean {
+    return !!build.azureDevOpsAccount &&
+           !!build.azureDevOpsProject &&
+           !!build.azureDevOpsBuildDefinitionId &&
+           !!build.azureDevOpsBranch;
   }
 
 
@@ -132,13 +89,13 @@ export class BuildComponent implements OnInit, OnChanges {
             if (b.id === build.azureDevOpsBuildId) {
               return false;
             }
-            return moment(b.finishTime).isAfter(build.dateProduced);
+            return isAfter(parseISO(b.finishTime), build.dateProduced);
           }
 
           let isMostRecent: boolean;
           let mostRecentFailureLink: string | undefined;
 
-          const newerBuilds = builds.value.filter(isNewer).sort((l, r) => moment(l.finishTime).diff(moment(r.finishTime)));
+          const newerBuilds = builds.value.filter(isNewer).sort((l, r) => compareAsc(parseISO(l.finishTime), parseISO(r.finishTime)));
           if (!newerBuilds.length) {
             isMostRecent = true;
             mostRecentFailureLink = undefined;

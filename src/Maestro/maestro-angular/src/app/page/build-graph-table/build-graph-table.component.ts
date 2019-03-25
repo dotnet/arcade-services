@@ -1,16 +1,21 @@
-import { Component, OnInit, Input, OnChanges } from '@angular/core';
+import { Component, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { Build, BuildGraph } from 'src/maestro-client/models';
 import { topologicalSort } from 'src/helpers';
+import { trigger, transition, style, animate } from '@angular/animations';
 
 interface BuildData {
   build: Build;
-  coherent: boolean;
+  coherent: {
+    withAll: boolean;
+    withProduct: boolean;
+  };
   isDependent?: boolean;
   isParent?: boolean;
   isAncestor?: boolean;
   isSameRepository?: boolean;
   isFocused?: boolean;
   isLocked?: boolean;
+  isToolset?: boolean;
 }
 
 function getRepo(build: Build) {
@@ -28,6 +33,25 @@ function buildNumber(b : Build): number | string {
   return result;
 }
 
+function isToolset(build: Build, graph: BuildGraph) {
+  // A build is a "toolset" if it has at least one dependency pointing to it,
+  // and all dependencies pointing to it are toolset dependencies
+  let hasParents = false;
+  for (const b of Object.values(graph.builds)) {
+    if (b.dependencies) {
+      for (const dep of b.dependencies) {
+        if (dep.buildId == build.id) {
+          hasParents = true;
+          if (dep.isProduct) {
+            return false;
+          }
+        }
+      }
+    }
+  }
+  return hasParents;
+}
+
 function sortBuilds(graph: BuildGraph): BuildData[] {
   const sortedBuilds = topologicalSort(Object.values(graph.builds), build => {
     if (build.dependencies) {
@@ -37,26 +61,62 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
   }, build => build.id);
 
 
-  const result = sortedBuilds.map<BuildData>(build => {
+  let result = sortedBuilds.map<BuildData>(build => {
       const sameRepo = sortedBuilds.filter(b => getRepo(b) === getRepo(build));
-      const coherent = sameRepo.every(b => buildNumber(b) <= buildNumber(build));
+      const sameRepoProducts = sameRepo.filter(b => !isToolset(b, graph));
+      const coherentWithAll = sameRepo.every(b => buildNumber(b) <= buildNumber(build));
+      const coherentWithProducts = sameRepoProducts.every(b => buildNumber(b) <= buildNumber(build));
       return {
         build: build,
-        coherent: coherent,
+        coherent: {
+          withAll: coherentWithAll,
+          withProduct: coherentWithProducts,
+        },
       };
   });
 
-  return result.reverse();
+  result = result.reverse();
+  for (const node of result) {
+    node.isToolset = isToolset(node.build, graph);
+  }
+
+  return result;
 }
+
+const elementOutStyle = style({
+  transform: 'translate(20vw, 0)',
+  opacity: 0,
+});
+
+const elementInStyle = style({
+  transform: 'translate(0, 0)',
+  opacity: 1,
+});
 
 @Component({
   selector: 'mc-build-graph-table',
   templateUrl: './build-graph-table.component.html',
-  styleUrls: ['./build-graph-table.component.scss']
+  styleUrls: ['./build-graph-table.component.scss'],
+  animations: [
+    trigger("noop", [
+      transition(":enter", []),
+    ]),
+    trigger("insertRemove", [
+      transition(":enter", [
+        elementOutStyle,
+        animate("0.5s ease-out", elementInStyle),
+      ]),
+      transition(":leave", [
+        elementInStyle,
+        animate("0.5s ease-in", elementOutStyle),
+      ]),
+    ]),
+  ]
 })
 export class BuildGraphTableComponent implements OnChanges {
 
   @Input() public graph?: BuildGraph;
+  @Input() public includeToolsets?: boolean;
   public sortedBuilds?: BuildData[];
   public locked: boolean = false;
   public focusedBuildId?: number;
@@ -120,8 +180,8 @@ export class BuildGraphTableComponent implements OnChanges {
     }
   }
 
-  ngOnChanges() {
-    if (this.graph) {
+  ngOnChanges(changes: SimpleChanges) {
+    if ('graph' in changes && this.graph) {
       this.sortedBuilds = sortBuilds(this.graph);
     }
   }
@@ -146,5 +206,16 @@ export class BuildGraphTableComponent implements OnChanges {
       `/${build.azureDevOpsProject}` +
       `/_build/results` +
       `?view=results&buildId=${build.azureDevOpsBuildId}`;
+  }
+
+  public getBuildId(node: BuildData) {
+    return node && node.build && node.build.id;
+  }
+
+  public isCoherent(node: BuildData) {
+    if (this.includeToolsets) {
+      return node.coherent.withAll;
+    }
+    return node.coherent.withProduct;
   }
 }

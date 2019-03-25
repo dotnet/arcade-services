@@ -51,6 +51,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
     public static class ServiceHostActorProxy
     {
+        private static ProxyGenerator Generator { get; } = new ProxyGenerator();
+
         private static ActorProxyFactory CreateFactory()
         {
             return new ActorProxyFactory(
@@ -63,8 +65,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         {
             var actor = CreateFactory().CreateActorProxy<T>(actorId);
             Uri serviceUri = actor.GetActorReference().ServiceUri;
-            var gen = new ProxyGenerator();
-            T proxy = gen.CreateInterfaceProxyWithTargetInterface(
+            T proxy = Generator.CreateInterfaceProxyWithTargetInterface(
                 actor,
                 new LoggingServiceProxyInterceptor(telemetryClient, context, serviceUri.ToString()));
             return proxy;
@@ -73,6 +74,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
     public static class ServiceHostProxy
     {
+        private static ProxyGenerator Generator { get; } = new ProxyGenerator();
+
         private static ServiceProxyFactory CreateFactory()
         {
             if (!FabricTransportRemotingSettings.TryLoadFrom(
@@ -95,8 +98,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             TargetReplicaSelector targetReplicaSelector = TargetReplicaSelector.Default) where T : class, IService
         {
             var service = CreateFactory().CreateServiceProxy<T>(serviceUri, partitionKey, targetReplicaSelector);
-            var gen = new ProxyGenerator();
-            T proxy = gen.CreateInterfaceProxyWithTargetInterface(
+            T proxy = Generator.CreateInterfaceProxyWithTargetInterface(
                 service,
                 new LoggingServiceProxyInterceptor(telemetryClient, context, serviceUri.ToString()));
             return proxy;

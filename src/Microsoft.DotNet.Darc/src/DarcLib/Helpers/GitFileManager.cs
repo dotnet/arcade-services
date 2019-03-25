@@ -153,6 +153,15 @@ namespace Microsoft.DotNet.DarcLib
 
             foreach (DependencyDetail itemToUpdate in itemsToUpdate)
             {
+                if (string.IsNullOrEmpty(itemToUpdate.Version) ||
+                    string.IsNullOrEmpty(itemToUpdate.Name) ||
+                    string.IsNullOrEmpty(itemToUpdate.Commit) ||
+                    string.IsNullOrEmpty(itemToUpdate.RepoUri))
+                {
+                    throw new DarcException("Either the name, version, commit or repo uri of a dependency in " +
+                        $"repo '{repoUri}' and branch '{branch}' was empty.");
+                }
+
                 // Double check that the dependency is not pinned
                 if (itemToUpdate.Pinned)
                 {

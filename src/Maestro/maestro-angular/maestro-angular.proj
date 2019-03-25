@@ -37,6 +37,8 @@
     <Exec Command="npm run build -- --prod"
           WorkingDirectory="$(MSBuildProjectDirectory)"/>
     <Touch AlwaysCreate="true" Files="@(BuildOutput)"/>
+    <Message Text="##vso[artifact.upload containerfolder=bundle-report;artifactname=bundle-report.html;]$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(OutputPath)'))bundle-report.html"
+             Importance="High"/>
   </Target>
 
   <Target Name="Build"
@@ -52,11 +54,12 @@
         Include="$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(OutputPath)'))**\*"
         Exclude="$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)', '$(OutputPath)')).build-successful">
       </_OutputFile>
+      <_OutputFile Remove="@(_OutputFile)" Condition="'%(Filename)%(Extension)' == 'index.html'"/>
+      <_OutputFile Remove="@(_OutputFile)" Condition="'%(Filename)%(Extension)' == 'bundle-report.html'"/>
+      <_OutputFile Remove="@(_OutputFile)" Condition="'%(Filename)%(Extension)' == 'stats.json'"/>
       <CopyToPublishDirectoryItem
-        Include="@(_OutputFile)"
-        Condition="'%(Filename)%(Extension)' != 'favicon.ico'">
-        <TargetPath Condition="'%(Filename)%(Extension)' != 'index.html'">wwwroot\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
-        <TargetPath Condition="'%(Filename)%(Extension)' == 'index.html'">angular-bundle.html</TargetPath>
+        Include="@(_OutputFile)">
+        <TargetPath>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       </CopyToPublishDirectoryItem>
     </ItemGroup>

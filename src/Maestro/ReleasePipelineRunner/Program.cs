@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Maestro.AzureDevOps;
+using Maestro.Contracts;
 using Maestro.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
@@ -23,6 +24,7 @@ namespace ReleasePipelineRunner
                 host =>
                 {
                     host.RegisterStatefulService<ReleasePipelineRunner>("ReleasePipelineRunnerType");
+                    host.ConfigureContainer(builder => { builder.AddServiceFabricService<IDependencyUpdater>("fabric:/MaestroApplication/DependencyUpdater"); });
                     host.ConfigureServices(
                         services =>
                         {
