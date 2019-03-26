@@ -107,7 +107,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 var buildId = await GetBuildId(dep, client, cancellationToken);
                 if (buildId == null)
                 {
-                    Log.LogWarning($"Asset '{dep.Name}@{dep.Version}' not found in BAR, ignoring.");
+                    Log.LogMessage($"Asset '{dep.Name}@{dep.Version}' not found in BAR, most likely this is an external dependency, ignoring...");
                     continue;
                 }
 
