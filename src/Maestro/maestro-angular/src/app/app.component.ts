@@ -1,4 +1,11 @@
-import { Component, ViewEncapsulation } from "@angular/core";
+import { Component, ViewEncapsulation, OnInit } from "@angular/core";
+import { NgbDropdown } from '@ng-bootstrap/ng-bootstrap';
+import { CookieService } from './services/cookie.service';
+
+interface Theme {
+  name: string;
+  file: string;
+}
 
 @Component({
   selector: "mc-root",
@@ -6,11 +13,41 @@ import { Component, ViewEncapsulation } from "@angular/core";
   styleUrls: ["./app.component.scss"],
   encapsulation: ViewEncapsulation.None,
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
+  static themeCookieName = "Maestro.Theme";
+
+  constructor(private cookieService: CookieService){}
+
   public title = ".NET Mission Control";
   public navbarOpen = false;
   public sidebarOpen = false;
   public returnUrl = location.pathname + location.search;
   public brand = (window as any).applicationData.brand;
   public userName = (window as any).applicationData.userName;
+
+  public currentTheme!: string;
+  public themes: Theme[] = (window as any).applicationData.themes;
+
+  public ngOnInit(): void {
+    this.currentTheme = this.cookieService.get(AppComponent.themeCookieName) || "light";
+  }
+
+  public selectTheme(name: string) {
+    if (this.currentTheme === name) {
+      return;
+    }
+
+    this.currentTheme = name;
+    this.cookieService.set(AppComponent.themeCookieName, name);
+
+    const existingThemeStyleElement = document.querySelector("head link[purpose='theme']");
+    if (!existingThemeStyleElement) {
+      return;
+    }
+
+    const selectedThemeStyles = this.themes.find(t => t.name === name);
+    if (selectedThemeStyles) {
+      existingThemeStyleElement.setAttribute("href", selectedThemeStyles.file);
+    }
+  }
 }
