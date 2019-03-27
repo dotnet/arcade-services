@@ -1,0 +1,135 @@
+@import "~bootstrap/scss/root";
+@import "~bootstrap/scss/reboot";
+@import "~bootstrap/scss/type";
+// @import "~bootstrap/scss/images";
+// @import "~bootstrap/scss/code";
+@import "~bootstrap/scss/grid";
+@import "~bootstrap/scss/tables";
+@import "~bootstrap/scss/buttons";
+@import "~bootstrap/scss/transitions";
+@import "~bootstrap/scss/dropdown";
+// @import "~bootstrap/scss/button-group";
+// @import "~bootstrap/scss/input-group";
+// @import "~bootstrap/scss/custom-forms";
+@import "~bootstrap/scss/nav";
+@import "~bootstrap/scss/navbar";
+@import "~bootstrap/scss/card";
+// @import "~bootstrap/scss/breadcrumb";
+// @import "~bootstrap/scss/pagination";
+@import "~bootstrap/scss/badge";
+// @import "~bootstrap/scss/jumbotron";
+@import "~bootstrap/scss/alert";
+@import "~bootstrap/scss/progress";
+@import "~bootstrap/scss/media";
+@import "~bootstrap/scss/list-group";
+@import "~bootstrap/scss/close";
+// @import "~bootstrap/scss/toasts";
+// @import "~bootstrap/scss/modal";
+// @import "~bootstrap/scss/tooltip";
+@import "~bootstrap/scss/popover";
+// @import "~bootstrap/scss/carousel";
+// @import "~bootstrap/scss/spinners";
+@import "~bootstrap/scss/utilities";
+// @import "~bootstrap/scss/print";
+
+
+html, body {height: 100%;}
+
+.custom-nav {
+  display: block;
+  background: $gray-100;
+  z-index: 100;
+  line-height: 35px;
+
+  a {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  border-bottom: solid 1px $gray-300;
+}
+
+
+// mc-switch styles
+
+$width: 3em;
+$height: 1.5em;
+
+$switchPadding: 0.2em;
+$switchSize: $height - $switchPadding - $switchPadding;
+
+$translate: $width - $switchSize - $switchPadding - $switchPadding;
+
+mc-switch {
+  @each $name, $color in $theme-colors {
+    .switch-#{$name} {
+      input {
+        &:checked + .slider {
+          background-color: $color;
+        }
+
+        &:focus + .slider {
+          box-shadow: 0 0 5px rgba($color, 0.70);
+        }
+      }
+
+      &:hover {
+        .slider {
+          box-shadow: 0 0 5px rgba($color, 0.70);
+        }
+      }
+    }
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: $width;
+    height: $height;
+    margin: 0.25em;
+
+    input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+
+      &:checked + .slider {
+        &:before {
+          -webkit-transform: translateX($translate);
+          -ms-transform: translateX($translate);
+          transform: translateX($translate);
+        }
+      }
+
+      &:focus + .slider {
+        box-shadow: 0 0 1px #2196F3;
+      }
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      -webkit-transition: .4s;
+      transition: .4s;
+      border-radius: $width;
+
+      &:before {
+        position: absolute;
+        content: "";
+        height: $switchSize;
+        width: $switchSize;
+        left: $switchPadding;
+        bottom: $switchPadding;
+        background-color: white;
+        -webkit-transition: .4s;
+        transition: .4s;
+        border-radius: 50%;
+      }
+    }
+  }
+}

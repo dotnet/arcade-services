@@ -26,21 +26,21 @@
               "src/assets"
             ],
             "styles": [
-              "src/styles.scss"
+              "src/themes/styles.scss"
             ],
             "scripts": [],
             "es5BrowserSupport": true
           },
           "configurations": {
             "production": {
+              "styles": [
+                { "input": "src/themes/light/styles.scss", "bundleName": "light", "lazy": true },
+                { "input": "src/themes/dark/styles.scss", "bundleName": "dark", "lazy": true }
+              ],
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
                   "with": "src/environments/environment.prod.ts"
-                },
-                {
-                  "replace": "src/index.html",
-                  "with": "src/index.prod.html"
                 }
               ],
               "optimization": true,
