@@ -821,5 +821,17 @@ namespace Microsoft.DotNet.DarcLib
                 return GitDiff.UnknownDiff();
             }
         }
+
+        /// <summary>
+        ///     Clone a remote repository.
+        /// </summary>
+        /// <param name="repoUri">Repository uri to clone</param>
+        /// <param name="commit">Commit, branch, or tag to checkout</param>
+        /// <param name="targetDirectory">Directory to clone into</param>
+        /// <returns></returns>
+        public async Task CloneAsync(string repoUri, string commit, string targetDirectory)
+        {
+            await this.CloneAsync(repoUri, commit, targetDirectory, _logger, Client.Credentials.Password);
+        }
     }
 }

@@ -1039,5 +1039,17 @@ namespace Microsoft.DotNet.DarcLib
 
             return repoUri;
         }
+
+        /// <summary>
+        ///     Clone a remote repository.
+        /// </summary>
+        /// <param name="repoUri">Repository uri to clone</param>
+        /// <param name="commit">Branch, tag, or commit to checkout</param>
+        /// <param name="targetDirectory">Directory to clone into</param>
+        /// <returns></returns>
+        public Task CloneAsync(string repoUri, string commit, string targetDirectory)
+        {
+            return this.CloneAsync(repoUri, commit, targetDirectory, _logger, _personalAccessToken);
+        }
     }
 }

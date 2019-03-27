@@ -138,6 +138,15 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="targetVersion">Target version</param>
         /// <returns>Diff information</returns>
         Task<GitDiff> GitDiffAsync(string repoUri, string baseVersion, string targetVersion);
+
+        /// <summary>
+        ///     Clone a remote repository.
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="commit">Branch, commit, or tag to checkout</param>
+        /// <param name="targetDirectory">Directory to clone to</param>
+        /// <returns></returns>
+        Task CloneAsync(string repoUri, string commit, string targetDirectory);
     }
 
     public class PullRequest
