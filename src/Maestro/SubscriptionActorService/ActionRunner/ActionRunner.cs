@@ -98,6 +98,8 @@ namespace SubscriptionActorService
                 }
                 catch (Exception displayable) when (IsDisplayableException(displayable))
                 {
+                    string message = $"Non-fatal error processing action: {displayable.Message}";
+                    Logger.LogError(displayable, message);
                     await target.TrackFailedAction(
                         actionMessage,
                         displayable.Message,
