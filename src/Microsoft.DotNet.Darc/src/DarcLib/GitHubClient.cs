@@ -70,10 +70,10 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository URI</param>
         /// <param name="branch">Branch to get file contents from</param>
         /// <returns>File contents or throws on file not found.</returns>
-        public Task<string> GetFileContentsAsync(string filePath, string repoUri, string branch)
+        public async Task<string> GetFileContentsAsync(string filePath, string repoUri, string branch)
         {
             (string owner, string repo) = ParseRepoUri(repoUri);
-            return GetFileContentsAsync(owner, repo, filePath, branch);
+            return await GetFileContentsAsync(owner, repo, filePath, branch);
         }
 
         /// <summary>
