@@ -403,7 +403,11 @@ namespace Microsoft.DotNet.DarcLib
                     .Select(
                         async treeItem =>
                         {
-                            Blob blob = await Client.Git.Blob.Get(owner, repo, treeItem.Sha);
+                            Blob blob = await ExponentialRetry.RetryAsync(
+                                async () => await Client.Git.Blob.Get(owner, repo, treeItem.Sha),
+                                ex => _logger.LogError(ex, $"Failed to get blob at sha {treeItem.Sha}"),
+                                ex => ex is ApiException && ((ApiException)ex).StatusCode == HttpStatusCode.InternalServerError);
+
                             ContentEncoding encoding;
                             switch (blob.Encoding.Value)
                             {
