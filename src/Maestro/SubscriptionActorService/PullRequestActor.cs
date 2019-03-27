@@ -841,8 +841,9 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             {
                 pr.ContainedSubscriptions.RemoveAll(s => s.SubscriptionId == update.update.SubscriptionId);
             }
-            pr.ContainedSubscriptions.AddRange(
-                requiredUpdates.Select(
+            pr.ContainedSubscriptions.AddRange(requiredUpdates
+                .Where( u => !u.update.IsCoherencyUpdate)
+                .Select(
                     u => new SubscriptionPullRequestUpdate
                     {
                         SubscriptionId = u.update.SubscriptionId,
