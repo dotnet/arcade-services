@@ -323,7 +323,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="commit">Branch, commit, or tag to checkout</param>
         /// <param name="targetDirectory">Directory to clone the repo to</param>
         /// <returns></returns>
-        Task CloneAsync(string repoUri, string commit, string targetDirectory);
+        void Clone(string repoUri, string commit, string targetDirectory);
 
         #endregion
 

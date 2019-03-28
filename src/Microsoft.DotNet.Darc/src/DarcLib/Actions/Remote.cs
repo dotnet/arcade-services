@@ -851,10 +851,10 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="commit">Branch, commit, or tag to checkout</param>
         /// <param name="targetDirectory">Directory to clone to</param>
         /// <returns></returns>
-        public async Task CloneAsync(string repoUri, string commit, string targetDirectory)
+        public void Clone(string repoUri, string commit, string targetDirectory)
         {
             CheckForValidGitClient();
-            await _gitClient.CloneAsync(repoUri, commit, targetDirectory);
+            _gitClient.Clone(repoUri, commit, targetDirectory);
         }
 
         /// <summary>

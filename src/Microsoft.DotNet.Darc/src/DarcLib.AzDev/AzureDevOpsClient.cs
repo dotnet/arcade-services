@@ -1047,9 +1047,9 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="commit">Branch, tag, or commit to checkout</param>
         /// <param name="targetDirectory">Directory to clone into</param>
         /// <returns></returns>
-        public Task CloneAsync(string repoUri, string commit, string targetDirectory)
+        public void Clone(string repoUri, string commit, string targetDirectory)
         {
-            return this.CloneAsync(repoUri, commit, targetDirectory, _logger, _personalAccessToken);
+            this.Clone(repoUri, commit, targetDirectory, _logger, _personalAccessToken);
         }
     }
 }

@@ -82,7 +82,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     logger.LogInformation($"Remote repo {repoUri}@{commit} has no dependencies.  Cloning shallowly into {repoPath}");
                     IRemote repoRemote = await remoteFactory.GetRemoteAsync(repoUri, logger);
-                    await repoRemote.CloneAsync(repoUri, commit, repoPath);
+                    repoRemote.Clone(repoUri, commit, repoPath);
                 }
                 return;
             }
@@ -114,7 +114,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     logger.LogInformation($"Cloning {repo.RepoUri}@{repo.Commit} into {repoPath}");
                     IRemote repoRemote = await remoteFactory.GetRemoteAsync(repo.RepoUri, logger);
-                    await repoRemote.CloneAsync(repo.RepoUri, repo.Commit, repoPath);
+                    repoRemote.Clone(repo.RepoUri, repo.Commit, repoPath);
                 }
             }
         }

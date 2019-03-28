@@ -150,7 +150,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="commit">Branch, commit, or tag to checkout</param>
         /// <param name="targetDirectory">Target directory to clone to</param>
         /// <returns></returns>
-        protected async Task CloneAsync(string repoUri, string commit, string targetDirectory, ILogger _logger, string pat)
+        protected void Clone(string repoUri, string commit, string targetDirectory, ILogger _logger, string pat)
         {
             string dotnetMaestro = "dotnet-maestro";
             using (_logger.BeginScope("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory))
