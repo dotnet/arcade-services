@@ -2,6 +2,7 @@ using CSharpx;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -25,78 +26,35 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             try
             {
-                // use a queue to accumulate dependencies as we go
-                Queue<StrippedDependency> dependenciesToClone = new Queue<StrippedDependency>();
-                // use a set to keep track of whether we've seen dependencies before, otherwise we get trapped in circular dependencies
-                HashSet<StrippedDependency> seenDependencies = new HashSet<StrippedDependency>();
+                EnsureOptionsCompatibility(_options);
                 RemoteFactory remoteFactory = new RemoteFactory(_options);
-                
-                if (string.IsNullOrWhiteSpace(_options.ReposFolder))
+                HashSet<StrippedDependency> seenDependencies = new HashSet<StrippedDependency>();
+
+                if (_options.Local)
                 {
-                    _options.ReposFolder = Environment.CurrentDirectory;
-                }
+                    Local local = new Local(Logger);
+                    IEnumerable<DependencyDetail>  rootDependencies = await local.GetDependenciesAsync();
 
-                if (!Directory.Exists(_options.ReposFolder))
+                    foreach (DependencyDetail dep in rootDependencies)
+                    {
+                        StrippedDependency seen = new StrippedDependency(dep);
+                        if (seenDependencies.Contains(seen))
+                        {
+                            Logger.LogDebug($"Local dependency {dep.RepoUri}@{dep.Commit} already processed.  Skipping...");
+                        }
+                        else
+                        {
+                            seenDependencies.Add(seen);
+                            Logger.LogInformation($"Found local dependency {dep.RepoUri}@{dep.Commit}.  Starting deep clone...");
+                            await CloneRemoteRepoAndDependencies(remoteFactory, _options.ReposFolder, dep.RepoUri, dep.Commit, _options.IncludeToolset, Logger);
+                        }
+                    }
+                }
+                else
                 {
-                    Directory.CreateDirectory(_options.ReposFolder);
+                    Logger.LogInformation($"Starting deep clone of {_options.RepoUri}@{_options.Version}");
+                    await CloneRemoteRepoAndDependencies(remoteFactory, _options.ReposFolder, _options.RepoUri, _options.Version, _options.IncludeToolset, Logger);
                 }
-
-                // Start with the root repo we were asked to clone
-                dependenciesToClone.Enqueue(new StrippedDependency(_options.RepoUri, _options.Version));
-                
-                while (dependenciesToClone.Any())
-                {
-                    StrippedDependency repo = dependenciesToClone.Dequeue();
-                    string repoPath = GetRepoDirectory(_options.ReposFolder, repo.RepoUri, repo.Commit);
-                    if (Directory.Exists(repoPath))
-                    {
-                        Logger.LogDebug($"Repo path {repoPath} already exists, assuming we cloned already and skipping");
-                    }
-                    else
-                    {
-                        Logger.LogInformation($"Cloning {repo.RepoUri}@{repo.Commit} into {repoPath}");
-                        IRemote repoRemote = await remoteFactory.GetRemoteAsync(repo.RepoUri, Logger);
-                        await repoRemote.CloneAsync(repo.RepoUri, repo.Commit, repoPath);
-                    }
-
-                    Logger.LogDebug($"Starting to look for dependencies in {repoPath}");
-                    Local local = new Local(Logger, repoPath);
-
-                    try
-                    {
-                        IEnumerable<DependencyDetail> deps = await local.GetDependenciesAsync();
-                        IEnumerable<DependencyDetail> filteredDeps = FilterToolsetDependencies(deps);
-                        Logger.LogDebug($"Got {deps.Count()} dependencies and filtered to {filteredDeps.Count()} dependencies");
-                        filteredDeps.ForEach((d) => {
-                            // arcade depends on previous versions of itself to build, so this would go on forever
-                            if (d.RepoUri == repo.RepoUri)
-                            {
-                                Logger.LogDebug($"Skipping self-dependency in {repo.RepoUri} ({repo.Commit} => {d.Commit})");
-                            }
-                            else
-                            {
-                                StrippedDependency stripped = new StrippedDependency(d);
-                                if (!seenDependencies.Contains(stripped))
-                                {
-                                    Logger.LogDebug($"Adding new dependency {stripped.RepoUri}@{stripped.Commit}");
-                                    seenDependencies.Add(stripped);
-                                    dependenciesToClone.Enqueue(stripped);
-                                }
-                            }
-                        });
-                    }
-                    catch (DirectoryNotFoundException)
-                    {
-                        Logger.LogWarning($"Repo {repoPath} appears to have no '/eng' directory at commit {repo.Commit}.  Dependency chain is broken here.");
-                    }
-                    catch (FileNotFoundException)
-                    {
-                        Logger.LogWarning($"Repo {repoPath} appears to have no '/eng/Version.Details.xml' file at commit {repo.Commit}.  Dependency chain is broken here.");
-                    }
-
-                    Logger.LogDebug($"Now have {dependenciesToClone.Count} dependencies to consider");
-                }
-
 
                 return Constants.SuccessCode;
             }
@@ -107,16 +65,102 @@ namespace Microsoft.DotNet.Darc.Operations
             }
         }
 
-        private string GetRepoDirectory(string reposFolder, string repoUri, string commit)
+        private static async Task CloneRemoteRepoAndDependencies(RemoteFactory remoteFactory, string reposFolder, string repoUri, string commit, bool includeToolset, ILogger logger)
+        {
+            IRemote rootRepoRemote = await remoteFactory.GetRemoteAsync(repoUri, logger);
+            IEnumerable<DependencyDetail> rootDependencies = await rootRepoRemote.GetDependenciesAsync(repoUri, commit);
+            rootDependencies = FilterToolsetDependencies(rootDependencies, includeToolset);
+
+            if (!rootDependencies.Any())
+            {
+                string repoPath = GetRepoDirectory(reposFolder, repoUri, commit);
+                if (Directory.Exists(repoPath))
+                {
+                    logger.LogDebug($"Repo path {repoPath} already exists, assuming we cloned already and skipping");
+                }
+                else
+                {
+                    logger.LogInformation($"Remote repo {repoUri}@{commit} has no dependencies.  Cloning shallowly into {repoPath}");
+                    IRemote repoRemote = await remoteFactory.GetRemoteAsync(repoUri, logger);
+                    await repoRemote.CloneAsync(repoUri, commit, repoPath);
+                }
+                return;
+            }
+
+            DependencyGraphBuildOptions graphBuildOptions = new DependencyGraphBuildOptions()
+            {
+                IncludeToolset = includeToolset,
+                LookupBuilds = true,
+                NodeDiff = NodeDiff.None
+            };
+
+            logger.LogDebug($"Building depdendency graph for {repoUri}@{commit} with {rootDependencies.Count()} dependencies");
+            DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
+                remoteFactory,
+                rootDependencies,
+                repoUri,
+                commit,
+                graphBuildOptions,
+                logger);
+
+            foreach (DependencyGraphNode repo in graph.Nodes)
+            {
+                string repoPath = GetRepoDirectory(reposFolder, repo.RepoUri, repo.Commit);
+                if (Directory.Exists(repoPath))
+                {
+                    logger.LogDebug($"Repo path {repoPath} already exists, assuming we cloned already and skipping");
+                }
+                else
+                {
+                    logger.LogInformation($"Cloning {repo.RepoUri}@{repo.Commit} into {repoPath}");
+                    IRemote repoRemote = await remoteFactory.GetRemoteAsync(repo.RepoUri, logger);
+                    await repoRemote.CloneAsync(repo.RepoUri, repo.Commit, repoPath);
+                }
+            }
+        }
+
+        private static void EnsureOptionsCompatibility(CloneCommandLineOptions options)
+        {
+            if (options.Local)
+            {
+                if (!string.IsNullOrWhiteSpace(options.RepoUri) || !string.IsNullOrWhiteSpace(options.Version))
+                {
+                    throw new ArgumentException($"If using the local Version.Details.xml to determine repos to clone, repo-uri and version are not applicable.");
+                }
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(options.RepoUri))
+                {
+                    throw new ArgumentException($"If not using a local Version.Details.xml, the repo to start the clone at must be specified.");
+                }
+                if (string.IsNullOrWhiteSpace(options.Version))
+                {
+                    throw new ArgumentException($"If not using a local Version.Details.xml, the version to start the clone at must be specified.");
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(options.ReposFolder))
+            {
+                options.ReposFolder = Environment.CurrentDirectory;
+            }
+
+            if (!Directory.Exists(options.ReposFolder))
+            {
+                Directory.CreateDirectory(options.ReposFolder);
+            }
+        }
+
+        private static string GetRepoDirectory(string reposFolder, string repoUri, string commit)
         {
             // commit could actually be a branch or tag, make it filename-safe
             commit = commit.Replace('/', '-').Replace('\\', '-').Replace('?', '-').Replace('*', '-').Replace(':', '-').Replace('|', '-').Replace('"', '-').Replace('<', '-').Replace('>', '-');
             return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}.{commit}");
         }
 
-        private IEnumerable<DependencyDetail> FilterToolsetDependencies(IEnumerable<DependencyDetail> dependencies)
+        private static IEnumerable<DependencyDetail> FilterToolsetDependencies(IEnumerable<DependencyDetail> dependencies, bool includeToolset)
         {
-            if (!_options.IncludeToolset)
+            if (!includeToolset)
             {
                 Console.WriteLine($"Removing toolset dependencies...");
                 return dependencies.Where(dependency => dependency.Type != DependencyType.Toolset);

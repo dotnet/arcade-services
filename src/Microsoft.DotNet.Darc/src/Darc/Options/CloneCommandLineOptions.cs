@@ -10,10 +10,13 @@ namespace Microsoft.DotNet.Darc.Options
 
     internal class CloneCommandLineOptions : CommandLineOptions
     {
-        [Option("repo", Required = true, HelpText = "Remote repository to start the clone operation at.")]
+        [Option('l', "local", HelpText = "Clone all repos that this local repository declares a reference on.")]
+        public bool Local { get; set; }
+
+        [Option("repo", HelpText = "Remote repository to start the clone operation at.")]
         public string RepoUri { get; set; }
 
-        [Option('v', "version", Required = true, HelpText = "Branch, commit or tag to start at in the remote repository.")]
+        [Option('v', "version", HelpText = "Branch, commit or tag to start at in the remote repository.")]
         public string Version { get; set; }
 
         [Option("repos-folder", HelpText = @"Full path to folder where all the repos will be cloned to. i.e. C:\repos.  Default: current directory.")]

@@ -183,8 +183,6 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 catch (Exception exc)
                 {
-                    // This was originally a DarcException. Making it an actual Exception so we get to see in AppInsights if something failed while
-                    // commiting the changes
                     throw new Exception($"Something went wrong when cloning repo {repoUri} at {commit} into {targetDirectory}", exc);
                 }
             }
