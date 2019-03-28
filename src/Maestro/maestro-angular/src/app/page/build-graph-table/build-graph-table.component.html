@@ -43,8 +43,10 @@
 </ng-template>
 <table class="table table-sm table-hover mb-0">
   <thead>
-    <th style="min-width: 0">
-      <span style="float: right; cursor: help;" [ngbPopover]="popContent" popoverTitle="Help" placement="right"><fa-icon [icon]="['far', 'question-circle']"></fa-icon></span>
+    <th style="min-width: 0" class="graph-icon">
+      <span style="cursor: help;" [ngbPopover]="popContent" popoverTitle="Help" placement="right">
+        <fa-icon [icon]="['far', 'question-circle']"></fa-icon>
+      </span>
     </th>
     <th>Repository</th>
     <th>Date Produced</th>
@@ -59,33 +61,26 @@
       [ngClass]="{'table-warning': !isCoherent(node)}"
       (mouseenter)="hover(node.build.id)"
       (mouseleave)="hover(undefined)">
-      <td style="width: 2em; text-align: center"
-          (click)="node.isFocused && toggleLock()">
-        <div style="display: inline-block">
-          <span *ngIf="node.isFocused; else first">
+      <td (click)="node.isFocused && toggleLock()" class="graph-icon">
+        <div>
+          <span [style.visibility]="node.state == 'locked' ? 'visible' : 'hidden'">
             <fa-icon icon="lock" *ngIf="node.isLocked" title="locked"></fa-icon>
+          </span>
+          <span [style.visibility]="node.state == 'unlocked' ? 'visible' : 'hidden'">
             <fa-icon icon="lock-open" *ngIf="!node.isLocked" title="unlocked"></fa-icon>
           </span>
-          <ng-template #first>
-            <span *ngIf="node.isSameRepository; else second" class="text-danger">
-              <fa-icon icon="exclamation-triangle" title="conflicting build"></fa-icon>
-            </span>
-          </ng-template>
-          <ng-template #second>
-            <span *ngIf="node.isAncestor; else third">
-              <fa-icon icon="ellipsis-v" title="ancestor"></fa-icon>
-            </span>
-          </ng-template>
-          <ng-template #third>
-            <span *ngIf="node.isParent; else fourth">
-              <fa-icon icon="angle-up" title="parent"></fa-icon>
-            </span>
-          </ng-template>
-          <ng-template #fourth>
-            <span *ngIf="node.isDependent">
-              <fa-icon icon="angle-right" title="child"></fa-icon>
-            </span>
-          </ng-template>
+          <span [style.visibility]="node.state == 'conflict' ? 'visible' : 'hidden'" class="text-danger">
+            <fa-icon icon="exclamation-triangle" title="conflicting build"></fa-icon>
+          </span>
+          <span [style.visibility]="node.state == 'ancestor' ? 'visible' : 'hidden'">
+            <fa-icon icon="ellipsis-v" title="ancestor"></fa-icon>
+          </span>
+          <span [style.visibility]="node.state == 'parent' ? 'visible' : 'hidden'">
+            <fa-icon icon="angle-up" title="parent"></fa-icon>
+          </span>
+          <span [style.visibility]="node.state == 'child' ? 'visible' : 'hidden'">
+            <fa-icon icon="angle-right" title="child"></fa-icon>
+          </span>
         </div>
       </td>
       <td>

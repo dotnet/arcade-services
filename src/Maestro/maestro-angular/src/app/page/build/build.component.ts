@@ -123,6 +123,10 @@ export class BuildComponent implements OnInit, OnChanges {
 
   public getBuildLink = getBuildLink;
 
+  public getRepo(build: Build) {
+    return build.gitHubRepository || build.azureDevOpsRepository;
+  }
+
   public getBuildLinkFromAzdo(account: string, project: string, buildId: number): string {
     return `https://dev.azure.com` +
       `/${account}` +
