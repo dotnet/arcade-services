@@ -202,7 +202,7 @@ export class BuildGraphTableComponent implements OnChanges {
         b.isDependent = focusedBuild.dependencies && focusedBuild.dependencies.some(d => d.buildId == b.build.id);
         b.isParent = isParent(focusedBuild.id, b.build.id, false);
         b.isAncestor = !b.isParent && isParent(focusedBuild.id, b.build.id, true);
-        b.isSameRepository = b.build.id !== focusedBuild.id && b.build.gitHubRepository === focusedBuild.gitHubRepository;
+        b.isSameRepository = b.build.id !== focusedBuild.id && getRepo(b.build) === getRepo(focusedBuild);
         b.isFocused = b.build.id === focusedBuild.id;
         b.isLocked = b.isFocused && this.locked;
       }
