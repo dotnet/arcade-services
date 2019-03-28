@@ -24,6 +24,17 @@ export function topologicalSort<TNode, TKey>(nodes: TNode[], getChildren: (node:
   const sorted: TNode[] = [];
   const toProcess: TNode[] = nodes.filter(node => !hasIncommingEdges(node));
   while (toProcess.length) {
+    toProcess.sort((a, b) => {
+      const ak = getKey(a);
+      const bk = getKey(b);
+      if (ak < bk) {
+        return -1;
+      }
+      if (ak > bk) {
+        return 1;
+      }
+      return 0;
+    })
     const n = toProcess.pop() as TNode; // can't be undefined
     log("processing: " + getKey(n))
     sorted.push(n);

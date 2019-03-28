@@ -1,7 +1,9 @@
-import { Component, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { Build, BuildGraph } from 'src/maestro-client/models';
 import { topologicalSort, getCommitLink, getBuildLink } from 'src/helpers';
 import { trigger, transition, style, animate } from '@angular/animations';
+
+type BuildState = "locked" | "unlocked" | "conflict" | "ancestor" | "parent" | "child";
 
 interface BuildData {
   build: Build;
@@ -16,6 +18,33 @@ interface BuildData {
   isFocused?: boolean;
   isLocked?: boolean;
   isToolset?: boolean;
+  state?: BuildState;
+}
+
+function getState(b: BuildData): BuildState | undefined {
+  if (b.isFocused) {
+    if (b.isLocked) {
+      return "locked";
+    } else {
+      return "unlocked";
+    }
+  }
+
+  if (b.isSameRepository) {
+    return "conflict";
+  }
+
+  if (b.isAncestor) {
+    return "ancestor";
+  }
+
+  if (b.isParent) {
+    return "parent";
+  }
+
+  if(b.isDependent) {
+    return "child";
+  }
 }
 
 function getRepo(build: Build) {
@@ -177,6 +206,7 @@ export class BuildGraphTableComponent implements OnChanges {
         b.isFocused = b.build.id === focusedBuild.id;
         b.isLocked = b.isFocused && this.locked;
       }
+      b.state = getState(b);
     }
   }
 
