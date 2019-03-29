@@ -388,42 +388,44 @@ namespace Microsoft.DotNet.DarcLib
                     updateList.Add(currentDependency);
                     DependencyDetail parentCoherentDependency = dependencies.FirstOrDefault(d =>
                         d.Name.Equals(currentDependency.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
-                    // If the coherent dependency is not found, this is non-valid.
-                    if (parentCoherentDependency == null)
-                    {
-                        throw new DarcException($"Dependency {currentDependency.Name} has non-existent parent " +
+                    currentDependency = parentCoherentDependency ?? throw new DarcException($"Dependency {currentDependency.Name} has non-existent parent " +
                             $"dependency {currentDependency.CoherentParentDependencyName}");
-                    }
-                    currentDependency = parentCoherentDependency;
                 }
 
                 DependencyGraphNode rootNode = null;
 
-                // At head, build dependency graph if need be. It's quite possible that this node
-                // has already been visited in a relatively coherent graph, so first check the node cache
-                if (!nodeCache.TryGetValue($"{currentDependency.RepoUri}@{currentDependency.Commit}", out rootNode))
+                // Build the graph to find the assets if we don't have the root in the cache.
+                // The graph build is automatically broken when
+                // all the desired assets are found (breadth first search). This means the cache may or
+                // may not contain a complete graph for a given node. So, we first search the cache for the desired assets,
+                // then if not found (or if there was no cache), we then build the graph from that node.
+                bool nodeFromCache = nodeCache.TryGetValue($"{currentDependency.RepoUri}@{currentDependency.Commit}", out rootNode);
+                if (!nodeFromCache)
                 {
-                    DependencyGraph dependencyGraph =
-                        await DependencyGraph.BuildRemoteDependencyGraphAsync(remoteFactory,
-                            null, currentDependency.RepoUri, currentDependency.Commit,
-                            dependencyGraphBuildOptions, _logger);
-
-                    // Cache all nodes in this built graph.
-                    foreach (DependencyGraphNode node in dependencyGraph.Nodes)
-                    {
-                        if (!nodeCache.ContainsKey($"{node.RepoUri}@{node.Commit}"))
-                        {
-                            nodeCache.Add($"{node.RepoUri}@{node.Commit}", node);
-                        }
-                    }
-                    rootNode = dependencyGraph.Root;
+                    _logger.LogInformation($"Node not found in cache, starting graph build at " +
+                        $"{currentDependency.RepoUri}@{currentDependency.Commit}");
+                    rootNode = await BuildGraphAtDependency(remoteFactory, currentDependency, updateList, nodeCache);
                 }
 
+                List<DependencyDetail> leftToFind = new List<DependencyDetail>(updateList);
                 // Now do the lookup to find the element in the tree for each item in the update list
                 foreach (DependencyDetail dependencyInUpdateChain in updateList)
                 {
                     (Asset coherentAsset, Build buildForAsset) =
                         FindAssetInBuildTree(dependencyInUpdateChain.Name, rootNode);
+
+                    // If we originally got the root node from the cache the graph may be incomplete.
+                    // Rebuild to attempt to find all the assets we have left to find. If we still can't find, or if
+                    // the root node did not come the cache, then we're in an invalid state.
+                    if (coherentAsset == null && nodeFromCache)
+                    {
+                        _logger.LogInformation($"Asset {dependencyInUpdateChain.Name} was not found in cached graph, rebuilding from " +
+                            $"{currentDependency.RepoUri}@{currentDependency.Commit}");
+                        rootNode = await BuildGraphAtDependency(remoteFactory, currentDependency, leftToFind, nodeCache);
+                        // And attempt to find again.
+                        (coherentAsset, buildForAsset) =
+                            FindAssetInBuildTree(dependencyInUpdateChain.Name, rootNode);
+                    }
 
                     if (coherentAsset == null)
                     {
@@ -432,6 +434,10 @@ namespace Microsoft.DotNet.DarcLib
                         throw new DarcException($"Unable to update {dependencyInUpdateChain.Name} to have coherency with " +
                             $"parent {dependencyInUpdateChain.CoherentParentDependencyName}. No matching asset found in tree. " +
                             $"Either remove the coherency attribute or mark as pinned.");
+                    }
+                    else
+                    {
+                        leftToFind.Remove(dependencyInUpdateChain);
                     }
 
                     string buildRepoUri = buildForAsset.GitHubRepository ?? buildForAsset.AzureDevOpsRepository;
@@ -463,6 +469,41 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             return toUpdate;
+        }
+
+        private async Task<DependencyGraphNode> BuildGraphAtDependency(
+            IRemoteFactory remoteFactory,
+            DependencyDetail rootDependency,
+            List<DependencyDetail> updateList,
+            Dictionary<string, DependencyGraphNode> nodeCache)
+        {
+            DependencyGraphBuildOptions dependencyGraphBuildOptions = new DependencyGraphBuildOptions()
+            {
+                IncludeToolset = true,
+                LookupBuilds = true,
+                NodeDiff = NodeDiff.None,
+                EarlyBuildBreak = new EarlyBreakOn
+                {
+                    Type = EarlyBreakOnType.Assets,
+                    BreakOn = new List<string>(updateList.Select(d => d.Name))
+                }
+            };
+
+            DependencyGraph dependencyGraph =
+                await DependencyGraph.BuildRemoteDependencyGraphAsync(remoteFactory,
+                    null, rootDependency.RepoUri, rootDependency.Commit,
+                    dependencyGraphBuildOptions, _logger);
+
+            // Cache all nodes in this built graph.
+            foreach (DependencyGraphNode node in dependencyGraph.Nodes)
+            {
+                if (!nodeCache.ContainsKey($"{node.RepoUri}@{node.Commit}"))
+                {
+                    nodeCache.Add($"{node.RepoUri}@{node.Commit}", node);
+                }
+            }
+
+            return dependencyGraph.Root;
         }
 
         /// <summary>

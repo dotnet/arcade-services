@@ -243,6 +243,13 @@
       <RepoUri>Extensions</RepoUri>
       <Commit>0de62ae930da31048ba7e54c8cd0c6c0bcbd9095</Commit>
     </Dependency>
+	<Dependency>
+      <Name>Microsoft.AspNetCore.BenchmarkRunner.Sources</Name>
+      <Version>3.0.0-preview.19074.2</Version>
+      <Type>Product</Type>
+      <RepoUri>Extensions</RepoUri>
+      <Commit>0de62ae930da31048ba7e54c8cd0c6c0bcbd9095</Commit>
+    </Dependency>
     <Dependency>
       <Name>Microsoft.AspNetCore.Testing</Name>
       <Version>3.0.0-preview.19074.2</Version>
