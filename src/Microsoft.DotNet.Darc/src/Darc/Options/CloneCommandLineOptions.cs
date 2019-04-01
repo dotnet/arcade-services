@@ -1,6 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 
@@ -10,13 +11,10 @@ namespace Microsoft.DotNet.Darc.Options
 
     internal class CloneCommandLineOptions : CommandLineOptions
     {
-        [Option('l', "local", HelpText = "Clone all repos that this local repository declares a reference on.")]
-        public bool Local { get; set; }
-
-        [Option("repo", HelpText = "Remote repository to start the clone operation at.")]
+        [Option("repo", HelpText = "Remote repository to start the clone operation at.  If none specified, clone all that the current repo depends on.")]
         public string RepoUri { get; set; }
 
-        [Option('v', "version", HelpText = "Branch, commit or tag to start at in the remote repository.")]
+        [Option('v', "version", HelpText = "Branch, commit or tag to start at in the remote repository.  Required if repo is specified.")]
         public string Version { get; set; }
 
         [Option("repos-folder", HelpText = @"Full path to folder where all the repos will be cloned to. i.e. C:\repos.  Default: current directory.")]
