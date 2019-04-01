@@ -146,6 +146,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 return null;
             }
 
+            // Commonly, if a repository has a dependency on an asset from a build, more dependencies will be to that same build
+            // lets fetch all assets from that build to save time later.
             var build = await client.Builds.GetBuildAsync(buildId.Value, cancellationToken);
             foreach (var asset in build.Assets)
             {
