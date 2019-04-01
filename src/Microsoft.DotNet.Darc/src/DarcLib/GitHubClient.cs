@@ -406,7 +406,7 @@ namespace Microsoft.DotNet.DarcLib
                             Blob blob = await ExponentialRetry.RetryAsync(
                                 async () => await Client.Git.Blob.Get(owner, repo, treeItem.Sha),
                                 ex => _logger.LogError(ex, $"Failed to get blob at sha {treeItem.Sha}"),
-                                ex => ex is ApiException apiex && apiex.StatusCode == HttpStatusCode.InternalServerError;
+                                ex => ex is ApiException apiex && apiex.StatusCode == HttpStatusCode.InternalServerError);
 
                             ContentEncoding encoding;
                             switch (blob.Encoding.Value)
