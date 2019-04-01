@@ -102,9 +102,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
             var local = new Local(logger, RepoRoot);
             IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync();
             var builds = new Dictionary<int, bool>();
+            var assetCache = new Dictionary<(string name, string version), int>();
             foreach (var dep in dependencies)
             {
-                var buildId = await GetBuildId(dep, client, cancellationToken);
+                var buildId = await GetBuildId(dep, client, assetCache, cancellationToken);
                 if (buildId == null)
                 {
                     Log.LogMessage(
@@ -132,10 +133,29 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return builds.Select(t => new BuildRef(t.Key, t.Value)).ToImmutableList();
         }
 
-        private async Task<int?> GetBuildId(DependencyDetail dep, IMaestroApi client, CancellationToken cancellationToken)
+        private static async Task<int?> GetBuildId(DependencyDetail dep, IMaestroApi client, Dictionary<(string name, string version), int> assetCache, CancellationToken cancellationToken)
         {
+            if (assetCache.TryGetValue((dep.Name, dep.Version), out int value))
+            {
+                return value;
+            }
             var assets = await client.Assets.ListAssetsAsync(name: dep.Name, version: dep.Version, cancellationToken: cancellationToken);
-            return assets.OrderByDescending(a => a.Id).FirstOrDefault()?.BuildId;
+            var buildId = assets.OrderByDescending(a => a.Id).FirstOrDefault()?.BuildId;
+            if (!buildId.HasValue)
+            {
+                return null;
+            }
+
+            var build = await client.Builds.GetBuildAsync(buildId.Value, cancellationToken);
+            foreach (var asset in build.Assets)
+            {
+                if (!assetCache.ContainsKey((asset.Name, asset.Version)))
+                {
+                    assetCache.Add((asset.Name, asset.Version), build.Id);
+                }
+            }
+
+            return buildId;
         }
 
         private string GetVersion(string assetId)
