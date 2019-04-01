@@ -11,7 +11,7 @@ namespace Microsoft.DotNet.DarcLib
     {
         private static readonly Random Randomizer = new Random();
 
-        private const int RetryCount = 15;
+        private const int RetryCount = 10;
 
         private const double RetryBackOffFactor = 1.3;
 
