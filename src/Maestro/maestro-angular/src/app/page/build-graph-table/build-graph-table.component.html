@@ -63,10 +63,10 @@
       (mouseleave)="hover(undefined)">
       <td (click)="node.isFocused && toggleLock()" class="graph-icon">
         <div>
-          <span [style.visibility]="node.state == 'locked' ? 'visible' : 'hidden'">
+          <span [style.visibility]="node.state == 'locked' ? 'visible' : 'hidden'" style="cursor: pointer;">
             <fa-icon icon="lock" *ngIf="node.isLocked" title="locked"></fa-icon>
           </span>
-          <span [style.visibility]="node.state == 'unlocked' ? 'visible' : 'hidden'">
+          <span [style.visibility]="node.state == 'unlocked' ? 'visible' : 'hidden'" style="cursor: pointer;">
             <fa-icon icon="lock-open" *ngIf="!node.isLocked" title="unlocked"></fa-icon>
           </span>
           <span [style.visibility]="node.state == 'conflict' ? 'visible' : 'hidden'" class="text-danger">
