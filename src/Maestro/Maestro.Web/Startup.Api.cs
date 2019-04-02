@@ -84,6 +84,7 @@ namespace Maestro.Web
                             var paginated = ctx.MethodInfo.GetCustomAttribute<PaginatedAttribute>();
                             if (paginated != null)
                             {
+                                // Add an extension that tells the client generator that this operation is paged with first,prev,next,last urls in the Link header.
                                 op.Extensions["x-ms-paginated"] = new
                                 {
                                     page = paginated.PageParameterName,
