@@ -845,6 +845,19 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Clone a remote repo
+        /// </summary>
+        /// <param name="repoUri">Repository to clone</param>
+        /// <param name="commit">Branch, commit, or tag to checkout</param>
+        /// <param name="targetDirectory">Directory to clone to</param>
+        /// <returns></returns>
+        public void Clone(string repoUri, string commit, string targetDirectory)
+        {
+            CheckForValidGitClient();
+            _gitClient.Clone(repoUri, commit, targetDirectory);
+        }
+
+        /// <summary>
         ///     Called prior to operations requiring the BAR.  Throws if a bar client isn't available.
         /// </summary>
         private void CheckForValidBarClient()
