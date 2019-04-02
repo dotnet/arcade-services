@@ -11,7 +11,7 @@
       <fa-icon class="text-info" icon="question-circle"></fa-icon>
     </div>
     <div class="flex-grow-1">
-      <h4>{{build.gitHubRepository}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
+      <h4>{{getRepo(build)}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
       <div>
         <span>Loading build information from Azure Pipelines</span>
         <div style="display:inline-block; vertical-align: middle;">
@@ -25,7 +25,7 @@
       <fa-icon class="text-warning" icon="exclamation-circle"></fa-icon>
     </div>
     <div class="flex-grow-1">
-      <h4>{{build.gitHubRepository}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
+      <h4>{{getRepo(build)}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
       <div>
         <span class="text-warning" *ngIf="!haveAzDevInfo(build)">
           Cannot lookup build in Azure Pipelines. Missing required data. Update to the latest Arcade SDK to collect this data.
@@ -59,7 +59,7 @@
             </a>
           </div>
         </div>
-        <h4>{{build.gitHubRepository}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
+        <h4>{{getRepo(build)}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
         <div><a class="btn btn-sm btn-info" [href]="getCommitLink(build)" target="_blank">{{build.commit}} <fa-icon
               icon="external-link-alt"></fa-icon></a></div>
         <div>{{build.dateProduced | relativeDate}}</div>

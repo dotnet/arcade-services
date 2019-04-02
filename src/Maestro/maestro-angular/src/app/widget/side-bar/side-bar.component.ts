@@ -11,7 +11,6 @@ import { StatefulResult, statefulSwitchMap } from 'src/stateful';
 @Component({
   selector: "mc-side-bar",
   templateUrl: "./side-bar.component.html",
-  styleUrls: ["./side-bar.component.scss"],
   animations: [
     trigger("openClose", [
       state("open", style({width: "250px"})),

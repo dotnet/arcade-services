@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
@@ -23,20 +24,34 @@ namespace Maestro.Web.Pages
             Environment = environment;
         }
 
+        public IReadOnlyList<(string name, string file)> Themes { get; private set; }
+        public string CurrentThemeFile { get; private set; }
+
         public PageResult OnGet()
         {
+            Themes = GetThemes();
+            CurrentThemeFile = GetCurrentThemeFile();
             return Page();
         }
 
-        public HtmlString GetStyleBundles()
+        public IReadOnlyList<(string name, string file)> GetThemes()
         {
             var assetsJson = Path.Join(Environment.WebRootPath, "assets.json");
             var assets = JObject.Parse(System.IO.File.ReadAllText(assetsJson));
 
-            var links = assets["styles"].ToObject<JArray>()
-                .Select(s => $"<link rel=\"stylesheet\" href=\"{s["file"]}\">");
+            return assets["styles"].ToObject<JArray>().Select(s => (s["name"].ToString(), s["file"].ToString())).ToList();
+        }
 
-            return new HtmlString(string.Join("", links));
+        public string GetCurrentThemeFile()
+        {
+            var selectedThemeName = HttpContext.Request.Cookies["Maestro.Theme"];
+            var selectedTheme = Themes.FirstOrDefault(t => t.name == selectedThemeName);
+            if (selectedTheme.file == default)
+            {
+                selectedTheme = Themes.FirstOrDefault(t => t.name == "light");
+            }
+
+            return selectedTheme.file;
         }
 
         public HtmlString GetScriptBundles()

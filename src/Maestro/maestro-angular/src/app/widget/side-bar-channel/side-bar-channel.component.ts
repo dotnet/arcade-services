@@ -39,6 +39,7 @@ export class SideBarChannelComponent implements OnInit, OnDestroy {
   public constructor(private channelService: ChannelService, private router: Router) { }
 
   @Input() public channel!: Channel;
+  @Input() public index!: number;
 
   public isCollapsed = true;
 

@@ -1,10 +1,10 @@
-<div style="overflow-y: scroll; width: 280px;">
+<div style="overflow-y: scroll; width: 280px; height: 100%;">
   <ng-template #loadingChannels>
     <progress-ring [style]="{ 'width.px': 200, 'height.px': 200, margin: 'auto' }"></progress-ring>
   </ng-template>
   <ng-container *stateful="let channels from channels$; loadingTemplate: loadingChannels">
-    <ng-container *ngFor="let channel of channels">
-      <mc-side-bar-channel [channel]="channel"></mc-side-bar-channel>
+    <ng-container *ngFor="let channel of channels; let idx = index">
+      <mc-side-bar-channel [channel]="channel" [index]="idx"></mc-side-bar-channel>
     </ng-container>
   </ng-container>
 </div>

@@ -1,3 +1,14 @@
+<ng-template #themePicker>
+  <div ngbDropdown placement="left">
+    <a class="nav-link" style="cursor: pointer;" id="navbarTheme" role="button" ngbDropdownToggle>
+      Theme
+    </a>
+    <div ngbDropdownMenu aria-labelledby="navbarTheme">
+      <a *ngFor="let theme of themes" style="cursor: pointer;" class="dropdown-item" [ngClass]="{ active: theme.name === currentTheme }" (click)="selectTheme(theme.name)">{{theme.name}}</a>
+    </div>
+  </div>
+</ng-template>
+
 <div class="d-flex flex-column" style="height: 100%; width: 100%;">
   <div class="d-flex flex-row flex-grow-1" style="overflow: visible; min-height: 56px; max-height: 56px;">
     <nav class="navbar navbar-expand-md navbar-light bg-light" style="min-height: 56px; width: 100%;">
@@ -15,12 +26,13 @@
           </li>
         </ul>
         <ul class="navbar-nav ml-auto">
-          <li class="nav-item" *ngIf="userName" ngbDropdown>
+          <li class="nav-item" *ngIf="userName" ngbDropdown [autoClose]="'outside'">
             <a class="nav-link" style="cursor: pointer;" id="navbarDropdown" role="button" ngbDropdownToggle>
               {{userName}} <span class="caret"></span>
             </a>
             <div ngbDropdownMenu aria-labelledby="navbarDropdown">
               <a class="dropdown-item" href="/Account/Tokens">Tokens</a>
+              <ng-container *ngTemplateOutlet="themePicker"></ng-container>
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="/Account/SignOut">Sign Out</a>
             </div>
@@ -42,7 +54,8 @@
     </ng-container>
     <ng-container *ngIf="!userName">
       <div class="d-flex flex-grow-1 grow-children" style="overflow-y: auto;">
-        <p class="p-2">Please <a href="/Account/SignIn?returnUrl={{returnUrl | uriEncode}}">Sign In</a> to use this site.</p>
+        <p class="p-2">Please <a href="/Account/SignIn?returnUrl={{returnUrl | uriEncode}}">Sign In</a> to use this
+          site.</p>
       </div>
     </ng-container>
   </div>

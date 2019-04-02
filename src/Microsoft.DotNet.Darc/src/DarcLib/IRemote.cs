@@ -316,6 +316,15 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Latest commit</returns>
         Task<string> GetLatestCommitAsync(string repoUri, string branch);
 
+        /// <summary>
+        ///     Clone a remote repo.
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="commit">Branch, commit, or tag to checkout</param>
+        /// <param name="targetDirectory">Directory to clone the repo to</param>
+        /// <returns></returns>
+        void Clone(string repoUri, string commit, string targetDirectory);
+
         #endregion
 
         #region Build/Asset Operations

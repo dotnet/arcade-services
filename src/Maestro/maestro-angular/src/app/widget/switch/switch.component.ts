@@ -3,7 +3,6 @@ import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
 @Component({
   selector: 'mc-switch',
   templateUrl: './switch.component.html',
-  styleUrls: ['./switch.component.scss']
 })
 export class SwitchComponent {
   @Input() public style?: object;

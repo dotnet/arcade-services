@@ -10,6 +10,7 @@ import { Observable } from 'rxjs';
 import { BuildStatusService } from 'src/app/services/build-status.service';
 import { BuildStatus } from 'src/app/model/build-status';
 import { statefulSwitchMap, StatefulResult, statefulPipe } from 'src/stateful';
+import { getCommitLink, getBuildLink } from 'src/helpers';
 
 interface AzDevBuildInfo {
   isMostRecent: boolean;
@@ -118,26 +119,12 @@ export class BuildComponent implements OnInit, OnChanges {
       );
   }
 
-  public getCommitLink(build: Build): string {
-    if (!build) {
-      return "nothing";
-    }
-    return `https://dev.azure.com/${build.azureDevOpsAccount}` +
-      `/${build.azureDevOpsProject}` +
-      `/_git` +
-      `/${build.azureDevOpsRepository}` +
-      `?_a=history&version=GC${build.commit}`;
-  }
+  public getCommitLink = getCommitLink;
 
-  public getBuildLink(build: Build): string {
-    if (!build) {
-      return "nothing";
-    }
-    return `https://dev.azure.com` +
-      `/${build.azureDevOpsAccount}` +
-      `/${build.azureDevOpsProject}` +
-      `/_build/results` +
-      `?view=logs&buildId=${build.azureDevOpsBuildId}`;
+  public getBuildLink = getBuildLink;
+
+  public getRepo(build: Build) {
+    return build.gitHubRepository || build.azureDevOpsRepository;
   }
 
   public getBuildLinkFromAzdo(account: string, project: string, buildId: number): string {
@@ -145,6 +132,6 @@ export class BuildComponent implements OnInit, OnChanges {
       `/${account}` +
       `/${project}` +
       `/_build/results` +
-      `?view=logs&buildId=${buildId}`;
+      `?view=results&buildId=${buildId}`;
   }
 }

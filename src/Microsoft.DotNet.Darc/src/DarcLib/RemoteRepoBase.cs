@@ -143,6 +143,51 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
+        /// <summary>
+        ///     Clone a remote git repo.
+        /// </summary>
+        /// <param name="repoUri">Repository uri to clone</param>
+        /// <param name="commit">Branch, commit, or tag to checkout</param>
+        /// <param name="targetDirectory">Target directory to clone to</param>
+        /// <returns></returns>
+        protected void Clone(string repoUri, string commit, string targetDirectory, ILogger _logger, string pat)
+        {
+            string dotnetMaestro = "dotnet-maestro";
+            using (_logger.BeginScope("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory))
+            {
+                try
+                {
+                    _logger.LogDebug($"Cloning {repoUri} to {targetDirectory}");
+                    string repoPath = LibGit2Sharp.Repository.Clone(
+                        repoUri,
+                        targetDirectory,
+                        new LibGit2Sharp.CloneOptions
+                        {
+                            Checkout = false,
+                            CredentialsProvider = (url, user, cred) =>
+                            new LibGit2Sharp.UsernamePasswordCredentials
+                            {
+                                // The PAT is actually the only thing that matters here, the username
+                                // will be ignored.
+                                Username = dotnetMaestro,
+                                Password = pat
+                            }
+                        });
+
+                    _logger.LogDebug($"Reading local repo from {repoPath}");
+                    using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoPath))
+                    {
+                        _logger.LogDebug($"Checking out {commit} in {repoPath}");
+                        LibGit2Sharp.Commands.Checkout(localRepo, commit);
+                    }
+                }
+                catch (Exception exc)
+                {
+                    throw new Exception($"Something went wrong when cloning repo {repoUri} at {commit} into {targetDirectory}", exc);
+                }
+            }
+        }
+
         private byte[] GetUtf8ContentBytes(string content, ContentEncoding encoding)
         {
             switch (encoding)

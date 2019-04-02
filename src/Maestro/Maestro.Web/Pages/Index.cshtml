@@ -82,9 +82,15 @@
         window.applicationData = {
           brand: '@Html.Raw(ViewBag.Brand)',
           userName: '@Html.Raw(HttpUtility.JavaScriptStringEncode(await GetUserNameAsync()))',
+          themes: [
+            @foreach (var theme in Model.Themes)
+            {
+            @:{ name: "@theme.name", file: "@theme.file" },
+            }
+          ],
         };
     </script>
-    @Model.GetStyleBundles()
+    <link rel="stylesheet" href="@Model.CurrentThemeFile" purpose="theme"/>
 </head>
 <body>
 <mc-root>
