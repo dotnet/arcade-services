@@ -251,15 +251,16 @@ namespace ReleasePipelineRunner
                                 if (HasInProgressEnvironments(release))
                                 {
                                     unfinishedReleases.Add(releaseStatus);
-                                    Logger.LogInformation($"Build {buildId}, channel {channelId}, still has unfinished release {releaseId} with status {release.Environments[0].Status}");
+                                    Logger.LogInformation($"Release {releaseId} from build {buildId} and channel {channelId} is still in progress.");
                                 }
                                 else
                                 {
                                     Logger.LogInformation($"Release {releaseId}, channel {channelId} finished executing");
 
-                                    if (release.Environments[0].Status == AzureDevOpsReleaseStatus.Rejected)
+                                    if (release.Environments.Any(r => r.Status != AzureDevOpsReleaseStatus.Succeeded))
                                     {
                                         await CreateGitHubIssueAsync(buildId, releaseId, release.Name);
+                                        await StateManager.RemoveAsync(release.Name);
                                     }
                                 }
                             }
@@ -271,7 +272,7 @@ namespace ReleasePipelineRunner
                             {
                                 // Something failed while fetching the release information so the potential created issue wouldn't have relevant information to
                                 // be notified so we just log the exception to AppInsights with not filed issue.
-                                Logger.LogError(ex, "Processing finished releases");
+                                Logger.LogError(ex, $"Processing release {releaseStatus.ReleaseId} failed. Check the exception for details.");
                             }
                         }
 
