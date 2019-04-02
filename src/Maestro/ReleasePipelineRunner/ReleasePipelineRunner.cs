@@ -5,14 +5,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Maestro.AzureDevOps;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.GitHub;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Git.IssueManager;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -225,21 +226,22 @@ namespace ReleasePipelineRunner
 
             var runningPipelines =
                 await StateManager.GetOrAddAsync<IReliableDictionary<int, IList<ReleasePipelineStatusItem>>>(RunningPipelineDictionaryName);
-            try
+
+            HashSet<BuildChannel> buildChannelsToAdd = new HashSet<BuildChannel>(new BuildChannelComparer());
+            using (ITransaction tx = StateManager.CreateTransaction())
             {
-                HashSet<BuildChannel> buildChannelsToAdd = new HashSet<BuildChannel>(new BuildChannelComparer());
-                using (ITransaction tx = StateManager.CreateTransaction())
+                var runningPipelinesEnumerable = await runningPipelines.CreateEnumerableAsync(tx, EnumerationMode.Unordered);
+                using (var asyncEnumerator = runningPipelinesEnumerable.GetAsyncEnumerator())
                 {
-                    var runningPipelinesEnumerable = await runningPipelines.CreateEnumerableAsync(tx, EnumerationMode.Unordered);
-                    using (var asyncEnumerator = runningPipelinesEnumerable.GetAsyncEnumerator())
+                    while (await asyncEnumerator.MoveNextAsync(cancellationToken))
                     {
-                        while (await asyncEnumerator.MoveNextAsync(cancellationToken))
+                        int buildId = asyncEnumerator.Current.Key;
+                        IList<ReleasePipelineStatusItem> releaseStatuses = asyncEnumerator.Current.Value;
+                        int channelId = releaseStatuses.First().ChannelId;
+                        List<ReleasePipelineStatusItem> unfinishedReleases = new List<ReleasePipelineStatusItem>();
+                        foreach (ReleasePipelineStatusItem releaseStatus in releaseStatuses)
                         {
-                            int buildId = asyncEnumerator.Current.Key;
-                            IList<ReleasePipelineStatusItem> releaseStatuses = asyncEnumerator.Current.Value;
-                            int channelId = releaseStatuses.First().ChannelId;
-                            List<ReleasePipelineStatusItem> unfinishedReleases = new List<ReleasePipelineStatusItem>();
-                            foreach (ReleasePipelineStatusItem releaseStatus in releaseStatuses)
+                            try
                             {
                                 int releaseId = releaseStatus.ReleaseId;
                                 AzureDevOpsClient azdoClient = await GetAzureDevOpsClientForAccount(releaseStatus.PipelineOrganization);
@@ -254,42 +256,49 @@ namespace ReleasePipelineRunner
                                 else
                                 {
                                     Logger.LogInformation($"Release {releaseId}, channel {channelId} finished executing");
+
+                                    if (release.Environments[0].Status == AzureDevOpsReleaseStatus.Rejected)
+                                    {
+                                        await CreateGitHubIssueAsync(buildId, releaseId, release.Name);
+                                    }
                                 }
                             }
-
-                            if (unfinishedReleases.Count > 0)
+                            catch (TaskCanceledException tcex) when (tcex.CancellationToken == cancellationToken)
                             {
-                                await runningPipelines.TryUpdateAsync(tx, buildId, unfinishedReleases, releaseStatuses);
+                                // ignore
                             }
-                            else
+                            catch (Exception ex)
                             {
-                                Logger.LogInformation($"All releases for build {buildId} for channel {channelId} finished. Creating BuildChannel.");
-
-                                buildChannelsToAdd.Add(new BuildChannel
-                                {
-                                    BuildId = buildId,
-                                    ChannelId = channelId
-                                });
-                                await runningPipelines.TryRemoveAsync(tx, buildId);
+                                // Something failed while fetching the release information so the potential created issue wouldn't have relevant information to
+                                // be notified so we just log the exception to AppInsights with not filed issue.
+                                Logger.LogError(ex, "Processing finished releases");
                             }
                         }
-                    }
 
-                    if (buildChannelsToAdd.Count > 0)
-                    {
-                        List<BuildChannel> addedBuildChannels = await AddFinishedBuildChannelsIfNotPresent(buildChannelsToAdd);
-                        await TriggerDependencyUpdates(addedBuildChannels);
+                        if (unfinishedReleases.Count > 0)
+                        {
+                            await runningPipelines.TryUpdateAsync(tx, buildId, unfinishedReleases, releaseStatuses);
+                        }
+                        else
+                        {
+                            Logger.LogInformation($"All releases for build {buildId} for channel {channelId} finished. Creating BuildChannel.");
+
+                            buildChannelsToAdd.Add(new BuildChannel
+                            {
+                                BuildId = buildId,
+                                ChannelId = channelId
+                            });
+                            await runningPipelines.TryRemoveAsync(tx, buildId);
+                        }
                     }
-                    await tx.CommitAsync();
                 }
-            }
-            catch (TaskCanceledException tcex) when (tcex.CancellationToken == cancellationToken)
-            {
-                // ignore
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Processing finished releases");
+
+                if (buildChannelsToAdd.Count > 0)
+                {
+                    List<BuildChannel> addedBuildChannels = await AddFinishedBuildChannelsIfNotPresent(buildChannelsToAdd);
+                    await TriggerDependencyUpdates(addedBuildChannels);
+                }
+                await tx.CommitAsync();
             }
         }
 
@@ -320,6 +329,49 @@ namespace ReleasePipelineRunner
             Context.BuildChannels.AddRange(missingBuildChannels);
             await Context.SaveChangesAsync();
             return missingBuildChannels;
+        }
+
+        private async Task CreateGitHubIssueAsync(int buildId, int releaseId, string releaseName)
+        {
+            Build build = Context.Builds.Where(b => b.Id == buildId).First();
+            string whereToCreateIssue = "https://github.com/dotnet/arcade";
+            string fyiHandles = "@JohnTortugo, @jcagme";
+            string gitHubToken = null, azureDevOpsToken = null;
+            string repo = build.GitHubRepository ?? build.AzureDevOpsRepository;
+
+            try
+            {
+                if (!string.IsNullOrEmpty(build.GitHubRepository))
+                {
+                    IGitHubTokenProvider gitHubTokenProvider = Context.GetService<IGitHubTokenProvider>();
+                    long installationId = await Context.GetInstallationId(build.GitHubRepository);
+                    gitHubToken = await gitHubTokenProvider.GetTokenForInstallation(installationId);
+                }
+
+                if (!string.IsNullOrEmpty(build.AzureDevOpsRepository))
+                {
+                    IAzureDevOpsTokenProvider azdoTokenProvider = Context.GetService<IAzureDevOpsTokenProvider>();
+                    azureDevOpsToken = await azdoTokenProvider.GetTokenForAccount(build.AzureDevOpsAccount);
+                }
+
+                IssueManager issueManager = new IssueManager(gitHubToken, azureDevOpsToken);
+                string author = await issueManager.GetCommitAuthorAsync(repo, build.Commit);
+                string title = $"Release '{releaseName}' with id {releaseId} failed";
+                string description = $"Something failed while trying to publish artifacts for build [{buildId}]({build.Id})." +
+                    $"{Environment.NewLine} {Environment.NewLine}" +
+                    $"Please click [here](https://dnceng.visualstudio.com/internal/_releaseProgress?_a=release-pipeline-progress&releaseId={releaseId}) to check the error logs." +
+                    $"{Environment.NewLine} {Environment.NewLine}" +
+                    $"Last commit by: {author}" +
+                    $" {Environment.NewLine} {Environment.NewLine}" +
+                    $"/fyi: {fyiHandles}";
+                int issueId = await issueManager.CreateNewIssueAsync(whereToCreateIssue, title, description);
+
+                Logger.LogInformation($"Issue {issueId} was created in '{whereToCreateIssue}'");
+            }
+            catch (Exception exc)
+            {
+                Logger.LogError(exc, $"Something failed while attempting to create an issue based on repo '{repo}' and commit {build.Commit}");
+            }
         }
     }
 }

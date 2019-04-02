@@ -19,5 +19,9 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>31abd61b43b115a6af83c92ce35ed4e8efd01dfd</Sha>
     </Dependency>
+    <Dependency Name="Microsoft.DotNet.Git.IssueManager" Version="1.0.0-beta.19180.1">
+      <Uri>https://github.com/dotnet/arcade</Uri>
+      <Sha>31abd61b43b115a6af83c92ce35ed4e8efd01dfd</Sha>
+    </Dependency>
   </ToolsetDependencies>
 </Dependencies>
