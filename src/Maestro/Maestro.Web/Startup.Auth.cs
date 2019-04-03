@@ -146,6 +146,8 @@ namespace Maestro.Web
             services.ConfigureApplicationCookie(
                 options =>
                 {
+                    options.ExpireTimeSpan = TimeSpan.FromDays(10 * 365);
+                    options.SlidingExpiration = true;
                     options.Events = new CookieAuthenticationEvents
                     {
                         OnSigningIn = async ctx =>

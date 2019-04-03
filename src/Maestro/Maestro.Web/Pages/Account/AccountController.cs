@@ -66,7 +66,7 @@ namespace Maestro.Web.Pages.Account
             }
 
             SignInResult signInResult =
-                await SignInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, false);
+                await SignInManager.ExternalLoginSignInAsync(info.LoginProvider, info.ProviderKey, true);
             if (signInResult.Succeeded)
             {
                 return RedirectToLocal(returnUrl);
@@ -77,7 +77,7 @@ namespace Maestro.Web.Pages.Account
                 ApplicationUser user = await CreateUserAsync(info);
                 if (user != null)
                 {
-                    await SignInManager.SignInAsync(user, false);
+                    await SignInManager.SignInAsync(user, true);
                     await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
                     return RedirectToLocal(returnUrl);
                 }
