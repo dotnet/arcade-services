@@ -946,13 +946,13 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 else
                 {
-                    _logger.LogInformation("Could not parse the repo's dotnet version from the global.json. Skipping update to dotnet version sections");
+                    _logger.LogError("Could not parse the repo's dotnet version from the global.json. Skipping update to dotnet version sections");
                     return repoGlobalJson;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogInformation($"Failed to update Dotnet version for global.json. Skipping update to version sections. Exception: {ex}");
+                _logger.LogError(ex, $"Failed to update Dotnet version for global.json. Skipping update to version sections.");
                 return repoGlobalJson;
             }
 
