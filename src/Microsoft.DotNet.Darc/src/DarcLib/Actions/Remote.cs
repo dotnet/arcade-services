@@ -672,8 +672,6 @@ namespace Microsoft.DotNet.DarcLib
                     fileContainer.GlobalJson = UpdateDotnetVersionGlobalJson(arcadeDotnetVersion, fileContainer.GlobalJson);
                 }
 
-                filesToCommit.AddRange(fileContainer.GetFilesToCommit());
-
                 List<GitFile> engCommonFiles = await GetCommonScriptFilesAsync(arcadeRepoUri, arcadeItem.Commit);
                 filesToCommit.AddRange(engCommonFiles);
 
@@ -690,6 +688,8 @@ namespace Microsoft.DotNet.DarcLib
                     }
                 }
             }
+
+            filesToCommit.AddRange(fileContainer.GetFilesToCommit());
 
             await _gitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
         }
