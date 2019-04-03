@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
+using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -681,9 +683,9 @@ namespace Microsoft.DotNet.DarcLib
             CheckForValidGitClient();
             GitFileContentContainer fileContainer =
                 await _fileManager.UpdateDependencyFiles(itemsToUpdate, repoUri, branch);
-            List<GitFile> filesToCommit = fileContainer.GetFilesToCommit();
+            List<GitFile> filesToCommit = new List<GitFile>();
 
-            // If we are updating the arcade sdk we need to update the eng/common files as well
+            // If we are updating the arcade sdk we need to update the eng/common files and the dotnet versions as well
             DependencyDetail arcadeItem = itemsToUpdate.FirstOrDefault(
                 i => string.Equals(i.Name, "Microsoft.DotNet.Arcade.Sdk", StringComparison.OrdinalIgnoreCase));
 
@@ -693,17 +695,23 @@ namespace Microsoft.DotNet.DarcLib
                 // URI from we are getting the eng/common files. If in an AzDO context we change the URI to that of
                 // dotnet-arcade in dnceng
 
-                string engCommonRepoUri = arcadeItem.RepoUri;
+                string arcadeRepoUri = arcadeItem.RepoUri;
 
                 if (Uri.TryCreate(repoUri, UriKind.Absolute, out Uri parsedUri))
                 {
                     if (parsedUri.Host == "dev.azure.com" || parsedUri.Host.EndsWith("visualstudio.com"))
                     {
-                        engCommonRepoUri = "https://dev.azure.com/dnceng/internal/_git/dotnet-arcade";
+                        arcadeRepoUri = "https://dev.azure.com/dnceng/internal/_git/dotnet-arcade";
                     }
                 }
-                    
-                List<GitFile> engCommonFiles = await GetCommonScriptFilesAsync(engCommonRepoUri, arcadeItem.Commit);
+
+                SemanticVersion arcadeDotnetVersion = await GetToolsDotnetVersionAsync(arcadeRepoUri, arcadeItem.Commit);
+                if (arcadeDotnetVersion != null)
+                {
+                    fileContainer.GlobalJson = UpdateDotnetVersionGlobalJson(arcadeDotnetVersion, fileContainer.GlobalJson);
+                }
+
+                List<GitFile> engCommonFiles = await GetCommonScriptFilesAsync(arcadeRepoUri, arcadeItem.Commit);
                 filesToCommit.AddRange(engCommonFiles);
 
                 // Files in the target repo
@@ -719,6 +727,8 @@ namespace Microsoft.DotNet.DarcLib
                     }
                 }
             }
+
+            filesToCommit.AddRange(fileContainer.GetFilesToCommit());
 
             await _gitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
         }
@@ -928,6 +938,76 @@ namespace Microsoft.DotNet.DarcLib
             _logger.LogInformation("Generating commits for script files succeeded!");
 
             return files;
+        }
+
+        /// <summary>
+        /// Get the tools.dotnet section of the global.json from a target repo URI
+        /// </summary>
+        /// <param name="repoUri">repo to get the version from</param>
+        /// <param name="commit">commit sha to query</param>
+        /// <returns></returns>
+        private async Task<SemanticVersion> GetToolsDotnetVersionAsync(string repoUri, string commit)
+        {
+            CheckForValidGitClient();
+            _logger.LogInformation("Reading dotnet version from global.json");
+
+            JObject globalJson = await _fileManager.ReadGlobalJsonAsync(repoUri, commit);
+            JToken dotnet = globalJson.SelectToken("tools.dotnet", true);
+
+            _logger.LogInformation("Reading dotnet version from global.json succeeded!");
+
+            SemanticVersion.TryParse(dotnet.ToString(), out SemanticVersion dotnetVersion);
+
+            if (dotnetVersion == null)
+            {
+                _logger.LogError($"Failed to parse dotnet version from global.json from repo: {repoUri} at commit {commit}. Version: {dotnet.ToString()}");
+            }
+
+            return dotnetVersion;
+        }
+
+        /// <summary>
+        /// Updates the global.json entries for tools.dotnet and sdk.version if they are older than an incoming version
+        /// </summary>
+        /// <param name="incomingDotnetVersion">version to compare against</param>
+        /// <param name="repoGlobalJson">Global.Json file to update</param>
+        /// <returns>Updated global.json file if was able to update, or the unchanged global.json if unable to</returns>
+        private GitFile UpdateDotnetVersionGlobalJson(SemanticVersion incomingDotnetVersion, GitFile repoGlobalJson)
+        {
+            string repoGlobalJsonContent = repoGlobalJson.ContentEncoding == ContentEncoding.Base64 ?
+                _gitClient.GetDecodedContent(repoGlobalJson.Content) :
+                repoGlobalJson.Content;
+            try
+            {
+                JObject parsedGlobalJson = JObject.Parse(repoGlobalJsonContent);
+                if (SemanticVersion.TryParse(parsedGlobalJson.SelectToken("tools.dotnet").ToString(), out SemanticVersion repoDotnetVersion))
+                {
+                    if (repoDotnetVersion.CompareTo(incomingDotnetVersion) < 0)
+                    {
+                        parsedGlobalJson["tools"]["dotnet"] = incomingDotnetVersion.ToNormalizedString();
+
+                        // Also update and keep sdk.version in sync.
+                        JToken sdkVersion = parsedGlobalJson.SelectToken("sdk.version");
+                        if (sdkVersion != null)
+                        {
+                            parsedGlobalJson["sdk"]["version"] = incomingDotnetVersion.ToNormalizedString();
+                        }
+                        return new GitFile(VersionFiles.GlobalJson, parsedGlobalJson);
+                    }
+                    return repoGlobalJson;
+                }
+                else
+                {
+                    _logger.LogError("Could not parse the repo's dotnet version from the global.json. Skipping update to dotnet version sections");
+                    return repoGlobalJson;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update Dotnet version for global.json. Skipping update to version sections.");
+                return repoGlobalJson;
+            }
+
         }
     }
 }
