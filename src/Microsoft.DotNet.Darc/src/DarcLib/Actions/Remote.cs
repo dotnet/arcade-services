@@ -952,7 +952,7 @@ namespace Microsoft.DotNet.DarcLib
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Failed to update Dotnet version for global.json. Skipping update to version sections.");
+                _logger.LogError(ex, "Failed to update Dotnet version for global.json. Skipping update to version sections.");
                 return repoGlobalJson;
             }
 
