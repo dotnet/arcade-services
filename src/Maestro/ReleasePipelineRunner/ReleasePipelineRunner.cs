@@ -334,44 +334,74 @@ namespace ReleasePipelineRunner
 
         private async Task CreateGitHubIssueAsync(int buildId, int releaseId, string releaseName)
         {
+            Logger.LogInformation($"Something failed in release definition {releaseId} triggered by build {buildId}");
+
             Build build = Context.Builds.Where(b => b.Id == buildId).First();
             string whereToCreateIssue = "https://github.com/dotnet/arcade";
             string fyiHandles = "@JohnTortugo, @jcagme";
             string gitHubToken = null, azureDevOpsToken = null;
             string repo = build.GitHubRepository ?? build.AzureDevOpsRepository;
 
-            try
+            using (Logger.BeginScope($"Opening GitHub issue forrelease definition {releaseId} " +
+                $"triggered by build {buildId} from repo '{repo}'."))
             {
-                if (!string.IsNullOrEmpty(build.GitHubRepository))
+                try
                 {
-                    IGitHubTokenProvider gitHubTokenProvider = Context.GetService<IGitHubTokenProvider>();
-                    long installationId = await Context.GetInstallationId(build.GitHubRepository);
-                    gitHubToken = await gitHubTokenProvider.GetTokenForInstallation(installationId);
-                }
+                    // We get the token of the repo which triggered the release so we can get the author.
+                    if (!string.IsNullOrEmpty(build.GitHubRepository))
+                    {
+                        IGitHubTokenProvider gitHubTokenProvider = Context.GetService<IGitHubTokenProvider>();
+                        long installationId = await Context.GetInstallationId(build.GitHubRepository);
+                        gitHubToken = await gitHubTokenProvider.GetTokenForInstallation(installationId);
 
-                if (!string.IsNullOrEmpty(build.AzureDevOpsRepository))
+                        Logger.LogInformation($"GitHub token acquired for '{build.GitHubRepository}'!");
+                    }
+
+                    if (!string.IsNullOrEmpty(build.AzureDevOpsRepository))
+                    {
+                        IAzureDevOpsTokenProvider azdoTokenProvider = Context.GetService<IAzureDevOpsTokenProvider>();
+                        azureDevOpsToken = await azdoTokenProvider.GetTokenForAccount(build.AzureDevOpsAccount);
+
+                        Logger.LogInformation($"AzureDevOPs token acquired for '{build.AzureDevOpsRepository}'!");
+                    }
+
+                    IssueManager issueManager = new IssueManager(gitHubToken, azureDevOpsToken);
+                    string author = await issueManager.GetCommitAuthorAsync(repo, build.Commit);
+
+                    Logger.LogInformation($"Going to include {author} in the created issue");
+
+                    string title = $"Release '{releaseName}' with id {releaseId} failed";
+                    string description = $"Something failed while trying to publish artifacts for build [{buildId}]({build.Id})." +
+                        $"{Environment.NewLine} {Environment.NewLine}" +
+                        $"Please click [here](https://dnceng.visualstudio.com/internal/_releaseProgress?_a=release-pipeline-progress&releaseId={releaseId}) to check the error logs." +
+                        $"{Environment.NewLine} {Environment.NewLine}" +
+                        $"Last commit by: {author}" +
+                        $" {Environment.NewLine} {Environment.NewLine}" +
+                        $"/fyi: {fyiHandles}";
+
+                    if (build.GitHubRepository != whereToCreateIssue)
+                    {
+                        // We get the token of the Arcade installation since there's where the actual issue will be
+                        // created. We cannot reuse the previously acquired token since its generated for a 
+                        // different repo.
+                        IGitHubTokenProvider gitHubTokenProvider = Context.GetService<IGitHubTokenProvider>();
+                        long installationId = await Context.GetInstallationId(whereToCreateIssue);
+                        gitHubToken = await gitHubTokenProvider.GetTokenForInstallation(installationId);
+
+                        Logger.LogInformation($"GitHub token acquired for '{whereToCreateIssue}'!");
+
+                        issueManager = new IssueManager(gitHubToken, azureDevOpsToken);
+                    }
+
+                    int issueId = await issueManager.CreateNewIssueAsync(whereToCreateIssue, title, description);
+
+                    Logger.LogInformation($"Issue {issueId} was created in '{whereToCreateIssue}'");
+                }
+                catch (Exception exc)
                 {
-                    IAzureDevOpsTokenProvider azdoTokenProvider = Context.GetService<IAzureDevOpsTokenProvider>();
-                    azureDevOpsToken = await azdoTokenProvider.GetTokenForAccount(build.AzureDevOpsAccount);
+                    Logger.LogError(exc, $"Something failed while attempting to create an issue based on repo '{repo}' " +
+                        $"and commit {build.Commit}.");
                 }
-
-                IssueManager issueManager = new IssueManager(gitHubToken, azureDevOpsToken);
-                string author = await issueManager.GetCommitAuthorAsync(repo, build.Commit);
-                string title = $"Release '{releaseName}' with id {releaseId} failed";
-                string description = $"Something failed while trying to publish artifacts for build [{buildId}]({build.Id})." +
-                    $"{Environment.NewLine} {Environment.NewLine}" +
-                    $"Please click [here](https://dnceng.visualstudio.com/internal/_releaseProgress?_a=release-pipeline-progress&releaseId={releaseId}) to check the error logs." +
-                    $"{Environment.NewLine} {Environment.NewLine}" +
-                    $"Last commit by: {author}" +
-                    $" {Environment.NewLine} {Environment.NewLine}" +
-                    $"/fyi: {fyiHandles}";
-                int issueId = await issueManager.CreateNewIssueAsync(whereToCreateIssue, title, description);
-
-                Logger.LogInformation($"Issue {issueId} was created in '{whereToCreateIssue}'");
-            }
-            catch (Exception exc)
-            {
-                Logger.LogError(exc, $"Something failed while attempting to create an issue based on repo '{repo}' and commit {build.Commit}");
             }
         }
     }
