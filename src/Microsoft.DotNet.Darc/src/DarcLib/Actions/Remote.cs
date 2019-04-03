@@ -489,10 +489,8 @@ namespace Microsoft.DotNet.DarcLib
                 }
             };
 
-            DependencyGraph dependencyGraph =
-                await DependencyGraph.BuildRemoteDependencyGraphAsync(remoteFactory,
-                    null, rootDependency.RepoUri, rootDependency.Commit,
-                    dependencyGraphBuildOptions, _logger);
+            DependencyGraph dependencyGraph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
+                    remoteFactory, null, rootDependency.RepoUri, rootDependency.Commit, dependencyGraphBuildOptions, _logger);
 
             // Cache all nodes in this built graph.
             foreach (DependencyGraphNode node in dependencyGraph.Nodes)

@@ -58,10 +58,13 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         public static readonly EarlyBreakOn NoEarlyBreak = new EarlyBreakOn() { Type = EarlyBreakOnType.None };
 
+        /// <summary>
+        ///     When should early breaking be done (how should the BreakOn list be interpreted)
+        /// </summary>
         public EarlyBreakOnType Type { get; set; }
         /// <summary>
-        /// When all the elements in BreakOn have been found,
-        /// (interpreted based on Type), break the graph build.
+        ///     When all the elements in BreakOn have been found,
+        ///     (interpreted based on Type), break the graph build.
         /// </summary>
         public List<string> BreakOn { get; set; }
     }
@@ -735,7 +738,8 @@ namespace Microsoft.DotNet.DarcLib
 
         /// <summary>
         ///     Add the assets from each build to the cache.
-        ///     Also 
+        ///     Also evaluate whether we see any of the assets that we are supposed to break
+        ///     on, and remove them from the break on set if so.
         /// </summary>
         /// <param name="build">Build producing assets</param>
         /// <param name="dependencyCache">Dependency cache</param>
