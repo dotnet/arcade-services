@@ -931,9 +931,11 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="accountName">Azure DevOps account name</param>
         /// <param name="projectName">Project name</param>
         /// <param name="releaseDefinition">Release definition to be updated</param>
-        public async Task<int> StartNewReleaseAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, int barBuildId)
+        /// <param name="barBuildId">BAR BuildID to be passed as variable to the pipeline</param>
+        /// <param name="channelClassification">BAR Channel Classification to be passed as variable to the pipeline</param>
+        public async Task<int> StartNewReleaseAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, int barBuildId, string channelClassification = null)
         {
-            var body = $"{{ \"definitionId\": {releaseDefinition.Id}, \"variables\": {{ \"BARBuildId\": {{ \"value\": \"{barBuildId}\" }} }} }}";
+            var body = $"{{ \"definitionId\": {releaseDefinition.Id}, \"variables\": {{ \"BARBuildId\": {{ \"value\": \"{barBuildId}\" }}, \"ChannelClassification\": {{ \"value\": \"{channelClassification}\" }} }} }}";
 
             JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Post,

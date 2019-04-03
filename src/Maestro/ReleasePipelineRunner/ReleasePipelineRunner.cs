@@ -177,7 +177,7 @@ namespace ReleasePipelineRunner
 
                     pipeDef = await azdoClient.AddArtifactSourceAsync(organization, project, pipeDef, azdoBuild);
 
-                    int releaseId = await azdoClient.StartNewReleaseAsync(organization, project, pipeDef, build.Id);
+                    int releaseId = await azdoClient.StartNewReleaseAsync(organization, project, pipeDef, build.Id, channel.Classification);
 
                     var item = new ReleasePipelineStatusItem(releaseId, channelId, organization, project);
                     releaseList.Add(item);
