@@ -10,6 +10,8 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
+using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -388,42 +390,44 @@ namespace Microsoft.DotNet.DarcLib
                     updateList.Add(currentDependency);
                     DependencyDetail parentCoherentDependency = dependencies.FirstOrDefault(d =>
                         d.Name.Equals(currentDependency.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
-                    // If the coherent dependency is not found, this is non-valid.
-                    if (parentCoherentDependency == null)
-                    {
-                        throw new DarcException($"Dependency {currentDependency.Name} has non-existent parent " +
+                    currentDependency = parentCoherentDependency ?? throw new DarcException($"Dependency {currentDependency.Name} has non-existent parent " +
                             $"dependency {currentDependency.CoherentParentDependencyName}");
-                    }
-                    currentDependency = parentCoherentDependency;
                 }
 
                 DependencyGraphNode rootNode = null;
 
-                // At head, build dependency graph if need be. It's quite possible that this node
-                // has already been visited in a relatively coherent graph, so first check the node cache
-                if (!nodeCache.TryGetValue($"{currentDependency.RepoUri}@{currentDependency.Commit}", out rootNode))
+                // Build the graph to find the assets if we don't have the root in the cache.
+                // The graph build is automatically broken when
+                // all the desired assets are found (breadth first search). This means the cache may or
+                // may not contain a complete graph for a given node. So, we first search the cache for the desired assets,
+                // then if not found (or if there was no cache), we then build the graph from that node.
+                bool nodeFromCache = nodeCache.TryGetValue($"{currentDependency.RepoUri}@{currentDependency.Commit}", out rootNode);
+                if (!nodeFromCache)
                 {
-                    DependencyGraph dependencyGraph =
-                        await DependencyGraph.BuildRemoteDependencyGraphAsync(remoteFactory,
-                            null, currentDependency.RepoUri, currentDependency.Commit,
-                            dependencyGraphBuildOptions, _logger);
-
-                    // Cache all nodes in this built graph.
-                    foreach (DependencyGraphNode node in dependencyGraph.Nodes)
-                    {
-                        if (!nodeCache.ContainsKey($"{node.RepoUri}@{node.Commit}"))
-                        {
-                            nodeCache.Add($"{node.RepoUri}@{node.Commit}", node);
-                        }
-                    }
-                    rootNode = dependencyGraph.Root;
+                    _logger.LogInformation($"Node not found in cache, starting graph build at " +
+                        $"{currentDependency.RepoUri}@{currentDependency.Commit}");
+                    rootNode = await BuildGraphAtDependency(remoteFactory, currentDependency, updateList, nodeCache);
                 }
 
+                List<DependencyDetail> leftToFind = new List<DependencyDetail>(updateList);
                 // Now do the lookup to find the element in the tree for each item in the update list
                 foreach (DependencyDetail dependencyInUpdateChain in updateList)
                 {
                     (Asset coherentAsset, Build buildForAsset) =
                         FindAssetInBuildTree(dependencyInUpdateChain.Name, rootNode);
+
+                    // If we originally got the root node from the cache the graph may be incomplete.
+                    // Rebuild to attempt to find all the assets we have left to find. If we still can't find, or if
+                    // the root node did not come the cache, then we're in an invalid state.
+                    if (coherentAsset == null && nodeFromCache)
+                    {
+                        _logger.LogInformation($"Asset {dependencyInUpdateChain.Name} was not found in cached graph, rebuilding from " +
+                            $"{currentDependency.RepoUri}@{currentDependency.Commit}");
+                        rootNode = await BuildGraphAtDependency(remoteFactory, currentDependency, leftToFind, nodeCache);
+                        // And attempt to find again.
+                        (coherentAsset, buildForAsset) =
+                            FindAssetInBuildTree(dependencyInUpdateChain.Name, rootNode);
+                    }
 
                     if (coherentAsset == null)
                     {
@@ -432,6 +436,10 @@ namespace Microsoft.DotNet.DarcLib
                         throw new DarcException($"Unable to update {dependencyInUpdateChain.Name} to have coherency with " +
                             $"parent {dependencyInUpdateChain.CoherentParentDependencyName}. No matching asset found in tree. " +
                             $"Either remove the coherency attribute or mark as pinned.");
+                    }
+                    else
+                    {
+                        leftToFind.Remove(dependencyInUpdateChain);
                     }
 
                     string buildRepoUri = buildForAsset.GitHubRepository ?? buildForAsset.AzureDevOpsRepository;
@@ -463,6 +471,39 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             return toUpdate;
+        }
+
+        private async Task<DependencyGraphNode> BuildGraphAtDependency(
+            IRemoteFactory remoteFactory,
+            DependencyDetail rootDependency,
+            List<DependencyDetail> updateList,
+            Dictionary<string, DependencyGraphNode> nodeCache)
+        {
+            DependencyGraphBuildOptions dependencyGraphBuildOptions = new DependencyGraphBuildOptions()
+            {
+                IncludeToolset = true,
+                LookupBuilds = true,
+                NodeDiff = NodeDiff.None,
+                EarlyBuildBreak = new EarlyBreakOn
+                {
+                    Type = EarlyBreakOnType.Assets,
+                    BreakOn = new List<string>(updateList.Select(d => d.Name))
+                }
+            };
+
+            DependencyGraph dependencyGraph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
+                    remoteFactory, null, rootDependency.RepoUri, rootDependency.Commit, dependencyGraphBuildOptions, _logger);
+
+            // Cache all nodes in this built graph.
+            foreach (DependencyGraphNode node in dependencyGraph.Nodes)
+            {
+                if (!nodeCache.ContainsKey($"{node.RepoUri}@{node.Commit}"))
+                {
+                    nodeCache.Add($"{node.RepoUri}@{node.Commit}", node);
+                }
+            }
+
+            return dependencyGraph.Root;
         }
 
         /// <summary>
@@ -642,9 +683,9 @@ namespace Microsoft.DotNet.DarcLib
             CheckForValidGitClient();
             GitFileContentContainer fileContainer =
                 await _fileManager.UpdateDependencyFiles(itemsToUpdate, repoUri, branch);
-            List<GitFile> filesToCommit = fileContainer.GetFilesToCommit();
+            List<GitFile> filesToCommit = new List<GitFile>();
 
-            // If we are updating the arcade sdk we need to update the eng/common files as well
+            // If we are updating the arcade sdk we need to update the eng/common files and the dotnet versions as well
             DependencyDetail arcadeItem = itemsToUpdate.FirstOrDefault(
                 i => string.Equals(i.Name, "Microsoft.DotNet.Arcade.Sdk", StringComparison.OrdinalIgnoreCase));
 
@@ -654,17 +695,23 @@ namespace Microsoft.DotNet.DarcLib
                 // URI from we are getting the eng/common files. If in an AzDO context we change the URI to that of
                 // dotnet-arcade in dnceng
 
-                string engCommonRepoUri = arcadeItem.RepoUri;
+                string arcadeRepoUri = arcadeItem.RepoUri;
 
                 if (Uri.TryCreate(repoUri, UriKind.Absolute, out Uri parsedUri))
                 {
                     if (parsedUri.Host == "dev.azure.com" || parsedUri.Host.EndsWith("visualstudio.com"))
                     {
-                        engCommonRepoUri = "https://dev.azure.com/dnceng/internal/_git/dotnet-arcade";
+                        arcadeRepoUri = "https://dev.azure.com/dnceng/internal/_git/dotnet-arcade";
                     }
                 }
-                    
-                List<GitFile> engCommonFiles = await GetCommonScriptFilesAsync(engCommonRepoUri, arcadeItem.Commit);
+
+                SemanticVersion arcadeDotnetVersion = await GetToolsDotnetVersionAsync(arcadeRepoUri, arcadeItem.Commit);
+                if (arcadeDotnetVersion != null)
+                {
+                    fileContainer.GlobalJson = UpdateDotnetVersionGlobalJson(arcadeDotnetVersion, fileContainer.GlobalJson);
+                }
+
+                List<GitFile> engCommonFiles = await GetCommonScriptFilesAsync(arcadeRepoUri, arcadeItem.Commit);
                 filesToCommit.AddRange(engCommonFiles);
 
                 // Files in the target repo
@@ -680,6 +727,8 @@ namespace Microsoft.DotNet.DarcLib
                     }
                 }
             }
+
+            filesToCommit.AddRange(fileContainer.GetFilesToCommit());
 
             await _gitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
         }
@@ -889,6 +938,76 @@ namespace Microsoft.DotNet.DarcLib
             _logger.LogInformation("Generating commits for script files succeeded!");
 
             return files;
+        }
+
+        /// <summary>
+        /// Get the tools.dotnet section of the global.json from a target repo URI
+        /// </summary>
+        /// <param name="repoUri">repo to get the version from</param>
+        /// <param name="commit">commit sha to query</param>
+        /// <returns></returns>
+        private async Task<SemanticVersion> GetToolsDotnetVersionAsync(string repoUri, string commit)
+        {
+            CheckForValidGitClient();
+            _logger.LogInformation("Reading dotnet version from global.json");
+
+            JObject globalJson = await _fileManager.ReadGlobalJsonAsync(repoUri, commit);
+            JToken dotnet = globalJson.SelectToken("tools.dotnet", true);
+
+            _logger.LogInformation("Reading dotnet version from global.json succeeded!");
+
+            SemanticVersion.TryParse(dotnet.ToString(), out SemanticVersion dotnetVersion);
+
+            if (dotnetVersion == null)
+            {
+                _logger.LogError($"Failed to parse dotnet version from global.json from repo: {repoUri} at commit {commit}. Version: {dotnet.ToString()}");
+            }
+
+            return dotnetVersion;
+        }
+
+        /// <summary>
+        /// Updates the global.json entries for tools.dotnet and sdk.version if they are older than an incoming version
+        /// </summary>
+        /// <param name="incomingDotnetVersion">version to compare against</param>
+        /// <param name="repoGlobalJson">Global.Json file to update</param>
+        /// <returns>Updated global.json file if was able to update, or the unchanged global.json if unable to</returns>
+        private GitFile UpdateDotnetVersionGlobalJson(SemanticVersion incomingDotnetVersion, GitFile repoGlobalJson)
+        {
+            string repoGlobalJsonContent = repoGlobalJson.ContentEncoding == ContentEncoding.Base64 ?
+                _gitClient.GetDecodedContent(repoGlobalJson.Content) :
+                repoGlobalJson.Content;
+            try
+            {
+                JObject parsedGlobalJson = JObject.Parse(repoGlobalJsonContent);
+                if (SemanticVersion.TryParse(parsedGlobalJson.SelectToken("tools.dotnet").ToString(), out SemanticVersion repoDotnetVersion))
+                {
+                    if (repoDotnetVersion.CompareTo(incomingDotnetVersion) < 0)
+                    {
+                        parsedGlobalJson["tools"]["dotnet"] = incomingDotnetVersion.ToNormalizedString();
+
+                        // Also update and keep sdk.version in sync.
+                        JToken sdkVersion = parsedGlobalJson.SelectToken("sdk.version");
+                        if (sdkVersion != null)
+                        {
+                            parsedGlobalJson["sdk"]["version"] = incomingDotnetVersion.ToNormalizedString();
+                        }
+                        return new GitFile(VersionFiles.GlobalJson, parsedGlobalJson);
+                    }
+                    return repoGlobalJson;
+                }
+                else
+                {
+                    _logger.LogError("Could not parse the repo's dotnet version from the global.json. Skipping update to dotnet version sections");
+                    return repoGlobalJson;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update Dotnet version for global.json. Skipping update to version sections.");
+                return repoGlobalJson;
+            }
+
         }
     }
 }

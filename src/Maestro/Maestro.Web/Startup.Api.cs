@@ -8,6 +8,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Hosting;
@@ -77,6 +78,21 @@ namespace Maestro.Web
                             op.OperationId = $"{op.Tags.First()}_{op.OperationId}";
                         });
 
+                    options.FilterOperations(
+                        (op, ctx) =>
+                        {
+                            var paginated = ctx.MethodInfo.GetCustomAttribute<PaginatedAttribute>();
+                            if (paginated != null)
+                            {
+                                // Add an extension that tells the client generator that this operation is paged with first,prev,next,last urls in the Link header.
+                                op.Extensions["x-ms-paginated"] = new
+                                {
+                                    page = paginated.PageParameterName,
+                                    pageSize = paginated.PageSizeParameterName
+                                };
+                            }
+                        });
+
                     options.FilterSchemas(
                         (schema, ctx) =>
                         {
@@ -117,6 +133,7 @@ namespace Maestro.Web
                     options.MapType<JToken>(() => new Schema());
 
                     options.DescribeAllEnumsAsStrings();
+                    options.SchemaRegistryOptions.UseReferencedDefinitionsForEnums = true;
 
                     string xmlPath;
                     if (HostingEnvironment.IsDevelopment())
