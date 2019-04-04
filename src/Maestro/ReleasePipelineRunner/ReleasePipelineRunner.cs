@@ -342,7 +342,7 @@ namespace ReleasePipelineRunner
             string gitHubToken = null, azureDevOpsToken = null;
             string repo = build.GitHubRepository ?? build.AzureDevOpsRepository;
 
-            using (Logger.BeginScope($"Opening GitHub issue forrelease definition {releaseId} " +
+            using (Logger.BeginScope($"Opening GitHub issue for release definition {releaseId} " +
                 $"triggered by build {buildId} from repo '{repo}'."))
             {
                 try
