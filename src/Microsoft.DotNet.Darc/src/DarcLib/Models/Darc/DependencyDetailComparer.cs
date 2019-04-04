@@ -13,7 +13,8 @@ namespace Microsoft.DotNet.DarcLib
             return x.Commit == y.Commit &&
                 x.Name == y.Name &&
                 x.RepoUri == y.RepoUri &&
-                x.Version == y.Version;
+                x.Version == y.Version &&
+                x.Type == y.Type;
         }
 
         public int GetHashCode(DependencyDetail obj)
@@ -21,7 +22,8 @@ namespace Microsoft.DotNet.DarcLib
             return (obj.Commit,
                 obj.Name,
                 obj.RepoUri,
-                obj.Version).GetHashCode();
+                obj.Version,
+                obj.Type).GetHashCode();
         }
     }
 }

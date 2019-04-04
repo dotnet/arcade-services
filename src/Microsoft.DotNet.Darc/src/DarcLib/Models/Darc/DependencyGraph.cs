@@ -34,6 +34,41 @@ namespace Microsoft.DotNet.DarcLib
         LatestInChannel,
     }
 
+    public enum EarlyBreakOnType
+    {
+        /// <summary>
+        /// Do not break graph build early
+        /// </summary>
+        None,
+        /// <summary>
+        /// Break graph when all the specified dependencies have
+        /// been found
+        /// </summary>
+        Dependencies,
+        /// <summary>
+        /// Break when the specified assets have been found
+        /// </summary>
+        Assets
+    }
+
+    public class EarlyBreakOn
+    {
+        /// <summary>
+        ///     Do not break early
+        /// </summary>
+        public static readonly EarlyBreakOn NoEarlyBreak = new EarlyBreakOn() { Type = EarlyBreakOnType.None };
+
+        /// <summary>
+        ///     When should early breaking be done (how should the BreakOn list be interpreted)
+        /// </summary>
+        public EarlyBreakOnType Type { get; set; }
+        /// <summary>
+        ///     When all the elements in BreakOn have been found,
+        ///     (interpreted based on Type), break the graph build.
+        /// </summary>
+        public List<string> BreakOn { get; set; }
+    }
+
     public class DependencyGraphBuildOptions
     {
         /// <summary>
@@ -48,6 +83,10 @@ namespace Microsoft.DotNet.DarcLib
         /// Type of node diff to perform. Local build only supports 'None' 
         /// </summary>
         public NodeDiff NodeDiff { get; set; } = NodeDiff.None;
+        /// <summary>
+        /// Stop the graph build based on the provided options
+        /// </summary>
+        public EarlyBreakOn EarlyBuildBreak { get; set; } = EarlyBreakOn.NoEarlyBreak;
     }
 
     public class DependencyGraph
@@ -429,6 +468,13 @@ namespace Microsoft.DotNet.DarcLib
             Dictionary<DependencyDetail, Build> dependencyCache =
                 new Dictionary<DependencyDetail, Build>(new DependencyDetailComparer());
 
+            EarlyBreakOnType breakOnType = options.EarlyBuildBreak.Type;
+            HashSet<string> breakOn = null;
+            if (breakOnType != EarlyBreakOnType.None)
+            {
+                breakOn = new HashSet<string>(options.EarlyBuildBreak.BreakOn, StringComparer.OrdinalIgnoreCase);
+            }
+
             if (options.LookupBuilds)
             {
                 allContributingBuilds = new HashSet<Build>(new BuildComparer());
@@ -451,26 +497,43 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     allContributingBuilds.Add(build);
                     rootNodeBuilds.Add(build);
-                    AddAssetsToBuildCache(build, dependencyCache);
+                    AddAssetsToBuildCache(build, dependencyCache, breakOnType, breakOn);
                 }
             }
 
             // Create the root node and add the repo to the visited bit vector.
             DependencyGraphNode rootGraphNode = new DependencyGraphNode(repoUri, commit, rootDependencies, rootNodeBuilds);
             rootGraphNode.VisitedNodes.Add(repoUri);
-            Stack<DependencyGraphNode> nodesToVisit = new Stack<DependencyGraphNode>();
-            nodesToVisit.Push(rootGraphNode);
+            // Nodes to visit is a queue, so that the evaluation order
+            // of the graph is breadth first.
+            Queue<DependencyGraphNode> nodesToVisit = new Queue<DependencyGraphNode>();
+            nodesToVisit.Enqueue(rootGraphNode);
             HashSet<DependencyDetail> uniqueDependencyDetails;
+
             if (rootGraphNode.Dependencies != null)
             {
                 uniqueDependencyDetails = new HashSet<DependencyDetail>(
                     rootGraphNode.Dependencies,
                     new DependencyDetailComparer());
+                // Remove the dependencies details from the
+                // break on if break on type is Dependencies
+                if (breakOnType == EarlyBreakOnType.Dependencies)
+                {
+                    rootGraphNode.Dependencies.Select(d => breakOn.Remove(d.Name));
+                }
             }
             else
             {
                 uniqueDependencyDetails = new HashSet<DependencyDetail>(
                     new DependencyDetailComparer());
+            }
+
+            // If we already found the assets/dependencies we wanted, clear the
+            // visit list and we'll drop through.
+            if (breakOnType != EarlyBreakOnType.None && breakOn.Count == 0)
+            {
+                logger.LogInformation($"Stopping graph build after finding all assets/dependencies.");
+                nodesToVisit.Clear();
             }
 
             // Cache of nodes we've visited. If we reach a repo/commit combo already in the cache,
@@ -487,7 +550,7 @@ namespace Microsoft.DotNet.DarcLib
 
             while (nodesToVisit.Count > 0)
             {
-                DependencyGraphNode node = nodesToVisit.Pop();
+                DependencyGraphNode node = nodesToVisit.Dequeue();
 
                 logger.LogInformation($"Visiting {node.RepoUri}@{node.Commit}");
 
@@ -584,7 +647,7 @@ namespace Microsoft.DotNet.DarcLib
                                     {
                                         allContributingBuilds.Add(build);
                                         nodeContributingBuilds.Add(build);
-                                        AddAssetsToBuildCache(build, dependencyCache);
+                                        AddAssetsToBuildCache(build, dependencyCache, breakOnType, breakOn);
                                     }
                                 }
                             }
@@ -618,7 +681,7 @@ namespace Microsoft.DotNet.DarcLib
                             nodeContributingBuilds);
                         // Cache the dependency and add it to the visitation stack.
                         nodeCache.Add($"{dependency.RepoUri}@{dependency.Commit}", newNode);
-                        nodesToVisit.Push(newNode);
+                        nodesToVisit.Enqueue(newNode);
                         newNode.VisitedNodes.Add(dependency.RepoUri);
                         node.AddChild(newNode, dependency);
                         // Calculate incoherencies. If we've not yet visited the repo uri, add the
@@ -632,6 +695,20 @@ namespace Microsoft.DotNet.DarcLib
                         else
                         {
                             visitedRepoUriNodes.Add(newNode.RepoUri, newNode);
+                        }
+
+                        // If breaking on dependencies, then decide whether we need to break
+                        // here.
+                        if (breakOnType == EarlyBreakOnType.Dependencies)
+                        {
+                            breakOn.Remove(dependency.Name);
+                        }
+
+                        if (breakOnType != EarlyBreakOnType.None && breakOn.Count == 0)
+                        {
+                            logger.LogInformation($"Stopping graph build after finding all assets/dependencies.");
+                            nodesToVisit.Clear();
+                            break;
                         }
                     }
                 }
@@ -659,7 +736,22 @@ namespace Microsoft.DotNet.DarcLib
                                        dependenciesMissingBuilds);
         }
 
-        private static void AddAssetsToBuildCache(Build build, Dictionary<DependencyDetail, Build> dependencyCache)
+        /// <summary>
+        ///     Add the assets from each build to the cache.
+        ///     Also evaluate whether we see any of the assets that we are supposed to break
+        ///     on, and remove them from the break on set if so.
+        /// </summary>
+        /// <param name="build">Build producing assets</param>
+        /// <param name="dependencyCache">Dependency cache</param>
+        /// <param name="earlyBreakOnType">Early break on type</param>
+        /// <param name="breakOn">Hash set of assets. Any assets in the <paramref name="build"/>
+        ///     that exist in <paramref name="breakOn"/> will be removed from
+        ///     <paramref name="breakOn"/> if <paramref name="earlyBreakOnType"/> is "Assets"</param>
+        private static void AddAssetsToBuildCache(
+            Build build, 
+            Dictionary<DependencyDetail, Build> dependencyCache,
+            EarlyBreakOnType earlyBreakOnType,
+            HashSet<string> breakOn)
         {
             foreach (Asset buildAsset in build.Assets)
             {
@@ -670,6 +762,11 @@ namespace Microsoft.DotNet.DarcLib
                 if (!dependencyCache.ContainsKey(newDependency))
                 {
                     dependencyCache.Add(newDependency, build);
+                }
+
+                if (earlyBreakOnType == EarlyBreakOnType.Assets)
+                {
+                    breakOn.Remove(buildAsset.Name);
                 }
             }
         }
