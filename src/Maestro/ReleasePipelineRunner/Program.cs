@@ -5,11 +5,13 @@
 using Maestro.AzureDevOps;
 using Maestro.Contracts;
 using Maestro.Data;
+using Maestro.GitHub;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace ReleasePipelineRunner
 {
@@ -47,6 +49,18 @@ namespace ReleasePipelineRunner
                                     {
                                         options.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
                                     }
+                                });
+                            services.AddGitHubTokenProvider();
+                            services.Configure<GitHubTokenProviderOptions>(
+                                (options, provider) =>
+                                {
+                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    IConfigurationSection section = config.GetSection("GitHub");
+                                    section.Bind(options);
+                                    options.ApplicationName = "Maestro";
+                                    options.ApplicationVersion = Assembly.GetEntryAssembly()
+                                        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                                        ?.InformationalVersion;
                                 });
                         });
                 });

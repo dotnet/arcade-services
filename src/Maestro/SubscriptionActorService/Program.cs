@@ -13,7 +13,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
-using System.Linq;
 using Microsoft.DotNet.DarcLib;
 
 namespace SubscriptionActorService
