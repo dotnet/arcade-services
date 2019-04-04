@@ -5,14 +5,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Security.Claims;
+using System.Text;
 using System.Threading.Tasks;
 using Maestro.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +25,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Net.Http.Headers;
 using Octokit;
 
 namespace Maestro.Web
@@ -61,6 +65,16 @@ namespace Maestro.Web
                                     context.Identity.AddClaim(
                                         new Claim(ClaimTypes.Role, role, ClaimValueTypes.String, GitHubScheme));
                                 }
+                            },
+                            OnRemoteFailure = async context =>
+                            {
+                                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<GitHubAuthenticationHandler>>();
+                                logger.LogError(context.Failure, "Github authentication failed.");
+                                context.HandleResponse();
+                                var res = context.HttpContext.Response;
+                                res.StatusCode = (int)HttpStatusCode.Forbidden;
+                                res.GetTypedHeaders().ContentType = new MediaTypeHeaderValue("text/html");
+                                await context.HttpContext.Response.Body.WriteAsync(Encoding.UTF8.GetBytes("403; Authentication failed. <a href='/Account/SignIn'>Sign In</a> again."));
                             },
                         };
                     })
