@@ -578,7 +578,7 @@ namespace Microsoft.DotNet.DarcLib
             foreach (AssetData asset in assets)
             {
                 DependencyDetail matchingDependencyByName =
-                    dependencies.FirstOrDefault(d => d.Name.Equals(asset.Name, StringComparison.Ordinal) &&
+                    dependencies.FirstOrDefault(d => d.Name.Equals(asset.Name, StringComparison.OrdinalIgnoreCase) &&
                                                      string.IsNullOrEmpty(d.CoherentParentDependencyName));
 
                 if (matchingDependencyByName == null)
