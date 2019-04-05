@@ -63,7 +63,7 @@ namespace Maestro.Web
                                         new Claim(ClaimTypes.Role, role, ClaimValueTypes.String, GitHubScheme));
                                 }
                             },
-                            OnRemoteFailure = async context =>
+                            OnRemoteFailure = context =>
                             {
                                 var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<GitHubAuthenticationHandler>>();
                                 logger.LogError(context.Failure, "Github authentication failed.");
@@ -71,6 +71,7 @@ namespace Maestro.Web
                                 res.StatusCode = (int)HttpStatusCode.Forbidden;
                                 context.HandleResponse();
                                 context.HttpContext.Items["ErrorMessage"] = "Authentication failed.";
+                                return Task.CompletedTask;
                             },
                         };
                     })
