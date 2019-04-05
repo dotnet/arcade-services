@@ -365,7 +365,7 @@ namespace Maestro.Web
             }
 
             app.UseRewriter(new RewriteOptions().AddRedirect("^swagger(/ui)?/?$", "/swagger/ui/index.html"));
-            app.UseStatusCodePages();
+            app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
             app.UseCookiePolicy();
             app.UseStaticFiles();
             app.UseAuthentication();
