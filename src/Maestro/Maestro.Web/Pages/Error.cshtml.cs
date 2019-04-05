@@ -10,7 +10,7 @@ namespace Maestro.Web.Pages
 {
     public class ErrorModel : PageModel
     {
-        public int StatusCode { get; set; }
+        public new int StatusCode { get; set; }
 
         public string ErrorMessage { get; set; }
 
