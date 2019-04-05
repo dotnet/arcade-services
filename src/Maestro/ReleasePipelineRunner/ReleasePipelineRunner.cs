@@ -373,7 +373,8 @@ namespace ReleasePipelineRunner
                     Logger.LogInformation($"Going to include {author} in the created issue");
 
                     string title = $"Release '{releaseName}' with id {releaseId} failed";
-                    string description = $"Something failed while trying to publish artifacts for build [{build.AzureDevOpsBuildNumber}](https://dnceng.visualstudio.com/internal/_build/results?buildId={build.AzureDevOpsBuildId})." +
+                    string description = $"Something failed while running an async release pipeline for build " +
+                        $"s[{build.AzureDevOpsBuildNumber}](https://dnceng.visualstudio.com/internal/_build/results?buildId={build.AzureDevOpsBuildId})." +
                         $"{Environment.NewLine} {Environment.NewLine}" +
                         $"Please click [here](https://dnceng.visualstudio.com/internal/_releaseProgress?_a=release-pipeline-progress&releaseId={releaseId}) to check the error logs." +
                         $"{Environment.NewLine} {Environment.NewLine}" +
