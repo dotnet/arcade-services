@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -61,6 +62,16 @@ namespace Maestro.Web
                                     context.Identity.AddClaim(
                                         new Claim(ClaimTypes.Role, role, ClaimValueTypes.String, GitHubScheme));
                                 }
+                            },
+                            OnRemoteFailure = context =>
+                            {
+                                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<GitHubAuthenticationHandler>>();
+                                logger.LogError(context.Failure, "Github authentication failed.");
+                                var res = context.HttpContext.Response;
+                                res.StatusCode = (int)HttpStatusCode.Forbidden;
+                                context.HandleResponse();
+                                context.HttpContext.Items["ErrorMessage"] = "Authentication failed.";
+                                return Task.CompletedTask;
                             },
                         };
                     })
