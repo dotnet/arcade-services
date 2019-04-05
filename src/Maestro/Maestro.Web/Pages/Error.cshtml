@@ -1,0 +1,10 @@
+@page
+@model Maestro.Web.Pages.ErrorModel
+@{
+    ViewBag.Title = "Error";
+}
+
+<div class="alert alert-danger">
+    <strong>@Model.StatusCode</strong> @Model.ErrorMessage
+</div>
+

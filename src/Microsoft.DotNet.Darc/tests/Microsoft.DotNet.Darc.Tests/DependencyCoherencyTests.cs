@@ -83,6 +83,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     Test that a simple set of non-coherency updates works.
         ///     
         ///     depB is tied to depA and should not move.
+        ///     depA should have its case-corrected.
         /// </summary>
         [Fact]
         public async Task CoherencyUpdateTests3()
@@ -95,7 +96,7 @@ namespace Microsoft.DotNet.Darc.Tests
 
             List<AssetData> assets = new List<AssetData>()
             {
-                new AssetData(false) { Name = "depA", Version = "v2"},
+                new AssetData(false) { Name = "depa", Version = "v2"},
                 new AssetData(false) { Name = "depB", Version = "v5"}
             };
 
@@ -107,6 +108,7 @@ namespace Microsoft.DotNet.Darc.Tests
             {
                 Assert.Equal(depA, u.From);
                 Assert.Equal("v2", u.To.Version);
+                Assert.Equal("depa", u.To.Name);
             });
         }
 
