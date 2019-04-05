@@ -1,5 +1,5 @@
-import { switchMap, catchError, concat, mergeMap } from 'rxjs/operators';
-import { OperatorFunction, ObservableInput, of, Observable } from 'rxjs';
+import { switchMap, catchError, concat, partition, shareReplay } from 'rxjs/operators';
+import { OperatorFunction, ObservableInput, of, Observable, merge } from 'rxjs';
 
 // Class that we can use to wrap error in observables that we can detect later
 export class WrappedError {
@@ -44,9 +44,16 @@ export function statefulPipe<T>(...args: OperatorFunction<any, any>[]): Operator
   const predicate = function (value: any) {
     return value instanceof WrappedError || value instanceof Loading;
   }
-  return function(source: Observable<StatefulResult<T>>) {
-    return source.pipe(
-      mergeMap(value => !predicate(value) ? (of(value).pipe as any)(...args) : of(value)),
+  return function (source: Observable<StatefulResult<T>>) {
+    // partition subscribes to the source twice,
+    // we only want to subscribe to the source once
+    // use shareReplay(1) to fix this
+    source = source.pipe(
+      shareReplay(1),
     );
-  }
+    const [nonValues, values] = partition(predicate)(source);
+    let transformedValues = (values.pipe as any)(...args);
+
+    return merge(nonValues, transformedValues);
+  };
 }
