@@ -262,7 +262,7 @@ namespace Microsoft.DotNet.DarcLib
             throw new NotImplementedException();
         }
 
-        public void Clone(string repoUri, string commit, string targetDirectory)
+        public void Clone(string repoUri, string commit, string targetDirectory, string gitDirectory)
         {
             throw new NotImplementedException();
         }

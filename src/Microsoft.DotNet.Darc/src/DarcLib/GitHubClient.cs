@@ -865,10 +865,11 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository uri to clone</param>
         /// <param name="commit">Commit, branch, or tag to checkout</param>
         /// <param name="targetDirectory">Directory to clone into</param>
+        /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
         /// <returns></returns>
-        public void Clone(string repoUri, string commit, string targetDirectory)
+        public void Clone(string repoUri, string commit, string targetDirectory, string gitDirectory = null)
         {
-            this.Clone(repoUri, commit, targetDirectory, _logger, Client.Credentials.Password);
+            this.Clone(repoUri, commit, targetDirectory, _logger, Client.Credentials.Password, gitDirectory);
         }
     }
 }

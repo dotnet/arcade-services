@@ -149,8 +149,9 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository uri to clone</param>
         /// <param name="commit">Branch, commit, or tag to checkout</param>
         /// <param name="targetDirectory">Target directory to clone to</param>
+        /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
         /// <returns></returns>
-        protected void Clone(string repoUri, string commit, string targetDirectory, ILogger _logger, string pat)
+        protected void Clone(string repoUri, string commit, string targetDirectory, ILogger _logger, string pat, string gitDirectory)
         {
             string dotnetMaestro = "dotnet-maestro";
             using (_logger.BeginScope("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory))
@@ -171,7 +172,8 @@ namespace Microsoft.DotNet.DarcLib
                                 // will be ignored.
                                 Username = dotnetMaestro,
                                 Password = pat
-                            }
+                            },
+                            RecurseSubmodules = true,
                         });
 
                     _logger.LogDebug($"Reading local repo from {repoPath}");
@@ -179,6 +181,12 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         _logger.LogDebug($"Checking out {commit} in {repoPath}");
                         LibGit2Sharp.Commands.Checkout(localRepo, commit);
+                    }
+                    // LibGit2Sharp doesn't support a --git-dir equivalent yet (https://github.com/libgit2/libgit2sharp/issues/1467), so we do this manually
+                    if (gitDirectory != null)
+                    {
+                        Directory.Move(repoPath, gitDirectory);
+                        File.WriteAllText(repoPath.TrimEnd('\\', '/'), $"gitdir: {gitDirectory}");
                     }
                 }
                 catch (Exception exc)

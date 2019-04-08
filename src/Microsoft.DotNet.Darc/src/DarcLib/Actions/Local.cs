@@ -110,10 +110,12 @@ namespace Microsoft.DotNet.DarcLib
         ///     Gets the local dependencies
         /// </summary>
         /// <returns></returns>
-        public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string name = null, bool includePinned = true)
+        public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string name = null, bool includePinned = true, IEnumerable<string> reposToIgnore = null)
         {
+            reposToIgnore = reposToIgnore ?? Enumerable.Empty<string>();
             return (await _fileManager.ParseVersionDetailsXmlAsync(_repo, null, includePinned)).Where(
-                dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+                dependency => (string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                           && !reposToIgnore.Any(r => dependency.RepoUri.Equals(r, StringComparison.OrdinalIgnoreCase)));
         }
 
         /// <summary>
