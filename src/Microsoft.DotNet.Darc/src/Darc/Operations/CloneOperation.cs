@@ -40,7 +40,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 if (string.IsNullOrWhiteSpace(_options.RepoUri))
                 {
                     Local local = new Local(Logger);
-                    IEnumerable<DependencyDetail>  rootDependencies = await local.GetDependenciesAsync(reposToIgnore: _options.IgnoredRepos);
+                    IEnumerable<DependencyDetail>  rootDependencies = await local.GetDependenciesAsync();
                     IEnumerable<StrippedDependency> stripped = rootDependencies.Select(d => new StrippedDependency(d));
                     stripped.ForEach((s) => accumulatedDependencies.Add(s));
                     stripped.ForEach((s) => seenDependencies.Add(s));
@@ -82,7 +82,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         Local local = new Local(Logger, repoPath);
                         try
                         {
-                            IEnumerable<DependencyDetail> deps = await local.GetDependenciesAsync(reposToIgnore: _options.IgnoredRepos);
+                            IEnumerable<DependencyDetail> deps = await local.GetDependenciesAsync();
                             IEnumerable<DependencyDetail> filteredDeps = FilterToolsetDependencies(deps, _options.IncludeToolset);
                             Logger.LogDebug($"Got {deps.Count()} dependencies and filtered to {filteredDeps.Count()} dependencies");
                             filteredDeps.ForEach((d) =>
@@ -91,6 +91,10 @@ namespace Microsoft.DotNet.Darc.Operations
                                 if (d.RepoUri == repo.RepoUri)
                                 {
                                     Logger.LogDebug($"Skipping self-dependency in {repo.RepoUri} ({repo.Commit} => {d.Commit})");
+                                }
+                                else if (_options.IgnoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    Logger.LogDebug($"Skipping ignored repo {d.RepoUri} (at {d.Commit})");
                                 }
                                 else
                                 {
