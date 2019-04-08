@@ -18,7 +18,7 @@
     </ng-template>
     <ng-template stateful [statefulFrom]="branches$" let-branches [statefulLoadingTemplate]="loadingBranches" (statefulState)="state = $event">
       <div class="list-group list-group-flush">
-        <a class="list-group-item" *ngFor="let branch of branches" [routerLink]="['/', channel.id, branch.repository]"
+        <a class="list-group-item" *ngFor="let branch of branches" [routerLink]="['/', channel.id, branch.repository, 'latest']"
           routerLinkActive="active">
           {{trimName(branch.repository)}}
         </a>

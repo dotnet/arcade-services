@@ -37,7 +37,6 @@ import { SideBarChannelComponent } from "./widget/side-bar-channel/side-bar-chan
 import { SideBarComponent } from "./widget/side-bar/side-bar.component";
 
 import { maestroOptions } from "src/environments/environment";
-import { RecentBuildComponent } from './page/recent-build/recent-build.component';
 import { BuildGraphTableComponent } from './page/build-graph-table/build-graph-table.component';
 import { UriEncodePipe } from './uri-encode.pipe';
 import { SwitchComponent } from './widget/switch/switch.component';
@@ -51,7 +50,6 @@ import { TimeAgoPipe } from './pipes/time-ago.pipe';
     SideBarComponent,
     SideBarChannelComponent,
     BuildComponent,
-    RecentBuildComponent,
     BuildGraphTableComponent,
     UriEncodePipe,
     SwitchComponent,

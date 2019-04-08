@@ -46,7 +46,8 @@ namespace ReleasePipelineRunner
         public IDependencyUpdater DependencyUpdater { get; }
 
         private const string RunningPipelineDictionaryName = "runningPipelines";
-        private static HashSet<string> InProgressStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "notstarted", "scheduled", "queued", "inprogress" };
+        private static HashSet<string> InProgressStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "notstarted", "scheduled", "queued", "inprogress", "undefined" };
+        private static HashSet<string> StopStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "canceled", "rejected" };
 
         public async Task StartAssociatedReleasePipelinesAsync(int buildId, int channelId)
         {
@@ -314,7 +315,8 @@ namespace ReleasePipelineRunner
 
         private static bool HasInProgressEnvironments(AzureDevOpsRelease release)
         {
-            return release.Environments.Any(x => InProgressStatuses.Contains(x.Status));
+            return !release.Environments.Any(x => StopStatuses.Contains(x.Status)) && 
+                    release.Environments.Any(x => InProgressStatuses.Contains(x.Status));
         }
 
         private async Task<AzureDevOpsClient> GetAzureDevOpsClientForAccount(string account)
@@ -371,7 +373,8 @@ namespace ReleasePipelineRunner
                     Logger.LogInformation($"Going to include {author} in the created issue");
 
                     string title = $"Release '{releaseName}' with id {releaseId} failed";
-                    string description = $"Something failed while trying to publish artifacts for build [{buildId}]({build.Id})." +
+                    string description = $"Something failed while running an async release pipeline for build " +
+                        $"s[{build.AzureDevOpsBuildNumber}](https://dnceng.visualstudio.com/internal/_build/results?buildId={build.AzureDevOpsBuildId})." +
                         $"{Environment.NewLine} {Environment.NewLine}" +
                         $"Please click [here](https://dnceng.visualstudio.com/internal/_releaseProgress?_a=release-pipeline-progress&releaseId={releaseId}) to check the error logs." +
                         $"{Environment.NewLine} {Environment.NewLine}" +
