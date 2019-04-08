@@ -17,6 +17,8 @@ $azdoBranchesToDelete = @()
 $subscriptionsToDelete = @()
 $channelsToDelete = @()
 $defaultChannelsToDelete = @()
+$pipelinesToDelete = @()
+$channelPipelinesToDelete = @{}
 
 # Get a temporary directory for a test root
 $testRoot = Join-Path -Path $([System.IO.Path]::GetTempPath()) -ChildPath $([System.IO.Path]::GetRandomFileName())
@@ -41,7 +43,7 @@ $darcAuthParams = "--bar-uri $maestroInstallation --github-pat $githubPAT --azde
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 function Teardown() {
-    
+
     Write-Host
 
     Write-Host "Cleaning $($subscriptionsToDelete.Count) subscriptions"
@@ -66,6 +68,20 @@ function Teardown() {
         }
     }
 
+    Write-Host "Cleaning $($channelPipelinesToDelete.Count) channel-pipeline mappings"
+    foreach ($channelId in $channelPipelinesToDelete.Keys) {
+        $pipelineIds = $channelPipelinesToDelete[$channelId]
+        foreach ($pipelineId in $pipelineIds) {
+            try {
+                Write-Host "Removing pipeline: $pipelineId from channel: $channelId"
+                Remove-Pipeline-From-Channel $channelId $pipelineId
+            } catch {
+                Write-Warning "Failed to remove pipeline $pipelineId from channel $channelId"
+                Write-Warning $_
+            }
+        }
+    }
+
     Write-Host "Cleaning $($channelsToDelete.Count) channels"
     foreach ($channel in $channelsToDelete) {
         try {
@@ -73,6 +89,17 @@ function Teardown() {
             Darc-Command delete-channel --name `'$channel`'
         } catch {
             Write-Warning "Failed to delete channel $channel"
+            Write-Warning $_
+        }
+    }
+
+    Write-Host "Cleaning $($pipelinesToDelete.Count) pipelines"
+    foreach ($pipeline in $pipelinesToDelete) {
+        try {
+            Write-Host "Deleting pipeline $pipeline"
+            Delete-Pipeline $pipeline
+        } catch {
+            Write-Warning "Failed to delete pipeline $pipeline"
             Write-Warning $_
         }
     }
@@ -86,7 +113,7 @@ function Teardown() {
             Write-Warning "Failed to remove github branch $($branch.branch) $($branch.repo)"
             Write-Warning $_
         }
-    }
+    } 
 
     Write-Host "Cleaning $($gitHubPRsToClose.Count) github PRs"
     foreach ($pr in $gitHubPRsToClose) {
@@ -185,8 +212,7 @@ function Trigger-Subscription($subscriptionId) {
     Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
 }
 
-function Add-Build-To-Channel ($buildId, $channelName) {
-    # Look up the channel id
+function Get-ChannelId($channelName) {
     Write-Host "Looking up id of channel '${channelName}'"
     $headers = Get-Bar-Headers 'text/plain' $barToken
     $getChannelsEndpoint = "$maestroInstallation/api/channels?api-version=${barApiVersion}"
@@ -195,6 +221,12 @@ function Add-Build-To-Channel ($buildId, $channelName) {
     if (!$channelId) {
         throw "Channel ${channelName} not found"
     }
+    $channelId
+}
+
+function Add-Build-To-Channel ($buildId, $channelName) {
+    # Look up the channel id
+    $channelId = Get-ChannelId $channelName
 
     Write-Host "Adding build ${buildId} to channel ${channelId}"
     $headers = Get-Bar-Headers 'text/plain'
@@ -202,7 +234,11 @@ function Add-Build-To-Channel ($buildId, $channelName) {
     Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
 }
 
-function New-Build($repository, $branch, $commit, $buildNumber, $assets) {
+function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publishUsingPipelines) {
+    if (!$publishUsingPipelines) {
+        $publishUsingPipelines = "false"
+    }
+    
     $headers = Get-Bar-Headers 'text/plain'
     $body = @{
         gitHubRepository = $repository;
@@ -212,8 +248,11 @@ function New-Build($repository, $branch, $commit, $buildNumber, $assets) {
         azureDevOpsAccount = "dnceng";
         azureDevOpsProject = "internal";
         azureDevOpsBuildNumber = $buildNumber;
+        azureDevOpsBuildId = 144618;
+        azureDevOpsBuildDefinitionId = 6;
         commit = $commit;
         assets = $assets;
+        publishUsingPipelines = $publishUsingPipelines;
     }
     $bodyJson = ConvertTo-Json $body
     Write-Host "Creating Build:"
@@ -266,6 +305,56 @@ function Git-Command($repoName) {
     }
 }
 
+function Create-Pipeline($releasePipelineId) {
+    $headers = Get-Bar-Headers 'text/plain'
+
+    $uri = "$maestroInstallation/api/pipelines?pipelineIdentifier=$releasePipelineId&organization=dnceng&project=internal&api-version=$barApiVersion"
+
+    Write-Host "Creating a new pipeline in the Build Asset Registry..."
+
+    $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Post | ConvertFrom-Json
+    write-host $response
+    $pipelineId = $response.id
+    Write-Host "Created Pipeline with id $pipelineId"
+    return $pipelineId
+}
+
+function Delete-Pipeline($barPipelineId) {
+    $headers = Get-Bar-Headers 'text/plain'
+
+    $uri = "$maestroInstallation/api/pipelines/${barPipelineId}?api-version=$barApiVersion"
+
+    Write-Host "Deleting Pipeline $barPipelineId from the Build Asset Registry..."
+
+    Invoke-WebRequest -Uri $uri -Headers $headers -Method Delete
+}
+
+function Add-Pipeline-To-Channel($channelName, $pipelineId) {
+    $channelId = Get-ChannelId $channelName
+
+    $headers = Get-Bar-Headers 'text/plain'
+
+    $uri = "$maestroInstallation/api/channels/${channelId}/pipelines/${pipelineId}?api-version=$barApiVersion"
+
+    Write-Host "Adding pipeline ${pipelineId} to channel ${channelId} in the Build Asset Registry..."
+
+    $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
+
+    Write-Host $response
+}
+
+function Remove-Pipeline-From-Channel($channelName, $pipelineId) {
+    $channelId = Get-ChannelId $channelName
+
+    $headers = Get-Bar-Headers 'text/plain'
+
+    $uri = "$maestroInstallation/api/channels/${channelId}/pipelines/${pipelineId}?api-version=$barApiVersion"
+
+    Write-Host "Removing pipeline ${pipelineId} from channel ${channelId} in the Build Asset Registry..."
+
+    Invoke-WebRequest -Uri $uri -Headers $headers -Method Delete
+}
+
 #
 # Azure DevOps specific functionality
 #
@@ -315,6 +404,11 @@ function Get-AzDO-Headers() {
     $base64authinfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":${azdoPAT}"))
     $headers = @{"Authorization"="Basic $base64authinfo"}
     return $headers
+}
+
+function Get-AzDO-Release($releaseId) {
+    $uri = "https://dev.azure.com/${azdoAccount$}/${azdoProject}/_apis/release/releases/${releaseId}&api-version=${azdoApiVersion}"
+    Invoke-WebRequest -Uri $uri -Headers $(Get-AzDO-Headers) -Method Get | ConvertFrom-Json
 }
 
 #
