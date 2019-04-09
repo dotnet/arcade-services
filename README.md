@@ -44,4 +44,4 @@ Similarly, each dependency denotes the version of that dependency used and a lin
 
 #### How to Onboard a New Repository
 
-If you would like to add your repository as a channel in BARViz, please see the [Darc documentation](https://github.com/dotnet/arcade/blob/master/Documentation/Darc.md).
+If you would like to see your repository on BarViz, it needs to publish to the Build Asset Registry. Please see the [Darc documentation](https://github.com/dotnet/arcade/blob/master/Documentation/Darc.md).
