@@ -133,5 +133,14 @@ namespace Microsoft.DotNet.DarcLib
         {
             return _fileManager.ParseVersionDetailsXml(fileContents, includePinned);
         }
+
+        /// <summary>
+        /// Checkout the local repo to a given state.
+        /// </summary>
+        /// <param name="commit">Tag, branch, or commit to checkout</param>
+        public void Checkout(string commit)
+        {
+            _gitClient.Checkout(_repo, commit);
+        }
     }
 }

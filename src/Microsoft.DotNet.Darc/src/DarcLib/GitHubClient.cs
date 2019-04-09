@@ -871,5 +871,14 @@ namespace Microsoft.DotNet.DarcLib
         {
             this.Clone(repoUri, commit, targetDirectory, _logger, Client.Credentials.Password, gitDirectory);
         }
+
+        /// <summary>
+        ///     Does not apply to remote repositories.
+        /// </summary>
+        /// <param name="commit">Ignored</param>
+        public void Checkout(string repoPath, string commit)
+        {
+            throw new NotImplementedException($"Cannot checkout a remote repo.");
+        }
     }
 }

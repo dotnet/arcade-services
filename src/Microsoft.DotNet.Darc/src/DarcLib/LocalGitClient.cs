@@ -266,5 +266,31 @@ namespace Microsoft.DotNet.DarcLib
         {
             throw new NotImplementedException();
         }
+
+        /// <summary>
+        ///     Checkout the repo to the specified state.
+        /// </summary>
+        /// <param name="commit">Tag, branch, or commit to checkout.</param>
+        public void Checkout(string repoDir, string commit)
+        {
+            using (_logger.BeginScope("Checking out {commit}", commit))
+            {
+                try
+                {
+                    _logger.LogDebug($"Checking out {commit}");
+
+                    _logger.LogDebug($"Reading local repo from {repoDir}");
+                    using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoDir))
+                    {
+                        _logger.LogDebug($"Checking out {commit} in {repoDir}");
+                        LibGit2Sharp.Commands.Checkout(localRepo, commit);
+                    }
+                }
+                catch (Exception exc)
+                {
+                    throw new Exception($"Something went wrong when checkout out {commit} in {repoDir}", exc);
+                }
+            }
+        }
     }
 }

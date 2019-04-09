@@ -35,6 +35,8 @@ namespace Microsoft.DotNet.Darc.Operations
                 Queue<StrippedDependency> dependenciesToClone = new Queue<StrippedDependency>();
                 // use a set to keep track of whether we've seen dependencies before, otherwise we get trapped in circular dependencies
                 HashSet<StrippedDependency> seenDependencies = new HashSet<StrippedDependency>();
+                // list of master copies of repos that we relocate the .gitdirs for later
+                HashSet<string> masterCopies = new HashSet<string>();
                 RemoteFactory remoteFactory = new RemoteFactory(_options);
 
                 if (string.IsNullOrWhiteSpace(_options.RepoUri))
@@ -67,19 +69,36 @@ namespace Microsoft.DotNet.Darc.Operations
                         StrippedDependency repo = dependenciesToClone.Dequeue();
                         string repoPath = GetRepoDirectory(_options.ReposFolder, repo.RepoUri, repo.Commit);
                         string gitDirPath = GetGitDirPath(_options.GitDirFolder, repo.RepoUri, repo.Commit);
-                        if (Directory.Exists(repoPath))
+                        string masterGitRepoPath = GetMasterGitRepoPath(_options.ReposFolder, repo.RepoUri);
+                        // used for the specific-commit version of the repo
+                        Local local;
+
+                        if (!Directory.Exists(masterGitRepoPath))
                         {
-                            Logger.LogDebug($"Repo path {repoPath} already exists, assuming we cloned already and skipping");
+                            Logger.LogInformation($"Cloning master copy of {repo.RepoUri} into {masterGitRepoPath}");
+                            IRemote repoRemote = await remoteFactory.GetRemoteAsync(repo.RepoUri, Logger);
+                            repoRemote.Clone(repo.RepoUri, "master", masterGitRepoPath, null);
                         }
                         else
                         {
-                            Logger.LogInformation($"Cloning {repo.RepoUri}@{repo.Commit} into {repoPath}");
-                            IRemote repoRemote = await remoteFactory.GetRemoteAsync(repo.RepoUri, Logger);
-                            repoRemote.Clone(repo.RepoUri, repo.Commit, repoPath, gitDirPath);
+                            Local masterLocal = new Local(Logger, masterGitRepoPath);
+                            // fetch?
+                        }
+                        if (Directory.Exists(repoPath))
+                        {
+                            Logger.LogDebug($"Repo path {repoPath} already exists, assuming we cloned already and skipping");
+                            local = new Local(Logger, repoPath);
+                        }
+                        else
+                        {
+                            Logger.LogInformation($"Copying {masterGitRepoPath} into {repoPath}");
+                            CopyDirectory(masterGitRepoPath, repoPath);
+                            Logger.LogInformation($"Checking out {repo.Commit} in {repoPath}");
+                            local = new Local(Logger, repoPath);
+                            local.Checkout(repo.Commit);
                         }
 
                         Logger.LogDebug($"Starting to look for dependencies in {repoPath}");
-                        Local local = new Local(Logger, repoPath);
                         try
                         {
                             IEnumerable<DependencyDetail> deps = await local.GetDependenciesAsync();
@@ -107,6 +126,12 @@ namespace Microsoft.DotNet.Darc.Operations
                                     }
                                 }
                             });
+                            string repoGitDirPath = Path.Combine(repoPath, ".git");
+                            if (gitDirPath != null && Directory.Exists(repoGitDirPath))
+                            {
+                                Directory.Move(repoGitDirPath, gitDirPath);
+                                File.WriteAllText(repoGitDirPath, $"gitdir: {gitDirPath}");
+                            }
                         }
                         catch (DirectoryNotFoundException)
                         {
@@ -191,6 +216,11 @@ namespace Microsoft.DotNet.Darc.Operations
             return Path.Combine(gitDirParent, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}.{commit}.git");
         }
 
+        private static string GetMasterGitRepoPath(string reposFolder, string repoUri)
+        {
+            return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}");
+        }
+
         private static IEnumerable<DependencyDetail> FilterToolsetDependencies(IEnumerable<DependencyDetail> dependencies, bool includeToolset)
         {
             if (!includeToolset)
@@ -199,6 +229,34 @@ namespace Microsoft.DotNet.Darc.Operations
                 return dependencies.Where(dependency => dependency.Type != DependencyType.Toolset);
             }
             return dependencies;
+        }
+
+        // https://docs.microsoft.com/en-us/dotnet/standard/io/how-to-copy-directories
+        private static void CopyDirectory(string sourceDirPath, string destDirPath)
+        {
+            // Get the subdirectories for the specified directory.
+            DirectoryInfo dir = new DirectoryInfo(sourceDirPath);
+
+            DirectoryInfo[] dirs = dir.GetDirectories();
+            // If the destination directory doesn't exist, create it.
+            if (!Directory.Exists(destDirPath))
+            {
+                Directory.CreateDirectory(destDirPath);
+            }
+
+            // Get the files in the directory and copy them to the new location.
+            FileInfo[] files = dir.GetFiles();
+            foreach (FileInfo file in files)
+            {
+                string temppath = Path.Combine(destDirPath, file.Name);
+                file.CopyTo(temppath, false);
+            }
+
+            foreach (DirectoryInfo subdir in dirs)
+            {
+                string temppath = Path.Combine(destDirPath, subdir.Name);
+                CopyDirectory(subdir.FullName, temppath);
+            }
         }
 
         private class StrippedDependency
