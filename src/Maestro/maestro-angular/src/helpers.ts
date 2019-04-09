@@ -1,4 +1,7 @@
 import { Build } from 'src/maestro-client/models';
+import { startOfMinute, addMinutes, startOfHour, addHours, differenceInMilliseconds, startOfDay, addDays } from 'date-fns';
+import { concat, of, timer } from 'rxjs';
+import { tap } from 'rxjs/operators';
 
 function log(str: string) {
   // console.log(str);
@@ -75,4 +78,33 @@ export function getBuildLink(build: Build): string | undefined {
     `/${build.azureDevOpsProject}` +
     `/_build/results` +
     `?view=results&buildId=${build.azureDevOpsBuildId}`;
+}
+
+export function onThe(time: "minute" | "hour" | "day") {
+  let start: ((d: Date) => Date) | undefined = undefined;
+  let add: ((d: Date, n: number) => Date) | undefined = undefined;
+  let interval: number | undefined = undefined;
+  if (time === "minute") {
+    start = startOfMinute;
+    add = addMinutes;
+    interval = 1000 * 60;
+  } else if (time === "hour") {
+    start = startOfHour;
+    add = addHours;
+    interval = 1000 * 60 * 60;
+  } else if (time === "day") {
+    start = startOfDay;
+    add = addDays;
+    interval = 1000 * 60 * 60 * 24;
+  }
+  if (!start || !add || !interval) {
+    throw new Error(`time '${time}' is invalid`);
+  }
+
+  const delay = differenceInMilliseconds(start(add(new Date(), 1)), new Date());
+  return concat(of(0), timer(delay, interval));
+}
+
+export function tapLog<T>(message: string) {
+  return tap<T>(v => console.log(message, v));
 }

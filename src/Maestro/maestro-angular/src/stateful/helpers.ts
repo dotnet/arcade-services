@@ -47,9 +47,14 @@ export function statefulPipe<T>(...args: OperatorFunction<any, any>[]): Operator
   return function (source: Observable<StatefulResult<T>>) {
     // partition subscribes to the source twice,
     // we only want to subscribe to the source once
-    // use shareReplay(1) to fix this
+    // use shareReplay to fix this
+    // make sure to enable refCounting so the source
+    // is unsubscribed when the output is unsubscribed
     source = source.pipe(
-      shareReplay(1),
+      shareReplay({
+        bufferSize: 1,
+        refCount: true,
+      }),
     );
     const [nonValues, values] = partition(predicate)(source);
     let transformedValues = (values.pipe as any)(...args);

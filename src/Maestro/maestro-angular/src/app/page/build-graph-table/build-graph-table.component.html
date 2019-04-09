@@ -87,7 +87,7 @@
         <a [routerLink]="['../..', getRepo(node.build), node.build.id]">{{getRepo(node.build)}}</a>
       </td>
       <td>
-        {{node.build.dateProduced | timeAgo}}
+        <mc-time-ago [value]="node.build.dateProduced"></mc-time-ago>
       </td>
       <td>
         <fa-icon icon="exclamation-circle" title="A newer build of this same repository is in the tree" *ngIf="!isCoherent(node)"></fa-icon>

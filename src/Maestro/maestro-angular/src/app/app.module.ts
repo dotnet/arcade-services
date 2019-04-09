@@ -40,8 +40,8 @@ import { maestroOptions } from "src/environments/environment";
 import { BuildGraphTableComponent } from './page/build-graph-table/build-graph-table.component';
 import { UriEncodePipe } from './uri-encode.pipe';
 import { SwitchComponent } from './widget/switch/switch.component';
-import { RelativeDatePipe } from './pipes/relative-date.pipe';
-import { TimeAgoPipe } from './pipes/time-ago.pipe';
+import { TimeAgoComponent } from './widget/time-ago/time-ago.component';
+import { RelativeDateComponent } from './widget/relative-date/relative-date.component';
 
 @NgModule({
   declarations: [
@@ -53,8 +53,8 @@ import { TimeAgoPipe } from './pipes/time-ago.pipe';
     BuildGraphTableComponent,
     UriEncodePipe,
     SwitchComponent,
-    RelativeDatePipe,
-    TimeAgoPipe,
+    TimeAgoComponent,
+    RelativeDateComponent,
   ],
   imports: [
     BrowserModule,

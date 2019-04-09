@@ -100,6 +100,8 @@ namespace Maestro.Web
             Configuration = ServiceHostConfiguration.Get(env);
         }
 
+        public static readonly TimeSpan LoginCookieLifetime = new TimeSpan(days: 120, hours: 0, minutes: 0, seconds: 0);
+
         public IHostingEnvironment HostingEnvironment { get; set; }
         public IConfigurationRoot Configuration { get; }
 
@@ -108,7 +110,8 @@ namespace Maestro.Web
         {
             if (HostingEnvironment.IsDevelopment())
             {
-                services.AddDataProtection();
+                services.AddDataProtection()
+                    .SetDefaultKeyLifetime(LoginCookieLifetime * 2);
             }
             else
             {
@@ -120,7 +123,8 @@ namespace Maestro.Web
                 KeyBundle key = kvClient.GetKeyAsync(vaultUri, keyVaultKeyIdentifierName).GetAwaiter().GetResult();
                 services.AddDataProtection()
                     .PersistKeysToAzureBlobStorage(new Uri(dpConfig["KeyFileUri"]))
-                    .ProtectKeysWithAzureKeyVault(kvClient, key.KeyIdentifier.ToString());
+                    .ProtectKeysWithAzureKeyVault(kvClient, key.KeyIdentifier.ToString())
+                    .SetDefaultKeyLifetime(LoginCookieLifetime * 2);
             }
 
             ConfigureApiServices(services);
