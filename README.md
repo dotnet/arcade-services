@@ -38,7 +38,7 @@ When mousing over a dependency, you may notice icons that show up along the left
 
 #### How to Understand Versions and Hashes Used for a Build
 
-The number at the top of the channel’s page, next to the URL for the repository, is the current build number of the repository. The link of the hash below the URL will take you to the AzDO repository and the hash referenced so that the user can see all the commits that are a part of the latest build. 
+The number at the top of the build's page, next to the URL for the repository, is the current build number of the repository. The link of the hash below the URL will take you to the AzDO repository and the hash referenced so that the user can see all the commits that are a part of the latest build. 
 
 Similarly, each dependency denotes the version of that dependency used and a link to the hash of the latest commit that was contained in the build. 
 
