@@ -28,7 +28,7 @@ The two main states of a channel’s current build are as follows:
 
 - [Green checkmark] Current build is good. 
 
-- [Yellow bang] There are issues with this channel. The message at the top of the channel’s page will give you more information as to the issue with the channel, but most likely is one of the following issues: 
+- [Yellow bang] There are issues with this build. The message at the top of the build's page will give you more information as to the issue, but most likely is one of the following issues: 
   - The repository is not running the latest version of the Arcade toolset. Older versions of the Arcade toolset are incompatible with determining the state of the build. 
   - Latest builds are failing
 
