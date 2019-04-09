@@ -32,7 +32,7 @@ The two main states of a channel’s current build are as follows:
   - The repository is not running the latest version of the Arcade toolset. Older versions of the Arcade toolset are incompatible with determining the state of the build. 
   - Latest builds are failing
 
-While looking at a channel, you may notice highlighted (in yellow) dependencies. These denote the dependencies that are an older version than another of the same dependency used in the build. This should help the teams to identify issues with dependency coherency within a build.  
+While looking at a build, you may notice highlighted (in yellow) dependencies. These denote the dependencies that are an older version than another of the same dependency used in the build. This should help the teams to identify issues with dependency coherency within a build.  
 
 When mousing over a dependency, you may notice icons that show up along the left-hand side of the list. The icon at the top of the column provides help for understanding these icons. These icons are to assist in understanding the hierarchy of the dependency graph and to point out conflicting dependencies within the build.  
 
