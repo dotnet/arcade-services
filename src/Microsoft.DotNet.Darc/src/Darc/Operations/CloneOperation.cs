@@ -110,6 +110,10 @@ namespace Microsoft.DotNet.Darc.Operations
                                 {
                                     Logger.LogDebug($"Skipping ignored repo {d.RepoUri} (at {d.Commit})");
                                 }
+                                else if (string.IsNullOrWhiteSpace(d.Commit))
+                                {
+                                    Logger.LogWarning($"Skipping dependency from {repo.RepoUri}@{repo.Commit} to {d.RepoUri}: Missing commit.");
+                                }
                                 else
                                 {
                                     StrippedDependency stripped = new StrippedDependency(d);
@@ -197,6 +201,11 @@ namespace Microsoft.DotNet.Darc.Operations
 
         private static string GetRepoDirectory(string reposFolder, string repoUri, string commit)
         {
+            if (repoUri.EndsWith(".git"))
+            {
+                repoUri = repoUri.Substring(0, repoUri.Length - ".git".Length);
+            }
+
             // commit could actually be a branch or tag, make it filename-safe
             commit = commit.Replace('/', '-').Replace('\\', '-').Replace('?', '-').Replace('*', '-').Replace(':', '-').Replace('|', '-').Replace('"', '-').Replace('<', '-').Replace('>', '-');
             return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}.{commit}");
@@ -209,12 +218,20 @@ namespace Microsoft.DotNet.Darc.Operations
                 return null;
             }
 
-            // commit could actually be a branch or tag, make it filename-safe
+            if (repoUri.EndsWith(".git"))
+            {
+                repoUri = repoUri.Substring(0, repoUri.Length - ".git".Length);
+            }
+
             return Path.Combine(gitDirParent, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}.git");
         }
 
         private static string GetMasterGitRepoPath(string reposFolder, string repoUri)
         {
+            if (repoUri.EndsWith(".git"))
+            {
+                repoUri = repoUri.Substring(0, repoUri.Length - ".git".Length);
+            }
             return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}");
         }
 

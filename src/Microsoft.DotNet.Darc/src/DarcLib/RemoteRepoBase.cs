@@ -183,9 +183,20 @@ namespace Microsoft.DotNet.DarcLib
                         if (commit == null)
                         {
                             commit = localRepo.Head.Reference.TargetIdentifier;
+                            _logger.LogInformation($"Repo {localRepo.Info.WorkingDirectory} has no commit to clone at, assuming it's {commit}");
                         }
-                        _logger.LogDebug($"Checking out {commit} in {repoPath}");
-                        LibGit2Sharp.Commands.Checkout(localRepo, commit);
+                        try
+                        {
+                            _logger.LogDebug($"Attempting to checkout {commit} as commit in {localRepo.Info.WorkingDirectory}");
+                            LibGit2Sharp.Commands.Checkout(localRepo, commit);
+                        }
+                        catch
+                        {
+                            _logger.LogDebug($"Failed to checkout {commit} as commit, trying to resolve");
+                            string resolvedReference = ParseReference(localRepo, commit, _logger);
+                            _logger.LogDebug($"Resolved {commit} to {resolvedReference ?? "<invalid>"} in {localRepo.Info.WorkingDirectory}, attempting checkout");
+                            LibGit2Sharp.Commands.Checkout(localRepo, resolvedReference);
+                        }
                     }
                     // LibGit2Sharp doesn't support a --git-dir equivalent yet (https://github.com/libgit2/libgit2sharp/issues/1467), so we do this manually
                     if (gitDirectory != null)
@@ -195,7 +206,7 @@ namespace Microsoft.DotNet.DarcLib
                     }
                     using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoPath))
                     {
-                        CheckoutSubmodules(localRepo, cloneOptions, gitDirectory);
+                        CheckoutSubmodules(localRepo, cloneOptions, gitDirectory, _logger);
                     }
                 }
                 catch (Exception exc)
@@ -205,20 +216,19 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
-        private static void CheckoutSubmodules(LibGit2Sharp.Repository repo, LibGit2Sharp.CloneOptions submoduleCloneOptions, string gitDirParentPath)
+        private static void CheckoutSubmodules(LibGit2Sharp.Repository repo, LibGit2Sharp.CloneOptions submoduleCloneOptions, string gitDirParentPath, ILogger log)
         {
             foreach (LibGit2Sharp.Submodule sub in repo.Submodules)
             {
+                log.LogDebug($"Updating submodule {sub.Name} at {sub.Path} for {repo.Info.WorkingDirectory}.  GitDirParent: {gitDirParentPath}");
                 repo.Submodules.Update(sub.Name, new LibGit2Sharp.SubmoduleUpdateOptions { CredentialsProvider = submoduleCloneOptions.CredentialsProvider, Init = true });
-                string subRepoPath = Path.Combine(repo.Info.WorkingDirectory, sub.Path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar));
+                string normalizedSubPath = sub.Path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+                string subRepoPath = Path.Combine(repo.Info.WorkingDirectory, normalizedSubPath);
                 string relativeGitDirPath = File.ReadAllText(Path.Combine(subRepoPath, ".git")).Substring(8);
-                //using (FileStream s = File.OpenRead(Path.Combine(subRepoPath, ".git")))
-                //using (StreamReader r = new StreamReader(s))
-                //{
-                //    relativeGitDirPath = r.ReadToEnd().Substring("gitdir: ".Length + 1);
-                //}
+                log.LogDebug($"Submodule {sub.Name} has .gitdir {relativeGitDirPath}");
                 string absoluteGitDirPath = Path.GetFullPath(Path.Combine(subRepoPath, relativeGitDirPath));
                 string relocatedGitDirPath = absoluteGitDirPath.Replace(repo.Info.Path.TrimEnd(new[] { '/', '\\' }), gitDirParentPath.TrimEnd(new[] { '/', '\\' }));
+                log.LogDebug($"Writing new .gitdir path {relocatedGitDirPath} to submodule at {subRepoPath}");
                 // File.WriteAllText gets access denied for some reason
                 using (FileStream s = File.OpenWrite(Path.Combine(subRepoPath, ".git")))
                 using (StreamWriter w = new StreamWriter(s))
@@ -227,10 +237,39 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
                 {
+                    log.LogDebug($"Resetting {sub.Name} to {sub.HeadCommitId.Sha}");
                     subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.Single(c => c.Sha == sub.HeadCommitId.Sha));
-                    CheckoutSubmodules(subRepo, submoduleCloneOptions, gitDirParentPath);
+                    CheckoutSubmodules(subRepo, submoduleCloneOptions, absoluteGitDirPath, log);
                 }
             }
+        }
+
+        private static string ParseReference(LibGit2Sharp.Repository repo, string treeish, ILogger log)
+        {
+            LibGit2Sharp.Reference reference = null;
+            LibGit2Sharp.GitObject dummy;
+            try
+            {
+                repo.RevParse(treeish, out reference, out dummy);
+            }
+            catch
+            {
+                // nothing we can do
+            }
+            log.LogDebug($"Parsed {treeish} to mean {reference?.TargetIdentifier ?? "<invalid>"}");
+            if (reference == null)
+            {
+                try
+                {
+                    repo.RevParse($"origin/{treeish}", out reference, out dummy);
+                }
+                catch
+                {
+                    // nothing we can do
+                }
+                log.LogDebug($"Parsed origin/{treeish} to mean {reference?.TargetIdentifier ?? "<invalid>"}");
+            }
+            return reference?.TargetIdentifier;
         }
 
         private byte[] GetUtf8ContentBytes(string content, ContentEncoding encoding)

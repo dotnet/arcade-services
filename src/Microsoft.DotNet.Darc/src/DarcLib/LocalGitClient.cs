@@ -295,11 +295,11 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         try
                         {
-                            _logger.LogDebug($"Checking out {commit} in {repoDir}");
+                            _logger.LogDebug($"Attempting to check out {commit} in {repoDir}");
                             LibGit2Sharp.Commands.Checkout(localRepo, commit, checkoutOptions);
                             if (force)
                             {
-                                CleanRepoAndSubmodules(localRepo);
+                                CleanRepoAndSubmodules(localRepo, _logger);
                             }
                         }
                         catch (LibGit2Sharp.NotFoundException)
@@ -311,18 +311,39 @@ namespace Microsoft.DotNet.DarcLib
                                 {
                                     IEnumerable<string> refSpecs = r.FetchRefSpecs.Select(x => x.Specification);
                                     _logger.LogDebug($"Fetching {string.Join(";", refSpecs)} from {r.Url} in {repoDir}");
-                                    LibGit2Sharp.Commands.Fetch(localRepo, r.Name, refSpecs, new LibGit2Sharp.FetchOptions(), $"Fetching from {r.Url}");
+                                    try
+                                    {
+                                        LibGit2Sharp.Commands.Fetch(localRepo, r.Name, refSpecs, new LibGit2Sharp.FetchOptions(), $"Fetching from {r.Url}");
+                                    }
+                                    catch
+                                    {
+                                        _logger.LogWarning($"Fetching failed, are you offline or missing a remote?");
+                                    }
                                 }
                                 _logger.LogDebug($"After fetch, attempting to checkout {commit} in {repoDir}");
-                                LibGit2Sharp.Commands.Checkout(localRepo, commit, checkoutOptions);
+                                try
+                                {
+                                    LibGit2Sharp.Commands.Checkout(localRepo, commit, checkoutOptions);
+                                }
+                                catch
+                                {
+                                    _logger.LogDebug($"Couldn't checkout {commit} as a commit after fetch.  Attempting to resolve as a treeish.");
+                                    string resolvedReference = ParseReference(localRepo, commit, _logger);
+                                    if (resolvedReference != null)
+                                    {
+                                        _logger.LogDebug($"Resolved {commit} to {resolvedReference}, attempting to check out");
+                                        LibGit2Sharp.Commands.Checkout(localRepo, resolvedReference, checkoutOptions);
+                                    }
+                                }
+
                                 if (force)
                                 {
-                                    CleanRepoAndSubmodules(localRepo);
+                                    CleanRepoAndSubmodules(localRepo, _logger);
                                 }
                             }
                             catch   // Most likely network exception, could also be no remotes.  We can't do anything about any error here.
                             {
-                                _logger.LogError($"After fetch, still couldn't find commit {commit} in {repoDir}.  Are you offline or missing a remote?");
+                                _logger.LogError($"After fetch, still couldn't find commit or treeish {commit} in {repoDir}.  Are you offline or missing a remote?");
                                 throw;
                             }
                         }
@@ -330,33 +351,78 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 catch (Exception exc)
                 {
-                    throw new Exception($"Something went wrong when checkout out {commit} in {repoDir}", exc);
+                    throw new Exception($"Something went wrong when checking out {commit} in {repoDir}", exc);
                 }
             }
         }
 
-        private static void CleanRepoAndSubmodules(LibGit2Sharp.Repository repo)
+        private static void CleanRepoAndSubmodules(LibGit2Sharp.Repository repo, ILogger log)
         {
+            log.LogDebug($"Beginning clean of {repo.Info.WorkingDirectory} and {repo.Submodules.Count()} submodules");
+
             LibGit2Sharp.StatusOptions options = new LibGit2Sharp.StatusOptions
             {
                 IncludeUntracked = true,
                 RecurseUntrackedDirs = true,
             };
+            int count = 0;
             foreach (LibGit2Sharp.StatusEntry item in repo.RetrieveStatus(options))
             {
                 if (item.State == LibGit2Sharp.FileStatus.NewInWorkdir)
                 {
-                    File.Delete(item.FilePath);
+                    File.Delete(Path.Combine(repo.Info.WorkingDirectory, item.FilePath));
+                    ++count;
                 }
             }
+            log.LogDebug($"Deleted {count} untracked files");
+
             foreach (LibGit2Sharp.Submodule sub in repo.Submodules)
             {
-                using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(Path.Combine(repo.Info.WorkingDirectory, sub.Path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar))))
+                string normalizedSubPath = sub.Path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+                string subRepoPath = Path.Combine(repo.Info.WorkingDirectory, normalizedSubPath);
+                string subRepoGitFilePath = Path.Combine(subRepoPath, ".git");
+                if (!File.Exists(subRepoGitFilePath))
+                {
+                    log.LogDebug($"Submodule {sub.Name} in {subRepoPath} does not appear to be initialized, attempting to initialize now.");
+                    // hasn't been initialized yet, can happen when differest hashes have new or moved submodules
+                    repo.Submodules.Update(sub.Name, new LibGit2Sharp.SubmoduleUpdateOptions { Init = true });
+                }
+
+                log.LogDebug($"Beginning clean of submodule {sub.Name}");
+                using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
                 {
                     subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.Single(c => c.Sha == sub.HeadCommitId.Sha));
-                    CleanRepoAndSubmodules(subRepo);
+                    CleanRepoAndSubmodules(subRepo, log);
                 }
             }
+        }
+
+        private static string ParseReference(LibGit2Sharp.Repository repo, string treeish, ILogger log)
+        {
+            LibGit2Sharp.Reference reference = null;
+            LibGit2Sharp.GitObject dummy;
+            try
+            {
+                repo.RevParse(treeish, out reference, out dummy);
+            }
+            catch
+            {
+                // nothing we can do
+            }
+            log.LogDebug($"Parsed {treeish} to mean {reference?.TargetIdentifier ?? "<invalid>"}");
+            if (reference == null)
+            {
+                try
+                {
+                    repo.RevParse($"origin/{treeish}", out reference, out dummy);
+                }
+                catch
+                {
+                    // nothing we can do
+                }
+                log.LogDebug($"Parsed origin/{treeish} to mean {reference?.TargetIdentifier ?? "<invalid>"}");
+            }
+            return reference?.TargetIdentifier;
         }
     }
 }
