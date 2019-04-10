@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -154,6 +155,18 @@ namespace Microsoft.DotNet.DarcLib
         protected void Clone(string repoUri, string commit, string targetDirectory, ILogger _logger, string pat, string gitDirectory)
         {
             string dotnetMaestro = "dotnet-maestro";
+            LibGit2Sharp.CloneOptions cloneOptions = new LibGit2Sharp.CloneOptions
+            {
+                Checkout = false,
+                CredentialsProvider = (url, user, cred) =>
+                new LibGit2Sharp.UsernamePasswordCredentials
+                {
+                    // The PAT is actually the only thing that matters here, the username
+                    // will be ignored.
+                    Username = dotnetMaestro,
+                    Password = pat
+                },
+            };
             using (_logger.BeginScope("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory))
             {
                 try
@@ -162,23 +175,15 @@ namespace Microsoft.DotNet.DarcLib
                     string repoPath = LibGit2Sharp.Repository.Clone(
                         repoUri,
                         targetDirectory,
-                        new LibGit2Sharp.CloneOptions
-                        {
-                            Checkout = false,
-                            CredentialsProvider = (url, user, cred) =>
-                            new LibGit2Sharp.UsernamePasswordCredentials
-                            {
-                                // The PAT is actually the only thing that matters here, the username
-                                // will be ignored.
-                                Username = dotnetMaestro,
-                                Password = pat
-                            },
-                            RecurseSubmodules = true,
-                        });
+                        cloneOptions);
 
                     _logger.LogDebug($"Reading local repo from {repoPath}");
                     using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoPath))
                     {
+                        if (commit == null)
+                        {
+                            commit = localRepo.Head.Reference.TargetIdentifier;
+                        }
                         _logger.LogDebug($"Checking out {commit} in {repoPath}");
                         LibGit2Sharp.Commands.Checkout(localRepo, commit);
                     }
@@ -188,10 +193,42 @@ namespace Microsoft.DotNet.DarcLib
                         Directory.Move(repoPath, gitDirectory);
                         File.WriteAllText(repoPath.TrimEnd('\\', '/'), $"gitdir: {gitDirectory}");
                     }
+                    using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoPath))
+                    {
+                        CheckoutSubmodules(localRepo, cloneOptions, gitDirectory);
+                    }
                 }
                 catch (Exception exc)
                 {
-                    throw new Exception($"Something went wrong when cloning repo {repoUri} at {commit} into {targetDirectory}", exc);
+                    throw new Exception($"Something went wrong when cloning repo {repoUri} at {commit ?? "<default branch>"} into {targetDirectory}", exc);
+                }
+            }
+        }
+
+        private static void CheckoutSubmodules(LibGit2Sharp.Repository repo, LibGit2Sharp.CloneOptions submoduleCloneOptions, string gitDirParentPath)
+        {
+            foreach (LibGit2Sharp.Submodule sub in repo.Submodules)
+            {
+                repo.Submodules.Update(sub.Name, new LibGit2Sharp.SubmoduleUpdateOptions { CredentialsProvider = submoduleCloneOptions.CredentialsProvider, Init = true });
+                string subRepoPath = Path.Combine(repo.Info.WorkingDirectory, sub.Path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar));
+                string relativeGitDirPath = File.ReadAllText(Path.Combine(subRepoPath, ".git")).Substring(8);
+                //using (FileStream s = File.OpenRead(Path.Combine(subRepoPath, ".git")))
+                //using (StreamReader r = new StreamReader(s))
+                //{
+                //    relativeGitDirPath = r.ReadToEnd().Substring("gitdir: ".Length + 1);
+                //}
+                string absoluteGitDirPath = Path.GetFullPath(Path.Combine(subRepoPath, relativeGitDirPath));
+                string relocatedGitDirPath = absoluteGitDirPath.Replace(repo.Info.Path.TrimEnd(new[] { '/', '\\' }), gitDirParentPath.TrimEnd(new[] { '/', '\\' }));
+                // File.WriteAllText gets access denied for some reason
+                using (FileStream s = File.OpenWrite(Path.Combine(subRepoPath, ".git")))
+                using (StreamWriter w = new StreamWriter(s))
+                {
+                    w.Write($"gitdir: {relocatedGitDirPath}");
+                }
+                using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
+                {
+                    subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.Single(c => c.Sha == sub.HeadCommitId.Sha));
+                    CheckoutSubmodules(subRepo, submoduleCloneOptions, gitDirParentPath);
                 }
             }
         }

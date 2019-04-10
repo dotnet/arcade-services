@@ -20,6 +20,7 @@ namespace Microsoft.DotNet.DarcLib
         ///     Checkout the specified tag, branch, or commit.
         /// </summary>
         /// <param name="commit">Tag, branch, or commit to checkout</param>
-        void Checkout(string commit);
+        /// <param name="force">True to force checkout (can lose work)</param>
+        void Checkout(string commit, bool force);
     }
 }

@@ -159,8 +159,10 @@ namespace Microsoft.DotNet.DarcLib
         /// <summary>
         ///     Checkout the repository to a given state.
         /// </summary>
+        /// <param name="repoPath">Path to the local repository</param>
         /// <param name="commit">Tag, branch, or commit to checkout</param>
-        void Checkout(string repoPath, string commit);
+        /// <param name="force">True to force the checkout (loses work)</param>
+        void Checkout(string repoPath, string commit, bool force);
     }
 
     public class PullRequest

@@ -68,8 +68,8 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         StrippedDependency repo = dependenciesToClone.Dequeue();
                         string repoPath = GetRepoDirectory(_options.ReposFolder, repo.RepoUri, repo.Commit);
-                        string gitDirPath = GetGitDirPath(_options.GitDirFolder, repo.RepoUri, repo.Commit);
                         string masterGitRepoPath = GetMasterGitRepoPath(_options.ReposFolder, repo.RepoUri);
+                        string masterRepoGitDirPath = GetMasterGitDirPath(_options.GitDirFolder, repo.RepoUri);
                         // used for the specific-commit version of the repo
                         Local local;
 
@@ -77,12 +77,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         {
                             Logger.LogInformation($"Cloning master copy of {repo.RepoUri} into {masterGitRepoPath}");
                             IRemote repoRemote = await remoteFactory.GetRemoteAsync(repo.RepoUri, Logger);
-                            repoRemote.Clone(repo.RepoUri, "master", masterGitRepoPath, null);
-                        }
-                        else
-                        {
-                            Local masterLocal = new Local(Logger, masterGitRepoPath);
-                            // fetch?
+                            repoRemote.Clone(repo.RepoUri, null, masterGitRepoPath, masterRepoGitDirPath);
                         }
                         if (Directory.Exists(repoPath))
                         {
@@ -91,11 +86,11 @@ namespace Microsoft.DotNet.Darc.Operations
                         }
                         else
                         {
-                            Logger.LogInformation($"Copying {masterGitRepoPath} into {repoPath}");
+                            Logger.LogDebug($"Copying master copy {masterGitRepoPath} into {repoPath}");
                             CopyDirectory(masterGitRepoPath, repoPath);
                             Logger.LogInformation($"Checking out {repo.Commit} in {repoPath}");
                             local = new Local(Logger, repoPath);
-                            local.Checkout(repo.Commit);
+                            local.Checkout(repo.Commit, true);
                         }
 
                         Logger.LogDebug($"Starting to look for dependencies in {repoPath}");
@@ -106,7 +101,7 @@ namespace Microsoft.DotNet.Darc.Operations
                             Logger.LogDebug($"Got {deps.Count()} dependencies and filtered to {filteredDeps.Count()} dependencies");
                             filteredDeps.ForEach((d) =>
                             {
-                                // arcade depends on previous versions of itself to build, so this would go on forever
+                                // e.g. arcade depends on previous versions of itself to build, so this would go on forever
                                 if (d.RepoUri == repo.RepoUri)
                                 {
                                     Logger.LogDebug($"Skipping self-dependency in {repo.RepoUri} ({repo.Commit} => {d.Commit})");
@@ -126,11 +121,14 @@ namespace Microsoft.DotNet.Darc.Operations
                                     }
                                 }
                             });
-                            string repoGitDirPath = Path.Combine(repoPath, ".git");
-                            if (gitDirPath != null && Directory.Exists(repoGitDirPath))
+                            // delete the .gitdir redirect to orphan the repo.
+                            // we want to do this because otherwise all of these folder will show as dirty in Git,
+                            // and any operations on them will affect the master copy and all the others, which
+                            // could be confusing.
+                            string repoGitRedirectPath = Path.Combine(repoPath, ".git");
+                            if (File.Exists(repoGitRedirectPath))
                             {
-                                Directory.Move(repoGitDirPath, gitDirPath);
-                                File.WriteAllText(repoGitDirPath, $"gitdir: {gitDirPath}");
+                                File.Delete(repoGitRedirectPath);
                             }
                         }
                         catch (DirectoryNotFoundException)
@@ -204,7 +202,7 @@ namespace Microsoft.DotNet.Darc.Operations
             return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}.{commit}");
         }
 
-        private static string GetGitDirPath(string gitDirParent, string repoUri, string commit)
+        private static string GetMasterGitDirPath(string gitDirParent, string repoUri)
         {
             if (gitDirParent == null)
             {
@@ -212,8 +210,7 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             // commit could actually be a branch or tag, make it filename-safe
-            commit = commit.Replace('/', '-').Replace('\\', '-').Replace('?', '-').Replace('*', '-').Replace(':', '-').Replace('|', '-').Replace('"', '-').Replace('<', '-').Replace('>', '-');
-            return Path.Combine(gitDirParent, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}.{commit}.git");
+            return Path.Combine(gitDirParent, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}.git");
         }
 
         private static string GetMasterGitRepoPath(string reposFolder, string repoUri)

@@ -138,9 +138,9 @@ namespace Microsoft.DotNet.DarcLib
         /// Checkout the local repo to a given state.
         /// </summary>
         /// <param name="commit">Tag, branch, or commit to checkout</param>
-        public void Checkout(string commit)
+        public void Checkout(string commit, bool force = false)
         {
-            _gitClient.Checkout(_repo, commit);
+            _gitClient.Checkout(_repo, commit, force);
         }
     }
 }

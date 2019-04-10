@@ -1169,7 +1169,7 @@ namespace Microsoft.DotNet.DarcLib
         ///     Does not apply to remote repositories.
         /// </summary>
         /// <param name="commit">Ignored</param>
-        public void Checkout(string repoPath, string commit)
+        public void Checkout(string repoPath, string commit, bool force)
         {
             throw new NotImplementedException($"Cannot checkout a remote repo.");
         }

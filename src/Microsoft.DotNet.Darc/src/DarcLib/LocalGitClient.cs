@@ -262,6 +262,13 @@ namespace Microsoft.DotNet.DarcLib
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        ///     Clone a remote repository at the specified commit.
+        /// </summary>
+        /// <param name="repoUri">Remote git repo to clone</param>
+        /// <param name="commit">Tag, branch, or commit to clone at</param>
+        /// <param name="targetDirectory">Directory to clone into</param>
+        /// <param name="gitDirectory">Directory for the .git folder, or null for default</param>
         public void Clone(string repoUri, string commit, string targetDirectory, string gitDirectory)
         {
             throw new NotImplementedException();
@@ -271,10 +278,14 @@ namespace Microsoft.DotNet.DarcLib
         ///     Checkout the repo to the specified state.
         /// </summary>
         /// <param name="commit">Tag, branch, or commit to checkout.</param>
-        public void Checkout(string repoDir, string commit)
+        public void Checkout(string repoDir, string commit, bool force = false)
         {
             using (_logger.BeginScope("Checking out {commit}", commit))
             {
+                LibGit2Sharp.CheckoutOptions checkoutOptions = new LibGit2Sharp.CheckoutOptions
+                {
+                    CheckoutModifiers = force ? LibGit2Sharp.CheckoutModifiers.Force : LibGit2Sharp.CheckoutModifiers.None,
+                };
                 try
                 {
                     _logger.LogDebug($"Checking out {commit}");
@@ -282,13 +293,68 @@ namespace Microsoft.DotNet.DarcLib
                     _logger.LogDebug($"Reading local repo from {repoDir}");
                     using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoDir))
                     {
-                        _logger.LogDebug($"Checking out {commit} in {repoDir}");
-                        LibGit2Sharp.Commands.Checkout(localRepo, commit);
+                        try
+                        {
+                            _logger.LogDebug($"Checking out {commit} in {repoDir}");
+                            LibGit2Sharp.Commands.Checkout(localRepo, commit, checkoutOptions);
+                            if (force)
+                            {
+                                CleanRepoAndSubmodules(localRepo);
+                            }
+                        }
+                        catch (LibGit2Sharp.NotFoundException)
+                        {
+                            _logger.LogWarning($"Couldn't find commit {commit} in {repoDir} locally.  Attempting fetch.");
+                            try
+                            {
+                                foreach (LibGit2Sharp.Remote r in localRepo.Network.Remotes)
+                                {
+                                    IEnumerable<string> refSpecs = r.FetchRefSpecs.Select(x => x.Specification);
+                                    _logger.LogDebug($"Fetching {string.Join(";", refSpecs)} from {r.Url} in {repoDir}");
+                                    LibGit2Sharp.Commands.Fetch(localRepo, r.Name, refSpecs, new LibGit2Sharp.FetchOptions(), $"Fetching from {r.Url}");
+                                }
+                                _logger.LogDebug($"After fetch, attempting to checkout {commit} in {repoDir}");
+                                LibGit2Sharp.Commands.Checkout(localRepo, commit, checkoutOptions);
+                                if (force)
+                                {
+                                    CleanRepoAndSubmodules(localRepo);
+                                }
+                            }
+                            catch   // Most likely network exception, could also be no remotes.  We can't do anything about any error here.
+                            {
+                                _logger.LogError($"After fetch, still couldn't find commit {commit} in {repoDir}.  Are you offline or missing a remote?");
+                                throw;
+                            }
+                        }
                     }
                 }
                 catch (Exception exc)
                 {
                     throw new Exception($"Something went wrong when checkout out {commit} in {repoDir}", exc);
+                }
+            }
+        }
+
+        private static void CleanRepoAndSubmodules(LibGit2Sharp.Repository repo)
+        {
+            LibGit2Sharp.StatusOptions options = new LibGit2Sharp.StatusOptions
+            {
+                IncludeUntracked = true,
+                RecurseUntrackedDirs = true,
+            };
+            foreach (LibGit2Sharp.StatusEntry item in repo.RetrieveStatus(options))
+            {
+                if (item.State == LibGit2Sharp.FileStatus.NewInWorkdir)
+                {
+                    File.Delete(item.FilePath);
+                }
+            }
+            foreach (LibGit2Sharp.Submodule sub in repo.Submodules)
+            {
+                using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(Path.Combine(repo.Info.WorkingDirectory, sub.Path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar))))
+                {
+                    subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.Single(c => c.Sha == sub.HeadCommitId.Sha));
+                    CleanRepoAndSubmodules(subRepo);
                 }
             }
         }
