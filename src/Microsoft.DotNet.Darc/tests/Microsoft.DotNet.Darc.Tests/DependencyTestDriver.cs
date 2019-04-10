@@ -206,7 +206,7 @@ namespace Microsoft.DotNet.Darc.Tests
                 string repoUri = node.SelectSingleNode("RepoUri").InnerText;
                 string commit = node.SelectSingleNode("Commit").InnerText;
                 DependencyGraphNode matchingNode = nodes.FirstOrDefault(graphNode =>
-                        graphNode.RepoUri == repoUri &&
+                        graphNode.Repository == repoUri &&
                         graphNode.Commit == commit);
 
                 Assert.NotNull(matchingNode);
@@ -217,7 +217,7 @@ namespace Microsoft.DotNet.Darc.Tests
         private void AssertDependencyGraphNodeIsEqual(DependencyGraphNode graphNode, XmlNode xmlNode)
         {
             // Check root commit info
-            Assert.Equal(graphNode.RepoUri, xmlNode.SelectSingleNode("RepoUri").InnerText);
+            Assert.Equal(graphNode.Repository, xmlNode.SelectSingleNode("RepoUri").InnerText);
             Assert.Equal(graphNode.Commit, xmlNode.SelectSingleNode("Commit").InnerText);
 
             // Check dependencies
@@ -255,7 +255,7 @@ namespace Microsoft.DotNet.Darc.Tests
                 string commit = node.SelectSingleNode("Commit").InnerText;
 
                 var matchingNode = graphNodes.FirstOrDefault(graphNode =>
-                    graphNode.RepoUri == repoUri &&
+                    graphNode.Repository == repoUri &&
                     graphNode.Commit == commit);
 
                 Assert.NotNull(matchingNode);

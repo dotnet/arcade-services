@@ -31,7 +31,7 @@ namespace Microsoft.DotNet.DarcLib
             HashSet<string> visitedNodes,
             HashSet<Build> contributingBuilds)
         {
-            RepoUri = repoUri;
+            Repository = repoUri;
             Commit = commit;
             Dependencies = dependencies;
             VisitedNodes = new HashSet<string>(visitedNodes, StringComparer.OrdinalIgnoreCase);
@@ -45,7 +45,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <summary>
         ///     Node repository URI
         /// </summary>
-        public readonly string RepoUri;
+        public readonly string Repository;
 
         /// <summary>
         /// Node commit

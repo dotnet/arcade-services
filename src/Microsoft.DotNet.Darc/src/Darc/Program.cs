@@ -66,6 +66,7 @@ namespace Microsoft.DotNet.Darc
                     typeof(GetDefaultChannelsCommandLineOptions),
                     typeof(GetDependenciesCommandLineOptions),
                     typeof(GetDependencyGraphCommandLineOptions),
+                    typeof(GetDependencyFlowGraphCommandLineOptions),
                     typeof(GetLatestBuildCommandLineOptions),
                     typeof(GetSubscriptionsCommandLineOptions),
                     typeof(SubscriptionStatusCommandLineOptions),
