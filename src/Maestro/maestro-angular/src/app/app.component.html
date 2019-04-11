@@ -20,7 +20,7 @@
 
       <div class="collapse navbar-collapse bg-light" id="bs-navbar-collapse" [ngbCollapse]="!navbarOpen"
         style="z-index: 1000; width: 100%; padding: 0.5rem 1rem; margin: 0 -1rem;">
-        <ul class="navbar-nav mr-auto" *ngIf="userName">
+        <ul class="navbar-nav mr-auto" *ngIf="authorized">
           <li class="nav-item">
             <a class="nav-link" href="/">Home</a>
           </li>
@@ -47,10 +47,17 @@
 
   <div class="d-flex flex-row flex-grow-1" style="overflow: hidden;">
     <ng-container *ngIf="userName">
-      <mc-side-bar [(opened)]="sidebarOpen" [dockedSize]="'45px'" [fullSize]="'250px'" #sideBar></mc-side-bar>
-      <div class="d-flex flex-grow-1 grow-children" style="overflow-y: auto;">
-        <router-outlet class="flex-grow-0"></router-outlet>
-      </div>
+      <ng-container *ngIf="authorized; else: notAuthorized">
+        <mc-side-bar [(opened)]="sidebarOpen" [dockedSize]="'45px'" [fullSize]="'250px'" #sideBar></mc-side-bar>
+        <div class="d-flex flex-grow-1 grow-children" style="overflow-y: auto;">
+          <router-outlet class="flex-grow-0"></router-outlet>
+        </div>
+      </ng-container>
+      <ng-template #notAuthorized>
+        <div class="d-flex flex-grow-1 grow-children" style="overflow-y: auto;">
+          <p class="p-2">You are not authorized to use this site. If you think you should be able to use this site contact <a href="mailto:dnceng@microsoft.com">dnceng</a>.</p>
+        </div>
+      </ng-template>
     </ng-container>
     <ng-container *ngIf="!userName">
       <div class="d-flex flex-grow-1 grow-children" style="overflow-y: auto;">

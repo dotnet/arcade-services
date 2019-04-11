@@ -226,7 +226,7 @@ namespace Maestro.Web
         {
             if (ctx.User == null)
             {
-                ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                 return;
             }
 
@@ -234,7 +234,7 @@ namespace Maestro.Web
             AuthorizationResult result = await authService.AuthorizeAsync(ctx.User, MsftAuthorizationPolicyName);
             if (!result.Succeeded)
             {
-                ctx.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                 return;
             }
 
