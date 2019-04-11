@@ -280,7 +280,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="commit">Tag, branch, or commit to checkout.</param>
         public void Checkout(string repoDir, string commit, bool force = false)
         {
-            using (_logger.BeginScope("Checking out {commit}", commit))
+            using (_logger.BeginScope("Checking out {commit}", commit ?? "default commit"))
             {
                 LibGit2Sharp.CheckoutOptions checkoutOptions = new LibGit2Sharp.CheckoutOptions
                 {
@@ -288,11 +288,16 @@ namespace Microsoft.DotNet.DarcLib
                 };
                 try
                 {
-                    _logger.LogDebug($"Checking out {commit}");
+                    _logger.LogDebug($"Checking out {commit ?? "default commit"}");
 
                     _logger.LogDebug($"Reading local repo from {repoDir}");
                     using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoDir))
                     {
+                        if (commit == null)
+                        {
+                            commit = localRepo.Head.Reference.TargetIdentifier;
+                            _logger.LogInformation($"Repo {localRepo.Info.WorkingDirectory} default commit to checkout is {commit}");
+                        }
                         try
                         {
                             _logger.LogDebug($"Attempting to check out {commit} in {repoDir}");
