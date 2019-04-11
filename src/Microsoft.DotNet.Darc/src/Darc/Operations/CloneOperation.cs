@@ -232,10 +232,12 @@ namespace Microsoft.DotNet.Darc.Operations
                 // The .gitdir does not exist.  This could be a new clone or resuming with a different --git-dir-parent setting.
                 else
                 {
+                    log.LogDebug($"Master .gitdir {masterRepoGitDirPath} does not exist");
+
                     // The master folder also doesn't exist.  Just clone and set everything up for the first time.
                     if (!Directory.Exists(masterGitRepoPath))
                     {
-                        log.LogInformation($"Cloning master copy of {repoUrl} into {masterGitRepoPath}");
+                        log.LogInformation($"Cloning master copy of {repoUrl} into {masterGitRepoPath} with .gitdir path {masterRepoGitDirPath}");
                         IRemote repoRemote = await remoteFactory.GetRemoteAsync(repoUrl, log);
                         repoRemote.Clone(repoUrl, null, masterGitRepoPath, masterRepoGitDirPath);
                     }
@@ -246,9 +248,12 @@ namespace Microsoft.DotNet.Darc.Operations
                         // The master folder has a full .gitdir.  Relocate it to the .gitdir parent directory and update to redirect to that.
                         if (Directory.Exists(masterRepoPossibleGitDirPath))
                         {
+                            log.LogDebug($".gitdir {masterRepoPossibleGitDirPath} exists in {masterGitRepoPath}");
+
                             // Check if the .gitdir is already where we expect it to be first.
                             if (Path.GetFullPath(masterRepoPossibleGitDirPath) != Path.GetFullPath(masterRepoGitDirPath))
                             {
+                                log.LogDebug($"Moving .gitdir {masterRepoPossibleGitDirPath} to expected location {masterRepoGitDirPath}");
                                 Directory.Move(masterRepoPossibleGitDirPath, masterRepoGitDirPath);
                                 File.WriteAllText(masterRepoPossibleGitDirPath, gitDirRedirect);
                             }
@@ -256,9 +261,12 @@ namespace Microsoft.DotNet.Darc.Operations
                         // The master folder has a .gitdir redirect.  Relocate its .gitdir to where we expect and update the redirect.
                         else if (File.Exists(masterRepoPossibleGitDirPath))
                         {
+                            log.LogDebug($"Master repo {masterGitRepoPath} has a .gitdir redirect");
+
                             string relocatedGitDirPath = File.ReadAllText(masterRepoPossibleGitDirPath).Substring(GitDirRedirectPrefix.Length);
                             if (Path.GetFullPath(relocatedGitDirPath) != Path.GetFullPath(masterRepoGitDirPath))
                             {
+                                log.LogDebug($"Existing .gitdir redirect of {relocatedGitDirPath} does not match expected {masterRepoGitDirPath}, moving .gitdir and updating redirect");
                                 Directory.Move(relocatedGitDirPath, masterRepoGitDirPath);
                                 File.WriteAllText(masterRepoPossibleGitDirPath, gitDirRedirect);
                             }
@@ -266,6 +274,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         // This repo is orphaned.  Since it's supposed to be our master copy, adopt it.
                         else
                         {
+                            log.LogDebug($"Master repo {masterGitRepoPath} is orphaned, adding .gitdir redirect");
                             File.WriteAllText(masterRepoPossibleGitDirPath, gitDirRedirect);
                         }
                     }
@@ -285,6 +294,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 // The master folder already exists.  We are probably resuming with a different --git-dir-parent setting, or the .gitdir parent was cleaned.
                 else
                 {
+                    log.LogDebug($"Checking for existing .gitdir in {masterGitRepoPath}");
                     string masterRepoPossibleGitDirPath = Path.Combine(masterGitRepoPath, ".git");
                     // This repo is not in good shape for us.  It needs to be deleted and recreated.
                     if (!Directory.Exists(masterRepoPossibleGitDirPath))
@@ -379,34 +389,6 @@ namespace Microsoft.DotNet.Darc.Operations
                 return dependencies.Where(dependency => dependency.Type != DependencyType.Toolset);
             }
             return dependencies;
-        }
-
-        // https://docs.microsoft.com/en-us/dotnet/standard/io/how-to-copy-directories
-        private static void CopyDirectory(string sourceDirPath, string destDirPath)
-        {
-            // Get the subdirectories for the specified directory.
-            DirectoryInfo dir = new DirectoryInfo(sourceDirPath);
-
-            DirectoryInfo[] dirs = dir.GetDirectories();
-            // If the destination directory doesn't exist, create it.
-            if (!Directory.Exists(destDirPath))
-            {
-                Directory.CreateDirectory(destDirPath);
-            }
-
-            // Get the files in the directory and copy them to the new location.
-            FileInfo[] files = dir.GetFiles();
-            foreach (FileInfo file in files)
-            {
-                string temppath = Path.Combine(destDirPath, file.Name);
-                file.CopyTo(temppath, false);
-            }
-
-            foreach (DirectoryInfo subdir in dirs)
-            {
-                string temppath = Path.Combine(destDirPath, subdir.Name);
-                CopyDirectory(subdir.FullName, temppath);
-            }
         }
 
         private class StrippedDependency
