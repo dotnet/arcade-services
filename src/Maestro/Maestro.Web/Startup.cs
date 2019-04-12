@@ -124,7 +124,8 @@ namespace Maestro.Web
                 services.AddDataProtection()
                     .PersistKeysToAzureBlobStorage(new Uri(dpConfig["KeyFileUri"]))
                     .ProtectKeysWithAzureKeyVault(kvClient, key.KeyIdentifier.ToString())
-                    .SetDefaultKeyLifetime(LoginCookieLifetime * 2);
+                    .SetDefaultKeyLifetime(LoginCookieLifetime * 2)
+                    .SetApplicationName(typeof(Startup).FullName);
             }
 
             ConfigureApiServices(services);

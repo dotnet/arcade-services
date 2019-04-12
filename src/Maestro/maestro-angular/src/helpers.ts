@@ -58,27 +58,6 @@ export function topologicalSort<TNode, TKey>(nodes: TNode[], getChildren: (node:
   return sorted.reverse();
 }
 
-export function getCommitLink(build: Build): string | undefined {
-  if (!build ||
-      !build.azureDevOpsRepository) {
-    return;
-  }
-  return `${build.azureDevOpsRepository}` +
-    `?_a=history&version=GC${build.commit}`;
-}
-
-export function getBuildLink(build: Build): string | undefined {
-  if (!build ||
-      !build.azureDevOpsAccount ||
-      !build.azureDevOpsProject) {
-    return;
-  }
-  return `https://dev.azure.com` +
-    `/${build.azureDevOpsAccount}` +
-    `/${build.azureDevOpsProject}` +
-    `/_build/results` +
-    `?view=results&buildId=${build.azureDevOpsBuildId}`;
-}
 
 export function onThe(time: "minute" | "hour" | "day") {
   let start: ((d: Date) => Date) | undefined = undefined;
