@@ -1,6 +1,6 @@
 import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { Build, BuildGraph } from 'src/maestro-client/models';
-import { topologicalSort, getCommitLink, getBuildLink } from 'src/helpers';
+import { topologicalSort } from 'src/helpers';
 import { trigger, transition, style, animate } from '@angular/animations';
 
 type BuildState = "locked" | "unlocked" | "conflict" | "ancestor" | "parent" | "child";
@@ -215,10 +215,6 @@ export class BuildGraphTableComponent implements OnChanges {
       this.sortedBuilds = sortBuilds(this.graph);
     }
   }
-
-  public getCommitLink = getCommitLink;
-
-  public getBuildLink = getBuildLink;
 
   public getBuildId(node: BuildData) {
     return node && node.build && node.build.id;

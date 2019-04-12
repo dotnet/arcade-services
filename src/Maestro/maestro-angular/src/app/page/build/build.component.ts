@@ -9,7 +9,7 @@ import { Observable, of, timer, OperatorFunction } from 'rxjs';
 import { BuildStatusService } from 'src/app/services/build-status.service';
 import { BuildStatus } from 'src/app/model/build-status';
 import { statefulSwitchMap, StatefulResult, statefulPipe } from 'src/stateful';
-import { getCommitLink, getBuildLink, tapLog } from 'src/helpers';
+import { tapLog } from 'src/helpers';
 import { BuildService } from 'src/app/services/build.service';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { Loading } from 'src/stateful/helpers';
@@ -236,10 +236,6 @@ export class BuildComponent implements OnInit, OnChanges {
         }),
       );
   }
-
-  public getCommitLink = getCommitLink;
-
-  public getBuildLink = getBuildLink;
 
   public getRepo(build: Build) {
     return build.gitHubRepository || build.azureDevOpsRepository;

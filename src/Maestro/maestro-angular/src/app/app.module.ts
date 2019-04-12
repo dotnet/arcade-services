@@ -42,6 +42,8 @@ import { UriEncodePipe } from './uri-encode.pipe';
 import { SwitchComponent } from './widget/switch/switch.component';
 import { TimeAgoComponent } from './widget/time-ago/time-ago.component';
 import { RelativeDateComponent } from './widget/relative-date/relative-date.component';
+import { CommitLinkPipe } from './pipes/commit-link.pipe';
+import { BuildLinkPipe } from './pipes/build-link.pipe';
 
 @NgModule({
   declarations: [
@@ -55,6 +57,8 @@ import { RelativeDateComponent } from './widget/relative-date/relative-date.comp
     SwitchComponent,
     TimeAgoComponent,
     RelativeDateComponent,
+    CommitLinkPipe,
+    BuildLinkPipe,
   ],
   imports: [
     BrowserModule,
