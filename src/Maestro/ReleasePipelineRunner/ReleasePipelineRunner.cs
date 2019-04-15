@@ -328,6 +328,12 @@ namespace ReleasePipelineRunner
 
         private async Task<List<BuildChannel>> AddFinishedBuildChannelsIfNotPresent(HashSet<BuildChannel> buildChannelsToAdd)
         {
+            HashSet<int> channels = new HashSet<int>(Context.Channels.Select(b => b.Id));
+
+            // There could be a case where a channel is removed in between a release finishes and when a build is assigned to a channel.
+            // If this happens, insertion into the DB will fail since the channel id is a FK in the BuildChannels table.
+            buildChannelsToAdd = new HashSet<BuildChannel>(buildChannelsToAdd.Where(b => channels.Contains(b.ChannelId)));
+
             var missingBuildChannels = buildChannelsToAdd.Where(x => !Context.BuildChannels.Any(y => y.ChannelId == x.ChannelId && y.BuildId == x.BuildId)).ToList();
             Context.BuildChannels.AddRange(missingBuildChannels);
             await Context.SaveChangesAsync();
