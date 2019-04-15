@@ -411,7 +411,7 @@ function Get-AzDO-Headers() {
 }
 
 # Release API only works with Oauth2 Authentication. For now we can only run these functions inside an AzDo environment,
-# so that the 
+# so that the SYSTEM_ACCESSTOKEN variable is available.
 function Get-AzDO-Releases($releaseDefinitionId, $count) {
     if (-not $env:SYSTEM_ACCESSTOKEN) {
         throw "env:SYSTEM_ACCESSTOKEN is not set. Is the script running within Azure DevOps?"
