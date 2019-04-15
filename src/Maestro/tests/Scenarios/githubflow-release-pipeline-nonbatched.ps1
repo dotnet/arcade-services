@@ -191,7 +191,7 @@ try {
     if ($buildInfo.channels.length -ne 1) {
         throw "Expected to see build in 1 channel, got $($buildInfo.channels.length)"
     }
-    $success =  ($buildInfo.channels[0].name -eq $testChannelName)
+    $success = ($buildInfo.channels[0].name -eq $testChannelName)
 
     if (-not $success) {
         throw "Expected build to be applied to $testChannelName"

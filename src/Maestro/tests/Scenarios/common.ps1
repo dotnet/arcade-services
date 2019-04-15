@@ -410,8 +410,8 @@ function Get-AzDO-Headers() {
     return $headers
 }
 
-# Release API Only works during automation in Azure DevOps so that the env:SYSTEM_ACCESSTOKEN variable is set.
-# //TODO: Switch to PAT-based API if it ever becomes available
+# Release API only works with Oauth2 Authentication. For now we can only run these functions inside an AzDo environment,
+# so that the 
 function Get-AzDO-Releases($releaseDefinitionId, $count) {
     if (-not $env:SYSTEM_ACCESSTOKEN) {
         throw "env:SYSTEM_ACCESSTOKEN is not set. Is the script running within Azure DevOps?"
