@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using CSharpx;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
@@ -15,6 +14,24 @@ using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
+    /// <summary>
+    /// This operation has two modes:
+    /// - In remote mode, it will clone a single remote repo, then recursively fetch all repos it depends on.
+    /// - In local mode, it will take all the dependencies in the current repo's Version.Details.xml, clone them, and recursively fetch repos that they depend on.
+    /// For performance reasons, we do some gymnastics so that we only ever have to actually clone a repo once.
+    /// For user convenience reasons, the generally-intended mode of operation is to use a separate folder for .gitdirs, which allows a developer to do a "git clean" and not have to reclone all of the repos again for the next build.
+    /// This is also useful for performance.  The general approach is:
+    /// 1. Clone a "master" version of a repo.  LibGit2 does not currently support cloning with a separate .gitdir, so we then:
+    /// 2. Move the .gitdir to the specified location.  If there is none specified, the .gitdir stays in the repo as usual.
+    /// 3. Create a file (not directory) called ".git" and containing the new .gitdir that we just moved so Git can use the "master" folder properly as a repo.
+    ///     Note: The "master" folder is also the only one that will end up being a real Git repo at the end of the process.
+    /// 4. For each SHA that we want a copy of a repo at, create a new folder called repo.hash and add the same .gitdir redirect.
+    /// 5. Checkout the SHA in that folder.  This causes a minor change in the "master" folder in that it changes the HEAD, but it will be otherwise unaffected.
+    /// 6. Delete the .gitdir redirect file in the new repo.hash folder to orphan the repo.  This is done to avoid confusion about every repo.hash folder showing up with dirty files (since the repo thinks its HEAD is at a different SHA).
+    /// Submodules add some complexity to this process.  Once a submodule has been initialized in the .gitdir, it will be initialized for all repos; however, the submodule will not have one of the .gitdir redirects.
+    /// In this case, we go back to the "master" folder, which will have a .git/modules/subrepo directory, and redirect the submodule to this.  This means that if a submodule is included in multiple repos, we will have multiple copies of it, but this hasn't seemed to have a large perf impact.
+    /// After cloning, we use local dependency graph discovery to add new repo-hash combinations to clone at.  This is done in waves to support a "depth limit" of followed repos.
+    /// </summary>
     internal class CloneOperation : Operation
     {
         CloneCommandLineOptions _options;
@@ -35,10 +52,8 @@ namespace Microsoft.DotNet.Darc.Operations
                 HashSet<StrippedDependency> accumulatedDependencies = new HashSet<StrippedDependency>();
                 // at the end of each depth level, these are added to the queue to clone
                 Queue<StrippedDependency> dependenciesToClone = new Queue<StrippedDependency>();
-                // use a set to keep track of whether we've seen dependencies before, otherwise we get trapped in circular dependencies
-                HashSet<StrippedDependency> seenDependencies = new HashSet<StrippedDependency>();
-                // list of master copies of repos that we relocate the .gitdirs for later
-                HashSet<string> masterCopies = new HashSet<string>();
+                // keep track of repos we have seen each repo have dependencies on so we don't follow circular dependencies
+                Dictionary<string, HashSet<string>> seenRepoCircularDependencies = new Dictionary<string, HashSet<string>>();
                 RemoteFactory remoteFactory = new RemoteFactory(_options);
 
                 if (string.IsNullOrWhiteSpace(_options.RepoUri))
@@ -46,8 +61,10 @@ namespace Microsoft.DotNet.Darc.Operations
                     Local local = new Local(Logger);
                     IEnumerable<DependencyDetail>  rootDependencies = await local.GetDependenciesAsync();
                     IEnumerable<StrippedDependency> stripped = rootDependencies.Select(d => new StrippedDependency(d));
-                    stripped.ForEach((s) => accumulatedDependencies.Add(s));
-                    stripped.ForEach((s) => seenDependencies.Add(s));
+                    foreach (StrippedDependency d in stripped)
+                    {
+                        accumulatedDependencies.Add(d);
+                    }
                     Logger.LogInformation($"Found {rootDependencies.Count()} local dependencies.  Starting deep clone...");
                 }
                 else
@@ -55,14 +72,16 @@ namespace Microsoft.DotNet.Darc.Operations
                     // Start with the root repo we were asked to clone
                     StrippedDependency rootDep = new StrippedDependency(_options.RepoUri, _options.Version);
                     accumulatedDependencies.Add(rootDep);
-                    seenDependencies.Add(rootDep);
                     Logger.LogInformation($"Starting deep clone of {rootDep.RepoUri}@{rootDep.Commit}");
                 }
 
                 while (accumulatedDependencies.Any())
                 {
                     // add this level's dependencies to the queue and clear it for the next level
-                    accumulatedDependencies.ForEach(dependenciesToClone.Enqueue);
+                    foreach (StrippedDependency d in accumulatedDependencies)
+                    {
+                        dependenciesToClone.Enqueue(d);
+                    }
                     accumulatedDependencies.Clear();
 
                     // this will do one level of clones at a time
@@ -93,12 +112,27 @@ namespace Microsoft.DotNet.Darc.Operations
                             IEnumerable<DependencyDetail> deps = await local.GetDependenciesAsync();
                             IEnumerable<DependencyDetail> filteredDeps = FilterToolsetDependencies(deps, _options.IncludeToolset);
                             Logger.LogDebug($"Got {deps.Count()} dependencies and filtered to {filteredDeps.Count()} dependencies");
-                            filteredDeps.ForEach((d) =>
+                            foreach (DependencyDetail d in filteredDeps)
                             {
+                                HashSet<string> seenRepoDependencies;
+                                if (seenRepoCircularDependencies.ContainsKey(d.RepoUri.ToLowerInvariant()))
+                                {
+                                    seenRepoDependencies = seenRepoCircularDependencies[d.RepoUri.ToLowerInvariant()];
+                                }
+                                else
+                                {
+                                    seenRepoDependencies = new HashSet<string>();
+                                    seenRepoCircularDependencies.Add(d.RepoUri.ToLowerInvariant(), seenRepoDependencies);
+                                }
                                 // e.g. arcade depends on previous versions of itself to build, so this would go on forever
                                 if (d.RepoUri == repo.RepoUri)
                                 {
                                     Logger.LogDebug($"Skipping self-dependency in {repo.RepoUri} ({repo.Commit} => {d.Commit})");
+                                }
+                                // circular dependencies that have different hashes, e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
+                                else if (seenRepoDependencies.Any(r => r.ToLowerInvariant() == repo.RepoUri.ToLowerInvariant()))
+                                {
+                                    Logger.LogDebug($"Skipping already-seen circular dependency from {repo.RepoUri} to {d.RepoUri}");
                                 }
                                 else if (_options.IgnoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
                                 {
@@ -111,14 +145,11 @@ namespace Microsoft.DotNet.Darc.Operations
                                 else
                                 {
                                     StrippedDependency stripped = new StrippedDependency(d);
-                                    if (!seenDependencies.Contains(stripped))
-                                    {
-                                        Logger.LogDebug($"Adding new dependency {stripped.RepoUri}@{stripped.Commit}");
-                                        seenDependencies.Add(stripped);
-                                        accumulatedDependencies.Add(stripped);
-                                    }
+                                    Logger.LogDebug($"Adding new dependency {stripped.RepoUri}@{stripped.Commit}");
+                                    accumulatedDependencies.Add(stripped);
+                                    seenRepoDependencies.Add(d.RepoUri.ToLowerInvariant());
                                 }
-                            });
+                            }
                             // delete the .gitdir redirect to orphan the repo.
                             // we want to do this because otherwise all of these folder will show as dirty in Git,
                             // and any operations on them will affect the master copy and all the others, which
@@ -194,114 +225,134 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             if (masterRepoGitDirPath != null)
             {
-                string gitDirRedirect = GetGitDirRedirectString(masterRepoGitDirPath);
-                log.LogDebug($"Starting master copy for {repoUrl} in {masterGitRepoPath} with .gitdir {masterRepoGitDirPath}");
+                await HandleMasterCopyWithGitDirPath(remoteFactory, repoUrl, masterGitRepoPath, masterRepoGitDirPath, log);
+            }
+            else
+            {
+                await HandleMasterCopyWithDefaultGitDir(remoteFactory, repoUrl, masterGitRepoPath, masterRepoGitDirPath, log);
+            }
+        }
 
-                // the .gitdir exists already.  We are resuming with the same --git-dir-parent setting.
-                if (Directory.Exists(masterRepoGitDirPath))
+        private static async Task HandleMasterCopyWithDefaultGitDir(RemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath, ILogger log)
+        {
+            log.LogDebug($"Starting master copy for {repoUrl} in {masterGitRepoPath} with default .gitdir");
+
+            // The master folder doesn't exist.  Just clone and set everything up for the first time.
+            if (!Directory.Exists(masterGitRepoPath))
+            {
+                log.LogInformation($"Cloning master copy of {repoUrl} into {masterGitRepoPath}");
+                IRemote repoRemote = await remoteFactory.GetRemoteAsync(repoUrl, log);
+                repoRemote.Clone(repoUrl, null, masterGitRepoPath, masterRepoGitDirPath);
+            }
+            // The master folder already exists.  We are probably resuming with a different --git-dir-parent setting, or the .gitdir parent was cleaned.
+            else
+            {
+                log.LogDebug($"Checking for existing .gitdir in {masterGitRepoPath}");
+                string masterRepoPossibleGitDirPath = Path.Combine(masterGitRepoPath, ".git");
+                // This repo is not in good shape for us.  It needs to be deleted and recreated.
+                if (!Directory.Exists(masterRepoPossibleGitDirPath))
                 {
-                    log.LogDebug($"Master .gitdir {masterRepoGitDirPath} exists");
+                    throw new InvalidOperationException($"Repo {masterGitRepoPath} does not have a .git folder, but no git-dir-parent was specified.  Please fix the repo or specify a git-dir-parent.");
+                }
+            }
+        }
 
-                    // the master folder doesn't exist yet.  Create it.
-                    if (!Directory.Exists(masterGitRepoPath))
-                    {
-                        log.LogDebug($"Master .gitdir exists and master folder {masterGitRepoPath} does not.  Creating master folder.");
-                        Directory.CreateDirectory(masterGitRepoPath);
-                        File.WriteAllText(Path.Combine(masterGitRepoPath, ".git"), gitDirRedirect);
-                        Local masterLocal = new Local(log, masterGitRepoPath);
-                        log.LogDebug($"Checking out default commit in {masterGitRepoPath}");
-                        masterLocal.Checkout(null, true);
-                    }
-                    // The master folder already exists.  Redirect it to the .gitdir we expect.
-                    else
-                    {
-                        log.LogDebug($"Master .gitdir exists and master folder {masterGitRepoPath} also exists.  Redirecting master folder.");
+        private static async Task HandleMasterCopyWithGitDirPath(RemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath, ILogger log)
+        {
+            string gitDirRedirect = GetGitDirRedirectString(masterRepoGitDirPath);
+            log.LogDebug($"Starting master copy for {repoUrl} in {masterGitRepoPath} with .gitdir {masterRepoGitDirPath}");
 
-                        string masterRepoPossibleGitDirPath = Path.Combine(masterGitRepoPath, ".git");
-                        if (Directory.Exists(masterRepoPossibleGitDirPath))
-                        {
-                            Directory.Delete(masterRepoPossibleGitDirPath);
-                        }
-                        if (File.Exists(masterRepoPossibleGitDirPath))
-                        {
-                            File.Delete(masterRepoPossibleGitDirPath);
-                        }
+            // the .gitdir exists already.  We are resuming with the same --git-dir-parent setting.
+            if (Directory.Exists(masterRepoGitDirPath))
+            {
+                HandleMasterCopyWithExistingGitDir(masterGitRepoPath, masterRepoGitDirPath, log, gitDirRedirect);
+            }
+            // The .gitdir does not exist.  This could be a new clone or resuming with a different --git-dir-parent setting.
+            else
+            {
+                await HandleMasterCopyAndCreateGitDir(remoteFactory, repoUrl, masterGitRepoPath, masterRepoGitDirPath, gitDirRedirect, log);
+            }
+        }
+
+        private static async Task HandleMasterCopyAndCreateGitDir(RemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath, string gitDirRedirect, ILogger log)
+        {
+            log.LogDebug($"Master .gitdir {masterRepoGitDirPath} does not exist");
+
+            // The master folder also doesn't exist.  Just clone and set everything up for the first time.
+            if (!Directory.Exists(masterGitRepoPath))
+            {
+                log.LogInformation($"Cloning master copy of {repoUrl} into {masterGitRepoPath} with .gitdir path {masterRepoGitDirPath}");
+                IRemote repoRemote = await remoteFactory.GetRemoteAsync(repoUrl, log);
+                repoRemote.Clone(repoUrl, null, masterGitRepoPath, masterRepoGitDirPath);
+            }
+            // The master folder already exists.  We are probably resuming with a different --git-dir-parent setting, or the .gitdir parent was cleaned.
+            else
+            {
+                string masterRepoPossibleGitDirPath = Path.Combine(masterGitRepoPath, ".git");
+                // The master folder has a full .gitdir.  Relocate it to the .gitdir parent directory and update to redirect to that.
+                if (Directory.Exists(masterRepoPossibleGitDirPath))
+                {
+                    log.LogDebug($".gitdir {masterRepoPossibleGitDirPath} exists in {masterGitRepoPath}");
+
+                    // Check if the .gitdir is already where we expect it to be first.
+                    if (Path.GetFullPath(masterRepoPossibleGitDirPath) != Path.GetFullPath(masterRepoGitDirPath))
+                    {
+                        log.LogDebug($"Moving .gitdir {masterRepoPossibleGitDirPath} to expected location {masterRepoGitDirPath}");
+                        Directory.Move(masterRepoPossibleGitDirPath, masterRepoGitDirPath);
                         File.WriteAllText(masterRepoPossibleGitDirPath, gitDirRedirect);
                     }
                 }
-                // The .gitdir does not exist.  This could be a new clone or resuming with a different --git-dir-parent setting.
+                // The master folder has a .gitdir redirect.  Relocate its .gitdir to where we expect and update the redirect.
+                else if (File.Exists(masterRepoPossibleGitDirPath))
+                {
+                    log.LogDebug($"Master repo {masterGitRepoPath} has a .gitdir redirect");
+
+                    string relocatedGitDirPath = File.ReadAllText(masterRepoPossibleGitDirPath).Substring(GitDirRedirectPrefix.Length);
+                    if (Path.GetFullPath(relocatedGitDirPath) != Path.GetFullPath(masterRepoGitDirPath))
+                    {
+                        log.LogDebug($"Existing .gitdir redirect of {relocatedGitDirPath} does not match expected {masterRepoGitDirPath}, moving .gitdir and updating redirect");
+                        Directory.Move(relocatedGitDirPath, masterRepoGitDirPath);
+                        File.WriteAllText(masterRepoPossibleGitDirPath, gitDirRedirect);
+                    }
+                }
+                // This repo is orphaned.  Since it's supposed to be our master copy, adopt it.
                 else
                 {
-                    log.LogDebug($"Master .gitdir {masterRepoGitDirPath} does not exist");
-
-                    // The master folder also doesn't exist.  Just clone and set everything up for the first time.
-                    if (!Directory.Exists(masterGitRepoPath))
-                    {
-                        log.LogInformation($"Cloning master copy of {repoUrl} into {masterGitRepoPath} with .gitdir path {masterRepoGitDirPath}");
-                        IRemote repoRemote = await remoteFactory.GetRemoteAsync(repoUrl, log);
-                        repoRemote.Clone(repoUrl, null, masterGitRepoPath, masterRepoGitDirPath);
-                    }
-                    // The master folder already exists.  We are probably resuming with a different --git-dir-parent setting, or the .gitdir parent was cleaned.
-                    else
-                    {
-                        string masterRepoPossibleGitDirPath = Path.Combine(masterGitRepoPath, ".git");
-                        // The master folder has a full .gitdir.  Relocate it to the .gitdir parent directory and update to redirect to that.
-                        if (Directory.Exists(masterRepoPossibleGitDirPath))
-                        {
-                            log.LogDebug($".gitdir {masterRepoPossibleGitDirPath} exists in {masterGitRepoPath}");
-
-                            // Check if the .gitdir is already where we expect it to be first.
-                            if (Path.GetFullPath(masterRepoPossibleGitDirPath) != Path.GetFullPath(masterRepoGitDirPath))
-                            {
-                                log.LogDebug($"Moving .gitdir {masterRepoPossibleGitDirPath} to expected location {masterRepoGitDirPath}");
-                                Directory.Move(masterRepoPossibleGitDirPath, masterRepoGitDirPath);
-                                File.WriteAllText(masterRepoPossibleGitDirPath, gitDirRedirect);
-                            }
-                        }
-                        // The master folder has a .gitdir redirect.  Relocate its .gitdir to where we expect and update the redirect.
-                        else if (File.Exists(masterRepoPossibleGitDirPath))
-                        {
-                            log.LogDebug($"Master repo {masterGitRepoPath} has a .gitdir redirect");
-
-                            string relocatedGitDirPath = File.ReadAllText(masterRepoPossibleGitDirPath).Substring(GitDirRedirectPrefix.Length);
-                            if (Path.GetFullPath(relocatedGitDirPath) != Path.GetFullPath(masterRepoGitDirPath))
-                            {
-                                log.LogDebug($"Existing .gitdir redirect of {relocatedGitDirPath} does not match expected {masterRepoGitDirPath}, moving .gitdir and updating redirect");
-                                Directory.Move(relocatedGitDirPath, masterRepoGitDirPath);
-                                File.WriteAllText(masterRepoPossibleGitDirPath, gitDirRedirect);
-                            }
-                        }
-                        // This repo is orphaned.  Since it's supposed to be our master copy, adopt it.
-                        else
-                        {
-                            log.LogDebug($"Master repo {masterGitRepoPath} is orphaned, adding .gitdir redirect");
-                            File.WriteAllText(masterRepoPossibleGitDirPath, gitDirRedirect);
-                        }
-                    }
+                    log.LogDebug($"Master repo {masterGitRepoPath} is orphaned, adding .gitdir redirect");
+                    File.WriteAllText(masterRepoPossibleGitDirPath, gitDirRedirect);
                 }
             }
-            else // masterRepoGitDirPath == null
-            {
-                log.LogDebug($"Starting master copy for {repoUrl} in {masterGitRepoPath} with default .gitdir");
+        }
 
-                // The master folder doesn't exist.  Just clone and set everything up for the first time.
-                if (!Directory.Exists(masterGitRepoPath))
+        private static void HandleMasterCopyWithExistingGitDir(string masterGitRepoPath, string masterRepoGitDirPath, ILogger log, string gitDirRedirect)
+        {
+            log.LogDebug($"Master .gitdir {masterRepoGitDirPath} exists");
+
+            // the master folder doesn't exist yet.  Create it.
+            if (!Directory.Exists(masterGitRepoPath))
+            {
+                log.LogDebug($"Master .gitdir exists and master folder {masterGitRepoPath} does not.  Creating master folder.");
+                Directory.CreateDirectory(masterGitRepoPath);
+                File.WriteAllText(Path.Combine(masterGitRepoPath, ".git"), gitDirRedirect);
+                Local masterLocal = new Local(log, masterGitRepoPath);
+                log.LogDebug($"Checking out default commit in {masterGitRepoPath}");
+                masterLocal.Checkout(null, true);
+            }
+            // The master folder already exists.  Redirect it to the .gitdir we expect.
+            else
+            {
+                log.LogDebug($"Master .gitdir exists and master folder {masterGitRepoPath} also exists.  Redirecting master folder.");
+
+                string masterRepoPossibleGitDirPath = Path.Combine(masterGitRepoPath, ".git");
+                if (Directory.Exists(masterRepoPossibleGitDirPath))
                 {
-                    log.LogInformation($"Cloning master copy of {repoUrl} into {masterGitRepoPath}");
-                    IRemote repoRemote = await remoteFactory.GetRemoteAsync(repoUrl, log);
-                    repoRemote.Clone(repoUrl, null, masterGitRepoPath, masterRepoGitDirPath);
+                    Directory.Delete(masterRepoPossibleGitDirPath);
                 }
-                // The master folder already exists.  We are probably resuming with a different --git-dir-parent setting, or the .gitdir parent was cleaned.
-                else
+                if (File.Exists(masterRepoPossibleGitDirPath))
                 {
-                    log.LogDebug($"Checking for existing .gitdir in {masterGitRepoPath}");
-                    string masterRepoPossibleGitDirPath = Path.Combine(masterGitRepoPath, ".git");
-                    // This repo is not in good shape for us.  It needs to be deleted and recreated.
-                    if (!Directory.Exists(masterRepoPossibleGitDirPath))
-                    {
-                        throw new InvalidOperationException($"Repo {masterGitRepoPath} does not have a .git folder, but no git-dir-parent was specified.  Please fix the repo or specify a git-dir-parent.");
-                    }
+                    File.Delete(masterRepoPossibleGitDirPath);
                 }
+                File.WriteAllText(masterRepoPossibleGitDirPath, gitDirRedirect);
             }
         }
 

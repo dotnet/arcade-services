@@ -204,7 +204,7 @@ namespace Microsoft.DotNet.DarcLib
                         Directory.Move(repoPath, gitDirectory);
                         File.WriteAllText(repoPath.TrimEnd('\\', '/'), $"gitdir: {gitDirectory}");
                     }
-                    using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoPath))
+                    using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(targetDirectory))
                     {
                         CheckoutSubmodules(localRepo, cloneOptions, gitDirectory, _logger);
                     }
@@ -222,19 +222,24 @@ namespace Microsoft.DotNet.DarcLib
             {
                 log.LogDebug($"Updating submodule {sub.Name} at {sub.Path} for {repo.Info.WorkingDirectory}.  GitDirParent: {gitDirParentPath}");
                 repo.Submodules.Update(sub.Name, new LibGit2Sharp.SubmoduleUpdateOptions { CredentialsProvider = submoduleCloneOptions.CredentialsProvider, Init = true });
+
                 string normalizedSubPath = sub.Path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
                 string subRepoPath = Path.Combine(repo.Info.WorkingDirectory, normalizedSubPath);
                 string relativeGitDirPath = File.ReadAllText(Path.Combine(subRepoPath, ".git")).Substring(8);
+
                 log.LogDebug($"Submodule {sub.Name} has .gitdir {relativeGitDirPath}");
                 string absoluteGitDirPath = Path.GetFullPath(Path.Combine(subRepoPath, relativeGitDirPath));
                 string relocatedGitDirPath = absoluteGitDirPath.Replace(repo.Info.Path.TrimEnd(new[] { '/', '\\' }), gitDirParentPath.TrimEnd(new[] { '/', '\\' }));
+
                 log.LogDebug($"Writing new .gitdir path {relocatedGitDirPath} to submodule at {subRepoPath}");
+
                 // File.WriteAllText gets access denied for some reason
                 using (FileStream s = File.OpenWrite(Path.Combine(subRepoPath, ".git")))
                 using (StreamWriter w = new StreamWriter(s))
                 {
                     w.Write($"gitdir: {relocatedGitDirPath}");
                 }
+
                 using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
                 {
                     log.LogDebug($"Resetting {sub.Name} to {sub.HeadCommitId.Sha}");
