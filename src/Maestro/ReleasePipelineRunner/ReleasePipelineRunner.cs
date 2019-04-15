@@ -368,19 +368,14 @@ namespace ReleasePipelineRunner
                     }
 
                     IssueManager issueManager = new IssueManager(gitHubToken, azureDevOpsToken);
-                    string author = await issueManager.GetCommitAuthorAsync(repo, build.Commit);
-
-                    Logger.LogInformation($"Going to include {author} in the created issue");
 
                     string title = $"Release '{releaseName}' with id {releaseId} failed";
                     string description = $"Something failed while running an async release pipeline for build " +
-                        $"s[{build.AzureDevOpsBuildNumber}](https://dnceng.visualstudio.com/internal/_build/results?buildId={build.AzureDevOpsBuildId})." +
+                        $"[{build.AzureDevOpsBuildNumber}](https://dnceng.visualstudio.com/internal/_build/results?buildId={build.AzureDevOpsBuildId})." +
                         $"{Environment.NewLine} {Environment.NewLine}" +
                         $"Please click [here](https://dnceng.visualstudio.com/internal/_releaseProgress?_a=release-pipeline-progress&releaseId={releaseId}) to check the error logs." +
-                        $"{Environment.NewLine} {Environment.NewLine}" +
-                        $"Last commit by: {author}" +
                         $" {Environment.NewLine} {Environment.NewLine}" +
-                        $"/fyi: {fyiHandles}";
+                        $"/FYI: {fyiHandles}";
 
                     if (build.GitHubRepository != whereToCreateIssue)
                     {
