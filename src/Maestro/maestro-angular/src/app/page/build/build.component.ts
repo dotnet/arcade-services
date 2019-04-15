@@ -1,6 +1,5 @@
 import { Component, OnInit, OnChanges } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
-import { prettyRepository } from "src/app/util/names";
 import { map, shareReplay, switchMap, filter, distinctUntilChanged, tap } from 'rxjs/operators';
 import { isAfter, compareAsc, parseISO } from "date-fns";
 
@@ -12,7 +11,7 @@ import { statefulSwitchMap, StatefulResult, statefulPipe } from 'src/stateful';
 import { tapLog } from 'src/helpers';
 import { BuildService } from 'src/app/services/build.service';
 import { trigger, transition, style, animate } from '@angular/animations';
-import { Loading } from 'src/stateful/helpers';
+import { Loading, WrappedError } from 'src/stateful/helpers';
 
 interface AzDevBuildInfo {
   isMostRecent: boolean;
@@ -45,8 +44,6 @@ const elementInStyle = style({
   ],
 })
 export class BuildComponent implements OnInit, OnChanges {
-  public repositoryDisplay = prettyRepository;
-
   public constructor(private route: ActivatedRoute, private buildService: BuildService, private buildStatusService: BuildStatusService) { }
 
   public graph$!: Observable<StatefulResult<BuildGraph>>;
@@ -60,6 +57,8 @@ export class BuildComponent implements OnInit, OnChanges {
   public toastVisible: boolean = false;
   public toastDate?: Date;
   public acceptToast?: () => void;
+
+  public view: "graph" | "tree" = "graph";
 
   private toastNewBuild(): OperatorFunction<number,number> {
     const self = this;
@@ -96,6 +95,7 @@ export class BuildComponent implements OnInit, OnChanges {
   }
 
   public ngOnInit() {
+    let haveBuildId = false;
     const buildId$ = this.route.paramMap.pipe(
       map(params => {
         const buildId = params.get("buildId");
@@ -127,6 +127,18 @@ export class BuildComponent implements OnInit, OnChanges {
         else {
           return of(+params.buildId);
         }
+      }),
+      filter(r => {
+        if (!(r instanceof WrappedError)) {
+          if (!(r instanceof Loading)) {
+            haveBuildId = true;
+          }
+          return true;
+        }
+        if (haveBuildId) {
+          return false; // ignore errors retrieving latest if we have a build already (TODO: show something ?)
+        }
+        return true;
       }),
       tapLog("Showing Latest:"),
       shareReplay({

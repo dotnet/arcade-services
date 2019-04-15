@@ -93,7 +93,20 @@
           </span>
         </div>
         <ng-container *stateful="let graph from graph$; loadingTemplate: loadingData">
-          <mc-build-graph-table [graph]="graph" [includeToolsets]="includeToolsets"></mc-build-graph-table>
+          <ul class="nav nav-tabs">
+            <li class="nav-item">
+              <a (click)="view = 'graph'" style="cursor: pointer;" class="nav-link" [ngClass]="{active: view == 'graph'}">Graph</a>
+            </li>
+            <li class="nav-item">
+              <a (click)="view = 'tree'" style="cursor: pointer;" class="nav-link" [ngClass]="{active: view == 'tree'}">Tree</a>
+            </li>
+          </ul>
+          <ng-container *ngIf="view == 'graph'">
+            <mc-build-graph-table [graph]="graph" [includeToolsets]="includeToolsets"></mc-build-graph-table>
+          </ng-container>
+          <ng-container *ngIf="view == 'tree'">
+            <mc-build-graph-tree [graph]="graph" [includeToolsets]="includeToolsets" [rootId]="build.id"></mc-build-graph-tree>
+          </ng-container>
         </ng-container>
         <ng-template #loadingData>
           <progress-ring [style]="{ 'width.px': 150, 'height.px': 150 }"></progress-ring>

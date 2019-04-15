@@ -20,7 +20,7 @@
       <div class="list-group list-group-flush">
         <a class="list-group-item" *ngFor="let branch of branches" [routerLink]="['/', channel.id, branch.repository]"
           routerLinkActive="active">
-          {{trimName(branch.repository)}}
+          {{branch.repository | repoName}}
         </a>
         <div class="list-group-item" *ngIf="!branches.length">
           No repositories avaliable.

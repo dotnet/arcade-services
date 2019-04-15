@@ -3,7 +3,6 @@ import { NavigationEnd, Router } from "@angular/router";
 import { Observable, SubscriptionLike, of } from "rxjs";
 import { filter, map, switchMap, concat, shareReplay, tap } from "rxjs/operators";
 
-import { prettyRepository } from "../../util/names";
 import { Channel, DefaultChannel } from 'src/maestro-client/models';
 import { ChannelService } from 'src/app/services/channel.service';
 import { statefulSwitchMap, StatefulResult, statefulPipe } from 'src/stateful';
@@ -44,8 +43,6 @@ export class SideBarChannelComponent implements OnInit, OnDestroy {
   public isCollapsed = true;
 
   public branches$!: Observable<StatefulResult<DefaultChannel[]>>;
-
-  public trimName = prettyRepository;
 
   private routeSubscription?: SubscriptionLike;
 

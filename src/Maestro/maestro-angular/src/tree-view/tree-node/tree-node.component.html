@@ -1,0 +1,29 @@
+<div class="node list-group-item">
+  <div class="d-flex flex-row">
+    <div>
+      <div class="expander" (click)="open = !open" [style.visibility]="hasChildren ? 'visible' : 'hidden'">
+        <fa-icon [icon]="open ? faAngleDown : faAngleRight" [fixedWidth]="true"></fa-icon>
+      </div>
+    </div>
+    <div class="d-flex flex-column">
+      <div class="data">
+        <ng-container *ngIf="nodeTemplate">
+          <ng-container *ngTemplateOutlet="nodeTemplate; context: {$implicit: data?.data}"></ng-container>
+        </ng-container>
+        <ng-container *ngIf="!nodeTemplate">
+          {{data?.data}}
+        </ng-container>
+      </div>
+      <div class="children" *ngIf="open" @expandCollapse>
+        <ng-container *stateful="let children from children$; loadingTemplate: childrenLoading">
+          <tree-node-list [data]="children" [nodeTemplate]="nodeTemplate"></tree-node-list>
+        </ng-container>
+        <ng-template #childrenLoading>
+          <div style="margin: auto;">
+            <progress-ring width="24" height="24"></progress-ring>
+          </div>
+        </ng-template>
+      </div>
+    </div>
+  </div>
+</div>
