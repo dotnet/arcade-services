@@ -97,6 +97,28 @@ try {
     # and the build is not in the channel, fail the test
 
     Write-Host "Waiting on Release Pipeline https://dnceng.visualstudio.com/internal/_release?definitionId=$testReleasePipelineId to complete, and a PR to be opened in $targetRepoUri"
+
+    # Check that the release was actually triggered by this build. Only works during automation.
+    if ($env:SYSTEM_ACCESSTOKEN) {
+        Write-Host "Checking release triggered by Bar Build Id: $buildId "
+        $tries = 5
+        $success = $false
+        while ($tries-- -gt 0) {
+            Write-Host "Checking for triggered release, ${tries} tries remaining"
+            if (Find-BuildId-In-AzDO-Release $testReleasePipelineId $buildId) {
+                $success = $true
+                break
+            }
+            Start-Sleep 30
+        }
+        if (!$success) {
+            throw "Failed to find release triggered by $buildId"
+        }
+    }
+    else {
+        Write-Host "Skipping release check due to not having an access token to call the Azure DevOps release API..."
+    }
+
     # Check that the PR was created properly. poll github 
     $tries = 10
     $success = $false
@@ -169,7 +191,7 @@ try {
     if ($buildInfo.channels.length -ne 1) {
         throw "Expected to see build in 1 channel, got $($buildInfo.channels.length)"
     }
-    $success = ($success) -and ($buildInfo.channels[0].name -eq $testChannelName)
+    $success =  ($buildInfo.channels[0].name -eq $testChannelName)
 
     if (-not $success) {
         throw "Expected build to be applied to $testChannelName"

@@ -1,4 +1,4 @@
-# End to End ScenarioM Testing
+# End to End Scenario Testing
 
 This directory contains end to end scenario tests to run on a fully deployed Maestro deployment.  The tests will first attempt to clean up existing resources needed for testing, then they will attempty to run various end-to-end scenarios.
 

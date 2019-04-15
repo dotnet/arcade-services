@@ -8,7 +8,7 @@
 [string]$azdoUser = if (-not $azdoUser) { "dotnet-maestro-bot" } else { $azdoUser }
 [string]$azdoAccount = if (-not $azdoAccount) { "dnceng" } else { $azdoAccount }
 [string]$azdoProject = if (-not $azdoProject) { "internal" } else { $azdoProject }
-[string]$azdoApiVersion = if (-not $azdoApiVersion) { "5.0-preview.1" } else { $azdoApiVersion }
+[string]$azdoApiVersion = if (-not $azdoApiVersion) { "5.0-preview.8" } else { $azdoApiVersion }
 [string]$barApiVersion = "2019-01-16"
 $gitHubPRsToClose = @()
 $githubBranchesToDelete = @()
@@ -370,6 +370,10 @@ function Get-AzDO-RepoUri($repoName) {
 function AzDO-Clone($repoName) {
     $authUri = Get-AzDO-RepoAuthUri $repoName
     & git clone $authUri $(Get-Repo-Location $repoName)
+    Push-Location -Path $(Get-Repo-Location $repoName)
+    & git config user.email $azdoUser@test.com
+    & git config user.name $azdoUser
+    Pop-Location
 }
 
 function AzDO-Delete-Branch($repoName, $branchName) {
@@ -406,9 +410,43 @@ function Get-AzDO-Headers() {
     return $headers
 }
 
+# Release API Only works during automation in Azure DevOps so that the env:SYSTEM_ACCESSTOKEN variable is set.
+# //TODO: Switch to PAT-based API if it ever becomes available
+function Get-AzDO-Releases($releaseDefinitionId, $count) {
+    if (-not $env:SYSTEM_ACCESSTOKEN) {
+        throw "env:SYSTEM_ACCESSTOKEN is not set. Is the script running within Azure DevOps?"
+    }
+    $uri = "https://vsrm.dev.azure.com/${azdoAccount}/${azdoProject}/_apis/release/releases?definitionId=${releaseDefinitionId}&api-version=${azdoApiVersion}&`$top=${count}"
+    $headers = @{"Authorization"="Bearer $env:SYSTEM_ACCESSTOKEN"}
+    $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Get
+    $jsonResponse = ($response | ConvertFrom-Json).Value
+    return $jsonResponse
+}
+
 function Get-AzDO-Release($releaseId) {
-    $uri = "https://dev.azure.com/${azdoAccount$}/${azdoProject}/_apis/release/releases/${releaseId}&api-version=${azdoApiVersion}"
-    Invoke-WebRequest -Uri $uri -Headers $(Get-AzDO-Headers) -Method Get | ConvertFrom-Json
+    if (-not $env:SYSTEM_ACCESSTOKEN) {
+        throw "env:SYSTEM_ACCESSTOKEN is not set. Is the script running within Azure DevOps?"
+    }
+    $uri = "https://vsrm.dev.azure.com/${azdoAccount}/${azdoProject}/_apis/release/releases/${releaseId}?api-version=${azdoApiVersion}"
+    $headers = @{"Authorization"="Bearer $env:SYSTEM_ACCESSTOKEN"}
+    Invoke-WebRequest -Uri $uri -Headers $headers -Method Get | ConvertFrom-Json
+}
+
+function Find-BuildId-In-AzDO-Release($releaseDefinitionId, $barBuildId)
+{
+    write-host "attempting to find a release with BarBuildId: $barBuildId in release pipeline $releaseDefinitionId"
+    $found = $False
+    $releases = Get-AzDO-Releases $releaseDefinitionId 5
+    foreach ($release in $releases) {
+        $release = Get-AzDO-Release $release.Id
+        write-host $release
+        $releaseBarBuildId = $release.Variables.BarBuildId.value
+        if ($releaseBarBuildId -and ($releaseBarBuildId -eq $barBuildId)) {
+            $found = $True
+            break
+        }
+    }
+    return $found
 }
 
 #
@@ -436,6 +474,10 @@ function Get-Github-RepoApiUri($repoName) {
 function GitHub-Clone($repoName) {
     $authUri = Get-Github-RepoAuthUri $repoName
     & git clone $authUri $(Get-Repo-Location $repoName)
+    Push-Location -Path $(Get-Repo-Location $repoName)
+    & git config user.email "${githubUser}@test.com"
+    & git config user.name $githubUser
+    Pop-Location
 }
 
 function GitHub-Delete-Branch($repoName, $branchName) {
