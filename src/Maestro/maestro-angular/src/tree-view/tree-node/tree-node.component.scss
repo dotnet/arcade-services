@@ -1,0 +1,23 @@
+.node {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+
+  .expander, .data {
+    margin: 0.25rem 0.5rem;
+  }
+
+  .expander {
+    cursor: pointer;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .data {
+    margin-left: 0;
+  }
+}
+
+.children {
+
+}

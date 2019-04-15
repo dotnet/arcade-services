@@ -44,6 +44,10 @@ import { TimeAgoComponent } from './widget/time-ago/time-ago.component';
 import { RelativeDateComponent } from './widget/relative-date/relative-date.component';
 import { CommitLinkPipe } from './pipes/commit-link.pipe';
 import { BuildLinkPipe } from './pipes/build-link.pipe';
+import { TreeViewModule } from 'src/tree-view';
+import { BuildGraphTreeComponent } from './page/build-graph-tree/build-graph-tree.component';
+import { RepoNamePipe } from './pipes/repo-name.pipe';
+import { GetRepositoryNamePipe } from './pipes/get-repository-name.pipe';
 
 @NgModule({
   declarations: [
@@ -59,6 +63,9 @@ import { BuildLinkPipe } from './pipes/build-link.pipe';
     RelativeDateComponent,
     CommitLinkPipe,
     BuildLinkPipe,
+    BuildGraphTreeComponent,
+    RepoNamePipe,
+    GetRepositoryNamePipe,
   ],
   imports: [
     BrowserModule,
@@ -70,6 +77,7 @@ import { BuildLinkPipe } from './pipes/build-link.pipe';
     MaestroModule.forRoot(maestroOptions),
     StatefulModule,
     FormsModule,
+    TreeViewModule,
   ],
   providers: [],
   bootstrap: [AppComponent],
