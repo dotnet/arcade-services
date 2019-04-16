@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Maestro.Data.Migrations
 {
@@ -9,7 +9,7 @@ namespace Maestro.Data.Migrations
             migrationBuilder.AlterColumn<string>(
                 name: "Version",
                 table: "Assets",
-                maxLength: 400,
+                maxLength: 75,
                 nullable: true,
                 oldClrType: typeof(string),
                 oldNullable: true);
@@ -17,7 +17,7 @@ namespace Maestro.Data.Migrations
             migrationBuilder.AlterColumn<string>(
                 name: "Name",
                 table: "Assets",
-                maxLength: 400,
+                maxLength: 150,
                 nullable: true,
                 oldClrType: typeof(string),
                 oldNullable: true);
@@ -39,7 +39,7 @@ namespace Maestro.Data.Migrations
                 table: "Assets",
                 nullable: true,
                 oldClrType: typeof(string),
-                oldMaxLength: 400,
+                oldMaxLength: 75,
                 oldNullable: true);
 
             migrationBuilder.AlterColumn<string>(
@@ -47,7 +47,7 @@ namespace Maestro.Data.Migrations
                 table: "Assets",
                 nullable: true,
                 oldClrType: typeof(string),
-                oldMaxLength: 400,
+                oldMaxLength: 150,
                 oldNullable: true);
         }
     }
