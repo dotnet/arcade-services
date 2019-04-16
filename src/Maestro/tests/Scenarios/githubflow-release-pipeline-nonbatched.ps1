@@ -45,17 +45,14 @@ try {
     Write-Host "Creating test channel"
     try { Darc-Delete-Channel $testChannelName } catch {}
     Darc-Add-Channel $testChannelName "test"
-    $channelsToDelete += $testChannelName
 
     Write-Host "Creating test pipeline"
     $pipelineId = Create-Pipeline $testReleasePipelineId
-    $pipelinesToDelete += $pipelineId
     Write-Host "Created Pipeline $pipelineId"
 
     Write-Host "Adding test release pipeline mapping to test channel"
     Add-Pipeline-To-Channel $testChannelName $pipelineId
     Write-Host "Associated test release pipeline $pipelineId to test channel"
-    $channelPipelinesToDelete[$testChannelName] += $pipelineId
 
     Write-Host "Creating default channel"
     try { Darc-Delete-Default-Channel $testChannelName $sourceRepoUri $sourceBranch } catch {}

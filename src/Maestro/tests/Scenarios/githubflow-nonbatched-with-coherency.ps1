@@ -59,15 +59,13 @@ try {
     $childSourceRepoUri = Get-Github-RepoUri $childSourceRepoName
     $parentSourceRepoUri = Get-Github-RepoUri $parentSourceRepoName
     $targetRepoUri = Get-Github-RepoUri $targetRepoName
-    
+
     Write-Host "Creating a test channel '$testChannelName'"
     try { Darc-Command delete-channel --name `'$testChannelName`' } catch {}
     Darc-Add-Channel $testChannelName "test"
-    $channelsToDelete += $testChannelName
 
     Write-Host "Adding a subscription from $parentSourceRepoName to $targetRepoName"
     $subscriptionId = Darc-Add-Subscription --channel `'$testChannelName`' --source-repo $parentSourceRepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch
-    $subscriptionsToDelete += $subscriptionId
 
     Write-Host "Set up new builds for intake into target repository"
     # Create a build for the parent source repo.
@@ -101,83 +99,36 @@ try {
     # Commit and push
     Git-Command $targetRepoName commit -am `"Add dependencies.`"
     Git-Command $targetRepoName push origin HEAD
-    $githubBranchesToDelete += @{ branch = $targetBranch; repo = $targetRepoName}
+    $global:githubBranchesToDelete += @{ branch = $targetBranch; repo = $targetRepoName}
 
     Write-Host "Trigger the dependency update"
     # Trigger the subscription
     Trigger-Subscription $subscriptionId
 
+    $expectedDependencies =@(
+        "Name:    Foo"
+        "Version: 1.1.0",
+        "Repo:    $parentSourceRepoUri",
+        "Commit:  $parentSourceCommit",
+        "Type:    Product",
+        "",
+        "Name:    Bar",
+        "Version: 2.1.0",
+        "Repo:    $parentSourceRepoUri",
+        "Commit:  $parentSourceCommit",
+        "Type:    Product",
+        "",
+        "Name:    Baz",
+        "Version: 1.3.0",
+        "Repo:    $childSourceRepoUri",
+        "Commit:  $childSourceCommit",
+        "Type:    Product",
+        ""
+    )
+
     Write-Host "Waiting on PR to be opened in $targetRepoUri"
-    # Check that the PR was created properly. poll github 
-    $tries = 10
-    $success = $false
-    while ($tries-- -gt 0) {
-        Write-Host "Checking for PRs, ${tries} tries remaining"
-        $pullRequest = Get-GitHub-PullRequests $targetRepoName $targetBranch
-        if ($pullRequest) {
-            # Find and verify PR info
-            if ($pullRequest.Count -ne 1) {
-                throw "Unexpected number of pull requests opened."
-            }
-            $pullRequest = $pullRequest[0]
 
-            $pullRequestBaseBranch = $pullRequest.head.ref
-            $githubBranchesToDelete += @{ branch = $pullRequestBaseBranch; repo = $targetRepoName}
-            $gitHubPRsToClose += @{ number = $pullRequest.number; repo = $targetRepoName }
-
-            $expectedPRTitle = "[$targetBranch] Update dependencies from $githubTestOrg/$parentSourceRepoName"
-            if ($pullRequest.title -ne $expectedPRTitle) {
-                throw "Expected PR title to be $expectedPRTitle, was $($pullRequest.title)"
-            }
-            
-            # Check out the merge commit sha, then use darc to get and verify the
-            # dependencies
-            Git-Command $targetRepoName fetch
-            Git-Command $targetRepoName checkout $pullRequestBaseBranch
-
-            try {
-                Push-Location -Path $(Get-Repo-Location $targetRepoName)
-                $dependencies = Darc-Command get-dependencies
-                $expectedDependencies =@(
-                    "Name:    Foo"
-                    "Version: 1.1.0",
-                    "Repo:    $parentSourceRepoUri",
-                    "Commit:  $parentSourceCommit",
-                    "Type:    Product",
-                    "",
-                    "Name:    Bar",
-                    "Version: 2.1.0",
-                    "Repo:    $parentSourceRepoUri",
-                    "Commit:  $parentSourceCommit",
-                    "Type:    Product",
-                    "",
-                    "Name:    Baz",
-                    "Version: 1.3.0",
-                    "Repo:    $childSourceRepoUri",
-                    "Commit:  $childSourceCommit",
-                    "Type:    Product",
-                    ""
-                )
-
-                if ($dependencies.Count -ne $expectedDependencies.Count) {
-                    Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."
-                    throw "PR did not have expected dependency updates."
-                }
-                for ($i = 0; $i -lt $expectedDependencies.Count; $i++) {
-                    if ($dependencies[$i] -notmatch $expectedDependencies[$i]) {
-                        Write-Error "Dependencies Line $i not matched`nExpected $($expectedDependencies[$i])`nActual $($dependencies[$i])"
-                        throw "PR did not have expected dependency updates."
-                    }
-                }
-            } finally {
-                Pop-Location
-            }
-
-            $success = $true
-            break
-        }
-        Start-Sleep 60
-    }
+    $success = Check-Github-PullRequest $targetRepoName $targetBranch $expectedDependencies
 
     if (!$success) {
         throw "Pull request failed to open."

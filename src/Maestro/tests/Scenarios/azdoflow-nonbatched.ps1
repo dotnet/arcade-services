@@ -39,14 +39,12 @@ try {
 
     $sourceRepoUri = Get-AzDO-RepoUri $sourceRepoName
     $targetRepoUri = Get-AzDO-RepoUri $targetRepoName
-    
+
     Write-Host "Creating a test channel '$testChannelName'"
     Darc-Add-Channel $testChannelName "test"
-    $channelsToDelete += $testChannelName
 
     Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
     $subscriptionId = Darc-Add-Subscription --channel `'$testChannelName`' --source-repo $sourceRepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch
-    $subscriptionsToDelete += $subscriptionId
 
     Write-Host "Set up build for intake into target repository"
     # Create a build for the source repo
@@ -74,75 +72,29 @@ try {
     # Commit and push
     Git-Command $targetRepoName commit -am `"Add dependencies.`"
     Git-Command $targetRepoName push origin HEAD
-    $azdoBranchesToDelete += @{ branch = $targetBranch; repo = $targetRepoName}
+    $global:azdoBranchesToDelete += @{ branch = $targetBranch; repo = $targetRepoName}
 
     Write-Host "Trigger the dependency update"
     # Trigger the subscription
     Trigger-Subscription $subscriptionId
 
+    $expectedDependencies =@(
+        "Name:    Foo"
+        "Version: 1.1.0",
+        "Repo:    $sourceRepoUri",
+        "Commit:  $sourceCommit",
+        "Type:    Product",
+        "",
+        "Name:    Bar",
+        "Version: 2.1.0",
+        "Repo:    $sourceRepoUri",
+        "Commit:  $sourceCommit",
+        "Type:    Product",
+        ""
+    )
+
     Write-Host "Waiting on PR to be opened in $targetRepoUri"
-    # Check that the PR was created properly. poll azdo 
-    $tries = 10
-    $success = $false
-    while ($tries-- -gt 0) {
-        Write-Host "Checking for PRs, ${tries} tries remaining"
-        $pullRequests = Get-AzDO-PullRequests $targetRepoName $targetBranch
-        if ($pullRequests.count -gt 0) {
-            # Find and verify PR info
-            if ($pullRequests.count -ne 1) {
-                throw "Unexpected number of pull requests open $($pullRequests.count)."
-            }
-            $pullRequest = $pullRequests.value[0]
-            $pullRequestBaseBranch = $pullRequest.sourceRefName.Replace('refs/heads/','')
-            $azdoBranchesToDelete += @{ branch = $pullRequestBaseBranch; repo = $targetRepoName}
-            $azdoPRsToClose += @{ number = $pullRequest.pullRequestId; repo = $targetRepoName }
-
-            $expectedPRTitle = "[$targetBranch] Update dependencies from $azdoAccount/$azdoProject/$sourceRepoName"
-            if ($pullRequest.title -ne $expectedPRTitle) {
-                throw "Expected PR title to be $expectedPRTitle, was $($pullrequest.title)"
-            }
-            
-            # Check out the merge commit sha, then use darc to get and verify the
-            # dependencies
-            Git-Command $targetRepoName fetch
-            Git-Command $targetRepoName checkout $pullRequestBaseBranch
-
-            try {
-                Push-Location -Path $(Get-Repo-Location $targetRepoName)
-                $dependencies = Darc-Command get-dependencies
-                $expectedDependencies =@(
-                    "Name:    Foo"
-                    "Version: 1.1.0",
-                    "Repo:    $sourceRepoUri",
-                    "Commit:  $sourceCommit",
-                    "Type:    Product",
-                    "",
-                    "Name:    Bar",
-                    "Version: 2.1.0",
-                    "Repo:    $sourceRepoUri",
-                    "Commit:  $sourceCommit",
-                    "Type:    Product",
-                    ""
-                )
-                if ($dependencies.Count -ne $expectedDependencies.Count) {
-                    Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."
-                    throw "PR did not have expected dependency updates."
-                }
-                for ($i = 0; $i -lt $expectedDependencies.Count; $i++) {
-                    if ($dependencies[$i] -notmatch $expectedDependencies[$i]) {
-                        Write-Error "Dependencies Line $i not matched`nExpected $($expectedDependencies[$i])`nActual $($dependencies[$i])"
-                        throw "PR did not have expected dependency updates."
-                    }
-                }
-            } finally {
-                Pop-Location
-            }
-
-            $success = $true
-            break
-        }
-        Start-Sleep 60
-    }
+    $success = Check-AzDO-PullRequest $targetRepoName $targetBranch $expectedDependencies
 
     if (!$success) {
         throw "Pull request failed to open."

@@ -8,17 +8,17 @@
 [string]$azdoUser = if (-not $azdoUser) { "dotnet-maestro-bot" } else { $azdoUser }
 [string]$azdoAccount = if (-not $azdoAccount) { "dnceng" } else { $azdoAccount }
 [string]$azdoProject = if (-not $azdoProject) { "internal" } else { $azdoProject }
-[string]$azdoApiVersion = if (-not $azdoApiVersion) { "5.0-preview.8" } else { $azdoApiVersion }
+[string]$azdoApiVersion = if (-not $azdoApiVersion) { "5.0-preview.1" } else { $azdoApiVersion }
 [string]$barApiVersion = "2019-01-16"
-$gitHubPRsToClose = @()
-$githubBranchesToDelete = @()
-$azdoPRsToClose = @()
-$azdoBranchesToDelete = @()
-$subscriptionsToDelete = @()
-$channelsToDelete = @()
-$defaultChannelsToDelete = @()
-$pipelinesToDelete = @()
-$channelPipelinesToDelete = @{}
+$global:gitHubPRsToClose = @()
+$global:githubBranchesToDelete = @()
+$global:azdoPRsToClose = @()
+$global:azdoBranchesToDelete = @()
+$global:subscriptionsToDelete = @()
+$global:channelsToDelete = @()
+$global:defaultChannelsToDelete = @()
+$global:pipelinesToDelete = @()
+$global:channelPipelinesToDelete = @{}
 
 # Get a temporary directory for a test root
 $testRoot = Join-Path -Path $([System.IO.Path]::GetTempPath()) -ChildPath $([System.IO.Path]::GetRandomFileName())
@@ -46,8 +46,8 @@ function Teardown() {
 
     Write-Host
 
-    Write-Host "Cleaning $($subscriptionsToDelete.Count) subscriptions"
-    foreach ($subscriptionId in $subscriptionsToDelete) {
+    Write-Host "Cleaning $($global:subscriptionsToDelete.Count) subscriptions"
+    foreach ($subscriptionId in $global:subscriptionsToDelete) {
         try {
             Write-Host "Deleting $subscriptionId"
             Darc-Command delete-subscription --id $subscriptionId
@@ -57,8 +57,8 @@ function Teardown() {
         }
     }
 
-    Write-Host "Cleaning $($defaultChannelsToDelete.Count) default channels"
-    foreach ($defaultChannel in $defaultChannelsToDelete) {
+    Write-Host "Cleaning $($global:defaultChannelsToDelete.Count) default channels"
+    foreach ($defaultChannel in $global:defaultChannelsToDelete) {
         try {
             Write-Host "Deleting default channel $($defaultChannel.repo)@$($defaultChannel.branch) -> $($defaultChannel.channel)"
             Darc-Delete-Default-Channel $defaultChannel.channel $defaultChannel.repo $defaultChannel.branch
@@ -68,9 +68,9 @@ function Teardown() {
         }
     }
 
-    Write-Host "Cleaning $($channelPipelinesToDelete.Count) channel-pipeline mappings"
-    foreach ($channelId in $channelPipelinesToDelete.Keys) {
-        $pipelineIds = $channelPipelinesToDelete[$channelId]
+    Write-Host "Cleaning $($global:channelPipelinesToDelete.Count) channel-pipeline mappings"
+    foreach ($channelId in $global:channelPipelinesToDelete.Keys) {
+        $pipelineIds = $global:channelPipelinesToDelete[$channelId]
         foreach ($pipelineId in $pipelineIds) {
             try {
                 Write-Host "Removing pipeline: $pipelineId from channel: $channelId"
@@ -82,8 +82,8 @@ function Teardown() {
         }
     }
 
-    Write-Host "Cleaning $($channelsToDelete.Count) channels"
-    foreach ($channel in $channelsToDelete) {
+    Write-Host "Cleaning $($global:channelsToDelete.Count) channels"
+    foreach ($channel in $global:channelsToDelete) {
         try {
             Write-Host "Deleting channel $channel"
             Darc-Command delete-channel --name `'$channel`'
@@ -93,8 +93,8 @@ function Teardown() {
         }
     }
 
-    Write-Host "Cleaning $($pipelinesToDelete.Count) pipelines"
-    foreach ($pipeline in $pipelinesToDelete) {
+    Write-Host "Cleaning $($global:pipelinesToDelete.Count) pipelines"
+    foreach ($pipeline in $global:pipelinesToDelete) {
         try {
             Write-Host "Deleting pipeline $pipeline"
             Delete-Pipeline $pipeline
@@ -104,8 +104,8 @@ function Teardown() {
         }
     }
 
-    Write-Host "Cleaning $($githubBranchesToDelete.Count) github branches"
-    foreach ($branch in $githubBranchesToDelete) {
+    Write-Host "Cleaning $($global:githubBranchesToDelete.Count) github branches"
+    foreach ($branch in $global:githubBranchesToDelete) {
         try {
             Write-Host "Removing $($branch.branch) from $($branch.repo)"
             GitHub-Delete-Branch $branch.repo $branch.branch
@@ -115,8 +115,8 @@ function Teardown() {
         }
     } 
 
-    Write-Host "Cleaning $($gitHubPRsToClose.Count) github PRs"
-    foreach ($pr in $gitHubPRsToClose) {
+    Write-Host "Cleaning $($global:gitHubPRsToClose.Count) github PRs"
+    foreach ($pr in $global:gitHubPRsToClose) {
         try {
             Write-Host "Closing pull request $($pr.number) in $($pr.repo)"
             Close-GitHub-PullRequest $pr.repo $pr.number
@@ -126,8 +126,8 @@ function Teardown() {
         }
     }
 
-    Write-Host "Cleaning $($azdoBranchesToDelete.Count) azdo branches"
-    foreach ($branch in $azdoBranchesToDelete) {
+    Write-Host "Cleaning $($global:azdoBranchesToDelete.Count) azdo branches"
+    foreach ($branch in $global:azdoBranchesToDelete) {
         try {
             Write-Host "Removing $($branch.branch) from $($branch.repo)"
             AzDO-Delete-Branch $branch.repo $branch.branch
@@ -137,8 +137,8 @@ function Teardown() {
         }
     }
 
-    Write-Host "Cleaning $($azdoPRsToClose.Count) azdo PRs"
-    foreach ($pr in $azdoPRsToClose) {
+    Write-Host "Cleaning $($global:azdoPRsToClose.Count) azdo PRs"
+    foreach ($pr in $global:azdoPRsToClose) {
         try {
             Write-Host "Closing pull request $($pr.number) in $($pr.repo)"
             Close-AzDO-PullRequest $pr.repo $pr.number
@@ -168,6 +168,7 @@ function Darc-Command-Impl($darcParams) {
 function Darc-Add-Channel($channelName, $classification) {
     $darcParams = "add-channel --name '$channelName' --classification '$classification'"
     Darc-Command-Impl $darcParams
+    $global:channelsToDelete += $channelName
 }
 
 function Darc-Delete-Channel($channelName) {
@@ -179,6 +180,7 @@ function Darc-Delete-Channel($channelName) {
 function Darc-Add-Default-Channel($channelName, $repoUri, $branch) {
     $darcParams = "add-default-channel --channel '$channelName' --repo '$repoUri' --branch '$branch'"
     Darc-Command-Impl $darcParams
+    $global:defaultChannelsToDelete += @{ channel = $channelName; repo = $repoUri; branch = $branch }
 }
 
 function Darc-Delete-Default-Channel($channelName, $repoUri, $branch) {
@@ -197,6 +199,7 @@ function Darc-Add-Subscription() {
         if (-not $subscriptionId) {
             throw "Failed to extract subscription id"
         }
+        $global:subscriptionsToDelete += $subscriptionId
         $subscriptionId
     } else {
         throw "Failed to create subscrption or parse subscription id"
@@ -316,6 +319,7 @@ function Create-Pipeline($releasePipelineId) {
     write-host $response
     $pipelineId = $response.id
     Write-Host "Created Pipeline with id $pipelineId"
+    $global:pipelinesToDelete += $pipelineId
     return $pipelineId
 }
 
@@ -339,8 +343,8 @@ function Add-Pipeline-To-Channel($channelName, $pipelineId) {
     Write-Host "Adding pipeline ${pipelineId} to channel ${channelId} in the Build Asset Registry..."
 
     $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
-
     Write-Host $response
+    $global:channelPipelinesToDelete[$channelName] += $pipelineId
 }
 
 function Remove-Pipeline-From-Channel($channelName, $pipelineId) {
@@ -397,6 +401,57 @@ function Close-AzDO-PullRequest($targetRepoName, $prId) {
 function Get-AzDO-PullRequests($targetRepoName, $targetBranch) {
     $uri = "$(Get-AzDO-RepoApiUri($targetRepoName))/pullrequests?searchCriteria.status=active&searchCriteria.targetRefName=refs/heads/${targetBranch}&api-version=${azdoApiVersion}"
     Invoke-WebRequest -Uri $uri -Headers $(Get-AzDO-Headers) -Method Get  | ConvertFrom-Json
+}
+
+function Check-AzDO-PullRequest($targetRepoName, $targetBranch, $expectedDependencies) {
+    # Check that the PR was created properly. poll azdo
+    $tries = 10
+    $success = $false
+    while ($tries-- -gt 0) {
+        Write-Host "Checking for PRs, ${tries} tries remaining"
+        $pullRequests = Get-AzDO-PullRequests $targetRepoName $targetBranch
+        if ($pullRequests.count -gt 0) {
+            # Find and verify PR info
+            if ($pullRequests.count -ne 1) {
+                throw "Unexpected number of pull requests open $($pullRequests.count)."
+            }
+            $pullRequest = $pullRequests.value[0]
+            $pullRequestBaseBranch = $pullRequest.sourceRefName.Replace('refs/heads/','')
+            $global:azdoBranchesToDelete += @{ branch = $pullRequestBaseBranch; repo = $targetRepoName}
+            $global:azdoPRsToClose += @{ number = $pullRequest.pullRequestId; repo = $targetRepoName }
+
+            $expectedPRTitle = "[$targetBranch] Update dependencies from $azdoAccount/$azdoProject/$sourceRepoName"
+            if ($pullRequest.title -ne $expectedPRTitle) {
+                throw "Expected PR title to be $expectedPRTitle, was $($pullrequest.title)"
+            }
+
+            # Check out the merge commit sha, then use darc to get and verify the
+            # dependencies
+            Git-Command $targetRepoName fetch
+            Git-Command $targetRepoName checkout $pullRequestBaseBranch
+
+            try {
+                Push-Location -Path $(Get-Repo-Location $targetRepoName)
+                $dependencies = Darc-Command get-dependencies
+                if ($dependencies.Count -ne $expectedDependencies.Count) {
+                    Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."
+                    throw "PR did not have expected dependency updates."
+                }
+                for ($i = 0; $i -lt $expectedDependencies.Count; $i++) {
+                    if ($dependencies[$i] -notmatch $expectedDependencies[$i]) {
+                        Write-Error "Dependencies Line $i not matched`nExpected $($expectedDependencies[$i])`nActual $($dependencies[$i])"
+                        throw "PR did not have expected dependency updates."
+                    }
+                }
+            } finally {
+                Pop-Location
+            }
+
+            $success = $true
+            break
+        }
+        Start-Sleep 60
+    }
 }
 
 function Get-AzDO-RepoApiUri($repoName) {
@@ -496,4 +551,58 @@ function Close-GitHub-PullRequest($targetRepoName, $prId) {
 function Get-GitHub-PullRequests($targetRepoName, $targetBranch) {
     $uri = "$(Get-Github-RepoApiUri($targetRepoName))/pulls?state=open&base=$targetBranch"
     Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Get  | ConvertFrom-Json
+}
+
+function Check-Github-PullRequest($targetRepoName, $targetBranch, $expectedDependencies) {
+    # Check that the PR was created properly. poll github
+    $tries = 10
+    $success = $false
+    while ($tries-- -gt 0) {
+        Write-Host "Checking for PRs, ${tries} tries remaining"
+        $pullRequest = Get-GitHub-PullRequests $targetRepoName $targetBranch
+        if ($pullRequest) {
+            # Find and verify PR info
+            if ($pullRequest.Count -ne 1) {
+                throw "Unexpected number of pull requests opened."
+            }
+            $pullRequest = $pullRequest[0]
+
+            $pullRequestBaseBranch = $pullRequest.head.ref
+            $global:githubBranchesToDelete += @{ branch = $pullRequestBaseBranch; repo = $targetRepoName}
+            $global:gitHubPRsToClose += @{ number = $pullRequest.number; repo = $targetRepoName }
+
+            $expectedPRTitle = "[$targetBranch] Update dependencies from $githubTestOrg/$sourceRepoName"
+            if ($pullRequest.title -ne $expectedPRTitle) {
+                throw "Expected PR title to be $expectedPRTitle, was $($pullRequest.title)"
+            }
+
+            # Check out the merge commit sha, then use darc to get and verify the
+            # dependencies
+            Git-Command $targetRepoName fetch
+            Git-Command $targetRepoName checkout $pullRequestBaseBranch
+
+            try {
+                Push-Location -Path $(Get-Repo-Location $targetRepoName)
+                $dependencies = Darc-Command get-dependencies
+
+
+                if ($dependencies.Count -ne $expectedDependencies.Count) {
+                    Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."
+                    throw "PR did not have expected dependency updates."
+                }
+                for ($i = 0; $i -lt $expectedDependencies.Count; $i++) {
+                    if ($dependencies[$i] -notmatch $expectedDependencies[$i]) {
+                        Write-Error "Dependencies Line $i not matched`nExpected $($expectedDependencies[$i])`nActual $($dependencies[$i])"
+                        throw "PR did not have expected dependency updates."
+                    }
+                }
+            } finally {
+                Pop-Location
+            }
+
+            $success = $true
+            break
+        }
+        Start-Sleep 60
+    }
 }
