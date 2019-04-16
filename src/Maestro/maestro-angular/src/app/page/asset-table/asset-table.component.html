@@ -1,0 +1,35 @@
+<div class="card mt-3" *ngIf="assets && assets.length">
+  <div class="card-header">
+    <h5 class="card-title float-left">Assets Produced</h5>
+    <pagination-template #p="paginationApi" (pageChange)="page = $event">
+      <nav aria-label="Asset Pagination" class="float-right">
+        <ul class="pagination">
+          <li class="page-item" [class.disabled]="p.isFirstPage()">
+            <a class="page-link" aria-label="Previous" (click)="p.previous()">
+              <span aria-hidden="true">&laquo;</span>
+              <span class="sr-only">Previous</span>
+            </a>
+          </li>
+          <li class="page-item" *ngFor="let page of p.pages" [class.active]="p.getCurrent() === page.value">
+            <a class="page-link" (click)="p.setCurrent(page.value)">
+              <span style="display: inline-block; width: 2ch; text-align: center;">{{ page.label }}</span>
+              <span class="sr-only" *ngIf="p.getCurrent() === page.value">(current)</span>
+            </a>
+          </li>
+          <li class="page-item" [class.disabled]="p.isLastPage()">
+            <a class="page-link" aria-label="Next" (click)="p.next()">
+              <span aria-hidden="true">&raquo;</span>
+              <span class="sr-only">NExt</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </pagination-template>
+  </div>
+  <div class="card-body">
+    <ul class="list-group list-group-flush">
+      <li *ngFor="let asset of assets | paginate: { itemsPerPage: 50, currentPage: page }" class="list-group-item">{{asset.name}} <span
+          class="badge badge-info">{{asset.version}}</span></li>
+    </ul>
+  </div>
+</div>

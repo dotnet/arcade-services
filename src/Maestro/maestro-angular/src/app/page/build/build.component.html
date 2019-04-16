@@ -113,15 +113,7 @@
         </ng-template>
       </div>
 
-      <div class="card mt-3" *ngIf="build.assets && build.assets.length">
-        <div class="card-body">
-          <h5 class="card-title">Assets Produced</h5>
-        </div>
-        <ul class="list-group list-group-flush">
-          <li *ngFor="let asset of build.assets" class="list-group-item">{{asset.name}} <span
-              class="badge badge-info">{{asset.version}}</span></li>
-        </ul>
-      </div>
+      <mc-asset-table [assets]="build.assets"></mc-asset-table>
     </div>
   </ng-container>
   <div @toast class="toast show" *ngIf="toastVisible" role="alert" aria-live="assertive" aria-atomic="true"
