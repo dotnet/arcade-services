@@ -14,8 +14,10 @@ namespace Maestro.Data.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
+        [StringLength(150)]
         public string Name { get; set; }
 
+        [StringLength(75)]
         public string Version { get; set; }
 
         public int BuildId { get; set; }
