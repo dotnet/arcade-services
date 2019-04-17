@@ -1,9 +1,15 @@
 <div class="card mt-3" *ngIf="assets && assets.length">
   <div class="card-header">
-    <h5 class="card-title float-left">Assets Produced</h5>
+    <h5 class="card-title">Assets Produced</h5>
+  </div>
+  <div class="card-body">
+    <ul class="list-group list-group-flush">
+      <li *ngFor="let asset of assets | paginate: { itemsPerPage: 50, currentPage: page }" class="list-group-item">{{asset.name}} <span
+          class="badge badge-info">{{asset.version}}</span></li>
+    </ul>
     <pagination-template #p="paginationApi" (pageChange)="page = $event">
-      <nav aria-label="Asset Pagination" class="float-right">
-        <ul class="pagination">
+      <nav aria-label="Asset Pagination">
+        <ul class="pagination justify-content-center">
           <li class="page-item" [class.disabled]="p.isFirstPage()">
             <a class="page-link" aria-label="Previous" (click)="p.previous()">
               <span aria-hidden="true">&laquo;</span>
@@ -25,11 +31,5 @@
         </ul>
       </nav>
     </pagination-template>
-  </div>
-  <div class="card-body">
-    <ul class="list-group list-group-flush">
-      <li *ngFor="let asset of assets | paginate: { itemsPerPage: 50, currentPage: page }" class="list-group-item">{{asset.name}} <span
-          class="badge badge-info">{{asset.version}}</span></li>
-    </ul>
   </div>
 </div>
