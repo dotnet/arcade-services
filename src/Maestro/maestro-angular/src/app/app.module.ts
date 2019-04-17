@@ -25,6 +25,7 @@ import {
   faQuestionCircle as farQuestionCircle,
 } from "@fortawesome/free-regular-svg-icons";
 import { NgbCollapseModule, NgbModule } from "@ng-bootstrap/ng-bootstrap";
+import { NgxPaginationModule } from "ngx-pagination";
 
 import { MaestroModule } from "src/maestro-client";
 import { StatefulModule } from "src/stateful";
@@ -48,6 +49,7 @@ import { TreeViewModule } from 'src/tree-view';
 import { BuildGraphTreeComponent } from './page/build-graph-tree/build-graph-tree.component';
 import { RepoNamePipe } from './pipes/repo-name.pipe';
 import { GetRepositoryNamePipe } from './pipes/get-repository-name.pipe';
+import { AssetTableComponent } from './page/asset-table/asset-table.component';
 
 @NgModule({
   declarations: [
@@ -66,6 +68,7 @@ import { GetRepositoryNamePipe } from './pipes/get-repository-name.pipe';
     BuildGraphTreeComponent,
     RepoNamePipe,
     GetRepositoryNamePipe,
+    AssetTableComponent,
   ],
   imports: [
     BrowserModule,
@@ -78,6 +81,7 @@ import { GetRepositoryNamePipe } from './pipes/get-repository-name.pipe';
     StatefulModule,
     FormsModule,
     TreeViewModule,
+    NgxPaginationModule,
   ],
   providers: [],
   bootstrap: [AppComponent],
