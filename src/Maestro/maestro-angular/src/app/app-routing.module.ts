@@ -11,11 +11,16 @@ const routes: Routes = [
   },
   {
     path: ":channelId/:repository",
-    redirectTo: ":channelId/:repository/latest",
+    redirectTo: ":channelId/:repository/latest/graph",
     pathMatch: "full",
   },
   {
     path: ":channelId/:repository/:buildId",
+    redirectTo: ":channelId/:repository/:buildId/graph",
+    pathMatch: "full",
+  },
+  {
+    path: ":channelId/:repository/:buildId/:tabName",
     component: BuildComponent,
   },
 ];

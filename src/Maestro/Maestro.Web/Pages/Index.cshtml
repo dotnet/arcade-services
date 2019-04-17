@@ -90,6 +90,7 @@
             @:{ name: "@theme.name", file: "@theme.file" },
             }
           ],
+          aiKey: '@Html.Raw(Model.InstrumentationKey)',
         };
     </script>
     <link rel="stylesheet" href="@Model.CurrentThemeFile" purpose="theme"/>
