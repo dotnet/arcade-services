@@ -416,6 +416,8 @@ namespace Microsoft.DotNet.DarcLib
                     Status = PullRequestStatus.Completed,
                     CompletionOptions = new GitPullRequestCompletionOptions
                     {
+                        BypassPolicy = true,
+                        BypassReason = "All required checks were successful",
                         SquashMerge = parameters.SquashMerge,
                         DeleteSourceBranch = parameters.DeleteSourceBranch
                     },
@@ -619,7 +621,11 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string accountName, string projectName, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
-            string statusesPath = $"_apis/git/repositories/{repo}/pullRequests/{id}/statuses";
+            string projectId = await GetProjectIdAsync(accountName, projectName);
+
+            string artifactId = $"vstfs:///CodeReview/CodeReviewId/{projectId}/{id}";
+
+            string statusesPath = $"_apis/policy/evaluations?artifactId={artifactId}";
 
             JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(HttpMethod.Get,
                 accountName,
@@ -632,22 +638,25 @@ namespace Microsoft.DotNet.DarcLib
             IList<Check> statuses = new List<Check>();
             foreach (JToken status in values)
             {
-                if (Enum.TryParse(status["state"].ToString(), true, out AzureDevOpsCheckState state))
+                bool isEnabled = status["configuration"]["isEnabled"].Value<bool>();
+
+                if (isEnabled && Enum.TryParse(status["status"].ToString(), true, out AzureDevOpsCheckState state))
                 {
                     CheckState checkState;
 
                     switch (state)
                     {
-                        case AzureDevOpsCheckState.Error:
+                        case AzureDevOpsCheckState.Broken:
                             checkState = CheckState.Error;
                             break;
-                        case AzureDevOpsCheckState.Failed:
+                        case AzureDevOpsCheckState.Rejected:
                             checkState = CheckState.Failure;
                             break;
-                        case AzureDevOpsCheckState.Pending:
+                        case AzureDevOpsCheckState.Queued:
+                        case AzureDevOpsCheckState.Running:
                             checkState = CheckState.Pending;
                             break;
-                        case AzureDevOpsCheckState.Succeeded:
+                        case AzureDevOpsCheckState.Approved:
                             checkState = CheckState.Success;
                             break;
                         default:
@@ -658,8 +667,8 @@ namespace Microsoft.DotNet.DarcLib
                     statuses.Add(
                         new Check(
                             checkState,
-                            status["context"]["name"].ToString(),
-                            $"https://dev.azure.com/{accountName}/{projectName}/{statusesPath}/{status["id"]}"));
+                            status["configuration"]["type"]["displayName"].ToString(),
+                            status["configuration"]["url"].ToString()));
                 }
             }
 
@@ -729,12 +738,18 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="accountName">Azure DevOps account</param>
         /// <param name="projectName">Azure DevOps project</param>
         /// <returns>New http client</returns>
-        private HttpClient CreateHttpClient(string accountName, string projectName, string versionOverride = null, string baseAddressSubpath = null)
+        private HttpClient CreateHttpClient(string accountName, string projectName = null, string versionOverride = null, string baseAddressSubpath = null)
         {
             baseAddressSubpath = EnsureEndsWith(baseAddressSubpath, '.');
 
+            string address = $"https://{baseAddressSubpath}dev.azure.com/{accountName}/";
+            if (!string.IsNullOrEmpty(projectName))
+            {
+                address += $"{projectName}/";
+            }
+
             var client = new HttpClient {
-                BaseAddress = new Uri($"https://{baseAddressSubpath}dev.azure.com/{accountName}/{projectName}/")
+                BaseAddress = new Uri(address)
             };
 
             client.DefaultRequestHeaders.Add(
@@ -802,6 +817,24 @@ namespace Microsoft.DotNet.DarcLib
             return (m.Groups["account"].Value,
                     m.Groups["project"].Value,
                     m.Groups["repo"].Value);
+        }
+
+        /// <summary>
+        /// Returns the project ID for a combination of Azure DevOps account and project name
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account</param>
+        /// <param name="projectName">Azure DevOps project to get the ID for</param>
+        /// <returns>Project Id</returns>
+       public async Task<string> GetProjectIdAsync(string accountName, string projectName)
+        {
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                "",
+                $"_apis/projects/{projectName}",
+                _logger,
+                versionOverride: "5.0");
+            return content["id"].ToString();
         }
 
         /// <summary>
