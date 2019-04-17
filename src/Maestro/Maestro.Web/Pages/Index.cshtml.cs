@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 using System.Xml.XPath;
+using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -18,14 +19,17 @@ namespace Maestro.Web.Pages
     public class IndexModel : PageModel
     {
         public IHostingEnvironment Environment { get; }
+        public TelemetryClient TelemetryClient { get; }
 
-        public IndexModel(IHostingEnvironment environment)
+        public IndexModel(IHostingEnvironment environment, TelemetryClient telemetryClient)
         {
             Environment = environment;
+            TelemetryClient = telemetryClient;
         }
 
         public IReadOnlyList<(string name, string file)> Themes { get; private set; }
         public string CurrentThemeFile { get; private set; }
+        public string InstrumentationKey => TelemetryClient.InstrumentationKey;
 
         public PageResult OnGet()
         {

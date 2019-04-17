@@ -24,6 +24,7 @@
     "@fortawesome/fontawesome-svg-core": "^1.2.15",
     "@fortawesome/free-regular-svg-icons": "^5.7.2",
     "@fortawesome/free-solid-svg-icons": "^5.7.2",
+    "@microsoft/applicationinsights-web": "^2.0.0-rc3",
     "@ng-bootstrap/ng-bootstrap": "^4.0.4",
     "bootstrap": "^4.3.1",
     "core-js": "^2.5.4",

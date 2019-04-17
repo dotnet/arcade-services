@@ -58,7 +58,7 @@ export class BuildComponent implements OnInit, OnChanges {
   public toastDate?: Date;
   public acceptToast?: () => void;
 
-  public view: "graph" | "tree" = "graph";
+  public view$?: Observable<string>;
 
   private toastNewBuild(): OperatorFunction<number,number> {
     const self = this;
@@ -95,12 +95,12 @@ export class BuildComponent implements OnInit, OnChanges {
   }
 
   public ngOnInit() {
-    let haveBuildId = false;
-    const buildId$ = this.route.paramMap.pipe(
+    const params$ = this.route.paramMap.pipe(
       map(params => {
         const buildId = params.get("buildId");
         const channelId = params.get("channelId");
         const repository = params.get("repository");
+        const tabName = params.get("tabName");
         if (buildId == null) {
           throw new Error("buildId was null");
         }
@@ -110,11 +110,44 @@ export class BuildComponent implements OnInit, OnChanges {
         if (repository == null) {
           throw new Error("repository was null");
         }
-        return {buildId, channelId, repository};
+        if (tabName == null) {
+          throw new Error("tabName was null");
+        }
+        return {buildId, channelId, repository, tabName};
       }),
       tap(v => {
         console.log("Params: ", v);
         this.toastVisible = false;
+      }),
+      shareReplay({
+        refCount: true,
+        bufferSize: 1,
+      }),
+    );
+
+    this.view$ = params$.pipe(
+      map(params => params.tabName),
+    );
+
+    let haveBuildId = false;
+    let prevParams: {
+      buildId: string;
+      channelId: string;
+      repository: string;
+    } | undefined = undefined;
+    const buildId$ = params$.pipe(
+      filter(params => {
+        if(prevParams) {
+          if (prevParams.buildId === params.buildId &&
+              prevParams.channelId === params.channelId &&
+              prevParams.repository === params.repository) {
+            // If the important parameters haven't changed don't reload the build
+            return false;
+          }
+        }
+
+        prevParams = params;
+        return true;
       }),
       switchMap(params => {
         if (params.buildId == "latest") {
