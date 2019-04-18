@@ -37,7 +37,10 @@ namespace Maestro.Data
             }
 
             DbContextOptions options = new DbContextOptionsBuilder()
-                .UseSqlServer(connectionString)
+                .UseSqlServer(connectionString, opts =>
+                {
+                    opts.CommandTimeout(30 * 60);
+                })
                 .Options;
             return new BuildAssetRegistryContext(
                 new HostingEnvironment {EnvironmentName = EnvironmentName.Development},
