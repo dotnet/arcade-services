@@ -8,8 +8,8 @@
     - Download and install the SSL cert used for local development from key vault
     - Configure the SQL Server LocalDB instance for use from the local service fabric cluster
 4. From the Maestro.Data project directory, run `dotnet ef --msbuildprojectextensionspath <path to obj dir for Maestro data (e.g. artifacts/obj/Maestro.Data/)> database update`. 
-5. Join the @maestro-auth-test org in GitHub.
-6. In SQL Server Object Explorer in Visual Studio, find the local SQLExpression database for the build asset registry and populate the RepoInstallations table with the following row:
+5. Join the @maestro-auth-test org in GitHub (you will need to ask someone to manually add you to the org).
+6. In SQL Server Object Explorer in Visual Studio, find the local SQLExpression database for the build asset registry and populate the Repositories table with the following row:
     - Repository: https://github.com/maestro-auth-test/maestro-test
     - Installation Id: 289474
 

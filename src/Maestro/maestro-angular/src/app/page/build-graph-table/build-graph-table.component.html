@@ -41,7 +41,7 @@
     Focus a node by hovering over it. Lock the focus by clicking the <fa-icon icon="lock"></fa-icon>/<fa-icon icon="lock-open"></fa-icon> icon.
   </p>
 </ng-template>
-<table class="table table-sm table-hover mb-0">
+<table class="table table-sm table-hover mb-0" style="white-space: nowrap;">
   <thead>
     <th style="min-width: 0" class="graph-icon">
       <span style="cursor: help;" [ngbPopover]="popContent" popoverTitle="Help" placement="right">
@@ -87,25 +87,25 @@
         <a [routerLink]="['../..', getRepo(node.build), node.build.id]">{{getRepo(node.build)}}</a>
       </td>
       <td>
-        {{node.build.dateProduced | timeAgo}}
+        <mc-time-ago [value]="node.build.dateProduced"></mc-time-ago>
       </td>
       <td>
-        <fa-icon icon="exclamation-circle" title="A newer build of this same repository is in the tree" *ngIf="!isCoherent(node)"></fa-icon>
+        <fa-icon icon="exclamation-circle" title="A newer build of this same repository is in the tree" [style.visibility]="!isCoherent(node) ? 'visible' : 'hidden'"></fa-icon>
         {{node.build.azureDevOpsBuildNumber}}
       </td>
-      <td>
-        <a *ngIf="getCommitLink(node.build) as link; else noCommitLink" [href]="link" target="_blank">
-          <fa-icon icon="exclamation-circle" *ngIf="!isCoherent(node)"></fa-icon>
-          {{node.build.commit}}
+      <td class="text-monospace">
+        <a *ngIf="(node.build | commitLink) as link; else noCommitLink" [href]="link" target="_blank">
+          <fa-icon icon="exclamation-circle" [style.visibility]="!isCoherent(node) ? 'visible' : 'hidden'"></fa-icon>
+          {{node.build.commit | slice:0:7}}
           <fa-icon icon="external-link-alt"></fa-icon>
         </a>
         <ng-template #noCommitLink>
-          <fa-icon icon="exclamation-circle" *ngIf="!isCoherent(node)"></fa-icon>
-          {{node.build.commit}}
+          <fa-icon icon="exclamation-circle" [style.visibility]="!isCoherent(node) ? 'visible' : 'hidden'"></fa-icon>
+          {{node.build.commit | slice:0:7}}
         </ng-template>
       </td>
       <td>
-        <a *ngIf="getBuildLink(node.build) as link; else noBuildLink" class="btn btn-sm btn-primary" [href]="link" target="_blank">
+        <a *ngIf="(node.build | buildLink) as link; else noBuildLink" class="btn btn-sm btn-primary" [href]="link" target="_blank">
           Build
           <fa-icon icon="external-link-alt"></fa-icon>
         </a>

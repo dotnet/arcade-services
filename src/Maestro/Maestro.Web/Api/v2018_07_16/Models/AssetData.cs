@@ -3,14 +3,17 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 
 namespace Maestro.Web.Api.v2018_07_16.Models
 {
     public class AssetData
     {
+        [StringLength(150)]
         public string Name { get; set; }
 
+        [StringLength(75)]
         public string Version { get; set; }
 
         public bool NonShipping { get; set; }

@@ -299,18 +299,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <param name="nonShipping">If true, the asset is not intended for end customers</param>
         private void AddAsset(List<AssetData> assets, string assetName, string version, string location, AssetLocationDataType assetLocationType, bool nonShipping)
         {
-            var locations = ImmutableList.Create<AssetLocationData>();
-            if (location != null)
-            {
-                locations.Add(new AssetLocationData(assetLocationType)
-                {
-                    Location = location,
-                });
-            }
-
             assets.Add(new AssetData(nonShipping)
             {
-                Locations = locations,
+                Locations = (location == null) ? null : ImmutableList.Create(new AssetLocationData(assetLocationType)
+                {
+                    Location = location,
+                }),
                 Name = assetName,
                 Version = version,
             });

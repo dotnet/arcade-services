@@ -22,7 +22,7 @@ try {
     
     # Add a new channel
     Write-Host "Creating channel '$newChannelName'"
-    Darc-Command add-channel --name `'$newChannelName`' --classification 'test'
+    Darc-Add-Channel $newChannelName 'test'
 
     # Get the channel and make sure it's there
     Write-Host "Checking that '$newChannelName' exists"
@@ -38,7 +38,7 @@ try {
 
     # Get the channel and make sure it's no longer there
     $channels = Darc-Command get-channels
-    if ($channels.Contains($newChannelName)) {
+    if ($channels -and $channels.Contains($newChannelName)) {
         throw "Cannot delete '$newChannelName' after creating it"
     }
 

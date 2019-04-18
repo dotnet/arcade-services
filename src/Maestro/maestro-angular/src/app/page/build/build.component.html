@@ -1,109 +1,143 @@
-<ng-template #loadingBuild>
-  <div class="d-flex flex-column" style="height: 100%;">
+<div class="d-flex flex-column" style="height: 100%;">
+  <ng-template #loadingBuild>
     <div style="margin: auto;">
       <progress-ring width="200" height="200"></progress-ring>
     </div>
-  </div>
-</ng-template>
-<div class="d-flex flex-column" *stateful="let build from build$; loadingTemplate: loadingBuild">
-  <ng-template #loadingBuildInfo>
-    <div class="flex-grow-0 mr-3" style="font-size: 6em">
-      <fa-icon class="text-info" icon="question-circle"></fa-icon>
-    </div>
-    <div class="flex-grow-1">
-      <h4>{{getRepo(build)}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
-      <div>
-        <span>Loading build information from Azure Pipelines</span>
-        <div style="display:inline-block; vertical-align: middle;">
-          <progress-ring width="50" height="50" color="#777"></progress-ring>
-        </div>
-      </div>
-    </div>
   </ng-template>
-  <ng-template #errorBuildInfo>
-    <div class="flex-grow-0 mr-3" style="font-size: 6em">
-      <fa-icon class="text-warning" icon="exclamation-circle"></fa-icon>
-    </div>
-    <div class="flex-grow-1">
-      <h4>{{getRepo(build)}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
-      <div>
-        <span class="text-warning" *ngIf="!haveAzDevInfo(build)">
-          Cannot lookup build in Azure Pipelines. Missing required data. Update to the latest Arcade SDK to collect this data.
-        </span>
-        <span class="text-warning" *ngIf="haveAzDevInfo(build)">
-          Error loading build information from Azure Pipelines
-        </span>
-        <div style="display:inline-block; vertical-align: middle; width: 50px; height: 50px;">
-        </div>
-      </div>
-    </div>
-  </ng-template>
-  <div class="d-flex flex-row p-3 header align-items-center">
-    <ng-container *stateful="let azDevInfo from azDevBuildInfo$; loadingTemplate: loadingBuildInfo; errorTemplate: errorBuildInfo;">
+  <ng-container *stateful="let build from build$; loadingTemplate: loadingBuild">
+    <ng-template #loadingBuildInfo>
       <div class="flex-grow-0 mr-3" style="font-size: 6em">
-        <fa-icon class="text-info" icon="info-circle"
-          *ngIf="!azDevInfo.isMostRecent && !azDevInfo.mostRecentFailureLink"></fa-icon>
-        <fa-icon class="text-success" icon="check-circle" *ngIf="azDevInfo.isMostRecent"></fa-icon>
-        <fa-icon class="text-warning" icon="exclamation-circle" *ngIf="azDevInfo.mostRecentFailureLink"></fa-icon>
+        <fa-icon class="text-info" icon="question-circle"></fa-icon>
       </div>
       <div class="flex-grow-1">
-        <div class="float-right">
-          <div>
-            <a class="btn btn-sm btn-primary" [href]="getBuildLink(build)" target="_blank">
-              Go to build in Azure DevOps <fa-icon icon="external-link-alt"></fa-icon>
-            </a>
-          </div>
-          <div *ngIf="azDevInfo.mostRecentFailureLink">
-            <a class="btn btn-danger btn-sm float-right text-light" [href]="azDevInfo.mostRecentFailureLink" target="_blank">
-              Latest Failed Build <fa-icon icon="external-link-alt"></fa-icon>
-            </a>
-          </div>
-        </div>
         <h4>{{getRepo(build)}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
-        <div><a class="btn btn-sm btn-info" [href]="getCommitLink(build)" target="_blank">{{build.commit}} <fa-icon
-              icon="external-link-alt"></fa-icon></a></div>
-        <div>{{build.dateProduced | relativeDate}}</div>
         <div>
-          <span class="text-info" *ngIf="!azDevInfo.isMostRecent && !azDevInfo.mostRecentFailureLink">This is not the
-            most recent successful
-            build</span>
-          <span class="text-success" *ngIf="azDevInfo.isMostRecent">This is the most recent build</span>
-          <span class="text-warning" *ngIf="azDevInfo.mostRecentFailureLink">This is the most recent successful build,
-            more recent
-            builds are failing</span>
+          <span>Loading build information from Azure Pipelines</span>
+          <div style="display:inline-block; vertical-align: middle;">
+            <progress-ring width="50" height="50" color="#777"></progress-ring>
+          </div>
         </div>
       </div>
-    </ng-container>
-  </div>
-  <div class="container-fluid">
-    <div class="card mt-3">
-      <div class="card-body">
-        <h5 class="card-title float-left">
-          Dependencies
-        </h5>
-        <span class="form-check float-right">
-          <mc-switch [style]="" [(value)]="includeToolsets"></mc-switch>
-          <label class="form-check-label">
-            Include Toolsets
-          </label>
-        </span>
+    </ng-template>
+    <ng-template #errorBuildInfo>
+      <div class="flex-grow-0 mr-3" style="font-size: 6em">
+        <fa-icon class="text-warning" icon="exclamation-circle"></fa-icon>
       </div>
-      <ng-container *stateful="let graph from graph$; loadingTemplate: loadingData">
-        <mc-build-graph-table [graph]="graph" [includeToolsets]="includeToolsets"></mc-build-graph-table>
+      <div class="flex-grow-1">
+        <h4>{{getRepo(build)}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
+        <div>
+          <span class="text-warning" *ngIf="!haveAzDevInfo(build)">
+            Cannot lookup build in Azure Pipelines. Missing required data. Update to the latest Arcade SDK to collect
+            this data.
+          </span>
+          <span class="text-warning" *ngIf="haveAzDevInfo(build)">
+            Error loading build information from Azure Pipelines
+          </span>
+          <div style="display:inline-block; vertical-align: middle; width: 50px; height: 50px;">
+          </div>
+        </div>
+      </div>
+    </ng-template>
+    <div class="d-flex flex-row p-3 header align-items-center">
+      <ng-container
+        *stateful="let azDevInfo from azDevBuildInfo$; loadingTemplate: loadingBuildInfo; errorTemplate: errorBuildInfo;">
+        <div class="flex-grow-0 mr-3" style="font-size: 6em">
+          <fa-icon class="text-info" icon="info-circle"
+            *ngIf="!azDevInfo.isMostRecent && !azDevInfo.mostRecentFailureLink"></fa-icon>
+          <fa-icon class="text-success" icon="check-circle" *ngIf="azDevInfo.isMostRecent"></fa-icon>
+          <fa-icon class="text-warning" icon="exclamation-circle" *ngIf="azDevInfo.mostRecentFailureLink"></fa-icon>
+        </div>
+        <div class="flex-grow-1">
+          <div class="float-right">
+            <div>
+              <a class="btn btn-sm btn-primary" [href]="build | buildLink" target="_blank">
+                Go to build in Azure DevOps <fa-icon icon="external-link-alt"></fa-icon>
+              </a>
+            </div>
+            <div *ngIf="azDevInfo.mostRecentFailureLink">
+              <a class="btn btn-danger btn-sm float-right text-light" [href]="azDevInfo.mostRecentFailureLink"
+                target="_blank">
+                Latest Failed Build <fa-icon icon="external-link-alt"></fa-icon>
+              </a>
+            </div>
+          </div>
+          <h4>{{getRepo(build)}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
+          <div><a class="btn btn-sm btn-info" [href]="build | commitLink" target="_blank">{{build.commit}} <fa-icon
+                icon="external-link-alt"></fa-icon></a></div>
+          <div>
+            <mc-relative-date [value]="build.dateProduced"></mc-relative-date>
+          </div>
+          <div>
+            <span class="text-info" *ngIf="!azDevInfo.isMostRecent && !azDevInfo.mostRecentFailureLink">This is not the
+              most recent successful
+              build</span>
+            <span class="text-success" *ngIf="azDevInfo.isMostRecent">This is the most recent build</span>
+            <span class="text-warning" *ngIf="azDevInfo.mostRecentFailureLink">This is the most recent successful build,
+              more recent
+              builds are failing</span>
+          </div>
+        </div>
       </ng-container>
-      <ng-template #loadingData>
-        <progress-ring [style]="{ 'width.px': 150, 'height.px': 150 }"></progress-ring>
-      </ng-template>
     </div>
-
-    <div class="card mt-3" *ngIf="build.assets && build.assets.length">
-      <div class="card-body">
-        <h5 class="card-title">Assets Produced</h5>
+    <div class="container-fluid">
+      <div class="card mt-3">
+        <div class="card-body">
+          <h5 class="card-title float-left">
+            Dependencies
+          </h5>
+          <span class="form-check float-right">
+            <mc-switch [style]="" [(value)]="includeToolsets"></mc-switch>
+            <label class="form-check-label">
+              Include Toolsets
+            </label>
+          </span>
+        </div>
+        <ng-container *stateful="let graph from graph$; loadingTemplate: loadingData">
+          <ul class="nav nav-tabs">
+            <li class="nav-item">
+              <a [routerLink]="['..', 'graph']" routerLinkActive="active" style="cursor: pointer;" class="nav-link">Graph</a>
+            </li>
+            <li class="nav-item">
+              <a [routerLink]="['..', 'tree']" routerLinkActive="active" style="cursor: pointer;" class="nav-link">Tree</a>
+            </li>
+          </ul>
+          <ng-container *ngIf="view$ | async as view">
+            <ng-container *ngIf="view == 'graph'">
+              <mc-build-graph-table [graph]="graph" [includeToolsets]="includeToolsets"></mc-build-graph-table>
+            </ng-container>
+            <ng-container *ngIf="view == 'tree'">
+              <mc-build-graph-tree [graph]="graph" [includeToolsets]="includeToolsets" [rootId]="build.id"></mc-build-graph-tree>
+            </ng-container>
+          </ng-container>
+        </ng-container>
+        <ng-template #loadingData>
+          <progress-ring [style]="{ 'width.px': 150, 'height.px': 150 }"></progress-ring>
+        </ng-template>
       </div>
-      <ul class="list-group list-group-flush">
-        <li *ngFor="let asset of build.assets" class="list-group-item">{{asset.name}} <span
-            class="badge badge-info">{{asset.version}}</span></li>
-      </ul>
+
+      <mc-asset-table [assets]="build.assets"></mc-asset-table>
+    </div>
+  </ng-container>
+  <div @toast class="toast show" *ngIf="toastVisible" role="alert" aria-live="assertive" aria-atomic="true"
+    style="position: fixed; bottom: 0; right: 0; margin-bottom: 1rem; margin-right: 1.5rem;">
+    <div class="toast-header">
+      <img src="/favicon.ico" style="width: 2rem; height: 2rem;" class="rounded mr-2">
+      <strong class="mr-auto">New Build</strong>
+      <small class="text-muted" style="margin-left: 0.5rem;">
+        <mc-time-ago [value]="toastDate"></mc-time-ago>
+      </small>
+      <button type="button" class="ml-2 mb-1 close" aria-label="Close" (click)="toastVisible=false">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+    <div class="toast-body">
+      A new build is avaliable.
+      <small style="margin-left: 0.5rem;" class="float-right">
+        <a class="btn btn-sm btn-secondary" style="margin-top: -0.5rem;" aria-label="Accept"
+          (click)="acceptToast()">
+          Load?
+        </a>
+      </small>
     </div>
   </div>
 </div>

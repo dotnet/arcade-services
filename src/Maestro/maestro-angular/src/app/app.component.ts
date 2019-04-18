@@ -22,8 +22,9 @@ export class AppComponent implements OnInit {
   public navbarOpen = false;
   public sidebarOpen = false;
   public returnUrl = location.pathname + location.search;
-  public brand = (window as any).applicationData.brand;
-  public userName = (window as any).applicationData.userName;
+  public brand: string = (window as any).applicationData.brand;
+  public userName: string = (window as any).applicationData.userName;
+  public authorized: boolean = (window as any).applicationData.authorized;
 
   public currentTheme!: string;
   public themes: Theme[] = (window as any).applicationData.themes;

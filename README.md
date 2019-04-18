@@ -17,3 +17,31 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 ### License
 
 .NET Core (including the Arcade repo) is licensed under the [MIT license](LICENSE.TXT). 
+
+### BARViz Best Practices
+
+#### How to Understand the State of a Build and Channel
+
+Each of the links on the left side bar represent a channel for a product. Clicking on one of these links will load the current build state for a channel. 
+
+The two main states of a channel’s current build are as follows: 
+
+- [Green checkmark] Current build is good. 
+
+- [Yellow bang] There are issues with this build. The message at the top of the build's page will give you more information as to the issue, but most likely is one of the following issues: 
+  - The repository is not running the latest version of the Arcade toolset. Older versions of the Arcade toolset are incompatible with determining the state of the build. 
+  - Latest builds are failing
+
+While looking at a build, you may notice highlighted (in yellow) dependencies. These denote the dependencies that are an older version than another of the same dependency used in the build. This should help the teams to identify issues with dependency coherency within a build.  
+
+When mousing over a dependency, you may notice icons that show up along the left-hand side of the list. The icon at the top of the column provides help for understanding these icons. These icons are to assist in understanding the hierarchy of the dependency graph and to point out conflicting dependencies within the build.  
+
+#### How to Understand Versions and Hashes Used for a Build
+
+The number at the top of the build's page, next to the URL for the repository, is the current build number of the repository. The link of the hash below the URL will take you to the AzDO repository and the hash referenced so that the user can see all the commits that are a part of the latest build. 
+
+Similarly, each dependency denotes the version of that dependency used and a link to the hash of the latest commit that was contained in the build. 
+
+#### How to Onboard a New Repository
+
+If you would like to see your repository on BARViz, it needs to be published to the Build Asset Registry. Please see the [Darc documentation](https://github.com/dotnet/arcade/blob/master/Documentation/Darc.md).

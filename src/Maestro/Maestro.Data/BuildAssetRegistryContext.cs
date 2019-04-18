@@ -92,6 +92,9 @@ namespace Maestro.Data
         {
             base.OnModelCreating(builder);
 
+            builder.Entity<Asset>()
+                .HasIndex(a => new {a.Name, a.Version});
+
             builder.Entity<Channel>().HasIndex(c => c.Name).IsUnique();
 
             builder.Entity<BuildChannel>()
