@@ -4,7 +4,7 @@
       Build
       <a target="_blank" [href]="build | buildLink">{{build.azureDevOpsBuildNumber}}</a>
       of
-      <a [routerLink]="['../..', build | getRepositoryName, build.id]">{{build | getRepositoryName | repoName}}</a>@<a target="_blank" [href]="build | commitLink">{{build.commit | slice:0:7}}</a>
+      <a [routerLink]="['../../..', build | getRepositoryName, build.id]">{{build | getRepositoryName | repoName}}</a>@<a target="_blank" [href]="build | commitLink">{{build.commit | slice:0:7}}</a>
       produced
       <mc-time-ago [value]="build.dateProduced"></mc-time-ago>
     </span>
