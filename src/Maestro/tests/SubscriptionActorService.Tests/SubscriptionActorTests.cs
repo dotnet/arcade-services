@@ -10,7 +10,9 @@ using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using FluentAssertions;
 using Maestro.Contracts;
+using Maestro.Data;
 using Maestro.Data.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
@@ -70,6 +72,33 @@ namespace SubscriptionActorService.Tests
                     });
         }
 
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task DefaultChannelAssignmentTests(bool defaultChannelEnabled)
+        {
+            GivenATestChannel();
+            GivenADefaultChannel(defaultChannelEnabled);
+            GivenASubscription(
+                new SubscriptionPolicy
+                {
+                    Batchable = true,
+                    UpdateFrequency = UpdateFrequency.EveryBuild
+                });
+            Build newBuild = GivenANewBuild(false);
+
+            // Execute, which may or may not assign b to a channel
+            await Execute( async context => {
+                var barContext = context.Resolve<BuildAssetRegistryContext>();
+                var existingBuild = await barContext.Builds.Where(build => build.Id == newBuild.Id)
+                                                     .Include(b => b.BuildChannels)
+                                                     .ThenInclude(bc => bc.Channel)
+                                                     .FirstOrDefaultAsync();
+                bool isInChannel = existingBuild.BuildChannels.Where(bc => bc.ChannelId == Channel.Id).Any();
+                Assert.Equal(defaultChannelEnabled, isInChannel);
+            });
+        }
+
         [Fact]
         public async Task BatchableEveryBuildSubscription()
         {
@@ -80,7 +109,7 @@ namespace SubscriptionActorService.Tests
                     Batchable = true,
                     UpdateFrequency = UpdateFrequency.EveryBuild
                 });
-            Build b = GivenANewBuild();
+            Build b = GivenANewBuild(true);
 
             await WhenUpdateAsyncIsCalled(Subscription, b);
             ThenUpdateAssetsAsyncShouldHaveBeenCalled(
@@ -98,7 +127,7 @@ namespace SubscriptionActorService.Tests
                     Batchable = false,
                     UpdateFrequency = UpdateFrequency.EveryBuild
                 });
-            Build b = GivenANewBuild();
+            Build b = GivenANewBuild(true);
 
             await WhenUpdateAsyncIsCalled(Subscription, b);
             ThenUpdateAssetsAsyncShouldHaveBeenCalled(new ActorId(Subscription.Id), b);

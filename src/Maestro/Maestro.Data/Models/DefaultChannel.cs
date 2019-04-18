@@ -38,6 +38,8 @@ namespace Maestro.Data.Models
         [Required]
         public int ChannelId { get; set; }
 
+        public bool Enabled { get; set; } = true;
+
         public Channel Channel { get; set; }
     }
 }

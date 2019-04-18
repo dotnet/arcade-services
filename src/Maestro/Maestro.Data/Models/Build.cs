@@ -26,6 +26,7 @@ namespace Maestro.Data.Models
 
                 context.BuildChannels.AddRange((
                     from dc in context.DefaultChannels
+                    where (dc.Enabled)
                     where (dc.Repository == build.GitHubRepository || dc.Repository == build.AzureDevOpsRepository)
                     where (dc.Branch == build.GitHubBranch || dc.Branch == build.AzureDevOpsBranch)
                     select new BuildChannel
