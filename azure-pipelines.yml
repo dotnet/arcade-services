@@ -167,6 +167,20 @@ jobs:
             PathtoPublish: $(Build.ArtifactStagingDirectory)\eng
             ArtifactName: ReleaseUtilities
             ArtifactType: Container
+        ## Prepare scenario tests artifact
+        - task: CopyFiles@2
+          displayName: Prepare Scenario test scripts
+          inputs:
+            sourceFolder: $(Build.SourcesDirectory)\maestro\tests\scenarios
+            contents: '*'
+            targetFolder: $(Build.ArtifactStagingDirectory)\tests\scenarios
+            
+        - task: PublishBuildArtifacts@1
+          displayName: Publish Scenario test scripts Artifact
+          inputs:
+            PathtoPublish: $(Build.ArtifactStagingDirectory)\tests\scenarios
+            ArtifactName: ScenarioTests
+            ArtifactType: Container
 
         # Reenable tagging when stable package versions can be generated.
         # https://github.com/dotnet/arcade-services/issues/59
