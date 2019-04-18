@@ -2,16 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Xml.Linq;
-using System.Xml.XPath;
-using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.AspNetCore.Extensions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
 namespace Maestro.Web.Pages
@@ -19,17 +17,16 @@ namespace Maestro.Web.Pages
     public class IndexModel : PageModel
     {
         public IHostingEnvironment Environment { get; }
-        public TelemetryClient TelemetryClient { get; }
 
-        public IndexModel(IHostingEnvironment environment, TelemetryClient telemetryClient)
+        public IndexModel(IHostingEnvironment environment, IOptions<ApplicationInsightsServiceOptions> applicationInsightsOptions)
         {
             Environment = environment;
-            TelemetryClient = telemetryClient;
+            InstrumentationKey = applicationInsightsOptions.Value.InstrumentationKey;
         }
 
         public IReadOnlyList<(string name, string file)> Themes { get; private set; }
         public string CurrentThemeFile { get; private set; }
-        public string InstrumentationKey => TelemetryClient.InstrumentationKey;
+        public string InstrumentationKey { get; }
 
         public PageResult OnGet()
         {
