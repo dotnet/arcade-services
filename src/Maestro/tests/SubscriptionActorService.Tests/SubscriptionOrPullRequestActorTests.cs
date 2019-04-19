@@ -38,6 +38,8 @@ namespace SubscriptionActorService.Tests
 
         protected Channel Channel;
 
+        protected DefaultChannel DefaultChannel;
+
         protected Subscription Subscription;
 
         public SubscriptionOrPullRequestActorTests()
@@ -70,6 +72,19 @@ namespace SubscriptionActorService.Tests
             }
         }
 
+        internal void GivenADefaultChannel(bool enabled)
+        {
+            DefaultChannel = new DefaultChannel
+            {
+                Branch = SourceBranch,
+                Channel = Channel,
+                ChannelId = Channel.Id,
+                Enabled = enabled,
+                Repository = SourceRepo
+            };
+            ContextUpdates.Add(context => context.DefaultChannels.Add(DefaultChannel));
+        }
+
         internal void GivenATestChannel()
         {
             Channel = new Channel
@@ -93,9 +108,9 @@ namespace SubscriptionActorService.Tests
             ContextUpdates.Add(context => context.Subscriptions.Add(Subscription));
         }
 
-        internal Build GivenANewBuild((string name, string version, bool nonShipping)[] assets = null)
+        internal Build GivenANewBuild(bool addToChannel, (string name, string version, bool nonShipping)[] assets = null)
         {
-            assets = assets ?? new[] {("quail.eating.ducks", "1.1.0", false), ("quite.expensive.device", "2.0.1", true)};
+            assets = assets ?? new[] {("quail.eating.ducks", "1.1.0", false), ("quite.expensive.device", "2.0.1", true) };
             var build = new Build
             {
                 GitHubBranch = SourceBranch,
@@ -126,12 +141,15 @@ namespace SubscriptionActorService.Tests
                 context =>
                 {
                     context.Builds.Add(build);
-                    context.BuildChannels.Add(
-                        new BuildChannel
-                        {
-                            Build = build,
-                            Channel = Channel
-                        });
+                    if (addToChannel)
+                    {
+                        context.BuildChannels.Add(
+                            new BuildChannel
+                            {
+                                Build = build,
+                                Channel = Channel
+                            });
+                    }
                 });
             return build;
         }
