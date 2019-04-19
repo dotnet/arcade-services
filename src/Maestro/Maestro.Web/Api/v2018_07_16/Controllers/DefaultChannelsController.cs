@@ -163,7 +163,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 await _context.SaveChangesAsync();
             }
 
-
             return Ok(new DefaultChannel(defaultChannel));
         }
 
