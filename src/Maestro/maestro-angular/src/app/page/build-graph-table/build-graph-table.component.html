@@ -84,7 +84,7 @@
         </div>
       </td>
       <td>
-        <a [routerLink]="['../..', getRepo(node.build), node.build.id]">{{getRepo(node.build)}}</a>
+        <a [routerLink]="['../../..', getRepo(node.build), node.build.id]">{{getRepo(node.build)}}</a>
       </td>
       <td>
         <mc-time-ago [value]="node.build.dateProduced"></mc-time-ago>
