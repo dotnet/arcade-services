@@ -41,7 +41,7 @@ namespace Microsoft.DotNet.DarcLib
                     // Don't use RemoveEdge as it assumes that this node will remain in the graph and
                     // will cause modification of this OutgoingEdges collection while iterating
                     DependencyFlowNode targetNode = outgoingEdge.To;
-                    outgoingEdge.To.IncomingEdges.Remove(outgoingEdge);
+                    targetNode.IncomingEdges.Remove(outgoingEdge);
                     RecalculateInputChannels(targetNode);
                 }
             }
@@ -176,7 +176,7 @@ namespace Microsoft.DotNet.DarcLib
             // Remove if they do.
             const string refsHeadsPrefix = "refs/heads/";
             string normalizedBranch = branch;
-            if (normalizedBranch.StartsWith("refs/heads/"))
+            if (normalizedBranch.StartsWith(refsHeadsPrefix))
             {
                 normalizedBranch = normalizedBranch.Substring(refsHeadsPrefix.Length);
             }
