@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27823.0
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28803.156
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Darc", "src\Microsoft.DotNet.Darc\src\Darc\Microsoft.DotNet.Darc.csproj", "{054F97CB-9E79-4271-A288-83B8A88D1B5E}"
 EndProject
@@ -54,6 +54,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ReleasePipelineRunner", "src\maestro\ReleasePipelineRunner\ReleasePipelineRunner.csproj", "{8C180746-BD3F-4D5A-B642-44ED47B91945}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.DarcLib.AzDev", "src\Microsoft.DotNet.Darc\src\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj", "{F5AFEE21-DC23-42AE-9616-5F4281470732}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestPipelineRunner", "TestPipelineRunner\TestPipelineRunner.csproj", "{5985818E-AEAB-4B4A-AAA4-219E94F1C808}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -365,6 +367,18 @@ Global
 		{F5AFEE21-DC23-42AE-9616-5F4281470732}.Release|x64.Build.0 = Release|Any CPU
 		{F5AFEE21-DC23-42AE-9616-5F4281470732}.Release|x86.ActiveCfg = Release|Any CPU
 		{F5AFEE21-DC23-42AE-9616-5F4281470732}.Release|x86.Build.0 = Release|Any CPU
+		{5985818E-AEAB-4B4A-AAA4-219E94F1C808}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5985818E-AEAB-4B4A-AAA4-219E94F1C808}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5985818E-AEAB-4B4A-AAA4-219E94F1C808}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{5985818E-AEAB-4B4A-AAA4-219E94F1C808}.Debug|x64.Build.0 = Debug|Any CPU
+		{5985818E-AEAB-4B4A-AAA4-219E94F1C808}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5985818E-AEAB-4B4A-AAA4-219E94F1C808}.Debug|x86.Build.0 = Debug|Any CPU
+		{5985818E-AEAB-4B4A-AAA4-219E94F1C808}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5985818E-AEAB-4B4A-AAA4-219E94F1C808}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5985818E-AEAB-4B4A-AAA4-219E94F1C808}.Release|x64.ActiveCfg = Release|Any CPU
+		{5985818E-AEAB-4B4A-AAA4-219E94F1C808}.Release|x64.Build.0 = Release|Any CPU
+		{5985818E-AEAB-4B4A-AAA4-219E94F1C808}.Release|x86.ActiveCfg = Release|Any CPU
+		{5985818E-AEAB-4B4A-AAA4-219E94F1C808}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -390,6 +404,7 @@ Global
 		{423EDB52-F832-4AE9-B85F-7F427056940A} = {AE791E26-78E1-4936-BCF4-1BF5152CBBD6}
 		{BCCEABEA-0939-4135-9DB6-BB659C82D4DD} = {AE791E26-78E1-4936-BCF4-1BF5152CBBD6}
 		{8C180746-BD3F-4D5A-B642-44ED47B91945} = {AE791E26-78E1-4936-BCF4-1BF5152CBBD6}
+		{5985818E-AEAB-4B4A-AAA4-219E94F1C808} = {AE791E26-78E1-4936-BCF4-1BF5152CBBD6}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {32B9C883-432E-4FC8-A1BF-090EB033DD5B}
