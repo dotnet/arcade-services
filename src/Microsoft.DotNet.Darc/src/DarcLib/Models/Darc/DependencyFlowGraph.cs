@@ -42,10 +42,18 @@ namespace Microsoft.DotNet.DarcLib
                     // will cause modification of this OutgoingEdges collection while iterating
                     DependencyFlowNode targetNode = outgoingEdge.To;
                     outgoingEdge.To.IncomingEdges.Remove(outgoingEdge);
-                    // Recalculate the input channels
-                    targetNode.InputChannels = new HashSet<string>(targetNode.IncomingEdges.Select(e => e.Subscription.Channel.Name));
+                    RecalculateInputChannels(targetNode);
                 }
             }
+        }
+
+        /// <summary>
+        ///     Recalculate the input channels based on the input edges.
+        /// </summary>
+        /// <param name="node">Node to calculate the input edges for.</param>
+        private void RecalculateInputChannels(DependencyFlowNode node)
+        {
+            node.InputChannels = new HashSet<string>(node.IncomingEdges.Select(e => e.Subscription.Channel.Name));
         }
 
         public void RemoveEdge(DependencyFlowEdge edge)
@@ -55,21 +63,23 @@ namespace Microsoft.DotNet.DarcLib
                 edge.From.OutgoingEdges.Remove(edge);
                 DependencyFlowNode targetNode = edge.To;
                 edge.To.IncomingEdges.Remove(edge);
-                // Recalculate the input channels
-                targetNode.InputChannels = new HashSet<string>(targetNode.IncomingEdges.Select(e => e.Subscription.Channel.Name));
+                RecalculateInputChannels(targetNode);
             }
         }
 
         /// <summary>
-        ///     Prune the graph, 
+        ///     Prune away uninteresting nodes and edges from the graph
         /// </summary>
-        /// <param name="graph"></param>
-        /// <param name="isInterestingNode"></param>
-        /// <param name="isInterestingEdge"></param>
+        /// <param name="isInterestingNode">Returns true if the node is an interesting node</param>
+        /// <param name="isInterestingEdge">Returns true if the edge is an interesting edge</param>
+        /// <remarks>
+        ///     Starting with the set of interesting nodes as indicated by <paramref name="isInterestingNode"/>,
+        ///     remove all edges that are not interesting, and all nodes that are not reachable by an interesting
+        ///     edge.
+        /// </remarks>
         public void PruneGraph(Func<DependencyFlowNode, bool> isInterestingNode,
                                Func<DependencyFlowEdge, bool> isInterestingEdge)
         {
-            // If nodes or edges are all interesting, then no reason to 
             HashSet<DependencyFlowNode> unreachableNodes = new HashSet<DependencyFlowNode>(Nodes);
             HashSet<DependencyFlowEdge> unreachableEdges = new HashSet<DependencyFlowEdge>(Edges);
             Stack<DependencyFlowNode> nodes = new Stack<DependencyFlowNode>();
@@ -88,12 +98,11 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     DependencyFlowNode currentNode = nodes.Pop();
 
-                    if (!unreachableNodes.Contains(currentNode))
+                    if (!unreachableNodes.Remove(currentNode))
                     {
                         // Nothing to do
                         continue;
                     }
-                    unreachableNodes.Remove(currentNode);
                     foreach (var inputEdge in currentNode.IncomingEdges)
                     {
                         if (isInterestingEdge(inputEdge))
@@ -143,10 +152,10 @@ namespace Microsoft.DotNet.DarcLib
                 DependencyFlowNode destinationNode = GetOrCreateNode(subscription.TargetRepository, subscription.TargetBranch, nodes);
                 // Add the input channel for the node
                 destinationNode.InputChannels.Add(subscription.Channel.Name);
-                // Translate the input channel + repo to a default channel,
-                // and if one is found, an input node.
+                // Find all input nodes by looking up the default channels of the subscription input channel and repository.
+                // This may return no nodes if there is no default channel for the inputs.
                 IEnumerable<DefaultChannel> inputDefaultChannels = defaultChannels.Where(d => d.Channel.Name == subscription.Channel.Name &&
-                                                               d.Repository.Equals(subscription.SourceRepository, StringComparison.OrdinalIgnoreCase));
+                                                                   d.Repository.Equals(subscription.SourceRepository, StringComparison.OrdinalIgnoreCase));
                 foreach (DefaultChannel defaultChannel in inputDefaultChannels)
                 {
                     DependencyFlowNode sourceNode = GetOrCreateNode(defaultChannel.Repository, defaultChannel.Branch, nodes);

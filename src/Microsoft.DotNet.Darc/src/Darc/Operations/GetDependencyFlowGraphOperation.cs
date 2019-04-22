@@ -92,8 +92,11 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <returns>True if the edge is interesting, false otherwise.</returns>
         private bool IsInterestingEdge(DependencyFlowEdge edge)
         {
-            if (!_options.IncludeDisabledEdges &&
-                (!edge.Subscription.Enabled || edge.Subscription.Policy.UpdateFrequency == SubscriptionPolicyUpdateFrequency.None))
+            if (!_options.IncludeDisabledSubscriptions && !edge.Subscription.Enabled)
+            {
+                return false;
+            }
+            if (!_options.IncludedFrequencies.Any(s => s.Equals(edge.Subscription.Policy.UpdateFrequency.ToString(), StringComparison.OrdinalIgnoreCase)))
             {
                 return false;
             }

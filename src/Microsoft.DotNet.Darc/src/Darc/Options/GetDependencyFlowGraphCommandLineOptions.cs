@@ -15,8 +15,12 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("graphviz", HelpText = @"Writes the flow graph in GraphViz (dot) form, into the specified file.")]
         public string GraphVizOutputFile { get; set; }
 
-        [Option("include-disabled", HelpText = @"Include edges that do not flow or are disabled.")]
-        public bool IncludeDisabledEdges { get; set; }
+        [Option("include-disabled-subscriptions", HelpText = @"Include edges that have disabled subscriptions")]
+        public bool IncludeDisabledSubscriptions { get; set; }
+
+        [Option("frequencies", Separator = ',', Default = new string[] { "everyDay","everyBuild","none" },
+            HelpText = @"Include only subscriptions with the specific update frequencies in the graph.")]
+        public IEnumerable<string> IncludedFrequencies { get; set; }
 
         [Option("channel", HelpText = @"Only include nodes/edges with flow on this channel.")]
         public string Channel { get; set; }
