@@ -67,8 +67,13 @@ namespace Microsoft.DotNet.DarcLib
                         }
                         else if (response.StatusCode == HttpStatusCode.BadRequest)
                         {
-                            var errorDetails = await response.Content.ReadAsStringAsync();
-                            _logger.LogError($"A bad request response was returned from AzDO: {errorDetails}");
+                            if (_logFailure)
+                            {
+                                var errorDetails = await response.Content.ReadAsStringAsync();
+                                _logger.LogError($"A bad request response was returned from AzDO: {errorDetails}");
+                            }
+
+                            retriesRemaining = 0;
                         }
 
                         response.EnsureSuccessStatusCode();
