@@ -24,7 +24,7 @@ namespace Microsoft.DotNet.Darc
             // Retrieve the channel by name, matching substring. If more than one channel 
             // matches, then let the user know they need to be more specific
             IEnumerable<Channel> channels = (await remote.GetChannelsAsync());
-            List<Channel> matchingChannels = channels.Where(c => c.Name.Contains(desiredChannel, StringComparison.OrdinalIgnoreCase)).ToList();
+            IEnumerable<Channel> matchingChannels = channels.Where(c => c.Name.Contains(desiredChannel, StringComparison.OrdinalIgnoreCase));
 
             if (!matchingChannels.Any())
             {
@@ -36,7 +36,7 @@ namespace Microsoft.DotNet.Darc
                 }
                 return null;
             }
-            else if (matchingChannels.Count != 1)
+            else if (matchingChannels.Count() != 1)
             {
                 Console.WriteLine($"Multiple channels found with name containing '{desiredChannel}', please select one");
                 foreach (Channel channel in matchingChannels)

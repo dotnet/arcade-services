@@ -42,14 +42,32 @@ namespace Microsoft.DotNet.Darc
             }
             return repoUri;
         }
+        
+        /// <summary>
+        ///     Calculate a valid graphviz node name for a dependency graph node
+        /// </summary>
+        /// <param name="node">Node</param>
+        /// <returns>Valid node name string with repo name and commit</returns>
         public static string CalculateGraphVizNodeName(DependencyGraphNode node)
         {
             return CalculateGraphVizNodeName(GetSimpleRepoName(node.Repository)) + node.Commit;
         }
+
+        /// <summary>
+        ///     Calculate a validate graphviz node name for a dependency flow node
+        /// </summary>
+        /// <param name="node">Node</param>
+        /// <returns>Valid node name string with repo and branch</returns>
         public static string CalculateGraphVizNodeName(DependencyFlowNode node)
         {
             return CalculateGraphVizNodeName(GetSimpleRepoName(node.Repository) + node.Branch);
         }
+
+        /// <summary>
+        ///     Calculate a valid graphviz node name off of an input name string
+        /// </summary>
+        /// <param name="name">Input string</param>
+        /// <returns>String with invalid characters replaced</returns>
         public static string CalculateGraphVizNodeName(string name)
         {
             return name.Replace(".", "")
