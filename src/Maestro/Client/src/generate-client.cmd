@@ -1,1 +1,1 @@
-dotnet msbuild /t:GenerateCode /t:TargetFramework=netstandard2.0
+dotnet msbuild /t:GenerateCode /p:TargetFramework=netstandard2.0

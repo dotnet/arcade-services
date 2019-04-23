@@ -5,13 +5,13 @@ using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Maestro.Client.Models
 {
-    public enum AssetLocationType
+    public enum UpdateFrequency
     {
         [EnumMember(Value = "none")]
         None,
-        [EnumMember(Value = "nugetFeed")]
-        NugetFeed,
-        [EnumMember(Value = "container")]
-        Container,
+        [EnumMember(Value = "everyDay")]
+        EveryDay,
+        [EnumMember(Value = "everyBuild")]
+        EveryBuild,
     }
 }

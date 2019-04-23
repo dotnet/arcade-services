@@ -6,7 +6,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class AssetLocationData
     {
-        public AssetLocationData(AssetLocationDataType type)
+        public AssetLocationData(LocationType type)
         {
             Type = type;
         }
@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public string Location { get; set; }
 
         [JsonProperty("type")]
-        public AssetLocationDataType Type { get; set; }
+        public LocationType Type { get; set; }
 
         [JsonIgnore]
         public bool IsValid
