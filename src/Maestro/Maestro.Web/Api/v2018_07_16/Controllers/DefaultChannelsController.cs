@@ -112,7 +112,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="update">Default channel update data</param>
         /// <returns>Updated default channel data.</returns>
         [HttpPatch("{id}")]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Subscription), Description = "Default channel successfully updated")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(DefaultChannel), Description = "Default channel successfully updated")]
         [SwaggerApiResponse(HttpStatusCode.NotFound, Description = "The existing default channel does not exist.")]
         [SwaggerApiResponse(HttpStatusCode.Conflict, Description = "A DefaultChannel matching the data already exists")]
         [ValidateModelState]
