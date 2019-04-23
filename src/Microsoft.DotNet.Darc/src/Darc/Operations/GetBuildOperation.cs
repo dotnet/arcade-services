@@ -36,7 +36,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 Build build = await remote.GetBuildAsync(_options.Id);
                 if (build != null)
                 {
-                    OutputFormattingHelpers.PrintBuild(build);
+                    OutputHelpers.PrintBuild(build);
                 }
                 else
                 {

@@ -96,16 +96,16 @@ namespace Microsoft.DotNet.Darc.Operations
 
             foreach (DependencyGraphNode repo in graph.Nodes)
             {
-                string repoPath = GetRepoDirectory(reposFolder, repo.RepoUri, repo.Commit);
+                string repoPath = GetRepoDirectory(reposFolder, repo.Repository, repo.Commit);
                 if (Directory.Exists(repoPath))
                 {
                     logger.LogDebug($"Repo path {repoPath} already exists, assuming we cloned already and skipping");
                 }
                 else
                 {
-                    logger.LogInformation($"Cloning {repo.RepoUri}@{repo.Commit} into {repoPath}");
-                    IRemote repoRemote = await remoteFactory.GetRemoteAsync(repo.RepoUri, logger);
-                    repoRemote.Clone(repo.RepoUri, repo.Commit, repoPath);
+                    logger.LogInformation($"Cloning {repo.Repository}@{repo.Commit} into {repoPath}");
+                    IRemote repoRemote = await remoteFactory.GetRemoteAsync(repo.Repository, logger);
+                    repoRemote.Clone(repo.Repository, repo.Commit, repoPath);
                 }
             }
         }

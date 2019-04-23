@@ -497,9 +497,9 @@ namespace Microsoft.DotNet.DarcLib
             // Cache all nodes in this built graph.
             foreach (DependencyGraphNode node in dependencyGraph.Nodes)
             {
-                if (!nodeCache.ContainsKey($"{node.RepoUri}@{node.Commit}"))
+                if (!nodeCache.ContainsKey($"{node.Repository}@{node.Commit}"))
                 {
-                    nodeCache.Add($"{node.RepoUri}@{node.Commit}", node);
+                    nodeCache.Add($"{node.Repository}@{node.Commit}", node);
                 }
             }
 
