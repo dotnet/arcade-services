@@ -1,5 +1,5 @@
 import { Injectable } from "@angular/core";
-import { Observable, merge, combineLatest } from "rxjs";
+import { Observable, combineLatest } from "rxjs";
 import { Channel, DefaultChannel, Subscription } from 'src/maestro-client/models';
 import { MaestroService } from 'src/maestro-client';
 import { shareReplay, map } from 'rxjs/operators';
