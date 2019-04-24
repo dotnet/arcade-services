@@ -117,13 +117,22 @@ namespace Microsoft.DotNet.DarcLib
         Task AddDefaultChannelAsync(string repository, string branch, string channel);
 
         /// <summary>
-        ///     Removes a default channel based on the specified criteria
+        ///     Removes a default channel by id
         /// </summary>
-        /// <param name="repository">Repository having a default association</param>
-        /// <param name="branch">Branch having a default association</param>
-        /// <param name="channel">Name of channel that builds of 'repository' on 'branch' are being applied to.</param>
+        /// <param name="id">Id of default channel.</param>
         /// <returns>Async task</returns>
-        Task DeleteDefaultChannelAsync(string repository, string branch, string channel);
+        Task DeleteDefaultChannelAsync(int id);
+
+        /// <summary>
+        ///     Updates a default channel with new information.
+        /// </summary>
+        /// <param name="id">Id of default channel.</param>
+        /// <param name="repository">New repository</param>
+        /// <param name="branch">New branch</param>
+        /// <param name="channel">New channel</param>
+        /// <param name="enabled">Enabled/disabled status</param>
+        /// <returns>Async task</returns>
+        Task UpdateDefaultChannelAsync(int id, string repository = null, string branch = null, string channel = null, bool? enabled = null);
 
         /// <summary>
         ///     Create a new channel

@@ -36,7 +36,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 List<DefaultChannel> defaultChannels = (await barOnlyRemote.GetDefaultChannelsAsync()).ToList();
                 defaultChannels.Add(
-                    new DefaultChannel(0, "https://github.com/dotnet/arcade")
+                    new DefaultChannel(0, "https://github.com/dotnet/arcade", true)
                     {
                         Branch = "refs/heads/master",
                         Channel = await barOnlyRemote.GetChannelAsync(".NET Tools - Latest")
@@ -112,12 +112,12 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             switch (edge.Subscription.Policy.UpdateFrequency)
             {
-                case SubscriptionPolicyUpdateFrequency.EveryBuild:
+                case UpdateFrequency.EveryBuild:
                     // Solid
                     return "style=bold";
-                case SubscriptionPolicyUpdateFrequency.EveryDay:
+                case UpdateFrequency.EveryDay:
                     return "style=dashed";
-                case SubscriptionPolicyUpdateFrequency.None:
+                case UpdateFrequency.None:
                     return "style=dotted";
                 default:
                     throw new NotImplementedException("Unknown update frequency");

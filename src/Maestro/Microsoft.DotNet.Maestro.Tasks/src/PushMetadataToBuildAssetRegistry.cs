@@ -189,7 +189,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             package.Id,
                             package.Version,
                             manifest.InitialAssetsLocation ?? manifest.Location,
-                            (manifest.InitialAssetsLocation == null) ? AssetLocationDataType.NugetFeed : AssetLocationDataType.Container,
+                            (manifest.InitialAssetsLocation == null) ? LocationType.NugetFeed : LocationType.Container,
                             package.NonShipping);
                     }
 
@@ -208,7 +208,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             blob.Id,
                             version,
                             manifest.InitialAssetsLocation ?? manifest.Location,
-                            AssetLocationDataType.Container,
+                            LocationType.Container,
                             blob.NonShipping);
                     }
 
@@ -295,13 +295,13 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <param name="assetName">Name of new asset</param>
         /// <param name="version">Version of asset</param>
         /// <param name="location">Location of asset</param>
-        /// <param name="assetLocationType">Type of location</param>
+        /// <param name="locationType">Type of location</param>
         /// <param name="nonShipping">If true, the asset is not intended for end customers</param>
-        private void AddAsset(List<AssetData> assets, string assetName, string version, string location, AssetLocationDataType assetLocationType, bool nonShipping)
+        private void AddAsset(List<AssetData> assets, string assetName, string version, string location, LocationType locationType, bool nonShipping)
         {
             assets.Add(new AssetData(nonShipping)
             {
-                Locations = (location == null) ? null : ImmutableList.Create(new AssetLocationData(assetLocationType)
+                Locations = (location == null) ? null : ImmutableList.Create(new AssetLocationData(locationType)
                 {
                     Location = location,
                 }),

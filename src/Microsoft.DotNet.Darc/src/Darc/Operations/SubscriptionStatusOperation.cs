@@ -3,23 +3,20 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DotNet.Darc.Helpers;
-using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
-    class SubscriptionStatus : Operation
+    class SubscriptionStatusOperation : Operation
     {
         SubscriptionStatusCommandLineOptions _options;
 
-        public SubscriptionStatus(SubscriptionStatusCommandLineOptions options)
+        public SubscriptionStatusOperation(SubscriptionStatusCommandLineOptions options)
             : base(options)
         {
             _options = options;
@@ -34,7 +31,7 @@ namespace Microsoft.DotNet.Darc.Operations
             if ((_options.Enable && _options.Disable) ||
                 (!_options.Enable && !_options.Disable))
             {
-                Console.WriteLine("'Please specify either --enable or --disable");
+                Console.WriteLine("Please specify either --enable or --disable");
                 return Constants.ErrorCode;
             }
 
