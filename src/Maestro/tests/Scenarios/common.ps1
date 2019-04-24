@@ -403,7 +403,7 @@ function Get-AzDO-PullRequests($targetRepoName, $targetBranch) {
     Invoke-WebRequest -Uri $uri -Headers $(Get-AzDO-Headers) -Method Get  | ConvertFrom-Json
 }
 
-function Check-AzDO-PullRequest($targetRepoName, $targetBranch, $expectedDependencies) {
+function Check-AzDO-PullRequest($sourceRepoName, $targetRepoName, $targetBranch, $expectedDependencies) {
     # Check that the PR was created properly. poll azdo
     $tries = 10
     $success = $false
@@ -553,7 +553,7 @@ function Get-GitHub-PullRequests($targetRepoName, $targetBranch) {
     Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Get  | ConvertFrom-Json
 }
 
-function Check-Github-PullRequest($targetRepoName, $targetBranch, $expectedDependencies) {
+function Check-Github-PullRequest($sourceRepoName, $targetRepoName, $targetBranch, $expectedDependencies) {
     # Check that the PR was created properly. poll github
     $tries = 10
     $success = $false

@@ -128,7 +128,7 @@ try {
 
     Write-Host "Waiting on PR to be opened in $targetRepoUri"
 
-    $success = Check-Github-PullRequest $targetRepoName $targetBranch $expectedDependencies
+    $success = Check-Github-PullRequest $parentSourceRepoName $targetRepoName $targetBranch $expectedDependencies
 
     if (!$success) {
         throw "Pull request failed to open."
