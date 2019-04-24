@@ -87,3 +87,7 @@ export function onThe(time: "minute" | "hour" | "day") {
 export function tapLog<T>(message: string) {
   return tap<T>(v => console.log(message, v));
 }
+
+export function toTitleCase(value: string): string {
+  return value.slice(0, 1).toUpperCase() + value.slice(1);
+}
