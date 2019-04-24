@@ -96,7 +96,7 @@ try {
         "Type:    Product",
         ""
     )
-    $success = Check-Github-PullRequest $targetRepoName $targetBranch $expectedDependencies
+    $success = Check-Github-PullRequest $sourceRepoName $targetRepoName $targetBranch $expectedDependencies
 
     if (!$success) {
         throw "Pull request failed to open."

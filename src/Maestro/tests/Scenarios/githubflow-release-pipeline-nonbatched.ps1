@@ -116,70 +116,22 @@ try {
         Write-Host "Skipping release check due to not having an access token to call the Azure DevOps release API..."
     }
 
-    # Check that the PR was created properly. poll github 
-    $tries = 10
-    $success = $false
-    while ($tries-- -gt 0) {
-        Write-Host "Checking for PRs, ${tries} tries remaining"
-        $pullRequest = Get-GitHub-PullRequests $targetRepoName $targetBranch
-        if ($pullRequest) {
-            # Find and verify PR info
-            if ($pullRequest.Count -ne 1) {
-                throw "Unexpected number of pull requests opened."
-            }
-            $pullRequest = $pullRequest[0]
+    $expectedDependencies =@(
+    "Name:    Foo"
+    "Version: 1.1.0",
+    "Repo:    $sourceRepoUri",
+    "Commit:  $sourceCommit",
+    "Type:    Product",
+    "",
+    "Name:    Bar",
+    "Version: 2.1.0",
+    "Repo:    $sourceRepoUri",
+    "Commit:  $sourceCommit",
+    "Type:    Product",
+    ""
+    )
 
-            $pullRequestBaseBranch = $pullRequest.head.ref
-            $githubBranchesToDelete += @{ branch = $pullRequestBaseBranch; repo = $targetRepoName}
-            $gitHubPRsToClose += @{ number = $pullRequest.number; repo = $targetRepoName }
-
-            $expectedPRTitle = "[$targetBranch] Update dependencies from $githubTestOrg/$sourceRepoName"
-            if ($pullRequest.title -ne $expectedPRTitle) {
-                throw "Expected PR title to be $expectedPRTitle, was $($pullRequest.title)"
-            }
-            
-            # Check out the merge commit sha, then use darc to get and verify the
-            # dependencies
-            Git-Command $targetRepoName fetch
-            Git-Command $targetRepoName checkout $pullRequestBaseBranch
-
-            try {
-                Push-Location -Path $(Get-Repo-Location $targetRepoName)
-                $dependencies = Darc-Command get-dependencies
-                $expectedDependencies =@(
-                    "Name:    Foo"
-                    "Version: 1.1.0",
-                    "Repo:    $sourceRepoUri",
-                    "Commit:  $sourceCommit",
-                    "Type:    Product",
-                    "",
-                    "Name:    Bar",
-                    "Version: 2.1.0",
-                    "Repo:    $sourceRepoUri",
-                    "Commit:  $sourceCommit",
-                    "Type:    Product",
-                    ""
-                )
-
-                if ($dependencies.Count -ne $expectedDependencies.Count) {
-                    Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."
-                    throw "PR did not have expected dependency updates."
-                }
-                for ($i = 0; $i -lt $expectedDependencies.Count; $i++) {
-                    if ($dependencies[$i] -notmatch $expectedDependencies[$i]) {
-                        Write-Error "Dependencies Line $i not matched`nExpected $($expectedDependencies[$i])`nActual $($dependencies[$i])"
-                        throw "PR did not have expected dependency updates."
-                    }
-                }
-            } finally {
-                Pop-Location
-            }
-
-            $success = $true
-            break
-        }
-        Start-Sleep 60
-    }
+   $success = Check-Github-PullRequest $sourceRepoName $targetRepoName $targetBranch $expectedDependencies
 
     $buildInfo = Get-Build $buildId
     if ($buildInfo.id -ne $buildId) {
