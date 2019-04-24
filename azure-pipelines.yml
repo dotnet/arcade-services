@@ -171,7 +171,7 @@ jobs:
         - task: CopyFiles@2
           displayName: Prepare Scenario test scripts
           inputs:
-            sourceFolder: $(Build.SourcesDirectory)\maestro\tests\scenarios
+            sourceFolder: $(Build.SourcesDirectory)\src\maestro\tests\scenarios
             contents: '*'
             targetFolder: $(Build.ArtifactStagingDirectory)\tests\scenarios
             
