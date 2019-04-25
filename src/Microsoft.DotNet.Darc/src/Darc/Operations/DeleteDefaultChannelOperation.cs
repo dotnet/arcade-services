@@ -5,13 +5,14 @@
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
-    internal class DeleteDefaultChannelOperation : Operation
+    internal class DeleteDefaultChannelOperation : UpdateDefaultChannelBaseOperation
     {
         DeleteDefaultChannelCommandLineOptions _options;
         public DeleteDefaultChannelOperation(DeleteDefaultChannelCommandLineOptions options)
@@ -26,7 +27,13 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
-                await remote.DeleteDefaultChannelAsync(_options.Repository, _options.Branch, _options.Channel);
+                DefaultChannel resolvedChannel = await ResolveSingleChannel();
+                if (resolvedChannel == null)
+                {
+                    return Constants.ErrorCode;
+                }
+
+                await remote.DeleteDefaultChannelAsync(resolvedChannel.Id);
 
                 return Constants.SuccessCode;
             }

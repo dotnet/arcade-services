@@ -50,7 +50,12 @@ namespace SubscriptionActorService
             throw new NotImplementedException();
         }
 
-        public Task DeleteDefaultChannelAsync(string repository, string branch, string channel)
+        public Task DeleteDefaultChannelAsync(int id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task UpdateDefaultChannelAsync(int id, string repository = null, string branch = null, string channel = null, bool? enabled = null)
         {
             throw new NotImplementedException();
         }

@@ -8,6 +8,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -36,7 +37,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
-                var defaultChannels = (await remote.GetDefaultChannelsAsync()).Where(defaultChannel =>
+                IEnumerable<DefaultChannel> defaultChannels = (await remote.GetDefaultChannelsAsync()).Where(defaultChannel =>
                 {
                     return (string.IsNullOrEmpty(_options.SourceRepository) ||
                         defaultChannel.Repository.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase)) &&
@@ -52,9 +53,9 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
 
                 // Write out a simple list of each channel's name
-                foreach (var defaultChannel in defaultChannels)
+                foreach (DefaultChannel defaultChannel in defaultChannels)
                 {
-                    Console.WriteLine($"{defaultChannel.Repository} @ {defaultChannel.Branch} -> {defaultChannel.Channel.Name}");
+                    Console.WriteLine(OutputHelpers.GetDefaultChannelDescriptionString(defaultChannel));
                 }
 
                 return Constants.SuccessCode;

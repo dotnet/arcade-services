@@ -77,6 +77,20 @@ namespace Microsoft.DotNet.Darc
         }
 
         /// <summary>
+        ///     Get a string for describing a default channel.
+        /// </summary>
+        /// <param name="defaultChannel">Default channel to get a string for</param>
+        /// <returns>String describing the default channel.</returns>
+        public static string GetDefaultChannelDescriptionString(DefaultChannel defaultChannel)
+        {
+            string disabled = !defaultChannel.Enabled ? " (Disabled)" : "";
+            // Pad so that id's up to 9999 will result in consistent
+            // listing
+            string idPrefix = $"({defaultChannel.Id})".PadRight(7);
+            return $"{idPrefix}{defaultChannel.Repository} @ {defaultChannel.Branch} -> {defaultChannel.Channel.Name}{disabled}";
+        }
+
+        /// <summary>
         ///     Retrieve either a new StreamWriter for the specified output file,
         ///     or if the output file name is empty, create a new StreamWriter
         ///     wrapping standard out.

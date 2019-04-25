@@ -69,11 +69,16 @@ namespace Microsoft.DotNet.Darc.Operations
 
         private void LogDependency(DependencyDetail dependency)
         {
-            Console.WriteLine($"Name:    {dependency.Name}");
-            Console.WriteLine($"Version: {dependency.Version}");
-            Console.WriteLine($"Repo:    {dependency.RepoUri}");
-            Console.WriteLine($"Commit:  {dependency.Commit}");
-            Console.WriteLine($"Type:    {dependency.Type}");
+            Console.WriteLine($"Name:             {dependency.Name}");
+            Console.WriteLine($"Version:          {dependency.Version}");
+            Console.WriteLine($"Repo:             {dependency.RepoUri}");
+            Console.WriteLine($"Commit:           {dependency.Commit}");
+            Console.WriteLine($"Type:             {dependency.Type}");
+            Console.WriteLine($"Pinned:           {dependency.Pinned}");
+            if (!string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
+            {
+                Console.WriteLine($"Coherent Parent:  {dependency.CoherentParentDependencyName}");
+            }
         }
     }
 }

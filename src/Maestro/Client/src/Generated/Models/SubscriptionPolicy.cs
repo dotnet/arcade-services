@@ -6,7 +6,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class SubscriptionPolicy
     {
-        public SubscriptionPolicy(bool batchable, SubscriptionPolicyUpdateFrequency updateFrequency)
+        public SubscriptionPolicy(bool batchable, UpdateFrequency updateFrequency)
         {
             Batchable = batchable;
             UpdateFrequency = updateFrequency;
@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public bool Batchable { get; set; }
 
         [JsonProperty("updateFrequency")]
-        public SubscriptionPolicyUpdateFrequency UpdateFrequency { get; set; }
+        public UpdateFrequency UpdateFrequency { get; set; }
 
         [JsonProperty("mergePolicies")]
         public IImmutableList<MergePolicy> MergePolicies { get; set; }

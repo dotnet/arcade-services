@@ -565,7 +565,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Walk the locations and attempt to gather the asset at each one, setting the output
                 // path based on the type. Note that if there are multiple locations and their types don't
                 // match, consider this an error.
-                AssetLocationType locationType = asset.Locations[0].Type;
+                LocationType locationType = asset.Locations[0].Type;
                 foreach (AssetLocation location in asset.Locations)
                 {
                     if (locationType != location.Type)
@@ -576,10 +576,10 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     switch (locationType)
                     {
-                        case AssetLocationType.NugetFeed:
+                        case LocationType.NugetFeed:
                             downloadedAsset = await DownloadNugetPackageAsync(client, build, asset, location, subPath, errors);
                             break;
-                        case AssetLocationType.Container:
+                        case LocationType.Container:
                             downloadedAsset = await DownloadBlobAsync(client, build, asset, location, subPath, errors);
                             break;
                         default:

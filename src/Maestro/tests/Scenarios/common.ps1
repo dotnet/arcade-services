@@ -188,6 +188,16 @@ function Darc-Delete-Default-Channel($channelName, $repoUri, $branch) {
     Darc-Command-Impl $darcParams
 }
 
+function Darc-Enable-Default-Channel($channelName, $repoUri, $branch) {
+    $darcParams = "default-channel-status --channel '$channelName' --repo '$repoUri' --branch '$branch' --enable"
+    Darc-Command-Impl $darcParams
+}
+
+function Darc-Disable-Default-Channel($channelName, $repoUri, $branch) {
+    $darcParams = "default-channel-status --channel '$channelName' --repo '$repoUri' --branch '$branch' --disable"
+    Darc-Command-Impl $darcParams
+}
+
 # Run darc add-subscription with the specified parameters, extract out the subscription id,
 # and record it for teardown later. Implicitly passes -q
 function Darc-Add-Subscription() {

@@ -780,7 +780,7 @@ namespace Microsoft.DotNet.DarcLib
                                 {
                                     Name = dependency.Attributes[VersionFiles.NameAttributeName].Value,
                                     RepoUri = dependency.SelectSingleNode(VersionFiles.UriElementName).InnerText,
-                                    Commit = dependency.SelectSingleNode(VersionFiles.ShaElementName).InnerText,
+                                    Commit = dependency.SelectSingleNode(VersionFiles.ShaElementName)?.InnerText,
                                     Version = dependency.Attributes[VersionFiles.VersionAttributeName].Value,
                                     CoherentParentDependencyName = dependency.Attributes[VersionFiles.CoherentParentAttributeName]?.Value,
                                     Pinned = isPinned,
