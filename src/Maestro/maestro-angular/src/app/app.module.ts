@@ -53,19 +53,6 @@ import { AssetTableComponent } from './page/asset-table/asset-table.component';
 import { ApplicationInsightsService } from './services/application-insights.service';
 import { RouterEventHandlerService } from './services/router-event-handler.service';
 
-export function initializer(type: Type<{start: () => any}>) {
-  return {
-    provide: APP_INITIALIZER,
-    useFactory(injector: Injector) {
-      return () => {
-        return injector.get(type).start();
-      };
-    },
-    deps: [Injector],
-    multi: true,
-  };
-}
-
 @NgModule({
   declarations: [
     AppComponent,
@@ -99,12 +86,23 @@ export function initializer(type: Type<{start: () => any}>) {
     NgxPaginationModule,
   ],
   providers: [
-    initializer(ApplicationInsightsService),
-    initializer(RouterEventHandlerService),
+    {
+      provide: APP_INITIALIZER,
+      useFactory: initializerFactory,
+      deps: [Injector],
+      multi: true,
+    },
   ],
   bootstrap: [AppComponent],
 })
 export class AppModule { }
+
+export function initializerFactory(injector: Injector) {
+  return function initializer() {
+    injector.get<ApplicationInsightsService>(ApplicationInsightsService).start();
+    injector.get<RouterEventHandlerService>(RouterEventHandlerService).start();
+  }
+}
 
 library.add(
   faAngleDoubleUp,
