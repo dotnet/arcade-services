@@ -40,7 +40,8 @@ namespace SubscriptionActorService
             throw new NotImplementedException();
         }
 
-        public Task<Subscription> CreateSubscriptionAsync(string channelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency, List<MergePolicy> mergePolicies)
+        public Task<Subscription> CreateSubscriptionAsync(string channelName, string sourceRepo, string targetRepo, string targetBranch,
+            string updateFrequency, bool batchable, List<MergePolicy> mergePolicies)
         {
             throw new NotImplementedException();
         }

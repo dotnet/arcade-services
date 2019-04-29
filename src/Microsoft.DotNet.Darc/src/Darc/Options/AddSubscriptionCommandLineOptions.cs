@@ -26,6 +26,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("update-frequency", HelpText = "Frequency of updates. Valid values are: 'none', 'everyDay', or 'everyBuild'.")]
         public string UpdateFrequency { get; set; }
 
+        [Option("batchable", HelpText = "Make subscription batchable.")]
+        public bool Batchable { get; set; }
+
         [Option("all-checks-passed", HelpText = "PR is automatically merged if there is at least one checks and all are passed. " +
             "Optionally provide a comma separated list of ignored check with --ignore-checks.")]
         public bool AllChecksSuccessfulMergePolicy { get; set; }

@@ -174,6 +174,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="targetRepo">URL of target repository where updates should be made</param>
         /// <param name="targetBranch">Name of target branch where updates should be made</param>
         /// <param name="updateFrequency">Frequency of updates, can be 'none', 'everyBuild' or 'everyDay'</param>
+        /// <param name="batchable">Is subscription batchable</param>
         /// <param name="mergePolicies">
         ///     Dictionary of merge policies. Each merge policy is a name of a policy with an associated blob
         ///     of metadata
@@ -185,6 +186,7 @@ namespace Microsoft.DotNet.DarcLib
             string targetRepo,
             string targetBranch,
             string updateFrequency,
+            bool batchable,
             List<MergePolicy> mergePolicies)
         {
             CheckForValidBarClient();
@@ -194,6 +196,7 @@ namespace Microsoft.DotNet.DarcLib
                 targetRepo,
                 targetBranch,
                 updateFrequency,
+                batchable,
                 mergePolicies);
         }
 
@@ -215,7 +218,7 @@ namespace Microsoft.DotNet.DarcLib
         ///     Delete a subscription by id
         /// </summary>
         /// <param name="subscriptionId">Id of subscription to delete</param>
-        /// <returns>Information on deleted subscriptio</returns>
+        /// <returns>Information on deleted subscription</returns>
         public async Task<Subscription> DeleteSubscriptionAsync(string subscriptionId)
         {
             CheckForValidBarClient();

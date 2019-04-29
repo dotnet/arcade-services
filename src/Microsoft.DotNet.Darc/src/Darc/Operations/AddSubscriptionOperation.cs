@@ -38,9 +38,10 @@ namespace Microsoft.DotNet.Darc.Operations
 
             if (_options.IgnoreChecks.Count() > 0 && !_options.AllChecksSuccessfulMergePolicy)
             {
-                Logger.LogError($"--ignore-checks must be combined with --all-checks-passed");
+                Console.WriteLine($"--ignore-checks must be combined with --all-checks-passed");
                 return Constants.ErrorCode;
             }
+
             // Parse the merge policies
             List<MergePolicy> mergePolicies = new List<MergePolicy>();
             if (_options.NoExtraCommitsMergePolicy)
@@ -68,11 +69,19 @@ namespace Microsoft.DotNet.Darc.Operations
                     });
             }
 
+            if (_options.Batchable && mergePolicies.Count > 0)
+            {
+                Console.WriteLine("Batchable subscriptions cannot be combined with merge policies. " +
+                    "Merge policies are specified at a repository+branch level.");
+                return Constants.ErrorCode;
+            }
+
             string channel = _options.Channel;
             string sourceRepository = _options.SourceRepository;
             string targetRepository = _options.TargetRepository;
             string targetBranch = _options.TargetBranch;
             string updateFrequency = _options.UpdateFrequency;
+            bool batchable = _options.Batchable;
 
             // If in quiet (non-interactive mode), ensure that all options were passed, then
             // just call the remote API
@@ -107,6 +116,7 @@ namespace Microsoft.DotNet.Darc.Operations
                                              targetRepository,
                                              targetBranch,
                                              updateFrequency,
+                                             batchable,
                                              mergePolicies,
                                              (await suggestedChannels).Select(suggestedChannel => suggestedChannel.Name),
                                              (await suggestedRepos).SelectMany(subscription => new List<string> {subscription.SourceRepository, subscription.TargetRepository }).ToHashSet(),
@@ -125,6 +135,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 targetBranch = initEditorPopUp.TargetBranch;
                 updateFrequency = initEditorPopUp.UpdateFrequency;
                 mergePolicies = initEditorPopUp.MergePolicies;
+                batchable = initEditorPopUp.Batchable; 
             }
 
             try
@@ -134,6 +145,7 @@ namespace Microsoft.DotNet.Darc.Operations
                                                                            targetRepository,
                                                                            targetBranch,
                                                                            updateFrequency,
+                                                                           batchable,
                                                                            mergePolicies);
                 Console.WriteLine($"Successfully created new subscription with id '{newSubscription.Id}'.");
                 return Constants.SuccessCode;

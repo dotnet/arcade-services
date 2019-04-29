@@ -165,7 +165,8 @@ namespace Microsoft.DotNet.DarcLib
         ///     of metadata
         /// </param>
         /// <returns>Newly created subscription, if successful</returns>
-        public Task<Subscription> CreateSubscriptionAsync(string channelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency, List<MergePolicy> mergePolicies)
+        public Task<Subscription> CreateSubscriptionAsync(string channelName, string sourceRepo, string targetRepo,
+            string targetBranch, string updateFrequency, bool batchable, List<MergePolicy> mergePolicies)
         {
             var subscriptionData = new SubscriptionData(
                 channelName: channelName,
@@ -173,7 +174,7 @@ namespace Microsoft.DotNet.DarcLib
                 targetRepository: targetRepo,
                 targetBranch: targetBranch,
                 policy: new SubscriptionPolicy(
-                    false,
+                    batchable,
                     (UpdateFrequency) Enum.Parse(
                         typeof(UpdateFrequency),
                         updateFrequency,
@@ -248,7 +249,15 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>List of merge policies</returns>
         public async Task<IEnumerable<MergePolicy>> GetRepositoryMergePolicies(string repoUri, string branch)
         {
-            return await _barClient.Repository.GetMergePoliciesAsync(repository: repoUri, branch: branch);
+            try
+            {
+                return await _barClient.Repository.GetMergePoliciesAsync(repository: repoUri, branch: branch);
+            }
+            catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+            {
+                // Return an empty list
+                return new List<MergePolicy>();
+            }
         }
 
         #endregion

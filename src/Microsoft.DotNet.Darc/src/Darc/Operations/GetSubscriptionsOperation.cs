@@ -59,10 +59,10 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         mergePolicies = await remote.GetRepositoryMergePoliciesAsync(subscription.TargetRepository, subscription.TargetBranch);
                     }
-                    if (subscription.Policy.MergePolicies.Any())
+                    if (mergePolicies.Any())
                     {
                         Console.WriteLine($"  - Merge Policies:");
-                        foreach (var mergePolicy in subscription.Policy.MergePolicies)
+                        foreach (MergePolicy mergePolicy in mergePolicies)
                         {
                             Console.WriteLine($"    {mergePolicy.Name}");
                             if (mergePolicy.Properties != null)

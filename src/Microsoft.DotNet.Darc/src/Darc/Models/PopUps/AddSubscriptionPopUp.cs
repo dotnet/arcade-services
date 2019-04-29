@@ -24,6 +24,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
         public string TargetBranch => _yamlData.TargetBranch;
         public string UpdateFrequency => _yamlData.UpdateFrequency;
         public List<MergePolicy> MergePolicies => _yamlData.GetMergePolicies();
+        public bool Batchable => _yamlData.Batchable;
 
         public AddSubscriptionPopUp(string path,
                                     ILogger logger,
@@ -32,6 +33,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                                     string targetRepository,
                                     string targetBranch,
                                     string updateFrequency,
+                                    bool batchable,
                                     List<MergePolicy> mergePolicies,
                                     IEnumerable<string> suggestedChannels,
                                     IEnumerable<string> suggestedRepositories,
@@ -47,6 +49,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 TargetRepository = GetCurrentSettingForDisplay(targetRepository, "<required>", false),
                 TargetBranch = GetCurrentSettingForDisplay(targetBranch, "<required>", false),
                 UpdateFrequency = GetCurrentSettingForDisplay(updateFrequency, $"<'{string.Join("', '", Constants.AvailableFrequencies)}'>", false),
+                Batchable = batchable
             };
             _yamlData.SetMergePolicies(mergePolicies);
 
@@ -60,7 +63,8 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 new Line("Use this form to create a new subscription.", true),
                 new Line("A subscription maps a build of a source repository that has been applied to a specific channel", true),
                 new Line("onto a specific branch in a target repository.  The subscription has a trigger (update frequency)", true),
-                new Line("and merge policy.  For additional information about subscriptions, please see", true),
+                new Line("and merge policy. If a subscription is batchable, no merge policy should be provided.", true),
+                new Line("For additional information about subscriptions, please see", true),
                 new Line("https://github.com/dotnet/arcade/blob/master/Documentation/BranchesChannelsAndSubscriptions.md", true),
                 new Line("", true),
                 new Line("Fill out the following form.  Suggested values for fields are shown below.", true),
@@ -145,6 +149,8 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 return Constants.ErrorCode;
             }
 
+            _yamlData.Batchable = outputYamlData.Batchable;
+
             _yamlData.UpdateFrequency = ParseSetting(outputYamlData.UpdateFrequency, _yamlData.UpdateFrequency, false);
             if (string.IsNullOrEmpty(_yamlData.UpdateFrequency) || 
                 !Constants.AvailableFrequencies.Contains(_yamlData.UpdateFrequency, StringComparer.OrdinalIgnoreCase))
@@ -169,17 +175,26 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             public const string targetBranchElement = "Target Branch";
             public const string updateFrequencyElement = "Update Frequency";
             public const string mergePolicyElement = "Merge Policies";
+            public const string batchableElement = "Batchable";
 
             [YamlMember(Alias = channelElement, ApplyNamingConventions = false)]
             public string Channel { get; set; }
+
             [YamlMember(Alias = sourceRepoElement, ApplyNamingConventions = false)]
             public string SourceRepository { get; set; }
+
             [YamlMember(Alias = targetRepoElement, ApplyNamingConventions = false)]
             public string TargetRepository { get; set; }
+
             [YamlMember(Alias = targetBranchElement, ApplyNamingConventions = false)]
             public string TargetBranch { get; set; }
+
             [YamlMember(Alias = updateFrequencyElement, ApplyNamingConventions = false)]
             public string UpdateFrequency { get; set; }
+
+            [YamlMember(Alias = batchableElement, ApplyNamingConventions = false)]
+            public bool Batchable { get; set; }
+
             [YamlMember(Alias = mergePolicyElement, ApplyNamingConventions = false)]
             public List<MergePolicyData> MergePolicies { get; set; }
 
