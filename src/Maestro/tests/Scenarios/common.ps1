@@ -9,6 +9,7 @@
 [string]$azdoAccount = if (-not $azdoAccount) { "dnceng" } else { $azdoAccount }
 [string]$azdoProject = if (-not $azdoProject) { "internal" } else { $azdoProject }
 [string]$azdoApiVersion = if (-not $azdoApiVersion) { "5.0-preview.1" } else { $azdoApiVersion }
+[string]$darcPackageSource = ""
 [string]$barApiVersion = "2019-01-16"
 $global:gitHubPRsToClose = @()
 $global:githubBranchesToDelete = @()
@@ -30,8 +31,12 @@ if (Test-Path $darcVersion) {
     Write-Host "Using local darc binary $darcTool"
 } else {
     Write-Host "Temporary testing location located at $testRoot"
-    Write-Host "Installing Darc: dotnet tool install --tool-path $testRoot --version ${darcVersion} Microsoft.DotNet.Darc"
-    & dotnet tool install --tool-path $testRoot --version $darcVersion "Microsoft.DotNet.Darc"
+    $darcInstallCommand = "dotnet tool install --tool-path $testRoot --version $darcVersion `"Microsoft.DotNet.Darc`""
+    if ($darcPackageSource) {
+        $darcInstallCommand += " --add-source ${darcPackageSource}"
+    }
+    Write-Host "Installing Darc: $darcInstallCommand"
+    Invoke-Expression $darcInstallCommand
     $darcTool = Join-Path -Path $testRoot -ChildPath "darc"
 }
 Write-Host
@@ -443,6 +448,7 @@ function Check-AzDO-PullRequest($sourceRepoName, $targetRepoName, $targetBranch,
             try {
                 Push-Location -Path $(Get-Repo-Location $targetRepoName)
                 $dependencies = Darc-Command get-dependencies
+
                 if ($dependencies.Count -ne $expectedDependencies.Count) {
                     Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."
                     throw "PR did not have expected dependency updates."
@@ -594,7 +600,6 @@ function Check-Github-PullRequest($sourceRepoName, $targetRepoName, $targetBranc
             try {
                 Push-Location -Path $(Get-Repo-Location $targetRepoName)
                 $dependencies = Darc-Command get-dependencies
-
 
                 if ($dependencies.Count -ne $expectedDependencies.Count) {
                     Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."
