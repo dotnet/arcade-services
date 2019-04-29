@@ -118,6 +118,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="targetRepo">Target repository URI.</param>
         /// <param name="targetBranch">Target branch in <paramref name="targetRepo"/></param>
         /// <param name="updateFrequency">Frequency of update.  'none', 'everyDay', or 'everyBuild'.</param>
+        /// <param name="batchable">If true, the subscription is batchable</param>
         /// <param name="mergePolicies">Set of auto-merge policies.</param>
         /// <returns>Newly created subscription.</returns>
         Task<Subscription> CreateSubscriptionAsync(
@@ -126,6 +127,7 @@ namespace Microsoft.DotNet.DarcLib
             string targetRepo,
             string targetBranch,
             string updateFrequency,
+            bool batchable,
             List<MergePolicy> mergePolicies);
 
         /// <summary>
