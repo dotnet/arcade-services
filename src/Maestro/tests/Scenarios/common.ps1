@@ -9,7 +9,7 @@
 [string]$azdoAccount = if (-not $azdoAccount) { "dnceng" } else { $azdoAccount }
 [string]$azdoProject = if (-not $azdoProject) { "internal" } else { $azdoProject }
 [string]$azdoApiVersion = if (-not $azdoApiVersion) { "5.0-preview.1" } else { $azdoApiVersion }
-[string]$darcPackageSource = ""
+[string]$darcPackageSource = if (-not $darcPackageSource) {""} else { $darcPackageSource } 
 [string]$barApiVersion = "2019-01-16"
 $global:gitHubPRsToClose = @()
 $global:githubBranchesToDelete = @()
