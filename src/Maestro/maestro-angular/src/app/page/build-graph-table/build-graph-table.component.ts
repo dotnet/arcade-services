@@ -51,17 +51,6 @@ function getRepo(build: Build) {
   return build.gitHubRepository || build.azureDevOpsRepository;
 }
 
-function buildNumber(b : Build): number | string {
-  let result: number | string = 0;
-  if (b.azureDevOpsBuildNumber) {
-    result = +b.azureDevOpsBuildNumber;
-    if (isNaN(result)) {
-      result = b.azureDevOpsBuildNumber;
-    }
-  }
-  return result;
-}
-
 function isToolset(build: Build, graph: BuildGraph) {
   // A build is a "toolset" if it has at least one dependency pointing to it,
   // and all dependencies pointing to it are toolset dependencies
@@ -93,8 +82,8 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
   let result = sortedBuilds.map<BuildData>(build => {
       const sameRepo = sortedBuilds.filter(b => getRepo(b) === getRepo(build));
       const sameRepoProducts = sameRepo.filter(b => !isToolset(b, graph));
-      const coherentWithAll = sameRepo.every(b => buildNumber(b) <= buildNumber(build));
-      const coherentWithProducts = sameRepoProducts.every(b => buildNumber(b) <= buildNumber(build));
+      const coherentWithAll = sameRepo.every(b => b.id <= build.id);
+      const coherentWithProducts = sameRepoProducts.every(b => b.id <= build.id);
       return {
         build: build,
         coherent: {
