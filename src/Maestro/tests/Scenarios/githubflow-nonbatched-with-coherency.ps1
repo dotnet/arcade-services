@@ -106,23 +106,27 @@ try {
     Trigger-Subscription $subscriptionId
 
     $expectedDependencies =@(
-        "Name:    Foo"
-        "Version: 1.1.0",
-        "Repo:    $parentSourceRepoUri",
-        "Commit:  $parentSourceCommit",
-        "Type:    Product",
+        "Name:             Foo"
+        "Version:          1.1.0",
+        "Repo:             $parentSourceRepoUri",
+        "Commit:           $parentSourceCommit",
+        "Type:             Product",
+        "Pinned:           False",
         "",
-        "Name:    Bar",
-        "Version: 2.1.0",
-        "Repo:    $parentSourceRepoUri",
-        "Commit:  $parentSourceCommit",
-        "Type:    Product",
+        "Name:             Bar",
+        "Version:          2.1.0",
+        "Repo:             $parentSourceRepoUri",
+        "Commit:           $parentSourceCommit",
+        "Type:             Product",
+        "Pinned:           False",
         "",
-        "Name:    Baz",
-        "Version: 1.3.0",
-        "Repo:    $childSourceRepoUri",
-        "Commit:  $childSourceCommit",
-        "Type:    Product",
+        "Name:             Baz",
+        "Version:          1.3.0",
+        "Repo:             $childSourceRepoUri",
+        "Commit:           $childSourceCommit",
+        "Type:             Product",
+        "Pinned:           False",
+        "Coherent Parent:  Foo"
         ""
     )
 
