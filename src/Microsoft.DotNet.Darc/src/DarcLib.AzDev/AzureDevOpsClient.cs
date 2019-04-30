@@ -871,16 +871,21 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     If the release pipeline doesn't have an artifact source a new one is added.
-        ///     If the pipeline has a single artifact source the artifact definition is adjusted as needed.
-        ///     If the pipeline has more than one source an error is thrown.
+        ///   If the release pipeline doesn't have an artifact source a new one is added.
+        ///   If the pipeline has a single artifact source the artifact definition is adjusted as needed.
+        ///   If the pipeline has more than one source an error is thrown.
+        ///     
+        ///   The artifact source added (or the adjustment) has the following properties:
+        ///     - Alias: PrimaryArtifact
+        ///     - Type: Single Build
+        ///     - Version: Specific
         /// </summary>
         /// <param name="accountName">Azure DevOps account name</param>
         /// <param name="projectName">Project name</param>
         /// <param name="releaseDefinition">Release definition to be updated</param>
         /// <param name="build">Build which should be added as source of the release definition.</param>
         /// <returns>AzureDevOpsReleaseDefinition</returns>
-        public async Task<AzureDevOpsReleaseDefinition> AdjustReleasePipelineArtifactSource(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, AzureDevOpsBuild build)
+        public async Task<AzureDevOpsReleaseDefinition> AdjustReleasePipelineArtifactSourceAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, AzureDevOpsBuild build)
         {
             if (releaseDefinition.Artifacts == null || releaseDefinition.Artifacts.Count() == 0)
             {

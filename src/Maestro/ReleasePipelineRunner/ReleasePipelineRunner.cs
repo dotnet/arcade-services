@@ -175,7 +175,7 @@ namespace ReleasePipelineRunner
 
                     AzureDevOpsReleaseDefinition pipeDef = await azdoClient.GetReleaseDefinitionAsync(organization, project, pipelineId);
 
-                    pipeDef = await azdoClient.AdjustReleasePipelineArtifactSource(organization, project, pipeDef, azdoBuild);
+                    pipeDef = await azdoClient.AdjustReleasePipelineArtifactSourceAsync(organization, project, pipeDef, azdoBuild);
 
                     int releaseId = await azdoClient.StartNewReleaseAsync(organization, project, pipeDef, build.Id);
 
