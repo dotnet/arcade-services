@@ -19,7 +19,6 @@ namespace Maestro.MergePolicies
         {
             IEnumerable<Review> reviews = await context.Darc.GetPullRequestReviewsAsync(context.PullRequestUrl);
 
-            // Look for any reviews that are "rejected" or "rejected"
             if (reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected))
             {
                 context.Fail("There are reviews that have requested changes.");

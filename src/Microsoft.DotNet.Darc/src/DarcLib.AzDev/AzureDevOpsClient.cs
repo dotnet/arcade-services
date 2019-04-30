@@ -696,6 +696,11 @@ namespace Microsoft.DotNet.DarcLib
             IList<Review> reviews = new List<Review>();
             foreach (JToken review in values)
             {
+                // Azure DevOps uses an integral "vote" value to identify review state
+                // from their documentation:
+                // Vote on a pull request:
+                // 10 - approved 5 - approved with suggestions 0 - no vote - 5 - waiting for author - 10 - rejected
+
                 int vote = review["vote"].Value<int>();
 
                 ReviewState reviewState;
