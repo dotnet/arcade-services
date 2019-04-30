@@ -363,60 +363,61 @@ namespace Microsoft.DotNet.DarcLib
 
         private static void CleanRepoAndSubmodules(LibGit2Sharp.Repository repo, ILogger log)
         {
-            log.LogDebug($"Beginning clean of {repo.Info.WorkingDirectory} and {repo.Submodules.Count()} submodules");
-
-            LibGit2Sharp.StatusOptions options = new LibGit2Sharp.StatusOptions
+            using (log.BeginScope($"Beginning clean of {repo.Info.WorkingDirectory} and {repo.Submodules.Count()} submodules"))
             {
-                IncludeUntracked = true,
-                RecurseUntrackedDirs = true,
-            };
-            int count = 0;
-            foreach (LibGit2Sharp.StatusEntry item in repo.RetrieveStatus(options))
-            {
-                if (item.State == LibGit2Sharp.FileStatus.NewInWorkdir)
+                LibGit2Sharp.StatusOptions options = new LibGit2Sharp.StatusOptions
                 {
-                    File.Delete(Path.Combine(repo.Info.WorkingDirectory, item.FilePath));
-                    ++count;
-                }
-            }
-            log.LogDebug($"Deleted {count} untracked files");
-
-            foreach (LibGit2Sharp.Submodule sub in repo.Submodules)
-            {
-                string normalizedSubPath = sub.Path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
-                string subRepoPath = Path.Combine(repo.Info.WorkingDirectory, normalizedSubPath);
-                string subRepoGitFilePath = Path.Combine(subRepoPath, ".git");
-                if (!File.Exists(subRepoGitFilePath))
+                    IncludeUntracked = true,
+                    RecurseUntrackedDirs = true,
+                };
+                int count = 0;
+                foreach (LibGit2Sharp.StatusEntry item in repo.RetrieveStatus(options))
                 {
-                    log.LogDebug($"Submodule {sub.Name} in {subRepoPath} does not appear to be initialized (no file at {subRepoGitFilePath}), attempting to initialize now.");
-                    // hasn't been initialized yet, can happen when different hashes have new or moved submodules
-                    try
+                    if (item.State == LibGit2Sharp.FileStatus.NewInWorkdir)
                     {
-                        repo.Submodules.Update(sub.Name, new LibGit2Sharp.SubmoduleUpdateOptions { Init = true });
+                        File.Delete(Path.Combine(repo.Info.WorkingDirectory, item.FilePath));
+                        ++count;
                     }
-                    catch
-                    {
-                        log.LogDebug($"Submodule {sub.Name} in {subRepoPath} is already initialized, trying to adopt from super-repo {repo.Info.Path}");
+                }
+                log.LogDebug($"Deleted {count} untracked files");
 
-                        // superrepo thinks it is initialized, but it's orphaned.  Go back to the master repo to find out where this is supposed to point.
-                        using (LibGit2Sharp.Repository masterRepo = new LibGit2Sharp.Repository(repo.Info.WorkingDirectory))
+                foreach (LibGit2Sharp.Submodule sub in repo.Submodules)
+                {
+                    string normalizedSubPath = sub.Path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+                    string subRepoPath = Path.Combine(repo.Info.WorkingDirectory, normalizedSubPath);
+                    string subRepoGitFilePath = Path.Combine(subRepoPath, ".git");
+                    if (!File.Exists(subRepoGitFilePath))
+                    {
+                        log.LogDebug($"Submodule {sub.Name} in {subRepoPath} does not appear to be initialized (no file at {subRepoGitFilePath}), attempting to initialize now.");
+                        // hasn't been initialized yet, can happen when different hashes have new or moved submodules
+                        try
                         {
-                            LibGit2Sharp.Submodule masterSubModule = masterRepo.Submodules.Single(s => s.Name == sub.Name);
-                            string masterSubPath = Path.Combine(repo.Info.Path, "modules", masterSubModule.Path);
-                            log.LogDebug($"Writing .gitdir redirect {masterSubPath} to {subRepoGitFilePath}");
-                            Directory.CreateDirectory(Path.GetDirectoryName(subRepoGitFilePath));
-                            File.WriteAllText(subRepoGitFilePath, $"gitdir: {masterSubPath}");
+                            repo.Submodules.Update(sub.Name, new LibGit2Sharp.SubmoduleUpdateOptions { Init = true });
+                        }
+                        catch
+                        {
+                            log.LogDebug($"Submodule {sub.Name} in {subRepoPath} is already initialized, trying to adopt from super-repo {repo.Info.Path}");
+
+                            // superrepo thinks it is initialized, but it's orphaned.  Go back to the master repo to find out where this is supposed to point.
+                            using (LibGit2Sharp.Repository masterRepo = new LibGit2Sharp.Repository(repo.Info.WorkingDirectory))
+                            {
+                                LibGit2Sharp.Submodule masterSubModule = masterRepo.Submodules.Single(s => s.Name == sub.Name);
+                                string masterSubPath = Path.Combine(repo.Info.Path, "modules", masterSubModule.Path);
+                                log.LogDebug($"Writing .gitdir redirect {masterSubPath} to {subRepoGitFilePath}");
+                                Directory.CreateDirectory(Path.GetDirectoryName(subRepoGitFilePath));
+                                File.WriteAllText(subRepoGitFilePath, $"gitdir: {masterSubPath}");
+                            }
                         }
                     }
-                }
 
-                using (log.BeginScope($"Beginning clean of submodule {sub.Name}"))
-                {
-                    using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
+                    using (log.BeginScope($"Beginning clean of submodule {sub.Name}"))
                     {
-                        subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.Single(c => c.Sha == sub.HeadCommitId.Sha));
-                        log.LogDebug($"Done resestting {subRepoPath}, checking submodules");
-                        CleanRepoAndSubmodules(subRepo, log);
+                        using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
+                        {
+                            subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.Single(c => c.Sha == sub.HeadCommitId.Sha));
+                            log.LogDebug($"Done resetting {subRepoPath}, checking submodules");
+                            CleanRepoAndSubmodules(subRepo, log);
+                        }
                     }
                 }
             }
