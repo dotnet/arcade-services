@@ -352,13 +352,11 @@ namespace Microsoft.DotNet.Darc.Operations
                     products = downloadedBuilds
                         .Where(b => b.AnyShippingAssets)
                         .Select(b =>
-                        {
-                            return new
-                            {
+                            new {
                                 name = GetProductNameForReleaseJson(b),
                                 fileshare = GetFileShareLocationForReleaseJson(b),
-                            };
-                        })
+                            }
+                        )
                 }
             };
             await File.WriteAllTextAsync(outputPath, JsonConvert.SerializeObject(releaseJson, Formatting.Indented));
@@ -866,7 +864,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         symbolPackageName = asset.Name.Substring(lastSlash);
                     }
-                    string shippingNonShippingFolder = asset.NonShipping? "NonShipping" : "Shipping";
+                    string shippingNonShippingFolder = asset.NonShipping ? "NonShipping" : "Shipping";
                     string aspnetciSymbolSharePath = $@"\\aspnetci\drops\AspNetCore\master\{build.AzureDevOpsBuildNumber}\packages\Release\{shippingNonShippingFolder}\{symbolPackageName}";
                     if (await DownloadFromShareAsync(aspnetciSymbolSharePath, fullTargetPath, errors))
                     {
@@ -903,7 +901,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 string directory = Path.GetDirectoryName(targetFile);
                 Directory.CreateDirectory(directory);
-                
+
                 // Web client will overwrite, so avoid this if not desired by checking for file existence.
                 if (!_options.Overwrite && File.Exists(targetFile))
                 {
