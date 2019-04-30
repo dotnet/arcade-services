@@ -187,6 +187,13 @@ namespace Microsoft.DotNet.DarcLib
         Task<IEnumerable<Check>> GetPullRequestChecksAsync(string pullRequestUrl);
 
         /// <summary>
+        ///     Get the reviews for the specified pull request.
+        /// </summary>
+        /// <param name="pullRequestUrl">Url of pull request.</param>
+        /// <returns>List of reviews</returns>
+        Task<IEnumerable<Review>> GetPullRequestReviewsAsync(string pullRequestUrl);
+
+        /// <summary>
         ///     Retrieve information about a pull request.
         /// </summary>
         /// <param name="pullRequestUri">URI of pull request.</param>

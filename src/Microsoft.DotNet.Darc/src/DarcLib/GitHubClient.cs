@@ -555,6 +555,39 @@ namespace Microsoft.DotNet.DarcLib
                 .ToList();
         }
 
+        /// <summary>
+        ///     Retrieve the list of reviews on a PR
+        /// </summary>
+        /// <param name="pullRequestUrl">Uri of pull request</param>
+        /// <returns>List of reviews.</returns>
+        public async Task<IList<Review>> GetPullRequestReviewsAsync(string pullRequestUrl)
+        {
+            (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
+
+            var reviews = await Client.Repository.PullRequest.Review.GetAll(owner, repo, id);
+            return reviews.Select(review =>
+                new Review(TranslateReviewState(review.State.Value), pullRequestUrl)).ToList();
+        }
+
+        private ReviewState TranslateReviewState(PullRequestReviewState state)
+        {
+            switch (state)
+            {
+                case PullRequestReviewState.Approved:
+                    return ReviewState.Approved;
+                case PullRequestReviewState.ChangesRequested:
+                    return ReviewState.ChangesRequested;
+                case PullRequestReviewState.Commented:
+                    return ReviewState.Commented;
+                case PullRequestReviewState.Dismissed:
+                    return ReviewState.Rejected;
+                case PullRequestReviewState.Pending:
+                    return ReviewState.Pending;
+                default:
+                    throw new NotImplementedException($"Unexpected pull request review state {state}");
+            }
+        }
+
         private async Task<IList<Check>> GetChecksFromStatusApiAsync(string owner, string repo, string @ref)
         {
             var status = await Client.Repository.Status.GetCombined(owner, repo, @ref);
