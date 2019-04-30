@@ -893,7 +893,7 @@ namespace Microsoft.DotNet.DarcLib
                         {
                             Definition = new AzureDevOpsIdNamePair()
                             {
-                                Id = build.Definition.Id.ToString(),
+                                Id = build.Definition.Id,
                                 Name = build.Definition.Name
                             },
                             DefaultVersionType = new AzureDevOpsIdNamePair()
@@ -908,7 +908,7 @@ namespace Microsoft.DotNet.DarcLib
                             },
                             Project = new AzureDevOpsIdNamePair()
                             {
-                                Id = build.Project.Id.ToString(),
+                                Id = build.Project.Id,
                                 Name = build.Project.Name
                             }
                         }
@@ -919,13 +919,13 @@ namespace Microsoft.DotNet.DarcLib
             {
                 var definitionReference = releaseDefinition.Artifacts[0].DefinitionReference;
 
-                definitionReference.Definition.Id = build.Definition.Id.ToString();
+                definitionReference.Definition.Id = build.Definition.Id;
                 definitionReference.Definition.Name = build.Definition.Name;
 
                 definitionReference.DefaultVersionSpecific.Id = build.Id.ToString();
                 definitionReference.DefaultVersionSpecific.Name = build.BuildNumber;
 
-                definitionReference.Project.Id = build.Project.Id.ToString();
+                definitionReference.Project.Id = build.Project.Id;
                 definitionReference.Project.Name = build.Project.Name;
 
                 if (!releaseDefinition.Artifacts[0].Alias.Equals("PrimaryArtifact"))
