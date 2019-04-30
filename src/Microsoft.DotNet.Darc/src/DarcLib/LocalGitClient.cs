@@ -404,6 +404,7 @@ namespace Microsoft.DotNet.DarcLib
                             LibGit2Sharp.Submodule masterSubModule = masterRepo.Submodules.Single(s => s.Name == sub.Name);
                             string masterSubPath = Path.Combine(repo.Info.Path, "modules", masterSubModule.Path);
                             log.LogDebug($"Writing .gitdir redirect {masterSubPath} to {subRepoGitFilePath}");
+                            Directory.CreateDirectory(Path.GetDirectoryName(subRepoGitFilePath));
                             File.WriteAllText(subRepoGitFilePath, $"gitdir: {masterSubPath}");
                         }
                     }
