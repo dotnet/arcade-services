@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
@@ -52,15 +53,13 @@ namespace Microsoft.DotNet.Darc.Operations
                 HashSet<StrippedDependency> accumulatedDependencies = new HashSet<StrippedDependency>();
                 // at the end of each depth level, these are added to the queue to clone
                 Queue<StrippedDependency> dependenciesToClone = new Queue<StrippedDependency>();
-                // keep track of repos we have seen each repo have dependencies on so we don't follow circular dependencies
-                Dictionary<string, HashSet<string>> seenRepoCircularDependencies = new Dictionary<string, HashSet<string>>();
                 RemoteFactory remoteFactory = new RemoteFactory(_options);
 
                 if (string.IsNullOrWhiteSpace(_options.RepoUri))
                 {
                     Local local = new Local(Logger);
                     IEnumerable<DependencyDetail>  rootDependencies = await local.GetDependenciesAsync();
-                    IEnumerable<StrippedDependency> stripped = rootDependencies.Select(d => new StrippedDependency(d));
+                    IEnumerable<StrippedDependency> stripped = rootDependencies.Select(d => StrippedDependency.GetDependency(d));
                     foreach (StrippedDependency d in stripped)
                     {
                         accumulatedDependencies.Add(d);
@@ -70,7 +69,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 else
                 {
                     // Start with the root repo we were asked to clone
-                    StrippedDependency rootDep = new StrippedDependency(_options.RepoUri, _options.Version);
+                    StrippedDependency rootDep = StrippedDependency.GetDependency(_options.RepoUri, _options.Version);
                     accumulatedDependencies.Add(rootDep);
                     Logger.LogInformation($"Starting deep clone of {rootDep.RepoUri}@{rootDep.Commit}");
                 }
@@ -114,23 +113,14 @@ namespace Microsoft.DotNet.Darc.Operations
                             Logger.LogDebug($"Got {deps.Count()} dependencies and filtered to {filteredDeps.Count()} dependencies");
                             foreach (DependencyDetail d in filteredDeps)
                             {
-                                HashSet<string> seenRepoDependencies;
-                                if (seenRepoCircularDependencies.ContainsKey(d.RepoUri.ToLowerInvariant()))
-                                {
-                                    seenRepoDependencies = seenRepoCircularDependencies[d.RepoUri.ToLowerInvariant()];
-                                }
-                                else
-                                {
-                                    seenRepoDependencies = new HashSet<string>();
-                                    seenRepoCircularDependencies.Add(d.RepoUri.ToLowerInvariant(), seenRepoDependencies);
-                                }
+                                StrippedDependency dep = StrippedDependency.GetDependency(d);
                                 // e.g. arcade depends on previous versions of itself to build, so this would go on forever
                                 if (d.RepoUri == repo.RepoUri)
                                 {
                                     Logger.LogDebug($"Skipping self-dependency in {repo.RepoUri} ({repo.Commit} => {d.Commit})");
                                 }
                                 // circular dependencies that have different hashes, e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
-                                else if (seenRepoDependencies.Any(r => r.ToLowerInvariant() == repo.RepoUri.ToLowerInvariant()))
+                                else if (dep.HasDependencyOn(repo))
                                 {
                                     Logger.LogDebug($"Skipping already-seen circular dependency from {repo.RepoUri} to {d.RepoUri}");
                                 }
@@ -144,10 +134,10 @@ namespace Microsoft.DotNet.Darc.Operations
                                 }
                                 else
                                 {
-                                    StrippedDependency stripped = new StrippedDependency(d);
+                                    StrippedDependency stripped = StrippedDependency.GetDependency(d);
                                     Logger.LogDebug($"Adding new dependency {stripped.RepoUri}@{stripped.Commit}");
+                                    repo.AddDependency(dep);
                                     accumulatedDependencies.Add(stripped);
-                                    seenRepoDependencies.Add(d.RepoUri.ToLowerInvariant());
                                 }
                             }
                             // delete the .gitdir redirect to orphan the repo.
@@ -446,17 +436,116 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             internal string RepoUri { get; set; }
             internal string Commit { get; set; }
+            private bool Visited { get; set; }
+            internal HashSet<StrippedDependency> Dependencies { get; set; }
+            internal static HashSet<StrippedDependency> AllDependencies;
 
-            internal StrippedDependency(DependencyDetail d)
+            static StrippedDependency()
             {
-                this.RepoUri = d.RepoUri;
-                this.Commit = d.Commit;
+                AllDependencies = new HashSet<StrippedDependency>();
             }
 
-            internal StrippedDependency(string repoUri, string commit)
+            internal static StrippedDependency GetDependency(DependencyDetail d)
             {
-                this.RepoUri = repoUri;
+                return GetDependency(d.RepoUri, d.Commit);
+            }
+
+            internal static StrippedDependency GetDependency(StrippedDependency d)
+            {
+                return GetDependency(d.RepoUri, d.Commit);
+            }
+
+            internal static StrippedDependency GetDependency(string repoUrl, string commit)
+            {
+                Console.WriteLine($"getting dep for {repoUrl}@{commit}");
+                StrippedDependency dep;
+                dep = AllDependencies.SingleOrDefault(d => d.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant() && d.Commit.ToLowerInvariant() == commit.ToLowerInvariant());
+                if (dep == null)
+                {
+                    Console.WriteLine($"creating dep for {repoUrl}@{commit}");
+                    dep = new StrippedDependency(repoUrl, commit);
+                    foreach (StrippedDependency previousDep in AllDependencies.Where(d => d.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant()).SelectMany(d => d.Dependencies))
+                    {
+                        dep.AddDependency(previousDep);
+                    }
+                    AllDependencies.Add(dep);
+                }
+                return dep;
+            }
+
+            private StrippedDependency(string repoUrl, string commit)
+            {
+                this.RepoUri = repoUrl;
                 this.Commit = commit;
+                this.Dependencies = new HashSet<StrippedDependency>();
+                this.Dependencies.Add(this);
+            }
+
+            private StrippedDependency(DependencyDetail d) : this(d.RepoUri, d.Commit) { }
+
+            internal void AddDependency(StrippedDependency dep)
+            {
+                Console.WriteLine($"adding dep from {this.RepoUri}@{this.Commit} to {dep.RepoUri}@{dep.Commit}");
+                StrippedDependency other = GetDependency(dep);
+                if (this.Dependencies.Any(d => d.RepoUri.ToLowerInvariant() == other.RepoUri.ToLowerInvariant()))
+                {
+                    return;
+                }
+                this.Dependencies.Add(other);
+                foreach (StrippedDependency sameUrl in AllDependencies.Where(d => d.RepoUri.ToLowerInvariant() == this.RepoUri.ToLowerInvariant()))
+                {
+                    sameUrl.Dependencies.Add(other);
+                }
+            }
+
+            internal void AddDependency(DependencyDetail dep)
+            {
+                this.AddDependency(GetDependency(dep));
+            }
+
+            internal bool HasDependencyOn(string repoUrl)
+            {
+                Console.WriteLine($"checking {this.RepoUri}@{this.Commit} dep for dependency on {repoUrl}");
+                bool hasDep = false;
+                lock (this.Dependencies)
+                {
+                    foreach (StrippedDependency dep in this.Dependencies)
+                    {
+                        Console.WriteLine($"is {dep.RepoUri}@{dep.Commit} a dependency?");
+                        if (dep.Visited)
+                        {
+                            Console.WriteLine($"{dep.RepoUri}@{dep.Commit} is visited");
+                            return false;
+                        }
+                        if (dep.RepoUri.ToLowerInvariant() == this.RepoUri.ToLowerInvariant())
+                        {
+                            Console.WriteLine($"skipping self-dep {this.RepoUri}@{this.Commit}");
+                            return false;
+                        }
+                        dep.Visited = true;
+                        hasDep = hasDep || dep.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant() || dep.HasDependencyOn(repoUrl);
+                        if (hasDep)
+                        {
+                            break;
+                        }
+                    }
+                    foreach (StrippedDependency dep in AllDependencies)
+                    {
+                        dep.Visited = false;
+                    }
+                }
+
+                return hasDep;
+            }
+
+            internal bool HasDependencyOn(StrippedDependency dep)
+            {
+                return HasDependencyOn(dep.RepoUri);
+            }
+
+            internal bool HasDependencyOn(DependencyDetail dep)
+            {
+                return HasDependencyOn(dep.RepoUri);
             }
 
             public override bool Equals(object obj)
@@ -472,6 +561,11 @@ namespace Microsoft.DotNet.Darc.Operations
             public override int GetHashCode()
             {
                 return this.RepoUri.GetHashCode() ^ this.Commit.GetHashCode();
+            }
+
+            public override string ToString()
+            {
+                return $"{this.RepoUri}@{this.Commit} ({this.Dependencies.Count} deps)";
             }
         }
     }
