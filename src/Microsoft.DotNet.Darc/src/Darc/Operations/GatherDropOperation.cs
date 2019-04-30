@@ -349,9 +349,8 @@ namespace Microsoft.DotNet.Darc.Operations
                 new
                 {
                     release = _options.ReleaseName,
-                    products = new[]
-                    {
-                        downloadedBuilds.Where(b => b.AnyShippingAssets)
+                    products = downloadedBuilds
+                        .Where(b => b.AnyShippingAssets)
                         .Select(b =>
                         {
                             return new
@@ -360,7 +359,6 @@ namespace Microsoft.DotNet.Darc.Operations
                                 fileshare = GetFileShareLocationForReleaseJson(b),
                             };
                         })
-                    }
                 }
             };
             await File.WriteAllTextAsync(outputPath, JsonConvert.SerializeObject(releaseJson, Formatting.Indented));
