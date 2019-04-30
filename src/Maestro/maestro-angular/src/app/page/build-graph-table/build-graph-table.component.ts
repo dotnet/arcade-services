@@ -1,5 +1,5 @@
 import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
-import { Build, BuildGraph } from 'src/maestro-client/models';
+import { Build, BuildGraph, BuildRef } from 'src/maestro-client/models';
 import { topologicalSort } from 'src/helpers';
 import { trigger, transition, style, animate } from '@angular/animations';
 
@@ -19,6 +19,8 @@ interface BuildData {
   isLocked?: boolean;
   isToolset?: boolean;
   state?: BuildState;
+  hasIncoherentDependencies?: boolean;
+  hasIncoherentDependenciesIncludingToolsets?: boolean;
 }
 
 function getState(b: BuildData): BuildState | undefined {
@@ -84,6 +86,7 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
       const sameRepoProducts = sameRepo.filter(b => !isToolset(b, graph));
       const coherentWithAll = sameRepo.every(b => b.id <= build.id);
       const coherentWithProducts = sameRepoProducts.every(b => b.id <= build.id);
+
       return {
         build: build,
         coherent: {
@@ -93,6 +96,13 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
       };
   });
 
+  // We want to check the coherency of dependencies in this order, as BuildData array will start from the lowest dependency first. This will
+  // eliminate the need for recursion in the hasIncoherentDependencies method.
+  for (const node of result) {
+    node.hasIncoherentDependencies = hasIncoherentDependencies(node.build, result, false);
+    node.hasIncoherentDependenciesIncludingToolsets = hasIncoherentDependencies(node.build, result, true);
+  }
+
   result = result.reverse();
   for (const node of result) {
     node.isToolset = isToolset(node.build, graph);
@@ -100,6 +110,59 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
 
   return result;
 }
+
+// Given a build, determines if that build has incoherent dependencies at any level. Searches through toolset incoherencies if necessary. 
+function hasIncoherentDependencies(build: Build, buildData: BuildData[], includeToolsets: boolean): boolean {
+  let currentBuildData = buildData.find(x => x.build.id == build.id);
+  if(currentBuildData)
+  {
+    if(buildHasIncoherentDependencies(currentBuildData, includeToolsets))
+    {
+      return true;
+    }
+
+    if (currentBuildData.build.dependencies) {
+      for (const dep of currentBuildData.build.dependencies) {
+        if(shouldConsiderDependecy(dep, includeToolsets)){ 
+          let depBuildData = buildData.find(r => r.build.id == dep.buildId);
+          if(depBuildData && (dependencyIsIncoherent(depBuildData, includeToolsets) || buildHasIncoherentDependencies(depBuildData, includeToolsets)))
+          {
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+function shouldConsiderDependecy(dependecy: BuildRef, includeToolsets: boolean): boolean {
+  return !(!includeToolsets && !dependecy.isProduct);
+}
+
+function dependencyIsIncoherent(buildData: BuildData, includeToolsets: boolean): boolean {
+  return includeToolsets ? !buildData.coherent.withAll : !buildData.coherent.withProduct;
+}
+
+function buildHasIncoherentDependencies(buildData: BuildData, includeToolsets: boolean): boolean {
+  if(includeToolsets)
+  {
+    if(buildData.hasIncoherentDependenciesIncludingToolsets)
+    {
+      return buildData.hasIncoherentDependenciesIncludingToolsets;
+    }
+  }
+  else
+  { if(buildData.hasIncoherentDependencies)
+    {
+      return buildData.hasIncoherentDependencies;
+    }
+  }
+
+  return false;
+}
+
 
 const elementOutStyle = style({
   transform: 'translate(20vw, 0)',
@@ -176,6 +239,17 @@ export class BuildGraphTableComponent implements OnChanges {
       return false;
     }
 
+    function isDependent(buildId: number, dependencies: BuildRef[], includeToolsets?: boolean): boolean {
+      if(includeToolsets)
+      {
+        return dependencies.some(d => d.buildId == buildId);
+      }
+      else
+      {
+        return dependencies.some(d => d.buildId == buildId && d.isProduct);
+      }
+    }
+
     const focusedBuildData = sortedBuilds.find(b => b.build.id == this.focusedBuildId);
 
     for (const b of this.sortedBuilds) {
@@ -188,7 +262,7 @@ export class BuildGraphTableComponent implements OnChanges {
         b.isLocked = false;
       } else {
         const focusedBuild = focusedBuildData.build;
-        b.isDependent = focusedBuild.dependencies && focusedBuild.dependencies.some(d => d.buildId == b.build.id);
+        b.isDependent = focusedBuild.dependencies && isDependent(b.build.id, focusedBuild.dependencies, this.includeToolsets);
         b.isParent = isParent(focusedBuild.id, b.build.id, false);
         b.isAncestor = !b.isParent && isParent(focusedBuild.id, b.build.id, true);
         b.isSameRepository = b.build.id !== focusedBuild.id && getRepo(b.build) === getRepo(focusedBuild);
@@ -214,5 +288,12 @@ export class BuildGraphTableComponent implements OnChanges {
       return node.coherent.withAll;
     }
     return node.coherent.withProduct;
+  }
+
+  public hasIncoherentDependencies(node: BuildData) {
+    if (this.includeToolsets) {
+      return node.hasIncoherentDependenciesIncludingToolsets;
+    }
+    return node.hasIncoherentDependencies;
   }
 }
