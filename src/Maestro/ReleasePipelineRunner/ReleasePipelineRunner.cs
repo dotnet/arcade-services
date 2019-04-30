@@ -174,9 +174,8 @@ namespace ReleasePipelineRunner
                     Logger.LogInformation($"Going to create a release using pipeline {organization}/{project}/{pipelineId}");
 
                     AzureDevOpsReleaseDefinition pipeDef = await azdoClient.GetReleaseDefinitionAsync(organization, project, pipelineId);
-                    pipeDef = await azdoClient.RemoveAllArtifactSourcesAsync(organization, project, pipeDef);
 
-                    pipeDef = await azdoClient.AddArtifactSourceAsync(organization, project, pipeDef, azdoBuild);
+                    pipeDef = await azdoClient.AdjustReleasePipelineArtifactSource(organization, project, pipeDef, azdoBuild);
 
                     int releaseId = await azdoClient.StartNewReleaseAsync(organization, project, pipeDef, build.Id);
 

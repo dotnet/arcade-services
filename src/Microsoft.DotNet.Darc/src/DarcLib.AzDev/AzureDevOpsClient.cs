@@ -871,45 +871,87 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Add the informed build as an specific build artifact source to the release definition informed.
+        ///     If the release pipeline doesn't have an artifact source a new one is added.
+        ///     If the pipeline has a single artifact source the artifact definition is adjusted as needed.
+        ///     If the pipeline has more than one source an error is thrown.
         /// </summary>
         /// <param name="accountName">Azure DevOps account name</param>
         /// <param name="projectName">Project name</param>
         /// <param name="releaseDefinition">Release definition to be updated</param>
         /// <param name="build">Build which should be added as source of the release definition.</param>
         /// <returns>AzureDevOpsReleaseDefinition</returns>
-        public async Task<AzureDevOpsReleaseDefinition> AddArtifactSourceAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, AzureDevOpsBuild build)
+        public async Task<AzureDevOpsReleaseDefinition> AdjustReleasePipelineArtifactSource(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, AzureDevOpsBuild build)
         {
-            releaseDefinition.Artifacts = new AzureDevOpsArtifact[1] {
-                new AzureDevOpsArtifact()
-                {
-                    Alias = "PrimaryArtifact",
-                    Type = "Build",
-                    DefinitionReference = new AzureDevOpsArtifactSourceReference()
+            if (releaseDefinition.Artifacts == null || releaseDefinition.Artifacts.Count() == 0)
+            {
+                releaseDefinition.Artifacts = new AzureDevOpsArtifact[1] {
+                    new AzureDevOpsArtifact()
                     {
-                        Definition = new AzureDevOpsIdNamePair()
+                        Alias = "PrimaryArtifact",
+                        Type = "Build",
+                        DefinitionReference = new AzureDevOpsArtifactSourceReference()
                         {
-                            Id = build.Definition.Id.ToString(),
-                            Name = build.Definition.Name
-                        },
-                        DefaultVersionType = new AzureDevOpsIdNamePair()
-                        {
-                            Id = "specificVersionType",
-                            Name = "Specific version"
-                        },
-                        DefaultVersionSpecific = new AzureDevOpsIdNamePair()
-                        {
-                            Id = build.Id.ToString(),
-                            Name = build.BuildNumber
-                        },
-                        Project = new AzureDevOpsIdNamePair()
-                        {
-                            Id = build.Project.Id.ToString(),
-                            Name = build.Project.Name
+                            Definition = new AzureDevOpsIdNamePair()
+                            {
+                                Id = build.Definition.Id.ToString(),
+                                Name = build.Definition.Name
+                            },
+                            DefaultVersionType = new AzureDevOpsIdNamePair()
+                            {
+                                Id = "specificVersionType",
+                                Name = "Specific version"
+                            },
+                            DefaultVersionSpecific = new AzureDevOpsIdNamePair()
+                            {
+                                Id = build.Id.ToString(),
+                                Name = build.BuildNumber
+                            },
+                            Project = new AzureDevOpsIdNamePair()
+                            {
+                                Id = build.Project.Id.ToString(),
+                                Name = build.Project.Name
+                            }
                         }
                     }
+                };
+            }
+            else if (releaseDefinition.Artifacts.Count() == 1)
+            {
+                var definitionReference = releaseDefinition.Artifacts[0].DefinitionReference;
+
+                definitionReference.Definition.Id = build.Definition.Id.ToString();
+                definitionReference.Definition.Name = build.Definition.Name;
+
+                definitionReference.DefaultVersionSpecific.Id = build.Id.ToString();
+                definitionReference.DefaultVersionSpecific.Name = build.BuildNumber;
+
+                definitionReference.Project.Id = build.Project.Id.ToString();
+                definitionReference.Project.Name = build.Project.Name;
+
+                if (!releaseDefinition.Artifacts[0].Alias.Equals("PrimaryArtifact"))
+                {
+                    throw new ArgumentException("The artifact source for the release pipeline should be named 'PrimaryArtifact'.");
                 }
-            };
+
+                if (!releaseDefinition.Artifacts[0].Type.Equals("Build"))
+                {
+                    throw new ArgumentException("The artifact source for the release pipeline should have type 'Build'.");
+                }
+
+                if (!definitionReference.DefaultVersionType.Id.Equals("specificVersionType"))
+                {
+                    throw new ArgumentException("The artifact source for the release pipeline should be a specific version.");
+                }
+
+                if (!definitionReference.DefaultVersionType.Name.Equals("Specific version"))
+                {
+                    throw new ArgumentException("The artifact source for the release pipeline should be a specific version.");
+                }
+            }
+            else
+            {
+                throw new ArgumentException($"More than one artifact source is defined in pipeline {releaseDefinition.Id}. Only one artifact source was expected.");
+            }
 
             var _serializerSettings = new JsonSerializerSettings
             {
@@ -918,31 +960,6 @@ namespace Microsoft.DotNet.DarcLib
             };
 
             var body = JsonConvert.SerializeObject(releaseDefinition, _serializerSettings);
-
-            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
-                HttpMethod.Put,
-                accountName,
-                projectName,
-                $"_apis/release/definitions/",
-                _logger,
-                body,
-                versionOverride: "5.0-preview.3",
-                baseAddressSubpath: "vsrm.");
-
-            return content.ToObject<AzureDevOpsReleaseDefinition>();
-        }
-
-        /// <summary>
-        ///     Remove all artifact sources of the release definition informed.
-        /// </summary>
-        /// <param name="accountName">Azure DevOps account name</param>
-        /// <param name="projectName">Project name</param>
-        /// <param name="releaseDefinition">Release definition to be modified</param>
-        public async Task<AzureDevOpsReleaseDefinition> RemoveAllArtifactSourcesAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition)
-        {
-            releaseDefinition.Artifacts = new AzureDevOpsArtifact[0];
-
-            var body = JsonConvert.SerializeObject(releaseDefinition);
 
             JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Put,
