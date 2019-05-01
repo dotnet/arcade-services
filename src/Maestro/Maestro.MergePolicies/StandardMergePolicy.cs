@@ -26,15 +26,27 @@ namespace Maestro.MergePolicies
             };
         }
 
-        public override string DisplayName => "Standard Github Merge Policies";
+        public override string DisplayName => "Standard Merge Policies";
 
         public readonly HashSet<string> standardGithubIgnoredChecks;
         public readonly HashSet<string> standardAzureDevOpsIgnoredChecks;
 
         public override async Task EvaluateAsync(IMergePolicyEvaluationContext context, MergePolicyProperties properties)
         {
-            var ignoredChecks = context.PullRequestUrl.Contains("github.com") ?
-                standardGithubIgnoredChecks : standardAzureDevOpsIgnoredChecks;
+            HashSet<string> ignoredChecks = null;
+            string prUrl = context.PullRequestUrl;
+            if (prUrl.Contains("github.com"))
+            {
+                ignoredChecks = standardGithubIgnoredChecks;
+            }
+            else if (prUrl.Contains("dev.azure.com"))
+            {
+                ignoredChecks = standardAzureDevOpsIgnoredChecks;
+            }
+            else
+            {
+                throw new NotImplementedException("Unknown pr repo url");
+            }
             await AllChecksSuccessfulMergePolicy.EvaluateChecksAsync(context, ignoredChecks);
             await NoRequestedChangesMergePolicy.EvaluateReviewAsync(context);
         }
