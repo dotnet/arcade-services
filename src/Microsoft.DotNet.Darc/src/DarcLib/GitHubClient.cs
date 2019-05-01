@@ -778,7 +778,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="uri">Github repository URL</param>
         /// <returns>Tuple of owner and repo</returns>
-        private (string owner, string repo) ParseRepoUri(string uri)
+        public static (string owner, string repo) ParseRepoUri(string uri)
         {
             var u = new UriBuilder(uri);
             Match match = RepositoryUriPattern.Match(u.Path);

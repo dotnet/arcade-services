@@ -3,7 +3,8 @@ param(
     [string]$darcVersion,
     [string]$maestroBearerToken,
     [string]$githubPAT,
-    [string]$azdoPAT
+    [string]$azdoPAT,
+    [string]$darcPackageSource
 )
 
 $testScripts = (

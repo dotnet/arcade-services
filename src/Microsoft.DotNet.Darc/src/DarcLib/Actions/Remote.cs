@@ -253,7 +253,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <summary>
         ///     Get a list of pull request checks.
         /// </summary>
-        /// <param name="pullRequestUrl">Url of pull requests</param>
+        /// <param name="pullRequestUrl">Url of pull request</param>
         /// <returns>List of pull request checks</returns>
         public async Task<IEnumerable<Check>> GetPullRequestChecksAsync(string pullRequestUrl)
         {
@@ -267,7 +267,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <summary>
         ///     Get a list of pull request reviews.
         /// </summary>
-        /// <param name="pullRequestUrl">Url of pull requests</param>
+        /// <param name="pullRequestUrl">Url of pull request</param>
         /// <returns>List of pull request checks</returns>
         public async Task<IEnumerable<Review>> GetPullRequestReviewsAsync(string pullRequestUrl)
         {
