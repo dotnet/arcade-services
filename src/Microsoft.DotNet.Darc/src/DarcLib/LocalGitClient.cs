@@ -99,6 +99,11 @@ namespace Microsoft.DotNet.DarcLib
             throw new NotImplementedException();
         }
 
+        public Task<IList<Review>> GetPullRequestReviewsAsync(string pullRequestUrl)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
         {
             throw new NotImplementedException();

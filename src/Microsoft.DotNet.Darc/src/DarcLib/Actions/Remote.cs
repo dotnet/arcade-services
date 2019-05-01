@@ -250,13 +250,31 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
+        /// <summary>
+        ///     Get a list of pull request checks.
+        /// </summary>
+        /// <param name="pullRequestUrl">Url of pull request</param>
+        /// <returns>List of pull request checks</returns>
         public async Task<IEnumerable<Check>> GetPullRequestChecksAsync(string pullRequestUrl)
         {
             CheckForValidGitClient();
             using (_logger.BeginScope($"Getting status checks for pull request '{pullRequestUrl}'..."))
             {
-                IEnumerable<Check> checks = await _gitClient.GetPullRequestChecksAsync(pullRequestUrl);
-                return checks;
+                return await _gitClient.GetPullRequestChecksAsync(pullRequestUrl);
+            }
+        }
+
+        /// <summary>
+        ///     Get a list of pull request reviews.
+        /// </summary>
+        /// <param name="pullRequestUrl">Url of pull request</param>
+        /// <returns>List of pull request checks</returns>
+        public async Task<IEnumerable<Review>> GetPullRequestReviewsAsync(string pullRequestUrl)
+        {
+            CheckForValidGitClient();
+            using (_logger.BeginScope($"Getting reviews for pull request '{pullRequestUrl}'..."))
+            {
+                return await _gitClient.GetPullRequestReviewsAsync(pullRequestUrl);
             }
         }
 

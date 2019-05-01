@@ -676,6 +676,63 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        /// Retrieve the list of reviews on a PR.
+        /// </summary>
+        /// <param name="pullRequestUrl">Uri of pull request</param>
+        /// <returns>List of reviews.</returns>
+        public async Task<IList<Review>> GetPullRequestReviewsAsync(string pullRequestUrl)
+        {
+            (string accountName, string projectName, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
+
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                    HttpMethod.Get,
+                    accountName,
+                    projectName,
+                    $"_apis/git/repositories/{repo}/pullRequests/{id}/reviewers",
+                    _logger);
+
+            JArray values = JArray.Parse(content["value"].ToString());
+
+            IList<Review> reviews = new List<Review>();
+            foreach (JToken review in values)
+            {
+                // Azure DevOps uses an integral "vote" value to identify review state
+                // from their documentation:
+                // Vote on a pull request:
+                // 10 - approved 5 - approved with suggestions 0 - no vote - 5 - waiting for author - 10 - rejected
+
+                int vote = review["vote"].Value<int>();
+
+                ReviewState reviewState;
+
+                switch (vote)
+                {
+                    case 10:
+                        reviewState = ReviewState.Approved;
+                        break;
+                    case 5:
+                        reviewState = ReviewState.Commented;
+                        break;
+                    case 0:
+                        reviewState = ReviewState.Pending;
+                        break;
+                    case -5:
+                        reviewState = ReviewState.ChangesRequested;
+                        break;
+                    case -10:
+                        reviewState = ReviewState.Rejected;
+                        break;
+                    default:
+                        throw new NotImplementedException($"Unknown review vote {vote}");
+                }
+
+                reviews.Add(new Review(reviewState, pullRequestUrl));
+            }
+
+            return reviews;
+        }
+
+        /// <summary>
         ///     Execute a command on the remote repository.
         /// </summary>
         /// <param name="method">Http method</param>

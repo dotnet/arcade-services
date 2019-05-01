@@ -48,6 +48,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 mergePolicies.Add(new MergePolicy {Name = "NoExtraCommits" });
             }
+
             if (_options.AllChecksSuccessfulMergePolicy)
             {
                 mergePolicies.Add(
@@ -58,6 +59,12 @@ namespace Microsoft.DotNet.Darc.Operations
                             .Add("ignoreChecks", JToken.FromObject(_options.IgnoreChecks))
                     });
             }
+
+            if (_options.NoRequestedChangesMergePolicy)
+            {
+                mergePolicies.Add(new MergePolicy { Name = "NoRequestedChanges" });
+            }
+
             if (_options.RequireChecksMergePolicy.Count() > 0)
             {
                 mergePolicies.Add(

@@ -67,6 +67,10 @@ namespace Microsoft.DotNet.Darc
             "NoExtraCommits - If additional non-bot commits appear in the PR, the PR should not be merged.",
             "YAML format:",
             "- Name: NoExtraCommits",
+            "",
+            "NoRequestedChanges - If changes are requested on the PR (or the PR is rejected), it will not be merged.",
+            "YAML format:",
+            "- Name: NoRequestedChanges",
         };
     }
 }

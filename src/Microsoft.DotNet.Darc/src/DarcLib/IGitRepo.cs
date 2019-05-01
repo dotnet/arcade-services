@@ -131,6 +131,13 @@ namespace Microsoft.DotNet.DarcLib
         Task<IList<Check>> GetPullRequestChecksAsync(string pullRequestUrl);
 
         /// <summary>
+        /// Retrieve the list of reviews on a PR.
+        /// </summary>
+        /// <param name="pullRequestUrl">Uri of pull request</param>
+        /// <returns>List of pull request reviews.</returns>
+        Task<IList<Review>> GetPullRequestReviewsAsync(string pullRequestUrl);
+
+        /// <summary>
         ///     Diff two commits in a repository and return information about them.
         /// </summary>
         /// <param name="repoUri">Repository uri</param>

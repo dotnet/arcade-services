@@ -13,6 +13,7 @@ namespace Maestro.MergePolicies
             services.AddTransient<MergePolicy, NoExtraCommitsMergePolicy>();
             services.AddTransient<MergePolicy, RequireSuccessfulChecksMergePolicy>();
             services.AddTransient<MergePolicy, AllChecksSuccessfulMergePolicy>();
+            services.AddTransient<MergePolicy, NoRequestedChangesMergePolicy>();
             return services;
         }
     }

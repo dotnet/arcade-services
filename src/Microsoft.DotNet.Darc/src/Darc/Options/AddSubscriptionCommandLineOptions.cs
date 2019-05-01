@@ -36,6 +36,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("ignore-checks", Separator = ',', HelpText = "For use with --all-checks-passed. A set of checks that are ignored.")]
         public IEnumerable<string> IgnoreChecks { get; set; }
 
+        [Option("no-requested-changes", HelpText = "PR is not merged if there are changes requested or the PR has been rejected.")]
+        public bool NoRequestedChangesMergePolicy { get; set; }
+
         [Option("no-extra-commits", HelpText = "PR is automatically merged if no non-bot commits exist in the PR.")]
         public bool NoExtraCommitsMergePolicy { get; set; }
 
