@@ -3,10 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DotNet.DarcLib;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Maestro.MergePolicies
@@ -15,7 +13,7 @@ namespace Maestro.MergePolicies
     {
         public override string DisplayName => "No Requested Changes";
 
-        public override async Task EvaluateAsync(IMergePolicyEvaluationContext context, MergePolicyProperties properties)
+        public static async Task EvaluateReviewAsync(IMergePolicyEvaluationContext context)
         {
             IEnumerable<Review> reviews = await context.Darc.GetPullRequestReviewsAsync(context.PullRequestUrl);
 
@@ -27,6 +25,11 @@ namespace Maestro.MergePolicies
             {
                 context.Succeed("No reviews have requested changes.");
             }
+        }
+
+        public override async Task EvaluateAsync(IMergePolicyEvaluationContext context, MergePolicyProperties properties)
+        {
+            await EvaluateReviewAsync(context);
         }
     }
 }

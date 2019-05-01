@@ -18,7 +18,7 @@ namespace Maestro.MergePolicies
     {
         public override string DisplayName => "All Checks Successful";
 
-        public static async Task EvaluateChecks(IMergePolicyEvaluationContext context, HashSet<string> ignoredChecks)
+        public static async Task EvaluateChecksAsync(IMergePolicyEvaluationContext context, HashSet<string> ignoredChecks)
         {
             IEnumerable<Check> checks = await context.Darc.GetPullRequestChecksAsync(context.PullRequestUrl);
             IEnumerable<Check> notIgnoredChecks = checks.Where(c => !ignoredChecks.Contains(c.Name));
@@ -69,7 +69,7 @@ namespace Maestro.MergePolicies
         {
             var ignoreChecks = new HashSet<string>(properties.Get<string[]>("ignoreChecks") ?? Array.Empty<string>());
 
-            await EvaluateChecks(context, ignoreChecks);
+            await EvaluateChecksAsync(context, ignoreChecks);
         }
     }
 }

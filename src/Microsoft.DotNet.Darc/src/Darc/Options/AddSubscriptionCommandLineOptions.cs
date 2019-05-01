@@ -29,6 +29,10 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("batchable", HelpText = "Make subscription batchable.")]
         public bool Batchable { get; set; }
 
+        [Option("standard-automerge", HelpText = "Use standard auto-merge policies. GitHub ignores WIP and license/cla checks," +
+            "Azure DevOps ignores comment, reviewer and work item linking. Both will not auto-merge if changes are requested.")]
+        public bool StandardAutoMergePolicies { get; set; }
+
         [Option("all-checks-passed", HelpText = "PR is automatically merged if there is at least one checks and all are passed. " +
             "Optionally provide a comma separated list of ignored check with --ignore-checks.")]
         public bool AllChecksSuccessfulMergePolicy { get; set; }
@@ -41,10 +45,6 @@ namespace Microsoft.DotNet.Darc.Options
 
         [Option("no-extra-commits", HelpText = "PR is automatically merged if no non-bot commits exist in the PR.")]
         public bool NoExtraCommitsMergePolicy { get; set; }
-
-        [Option("require-checks", Separator = ',', HelpText = "PR is automatically merged if the specified checks are passed. " +
-            "Provide a comma separate list of required checks.")]
-        public IEnumerable<string> RequireChecksMergePolicy { get; set; }
 
         [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]
         public bool Quiet { get; set; }
