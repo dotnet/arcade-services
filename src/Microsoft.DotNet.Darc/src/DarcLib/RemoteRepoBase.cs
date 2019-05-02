@@ -238,6 +238,8 @@ namespace Microsoft.DotNet.DarcLib
                 using (StreamWriter w = new StreamWriter(s))
                 {
                     w.Write($"gitdir: {relocatedGitDirPath}");
+                    w.Flush();
+                    s.SetLength(s.Position);
                 }
 
                 using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
