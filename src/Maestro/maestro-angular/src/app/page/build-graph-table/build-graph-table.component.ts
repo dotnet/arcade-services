@@ -105,17 +105,20 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
 
   result = result.reverse();
 
-  if(result[0].build.dependencies)
+  if (result && result[0] && result[0].build)
   {
     result[0].isRootOrImmediateDependency = true;
-    for (const dependecy of result[0].build.dependencies)
+    if (result[0].build.dependencies)
     {
-      if(dependecy)
+      for (const dependecy of result[0].build.dependencies!)
       {
-        let dep = result.find(d => d.build.id == dependecy.buildId);
-        if(dep)
+        if (dependecy)
         {
-          dep.isRootOrImmediateDependency = true;
+          let dep = result.find(d => d.build.id == dependecy.buildId);
+          if (dep)
+          {
+            dep.isRootOrImmediateDependency = true;
+          }
         }
       }
     }
