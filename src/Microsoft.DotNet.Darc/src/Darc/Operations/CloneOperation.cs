@@ -109,7 +109,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         try
                         {
                             IEnumerable<DependencyDetail> deps = await local.GetDependenciesAsync();
-                            IEnumerable<DependencyDetail> filteredDeps = FilterToolsetDependencies(deps, _options.IncludeToolset);
+                            IEnumerable<DependencyDetail> filteredDeps = FilterToolsetDependencies(deps, _options.IncludeToolset, Logger);
                             Logger.LogDebug($"Got {deps.Count()} dependencies and filtered to {filteredDeps.Count()} dependencies");
                             foreach (DependencyDetail d in filteredDeps)
                             {
@@ -422,11 +422,11 @@ namespace Microsoft.DotNet.Darc.Operations
             return $"{GitDirRedirectPrefix}{gitDir}";
         }
 
-        private static IEnumerable<DependencyDetail> FilterToolsetDependencies(IEnumerable<DependencyDetail> dependencies, bool includeToolset)
+        private static IEnumerable<DependencyDetail> FilterToolsetDependencies(IEnumerable<DependencyDetail> dependencies, bool includeToolset, ILogger log)
         {
             if (!includeToolset)
             {
-                Console.WriteLine($"Removing toolset dependencies...");
+                log.LogInformation($"Removing toolset dependencies...");
                 return dependencies.Where(dependency => dependency.Type != DependencyType.Toolset);
             }
             return dependencies;
@@ -457,12 +457,10 @@ namespace Microsoft.DotNet.Darc.Operations
 
             internal static StrippedDependency GetDependency(string repoUrl, string commit)
             {
-                Console.WriteLine($"getting dep for {repoUrl}@{commit}");
                 StrippedDependency dep;
                 dep = AllDependencies.SingleOrDefault(d => d.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant() && d.Commit.ToLowerInvariant() == commit.ToLowerInvariant());
                 if (dep == null)
                 {
-                    Console.WriteLine($"creating dep for {repoUrl}@{commit}");
                     dep = new StrippedDependency(repoUrl, commit);
                     foreach (StrippedDependency previousDep in AllDependencies.Where(d => d.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant()).SelectMany(d => d.Dependencies))
                     {
@@ -485,7 +483,6 @@ namespace Microsoft.DotNet.Darc.Operations
 
             internal void AddDependency(StrippedDependency dep)
             {
-                Console.WriteLine($"adding dep from {this.RepoUri}@{this.Commit} to {dep.RepoUri}@{dep.Commit}");
                 StrippedDependency other = GetDependency(dep);
                 if (this.Dependencies.Any(d => d.RepoUri.ToLowerInvariant() == other.RepoUri.ToLowerInvariant()))
                 {
@@ -505,21 +502,17 @@ namespace Microsoft.DotNet.Darc.Operations
 
             internal bool HasDependencyOn(string repoUrl)
             {
-                Console.WriteLine($"checking {this.RepoUri}@{this.Commit} dep for dependency on {repoUrl}");
                 bool hasDep = false;
-                lock (this.Dependencies)
+                lock (AllDependencies)
                 {
                     foreach (StrippedDependency dep in this.Dependencies)
                     {
-                        Console.WriteLine($"is {dep.RepoUri}@{dep.Commit} a dependency?");
                         if (dep.Visited)
                         {
-                            Console.WriteLine($"{dep.RepoUri}@{dep.Commit} is visited");
                             return false;
                         }
                         if (dep.RepoUri.ToLowerInvariant() == this.RepoUri.ToLowerInvariant())
                         {
-                            Console.WriteLine($"skipping self-dep {this.RepoUri}@{this.Commit}");
                             return false;
                         }
                         dep.Visited = true;
