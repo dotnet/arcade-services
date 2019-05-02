@@ -91,6 +91,12 @@
               Include Toolsets
             </label>
           </span>
+          <span class="form-check float-right">
+            <mc-switch [style]="" [(value)]="showAllDependencies"></mc-switch>
+            <label class="form-check-label">
+              Show Sub-Dependencies
+            </label>
+          </span>
         </div>
         <ng-container *stateful="let graph from graph$; loadingTemplate: loadingData">
           <ul class="nav nav-tabs">
@@ -103,7 +109,7 @@
           </ul>
           <ng-container *ngIf="view$ | async as view">
             <ng-container *ngIf="view == 'graph'">
-              <mc-build-graph-table [graph]="graph" [includeToolsets]="includeToolsets"></mc-build-graph-table>
+              <mc-build-graph-table [graph]="graph" [includeToolsets]="includeToolsets" [showAllDependencies]="showAllDependencies"></mc-build-graph-table>
             </ng-container>
             <ng-container *ngIf="view == 'tree'">
               <mc-build-graph-tree [graph]="graph" [includeToolsets]="includeToolsets" [rootId]="build.id"></mc-build-graph-tree>

@@ -72,7 +72,7 @@
   </thead>
   <tbody @noop>
     <ng-container *ngFor="let node of sortedBuilds; trackBy getBuildId">
-    <tr *ngIf="includeToolsets || !node.isToolset"
+    <tr *ngIf="(includeToolsets || !node.isToolset) && (showAllDependencies || node.isRootOrImmediateDependency)"
       @insertRemove
       [ngClass]="{'table-danger': !isCoherent(node), 'table-warning': hasIncoherentDependencies(node)}"
       (mouseenter)="hover(node.build.id)"
@@ -112,9 +112,9 @@
         {{node.build.azureDevOpsBuildNumber}}
       </td>
       <td class="text-monospace">
+        <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 
+        [style.visibility]="(!isCoherent(node) || hasIncoherentDependencies(node)) ? 'visible' : 'hidden'"></fa-icon>
         <a *ngIf="(node.build | commitLink) as link; else noCommitLink" [href]="link" target="_blank">
-            <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 
-            [style.visibility]="(!isCoherent(node) || hasIncoherentDependencies(node)) ? 'visible' : 'hidden'"></fa-icon>
           {{node.build.commit | slice:0:7}}
           <fa-icon icon="external-link-alt"></fa-icon>
         </a>
