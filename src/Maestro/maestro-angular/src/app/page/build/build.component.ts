@@ -51,6 +51,7 @@ export class BuildComponent implements OnInit, OnChanges {
   public azDevBuildInfo$!: Observable<StatefulResult<AzDevBuildInfo>>;
 
   public includeToolsets: boolean = false;
+  public showAllDependencies: boolean = false;
 
   public neverToastNewBuilds: boolean = false;
 

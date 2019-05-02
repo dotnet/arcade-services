@@ -18,6 +18,7 @@ interface BuildData {
   isFocused?: boolean;
   isLocked?: boolean;
   isToolset?: boolean;
+  isRootOrImmediateDependency?: boolean;
   state?: BuildState;
   hasIncoherentDependencies?: boolean;
   hasIncoherentDependenciesIncludingToolsets?: boolean;
@@ -78,8 +79,7 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
       return build.dependencies.map(dep => graph.builds[dep.buildId]);
     }
     return [];
-  }, build => build.id);
-
+  }, build => build.id);  
 
   let result = sortedBuilds.map<BuildData>(build => {
       const sameRepo = sortedBuilds.filter(b => getRepo(b) === getRepo(build));
@@ -104,6 +104,20 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
   }
 
   result = result.reverse();
+
+  if(result[0].build.dependencies)
+  {
+    result[0].isRootOrImmediateDependency = true;
+    for (const dependecy of result[0].build.dependencies)
+    {
+      let dep = result.find(d => d.build.id == dependecy.buildId);
+      if(dep)
+      {
+        dep.isRootOrImmediateDependency = true;
+      }
+    }
+  }
+
   for (const node of result) {
     node.isToolset = isToolset(node.build, graph);
   }
@@ -198,6 +212,7 @@ export class BuildGraphTableComponent implements OnChanges {
 
   @Input() public graph?: BuildGraph;
   @Input() public includeToolsets?: boolean;
+  @Input() public showAllDependencies?: boolean;
   public sortedBuilds?: BuildData[];
   public locked: boolean = false;
   public focusedBuildId?: number;
