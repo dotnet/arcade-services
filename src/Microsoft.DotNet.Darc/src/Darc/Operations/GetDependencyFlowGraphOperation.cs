@@ -116,6 +116,8 @@ namespace Microsoft.DotNet.Darc.Operations
                     // Solid
                     return "style=bold";
                 case UpdateFrequency.EveryDay:
+                case UpdateFrequency.TwiceDaily:
+                case UpdateFrequency.EveryWeek:
                     return "style=dashed";
                 case UpdateFrequency.None:
                     return "style=dotted";

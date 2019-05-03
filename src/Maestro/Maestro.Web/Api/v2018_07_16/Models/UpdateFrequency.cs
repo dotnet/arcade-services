@@ -8,6 +8,8 @@ namespace Maestro.Web.Api.v2018_07_16.Models
     {
         None = 0,
         EveryDay,
-        EveryBuild
+        EveryBuild,
+        TwiceDaily,
+        EveryWeek,
     }
 }
