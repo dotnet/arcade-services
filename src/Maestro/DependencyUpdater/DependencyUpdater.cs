@@ -146,13 +146,39 @@ namespace DependencyUpdater
         [CronSchedule("0 0 5 1/1 * ? *", TimeZones.PST)]
         public async Task CheckDailySubscriptionsAsync(CancellationToken cancellationToken)
         {
-            using (Logger.BeginScope(
-                "Updating daily subscriptions"))
+            await CheckSubscriptionsAsync(UpdateFrequency.EveryDay, cancellationToken);
+        }
+        
+        /// <summary>
+        ///     Check "TwiceDaily" subscriptions at 5 AM and 7 PM
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        [CronSchedule("0 0 5,19 * * ?", TimeZones.PST)]
+        public async Task CheckTwiceDailySubscriptionsAsync(CancellationToken cancellationToken)
+        {
+            await CheckSubscriptionsAsync(UpdateFrequency.TwiceDaily, cancellationToken);
+        }
+        
+        /// <summary>
+        ///     Check "EveryWeek" subscriptions on Monday at 5 AM
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        [CronSchedule("0 0 5 ? * MON", TimeZones.PST)]
+        public async Task CheckWeeklySubscriptionsAsync(CancellationToken cancellationToken)
+        {
+            await CheckSubscriptionsAsync(UpdateFrequency.EveryWeek, cancellationToken);
+        }
+
+        private async Task CheckSubscriptionsAsync(UpdateFrequency targetUpdateFrequency, CancellationToken cancellationToken)
+        {
+            using (Logger.BeginScope($"Updating {targetUpdateFrequency} subscriptions"))
             {
                 var subscriptionsToUpdate = from sub in Context.Subscriptions
                                             where sub.Enabled
                                             let updateFrequency = JsonExtensions.JsonValue(sub.PolicyString, "lax $.UpdateFrequency")
-                                            where updateFrequency == ((int)UpdateFrequency.EveryDay).ToString()
+                                            where updateFrequency == ((int)targetUpdateFrequency).ToString()
                                             let latestBuild =
                                                 sub.Channel.BuildChannels.Select(bc => bc.Build)
                                                     .Where(b => (sub.SourceRepository == b.GitHubRepository || sub.SourceRepository == b.AzureDevOpsRepository))
