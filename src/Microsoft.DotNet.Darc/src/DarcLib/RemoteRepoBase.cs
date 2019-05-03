@@ -177,6 +177,11 @@ namespace Microsoft.DotNet.DarcLib
                         targetDirectory,
                         cloneOptions);
 
+                    LibGit2Sharp.CheckoutOptions checkoutOptions = new LibGit2Sharp.CheckoutOptions
+                    {
+                        CheckoutModifiers = LibGit2Sharp.CheckoutModifiers.Force,
+                    };
+
                     _logger.LogDebug($"Reading local repo from {repoPath}");
                     using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoPath))
                     {
@@ -188,14 +193,14 @@ namespace Microsoft.DotNet.DarcLib
                         try
                         {
                             _logger.LogDebug($"Attempting to checkout {commit} as commit in {localRepo.Info.WorkingDirectory}");
-                            LibGit2Sharp.Commands.Checkout(localRepo, commit);
+                            LibGit2Sharp.Commands.Checkout(localRepo, commit, checkoutOptions);
                         }
                         catch
                         {
                             _logger.LogDebug($"Failed to checkout {commit} as commit, trying to resolve");
                             string resolvedReference = ParseReference(localRepo, commit, _logger);
                             _logger.LogDebug($"Resolved {commit} to {resolvedReference ?? "<invalid>"} in {localRepo.Info.WorkingDirectory}, attempting checkout");
-                            LibGit2Sharp.Commands.Checkout(localRepo, resolvedReference);
+                            LibGit2Sharp.Commands.Checkout(localRepo, resolvedReference, checkoutOptions);
                         }
                     }
                     // LibGit2Sharp doesn't support a --git-dir equivalent yet (https://github.com/libgit2/libgit2sharp/issues/1467), so we do this manually
