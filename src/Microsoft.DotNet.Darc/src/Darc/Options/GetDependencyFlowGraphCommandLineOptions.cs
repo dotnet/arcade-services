@@ -17,8 +17,8 @@ namespace Microsoft.DotNet.Darc.Options
 
         [Option("include-disabled-subscriptions", HelpText = @"Include edges that have disabled subscriptions")]
         public bool IncludeDisabledSubscriptions { get; set; }
-        
-        [Option("frequencies", Separator = ',', Default = new string[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", },
+
+        [Option("frequencies", Separator = ',', Default = new string[] { "everyDay","everyBuild","none" },
             HelpText = @"Include only subscriptions with the specific update frequencies in the graph.")]
         public IEnumerable<string> IncludedFrequencies { get; set; }
 

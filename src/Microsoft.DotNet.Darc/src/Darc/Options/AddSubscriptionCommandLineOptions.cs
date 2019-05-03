@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("target-branch", HelpText = "Target branch for the subscription.")]
         public string TargetBranch { get; set; }
 
-        [Option("update-frequency", HelpText = "Frequency of updates. Valid values are: 'none', 'everyDay', 'everyBuild', 'twiceDaily', or 'everyWeek'.")]
+        [Option("update-frequency", HelpText = "Frequency of updates. Valid values are: 'none', 'everyDay', or 'everyBuild'.")]
         public string UpdateFrequency { get; set; }
 
         [Option("batchable", HelpText = "Make subscription batchable.")]

@@ -24,9 +24,7 @@ namespace Microsoft.DotNet.Darc
         {
             "none",
             "everyDay",
-            "everyBuild",
-            "twiceDaily",
-            "everyWeek",
+            "everyBuild"
         };
 
         /// <summary>

@@ -82,7 +82,8 @@ namespace Microsoft.DotNet.Darc.Operations
             IEnumerable<Subscription> subscriptionsThatWillFlowImmediately = applicableSubscriptions.Where(s => s.Enabled &&
                     s.Policy.UpdateFrequency == UpdateFrequency.EveryBuild);
             IEnumerable<Subscription> subscriptionsThatWillFlowTomorrowOrNotAtAll = applicableSubscriptions.Where(s => s.Enabled &&
-                    s.Policy.UpdateFrequency != UpdateFrequency.EveryBuild);
+                (s.Policy.UpdateFrequency == UpdateFrequency.EveryDay ||
+                s.Policy.UpdateFrequency == UpdateFrequency.None));
             IEnumerable<Subscription> disabledSubscriptions = applicableSubscriptions.Where(s => !s.Enabled);
 
             // Print out info
