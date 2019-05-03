@@ -13,9 +13,5 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         EveryDay,
         [EnumMember(Value = "everyBuild")]
         EveryBuild,
-        [EnumMember(Value = "twiceDaily")]
-        TwiceDaily,
-        [EnumMember(Value = "everyWeek")]
-        EveryWeek,
     }
 }
