@@ -159,7 +159,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="sourceRepo">URL of source repository</param>
         /// <param name="targetRepo">URL of target repository where updates should be made</param>
         /// <param name="targetBranch">Name of target branch where updates should be made</param>
-        /// <param name="updateFrequency">Frequency of updates, can be 'none', 'everyBuild' or 'everyDay'</param>
+        /// <param name="updateFrequency">Frequency of updates, can be 'none', 'everyBuild', 'everyDay', 'twiceDaily', or 'everyWeek'</param>
         /// <param name="mergePolicies">
         ///     Dictionary of merge policies. Each merge policy is a name of a policy with an associated blob
         ///     of metadata
