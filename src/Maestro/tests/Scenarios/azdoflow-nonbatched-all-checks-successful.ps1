@@ -11,7 +11,8 @@ $pullRequestBaseBranch = $null
 $sourceRepoName = "maestro-test1"
 $targetRepoName = "maestro-test2"
 $testChannelName = Get-Random
-$targetBranch = Get-Random
+# Test folder has merge policies for no-unresolved comments and linked work items
+$targetBranch = "test/$(Get-Random)"
 $sourceBuildNumber = Get-Random
 $sourceCommit = Get-Random
 $sourceBranch = "master"
@@ -28,7 +29,7 @@ $sourceAssets = @(
 
 try {
     Write-Host
-    Write-Host "Azure DevOps Dependency Flow, non-batched"
+    Write-Host "Azure DevOps Dependency Flow, non-batched auto merge with all-checks-successful policy"
     Write-Host
 
     # Import common tooling and prep for tests
@@ -44,7 +45,7 @@ try {
     Darc-Add-Channel $testChannelName "test"
 
     Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
-    $subscriptionId = Darc-Add-Subscription --channel `'$testChannelName`' --source-repo $sourceRepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch
+    $subscriptionId = Darc-Add-Subscription --channel `'$testChannelName`' --source-repo $sourceRepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch --all-checks-passed --ignore-checks "'Work item linking'"
 
     Write-Host "Set up build for intake into target repository"
     # Create a build for the source repo
@@ -95,11 +96,11 @@ try {
         ""
     )
 
-    Write-Host "Waiting on PR to be opened in $targetRepoUri"
-    $success = Check-NonBatched-AzDO-PullRequest $sourceRepoName $targetRepoName $targetBranch $expectedDependencies
+    Write-Host "Waiting on PR to be opened and auto merged in $targetRepoUri"
+    $success = Check-NonBatched-AzDO-PullRequest $sourceRepoName $targetRepoName $targetBranch $expectedDependencies $true
 
     if (!$success) {
-        throw "Pull request failed to open."
+        throw "Pull request failed to open and be automatically completed."
     } else {
         Write-Host "Test passed"
     }
