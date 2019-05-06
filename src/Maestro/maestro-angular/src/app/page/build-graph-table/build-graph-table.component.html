@@ -35,6 +35,22 @@
         <span>This node is a different build of the same repository as the focused node.</span>
         </td>
       </tr>
+      <tr>
+        <td>
+            <span class="align-self-center" style="padding-right: 1rem;"><fa-icon icon="exclamation-circle"></fa-icon></span>
+        </td>
+        <td>
+          <span class='table-danger'>This node is incoherent</span>
+        </td>
+      </tr>
+      <tr>
+        <td>
+            <span class="align-self-center" style="padding-right: 1rem;"><fa-icon icon="exclamation-triangle"></fa-icon></span>
+        </td>
+        <td>
+          <span class='table-warning'>This node has incoherent dependencies</span>
+        </td>
+      </tr>
     </tbody>
   </table>
   <p>
@@ -56,9 +72,9 @@
   </thead>
   <tbody @noop>
     <ng-container *ngFor="let node of sortedBuilds; trackBy getBuildId">
-    <tr *ngIf="includeToolsets || !node.isToolset"
+    <tr *ngIf="(includeToolsets || !node.isToolset) && (showAllDependencies || node.isRootOrImmediateDependency)"
       @insertRemove
-      [ngClass]="{'table-warning': !isCoherent(node)}"
+      [ngClass]="{'table-danger': !isCoherent(node), 'table-warning': hasIncoherentDependencies(node)}"
       (mouseenter)="hover(node.build.id)"
       (mouseleave)="hover(undefined)">
       <td (click)="node.isFocused && toggleLock()" class="graph-icon">
@@ -90,17 +106,21 @@
         <mc-time-ago [value]="node.build.dateProduced"></mc-time-ago>
       </td>
       <td>
-        <fa-icon icon="exclamation-circle" title="A newer build of this same repository is in the tree" [style.visibility]="!isCoherent(node) ? 'visible' : 'hidden'"></fa-icon>
+        <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 
+          [title]="!isCoherent(node) ? 'A newer build of this same repository is in the tree' : (hasIncoherentDependencies(node) ? 'This build relies on dependencies that are incoherent' : '')" 
+          [style.visibility]="(!isCoherent(node) || hasIncoherentDependencies(node)) ? 'visible' : 'hidden'"></fa-icon>
         {{node.build.azureDevOpsBuildNumber}}
       </td>
       <td class="text-monospace">
+        <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 
+        [style.visibility]="(!isCoherent(node) || hasIncoherentDependencies(node)) ? 'visible' : 'hidden'"></fa-icon>
         <a *ngIf="(node.build | commitLink) as link; else noCommitLink" [href]="link" target="_blank">
-          <fa-icon icon="exclamation-circle" [style.visibility]="!isCoherent(node) ? 'visible' : 'hidden'"></fa-icon>
           {{node.build.commit | slice:0:7}}
           <fa-icon icon="external-link-alt"></fa-icon>
         </a>
         <ng-template #noCommitLink>
-          <fa-icon icon="exclamation-circle" [style.visibility]="!isCoherent(node) ? 'visible' : 'hidden'"></fa-icon>
+            <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 
+            [style.visibility]="(!isCoherent(node) || hasIncoherentDependencies(node)) ? 'visible' : 'hidden'"></fa-icon>
           {{node.build.commit | slice:0:7}}
         </ng-template>
       </td>
