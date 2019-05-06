@@ -115,7 +115,7 @@ function Teardown() {
             Write-Host "Removing $($branch.branch) from $($branch.repo)"
             GitHub-Delete-Branch $branch.repo $branch.branch
         } catch {
-            Write-Warning "Failed to remove github branch $($branch.branch) $($branch.repo)"
+            Write-Warning "Failed to remove github branch $($branch.branch) in $($branch.repo)"
             Write-Warning $_
         }
     } 
@@ -345,7 +345,7 @@ function Delete-Pipeline($barPipelineId) {
 
     Write-Host "Deleting Pipeline $barPipelineId from the Build Asset Registry..."
 
-    Invoke-WebRequest -Uri $uri -Headers $headers -Method Delete
+    Invoke-WebRequest -Uri $uri -Headers $headers -Method Delete | Out-Null
 }
 
 function Add-Pipeline-To-Channel($channelName, $pipelineId) {
@@ -358,7 +358,7 @@ function Add-Pipeline-To-Channel($channelName, $pipelineId) {
     Write-Host "Adding pipeline ${pipelineId} to channel ${channelId} in the Build Asset Registry..."
 
     $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
-    Write-Host $response
+
     $global:channelPipelinesToDelete[$channelName] += $pipelineId
 }
 
@@ -371,7 +371,7 @@ function Remove-Pipeline-From-Channel($channelName, $pipelineId) {
 
     Write-Host "Removing pipeline ${pipelineId} from channel ${channelId} in the Build Asset Registry..."
 
-    Invoke-WebRequest -Uri $uri -Headers $headers -Method Delete
+    Invoke-WebRequest -Uri $uri -Headers $headers -Method Delete | Out-Null
 }
 
 #
@@ -402,7 +402,7 @@ function AzDO-Delete-Branch($repoName, $branchName) {
         newObjectId="0000000000000000000000000000000000000000"
         oldObjectId="0000000000000000000000000000000000000000"
     })
-    Invoke-WebRequest -Uri $uri -Headers $(Get-AzDO-Headers) -Method Post -Body $body -ContentType 'application/json'
+    Invoke-WebRequest -Uri $uri -Headers $(Get-AzDO-Headers) -Method Post -Body $body -ContentType 'application/json' | Out-Null
 }
 
 function Close-AzDO-PullRequest($targetRepoName, $prId) {
@@ -410,19 +410,34 @@ function Close-AzDO-PullRequest($targetRepoName, $prId) {
     $body = @{
         status="abandoned"
     } | ConvertTo-Json
-    Invoke-WebRequest -Uri $uri -Headers $(Get-AzDO-Headers) -Method Patch -Body $body -ContentType 'application/json'
+    Invoke-WebRequest -Uri $uri -Headers $(Get-AzDO-Headers) -Method Patch -Body $body -ContentType 'application/json' | Out-Null
 }
 
 function Get-AzDO-PullRequests($targetRepoName, $targetBranch) {
     $uri = "$(Get-AzDO-RepoApiUri($targetRepoName))/pullrequests?searchCriteria.status=active&searchCriteria.targetRefName=refs/heads/${targetBranch}&api-version=${azdoApiVersion}"
-    Invoke-WebRequest -Uri $uri -Headers $(Get-AzDO-Headers) -Method Get  | ConvertFrom-Json
+    Invoke-WebRequest -Uri $uri -Headers $(Get-AzDO-Headers) -Method Get | ConvertFrom-Json
 }
 
-function Check-AzDO-PullRequest($sourceRepoName, $targetRepoName, $targetBranch, $expectedDependencies) {
+function Check-AzDO-PullRequest-Completed($targetRepoName, $pullRequestNumber) {
+    $uri = "$(Get-AzDO-RepoApiUri($targetRepoName))/pullrequests/$pullRequestNumber"
+    $tries = 7
+    while ($tries-- -gt 0) {
+        $pullrequest = Invoke-WebRequest -Uri $uri -Headers $(Get-AzDO-Headers) -Method Get | ConvertFrom-Json
+        if ($pullRequest.status -eq "completed") {
+            return $true
+        }
+        Write-Host "Pull request has not been completed. $tries tries remaining."
+        Start-Sleep 60
+    }
+    $global:azdoPRsToClose += @{ number = $pullRequestNumber; repo = $targetRepoName }
+    throw "Expected PR to be completed."
+}
+
+function Check-AzDO-PullRequest-Created($targetRepoName, $targetBranch) {
     # Check that the PR was created properly. poll azdo
     $tries = 10
-    $success = $false
     while ($tries-- -gt 0) {
+        Start-Sleep 60
         Write-Host "Checking for PRs, ${tries} tries remaining"
         $pullRequests = Get-AzDO-PullRequests $targetRepoName $targetBranch
         if ($pullRequests.count -gt 0) {
@@ -434,40 +449,66 @@ function Check-AzDO-PullRequest($sourceRepoName, $targetRepoName, $targetBranch,
             $pullRequestBaseBranch = $pullRequest.sourceRefName.Replace('refs/heads/','')
             $global:azdoBranchesToDelete += @{ branch = $pullRequestBaseBranch; repo = $targetRepoName}
             $global:azdoPRsToClose += @{ number = $pullRequest.pullRequestId; repo = $targetRepoName }
-
-            $expectedPRTitle = "[$targetBranch] Update dependencies from $azdoAccount/$azdoProject/$sourceRepoName"
-            if ($pullRequest.title -ne $expectedPRTitle) {
-                throw "Expected PR title to be $expectedPRTitle, was $($pullrequest.title)"
-            }
-
-            # Check out the merge commit sha, then use darc to get and verify the
-            # dependencies
-            Git-Command $targetRepoName fetch
-            Git-Command $targetRepoName checkout $pullRequestBaseBranch
-
-            try {
-                Push-Location -Path $(Get-Repo-Location $targetRepoName)
-                $dependencies = Darc-Command get-dependencies
-
-                if ($dependencies.Count -ne $expectedDependencies.Count) {
-                    Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."
-                    throw "PR did not have expected dependency updates."
-                }
-                for ($i = 0; $i -lt $expectedDependencies.Count; $i++) {
-                    if ($dependencies[$i] -notmatch $expectedDependencies[$i]) {
-                        Write-Error "Dependencies Line $i not matched`nExpected $($expectedDependencies[$i])`nActual $($dependencies[$i])"
-                        throw "PR did not have expected dependency updates."
-                    }
-                }
-            } finally {
-                Pop-Location
-            }
-
-            $success = $true
-            break
+            return $pullRequest
         }
-        Start-Sleep 60
     }
+}
+
+function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $targetRepoName, $targetBranch, $expectedDependencies) {
+    $pullRequestBaseBranch = $pullRequest.sourceRefName.Replace('refs/heads/','')
+
+    if ($pullRequest.title -ne $expectedPRTitle) {
+        throw "Expected PR title to be $expectedPRTitle, was $($pullrequest.title)"
+    }
+
+    # Check out the merge commit sha, then use darc to get and verify the
+    # dependencies
+    Git-Command $targetRepoName fetch
+    Git-Command $targetRepoName checkout $pullRequestBaseBranch
+
+    try {
+        Push-Location -Path $(Get-Repo-Location $targetRepoName)
+        $dependencies = Darc-Command get-dependencies
+
+        if ($dependencies.Count -ne $expectedDependencies.Count) {
+            Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."
+            throw "PR did not have expected dependency updates."
+        }
+        for ($i = 0; $i -lt $expectedDependencies.Count; $i++) {
+            if ($dependencies[$i] -notmatch $expectedDependencies[$i]) {
+                Write-Error "Dependencies Line $i not matched`nExpected $($expectedDependencies[$i])`nActual $($dependencies[$i])"
+                throw "PR did not have expected dependency updates."
+            }
+        }
+        Write-Host "Finished validating PR contents"
+        return $true
+    } finally {
+        Pop-Location
+    }
+}
+
+function Check-NonBatched-AzDO-PullRequest($sourceRepoName, $targetRepoName, $targetBranch, $expectedDependencies, $complete = $false) {
+    $expectedPRTitle = "[$targetBranch] Update dependencies from $azdoAccount/$azdoProject/$sourceRepoName"
+    return Check-AzDO-PullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies $complete
+}
+
+function Check-Batched-AzDO-PullRequest($sourceRepoCount, $targetRepoName, $targetBranch, $expectedDependencies) {
+    $expectedPRTitle = "[$targetBranch] Update dependencies from  $sourceRepoCount repositories"
+    return Check-AzDO-PullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies $false
+}
+
+function Check-AzDO-PullRequest($expectedPRTitle, $targetRepoName, $targetBranch, $exptectedDependencies, $complete)
+{
+    Write-Host "Checking Opened PR in $targetBranch $targetRepoName ..."
+    $pullRequest = Check-AzDO-PullRequest-Created $targetRepoName $targetBranch
+    if (!$pullRequest) {
+        return $false
+    }
+    Validate-AzDO-PullRequest-Contents $pullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies
+    if ($complete) {
+        Check-AzDO-PullRequest-Completed $targetRepoName $pullRequest.pullRequestId
+    }
+    return $true
 }
 
 function Get-AzDO-RepoApiUri($repoName) {
@@ -553,7 +594,7 @@ function GitHub-Clone($repoName) {
 
 function GitHub-Delete-Branch($repoName, $branchName) {
     $uri = "$(Get-Github-RepoApiUri($repoName))/git/refs/heads/${branchName}"
-    Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Delete
+    Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Delete | Out-Null
 }
 
 function Close-GitHub-PullRequest($targetRepoName, $prId) {
@@ -561,63 +602,132 @@ function Close-GitHub-PullRequest($targetRepoName, $prId) {
     $body = @{
         state="closed"
     } | ConvertTo-Json
-    Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Patch -Body $body
+    Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Patch -Body $body | Out-Null
 }
 
 function Get-GitHub-PullRequests($targetRepoName, $targetBranch) {
     $uri = "$(Get-Github-RepoApiUri($targetRepoName))/pulls?state=open&base=$targetBranch"
-    Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Get  | ConvertFrom-Json
+    Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Get | ConvertFrom-Json
 }
 
-function Check-Github-PullRequest($sourceRepoName, $targetRepoName, $targetBranch, $expectedDependencies) {
+function Get-Github-File-Contents($repoUri, $path, $ref) {
+    $uri = "$repoUri/contents/${path}?ref=$ref"
+    Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Get | ConvertFrom-Json
+}
+
+function Check-Github-PullRequest-Completed($targetRepoName, $pullRequestNumber) {
+    $uri = "$(Get-Github-RepoApiUri($targetRepoName))/pulls/$pullRequestNumber/merge"
+    Write-Host "Checking $uri until it reports a completed merge"
+    # Maestro checks PRs every 5 minutes, give it a couple extra minutes just in case.
+    $tries = 7
+    while ($tries-- -gt 0) {
+        # Github API returns 404 if the PR has not been merged, so check for exception and keep trying
+        try {
+            Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Get
+            return
+        }
+        catch {
+            Write-Host "Pull request has not been completed. $tries tries remaining."
+            Start-Sleep 60
+        }
+    }
+    throw "Expected PR to be completed."
+}
+
+function Check-Github-PullRequest-Created($targetRepoName, $targetBranch) {
     # Check that the PR was created properly. poll github
     $tries = 10
-    $success = $false
     while ($tries-- -gt 0) {
+        Start-Sleep 60
         Write-Host "Checking for PRs, ${tries} tries remaining"
-        $pullRequest = Get-GitHub-PullRequests $targetRepoName $targetBranch
-        if ($pullRequest) {
+        $pullRequests = Get-GitHub-PullRequests $targetRepoName $targetBranch
+
+        if ($pullRequests) {
             # Find and verify PR info
-            if ($pullRequest.Count -ne 1) {
+            if ($pullRequests.Count -ne 1) {
                 throw "Unexpected number of pull requests opened."
             }
-            $pullRequest = $pullRequest[0]
-
+            $pullRequest = $pullRequests[0]
             $pullRequestBaseBranch = $pullRequest.head.ref
-            $global:githubBranchesToDelete += @{ branch = $pullRequestBaseBranch; repo = $targetRepoName}
             $global:gitHubPRsToClose += @{ number = $pullRequest.number; repo = $targetRepoName }
-
-            $expectedPRTitle = "[$targetBranch] Update dependencies from $githubTestOrg/$sourceRepoName"
-            if ($pullRequest.title -ne $expectedPRTitle) {
-                throw "Expected PR title to be $expectedPRTitle, was $($pullRequest.title)"
-            }
-
-            # Check out the merge commit sha, then use darc to get and verify the
-            # dependencies
-            Git-Command $targetRepoName fetch
-            Git-Command $targetRepoName checkout $pullRequestBaseBranch
-
-            try {
-                Push-Location -Path $(Get-Repo-Location $targetRepoName)
-                $dependencies = Darc-Command get-dependencies
-
-                if ($dependencies.Count -ne $expectedDependencies.Count) {
-                    Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."
-                    throw "PR did not have expected dependency updates."
-                }
-                for ($i = 0; $i -lt $expectedDependencies.Count; $i++) {
-                    if ($dependencies[$i] -notmatch $expectedDependencies[$i]) {
-                        Write-Error "Dependencies Line $i not matched`nExpected $($expectedDependencies[$i])`nActual $($dependencies[$i])"
-                        throw "PR did not have expected dependency updates."
-                    }
-                }
-            } finally {
-                Pop-Location
-            }
-
-            $success = $true
-            break
+            $global:githubBranchesToDelete += @{ branch = $pullRequestBaseBranch; repo = $targetRepoName}
+            return $pullRequest[0]
         }
-        Start-Sleep 60
     }
+    throw "Could not find open pull request in $targetRepoName for branch $targetBranch"
+}
+
+function Validate-Github-PullRequest-Contents($pullRequest, $expectedPRTitle, $targetRepoName, $targetBranch, $expectedDependencies) {
+    $pullRequestBaseBranch = $pullRequest.head.ref
+    if ($pullRequest.title -ne $expectedPRTitle) {
+        throw "Expected PR title to be $expectedPRTitle, was $($pullrequest.title)"
+    }
+
+    # Check out the merge commit sha, then use darc to get and verify the
+    # dependencies
+    Git-Command $targetRepoName fetch
+    Git-Command $targetRepoName checkout $pullRequestBaseBranch
+    try {
+        Push-Location -Path $(Get-Repo-Location $targetRepoName)
+        $dependencies = Darc-Command get-dependencies
+
+        if ($dependencies.Count -ne $expectedDependencies.Count) {
+            Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."
+            throw "PR did not have expected dependency updates."
+        }
+
+        for ($i = 0; $i -lt $expectedDependencies.Count; $i++) {
+            if ($dependencies[$i] -notmatch $expectedDependencies[$i]) {
+                Write-Error "Dependencies Line $i not matched`nExpected $($expectedDependencies[$i])`nActual $($dependencies[$i])"
+                throw "PR did not have expected dependency updates."
+            }
+        }
+        Write-Host "Finished validating PR contents"
+    } finally {
+        Pop-Location
+    }
+}
+
+function Check-NonBatched-Github-PullRequest($sourceRepoName, $targetRepoName, $targetBranch, $expectedDependencies, $complete = $false) {
+    $expectedPRTitle = "[$targetBranch] Update dependencies from $githubTestOrg/$sourceRepoName"
+    return Check-Github-PullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies $complete
+}
+
+function Check-Batched-Github-PullRequest($sourceRepoCount, $targetRepoName, $targetBranch, $expectedDependencies) {
+    $expectedPRTitle = "[$targetBranch] Update dependencies from  $sourceRepoCount repositories"
+    return Check-Github-PullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies $false
+}
+
+function Check-Github-PullRequest($expectedPRTitle, $targetRepoName, $targetBranch, $exptectedDependencies, $complete)
+{
+    Write-Host "Checking Opened PR in $targetBranch $targetRepoName ..."
+    $pullRequest = Check-Github-PullRequest-Created $targetRepoName $targetBranch
+    if (!$pullRequest) {
+        return $false
+    }
+    Validate-Github-PullRequest-Contents $pullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies
+    if ($complete) {
+        Check-Github-PullRequest-Completed $targetRepoName $pullRequest.number
+    }
+    return $true
+}
+
+function Validate-Arcade-PullRequest-Contents($pullRequest, $expectedPRTitle, $targetRepoName, $targetBranch, $expectedDependencies) {
+    Validate-Github-PullRequest-Contents $pullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies
+    Write-Host "Validating dependency update PR changes specific to arcade..."
+    Write-Host "Checking for eng\common directory..."
+    $engCommon = Get-Github-File-Contents $targetRepoName "eng/common" $pullRequest.merge_commit_sha
+
+    if (!$engCommon -or $engCommon.Length -eq 0) {
+        throw "Could not find update to eng/common files in the pull request."
+    }
+    $globaljson = Get-Github-File-Contents $targetRepoName "global.json" $pullRequest.merge_commit_sha
+    if (!$globaljson) {
+        throw "Could not find global.json in the pull request."
+    }
+}
+
+function Get-ArcadeRepoUri
+{
+    "https://github.com/dotnet/arcade"
 }

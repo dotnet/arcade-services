@@ -3,14 +3,15 @@ param(
     [string]$darcVersion,
     [string]$maestroBearerToken,
     [string]$githubPAT,
+    [string]$githubUser,
     [string]$azdoPAT
 )
 
 $subscriptionId = $null
 $pullRequestBaseBranch = $null
+$testChannelName = Get-Random
 $sourceRepoName = "maestro-test1"
 $targetRepoName = "maestro-test2"
-$testChannelName = Get-Random
 $targetBranch = Get-Random
 $sourceBuildNumber = Get-Random
 $sourceCommit = Get-Random
@@ -28,7 +29,7 @@ $sourceAssets = @(
 
 try {
     Write-Host
-    Write-Host "Azure DevOps Dependency Flow, non-batched"
+    Write-Host "GitHub Dependency Flow, non-batched auto merge with require-checks policy"
     Write-Host
 
     # Import common tooling and prep for tests
@@ -37,14 +38,15 @@ try {
     Write-Host "Running tests..."
     Write-Host
 
-    $sourceRepoUri = Get-AzDO-RepoUri $sourceRepoName
-    $targetRepoUri = Get-AzDO-RepoUri $targetRepoName
-
+    $sourceRepoUri = Get-Github-RepoUri $sourceRepoName
+    $targetRepoUri = Get-Github-RepoUri $targetRepoName
+    
     Write-Host "Creating a test channel '$testChannelName'"
+    try { Darc-Command delete-channel --name `'$testChannelName`' } catch {}
     Darc-Add-Channel $testChannelName "test"
 
     Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
-    $subscriptionId = Darc-Add-Subscription --channel `'$testChannelName`' --source-repo $sourceRepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch
+    $subscriptionId = Darc-Add-Subscription --channel `'$testChannelName`' --source-repo $sourceRepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch --all-checks-passed --require-checks "'WIP'"
 
     Write-Host "Set up build for intake into target repository"
     # Create a build for the source repo
@@ -54,7 +56,7 @@ try {
 
     Write-Host "Cloning target repo to prepare the target branch"
     # Clone the target repo, branch, add the new dependencies and push the branch
-    AzDO-Clone $targetRepoName
+    GitHub-Clone $targetRepoName
     Git-Command $targetRepoName checkout -b $targetBranch
 
     Write-Host "Adding dependencies to target repo"
@@ -72,11 +74,13 @@ try {
     # Commit and push
     Git-Command $targetRepoName commit -am `"Add dependencies.`"
     Git-Command $targetRepoName push origin HEAD
-    $global:azdoBranchesToDelete += @{ branch = $targetBranch; repo = $targetRepoName}
+    $global:githubBranchesToDelete += @{ branch = $targetBranch; repo = $targetRepoName}
 
     Write-Host "Trigger the dependency update"
     # Trigger the subscription
     Trigger-Subscription $subscriptionId
+
+    Write-Host "Waiting on PR to be opened in $targetRepoUri"
 
     $expectedDependencies =@(
         "Name:             Foo"
@@ -95,8 +99,7 @@ try {
         ""
     )
 
-    Write-Host "Waiting on PR to be opened in $targetRepoUri"
-    $success = Check-NonBatched-AzDO-PullRequest $sourceRepoName $targetRepoName $targetBranch $expectedDependencies
+    $success = Check-NonBatched-Github-PullRequest $sourceRepoName $targetRepoName $targetBranch $expectedDependencies $true
 
     if (!$success) {
         throw "Pull request failed to open."
