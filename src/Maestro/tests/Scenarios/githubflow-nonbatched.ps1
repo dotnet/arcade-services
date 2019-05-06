@@ -99,7 +99,7 @@ try {
         ""
     )
 
-    $success = Check-Github-PullRequest $sourceRepoName $targetRepoName $targetBranch $expectedDependencies
+    $success = Check-NonBatched-Github-PullRequest $sourceRepoName $targetRepoName $targetBranch $expectedDependencies
 
     if (!$success) {
         throw "Pull request failed to open."

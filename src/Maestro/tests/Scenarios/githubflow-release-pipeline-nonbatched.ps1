@@ -133,7 +133,7 @@ try {
     ""
     )
 
-   $success = Check-Github-PullRequest $sourceRepoName $targetRepoName $targetBranch $expectedDependencies
+   $success = Check-NonBatched-Github-PullRequest $sourceRepoName $targetRepoName $targetBranch $expectedDependencies
 
     $buildInfo = Get-Build $buildId
     if ($buildInfo.id -ne $buildId) {
