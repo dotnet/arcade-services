@@ -250,7 +250,7 @@ namespace Microsoft.DotNet.DarcLib
                 using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
                 {
                     log.LogDebug($"Resetting {sub.Name} to {sub.HeadCommitId.Sha}");
-                    subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.Single(c => c.Sha == sub.HeadCommitId.Sha));
+                    subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.QueryBy(new LibGit2Sharp.CommitFilter { IncludeReachableFrom = subRepo.Refs }).Single(c => c.Sha == sub.HeadCommitId.Sha));
                     CheckoutSubmodules(subRepo, submoduleCloneOptions, absoluteGitDirPath, log);
                 }
             }

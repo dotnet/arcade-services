@@ -282,6 +282,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             using (_logger.BeginScope("Checking out {commit}", commit ?? "default commit"))
             {
+                _logger.LogDebug($"Checking out {commit}", commit ?? "default commit");
                 LibGit2Sharp.CheckoutOptions checkoutOptions = new LibGit2Sharp.CheckoutOptions
                 {
                     CheckoutModifiers = force ? LibGit2Sharp.CheckoutModifiers.Force : LibGit2Sharp.CheckoutModifiers.None,
@@ -365,6 +366,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             using (log.BeginScope($"Beginning clean of {repo.Info.WorkingDirectory} and {repo.Submodules.Count()} submodules"))
             {
+                log.LogDebug($"Beginning clean of {repo.Info.WorkingDirectory} and {repo.Submodules.Count()} submodules");
                 LibGit2Sharp.StatusOptions options = new LibGit2Sharp.StatusOptions
                 {
                     IncludeUntracked = true,
@@ -412,9 +414,11 @@ namespace Microsoft.DotNet.DarcLib
 
                     using (log.BeginScope($"Beginning clean of submodule {sub.Name}"))
                     {
+                        log.LogDebug($"Beginning clean of submodule {sub.Name} in {subRepoPath}");
                         using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
                         {
-                            subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.Single(c => c.Sha == sub.HeadCommitId.Sha));
+                            log.LogDebug($"Resetting {sub.Name} to {sub.HeadCommitId.Sha}");
+                            subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.QueryBy(new LibGit2Sharp.CommitFilter { IncludeReachableFrom = subRepo.Refs }).Single(c => c.Sha == sub.HeadCommitId.Sha));
                             log.LogDebug($"Done resetting {subRepoPath}, checking submodules");
                             CleanRepoAndSubmodules(subRepo, log);
                         }
