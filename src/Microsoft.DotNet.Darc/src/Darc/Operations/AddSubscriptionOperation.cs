@@ -65,15 +65,9 @@ namespace Microsoft.DotNet.Darc.Operations
                 mergePolicies.Add(new MergePolicy { Name = "NoRequestedChanges" });
             }
 
-            if (_options.RequireChecksMergePolicy.Count() > 0)
+            if (_options.StandardAutoMergePolicies)
             {
-                mergePolicies.Add(
-                    new MergePolicy
-                    {
-                        Name = "RequireChecks",
-                        Properties = ImmutableDictionary.Create<string, JToken>()
-                            .Add("checks", JToken.FromObject(_options.RequireChecksMergePolicy)), 
-                    });
+                mergePolicies.Add(new MergePolicy { Name = "Standard" });
             }
 
             if (_options.Batchable && mergePolicies.Count > 0)
