@@ -610,8 +610,8 @@ function Get-GitHub-PullRequests($targetRepoName, $targetBranch) {
     Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Get | ConvertFrom-Json
 }
 
-function Get-Github-File-Contents($repoUri, $path, $ref) {
-    $uri = "$repoUri/contents/${path}?ref=$ref"
+function Get-Github-File-Contents($targetRepoName, $path, $ref) {
+    $uri = "$(Get-Github-RepoApiUri($targetRepoName))/contents/${path}?ref=$ref"
     Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Get | ConvertFrom-Json
 }
 

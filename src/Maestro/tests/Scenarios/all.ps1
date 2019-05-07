@@ -13,13 +13,11 @@ $testScripts = (
     'azdoflow-batched.ps1',
     'azdoflow-nonbatched.ps1',
     'azdoflow-nonbatched-all-checks-successful.ps1',
-    # 'azdoflow-nonbatched-require-checks.ps1',
     'channels.ps1',
     'default-channels.ps1',
     'githubflow-batched.ps1',
     'githubflow-nonbatched.ps1',
     'githubflow-nonbatched-all-checks-successful.ps1',
-    # 'githubflow-nonbatched-all-require-checks.ps1',
     'githubflow-nonbatched-with-coherency.ps1',
     'githubflow-release-pipeline-nonbatched.ps1'
 )
