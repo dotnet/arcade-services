@@ -7,7 +7,6 @@ param(
     [string]$darcPackageSource
 )
 
-# Require-checks tests disabled: https://github.com/dotnet/arcade/issues/2547
 $testScripts = (
     'arcade-update.ps1',
     'azdoflow-batched.ps1',
