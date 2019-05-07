@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Maestro.Client.Models
 {
-    public enum AssetLocationType
+    public enum LocationType
     {
         [EnumMember(Value = "none")]
         None,

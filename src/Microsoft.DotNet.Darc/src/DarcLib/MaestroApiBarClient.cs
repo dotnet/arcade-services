@@ -53,6 +53,23 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Find a single channel by name.
+        /// </summary>
+        /// <param name="channel">Channel to find.</param>
+        /// <returns>Channel object or throws</returns>
+        private async Task<Channel> GetChannel(string channel)
+        {
+            Channel foundChannel = (await _barClient.Channels.ListChannelsAsync())
+                .Where(c => c.Name.Equals(channel, StringComparison.OrdinalIgnoreCase))
+                .SingleOrDefault();
+            if (foundChannel == null)
+            {
+                throw new ArgumentException($"Channel {channel} is not a valid channel.");
+            }
+            return foundChannel;
+        }
+
+        /// <summary>
         ///     Adds a default channel association.
         /// </summary>
         /// <param name="repository">Repository receiving the default association</param>
@@ -62,15 +79,9 @@ namespace Microsoft.DotNet.DarcLib
         public async Task AddDefaultChannelAsync(string repository, string branch, string channel)
         {
             // Look up channel to translate to channel id.
-            Channel foundChannel = (await _barClient.Channels.ListChannelsAsync())
-                .Where(c => c.Name.Equals(channel, StringComparison.OrdinalIgnoreCase))
-                .SingleOrDefault();
-            if (foundChannel == null)
-            {
-                throw new ArgumentException($"Channel {channel} is not a valid channel.");
-            }
+            Channel foundChannel = await GetChannel(channel);
 
-            var defaultChannelsData = new PostData(repository: repository, branch: branch, channelId: foundChannel.Id);
+            var defaultChannelsData = new DefaultChannelCreateData(repository: repository, branch: branch, channelId: foundChannel.Id);
 
             await _barClient.DefaultChannels.CreateAsync(defaultChannelsData);
         }
@@ -82,16 +93,38 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="branch">Branch having a default association</param>
         /// <param name="channel">Name of channel that builds of 'repository' on 'branch' are being applied to.</param>
         /// <returns>Async task</returns>
-        public async Task DeleteDefaultChannelAsync(string repository, string branch, string channel)
+        public async Task DeleteDefaultChannelAsync(int id)
         {
-            DefaultChannel existingDefaultChannel =
-                (await GetDefaultChannelsAsync(repository, branch, channel)).SingleOrDefault();
+            await _barClient.DefaultChannels.DeleteAsync(id);
+        }
 
-            if (existingDefaultChannel != null)
+        /// <summary>
+        ///     Updates a default channel with new information.
+        /// </summary>
+        /// <param name="id">Id of default channel.</param>
+        /// <param name="repository">New repository</param>
+        /// <param name="branch">New branch</param>
+        /// <param name="channel">New channel</param>
+        /// <param name="enabled">Enabled/disabled status</param>
+        /// <returns>Async task</returns>
+        public async Task UpdateDefaultChannelAsync(int id, string repository = null, string branch = null,
+            string channel = null, bool? enabled = null)
+        {
+            Channel foundChannel = null;
+            if (!string.IsNullOrEmpty(channel))
             {
-                // Find the existing default channel.  If none found then nothing to do.
-                await _barClient.DefaultChannels.DeleteAsync(existingDefaultChannel.Id);
+                foundChannel = await GetChannel(channel);
             }
+
+            DefaultChannelUpdateData updateData = new DefaultChannelUpdateData
+            {
+                Branch = branch,
+                ChannelId = foundChannel?.Id,
+                Enabled = enabled,
+                Repository = repository
+            };
+
+            await _barClient.DefaultChannels.UpdateAsync(id, updateData);
         }
 
         /// <summary>
@@ -126,13 +159,14 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="sourceRepo">URL of source repository</param>
         /// <param name="targetRepo">URL of target repository where updates should be made</param>
         /// <param name="targetBranch">Name of target branch where updates should be made</param>
-        /// <param name="updateFrequency">Frequency of updates, can be 'none', 'everyBuild' or 'everyDay'</param>
+        /// <param name="updateFrequency">Frequency of updates, can be 'none', 'everyBuild', 'everyDay', 'twiceDaily', or 'everyWeek'</param>
         /// <param name="mergePolicies">
         ///     Dictionary of merge policies. Each merge policy is a name of a policy with an associated blob
         ///     of metadata
         /// </param>
         /// <returns>Newly created subscription, if successful</returns>
-        public Task<Subscription> CreateSubscriptionAsync(string channelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency, List<MergePolicy> mergePolicies)
+        public Task<Subscription> CreateSubscriptionAsync(string channelName, string sourceRepo, string targetRepo,
+            string targetBranch, string updateFrequency, bool batchable, List<MergePolicy> mergePolicies)
         {
             var subscriptionData = new SubscriptionData(
                 channelName: channelName,
@@ -140,9 +174,9 @@ namespace Microsoft.DotNet.DarcLib
                 targetRepository: targetRepo,
                 targetBranch: targetBranch,
                 policy: new SubscriptionPolicy(
-                    false,
-                    (SubscriptionPolicyUpdateFrequency) Enum.Parse(
-                        typeof(SubscriptionPolicyUpdateFrequency),
+                    batchable,
+                    (UpdateFrequency) Enum.Parse(
+                        typeof(UpdateFrequency),
                         updateFrequency,
                         ignoreCase: true))
                 {
@@ -215,7 +249,15 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>List of merge policies</returns>
         public async Task<IEnumerable<MergePolicy>> GetRepositoryMergePolicies(string repoUri, string branch)
         {
-            return await _barClient.Repository.GetMergePoliciesAsync(repository: repoUri, branch: branch);
+            try
+            {
+                return await _barClient.Repository.GetMergePoliciesAsync(repository: repoUri, branch: branch);
+            }
+            catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+            {
+                // Return an empty list
+                return new List<MergePolicy>();
+            }
         }
 
         #endregion

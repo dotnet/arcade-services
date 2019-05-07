@@ -6,10 +6,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class DefaultChannel
     {
-        public DefaultChannel(int id, string repository)
+        public DefaultChannel(int id, string repository, bool enabled)
         {
             Id = id;
             Repository = repository;
+            Enabled = enabled;
         }
 
         [JsonProperty("id")]
@@ -23,6 +24,9 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 
         [JsonProperty("channel")]
         public Channel Channel { get; set; }
+
+        [JsonProperty("enabled")]
+        public bool Enabled { get; set; }
 
         [JsonIgnore]
         public bool IsValid

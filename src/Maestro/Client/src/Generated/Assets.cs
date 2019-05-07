@@ -13,7 +13,7 @@ namespace Microsoft.DotNet.Maestro.Client
 {
     public partial interface IAssets
     {
-        Task<IImmutableList<Asset>> ListAssetsAsync(
+        Task<PagedResponse<Asset>> ListAssetsAsync(
             int? buildId = default,
             bool? loadLocations = default,
             string name = default,
@@ -57,7 +57,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedListAssetsRequest(RestApiException ex);
 
-        public async Task<IImmutableList<Asset>> ListAssetsAsync(
+        public async Task<PagedResponse<Asset>> ListAssetsAsync(
             int? buildId = default,
             bool? loadLocations = default,
             string name = default,
@@ -79,8 +79,22 @@ namespace Microsoft.DotNet.Maestro.Client
                 cancellationToken
             ).ConfigureAwait(false))
             {
-                return _res.Body;
+                return new PagedResponse<Asset>(Client, OnListAssetsFailed, _res);
             }
+        }
+
+        internal async Task OnListAssetsFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedListAssetsRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<IImmutableList<Asset>>> ListAssetsInternalAsync(
@@ -146,21 +160,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedListAssetsRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnListAssetsFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<IImmutableList<Asset>>
                 {
                     Request = _req,
@@ -190,6 +194,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnGetAssetFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedGetAssetRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<Asset>> GetAssetInternalAsync(
@@ -227,21 +245,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedGetAssetRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnGetAssetFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<Asset>
                 {
                     Request = _req,
@@ -275,6 +283,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnAddAssetLocationToAssetFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedAddAssetLocationToAssetRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<AssetLocation>> AddAssetLocationToAssetInternalAsync(
@@ -332,21 +354,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedAddAssetLocationToAssetRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnAddAssetLocationToAssetFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<AssetLocation>
                 {
                     Request = _req,
@@ -378,6 +390,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return;
             }
+        }
+
+        internal async Task OnRemoveAssetLocationFromAssetFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedRemoveAssetLocationFromAssetRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse> RemoveAssetLocationFromAssetInternalAsync(
@@ -422,21 +448,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedRemoveAssetLocationFromAssetRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnRemoveAssetLocationFromAssetFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse
                 {
                     Request = _req,

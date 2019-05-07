@@ -251,6 +251,8 @@ namespace Maestro.Data.Migrations
 
                     b.Property<int>("ChannelId");
 
+                    b.Property<bool>("Enabled");
+
                     b.Property<string>("Repository")
                         .IsRequired()
                         .HasColumnType("varchar(300)")

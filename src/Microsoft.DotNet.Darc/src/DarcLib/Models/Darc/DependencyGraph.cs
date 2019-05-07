@@ -328,12 +328,12 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         int channelId = newestBuildWithChannel.Channels.First().Id;
                         // Just choose the first channel. This algorithm is mostly just heuristic.
-                        string latestCommitKey = $"{node.RepoUri}@{channelId}";
+                        string latestCommitKey = $"{node.Repository}@{channelId}";
                         string latestCommit = null;
                         if (!latestCommitCache.TryGetValue(latestCommitKey, out latestCommit))
                         {
                             // Look up latest build in the channel
-                            var latestBuild = await barOnlyRemote.GetLatestBuildAsync(node.RepoUri, channelId);
+                            var latestBuild = await barOnlyRemote.GetLatestBuildAsync(node.Repository, channelId);
                             // Could be null, if the only build was removed from the channel
                             if (latestBuild != null)
                             {
@@ -346,9 +346,9 @@ namespace Microsoft.DotNet.DarcLib
                         // Perform diff if there is a latest commit.
                         if (!string.IsNullOrEmpty(latestCommit))
                         {
-                            IRemote repoRemote = await remoteFactory.GetRemoteAsync(node.RepoUri, logger);
+                            IRemote repoRemote = await remoteFactory.GetRemoteAsync(node.Repository, logger);
                             // This will return a no-diff if latestCommit == node.Commit
-                            node.DiffFrom = await repoRemote.GitDiffAsync(node.RepoUri, latestCommit, node.Commit);
+                            node.DiffFrom = await repoRemote.GitDiffAsync(node.Repository, latestCommit, node.Commit);
                         }
                     }
                 }
@@ -377,7 +377,7 @@ namespace Microsoft.DotNet.DarcLib
             foreach (string repo in visitedRepoUriNodes.Keys)
             {
                 // Get all nodes with this value
-                List<DependencyGraphNode> nodes = nodeCache.Values.Where(n => n.RepoUri == repo).ToList();
+                List<DependencyGraphNode> nodes = nodeCache.Values.Where(n => n.Repository == repo).ToList();
                 // If only one, determine latest
                 if (nodes.Count > 1)
                 {
@@ -404,9 +404,9 @@ namespace Microsoft.DotNet.DarcLib
                     // Compare all other nodes to the latest
                     foreach (DependencyGraphNode node in nodes)
                     {
-                        IRemote repoRemote = await remoteFactory.GetRemoteAsync(node.RepoUri, logger);
+                        IRemote repoRemote = await remoteFactory.GetRemoteAsync(node.Repository, logger);
                         // If node == newestNode, returns no diff.
-                        node.DiffFrom = await repoRemote.GitDiffAsync(node.RepoUri, newestNode.Commit, node.Commit);
+                        node.DiffFrom = await repoRemote.GitDiffAsync(node.Repository, newestNode.Commit, node.Commit);
                     }
                 }
                 else
@@ -539,7 +539,7 @@ namespace Microsoft.DotNet.DarcLib
             // Cache of nodes we've visited. If we reach a repo/commit combo already in the cache,
             // we can just add these nodes as a child. The cache key is '{repoUri}@{commit}'
             Dictionary<string, DependencyGraphNode> nodeCache = new Dictionary<string, DependencyGraphNode>();
-            nodeCache.Add($"{rootGraphNode.RepoUri}@{rootGraphNode.Commit}", rootGraphNode);
+            nodeCache.Add($"{rootGraphNode.Repository}@{rootGraphNode.Commit}", rootGraphNode);
 
             // Cache of incoherent nodes, looked up by repo URI.
             Dictionary<string, DependencyGraphNode> visitedRepoUriNodes = new Dictionary<string, DependencyGraphNode>();
@@ -552,7 +552,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 DependencyGraphNode node = nodesToVisit.Dequeue();
 
-                logger.LogInformation($"Visiting {node.RepoUri}@{node.Commit}");
+                logger.LogInformation($"Visiting {node.Repository}@{node.Commit}");
 
                 IEnumerable<DependencyDetail> dependencies;
                 // In case of the root node which is initially put on the stack,
@@ -564,13 +564,13 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 else
                 {
-                    logger.LogInformation($"Getting dependencies at {node.RepoUri}@{node.Commit}");
+                    logger.LogInformation($"Getting dependencies at {node.Repository}@{node.Commit}");
 
                     dependencies = await GetDependenciesAsync(
                         remoteFactory,
                         remote,
                         logger,
-                        node.RepoUri,
+                        node.Repository,
                         node.Commit,
                         options.IncludeToolset,
                         remotesMap,
@@ -589,7 +589,7 @@ namespace Microsoft.DotNet.DarcLib
                             string.IsNullOrEmpty(dependency.Commit))
                         {
                             logger.LogInformation($"Dependency {dependency.Name}@{dependency.Version} in " +
-                                $"{node.RepoUri}@{node.Commit} " +
+                                $"{node.Repository}@{node.Commit} " +
                                 $"is missing repository uri or commit information, skipping");
                             continue;
                         }
@@ -598,7 +598,7 @@ namespace Microsoft.DotNet.DarcLib
                         // and should break.
                         if (node.VisitedNodes.Contains(dependency.RepoUri))
                         {
-                            logger.LogInformation($"Node {node.RepoUri}@{node.Commit} " +
+                            logger.LogInformation($"Node {node.Repository}@{node.Commit} " +
                                 $"introduces a cycle to {dependency.RepoUri}, skipping");
                             continue;
                         }
@@ -694,7 +694,7 @@ namespace Microsoft.DotNet.DarcLib
                         }
                         else
                         {
-                            visitedRepoUriNodes.Add(newNode.RepoUri, newNode);
+                            visitedRepoUriNodes.Add(newNode.Repository, newNode);
                         }
 
                         // If breaking on dependencies, then decide whether we need to break

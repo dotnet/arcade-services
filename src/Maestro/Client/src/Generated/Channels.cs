@@ -81,6 +81,20 @@ namespace Microsoft.DotNet.Maestro.Client
             }
         }
 
+        internal async Task OnListChannelsFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedListChannelsRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
+        }
+
         internal async Task<HttpOperationResponse<IImmutableList<Channel>>> ListChannelsInternalAsync(
             string classification = default,
             CancellationToken cancellationToken = default
@@ -114,21 +128,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedListChannelsRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnListChannelsFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<IImmutableList<Channel>>
                 {
                     Request = _req,
@@ -160,6 +164,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnCreateChannelFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedCreateChannelRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<Channel>> CreateChannelInternalAsync(
@@ -210,21 +228,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedCreateChannelRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnCreateChannelFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<Channel>
                 {
                     Request = _req,
@@ -254,6 +262,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnGetChannelFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedGetChannelRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<Channel>> GetChannelInternalAsync(
@@ -291,21 +313,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedGetChannelRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnGetChannelFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<Channel>
                 {
                     Request = _req,
@@ -335,6 +347,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnDeleteChannelFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedDeleteChannelRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<Channel>> DeleteChannelInternalAsync(
@@ -372,21 +398,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedDeleteChannelRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnDeleteChannelFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<Channel>
                 {
                     Request = _req,
@@ -418,6 +434,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return;
             }
+        }
+
+        internal async Task OnAddBuildToChannelFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedAddBuildToChannelRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse> AddBuildToChannelInternalAsync(
@@ -462,21 +492,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedAddBuildToChannelRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnAddBuildToChannelFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse
                 {
                     Request = _req,
@@ -507,6 +527,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return;
             }
+        }
+
+        internal async Task OnAddPipelineToChannelFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedAddPipelineToChannelRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse> AddPipelineToChannelInternalAsync(
@@ -551,21 +585,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedAddPipelineToChannelRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnAddPipelineToChannelFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse
                 {
                     Request = _req,
@@ -596,6 +620,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return;
             }
+        }
+
+        internal async Task OnDeletePipelineFromChannelFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedDeletePipelineFromChannelRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse> DeletePipelineFromChannelInternalAsync(
@@ -640,21 +678,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedDeletePipelineFromChannelRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnDeletePipelineFromChannelFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse
                 {
                     Request = _req,

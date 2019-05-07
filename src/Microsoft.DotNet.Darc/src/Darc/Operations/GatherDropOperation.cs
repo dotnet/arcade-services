@@ -7,6 +7,7 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -31,6 +32,14 @@ namespace Microsoft.DotNet.Darc.Operations
         public Build Build { get; set; }
         public bool Successful { get; set; }
         public IEnumerable<DownloadedAsset> DownloadedAssets { get; set; }
+        /// <summary>
+        ///     Root output directory for this build.
+        /// </summary>
+        public string OutputDirectory { get; set; }
+        /// <summary>
+        ///     True if the output has any shipping assets.
+        /// </summary>
+        public bool AnyShippingAssets { get; set; }
     }
 
     internal class InputBuilds
@@ -94,6 +103,9 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // Write the unified drop manifest
                 await WriteDropManifest(downloadedBuilds, _options.OutputDirectory);
+
+                // Write the release json
+                await WriteReleaseJson(downloadedBuilds, _options.OutputDirectory);
 
                 Console.WriteLine();
                 if (!success)
@@ -269,13 +281,85 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             public bool Equals(Build x, Build y)
             {
-                return x.Id== y.Id;
+                return x.Id == y.Id;
             }
 
             public int GetHashCode(Build obj)
             {
                 return obj.Id;
             }
+        }
+
+        /// <summary>
+        ///     Given a downloaded build, determine what the product name should be
+        ///     for the release json
+        /// </summary>
+        /// <param name="build">Downloaded build</param>
+        /// <returns>Product name</returns>
+        private string GetProductNameForReleaseJson(DownloadedBuild build)
+        {
+            // Preference the github repo name over the azure devops repo name.
+            if (!string.IsNullOrEmpty(build.Build.GitHubRepository))
+            {
+                // Split off the github.com+org name and just use the repo name, all lower case.
+                (string owner, string repo) = GitHubClient.ParseRepoUri(build.Build.GitHubRepository);
+                return repo.ToLowerInvariant();
+            }
+            else if (!string.IsNullOrEmpty(build.Build.AzureDevOpsRepository))
+            {
+                // Use the full repo name without project/account
+                (string accountName, string projectName, string repoName) = AzureDevOpsClient.ParseRepoUri(build.Build.AzureDevOpsRepository);
+                return repoName.ToLowerInvariant();
+            }
+            else
+            {
+                throw new NotImplementedException("Unknown repository name.");
+            }
+        }
+
+        /// <summary>
+        ///     Given a downloaded build, determine what the fileshare location should be.
+        /// </summary>
+        /// <param name="build">Downloaded build</param>
+        /// <returns>File share location</returns>
+        public string GetFileShareLocationForReleaseJson(DownloadedBuild build)
+        {
+            // We only want to have shipping assets in the release json, so append that path
+            return Path.Combine(build.OutputDirectory, shippingSubPath);
+        }
+
+        /// <summary>
+        ///     Write the release json.  Only applicable for separated (ReleaseLayout) drops
+        /// </summary>
+        /// <param name="downloadedBuilds">List of downloaded builds</param>
+        /// <param name="outputDirectory">Output directory write the release json</param>
+        /// <returns>Async task</returns>
+        private async Task WriteReleaseJson(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
+        {
+            if (_options.DryRun || !_options.ReleaseLayout)
+            {
+                return;
+            }
+
+            Directory.CreateDirectory(outputDirectory);
+            string outputPath = Path.Combine(outputDirectory, "release.json");
+
+            var releaseJson = new[]
+            {
+                new
+                {
+                    release = _options.ReleaseName,
+                    products = downloadedBuilds
+                        .Where(b => b.AnyShippingAssets)
+                        .Select(b =>
+                            new {
+                                name = GetProductNameForReleaseJson(b),
+                                fileshare = GetFileShareLocationForReleaseJson(b),
+                            }
+                        )
+                }
+            };
+            await File.WriteAllTextAsync(outputPath, JsonConvert.SerializeObject(releaseJson, Formatting.Indented));
         }
 
         /// <summary>
@@ -300,7 +384,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 await writer.WriteLineAsync($"Builds:");
                 foreach (DownloadedBuild build in downloadedBuilds)
                 {
-                    await writer.WriteLineAsync($"  - Repo:         {build.Build.AzureDevOpsRepository}");
+                    await writer.WriteLineAsync($"  - Repo:         {build.Build.GitHubRepository ?? build.Build.AzureDevOpsRepository}");
                     await writer.WriteLineAsync($"    Commit:       {build.Build.Commit}");
                     await writer.WriteLineAsync($"    Branch:       {build.Build.AzureDevOpsBranch}");
                     await writer.WriteLineAsync($"    Produced:     {build.Build.DateProduced}");
@@ -332,7 +416,7 @@ namespace Microsoft.DotNet.Darc.Operations
         private async Task<InputBuilds> GatherBuildsToDownloadAsync()
         {
             Console.WriteLine("Determining what builds to download...");
-            
+
             // Gather the root build 
             Build rootBuild = await GetRootBuildAsync();
             if (rootBuild == null)
@@ -340,7 +424,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 return new InputBuilds { Successful = false };
             }
             Console.WriteLine($"Root build - Build number {rootBuild.AzureDevOpsBuildNumber} of {rootBuild.AzureDevOpsRepository} @ {rootBuild.Commit}");
-            
+
             // If transitive (full tree) was not selected, we're done
             if (!_options.Transitive)
             {
@@ -457,7 +541,7 @@ namespace Microsoft.DotNet.Darc.Operations
             // repo uri plus the build number (to disambiguate overlapping builds)
             string outputDirectory = rootOutputDirectory;
             string repoUri = build.GitHubRepository ?? build.AzureDevOpsRepository;
-            if (_options.Separated)
+            if (_options.ReleaseLayout)
             {
                 int lastSlash = repoUri.LastIndexOf("/");
                 if (lastSlash != -1 && lastSlash != repoUri.Length - 1)
@@ -473,6 +557,7 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             List<DownloadedAsset> downloadedAssets = new List<DownloadedAsset>();
+            bool anyShipping = false;
 
             Console.WriteLine($"Gathering drop for build {build.AzureDevOpsBuildNumber} of {repoUri}");
             using (HttpClient client = new HttpClient())
@@ -496,6 +581,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     }
                     else
                     {
+                        anyShipping |= !asset.NonShipping;
                         downloadedAssets.Add(downloadedAsset);
                     }
                 }
@@ -505,11 +591,13 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 Successful = success,
                 Build = build,
-                DownloadedAssets = downloadedAssets
+                DownloadedAssets = downloadedAssets,
+                OutputDirectory = outputDirectory,
+                AnyShippingAssets = anyShipping
             };
 
             // If separated drop, generate a manifest per build
-            if (_options.Separated)
+            if (_options.ReleaseLayout)
             {
                 await WriteDropManifest(new List<DownloadedBuild>() { newBuild }, outputDirectory);
             }
@@ -560,12 +648,12 @@ namespace Microsoft.DotNet.Darc.Operations
             }
             else
             {
-                string subPath = Path.Combine(rootOutputDirectory, asset.NonShipping? nonShippingSubPath : shippingSubPath);
+                string subPath = Path.Combine(rootOutputDirectory, asset.NonShipping ? nonShippingSubPath : shippingSubPath);
 
                 // Walk the locations and attempt to gather the asset at each one, setting the output
                 // path based on the type. Note that if there are multiple locations and their types don't
                 // match, consider this an error.
-                AssetLocationType locationType = asset.Locations[0].Type;
+                LocationType locationType = asset.Locations[0].Type;
                 foreach (AssetLocation location in asset.Locations)
                 {
                     if (locationType != location.Type)
@@ -576,10 +664,10 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     switch (locationType)
                     {
-                        case AssetLocationType.NugetFeed:
+                        case LocationType.NugetFeed:
                             downloadedAsset = await DownloadNugetPackageAsync(client, build, asset, location, subPath, errors);
                             break;
-                        case AssetLocationType.Container:
+                        case LocationType.Container:
                             downloadedAsset = await DownloadBlobAsync(client, build, asset, location, subPath, errors);
                             break;
                         default:
@@ -633,27 +721,6 @@ namespace Microsoft.DotNet.Darc.Operations
                 finalUri += $"flatcontainer/{name}/{version}/{name}.{version}.nupkg";
 
                 // Construct the final path, using the correct casing rather than the blob feed casing.
-                string fullTargetPath = Path.Combine(subPath, packagesSubPath, $"{asset.Name}.{asset.Version}.nupkg");
-                if (await DownloadFileAsync(client, finalUri, fullTargetPath, errors))
-                {
-                    return new DownloadedAsset()
-                    {
-                        Successful = true,
-                        Asset = asset,
-                        SourceLocation = finalUri,
-                        TargetLocation = fullTargetPath
-                    };
-                }
-            }
-            else if (IsMyGetUrl(assetLocation.Location))
-            {
-                // Construct the download uri.  Make this:
-                // https://dotnet.myget.org/F/aspnetcore-dev/api/v3/index.json
-                // into this:
-                // https://dotnet.myget.org/F/aspnetcore-dev/api/v2/package/AspNetCoreRuntime.3.0.x64/3.0.0-preview-19074-0437
-                
-                string finalUri = assetLocation.Location.Substring(0, assetLocation.Location.Length - "v3/index.json".Length);
-                finalUri += $"v2/package/{asset.Name}/{asset.Version}";
                 string fullTargetPath = Path.Combine(subPath, packagesSubPath, $"{asset.Name}.{asset.Version}.nupkg");
                 if (await DownloadFileAsync(client, finalUri, fullTargetPath, errors))
                 {
@@ -797,7 +864,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         symbolPackageName = asset.Name.Substring(lastSlash);
                     }
-                    string shippingNonShippingFolder = asset.NonShipping? "NonShipping" : "Shipping";
+                    string shippingNonShippingFolder = asset.NonShipping ? "NonShipping" : "Shipping";
                     string aspnetciSymbolSharePath = $@"\\aspnetci\drops\AspNetCore\master\{build.AzureDevOpsBuildNumber}\packages\Release\{shippingNonShippingFolder}\{symbolPackageName}";
                     if (await DownloadFromShareAsync(aspnetciSymbolSharePath, fullTargetPath, errors))
                     {
@@ -834,7 +901,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 string directory = Path.GetDirectoryName(targetFile);
                 Directory.CreateDirectory(directory);
-                
+
                 // Web client will overwrite, so avoid this if not desired by checking for file existence.
                 if (!_options.Overwrite && File.Exists(targetFile))
                 {

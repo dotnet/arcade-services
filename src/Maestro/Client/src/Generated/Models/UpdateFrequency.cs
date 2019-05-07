@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Maestro.Client.Models
 {
-    public enum SubscriptionPolicyUpdateFrequency
+    public enum UpdateFrequency
     {
         [EnumMember(Value = "none")]
         None,
@@ -13,5 +13,9 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         EveryDay,
         [EnumMember(Value = "everyBuild")]
         EveryBuild,
+        [EnumMember(Value = "twiceDaily")]
+        TwiceDaily,
+        [EnumMember(Value = "everyWeek")]
+        EveryWeek,
     }
 }

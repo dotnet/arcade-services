@@ -51,7 +51,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
-        Task<IImmutableList<SubscriptionHistoryItem>> GetSubscriptionHistoryAsync(
+        Task<PagedResponse<SubscriptionHistoryItem>> GetSubscriptionHistoryAsync(
             Guid id,
             int? page = default,
             int? perPage = default,
@@ -97,6 +97,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnListSubscriptionsFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedListSubscriptionsRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<IImmutableList<Subscription>>> ListSubscriptionsInternalAsync(
@@ -147,21 +161,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedListSubscriptionsRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnListSubscriptionsFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<IImmutableList<Subscription>>
                 {
                     Request = _req,
@@ -191,6 +195,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnCreateFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, content),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedCreateRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<Subscription>> CreateInternalAsync(
@@ -245,21 +263,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, _requestContent),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedCreateRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnCreateFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<Subscription>
                 {
                     Request = _req,
@@ -289,6 +297,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnGetSubscriptionFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedGetSubscriptionRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<Subscription>> GetSubscriptionInternalAsync(
@@ -326,21 +348,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedGetSubscriptionRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnGetSubscriptionFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<Subscription>
                 {
                     Request = _req,
@@ -370,6 +382,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnDeleteSubscriptionFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedDeleteSubscriptionRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<Subscription>> DeleteSubscriptionInternalAsync(
@@ -407,21 +433,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedDeleteSubscriptionRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnDeleteSubscriptionFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<Subscription>
                 {
                     Request = _req,
@@ -453,6 +469,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnUpdateSubscriptionFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, content),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedUpdateSubscriptionRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<Subscription>> UpdateSubscriptionInternalAsync(
@@ -504,21 +534,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, _requestContent),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedUpdateSubscriptionRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnUpdateSubscriptionFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<Subscription>
                 {
                     Request = _req,
@@ -548,6 +568,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnTriggerSubscriptionFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedTriggerSubscriptionRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<Subscription>> TriggerSubscriptionInternalAsync(
@@ -585,21 +619,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedTriggerSubscriptionRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnTriggerSubscriptionFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<Subscription>
                 {
                     Request = _req,
@@ -627,6 +651,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return;
             }
+        }
+
+        internal async Task OnTriggerDailyUpdateFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedTriggerDailyUpdateRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse> TriggerDailyUpdateInternalAsync(
@@ -657,21 +695,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedTriggerDailyUpdateRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnTriggerDailyUpdateFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse
                 {
                     Request = _req,
@@ -688,7 +716,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedGetSubscriptionHistoryRequest(RestApiException ex);
 
-        public async Task<IImmutableList<SubscriptionHistoryItem>> GetSubscriptionHistoryAsync(
+        public async Task<PagedResponse<SubscriptionHistoryItem>> GetSubscriptionHistoryAsync(
             Guid id,
             int? page = default,
             int? perPage = default,
@@ -702,8 +730,22 @@ namespace Microsoft.DotNet.Maestro.Client
                 cancellationToken
             ).ConfigureAwait(false))
             {
-                return _res.Body;
+                return new PagedResponse<SubscriptionHistoryItem>(Client, OnGetSubscriptionHistoryFailed, _res);
             }
+        }
+
+        internal async Task OnGetSubscriptionHistoryFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedGetSubscriptionHistoryRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<IImmutableList<SubscriptionHistoryItem>>> GetSubscriptionHistoryInternalAsync(
@@ -751,21 +793,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedGetSubscriptionHistoryRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnGetSubscriptionHistoryFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<IImmutableList<SubscriptionHistoryItem>>
                 {
                     Request = _req,
@@ -797,6 +829,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return;
             }
+        }
+
+        internal async Task OnRetrySubscriptionActionAsyncFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedRetrySubscriptionActionAsyncRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse> RetrySubscriptionActionAsyncInternalAsync(
@@ -841,21 +887,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedRetrySubscriptionActionAsyncRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnRetrySubscriptionActionAsyncFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse
                 {
                     Request = _req,

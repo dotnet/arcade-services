@@ -25,5 +25,22 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 
         [JsonProperty("releasePipelines")]
         public IImmutableList<ReleasePipeline> ReleasePipelines { get; }
+
+        [JsonIgnore]
+        public bool IsValid
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(Name))
+                {
+                    return false;
+                }
+                if (string.IsNullOrEmpty(Classification))
+                {
+                    return false;
+                }
+                return true;
+            }
+        }
     }
 }

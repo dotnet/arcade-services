@@ -36,7 +36,8 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="sourceRepo">Source repository URI.</param>
         /// <param name="targetRepo">Target repository URI.</param>
         /// <param name="targetBranch">Target branch in <paramref name="targetRepo"/></param>
-        /// <param name="updateFrequency">Frequency of update.  'none', 'everyDay', or 'everyBuild'.</param>
+        /// <param name="updateFrequency">Frequency of update.  'none', 'everyBuild', 'everyDay', 'twiceDaily', or 'everyWeek'.</param>
+        /// <param name="batchable">Is subscription batchable.</param>
         /// <param name="mergePolicies">Set of auto-merge policies.</param>
         /// <returns>Newly created subscription.</returns>
         Task<Subscription> CreateSubscriptionAsync(
@@ -45,6 +46,7 @@ namespace Microsoft.DotNet.DarcLib
             string targetRepo,
             string targetBranch,
             string updateFrequency,
+            bool batchable,
             List<MergePolicy> mergePolicies);
 
         /// <summary>
@@ -117,13 +119,22 @@ namespace Microsoft.DotNet.DarcLib
         Task AddDefaultChannelAsync(string repository, string branch, string channel);
 
         /// <summary>
-        ///     Removes a default channel based on the specified criteria
+        ///     Removes a default channel by id
         /// </summary>
-        /// <param name="repository">Repository having a default association</param>
-        /// <param name="branch">Branch having a default association</param>
-        /// <param name="channel">Name of channel that builds of 'repository' on 'branch' are being applied to.</param>
+        /// <param name="id">Id of default channel.</param>
         /// <returns>Async task</returns>
-        Task DeleteDefaultChannelAsync(string repository, string branch, string channel);
+        Task DeleteDefaultChannelAsync(int id);
+
+        /// <summary>
+        ///     Updates a default channel with new information.
+        /// </summary>
+        /// <param name="id">Id of default channel.</param>
+        /// <param name="repository">New repository</param>
+        /// <param name="branch">New branch</param>
+        /// <param name="channel">New channel</param>
+        /// <param name="enabled">Enabled/disabled status</param>
+        /// <returns>Async task</returns>
+        Task UpdateDefaultChannelAsync(int id, string repository = null, string branch = null, string channel = null, bool? enabled = null);
 
         /// <summary>
         ///     Create a new channel

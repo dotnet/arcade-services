@@ -4,9 +4,9 @@ using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Maestro.Client.Models
 {
-    public partial class PostData
+    public partial class DefaultChannelCreateData
     {
-        public PostData(string repository, string branch, int channelId)
+        public DefaultChannelCreateData(string repository, string branch, int channelId)
         {
             Repository = repository;
             Branch = branch;
@@ -21,6 +21,9 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 
         [JsonProperty("channelId")]
         public int ChannelId { get; set; }
+
+        [JsonProperty("enabled")]
+        public bool? Enabled { get; set; }
 
         [JsonIgnore]
         public bool IsValid

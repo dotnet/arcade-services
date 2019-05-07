@@ -204,7 +204,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// </example>
         private async Task LogBasicNodeDetails(StreamWriter writer, DependencyGraphNode node, string indent)
         {
-            await writer.WriteLineAsync($"{indent}- Repo:     {node.RepoUri}");
+            await writer.WriteLineAsync($"{indent}- Repo:     {node.Repository}");
             await writer.WriteLineAsync($"{indent}  Commit:   {node.Commit}");
 
             StringBuilder deltaString = new StringBuilder($"{indent}  Delta:    ");
@@ -265,44 +265,13 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        ///     Retrieve either a new StreamWriter for the specified output file,
-        ///     or if the output file name is empty, create a new StreamWriter
-        ///     wrapping standard out.
-        /// </summary>
-        /// <param name="outputFile">Output file name.</param>
-        /// <returns>New stream writer</returns>
-        /// <remarks>
-        ///     The StreamWriter can be disposed of even if it's wrapping Console.Out.
-        ///     The underlying stream is only disposed of if the stream writer owns it.
-        /// </remarks>
-        private StreamWriter GetOutputFileStreamOrConsole(string outputFile)
-        {
-            StreamWriter outputStream = null;
-            if (!string.IsNullOrEmpty(outputFile))
-            {
-                string fullPath = Path.GetFullPath(outputFile);
-                string directory = Path.GetDirectoryName(fullPath);
-                if (!Directory.Exists(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
-                outputStream = new StreamWriter(fullPath);
-            }
-            else
-            {
-                outputStream = new StreamWriter(Console.OpenStandardOutput());
-            }
-            return outputStream;
-        }
-
-        /// <summary>
         ///     Log the dependency graph as a simple flat list of repo/sha combinations
         ///     that contribute to this graph.
         /// </summary>
         /// <param name="graph">Graph to log</param>
         private async Task LogFlatDependencyGraph(DependencyGraph graph)
         {
-            using (StreamWriter writer = GetOutputFileStreamOrConsole(_options.OutputFile))
+            using (StreamWriter writer = OutputHelpers.GetOutputFileStreamOrConsole(_options.OutputFile))
             {
                 await writer.WriteLineAsync($"Repositories:");
                 foreach (DependencyGraphNode node in graph.Nodes)
@@ -315,29 +284,12 @@ namespace Microsoft.DotNet.Darc.Operations
 
         private async Task LogDependencyGraph(DependencyGraph graph)
         {
-            using (StreamWriter writer = GetOutputFileStreamOrConsole(_options.OutputFile))
+            using (StreamWriter writer = OutputHelpers.GetOutputFileStreamOrConsole(_options.OutputFile))
             {
                 await writer.WriteLineAsync($"Repositories:");
                 await LogDependencyGraphNode(writer, graph.Root, "  ");
                 await LogIncoherencies(writer, graph);
             }
-        }
-
-        private string GetSimpleRepoName(string repoUri)
-        {
-            int lastSlash = repoUri.LastIndexOf("/");
-            if ((lastSlash != -1) && (lastSlash < (repoUri.Length - 1)))
-            {
-                return repoUri.Substring(lastSlash + 1);
-            }
-            return repoUri;
-        }
-
-        private string CalculateGraphVizNodeName(DependencyGraphNode node)
-        {
-            return GetSimpleRepoName(node.RepoUri)
-                .Replace(".", "")
-                .Replace("-", "") + node.Commit;
         }
 
         /// <summary>
@@ -357,7 +309,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <returns>Async task</returns>
         private async Task LogGraphViz(DependencyGraph graph)
         {
-            using (StreamWriter writer = GetOutputFileStreamOrConsole(_options.GraphVizOutputFile))
+            using (StreamWriter writer = OutputHelpers.GetOutputFileStreamOrConsole(_options.GraphVizOutputFile))
             {
                 await writer.WriteLineAsync("digraph repositoryGraph {");
                 await writer.WriteLineAsync("    node [shape=record]");
@@ -366,13 +318,13 @@ namespace Microsoft.DotNet.Darc.Operations
                     StringBuilder nodeBuilder = new StringBuilder();
                     
                     // First add the node name
-                    nodeBuilder.Append($"    {CalculateGraphVizNodeName(node)}");
+                    nodeBuilder.Append($"    {OutputHelpers.CalculateGraphVizNodeName(node)}");
                     
                     // Then add the label.  label looks like [label="<info here>"]
                     nodeBuilder.Append("[label=\"");
                     
                     // Append friendly repo name
-                    nodeBuilder.Append(GetSimpleRepoName(node.RepoUri));
+                    nodeBuilder.Append(OutputHelpers.GetSimpleRepoName(node.Repository));
                     nodeBuilder.Append(@"\n");
                     
                     // Append short commit sha
@@ -419,7 +371,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     // Now write the edges
                     foreach (DependencyGraphNode childNode in node.Children)
                     {
-                        await writer.WriteLineAsync($"    {CalculateGraphVizNodeName(node)} -> {CalculateGraphVizNodeName(childNode)}");
+                        await writer.WriteLineAsync($"    {OutputHelpers.CalculateGraphVizNodeName(node)} -> {OutputHelpers.CalculateGraphVizNodeName(childNode)}");
                     }
                 }
 

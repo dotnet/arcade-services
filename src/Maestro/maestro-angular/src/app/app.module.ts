@@ -1,4 +1,4 @@
-import { NgModule, APP_INITIALIZER } from "@angular/core";
+import { NgModule, APP_INITIALIZER, Injector, Type } from "@angular/core";
 import { BrowserModule } from "@angular/platform-browser";
 import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
 import { FormsModule } from '@angular/forms';
@@ -51,6 +51,7 @@ import { RepoNamePipe } from './pipes/repo-name.pipe';
 import { GetRepositoryNamePipe } from './pipes/get-repository-name.pipe';
 import { AssetTableComponent } from './page/asset-table/asset-table.component';
 import { ApplicationInsightsService } from './services/application-insights.service';
+import { RouterEventHandlerService } from './services/router-event-handler.service';
 
 @NgModule({
   declarations: [
@@ -86,15 +87,22 @@ import { ApplicationInsightsService } from './services/application-insights.serv
   ],
   providers: [
     {
-      provide: APP_INITIALIZER, // register an APP_INITIALIZER that resolves the application insights service
-      useFactory: () => () => {},
-      deps: [ApplicationInsightsService],
+      provide: APP_INITIALIZER,
+      useFactory: initializerFactory,
+      deps: [Injector],
       multi: true,
-    }
+    },
   ],
   bootstrap: [AppComponent],
 })
 export class AppModule { }
+
+export function initializerFactory(injector: Injector) {
+  return function initializer() {
+    injector.get<ApplicationInsightsService>(ApplicationInsightsService).start();
+    injector.get<RouterEventHandlerService>(RouterEventHandlerService).start();
+  }
+}
 
 library.add(
   faAngleDoubleUp,

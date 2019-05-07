@@ -11,12 +11,12 @@ namespace Microsoft.DotNet.DarcLib
         public bool Equals(DependencyGraphNode x, DependencyGraphNode y)
         {
             return x.Commit == y.Commit &&
-                   x.RepoUri == y.RepoUri;
+                   x.Repository == y.Repository;
         }
 
         public int GetHashCode(DependencyGraphNode obj)
         {
-            return (obj.Commit, obj.RepoUri).GetHashCode();
+            return (obj.Commit, obj.Repository).GetHashCode();
         }
     }
 }

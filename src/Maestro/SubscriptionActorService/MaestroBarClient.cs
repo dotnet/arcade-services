@@ -40,7 +40,8 @@ namespace SubscriptionActorService
             throw new NotImplementedException();
         }
 
-        public Task<Subscription> CreateSubscriptionAsync(string channelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency, List<MergePolicy> mergePolicies)
+        public Task<Subscription> CreateSubscriptionAsync(string channelName, string sourceRepo, string targetRepo, string targetBranch,
+            string updateFrequency, bool batchable, List<MergePolicy> mergePolicies)
         {
             throw new NotImplementedException();
         }
@@ -50,7 +51,12 @@ namespace SubscriptionActorService
             throw new NotImplementedException();
         }
 
-        public Task DeleteDefaultChannelAsync(string repository, string branch, string channel)
+        public Task DeleteDefaultChannelAsync(int id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task UpdateDefaultChannelAsync(int id, string repository = null, string branch = null, string channel = null, bool? enabled = null)
         {
             throw new NotImplementedException();
         }

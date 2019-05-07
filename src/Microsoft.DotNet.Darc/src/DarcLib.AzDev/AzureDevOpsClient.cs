@@ -676,6 +676,63 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        /// Retrieve the list of reviews on a PR.
+        /// </summary>
+        /// <param name="pullRequestUrl">Uri of pull request</param>
+        /// <returns>List of reviews.</returns>
+        public async Task<IList<Review>> GetPullRequestReviewsAsync(string pullRequestUrl)
+        {
+            (string accountName, string projectName, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
+
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                    HttpMethod.Get,
+                    accountName,
+                    projectName,
+                    $"_apis/git/repositories/{repo}/pullRequests/{id}/reviewers",
+                    _logger);
+
+            JArray values = JArray.Parse(content["value"].ToString());
+
+            IList<Review> reviews = new List<Review>();
+            foreach (JToken review in values)
+            {
+                // Azure DevOps uses an integral "vote" value to identify review state
+                // from their documentation:
+                // Vote on a pull request:
+                // 10 - approved 5 - approved with suggestions 0 - no vote - 5 - waiting for author - 10 - rejected
+
+                int vote = review["vote"].Value<int>();
+
+                ReviewState reviewState;
+
+                switch (vote)
+                {
+                    case 10:
+                        reviewState = ReviewState.Approved;
+                        break;
+                    case 5:
+                        reviewState = ReviewState.Commented;
+                        break;
+                    case 0:
+                        reviewState = ReviewState.Pending;
+                        break;
+                    case -5:
+                        reviewState = ReviewState.ChangesRequested;
+                        break;
+                    case -10:
+                        reviewState = ReviewState.Rejected;
+                        break;
+                    default:
+                        throw new NotImplementedException($"Unknown review vote {vote}");
+                }
+
+                reviews.Add(new Review(reviewState, pullRequestUrl));
+            }
+
+            return reviews;
+        }
+
+        /// <summary>
         ///     Execute a command on the remote repository.
         /// </summary>
         /// <param name="method">Http method</param>
@@ -871,45 +928,92 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Add the informed build as an specific build artifact source to the release definition informed.
+        ///   If the release pipeline doesn't have an artifact source a new one is added.
+        ///   If the pipeline has a single artifact source the artifact definition is adjusted as needed.
+        ///   If the pipeline has more than one source an error is thrown.
+        ///     
+        ///   The artifact source added (or the adjustment) has the following properties:
+        ///     - Alias: PrimaryArtifact
+        ///     - Type: Single Build
+        ///     - Version: Specific
         /// </summary>
         /// <param name="accountName">Azure DevOps account name</param>
         /// <param name="projectName">Project name</param>
         /// <param name="releaseDefinition">Release definition to be updated</param>
         /// <param name="build">Build which should be added as source of the release definition.</param>
         /// <returns>AzureDevOpsReleaseDefinition</returns>
-        public async Task<AzureDevOpsReleaseDefinition> AddArtifactSourceAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, AzureDevOpsBuild build)
+        public async Task<AzureDevOpsReleaseDefinition> AdjustReleasePipelineArtifactSourceAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, AzureDevOpsBuild build)
         {
-            releaseDefinition.Artifacts = new AzureDevOpsArtifact[1] {
-                new AzureDevOpsArtifact()
-                {
-                    Alias = "PrimaryArtifact",
-                    Type = "Build",
-                    DefinitionReference = new AzureDevOpsArtifactSourceReference()
+            if (releaseDefinition.Artifacts == null || releaseDefinition.Artifacts.Count() == 0)
+            {
+                releaseDefinition.Artifacts = new AzureDevOpsArtifact[1] {
+                    new AzureDevOpsArtifact()
                     {
-                        Definition = new AzureDevOpsIdNamePair()
+                        Alias = "PrimaryArtifact",
+                        Type = "Build",
+                        DefinitionReference = new AzureDevOpsArtifactSourceReference()
                         {
-                            Id = build.Definition.Id.ToString(),
-                            Name = build.Definition.Name
-                        },
-                        DefaultVersionType = new AzureDevOpsIdNamePair()
-                        {
-                            Id = "specificVersionType",
-                            Name = "Specific version"
-                        },
-                        DefaultVersionSpecific = new AzureDevOpsIdNamePair()
-                        {
-                            Id = build.Id.ToString(),
-                            Name = build.BuildNumber
-                        },
-                        Project = new AzureDevOpsIdNamePair()
-                        {
-                            Id = build.Project.Id.ToString(),
-                            Name = build.Project.Name
+                            Definition = new AzureDevOpsIdNamePair()
+                            {
+                                Id = build.Definition.Id,
+                                Name = build.Definition.Name
+                            },
+                            DefaultVersionType = new AzureDevOpsIdNamePair()
+                            {
+                                Id = "specificVersionType",
+                                Name = "Specific version"
+                            },
+                            DefaultVersionSpecific = new AzureDevOpsIdNamePair()
+                            {
+                                Id = build.Id.ToString(),
+                                Name = build.BuildNumber
+                            },
+                            Project = new AzureDevOpsIdNamePair()
+                            {
+                                Id = build.Project.Id,
+                                Name = build.Project.Name
+                            }
                         }
                     }
+                };
+            }
+            else if (releaseDefinition.Artifacts.Count() == 1)
+            {
+                var definitionReference = releaseDefinition.Artifacts[0].DefinitionReference;
+
+                definitionReference.Definition.Id = build.Definition.Id;
+                definitionReference.Definition.Name = build.Definition.Name;
+
+                definitionReference.DefaultVersionSpecific.Id = build.Id.ToString();
+                definitionReference.DefaultVersionSpecific.Name = build.BuildNumber;
+
+                definitionReference.Project.Id = build.Project.Id;
+                definitionReference.Project.Name = build.Project.Name;
+
+                if (!releaseDefinition.Artifacts[0].Alias.Equals("PrimaryArtifact"))
+                {
+                    throw new ArgumentException("The artifact source for the release pipeline should be named 'PrimaryArtifact'.");
                 }
-            };
+
+                if (!releaseDefinition.Artifacts[0].Type.Equals("Build"))
+                {
+                    throw new ArgumentException("The artifact source for the release pipeline should have type 'Build'.");
+                }
+
+                if (!definitionReference.DefaultVersionType.Id.Equals("specificVersionType"))
+                {
+                    throw new ArgumentException("The artifact source for the release pipeline should be a specific version.");
+                }
+
+                if (!definitionReference.DefaultVersionType.Name.Equals("Specific version"))
+                {
+                    throw new ArgumentException("The artifact source for the release pipeline should be a specific version.");
+                }
+            }
+            else
+            {
+                throw new ArgumentException($"More than one artifact source is defined in pipeline {releaseDefinition.Id}. Only one artifact source was expected.");
+            }
 
             var _serializerSettings = new JsonSerializerSettings
             {
@@ -918,31 +1022,6 @@ namespace Microsoft.DotNet.DarcLib
             };
 
             var body = JsonConvert.SerializeObject(releaseDefinition, _serializerSettings);
-
-            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
-                HttpMethod.Put,
-                accountName,
-                projectName,
-                $"_apis/release/definitions/",
-                _logger,
-                body,
-                versionOverride: "5.0-preview.3",
-                baseAddressSubpath: "vsrm.");
-
-            return content.ToObject<AzureDevOpsReleaseDefinition>();
-        }
-
-        /// <summary>
-        ///     Remove all artifact sources of the release definition informed.
-        /// </summary>
-        /// <param name="accountName">Azure DevOps account name</param>
-        /// <param name="projectName">Project name</param>
-        /// <param name="releaseDefinition">Release definition to be modified</param>
-        public async Task<AzureDevOpsReleaseDefinition> RemoveAllArtifactSourcesAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition)
-        {
-            releaseDefinition.Artifacts = new AzureDevOpsArtifact[0];
-
-            var body = JsonConvert.SerializeObject(releaseDefinition);
 
             JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Put,

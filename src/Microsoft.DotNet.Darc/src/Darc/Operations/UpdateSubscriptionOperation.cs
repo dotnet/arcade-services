@@ -78,7 +78,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     Policy = subscription.Policy,
                 };
                 subscriptionToUpdate.Policy.Batchable = batchable;
-                subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<SubscriptionPolicyUpdateFrequency>(updateFrequency);
+                subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency);
                 subscriptionToUpdate.Policy.MergePolicies = mergePolicies.ToImmutableList();
 
                 var updatedSubscription = await remote.UpdateSubscriptionAsync(

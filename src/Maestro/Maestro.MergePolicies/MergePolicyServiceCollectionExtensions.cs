@@ -11,8 +11,9 @@ namespace Maestro.MergePolicies
         public static IServiceCollection AddMergePolicies(this IServiceCollection services)
         {
             services.AddTransient<MergePolicy, NoExtraCommitsMergePolicy>();
-            services.AddTransient<MergePolicy, RequireSuccessfulChecksMergePolicy>();
             services.AddTransient<MergePolicy, AllChecksSuccessfulMergePolicy>();
+            services.AddTransient<MergePolicy, NoRequestedChangesMergePolicy>();
+            services.AddTransient<MergePolicy, StandardMergePolicy>();
             return services;
         }
     }

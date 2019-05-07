@@ -173,7 +173,7 @@ namespace Maestro.Data
                 .HasForeignKey<SubscriptionUpdate>(su => su.SubscriptionId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.ForSqlServerIsSystemVersioned<SubscriptionUpdate, SubscriptionUpdateHistory>("1 MONTHS");
+            builder.ForSqlServerIsSystemVersioned<SubscriptionUpdate, SubscriptionUpdateHistory>("6 MONTH");
 
             builder.Entity<SubscriptionUpdateHistory>().HasIndex("SubscriptionId", "SysEndTime", "SysStartTime");
 
@@ -211,7 +211,7 @@ namespace Maestro.Data
                     })
                 .OnDelete(DeleteBehavior.Restrict);
 
-            builder.ForSqlServerIsSystemVersioned<RepositoryBranchUpdate, RepositoryBranchUpdateHistory>("3 MONTHS");
+            builder.ForSqlServerIsSystemVersioned<RepositoryBranchUpdate, RepositoryBranchUpdateHistory>("6 MONTH");
 
             builder.Entity<RepositoryBranchUpdateHistory>()
             .HasKey(

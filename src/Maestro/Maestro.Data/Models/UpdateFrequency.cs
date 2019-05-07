@@ -8,6 +8,8 @@ namespace Maestro.Data.Models
     {
         None = 0,
         EveryDay,
-        EveryBuild
+        EveryBuild,
+        TwiceDaily,
+        EveryWeek,
     }
 }

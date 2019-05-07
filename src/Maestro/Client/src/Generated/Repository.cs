@@ -26,7 +26,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
-        Task<IImmutableList<RepositoryHistoryItem>> GetHistoryAsync(
+        Task<PagedResponse<RepositoryHistoryItem>> GetHistoryAsync(
             string branch = default,
             int? page = default,
             int? perPage = default,
@@ -70,6 +70,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnGetMergePoliciesFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedGetMergePoliciesRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<IImmutableList<MergePolicy>>> GetMergePoliciesInternalAsync(
@@ -120,21 +134,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedGetMergePoliciesRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnGetMergePoliciesFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<IImmutableList<MergePolicy>>
                 {
                     Request = _req,
@@ -168,6 +172,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return;
             }
+        }
+
+        internal async Task OnSetMergePoliciesFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, content),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedSetMergePoliciesRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse> SetMergePoliciesInternalAsync(
@@ -232,21 +250,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, _requestContent),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedSetMergePoliciesRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnSetMergePoliciesFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse
                 {
                     Request = _req,
@@ -263,7 +271,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedGetHistoryRequest(RestApiException ex);
 
-        public async Task<IImmutableList<RepositoryHistoryItem>> GetHistoryAsync(
+        public async Task<PagedResponse<RepositoryHistoryItem>> GetHistoryAsync(
             string branch = default,
             int? page = default,
             int? perPage = default,
@@ -279,8 +287,22 @@ namespace Microsoft.DotNet.Maestro.Client
                 cancellationToken
             ).ConfigureAwait(false))
             {
-                return _res.Body;
+                return new PagedResponse<RepositoryHistoryItem>(Client, OnGetHistoryFailed, _res);
             }
+        }
+
+        internal async Task OnGetHistoryFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedGetHistoryRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<IImmutableList<RepositoryHistoryItem>>> GetHistoryInternalAsync(
@@ -331,21 +353,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedGetHistoryRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnGetHistoryFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<IImmutableList<RepositoryHistoryItem>>
                 {
                     Request = _req,
@@ -379,6 +391,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return;
             }
+        }
+
+        internal async Task OnRetryActionAsyncFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedRetryActionAsyncRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse> RetryActionAsyncInternalAsync(
@@ -436,21 +462,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedRetryActionAsyncRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnRetryActionAsyncFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse
                 {
                     Request = _req,

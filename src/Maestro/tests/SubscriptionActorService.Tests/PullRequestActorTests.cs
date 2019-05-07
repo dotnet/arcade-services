@@ -424,7 +424,7 @@ namespace SubscriptionActorService.Tests
                         Batchable = true,
                         UpdateFrequency = UpdateFrequency.EveryBuild
                     });
-                Build b = GivenANewBuild();
+                Build b = GivenANewBuild(true);
 
                 GivenAPendingUpdateReminder();
                 AndNoPendingUpdates();
@@ -442,7 +442,7 @@ namespace SubscriptionActorService.Tests
                         Batchable = true,
                         UpdateFrequency = UpdateFrequency.EveryBuild
                     });
-                Build b = GivenANewBuild();
+                Build b = GivenANewBuild(true);
 
                 GivenAPendingUpdateReminder();
                 AndPendingUpdates(b);
@@ -463,7 +463,7 @@ namespace SubscriptionActorService.Tests
                         Batchable = true,
                         UpdateFrequency = UpdateFrequency.EveryBuild
                     });
-                Build b = GivenANewBuild();
+                Build b = GivenANewBuild(true);
 
                 GivenAPendingUpdateReminder();
                 AndPendingUpdates(b);
@@ -517,7 +517,7 @@ namespace SubscriptionActorService.Tests
                         Batchable = batchable,
                         UpdateFrequency = UpdateFrequency.EveryBuild
                     });
-                Build b = GivenANewBuild();
+                Build b = GivenANewBuild(true);
 
                 WithRequireNonCoherencyUpdates(b);
                 WithNoRequiredCoherencyUpdates();
@@ -546,7 +546,7 @@ namespace SubscriptionActorService.Tests
                         Batchable = batchable,
                         UpdateFrequency = UpdateFrequency.EveryBuild
                     });
-                Build b = GivenANewBuild();
+                Build b = GivenANewBuild(true);
 
                 WithRequireNonCoherencyUpdates(b);
                 WithNoRequiredCoherencyUpdates();
@@ -573,7 +573,7 @@ namespace SubscriptionActorService.Tests
                         Batchable = batchable,
                         UpdateFrequency = UpdateFrequency.EveryBuild
                     });
-                Build b = GivenANewBuild();
+                Build b = GivenANewBuild(true);
 
                 WithRequireNonCoherencyUpdates(b);
                 WithNoRequiredCoherencyUpdates();
@@ -598,7 +598,7 @@ namespace SubscriptionActorService.Tests
                         Batchable = batchable,
                         UpdateFrequency = UpdateFrequency.EveryBuild
                     });
-                Build b = GivenANewBuild(Array.Empty<(string, string, bool)>());
+                Build b = GivenANewBuild(true, Array.Empty<(string, string, bool)>());
 
                 WithRequireNonCoherencyUpdates(b);
                 WithNoRequiredCoherencyUpdates();

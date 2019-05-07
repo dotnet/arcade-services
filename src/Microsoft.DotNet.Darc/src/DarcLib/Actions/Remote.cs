@@ -66,16 +66,29 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Removes a default channel based on the specified criteria
+        ///     Removes a default channel by id
         /// </summary>
-        /// <param name="repository">Repository having a default association</param>
-        /// <param name="branch">Branch having a default association</param>
-        /// <param name="channel">Name of channel that builds of 'repository' on 'branch' are being applied to.</param>
+        /// <param name="id">Id of default channel.</param>
         /// <returns>Async task</returns>
-        public Task DeleteDefaultChannelAsync(string repository, string branch, string channel)
+        public Task DeleteDefaultChannelAsync(int id)
         {
             CheckForValidBarClient();
-            return _barClient.DeleteDefaultChannelAsync(repository, branch, channel);
+            return _barClient.DeleteDefaultChannelAsync(id);
+        }
+
+        /// <summary>
+        ///     Updates a default channel with new information.
+        /// </summary>
+        /// <param name="id">Id of default channel.</param>
+        /// <param name="repository">New repository</param>
+        /// <param name="branch">New branch</param>
+        /// <param name="channel">New channel</param>
+        /// <param name="enabled">Enabled/disabled status</param>
+        /// <returns>Async task</returns>
+        public Task UpdateDefaultChannelAsync(int id, string repository = null, string branch = null, string channel = null, bool? enabled = null)
+        {
+            CheckForValidBarClient();
+            return _barClient.UpdateDefaultChannelAsync(id, repository, branch, channel, enabled);
         }
 
         /// <summary>
@@ -160,7 +173,8 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="sourceRepo">URL of source repository</param>
         /// <param name="targetRepo">URL of target repository where updates should be made</param>
         /// <param name="targetBranch">Name of target branch where updates should be made</param>
-        /// <param name="updateFrequency">Frequency of updates, can be 'none', 'everyBuild' or 'everyDay'</param>
+        /// <param name="updateFrequency">Frequency of updates, can be 'none', 'everyBuild', 'everyDay', 'twiceDaily', or 'everyWeek'</param>
+        /// <param name="batchable">Is subscription batchable</param>
         /// <param name="mergePolicies">
         ///     Dictionary of merge policies. Each merge policy is a name of a policy with an associated blob
         ///     of metadata
@@ -172,6 +186,7 @@ namespace Microsoft.DotNet.DarcLib
             string targetRepo,
             string targetBranch,
             string updateFrequency,
+            bool batchable,
             List<MergePolicy> mergePolicies)
         {
             CheckForValidBarClient();
@@ -181,6 +196,7 @@ namespace Microsoft.DotNet.DarcLib
                 targetRepo,
                 targetBranch,
                 updateFrequency,
+                batchable,
                 mergePolicies);
         }
 
@@ -202,7 +218,7 @@ namespace Microsoft.DotNet.DarcLib
         ///     Delete a subscription by id
         /// </summary>
         /// <param name="subscriptionId">Id of subscription to delete</param>
-        /// <returns>Information on deleted subscriptio</returns>
+        /// <returns>Information on deleted subscription</returns>
         public async Task<Subscription> DeleteSubscriptionAsync(string subscriptionId)
         {
             CheckForValidBarClient();
@@ -234,13 +250,31 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
+        /// <summary>
+        ///     Get a list of pull request checks.
+        /// </summary>
+        /// <param name="pullRequestUrl">Url of pull request</param>
+        /// <returns>List of pull request checks</returns>
         public async Task<IEnumerable<Check>> GetPullRequestChecksAsync(string pullRequestUrl)
         {
             CheckForValidGitClient();
             using (_logger.BeginScope($"Getting status checks for pull request '{pullRequestUrl}'..."))
             {
-                IEnumerable<Check> checks = await _gitClient.GetPullRequestChecksAsync(pullRequestUrl);
-                return checks;
+                return await _gitClient.GetPullRequestChecksAsync(pullRequestUrl);
+            }
+        }
+
+        /// <summary>
+        ///     Get a list of pull request reviews.
+        /// </summary>
+        /// <param name="pullRequestUrl">Url of pull request</param>
+        /// <returns>List of pull request checks</returns>
+        public async Task<IEnumerable<Review>> GetPullRequestReviewsAsync(string pullRequestUrl)
+        {
+            CheckForValidGitClient();
+            using (_logger.BeginScope($"Getting reviews for pull request '{pullRequestUrl}'..."))
+            {
+                return await _gitClient.GetPullRequestReviewsAsync(pullRequestUrl);
             }
         }
 
@@ -497,9 +531,9 @@ namespace Microsoft.DotNet.DarcLib
             // Cache all nodes in this built graph.
             foreach (DependencyGraphNode node in dependencyGraph.Nodes)
             {
-                if (!nodeCache.ContainsKey($"{node.RepoUri}@{node.Commit}"))
+                if (!nodeCache.ContainsKey($"{node.Repository}@{node.Commit}"))
                 {
-                    nodeCache.Add($"{node.RepoUri}@{node.Commit}", node);
+                    nodeCache.Add($"{node.Repository}@{node.Commit}", node);
                 }
             }
 

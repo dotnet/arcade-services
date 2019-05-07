@@ -83,20 +83,23 @@ try {
     Write-Host "Waiting on PR to be opened in $targetRepoUri"
 
     $expectedDependencies =@(
-        "Name:    Foo"
-        "Version: 1.1.0",
-        "Repo:    $sourceRepoUri",
-        "Commit:  $sourceCommit",
-        "Type:    Product",
+        "Name:             Foo"
+        "Version:          1.1.0",
+        "Repo:             $sourceRepoUri",
+        "Commit:           $sourceCommit",
+        "Type:             Product",
+        "Pinned:           False",
         "",
-        "Name:    Bar",
-        "Version: 2.1.0",
-        "Repo:    $sourceRepoUri",
-        "Commit:  $sourceCommit",
-        "Type:    Product",
+        "Name:             Bar",
+        "Version:          2.1.0",
+        "Repo:             $sourceRepoUri",
+        "Commit:           $sourceCommit",
+        "Type:             Product",
+        "Pinned:           False",
         ""
     )
-    $success = Check-Github-PullRequest $targetRepoName $targetBranch $expectedDependencies
+
+    $success = Check-NonBatched-Github-PullRequest $sourceRepoName $targetRepoName $targetBranch $expectedDependencies
 
     if (!$success) {
         throw "Pull request failed to open."

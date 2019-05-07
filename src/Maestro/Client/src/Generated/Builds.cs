@@ -13,7 +13,7 @@ namespace Microsoft.DotNet.Maestro.Client
 {
     public partial interface IBuilds
     {
-        Task<IImmutableList<Build>> ListBuildsAsync(
+        Task<PagedResponse<Build>> ListBuildsAsync(
             string buildNumber = default,
             int? channelId = default,
             string commit = default,
@@ -67,7 +67,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedListBuildsRequest(RestApiException ex);
 
-        public async Task<IImmutableList<Build>> ListBuildsAsync(
+        public async Task<PagedResponse<Build>> ListBuildsAsync(
             string buildNumber = default,
             int? channelId = default,
             string commit = default,
@@ -93,8 +93,22 @@ namespace Microsoft.DotNet.Maestro.Client
                 cancellationToken
             ).ConfigureAwait(false))
             {
-                return _res.Body;
+                return new PagedResponse<Build>(Client, OnListBuildsFailed, _res);
             }
+        }
+
+        internal async Task OnListBuildsFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedListBuildsRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<IImmutableList<Build>>> ListBuildsInternalAsync(
@@ -170,21 +184,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedListBuildsRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnListBuildsFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<IImmutableList<Build>>
                 {
                     Request = _req,
@@ -214,6 +218,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnCreateFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, content),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedCreateRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<Build>> CreateInternalAsync(
@@ -268,21 +286,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, _requestContent),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedCreateRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnCreateFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<Build>
                 {
                     Request = _req,
@@ -312,6 +320,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnGetBuildFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedGetBuildRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<Build>> GetBuildInternalAsync(
@@ -349,21 +371,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedGetBuildRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnGetBuildFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<Build>
                 {
                     Request = _req,
@@ -393,6 +405,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnGetBuildGraphFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedGetBuildGraphRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<BuildGraph>> GetBuildGraphInternalAsync(
@@ -430,21 +456,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedGetBuildGraphRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnGetBuildGraphFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<BuildGraph>
                 {
                     Request = _req,
@@ -486,6 +502,20 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return _res.Body;
             }
+        }
+
+        internal async Task OnGetLatestFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedGetLatestRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         internal async Task<HttpOperationResponse<Build>> GetLatestInternalAsync(
@@ -551,21 +581,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
 
                 _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                string _responseContent;
                 if (!_res.IsSuccessStatusCode)
                 {
-                    _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                    var ex = new RestApiException<ApiError>(
-                        new HttpRequestMessageWrapper(_req, null),
-                        new HttpResponseMessageWrapper(_res, _responseContent),
-                        Client.Deserialize<ApiError>(_responseContent)
-);
-                    HandleFailedGetLatestRequest(ex);
-                    HandleFailedRequest(ex);
-                    Client.OnFailedRequest(ex);
-                    throw ex;
+                    await OnGetLatestFailed(_req, _res);
                 }
-                _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<Build>
                 {
                     Request = _req,

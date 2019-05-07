@@ -24,7 +24,9 @@ namespace Microsoft.DotNet.Darc
         {
             "none",
             "everyDay",
-            "everyBuild"
+            "everyBuild",
+            "twiceDaily",
+            "everyWeek",
         };
 
         /// <summary>
@@ -43,6 +45,15 @@ namespace Microsoft.DotNet.Darc
             "Each policy may have a set of required properties." +
             "See below for available merge policies:",
             "",
+            "Standard - Corresponds to either StandardGitHub or StandardAzureDevOps depending on the target repo type",
+            "The standard github merge policy is:" +
+            "- AllChecksSuccessful with the 'WIP' and 'license/cla' checks ignored." +
+            "- NoRequestedChanges" +
+            "The standard Azure DevOps merge policy is:" +
+            "- AllChecksSuccessful with the 'Comment requirements', 'Minimum number of reviewers', 'Required reviewers'," +
+            "  and 'Work item linking' ignored.",
+            "- NoRequestedChanges" +
+            "",
             "AllChecksSuccessful - All PR checks must be successful, potentially ignoring a specified set of checks.",
             "Checks might be ignored if they are unrelated to PR validation. The check name corresponds to the string that shows up",
             "in GitHub/Azure DevOps.",
@@ -54,19 +65,13 @@ namespace Microsoft.DotNet.Darc
             "    - license/cla",
             "    - <other check names>",
             "",
-            "RequireChecks - Require that a specific set of checks pass",
-            "The check name corresponds to the string that shows up in GitHub/Azure DevOps.",
-            " YAML format:",
-            "- Name: RequireChecks",
-            "  Properties:",
-            "    checks:",
-            "    - MyCIValidation",
-            "    - CI",
-            "    - <other check names>",
-            "",
             "NoExtraCommits - If additional non-bot commits appear in the PR, the PR should not be merged.",
             "YAML format:",
             "- Name: NoExtraCommits",
+            "",
+            "NoRequestedChanges - If changes are requested on the PR (or the PR is rejected), it will not be merged.",
+            "YAML format:",
+            "- Name: NoRequestedChanges",
         };
     }
 }

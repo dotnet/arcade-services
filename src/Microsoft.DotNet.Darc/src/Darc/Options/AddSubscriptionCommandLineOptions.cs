@@ -23,8 +23,15 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("target-branch", HelpText = "Target branch for the subscription.")]
         public string TargetBranch { get; set; }
 
-        [Option("update-frequency", HelpText = "Frequency of updates. Valid values are: 'none', 'everyDay', or 'everyBuild'.")]
+        [Option("update-frequency", HelpText = "Frequency of updates. Valid values are: 'none', 'everyDay', 'everyBuild', 'twiceDaily', or 'everyWeek'.")]
         public string UpdateFrequency { get; set; }
+
+        [Option("batchable", HelpText = "Make subscription batchable.")]
+        public bool Batchable { get; set; }
+
+        [Option("standard-automerge", HelpText = "Use standard auto-merge policies. GitHub ignores WIP and license/cla checks," +
+            "Azure DevOps ignores comment, reviewer and work item linking. Both will not auto-merge if changes are requested.")]
+        public bool StandardAutoMergePolicies { get; set; }
 
         [Option("all-checks-passed", HelpText = "PR is automatically merged if there is at least one checks and all are passed. " +
             "Optionally provide a comma separated list of ignored check with --ignore-checks.")]
@@ -33,12 +40,11 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("ignore-checks", Separator = ',', HelpText = "For use with --all-checks-passed. A set of checks that are ignored.")]
         public IEnumerable<string> IgnoreChecks { get; set; }
 
+        [Option("no-requested-changes", HelpText = "PR is not merged if there are changes requested or the PR has been rejected.")]
+        public bool NoRequestedChangesMergePolicy { get; set; }
+
         [Option("no-extra-commits", HelpText = "PR is automatically merged if no non-bot commits exist in the PR.")]
         public bool NoExtraCommitsMergePolicy { get; set; }
-
-        [Option("require-checks", Separator = ',', HelpText = "PR is automatically merged if the specified checks are passed. " +
-            "Provide a comma separate list of required checks.")]
-        public IEnumerable<string> RequireChecksMergePolicy { get; set; }
 
         [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]
         public bool Quiet { get; set; }

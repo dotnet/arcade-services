@@ -35,31 +35,6 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
-                // Retrieve the channel by name, matching substring. If more than one channel 
-                // matches, then let the user know they need to be more specific
-                IEnumerable<Channel> channels = (await remote.GetChannelsAsync());
-                List<Channel> matchingChannels = channels.Where(c => c.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase)).ToList();
-
-                if (!matchingChannels.Any())
-                {
-                    Console.WriteLine($"No channels found with name containing '{_options.Channel}'");
-                    Console.WriteLine("Available channels:");
-                    foreach (Channel channel in channels)
-                    {
-                        Console.WriteLine($"  {channel.Name}");
-                    }
-                    return Constants.ErrorCode;
-                }
-                else if (matchingChannels.Count != 1)
-                {
-                    Console.WriteLine($"Multiple channels found with name containing '{_options.Channel}', please select one");
-                    foreach (Channel channel in matchingChannels)
-                    {
-                        Console.WriteLine($"  {channel.Name}");
-                    }
-                    return Constants.ErrorCode;
-                }
-
                 // Find the build to give someone info
                 Build build = await remote.GetBuildAsync(_options.Id);
                 if (build == null)
@@ -68,7 +43,11 @@ namespace Microsoft.DotNet.Darc.Operations
                     return Constants.ErrorCode;
                 }
 
-                Channel targetChannel = matchingChannels.Single();
+                Channel targetChannel = await UxHelpers.ResolveSingleChannel(remote, _options.Channel);
+                if (targetChannel == null)
+                {
+                    return Constants.ErrorCode;
+                }
 
                 if (build.Channels.Any(c => c.Id == targetChannel.Id))
                 {
@@ -78,7 +57,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 Console.WriteLine($"Assigning the following build to channel '{targetChannel.Name}':");
                 Console.WriteLine();
-                OutputFormattingHelpers.PrintBuild(build);
+                OutputHelpers.PrintBuild(build);
 
                 await remote.AssignBuildToChannel(_options.Id, targetChannel.Id);
 
@@ -101,10 +80,9 @@ namespace Microsoft.DotNet.Darc.Operations
         private void PrintSubscriptionInfo(List<Subscription> applicableSubscriptions)
         {
             IEnumerable<Subscription> subscriptionsThatWillFlowImmediately = applicableSubscriptions.Where(s => s.Enabled &&
-                    s.Policy.UpdateFrequency == SubscriptionPolicyUpdateFrequency.EveryBuild);
+                    s.Policy.UpdateFrequency == UpdateFrequency.EveryBuild);
             IEnumerable<Subscription> subscriptionsThatWillFlowTomorrowOrNotAtAll = applicableSubscriptions.Where(s => s.Enabled &&
-                (s.Policy.UpdateFrequency == SubscriptionPolicyUpdateFrequency.EveryDay ||
-                s.Policy.UpdateFrequency == SubscriptionPolicyUpdateFrequency.None));
+                    s.Policy.UpdateFrequency != UpdateFrequency.EveryBuild);
             IEnumerable<Subscription> disabledSubscriptions = applicableSubscriptions.Where(s => !s.Enabled);
 
             // Print out info
