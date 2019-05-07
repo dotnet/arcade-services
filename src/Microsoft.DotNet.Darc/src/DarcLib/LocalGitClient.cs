@@ -423,6 +423,16 @@ namespace Microsoft.DotNet.DarcLib
                             CleanRepoAndSubmodules(subRepo, log);
                         }
                     }
+
+                    if (File.Exists(subRepoGitFilePath))
+                    {
+                        log.LogDebug($"Deleting {subRepoGitFilePath} to orphan submodule {sub.Name}");
+                        File.Delete(subRepoGitFilePath);
+                    }
+                    else
+                    {
+                        log.LogDebug($"{sub.Name} doesn't have a .gitdir redirect at {subRepoGitFilePath}, skipping delete");
+                    }
                 }
             }
         }

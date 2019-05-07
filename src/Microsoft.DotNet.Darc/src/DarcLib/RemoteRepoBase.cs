@@ -235,11 +235,12 @@ namespace Microsoft.DotNet.DarcLib
                 log.LogDebug($"Submodule {sub.Name} has .gitdir {relativeGitDirPath}");
                 string absoluteGitDirPath = Path.GetFullPath(Path.Combine(subRepoPath, relativeGitDirPath));
                 string relocatedGitDirPath = absoluteGitDirPath.Replace(repo.Info.Path.TrimEnd(new[] { '/', '\\' }), gitDirParentPath.TrimEnd(new[] { '/', '\\' }));
+                string subRepoGitFilePath = Path.Combine(subRepoPath, ".git");
 
                 log.LogDebug($"Writing new .gitdir path {relocatedGitDirPath} to submodule at {subRepoPath}");
 
                 // File.WriteAllText gets access denied for some reason
-                using (FileStream s = File.OpenWrite(Path.Combine(subRepoPath, ".git")))
+                using (FileStream s = File.OpenWrite(subRepoGitFilePath))
                 using (StreamWriter w = new StreamWriter(s))
                 {
                     w.Write($"gitdir: {relocatedGitDirPath}");
@@ -252,6 +253,16 @@ namespace Microsoft.DotNet.DarcLib
                     log.LogDebug($"Resetting {sub.Name} to {sub.HeadCommitId.Sha}");
                     subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.QueryBy(new LibGit2Sharp.CommitFilter { IncludeReachableFrom = subRepo.Refs }).Single(c => c.Sha == sub.HeadCommitId.Sha));
                     CheckoutSubmodules(subRepo, submoduleCloneOptions, absoluteGitDirPath, log);
+                }
+
+                if (File.Exists(subRepoGitFilePath))
+                {
+                    log.LogDebug($"Deleting {subRepoGitFilePath} to orphan submodule {sub.Name}");
+                    File.Delete(subRepoGitFilePath);
+                }
+                else
+                {
+                    log.LogDebug($"{sub.Name} doesn't have a .gitdir redirect at {subRepoGitFilePath}, skipping delete");
                 }
             }
         }
