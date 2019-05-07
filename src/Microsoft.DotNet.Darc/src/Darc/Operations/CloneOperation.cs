@@ -140,15 +140,7 @@ namespace Microsoft.DotNet.Darc.Operations
                                     accumulatedDependencies.Add(stripped);
                                 }
                             }
-                            // delete the .gitdir redirect to orphan the repo.
-                            // we want to do this because otherwise all of these folder will show as dirty in Git,
-                            // and any operations on them will affect the master copy and all the others, which
-                            // could be confusing.
-                            string repoGitRedirectPath = Path.Combine(repoPath, ".git");
-                            if (File.Exists(repoGitRedirectPath))
-                            {
-                                File.Delete(repoGitRedirectPath);
-                            }
+			    Logger.LogDebug($"done looking for dependencies in {repoPath} at {repo.Commit}");
                         }
                         catch (DirectoryNotFoundException)
                         {
@@ -158,8 +150,23 @@ namespace Microsoft.DotNet.Darc.Operations
                         {
                             Logger.LogWarning($"Repo {repoPath} appears to have no '/eng/Version.Details.xml' file at commit {repo.Commit}.  Dependency chain is broken here.");
                         }
-
-                        Logger.LogDebug($"Now have {dependenciesToClone.Count} dependencies to consider");
+                        finally
+                        {
+                            // delete the .gitdir redirect to orphan the repo.
+                            // we want to do this because otherwise all of these folder will show as dirty in Git,
+                            // and any operations on them will affect the master copy and all the others, which
+                            // could be confusing.
+                            string repoGitRedirectPath = Path.Combine(repoPath, ".git");
+                            if (File.Exists(repoGitRedirectPath))
+                            {
+                                Logger.LogDebug($"Deleting .gitdir redirect {repoGitRedirectPath}");
+                                File.Delete(repoGitRedirectPath);
+                            }
+                            else
+                            {
+                                Logger.LogDebug($"No .gitdir redirect found at {repoGitRedirectPath}");
+                            }
+                        }
                     }   // end inner while(dependenciesToClone.Any())
 
 
