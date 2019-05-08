@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
         public string TargetRepository => _yamlData.TargetRepository;
         public string TargetBranch => _yamlData.TargetBranch;
         public string UpdateFrequency => _yamlData.UpdateFrequency;
-        public List<MergePolicy> MergePolicies => _yamlData.GetMergePolicies();
+        public List<MergePolicy> MergePolicies => ConvertMergePolicies(_yamlData.MergePolicies);
         public bool Batchable => _yamlData.Batchable;
 
         public AddSubscriptionPopUp(string path,
@@ -51,7 +51,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 UpdateFrequency = GetCurrentSettingForDisplay(updateFrequency, $"<'{string.Join("', '", Constants.AvailableFrequencies)}'>", false),
                 Batchable = batchable
             };
-            _yamlData.SetMergePolicies(mergePolicies);
+            _yamlData.MergePolicies = ConvertMergePolicies(mergePolicies);
 
             ISerializer serializer = new SerializerBuilder().Build();
             string yaml = serializer.Serialize(_yamlData);
@@ -113,7 +113,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             }
 
             // Validate the merge policies
-            if (!ValidateMergePolicies(outputYamlData.GetMergePolicies()))
+            if (!ValidateMergePolicies(ConvertMergePolicies(outputYamlData.MergePolicies)))
             {
                 return Constants.ErrorCode;
             }
@@ -197,37 +197,6 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
 
             [YamlMember(Alias = mergePolicyElement, ApplyNamingConventions = false)]
             public List<MergePolicyData> MergePolicies { get; set; }
-
-            public List<MergePolicy> GetMergePolicies()
-            {
-                return MergePolicies.Select(
-                        d => new MergePolicy
-                        {
-                            Name = d.Name,
-                            Properties =
-                                d.Properties.ToImmutableDictionary(p => p.Key, p => JToken.FromObject(p.Value)),
-                        })
-                    .ToList();
-            }
-
-            public void SetMergePolicies(List<MergePolicy> value)
-            {
-                MergePolicies = value.Select(
-                        d => new MergePolicyData
-                        {
-                            Name = d.Name,
-                            Properties = d.Properties.ToDictionary(p => p.Key, p => (object) p.Value)
-                        })
-                    .ToList();
-            }
-        }
-
-        class MergePolicyData
-        {
-            [YamlMember(Alias = "Name")]
-            public string Name { get; set; }
-            [YamlMember(Alias = "Properties")]
-            public Dictionary<string, object> Properties { get; set; }
         }
     }
 }

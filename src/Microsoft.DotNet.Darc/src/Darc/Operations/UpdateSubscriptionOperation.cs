@@ -79,7 +79,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 };
                 subscriptionToUpdate.Policy.Batchable = batchable;
                 subscriptionToUpdate.Policy.UpdateFrequency = Enum.Parse<UpdateFrequency>(updateFrequency);
-                subscriptionToUpdate.Policy.MergePolicies = mergePolicies.ToImmutableList();
+                subscriptionToUpdate.Policy.MergePolicies = mergePolicies?.ToImmutableList();
 
                 var updatedSubscription = await remote.UpdateSubscriptionAsync(
                     _options.Id,

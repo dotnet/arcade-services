@@ -46,7 +46,11 @@ namespace Microsoft.DotNet.Darc.Operations
             List<MergePolicy> mergePolicies = new List<MergePolicy>();
             if (_options.NoExtraCommitsMergePolicy)
             {
-                mergePolicies.Add(new MergePolicy {Name = "NoExtraCommits" });
+                mergePolicies.Add(
+                    new MergePolicy
+                    {
+                        Name = "NoExtraCommits"
+                    });
             }
 
             if (_options.AllChecksSuccessfulMergePolicy)
@@ -62,12 +66,22 @@ namespace Microsoft.DotNet.Darc.Operations
 
             if (_options.NoRequestedChangesMergePolicy)
             {
-                mergePolicies.Add(new MergePolicy { Name = "NoRequestedChanges" });
+                mergePolicies.Add(
+                    new MergePolicy
+                    {
+                        Name = "NoRequestedChanges",
+                        Properties = ImmutableDictionary.Create<string, JToken>()
+                    });
             }
 
             if (_options.StandardAutoMergePolicies)
             {
-                mergePolicies.Add(new MergePolicy { Name = "Standard" });
+                mergePolicies.Add(
+                    new MergePolicy
+                    {
+                        Name = "Standard",
+                        Properties = ImmutableDictionary.Create<string, JToken>()
+                    });
             }
 
             if (_options.Batchable && mergePolicies.Count > 0)
