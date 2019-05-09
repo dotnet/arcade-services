@@ -2,16 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data;
-using Maestro.Data.Models;
 using Maestro.Web.Api.v2018_07_16.Models;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
@@ -19,6 +11,13 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.ServiceFabric.Actors;
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
 {
@@ -44,6 +43,33 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         public Func<ActorId, IPullRequestActor> PullRequestActorFactory { get; }
 
         /// <summary>
+        ///   Gets the list of <see cref="RepositoryBranch">RepositoryBranch</see>, optionally filtered by
+        ///   repository and branch.
+        /// </summary>
+        /// <param name="repository">The repository</param>
+        /// <param name="branch">The branch</param>
+        [HttpGet("repositories")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(IList<RepositoryBranch>),
+            Description = "The list of repositories+branches and their merge policies")]
+        [ValidateModelState]
+        public IActionResult ListRepositories(string repository = null, string branch = null)
+        {
+            IQueryable<Data.Models.RepositoryBranch> query = Context.RepositoryBranches;
+
+            if (!string.IsNullOrEmpty(repository))
+            {
+                query = query.Where(r => r.RepositoryName == repository);
+            }
+
+            if (!string.IsNullOrEmpty(branch))
+            {
+                query = query.Where(r => r.BranchName == branch);
+            }
+
+            return Ok(query.AsEnumerable().Select(r => new RepositoryBranch(r)).ToList());
+        }
+
+        /// <summary>
         ///   Gets the list of <see cref="MergePolicy">MergePolicies</see> set up for the given repository and branch.
         /// </summary>
         /// <param name="repository">The repository</param>
@@ -67,14 +93,14 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 return BadRequest(ModelState);
             }
 
-            RepositoryBranch repoBranch = await Context.RepositoryBranches.FindAsync(repository, branch);
+            Data.Models.RepositoryBranch repoBranch = await Context.RepositoryBranches.FindAsync(repository, branch);
             if (repoBranch == null)
             {
                 return NotFound();
             }
 
-            List<MergePolicyDefinition> policies =
-                repoBranch.PolicyObject?.MergePolicies ?? new List<MergePolicyDefinition>();
+            List<Data.Models.MergePolicyDefinition> policies =
+                repoBranch.PolicyObject?.MergePolicies ?? new List<Data.Models.MergePolicyDefinition>();
             return Ok(policies.Select(p => new MergePolicy(p)));
         }
 
@@ -106,9 +132,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 return BadRequest(ModelState);
             }
 
-            RepositoryBranch repoBranch = await GetRepositoryBranch(repository, branch);
-            RepositoryBranch.Policy policy = repoBranch.PolicyObject ?? new RepositoryBranch.Policy();
-            policy.MergePolicies = policies?.Select(p => p.ToDb()).ToList() ?? new List<MergePolicyDefinition>();
+            Data.Models.RepositoryBranch repoBranch = await GetRepositoryBranch(repository, branch);
+            Data.Models.RepositoryBranch.Policy policy = repoBranch.PolicyObject ?? new Data.Models.RepositoryBranch.Policy();
+            policy.MergePolicies = policies?.Select(p => p.ToDb()).ToList() ?? new List<Data.Models.MergePolicyDefinition>();
             repoBranch.PolicyObject = policy;
             await Context.SaveChangesAsync();
             return Ok();
@@ -139,7 +165,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 return BadRequest(ModelState);
             }
 
-            RepositoryBranch repoBranch = await Context.RepositoryBranches.FindAsync(repository, branch);
+            Data.Models.RepositoryBranch repoBranch = await Context.RepositoryBranches.FindAsync(repository, branch);
 
             if (repoBranch == null)
             {
@@ -182,7 +208,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             DateTime ts = DateTimeOffset.FromUnixTimeSeconds(timestamp).UtcDateTime;
 
-            RepositoryBranch repoBranch = await Context.RepositoryBranches.FindAsync(repository, branch);
+            Data.Models.RepositoryBranch repoBranch = await Context.RepositoryBranches.FindAsync(repository, branch);
 
             if (repoBranch == null)
             {
@@ -216,13 +242,13 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Accepted();
         }
 
-        private async Task<RepositoryBranch> GetRepositoryBranch(string repository, string branch)
+        private async Task<Data.Models.RepositoryBranch> GetRepositoryBranch(string repository, string branch)
         {
-            RepositoryBranch repoBranch = await Context.RepositoryBranches.FindAsync(repository, branch);
+            Data.Models.RepositoryBranch repoBranch = await Context.RepositoryBranches.FindAsync(repository, branch);
             if (repoBranch == null)
             {
                 Context.RepositoryBranches.Add(
-                    repoBranch = new RepositoryBranch
+                    repoBranch = new Data.Models.RepositoryBranch
                     {
                         RepositoryName = repository,
                         BranchName = branch
