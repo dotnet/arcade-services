@@ -299,18 +299,14 @@ export class BuildGraphTableComponent implements OnChanges {
       this.sortedBuilds = sortBuilds(this.graph);
     }
 
-    if(changes.showAllDependencies && (typeof changes.showAllDependencies.previousValue !== 'undefined') && (changes.showAllDependencies.previousValue != changes.showAllDependencies.currentValue))
+    if(changes.showAllDependencies && (changes.showAllDependencies.previousValue != changes.showAllDependencies.currentValue))
     {
-      let showSubDependenciesSetting = changes.showAllDependencies.currentValue ? "on" : "off";
-
-      this.ai.trackEvent({name: "Show Sub-Dependencies"}, {value: showSubDependenciesSetting});
+      this.ai.trackEvent({name: "Show Sub-Dependencies"}, {optionEnabled: changes.showAllDependencies.currentValue});
     }
 
-    if(changes.includeToolsets && (typeof changes.includeToolsets.previousValue !== 'undefined') && (changes.includeToolsets.previousValue != changes.includeToolsets.currentValue))
+    if(changes.includeToolsets && (changes.includeToolsets.previousValue != changes.includeToolsets.currentValue))
     {
-      let includeToolsetsSetting = changes.includeToolsets.currentValue ? "on" : "off";
-
-      this.ai.trackEvent({name: "Include Toolsets"}, {value: includeToolsetsSetting});
+      this.ai.trackEvent({name: "Include Toolsets"}, {optionEnabled: changes.includeToolsets.currentValue});
     }
   }
 
