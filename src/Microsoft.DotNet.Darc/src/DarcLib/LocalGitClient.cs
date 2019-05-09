@@ -415,10 +415,40 @@ namespace Microsoft.DotNet.DarcLib
                     using (log.BeginScope($"Beginning clean of submodule {sub.Name}"))
                     {
                         log.LogDebug($"Beginning clean of submodule {sub.Name} in {subRepoPath}");
+
+                        // The worktree is stored in the .gitdir/config file, so we have to change it
+                        // to get it to check out to the correct place.
+                        LibGit2Sharp.ConfigurationEntry<string> oldWorkTree = null;
+                        using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
+                        {
+                            oldWorkTree = subRepo.Config.Get<string>("core.worktree");
+                            if (oldWorkTree != null)
+                            {
+                                log.LogDebug($"{subRepoPath} old worktree is {oldWorkTree.Value}, setting to {subRepoPath}");
+                                subRepo.Config.Set("core.worktree", subRepoPath);
+                            }
+                            // This branch really shouldn't happen but just in case.
+                            else
+                            {
+                                log.LogDebug($"{subRepoPath} has default worktree, leaving unchanged");
+                            }
+                        }
+
                         using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
                         {
                             log.LogDebug($"Resetting {sub.Name} to {sub.HeadCommitId.Sha}");
                             subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.QueryBy(new LibGit2Sharp.CommitFilter { IncludeReachableFrom = subRepo.Refs }).Single(c => c.Sha == sub.HeadCommitId.Sha));
+                            // Now we reset the worktree back so that when we can initialize a Repository
+                            // from it, instead of having to figure out which hash of the repo was most recently checked out.
+                            if (oldWorkTree != null)
+                            {
+                                log.LogDebug($"resetting {subRepoPath} worktree to {oldWorkTree.Value}");
+                                subRepo.Config.Set("core.worktree", oldWorkTree.Value);
+                            }
+                            else
+                            {
+                                log.LogDebug($"leaving {subRepoPath} worktree as default");
+                            }
                             log.LogDebug($"Done resetting {subRepoPath}, checking submodules");
                             CleanRepoAndSubmodules(subRepo, log);
                         }
