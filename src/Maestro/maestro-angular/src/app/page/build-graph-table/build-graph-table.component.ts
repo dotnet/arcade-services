@@ -301,12 +301,20 @@ export class BuildGraphTableComponent implements OnChanges {
 
     if(changes.showAllDependencies && (changes.showAllDependencies.previousValue != changes.showAllDependencies.currentValue))
     {
-      this.ai.trackEvent({name: "Show Sub-Dependencies"}, {optionEnabled: changes.showAllDependencies.currentValue});
+      this.ai.trackEvent({name: "featureEnabled"}, 
+        {
+          featureName: "showSubDependencies",
+          featureState: changes.showAllDependencies.currentValue
+        });
     }
 
     if(changes.includeToolsets && (changes.includeToolsets.previousValue != changes.includeToolsets.currentValue))
     {
-      this.ai.trackEvent({name: "Include Toolsets"}, {optionEnabled: changes.includeToolsets.currentValue});
+      this.ai.trackEvent({name: "featureEnabled"}, 
+        {
+          featureName: "includeToolsets",
+          featureState: changes.includeToolsets.currentValue
+        });
     }
   }
 
