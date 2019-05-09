@@ -4,10 +4,11 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Darc.Options
 {
-    [Verb("clone", HelpText = "clone a remote repo and all of its dependency repos")]
+    [Verb("clone", HelpText = "Clone a remote repo and all of its dependency repos")]
 
     internal class CloneCommandLineOptions : CommandLineOptions
     {
@@ -17,11 +18,20 @@ namespace Microsoft.DotNet.Darc.Options
         [Option('v', "version", HelpText = "Branch, commit or tag to start at in the remote repository.  Required if repo is specified.")]
         public string Version { get; set; }
 
-        [Option("repos-folder", HelpText = @"Full path to folder where all the repos will be cloned to. i.e. C:\repos.  Default: current directory.")]
+        [Option("repos-folder", HelpText = @"Full path to folder where all the repos will be cloned to, e.g. C:\repos.  Default: current directory.")]
         public string ReposFolder { get; set; }
+
+        [Option("git-dir-folder", HelpText = @"Advanced: Full path to folder where .git folders will be stored, e.g. C:\myrepos\.git\modules.  Default: each repo's folder.")]
+        public string GitDirFolder { get; set; }
 
         [Option("include-toolset", HelpText = "Include toolset dependencies.")]
         public bool IncludeToolset { get; set; }
+
+        [Option("ignore-repos", Separator = ';', HelpText = "Semicolon-separated list of repo URIs to ignore.  e.g. 'https://dev.azure.com/devdiv/DevDiv/_git/DotNet-Trusted;https://github.com/dotnet/arcade-services'")]
+        public IEnumerable<string> IgnoredRepos { get; set; }
+
+        [Option('d', "depth", Default = uint.MaxValue, HelpText = "Depth to clone the repos to.  Defaults to infinite.")]
+        public uint CloneDepth { get; set; }
 
         public override Operation GetOperation()
         {

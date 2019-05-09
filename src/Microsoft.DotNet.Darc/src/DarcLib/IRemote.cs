@@ -340,8 +340,9 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository uri</param>
         /// <param name="commit">Branch, commit, or tag to checkout</param>
         /// <param name="targetDirectory">Directory to clone the repo to</param>
+        /// <param name="gitDirParent">Location for the .git directory, or null for default</param>
         /// <returns></returns>
-        void Clone(string repoUri, string commit, string targetDirectory);
+        void Clone(string repoUri, string commit, string targetDirectory, string gitDirectory);
 
         #endregion
 

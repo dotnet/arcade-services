@@ -262,9 +262,237 @@ namespace Microsoft.DotNet.DarcLib
             throw new NotImplementedException();
         }
 
-        public void Clone(string repoUri, string commit, string targetDirectory)
+        /// <summary>
+        ///     Clone a remote repository at the specified commit.
+        /// </summary>
+        /// <param name="repoUri">Remote git repo to clone</param>
+        /// <param name="commit">Tag, branch, or commit to clone at</param>
+        /// <param name="targetDirectory">Directory to clone into</param>
+        /// <param name="gitDirectory">Directory for the .git folder, or null for default</param>
+        public void Clone(string repoUri, string commit, string targetDirectory, string gitDirectory)
         {
             throw new NotImplementedException();
+        }
+
+        /// <summary>
+        ///     Checkout the repo to the specified state.
+        /// </summary>
+        /// <param name="commit">Tag, branch, or commit to checkout.</param>
+        public void Checkout(string repoDir, string commit, bool force = false)
+        {
+            using (_logger.BeginScope("Checking out {commit}", commit ?? "default commit"))
+            {
+                _logger.LogDebug($"Checking out {commit}", commit ?? "default commit");
+                LibGit2Sharp.CheckoutOptions checkoutOptions = new LibGit2Sharp.CheckoutOptions
+                {
+                    CheckoutModifiers = force ? LibGit2Sharp.CheckoutModifiers.Force : LibGit2Sharp.CheckoutModifiers.None,
+                };
+                try
+                {
+                    _logger.LogDebug($"Checking out {commit ?? "default commit"}");
+
+                    _logger.LogDebug($"Reading local repo from {repoDir}");
+                    using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoDir))
+                    {
+                        if (commit == null)
+                        {
+                            commit = localRepo.Head.Reference.TargetIdentifier;
+                            _logger.LogInformation($"Repo {localRepo.Info.WorkingDirectory} default commit to checkout is {commit}");
+                        }
+                        try
+                        {
+                            _logger.LogDebug($"Attempting to check out {commit} in {repoDir}");
+                            LibGit2Sharp.Commands.Checkout(localRepo, commit, checkoutOptions);
+                            if (force)
+                            {
+                                CleanRepoAndSubmodules(localRepo, _logger);
+                            }
+                        }
+                        catch (LibGit2Sharp.NotFoundException)
+                        {
+                            _logger.LogWarning($"Couldn't find commit {commit} in {repoDir} locally.  Attempting fetch.");
+                            try
+                            {
+                                foreach (LibGit2Sharp.Remote r in localRepo.Network.Remotes)
+                                {
+                                    IEnumerable<string> refSpecs = r.FetchRefSpecs.Select(x => x.Specification);
+                                    _logger.LogDebug($"Fetching {string.Join(";", refSpecs)} from {r.Url} in {repoDir}");
+                                    try
+                                    {
+                                        LibGit2Sharp.Commands.Fetch(localRepo, r.Name, refSpecs, new LibGit2Sharp.FetchOptions(), $"Fetching from {r.Url}");
+                                    }
+                                    catch
+                                    {
+                                        _logger.LogWarning($"Fetching failed, are you offline or missing a remote?");
+                                    }
+                                }
+                                _logger.LogDebug($"After fetch, attempting to checkout {commit} in {repoDir}");
+                                try
+                                {
+                                    LibGit2Sharp.Commands.Checkout(localRepo, commit, checkoutOptions);
+                                }
+                                catch
+                                {
+                                    _logger.LogDebug($"Couldn't checkout {commit} as a commit after fetch.  Attempting to resolve as a treeish.");
+                                    string resolvedReference = ParseReference(localRepo, commit, _logger);
+                                    if (resolvedReference != null)
+                                    {
+                                        _logger.LogDebug($"Resolved {commit} to {resolvedReference}, attempting to check out");
+                                        LibGit2Sharp.Commands.Checkout(localRepo, resolvedReference, checkoutOptions);
+                                    }
+                                }
+
+                                if (force)
+                                {
+                                    CleanRepoAndSubmodules(localRepo, _logger);
+                                }
+                            }
+                            catch   // Most likely network exception, could also be no remotes.  We can't do anything about any error here.
+                            {
+                                _logger.LogError($"After fetch, still couldn't find commit or treeish {commit} in {repoDir}.  Are you offline or missing a remote?");
+                                throw;
+                            }
+                        }
+                    }
+                }
+                catch (Exception exc)
+                {
+                    throw new Exception($"Something went wrong when checking out {commit} in {repoDir}", exc);
+                }
+            }
+        }
+
+        private static void CleanRepoAndSubmodules(LibGit2Sharp.Repository repo, ILogger log)
+        {
+            using (log.BeginScope($"Beginning clean of {repo.Info.WorkingDirectory} and {repo.Submodules.Count()} submodules"))
+            {
+                log.LogDebug($"Beginning clean of {repo.Info.WorkingDirectory} and {repo.Submodules.Count()} submodules");
+                LibGit2Sharp.StatusOptions options = new LibGit2Sharp.StatusOptions
+                {
+                    IncludeUntracked = true,
+                    RecurseUntrackedDirs = true,
+                };
+                int count = 0;
+                foreach (LibGit2Sharp.StatusEntry item in repo.RetrieveStatus(options))
+                {
+                    if (item.State == LibGit2Sharp.FileStatus.NewInWorkdir)
+                    {
+                        File.Delete(Path.Combine(repo.Info.WorkingDirectory, item.FilePath));
+                        ++count;
+                    }
+                }
+                log.LogDebug($"Deleted {count} untracked files");
+
+                foreach (LibGit2Sharp.Submodule sub in repo.Submodules)
+                {
+                    string normalizedSubPath = sub.Path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+                    string subRepoPath = Path.Combine(repo.Info.WorkingDirectory, normalizedSubPath);
+                    string subRepoGitFilePath = Path.Combine(subRepoPath, ".git");
+                    if (!File.Exists(subRepoGitFilePath))
+                    {
+                        log.LogDebug($"Submodule {sub.Name} in {subRepoPath} does not appear to be initialized (no file at {subRepoGitFilePath}), attempting to initialize now.");
+                        // hasn't been initialized yet, can happen when different hashes have new or moved submodules
+                        try
+                        {
+                            repo.Submodules.Update(sub.Name, new LibGit2Sharp.SubmoduleUpdateOptions { Init = true });
+                        }
+                        catch
+                        {
+                            log.LogDebug($"Submodule {sub.Name} in {subRepoPath} is already initialized, trying to adopt from super-repo {repo.Info.Path}");
+
+                            // superrepo thinks it is initialized, but it's orphaned.  Go back to the master repo to find out where this is supposed to point.
+                            using (LibGit2Sharp.Repository masterRepo = new LibGit2Sharp.Repository(repo.Info.WorkingDirectory))
+                            {
+                                LibGit2Sharp.Submodule masterSubModule = masterRepo.Submodules.Single(s => s.Name == sub.Name);
+                                string masterSubPath = Path.Combine(repo.Info.Path, "modules", masterSubModule.Path);
+                                log.LogDebug($"Writing .gitdir redirect {masterSubPath} to {subRepoGitFilePath}");
+                                Directory.CreateDirectory(Path.GetDirectoryName(subRepoGitFilePath));
+                                File.WriteAllText(subRepoGitFilePath, $"gitdir: {masterSubPath}");
+                            }
+                        }
+                    }
+
+                    using (log.BeginScope($"Beginning clean of submodule {sub.Name}"))
+                    {
+                        log.LogDebug($"Beginning clean of submodule {sub.Name} in {subRepoPath}");
+
+                        // The worktree is stored in the .gitdir/config file, so we have to change it
+                        // to get it to check out to the correct place.
+                        LibGit2Sharp.ConfigurationEntry<string> oldWorkTree = null;
+                        using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
+                        {
+                            oldWorkTree = subRepo.Config.Get<string>("core.worktree");
+                            if (oldWorkTree != null)
+                            {
+                                log.LogDebug($"{subRepoPath} old worktree is {oldWorkTree.Value}, setting to {subRepoPath}");
+                                subRepo.Config.Set("core.worktree", subRepoPath);
+                            }
+                            // This branch really shouldn't happen but just in case.
+                            else
+                            {
+                                log.LogDebug($"{subRepoPath} has default worktree, leaving unchanged");
+                            }
+                        }
+
+                        using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
+                        {
+                            log.LogDebug($"Resetting {sub.Name} to {sub.HeadCommitId.Sha}");
+                            subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.QueryBy(new LibGit2Sharp.CommitFilter { IncludeReachableFrom = subRepo.Refs }).Single(c => c.Sha == sub.HeadCommitId.Sha));
+                            // Now we reset the worktree back so that when we can initialize a Repository
+                            // from it, instead of having to figure out which hash of the repo was most recently checked out.
+                            if (oldWorkTree != null)
+                            {
+                                log.LogDebug($"resetting {subRepoPath} worktree to {oldWorkTree.Value}");
+                                subRepo.Config.Set("core.worktree", oldWorkTree.Value);
+                            }
+                            else
+                            {
+                                log.LogDebug($"leaving {subRepoPath} worktree as default");
+                            }
+                            log.LogDebug($"Done resetting {subRepoPath}, checking submodules");
+                            CleanRepoAndSubmodules(subRepo, log);
+                        }
+                    }
+
+                    if (File.Exists(subRepoGitFilePath))
+                    {
+                        log.LogDebug($"Deleting {subRepoGitFilePath} to orphan submodule {sub.Name}");
+                        File.Delete(subRepoGitFilePath);
+                    }
+                    else
+                    {
+                        log.LogDebug($"{sub.Name} doesn't have a .gitdir redirect at {subRepoGitFilePath}, skipping delete");
+                    }
+                }
+            }
+        }
+
+        private static string ParseReference(LibGit2Sharp.Repository repo, string treeish, ILogger log)
+        {
+            LibGit2Sharp.Reference reference = null;
+            LibGit2Sharp.GitObject dummy;
+            try
+            {
+                repo.RevParse(treeish, out reference, out dummy);
+            }
+            catch
+            {
+                // nothing we can do
+            }
+            log.LogDebug($"Parsed {treeish} to mean {reference?.TargetIdentifier ?? "<invalid>"}");
+            if (reference == null)
+            {
+                try
+                {
+                    repo.RevParse($"origin/{treeish}", out reference, out dummy);
+                }
+                catch
+                {
+                    // nothing we can do
+                }
+                log.LogDebug($"Parsed origin/{treeish} to mean {reference?.TargetIdentifier ?? "<invalid>"}");
+            }
+            return reference?.TargetIdentifier;
         }
     }
 }

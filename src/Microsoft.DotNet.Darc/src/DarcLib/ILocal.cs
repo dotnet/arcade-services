@@ -15,5 +15,12 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <returns>Async task</returns>
         Task<bool> Verify();
+
+        /// <summary>
+        ///     Checkout the specified tag, branch, or commit.
+        /// </summary>
+        /// <param name="commit">Tag, branch, or commit to checkout</param>
+        /// <param name="force">True to force checkout (can lose work)</param>
+        void Checkout(string commit, bool force);
     }
 }

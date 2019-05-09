@@ -152,8 +152,17 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository uri</param>
         /// <param name="commit">Branch, commit, or tag to checkout</param>
         /// <param name="targetDirectory">Directory to clone to</param>
+        /// <param name="gitDirectory">Location for .git directory, or null for default</param>
         /// <returns></returns>
-        void Clone(string repoUri, string commit, string targetDirectory);
+        void Clone(string repoUri, string commit, string targetDirectory, string gitDirectory);
+
+        /// <summary>
+        ///     Checkout the repository to a given state.
+        /// </summary>
+        /// <param name="repoPath">Path to the local repository</param>
+        /// <param name="commit">Tag, branch, or commit to checkout</param>
+        /// <param name="force">True to force the checkout (loses work)</param>
+        void Checkout(string repoPath, string commit, bool force);
     }
 
     public class PullRequest
