@@ -2,6 +2,7 @@ import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { Build, BuildGraph, BuildRef } from 'src/maestro-client/models';
 import { topologicalSort } from 'src/helpers';
 import { trigger, transition, style, animate } from '@angular/animations';
+import { ApplicationInsightsService } from 'src/app/services/application-insights.service';
 
 type BuildState = "locked" | "unlocked" | "conflict" | "ancestor" | "parent" | "child";
 
@@ -183,7 +184,6 @@ function buildHasIncoherentDependencies(buildData: BuildData, includeToolsets: b
   return false;
 }
 
-
 const elementOutStyle = style({
   transform: 'translate(20vw, 0)',
   opacity: 0,
@@ -225,7 +225,7 @@ export class BuildGraphTableComponent implements OnChanges {
 
   getRepo = getRepo;
 
-  constructor() { }
+  constructor(private ai: ApplicationInsightsService) { }
 
   public toggleLock() {
     this.locked = !this.locked;
@@ -297,6 +297,20 @@ export class BuildGraphTableComponent implements OnChanges {
   ngOnChanges(changes: SimpleChanges) {
     if ('graph' in changes && this.graph) {
       this.sortedBuilds = sortBuilds(this.graph);
+    }
+
+    if(changes.showAllDependencies && (typeof changes.showAllDependencies.previousValue !== 'undefined') && (changes.showAllDependencies.previousValue != changes.showAllDependencies.currentValue))
+    {
+      let showSubDependenciesSetting = changes.showAllDependencies.currentValue ? "on" : "off";
+
+      this.ai.trackEvent({name: "Show Sub-Dependencies"}, {value: showSubDependenciesSetting});
+    }
+
+    if(changes.includeToolsets && (typeof changes.includeToolsets.previousValue !== 'undefined') && (changes.includeToolsets.previousValue != changes.includeToolsets.currentValue))
+    {
+      let includeToolsetsSetting = changes.includeToolsets.currentValue ? "on" : "off";
+
+      this.ai.trackEvent({name: "Include Toolsets"}, {value: includeToolsetsSetting});
     }
   }
 
