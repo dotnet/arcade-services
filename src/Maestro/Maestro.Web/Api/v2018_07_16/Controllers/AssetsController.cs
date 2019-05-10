@@ -89,10 +89,18 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         public IActionResult GetDarcVersion()
         {
             // Use the assembly file version, which is the same as the package
-            // version.
+            // version. The informational version has a "+<sha>" appended to the end for official builds
+            // We don't want this, so eliminate it. The primary use of this is to install the darc version
+            // corresponding to the maestro++ version.
             AssemblyInformationalVersionAttribute informationalVersionAttribute =
                 typeof(IRemote).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-            return Ok(informationalVersionAttribute.InformationalVersion);
+            string version = informationalVersionAttribute.InformationalVersion;
+            int lastPlus = version.LastIndexOf('+');
+            if (lastPlus != -1)
+            {
+                version = version.Substring(0, lastPlus);
+            }
+            return Ok(version);
         }
 
         /// <summary>
