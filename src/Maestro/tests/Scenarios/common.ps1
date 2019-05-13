@@ -22,7 +22,7 @@ $global:pipelinesToDelete = @()
 $global:channelPipelinesToDelete = @{}
 
 # Get a temporary directory for a test root. Use the agent work folder if running under azdo, use the temp path if not.
-$testRootBase = if ($env:AGENT_WORKFOLDER ) { $env:AGENT_WORKFOLDER } else { $([System.IO.Path]::GetTempPath()) }
+$testRootBase = if ($env:AGENT_WORKFOLDER) { $env:AGENT_WORKFOLDER } else { $([System.IO.Path]::GetTempPath()) }
 $testRoot = Join-Path -Path $testRootBase -ChildPath $([System.IO.Path]::GetRandomFileName())
 New-Item -Path $testRoot -ItemType Directory | Out-Null
 
