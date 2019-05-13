@@ -57,7 +57,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Write out a simple list of each channel's name
                 foreach (DefaultChannel defaultChannel in defaultChannels)
                 {
-                    Console.WriteLine(OutputHelpers.GetDefaultChannelDescriptionString(defaultChannel));
+                    Console.WriteLine(UxHelpers.GetDefaultChannelDescriptionString(defaultChannel));
                 }
 
                 return Constants.SuccessCode;

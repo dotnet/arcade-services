@@ -68,6 +68,7 @@ namespace Microsoft.DotNet.Darc
                     typeof(GetDependenciesCommandLineOptions),
                     typeof(GetDependencyGraphCommandLineOptions),
                     typeof(GetDependencyFlowGraphCommandLineOptions),
+                    typeof(GetHealthCommandLineOptions),
                     typeof(GetLatestBuildCommandLineOptions),
                     typeof(GetRepositoryMergePoliciesCommandLineOptions),
                     typeof(GetSubscriptionsCommandLineOptions),

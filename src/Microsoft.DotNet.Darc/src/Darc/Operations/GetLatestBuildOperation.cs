@@ -69,7 +69,7 @@ namespace Microsoft.DotNet.Darc.Operations
                                 Console.WriteLine();
                             }
                             foundBuilds = true;
-                            OutputHelpers.PrintBuild(latestBuild);
+                            Console.Write(UxHelpers.GetBuildDescription(latestBuild));
                         }
                     }
                 }

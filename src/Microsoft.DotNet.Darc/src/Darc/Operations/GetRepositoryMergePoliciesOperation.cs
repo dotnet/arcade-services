@@ -59,7 +59,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 foreach (var repository in filteredRepositories)
                 {
                     Console.WriteLine($"{repository.Repository} @ {repository.Branch}");
-                    OutputHelpers.PrintMergePolicies(repository.MergePolicies);
+                    Console.Write(UxHelpers.GetMergePoliciesDescription(repository.MergePolicies));
                 }
 
                 return Constants.SuccessCode;
