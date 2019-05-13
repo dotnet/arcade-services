@@ -5,7 +5,9 @@
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace Microsoft.DotNet.Darc
 {
@@ -30,6 +32,55 @@ namespace Microsoft.DotNet.Darc
             foreach (Channel buildChannel in build.Channels)
             {
                 Console.WriteLine($"- {buildChannel.Name}");
+            }
+        }
+
+        /// <summary>
+        ///     Print a set of merge policies, if any
+        /// </summary>
+        /// <param name="mergePolicies"></param>
+        /// <param name="indent"></param>
+        public static void PrintMergePolicies(IEnumerable<MergePolicy> mergePolicies, string indent = "")
+        {
+            if (mergePolicies.Any())
+            {
+                Console.WriteLine($"{indent}- Merge Policies:");
+                foreach (MergePolicy mergePolicy in mergePolicies)
+                {
+                    Console.WriteLine($"{indent}  {mergePolicy.Name}");
+                    if (mergePolicy.Properties != null)
+                    {
+                        foreach (var mergePolicyProperty in mergePolicy.Properties)
+                        {
+                            // The merge policy property is a key value pair.  For formatting, turn it into a string.
+                            // It's often a JToken, so handle appropriately
+                            // 1. If the number of lines in the string is 1, write on same line as key
+                            // 2. If the number of lines in the string is more than one, start on new
+                            //    line and indent.
+                            string valueString = mergePolicyProperty.Value.ToString();
+                            string[] valueLines = valueString.Split(System.Environment.NewLine);
+                            string keyString = $"{indent}    {mergePolicyProperty.Key} = ";
+                            Console.Write(keyString);
+                            if (valueLines.Length == 1)
+                            {
+                                Console.WriteLine(valueString);
+                            }
+                            else
+                            {
+                                string indentString = new string(' ', keyString.Length);
+                                Console.WriteLine();
+                                foreach (string line in valueLines)
+                                {
+                                    Console.WriteLine($"{indent}{indentString}{line}");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine($"{indent}- Merge Policies: []");
             }
         }
 

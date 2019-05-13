@@ -59,46 +59,9 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         mergePolicies = await remote.GetRepositoryMergePoliciesAsync(subscription.TargetRepository, subscription.TargetBranch);
                     }
-                    if (mergePolicies.Any())
-                    {
-                        Console.WriteLine($"  - Merge Policies:");
-                        foreach (MergePolicy mergePolicy in mergePolicies)
-                        {
-                            Console.WriteLine($"    {mergePolicy.Name}");
-                            if (mergePolicy.Properties != null)
-                            {
-                                foreach (var mergePolicyProperty in mergePolicy.Properties)
-                                {
-                                    // The merge policy property is a key value pair.  For formatting, turn it into a string.
-                                    // It's often a JToken, so handle appropriately
-                                    // 1. If the number of lines in the string is 1, write on same line as key
-                                    // 2. If the number of lines in the string is more than one, start on new
-                                    //    line and indent.
-                                    string valueString = mergePolicyProperty.Value.ToString();
-                                    string[] valueLines = valueString.Split(System.Environment.NewLine);
-                                    string keyString = $"      {mergePolicyProperty.Key} = ";
-                                    Console.Write(keyString);
-                                    if (valueLines.Length == 1)
-                                    {
-                                        Console.WriteLine(valueString);
-                                    }
-                                    else
-                                    {
-                                        string indentString = new string(' ', keyString.Length);
-                                        Console.WriteLine();
-                                        foreach (string line in valueLines)
-                                        {
-                                            Console.WriteLine($"{indentString}{line}");
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine($"  - Merge Policies: []");
-                    }
+
+                    OutputHelpers.PrintMergePolicies(mergePolicies, "  ");
+
                     // Currently the API only returns the last applied build for requests to specific subscriptions.
                     // This will be fixed, but for now, don't print the last applied build otherwise.
                     if (subscription.LastAppliedBuild != null)

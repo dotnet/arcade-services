@@ -153,6 +153,23 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>List of merge policies</returns>
         Task<IEnumerable<MergePolicy>> GetRepositoryMergePoliciesAsync(string repoUri, string branch);
 
+        /// <summary>
+        ///     Get a list of repository+branch combos and their associated merge policies.
+        /// </summary>
+        /// <param name="repoUri">Optional repository</param>
+        /// <param name="branch">Optional branch</param>
+        /// <returns>List of repository+branch combos</returns>
+        Task<IEnumerable<RepositoryBranch>> GetRepositoriesAsync(string repoUri = null, string branch = null);
+
+        /// <summary>
+        ///     Set the merge policies for batchable subscriptions applied to a specific repo and branch
+        /// </summary>
+        /// <param name="repoUri">Repository</param>
+        /// <param name="branch">Branch</param>
+        /// <param name="mergePolicies">Merge policies. May be empty.</param>
+        /// <returns>Task</returns>
+        Task SetRepositoryMergePoliciesAsync(string repoUri, string branch, List<MergePolicy> mergePolicies);
+
         #endregion
 
         #region Pull Request Operations

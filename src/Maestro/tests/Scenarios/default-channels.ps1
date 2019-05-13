@@ -115,6 +115,8 @@ try {
     if (-not $success) {
         throw "Expected build to be applied to $testChannel1Name but not $testChannel2Name"
     }
+    
+    Write-Host "Test Passed"
 
 } finally {
     Teardown
