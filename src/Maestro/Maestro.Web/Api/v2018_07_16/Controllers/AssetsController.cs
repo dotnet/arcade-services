@@ -7,13 +7,16 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.Web.Api.v2018_07_16.Models;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
@@ -74,6 +77,30 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             query = query.OrderByDescending(a => a.Id);
             return Ok(query);
+        }
+
+        /// <summary>
+        ///   Gets the version of Darc in use by this deployment of Maestro.
+        /// </summary>
+        [HttpGet("darc-version")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(string), Description = "Gets the version of darc in use by this Maestro++ instance.")]
+        [ValidateModelState]
+        [AllowAnonymous]
+        public IActionResult GetDarcVersion()
+        {
+            // Use the assembly file version, which is the same as the package
+            // version. The informational version has a "+<sha>" appended to the end for official builds
+            // We don't want this, so eliminate it. The primary use of this is to install the darc version
+            // corresponding to the maestro++ version.
+            AssemblyInformationalVersionAttribute informationalVersionAttribute =
+                typeof(IRemote).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+            string version = informationalVersionAttribute.InformationalVersion;
+            int lastPlus = version.LastIndexOf('+');
+            if (lastPlus != -1)
+            {
+                version = version.Substring(0, lastPlus);
+            }
+            return Ok(version);
         }
 
         /// <summary>

@@ -31,7 +31,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
 
         public bool Enabled => bool.Parse(_yamlData.Enabled);
 
-        public List<MergePolicy> MergePolicies => _yamlData.MergePolicies;
+        public List<MergePolicy> MergePolicies => ConvertMergePolicies(_yamlData.MergePolicies);
 
         public UpdateSubscriptionPopUp(string path,
                                     ILogger logger,
@@ -43,36 +43,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             : base(path, logger)
         {
             _logger = logger;
-            List<MergePolicy> mergePolicies = new List<MergePolicy>();
-
-            // This is a workaround issue https://github.com/aaubry/YamlDotNet/issues/383 which
-            // is causing to display empty items in the properties collection of the mergePolicies
-            try
-            {
-                foreach (MergePolicy mergePolicy in subscription.Policy.MergePolicies)
-                {
-                    MergePolicy policy = new MergePolicy
-                    {
-                        Name = mergePolicy.Name,
-                        Properties = ImmutableDictionary.Create<string, JToken>(),
-                    };
-
-                    foreach (string key in mergePolicy.Properties.Keys)
-                    {
-                        JToken value = JsonConvert.DeserializeObject<JToken>(
-                            mergePolicy.Properties[key].ToString());
-                        policy.Properties = policy.Properties.Add(key, value);
-                    }
-
-                    mergePolicies.Add(policy);
-                }
-            }
-            catch
-            {
-                // Something failed parsing the properties. Continue with the original collection
-                mergePolicies = new List<MergePolicy>(subscription.Policy.MergePolicies);
-            }
-
+            
             _yamlData = new SubscriptionData
             {
                 Id = GetCurrentSettingForDisplay(subscription.Id.ToString(), subscription.Id.ToString(), false),
@@ -81,8 +52,9 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 Batchable = GetCurrentSettingForDisplay(subscription.Policy.Batchable.ToString(), subscription.Policy.Batchable.ToString(), false),
                 UpdateFrequency = GetCurrentSettingForDisplay(subscription.Policy.UpdateFrequency.ToString(), subscription.Policy.UpdateFrequency.ToString(), false),
                 Enabled = GetCurrentSettingForDisplay(subscription.Enabled.ToString(), subscription.Enabled.ToString(), false),
-                MergePolicies = mergePolicies
             };
+
+            _yamlData.MergePolicies = ConvertMergePolicies(subscription.Policy.MergePolicies);
 
             ISerializer serializer = new SerializerBuilder().Build();
 
@@ -154,7 +126,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             }
 
             // Validate the merge policies
-            if (outputYamlData.MergePolicies != null &&!ValidateMergePolicies(outputYamlData.MergePolicies))
+            if (!ValidateMergePolicies(ConvertMergePolicies(outputYamlData.MergePolicies)))
             {
                 return Constants.ErrorCode;
             }
@@ -220,7 +192,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             public string Enabled { get; set; }
 
             [YamlMember(Alias = mergePolicyElement, ApplyNamingConventions = false)]
-            public List<MergePolicy> MergePolicies { get; set; }
+            public List<MergePolicyData> MergePolicies { get; set; }
         }
     }
 }

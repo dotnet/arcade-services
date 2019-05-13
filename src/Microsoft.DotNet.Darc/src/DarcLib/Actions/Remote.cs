@@ -933,11 +933,12 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository to clone</param>
         /// <param name="commit">Branch, commit, or tag to checkout</param>
         /// <param name="targetDirectory">Directory to clone to</param>
+        /// <param name="gitDirectory">Location for the .git directory</param>
         /// <returns></returns>
-        public void Clone(string repoUri, string commit, string targetDirectory)
+        public void Clone(string repoUri, string commit, string targetDirectory, string gitDirectory = null)
         {
             CheckForValidGitClient();
-            _gitClient.Clone(repoUri, commit, targetDirectory);
+            _gitClient.Clone(repoUri, commit, targetDirectory, gitDirectory);
         }
 
         /// <summary>

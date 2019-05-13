@@ -37,15 +37,17 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
-                IEnumerable<DefaultChannel> defaultChannels = (await remote.GetDefaultChannelsAsync()).Where(defaultChannel =>
-                {
-                    return (string.IsNullOrEmpty(_options.SourceRepository) ||
-                        defaultChannel.Repository.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase)) &&
-                    (string.IsNullOrEmpty(_options.Branch) ||
-                        defaultChannel.Branch.Contains(_options.Branch, StringComparison.OrdinalIgnoreCase)) &&
-                    (string.IsNullOrEmpty(_options.Channel) ||
-                        defaultChannel.Channel.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
-                });
+                IEnumerable<DefaultChannel> defaultChannels = (await remote.GetDefaultChannelsAsync())
+                    .Where(defaultChannel =>
+                    {
+                        return (string.IsNullOrEmpty(_options.SourceRepository) ||
+                            defaultChannel.Repository.Contains(_options.SourceRepository, StringComparison.OrdinalIgnoreCase)) &&
+                        (string.IsNullOrEmpty(_options.Branch) ||
+                            defaultChannel.Branch.Contains(_options.Branch, StringComparison.OrdinalIgnoreCase)) &&
+                        (string.IsNullOrEmpty(_options.Channel) ||
+                            defaultChannel.Channel.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase));
+                    })
+                    .OrderBy(df => df.Repository);
 
                 if (defaultChannels.Count() == 0)
                 {

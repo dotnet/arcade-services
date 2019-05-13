@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -149,10 +150,23 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository uri to clone</param>
         /// <param name="commit">Branch, commit, or tag to checkout</param>
         /// <param name="targetDirectory">Target directory to clone to</param>
+        /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
         /// <returns></returns>
-        protected void Clone(string repoUri, string commit, string targetDirectory, ILogger _logger, string pat)
+        protected void Clone(string repoUri, string commit, string targetDirectory, ILogger _logger, string pat, string gitDirectory)
         {
             string dotnetMaestro = "dotnet-maestro";
+            LibGit2Sharp.CloneOptions cloneOptions = new LibGit2Sharp.CloneOptions
+            {
+                Checkout = false,
+                CredentialsProvider = (url, user, cred) =>
+                new LibGit2Sharp.UsernamePasswordCredentials
+                {
+                    // The PAT is actually the only thing that matters here, the username
+                    // will be ignored.
+                    Username = dotnetMaestro,
+                    Password = pat
+                },
+            };
             using (_logger.BeginScope("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory))
             {
                 try
@@ -161,31 +175,155 @@ namespace Microsoft.DotNet.DarcLib
                     string repoPath = LibGit2Sharp.Repository.Clone(
                         repoUri,
                         targetDirectory,
-                        new LibGit2Sharp.CloneOptions
-                        {
-                            Checkout = false,
-                            CredentialsProvider = (url, user, cred) =>
-                            new LibGit2Sharp.UsernamePasswordCredentials
-                            {
-                                // The PAT is actually the only thing that matters here, the username
-                                // will be ignored.
-                                Username = dotnetMaestro,
-                                Password = pat
-                            }
-                        });
+                        cloneOptions);
+
+                    LibGit2Sharp.CheckoutOptions checkoutOptions = new LibGit2Sharp.CheckoutOptions
+                    {
+                        CheckoutModifiers = LibGit2Sharp.CheckoutModifiers.Force,
+                    };
 
                     _logger.LogDebug($"Reading local repo from {repoPath}");
                     using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoPath))
                     {
-                        _logger.LogDebug($"Checking out {commit} in {repoPath}");
-                        LibGit2Sharp.Commands.Checkout(localRepo, commit);
+                        if (commit == null)
+                        {
+                            commit = localRepo.Head.Reference.TargetIdentifier;
+                            _logger.LogInformation($"Repo {localRepo.Info.WorkingDirectory} has no commit to clone at, assuming it's {commit}");
+                        }
+                        try
+                        {
+                            _logger.LogDebug($"Attempting to checkout {commit} as commit in {localRepo.Info.WorkingDirectory}");
+                            LibGit2Sharp.Commands.Checkout(localRepo, commit, checkoutOptions);
+                        }
+                        catch
+                        {
+                            _logger.LogDebug($"Failed to checkout {commit} as commit, trying to resolve");
+                            string resolvedReference = ParseReference(localRepo, commit, _logger);
+                            _logger.LogDebug($"Resolved {commit} to {resolvedReference ?? "<invalid>"} in {localRepo.Info.WorkingDirectory}, attempting checkout");
+                            LibGit2Sharp.Commands.Checkout(localRepo, resolvedReference, checkoutOptions);
+                        }
+                    }
+                    // LibGit2Sharp doesn't support a --git-dir equivalent yet (https://github.com/libgit2/libgit2sharp/issues/1467), so we do this manually
+                    if (gitDirectory != null)
+                    {
+                        Directory.Move(repoPath, gitDirectory);
+                        File.WriteAllText(repoPath.TrimEnd('\\', '/'), $"gitdir: {gitDirectory}");
+                    }
+                    using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(targetDirectory))
+                    {
+                        CheckoutSubmodules(localRepo, cloneOptions, gitDirectory, _logger);
                     }
                 }
                 catch (Exception exc)
                 {
-                    throw new Exception($"Something went wrong when cloning repo {repoUri} at {commit} into {targetDirectory}", exc);
+                    throw new Exception($"Something went wrong when cloning repo {repoUri} at {commit ?? "<default branch>"} into {targetDirectory}", exc);
                 }
             }
+        }
+
+        private static void CheckoutSubmodules(LibGit2Sharp.Repository repo, LibGit2Sharp.CloneOptions submoduleCloneOptions, string gitDirParentPath, ILogger log)
+        {
+            foreach (LibGit2Sharp.Submodule sub in repo.Submodules)
+            {
+                log.LogDebug($"Updating submodule {sub.Name} at {sub.Path} for {repo.Info.WorkingDirectory}.  GitDirParent: {gitDirParentPath}");
+                repo.Submodules.Update(sub.Name, new LibGit2Sharp.SubmoduleUpdateOptions { CredentialsProvider = submoduleCloneOptions.CredentialsProvider, Init = true });
+
+                string normalizedSubPath = sub.Path.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+                string subRepoPath = Path.Combine(repo.Info.WorkingDirectory, normalizedSubPath);
+                string relativeGitDirPath = File.ReadAllText(Path.Combine(subRepoPath, ".git")).Substring(8);
+
+                log.LogDebug($"Submodule {sub.Name} has .gitdir {relativeGitDirPath}");
+                string absoluteGitDirPath = Path.GetFullPath(Path.Combine(subRepoPath, relativeGitDirPath));
+                string relocatedGitDirPath = absoluteGitDirPath.Replace(repo.Info.Path.TrimEnd(new[] { '/', '\\' }), gitDirParentPath.TrimEnd(new[] { '/', '\\' }));
+                string subRepoGitFilePath = Path.Combine(subRepoPath, ".git");
+
+                log.LogDebug($"Writing new .gitdir path {relocatedGitDirPath} to submodule at {subRepoPath}");
+
+                // File.WriteAllText gets access denied for some reason
+                using (FileStream s = File.OpenWrite(subRepoGitFilePath))
+                using (StreamWriter w = new StreamWriter(s))
+                {
+                    w.Write($"gitdir: {relocatedGitDirPath}");
+                    w.Flush();
+                    s.SetLength(s.Position);
+                }
+
+                // The worktree is stored in the .gitdir/config file, so we have to change it
+                // to get it to check out to the correct place.
+                LibGit2Sharp.ConfigurationEntry<string> oldWorkTree = null;
+                using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
+                {
+                    oldWorkTree = subRepo.Config.Get<string>("core.worktree");
+                    if (oldWorkTree != null)
+                    {
+                        log.LogDebug($"{subRepoPath} old worktree is {oldWorkTree.Value}, setting to {subRepoPath}");
+                        subRepo.Config.Set("core.worktree", subRepoPath);
+                    }
+                    else
+                    {
+                        log.LogDebug($"{subRepoPath} has default worktree, leaving unchanged");
+                    }
+                }
+
+                using (LibGit2Sharp.Repository subRepo = new LibGit2Sharp.Repository(subRepoPath))
+                {
+                    log.LogDebug($"Resetting {sub.Name} to {sub.HeadCommitId.Sha}");
+                    subRepo.Reset(LibGit2Sharp.ResetMode.Hard, subRepo.Commits.QueryBy(new LibGit2Sharp.CommitFilter { IncludeReachableFrom = subRepo.Refs }).Single(c => c.Sha == sub.HeadCommitId.Sha));
+
+                    // Now we reset the worktree back so that when we can initialize a Repository
+                    // from it, instead of having to figure out which hash of the repo was most recently checked out.
+                    if (oldWorkTree != null)
+                    {
+                        log.LogDebug($"resetting {subRepoPath} worktree to {oldWorkTree.Value}");
+                        subRepo.Config.Set("core.worktree", oldWorkTree.Value);
+                    }
+                    else
+                    {
+                        log.LogDebug($"leaving {subRepoPath} worktree as default");
+                    }
+
+                    log.LogDebug($"Done checking out {subRepoPath}, checking submodules");
+                    CheckoutSubmodules(subRepo, submoduleCloneOptions, absoluteGitDirPath, log);
+                }
+
+                if (File.Exists(subRepoGitFilePath))
+                {
+                    log.LogDebug($"Deleting {subRepoGitFilePath} to orphan submodule {sub.Name}");
+                    File.Delete(subRepoGitFilePath);
+                }
+                else
+                {
+                    log.LogDebug($"{sub.Name} doesn't have a .gitdir redirect at {subRepoGitFilePath}, skipping delete");
+                }
+            }
+        }
+
+        private static string ParseReference(LibGit2Sharp.Repository repo, string treeish, ILogger log)
+        {
+            LibGit2Sharp.Reference reference = null;
+            LibGit2Sharp.GitObject dummy;
+            try
+            {
+                repo.RevParse(treeish, out reference, out dummy);
+            }
+            catch
+            {
+                // nothing we can do
+            }
+            log.LogDebug($"Parsed {treeish} to mean {reference?.TargetIdentifier ?? "<invalid>"}");
+            if (reference == null)
+            {
+                try
+                {
+                    repo.RevParse($"origin/{treeish}", out reference, out dummy);
+                }
+                catch
+                {
+                    // nothing we can do
+                }
+                log.LogDebug($"Parsed origin/{treeish} to mean {reference?.TargetIdentifier ?? "<invalid>"}");
+            }
+            return reference?.TargetIdentifier;
         }
 
         private byte[] GetUtf8ContentBytes(string content, ContentEncoding encoding)
