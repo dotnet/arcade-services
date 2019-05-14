@@ -190,18 +190,8 @@ namespace Microsoft.DotNet.DarcLib
                             commit = localRepo.Head.Reference.TargetIdentifier;
                             _logger.LogInformation($"Repo {localRepo.Info.WorkingDirectory} has no commit to clone at, assuming it's {commit}");
                         }
-                        try
-                        {
-                            _logger.LogDebug($"Attempting to checkout {commit} as commit in {localRepo.Info.WorkingDirectory}");
-                            LibGit2Sharp.Commands.Checkout(localRepo, commit, checkoutOptions);
-                        }
-                        catch
-                        {
-                            _logger.LogDebug($"Failed to checkout {commit} as commit, trying to resolve");
-                            string resolvedReference = ParseReference(localRepo, commit, _logger);
-                            _logger.LogDebug($"Resolved {commit} to {resolvedReference ?? "<invalid>"} in {localRepo.Info.WorkingDirectory}, attempting checkout");
-                            LibGit2Sharp.Commands.Checkout(localRepo, resolvedReference, checkoutOptions);
-                        }
+                        _logger.LogDebug($"Attempting to checkout {commit} as commit in {localRepo.Info.WorkingDirectory}");
+                        SafeCheckout(localRepo, commit, checkoutOptions, _logger);
                     }
                     // LibGit2Sharp doesn't support a --git-dir equivalent yet (https://github.com/libgit2/libgit2sharp/issues/1467), so we do this manually
                     if (gitDirectory != null)
@@ -294,6 +284,60 @@ namespace Microsoft.DotNet.DarcLib
                 else
                 {
                     log.LogDebug($"{sub.Name} doesn't have a .gitdir redirect at {subRepoGitFilePath}, skipping delete");
+                }
+            }
+        }
+
+        private static void SafeCheckout(LibGit2Sharp.Repository repo, string commit, LibGit2Sharp.CheckoutOptions options, ILogger log)
+        {
+            try
+            {
+                log.LogDebug($"Trying safe checkout of {repo.Info.WorkingDirectory} at {commit}");
+                LibGit2Sharp.Commands.Checkout(repo, commit, options);
+            }
+            catch (LibGit2Sharp.InvalidSpecificationException)
+            {
+                log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations.  Attempting to checkout by individual files.");
+                SafeCheckoutByIndividualFiles(repo, commit, options, log);
+            }
+            catch
+            {
+                log.LogDebug($"Couldn't checkout {commit} as a commit after fetch.  Attempting to resolve as a treeish.");
+                string resolvedReference = ParseReference(repo, commit, log);
+                if (resolvedReference != null)
+                {
+                    log.LogDebug($"Resolved {commit} to {resolvedReference}, attempting to check out");
+                    try
+                    {
+                        log.LogDebug($"Trying checkout of {repo.Info.WorkingDirectory} at {resolvedReference}");
+                        LibGit2Sharp.Commands.Checkout(repo, resolvedReference, options);
+                    }
+                    catch (LibGit2Sharp.InvalidSpecificationException)
+                    {
+                        log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations.  Attempting to checkout by individual files.");
+                        SafeCheckoutByIndividualFiles(repo, resolvedReference, options, log);
+                    }
+                }
+                else
+                {
+                    log.LogError($"Couldn't resolve {commit} as a commit or treeish.  Checkout of {repo.Info.WorkingDirectory} failed.");
+                    throw new ArgumentException($"Couldn't resolve {commit} as a commit or treeish.  Checkout of {repo.Info.WorkingDirectory} failed.");
+                }
+            }
+        }
+
+        private static void SafeCheckoutByIndividualFiles(LibGit2Sharp.Repository repo, string commit, LibGit2Sharp.CheckoutOptions options, ILogger log)
+        {
+            log.LogDebug($"Beginning individual file checkout for {repo.Info.WorkingDirectory} at {commit}");
+            foreach (LibGit2Sharp.IndexEntry f in repo.Index)
+            {
+                try
+                {
+                    repo.CheckoutPaths(commit, new[] { f.Path }, options);
+                }
+                catch (LibGit2Sharp.InvalidSpecificationException)
+                {
+                    log.LogWarning($"Failed to checkout {f.Path} in {repo.Info.WorkingDirectory} at {commit}, skipping.");
                 }
             }
         }
