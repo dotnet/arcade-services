@@ -46,12 +46,14 @@ namespace Microsoft.DotNet.Maestro.Client
             _onFailure = onFailure;
             Client = client;
             Values = response.Body;
-            var linkHeader = response.Response.Headers.GetValues("Link");
-            var links = ParseLinkHeader(linkHeader).ToList();
-            FirstPageLink = links.FirstOrDefault(t => t.rel == "first").href;
-            PrevPageLink = links.FirstOrDefault(t => t.rel == "prev").href;
-            NextPageLink = links.FirstOrDefault(t => t.rel == "next").href;
-            LastPageLink = links.FirstOrDefault(t => t.rel == "last").href;
+            if (response.Response.Headers.TryGetValues("Link", out var linkHeader))
+            {
+                var links = ParseLinkHeader(linkHeader).ToList();
+                FirstPageLink = links.FirstOrDefault(t => t.rel == "first").href;
+                PrevPageLink = links.FirstOrDefault(t => t.rel == "prev").href;
+                NextPageLink = links.FirstOrDefault(t => t.rel == "next").href;
+                LastPageLink = links.FirstOrDefault(t => t.rel == "last").href;
+            }
         }
 
         private static IEnumerable<(string href, string rel)> ParseLinkHeader(IEnumerable<string> linkHeader)

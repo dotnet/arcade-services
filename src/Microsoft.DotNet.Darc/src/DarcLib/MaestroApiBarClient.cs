@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
@@ -320,9 +321,9 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public async Task<IEnumerable<Build>> GetBuildsAsync(string repoUri, string commit)
         {
-            return await _barClient.Builds.ListBuildsAsync(repository: repoUri,
-                                                           commit: commit,
-                                                           loadCollections: true);
+            var pagedResponse = await _barClient.Builds.ListBuildsAsync(repository: repoUri,
+                commit: commit, loadCollections: true);
+            return await pagedResponse.EnumerateAll().ToListAsync(CancellationToken.None);
         }
 
         public async Task AssignBuildToChannel(int buildId, int channelId)
