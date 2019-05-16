@@ -461,9 +461,9 @@ namespace Microsoft.DotNet.DarcLib
                 log.LogDebug($"Trying safe checkout of {repo.Info.WorkingDirectory} at {commit}");
                 LibGit2Sharp.Commands.Checkout(repo, commit, options);
             }
-            catch (LibGit2Sharp.InvalidSpecificationException)
+            catch (Exception e) when (e is LibGit2Sharp.InvalidSpecificationException || e is LibGit2Sharp.NameConflictException)
             {
-                log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations.  Attempting to checkout by individual files.");
+                log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e.ToString()}).  Attempting to checkout by individual files.");
                 SafeCheckoutByIndividualFiles(repo, commit, options, log);
             }
             catch
@@ -478,9 +478,9 @@ namespace Microsoft.DotNet.DarcLib
                         log.LogDebug($"Trying checkout of {repo.Info.WorkingDirectory} at {resolvedReference}");
                         LibGit2Sharp.Commands.Checkout(repo, resolvedReference, options);
                     }
-                    catch (LibGit2Sharp.InvalidSpecificationException)
+                    catch (Exception e) when (e is LibGit2Sharp.InvalidSpecificationException || e is LibGit2Sharp.NameConflictException)
                     {
-                        log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations.  Attempting to checkout by individual files.");
+                        log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e.ToString()}).  Attempting to checkout by individual files.");
                         SafeCheckoutByIndividualFiles(repo, resolvedReference, options, log);
                     }
                 }
@@ -501,9 +501,9 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     repo.CheckoutPaths(commit, new[] { f.Path }, options);
                 }
-                catch (LibGit2Sharp.InvalidSpecificationException)
+                catch (Exception e) when (e is LibGit2Sharp.InvalidSpecificationException || e is LibGit2Sharp.NameConflictException)
                 {
-                    log.LogWarning($"Failed to checkout {f.Path} in {repo.Info.WorkingDirectory} at {commit}, skipping.");
+                    log.LogWarning($"Failed to checkout {f.Path} in {repo.Info.WorkingDirectory} at {commit}, skipping.  Exception: {e.ToString()}");
                 }
             }
         }
