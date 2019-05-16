@@ -293,13 +293,14 @@ namespace ReleasePipelineRunner
                                     BuildId = buildId,
                                     ChannelId = channelId
                                 });
-                                await runningPipelines.TryRemoveAsync(tx, buildId);
                             }
                             else
                             {
                                 Logger.LogError($"One or more release environments of build {buildId} failed. Build id {buildId}" +
                                     $"was not added to channel {channelId}");
                             }
+
+                            await runningPipelines.TryRemoveAsync(tx, buildId);
                         }
                     }
                 }
