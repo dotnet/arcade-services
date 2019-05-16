@@ -239,6 +239,7 @@ namespace ReleasePipelineRunner
                         IList<ReleasePipelineStatusItem> releaseStatuses = asyncEnumerator.Current.Value;
                         int channelId = releaseStatuses.First().ChannelId;
                         List<ReleasePipelineStatusItem> unfinishedReleases = new List<ReleasePipelineStatusItem>();
+                        bool successfulRelease = true;
                         foreach (ReleasePipelineStatusItem releaseStatus in releaseStatuses)
                         {
                             try
@@ -259,6 +260,7 @@ namespace ReleasePipelineRunner
 
                                     if (release.Environments.Any(r => r.Status != AzureDevOpsReleaseStatus.Succeeded))
                                     {
+                                        successfulRelease = false;
                                         await CreateGitHubIssueAsync(buildId, releaseId, release.Name);
                                         await StateManager.RemoveAsync(release.Name);
                                     }
@@ -282,14 +284,22 @@ namespace ReleasePipelineRunner
                         }
                         else
                         {
-                            Logger.LogInformation($"All releases for build {buildId} for channel {channelId} finished. Creating BuildChannel.");
-
-                            buildChannelsToAdd.Add(new BuildChannel
+                            if (successfulRelease)
                             {
-                                BuildId = buildId,
-                                ChannelId = channelId
-                            });
-                            await runningPipelines.TryRemoveAsync(tx, buildId);
+                                Logger.LogInformation($"All releases for build {buildId} for channel {channelId} finished. Creating BuildChannel.");
+
+                                buildChannelsToAdd.Add(new BuildChannel
+                                {
+                                    BuildId = buildId,
+                                    ChannelId = channelId
+                                });
+                                await runningPipelines.TryRemoveAsync(tx, buildId);
+                            }
+                            else
+                            {
+                                Logger.LogError($"One or more release environments of build {buildId} failed. Build id {buildId}" +
+                                    $"was not added to channel {channelId}");
+                            }
                         }
                     }
                 }
