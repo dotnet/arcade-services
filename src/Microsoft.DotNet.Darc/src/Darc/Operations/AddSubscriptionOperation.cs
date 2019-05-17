@@ -155,6 +155,20 @@ namespace Microsoft.DotNet.Darc.Operations
 
             try
             {
+                // If we are about to add a batchable subscription and the merge policies are empty for the
+                // target repo/branch, warn the user.
+                if (batchable)
+                {
+                    var existingMergePolicies = await remote.GetRepositoryMergePoliciesAsync(targetRepository, targetBranch);
+                    if (!existingMergePolicies.Any())
+                    {
+                        Console.WriteLine("Warning: Batchable subscription doesn't have any repository merge policies. " +
+                            "PRs will not be auto-merged.");
+                        Console.WriteLine($"Please use 'darc set-repository-policies --repo {targetRepository} --branch {targetBranch}' " +
+                            $"to set policies.{Environment.NewLine}");
+                    }
+                }
+
                 var newSubscription = await remote.CreateSubscriptionAsync(channel,
                                                                            sourceRepository,
                                                                            targetRepository,

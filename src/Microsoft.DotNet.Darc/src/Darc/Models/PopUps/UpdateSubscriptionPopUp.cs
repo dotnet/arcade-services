@@ -15,7 +15,7 @@ using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.Darc.Models.PopUps
 {
-    public class UpdateSubscriptionPopUp : SubscriptionPopUp
+    public class UpdateSubscriptionPopUp : EditorPopUp
     {
         private readonly ILogger _logger;
 
@@ -31,7 +31,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
 
         public bool Enabled => bool.Parse(_yamlData.Enabled);
 
-        public List<MergePolicy> MergePolicies => ConvertMergePolicies(_yamlData.MergePolicies);
+        public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_yamlData.MergePolicies);
 
         public UpdateSubscriptionPopUp(string path,
                                     ILogger logger,
@@ -40,7 +40,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                                     IEnumerable<string> suggestedRepositories,
                                     IEnumerable<string> availableUpdateFrequencies,
                                     IEnumerable<string> availableMergePolicyHelp)
-            : base(path, logger)
+            : base(path)
         {
             _logger = logger;
             
@@ -54,7 +54,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 Enabled = GetCurrentSettingForDisplay(subscription.Enabled.ToString(), subscription.Enabled.ToString(), false),
             };
 
-            _yamlData.MergePolicies = ConvertMergePolicies(subscription.Policy.MergePolicies);
+            _yamlData.MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(subscription.Policy.MergePolicies);
 
             ISerializer serializer = new SerializerBuilder().Build();
 
@@ -126,7 +126,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             }
 
             // Validate the merge policies
-            if (!ValidateMergePolicies(ConvertMergePolicies(outputYamlData.MergePolicies)))
+            if (!MergePoliciesPopUpHelpers.ValidateMergePolicies(MergePoliciesPopUpHelpers.ConvertMergePolicies(outputYamlData.MergePolicies), _logger))
             {
                 return Constants.ErrorCode;
             }
@@ -168,7 +168,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
         {
             public const string channelElement = "Channel";
             public const string sourceRepoElement = "Source Repository URL";
-            public const string batchable = "Is batchable";
+            public const string batchable = "Batchable";
             public const string updateFrequencyElement = "Update Frequency";
             public const string mergePolicyElement = "Merge Policies";
             public const string enabled = "Enabled";
