@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.Darc.Options
         public string Branch { get; set; }
 
         [Option("standard-automerge", HelpText = "Use standard auto-merge policies. GitHub ignores WIP and license/cla checks," +
-            "Azure DevOps ignores comment, reviewer and work item linking. Neither will not auto-merge if changes are requested.")]
+            "Azure DevOps ignores comment, reviewer and work item linking. Neither will auto-merge if changes are requested.")]
         public bool StandardAutoMergePolicies { get; set; }
 
         [Option("all-checks-passed", HelpText = "PR is automatically merged if there is at least one checks and all are passed. " +
