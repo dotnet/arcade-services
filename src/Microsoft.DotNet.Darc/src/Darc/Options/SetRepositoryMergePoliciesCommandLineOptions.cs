@@ -22,7 +22,7 @@ namespace Microsoft.DotNet.Darc.Options
         public bool StandardAutoMergePolicies { get; set; }
 
         [Option("all-checks-passed", HelpText = "PR is automatically merged if there is at least one check and all are passed. " +
-            "Optionally provide a comma separated list of ignored check with --ignore-checks.")]
+            "Optionally provide a comma separated list of ignored checks with --ignore-checks.")]
         public bool AllChecksSuccessfulMergePolicy { get; set; }
 
         [Option("ignore-checks", Separator = ',', HelpText = "For use with --all-checks-passed. A set of checks that are ignored.")]
