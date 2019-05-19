@@ -329,15 +329,25 @@ namespace Microsoft.DotNet.DarcLib
         private static void SafeCheckoutByIndividualFiles(LibGit2Sharp.Repository repo, string commit, LibGit2Sharp.CheckoutOptions options, ILogger log)
         {
             log.LogDebug($"Beginning individual file checkout for {repo.Info.WorkingDirectory} at {commit}");
-            foreach (LibGit2Sharp.IndexEntry f in repo.Index)
+            SafeCheckoutTreeByIndividualFiles(repo, repo.Lookup(commit).Peel<LibGit2Sharp.Tree>(), "", commit, options, log);
+
+        }
+
+        private static void SafeCheckoutTreeByIndividualFiles(LibGit2Sharp.Repository repo, LibGit2Sharp.Tree tree, string treePath, string commit, LibGit2Sharp.CheckoutOptions options, ILogger log)
+        {
+            foreach (LibGit2Sharp.TreeEntry f in tree)
             {
                 try
                 {
-                    repo.CheckoutPaths(commit, new[] { f.Path }, options);
+                    repo.CheckoutPaths(commit, new[] { Path.Combine(treePath, f.Path) }, options);
                 }
                 catch (Exception e) when (e is LibGit2Sharp.InvalidSpecificationException || e is LibGit2Sharp.NameConflictException)
                 {
-                    log.LogWarning($"Failed to checkout {f.Path} in {repo.Info.WorkingDirectory} at {commit}, skipping.  Exception: {e.ToString()}");
+                    log.LogWarning($"Failed to checkout {Path.Combine(treePath, f.Path)} in {repo.Info.WorkingDirectory} at {commit}, skipping.  Exception: {e.ToString()}");
+                    if (f.TargetType == LibGit2Sharp.TreeEntryTargetType.Tree)
+                    {
+                        SafeCheckoutTreeByIndividualFiles(repo, f.Target.Peel<LibGit2Sharp.Tree>(), Path.Combine(treePath, f.Path), commit, options, log);
+                    }
                 }
             }
         }
