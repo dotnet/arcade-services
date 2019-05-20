@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -191,7 +192,7 @@ namespace Microsoft.DotNet.DarcLib
                             _logger.LogInformation($"Repo {localRepo.Info.WorkingDirectory} has no commit to clone at, assuming it's {commit}");
                         }
                         _logger.LogDebug($"Attempting to checkout {commit} as commit in {localRepo.Info.WorkingDirectory}");
-                        SafeCheckout(localRepo, commit, checkoutOptions, _logger);
+                        LibGit2SharpHelpers.SafeCheckout(localRepo, commit, checkoutOptions, _logger);
                     }
                     // LibGit2Sharp doesn't support a --git-dir equivalent yet (https://github.com/libgit2/libgit2sharp/issues/1467), so we do this manually
                     if (gitDirectory != null)
@@ -286,98 +287,6 @@ namespace Microsoft.DotNet.DarcLib
                     log.LogDebug($"{sub.Name} doesn't have a .gitdir redirect at {subRepoGitFilePath}, skipping delete");
                 }
             }
-        }
-
-        private static void SafeCheckout(LibGit2Sharp.Repository repo, string commit, LibGit2Sharp.CheckoutOptions options, ILogger log)
-        {
-            try
-            {
-                log.LogDebug($"Trying safe checkout of {repo.Info.WorkingDirectory} at {commit}");
-                LibGit2Sharp.Commands.Checkout(repo, commit, options);
-            }
-            catch (Exception e) when (e is LibGit2Sharp.InvalidSpecificationException || e is LibGit2Sharp.NameConflictException || e is LibGit2Sharp.LibGit2SharpException)
-            {
-                log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e.ToString()}).  Attempting to checkout by individual files.");
-                SafeCheckoutByIndividualFiles(repo, commit, options, log);
-            }
-            catch
-            {
-                log.LogDebug($"Couldn't checkout {commit} as a commit after fetch.  Attempting to resolve as a treeish.");
-                string resolvedReference = ParseReference(repo, commit, log);
-                if (resolvedReference != null)
-                {
-                    log.LogDebug($"Resolved {commit} to {resolvedReference}, attempting to check out");
-                    try
-                    {
-                        log.LogDebug($"Trying checkout of {repo.Info.WorkingDirectory} at {resolvedReference}");
-                        LibGit2Sharp.Commands.Checkout(repo, resolvedReference, options);
-                    }
-                    catch (Exception e) when (e is LibGit2Sharp.InvalidSpecificationException || e is LibGit2Sharp.NameConflictException || e is LibGit2Sharp.LibGit2SharpException)
-                    {
-                        log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e.ToString()}).  Attempting to checkout by individual files.");
-                        SafeCheckoutByIndividualFiles(repo, resolvedReference, options, log);
-                    }
-                }
-                else
-                {
-                    log.LogError($"Couldn't resolve {commit} as a commit or treeish.  Checkout of {repo.Info.WorkingDirectory} failed.");
-                    throw new ArgumentException($"Couldn't resolve {commit} as a commit or treeish.  Checkout of {repo.Info.WorkingDirectory} failed.");
-                }
-            }
-        }
-
-        private static void SafeCheckoutByIndividualFiles(LibGit2Sharp.Repository repo, string commit, LibGit2Sharp.CheckoutOptions options, ILogger log)
-        {
-            log.LogDebug($"Beginning individual file checkout for {repo.Info.WorkingDirectory} at {commit}");
-            SafeCheckoutTreeByIndividualFiles(repo, repo.Lookup(commit).Peel<LibGit2Sharp.Tree>(), "", commit, options, log);
-
-        }
-
-        private static void SafeCheckoutTreeByIndividualFiles(LibGit2Sharp.Repository repo, LibGit2Sharp.Tree tree, string treePath, string commit, LibGit2Sharp.CheckoutOptions options, ILogger log)
-        {
-            foreach (LibGit2Sharp.TreeEntry f in tree)
-            {
-                try
-                {
-                    repo.CheckoutPaths(commit, new[] { Path.Combine(treePath, f.Path) }, options);
-                }
-                catch (Exception e) when (e is LibGit2Sharp.InvalidSpecificationException || e is LibGit2Sharp.NameConflictException || e is LibGit2Sharp.LibGit2SharpException)
-                {
-                    log.LogWarning($"Failed to checkout {Path.Combine(treePath, f.Path)} in {repo.Info.WorkingDirectory} at {commit}, skipping.  Exception: {e.ToString()}");
-                    if (f.TargetType == LibGit2Sharp.TreeEntryTargetType.Tree)
-                    {
-                        SafeCheckoutTreeByIndividualFiles(repo, f.Target.Peel<LibGit2Sharp.Tree>(), Path.Combine(treePath, f.Path), commit, options, log);
-                    }
-                }
-            }
-        }
-
-        private static string ParseReference(LibGit2Sharp.Repository repo, string treeish, ILogger log)
-        {
-            LibGit2Sharp.Reference reference = null;
-            LibGit2Sharp.GitObject dummy;
-            try
-            {
-                repo.RevParse(treeish, out reference, out dummy);
-            }
-            catch
-            {
-                // nothing we can do
-            }
-            log.LogDebug($"Parsed {treeish} to mean {reference?.TargetIdentifier ?? "<invalid>"}");
-            if (reference == null)
-            {
-                try
-                {
-                    repo.RevParse($"origin/{treeish}", out reference, out dummy);
-                }
-                catch
-                {
-                    // nothing we can do
-                }
-                log.LogDebug($"Parsed origin/{treeish} to mean {reference?.TargetIdentifier ?? "<invalid>"}");
-            }
-            return reference?.TargetIdentifier;
         }
 
         private byte[] GetUtf8ContentBytes(string content, ContentEncoding encoding)
