@@ -33,9 +33,12 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                 log.LogDebug($"Trying safe checkout of {repo.Info.WorkingDirectory} at {commit}");
                 Commands.Checkout(repo, commit, options);
             }
-            catch (Exception e) when (e is InvalidSpecificationException || e is NameConflictException || e is LibGit2SharpException)
+            catch (Exception e) when (e is InvalidSpecificationException
+                                   || e is NameConflictException
+                                   || e is LibGit2SharpException)
             {
-                log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e.ToString()}).  Attempting to checkout by individual files.");
+                log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e.ToString()})." + 
+                                "  Attempting to checkout by individual files.");
                 SafeCheckoutByIndividualFiles(repo, commit, options, log);
             }
             catch
@@ -50,9 +53,12 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                         log.LogDebug($"Trying checkout of {repo.Info.WorkingDirectory} at {resolvedReference}");
                         Commands.Checkout(repo, resolvedReference, options);
                     }
-                    catch (Exception e) when (e is InvalidSpecificationException || e is NameConflictException || e is LibGit2SharpException)
+                    catch (Exception e) when (e is InvalidSpecificationException
+                                           || e is NameConflictException
+                                           || e is LibGit2SharpException)
                     {
-                        log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e.ToString()}).  Attempting to checkout by individual files.");
+                        log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e.ToString()})." + 
+                                        "  Attempting to checkout by individual files.");
                         SafeCheckoutByIndividualFiles(repo, resolvedReference, options, log);
                     }
                 }
@@ -83,7 +89,12 @@ namespace Microsoft.DotNet.DarcLib.Helpers
         /// <param name="commit">The commit we are trying to checkout at.  This should be resolved already if it needs to be (i.e. normal whole-repo checkout failed)</param>
         /// <param name="options">Options for checkout - mostly used to force checkout</param>
         /// <param name="log">Logger</param>
-        private static void SafeCheckoutTreeByIndividualFiles(Repository repo, Tree tree, string treePath, string commit, CheckoutOptions options, ILogger log)
+        private static void SafeCheckoutTreeByIndividualFiles(Repository repo,
+                                                              Tree tree,
+                                                              string treePath,
+                                                              string commit,
+                                                              CheckoutOptions options,
+                                                              ILogger log)
         {
             foreach (TreeEntry f in tree)
             {
@@ -91,7 +102,9 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                 {
                     repo.CheckoutPaths(commit, new[] { Path.Combine(treePath, f.Path) }, options);
                 }
-                catch (Exception e) when (e is InvalidSpecificationException || e is NameConflictException || e is LibGit2SharpException)
+                catch (Exception e) when (e is InvalidSpecificationException
+                                       || e is NameConflictException
+                                       || e is LibGit2SharpException)
                 {
                     log.LogWarning($"Failed to checkout {Path.Combine(treePath, f.Path)} in {repo.Info.WorkingDirectory} at {commit}, skipping.  Exception: {e.ToString()}");
                     if (f.TargetType == TreeEntryTargetType.Tree)
