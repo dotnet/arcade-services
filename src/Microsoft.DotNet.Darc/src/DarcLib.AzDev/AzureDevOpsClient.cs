@@ -1016,7 +1016,7 @@ namespace Microsoft.DotNet.DarcLib
             }
             else
             {
-                throw new ArgumentException($"{releaseDefinition.Artifacts.Count()} artifact sources are defined in pipeline {releaseDefinition.Id}. Only one artifact source was expected. Trying to patch it.");
+                throw new ArgumentException($"{releaseDefinition.Artifacts.Count()} artifact sources are defined in pipeline {releaseDefinition.Id}. Only one artifact source was expected.");
             }
 
             var _serializerSettings = new JsonSerializerSettings
