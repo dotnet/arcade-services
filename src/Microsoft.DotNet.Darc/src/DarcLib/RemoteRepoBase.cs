@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -190,18 +191,8 @@ namespace Microsoft.DotNet.DarcLib
                             commit = localRepo.Head.Reference.TargetIdentifier;
                             _logger.LogInformation($"Repo {localRepo.Info.WorkingDirectory} has no commit to clone at, assuming it's {commit}");
                         }
-                        try
-                        {
-                            _logger.LogDebug($"Attempting to checkout {commit} as commit in {localRepo.Info.WorkingDirectory}");
-                            LibGit2Sharp.Commands.Checkout(localRepo, commit, checkoutOptions);
-                        }
-                        catch
-                        {
-                            _logger.LogDebug($"Failed to checkout {commit} as commit, trying to resolve");
-                            string resolvedReference = ParseReference(localRepo, commit, _logger);
-                            _logger.LogDebug($"Resolved {commit} to {resolvedReference ?? "<invalid>"} in {localRepo.Info.WorkingDirectory}, attempting checkout");
-                            LibGit2Sharp.Commands.Checkout(localRepo, resolvedReference, checkoutOptions);
-                        }
+                        _logger.LogDebug($"Attempting to checkout {commit} as commit in {localRepo.Info.WorkingDirectory}");
+                        LibGit2SharpHelpers.SafeCheckout(localRepo, commit, checkoutOptions, _logger);
                     }
                     // LibGit2Sharp doesn't support a --git-dir equivalent yet (https://github.com/libgit2/libgit2sharp/issues/1467), so we do this manually
                     if (gitDirectory != null)
@@ -296,34 +287,6 @@ namespace Microsoft.DotNet.DarcLib
                     log.LogDebug($"{sub.Name} doesn't have a .gitdir redirect at {subRepoGitFilePath}, skipping delete");
                 }
             }
-        }
-
-        private static string ParseReference(LibGit2Sharp.Repository repo, string treeish, ILogger log)
-        {
-            LibGit2Sharp.Reference reference = null;
-            LibGit2Sharp.GitObject dummy;
-            try
-            {
-                repo.RevParse(treeish, out reference, out dummy);
-            }
-            catch
-            {
-                // nothing we can do
-            }
-            log.LogDebug($"Parsed {treeish} to mean {reference?.TargetIdentifier ?? "<invalid>"}");
-            if (reference == null)
-            {
-                try
-                {
-                    repo.RevParse($"origin/{treeish}", out reference, out dummy);
-                }
-                catch
-                {
-                    // nothing we can do
-                }
-                log.LogDebug($"Parsed origin/{treeish} to mean {reference?.TargetIdentifier ?? "<invalid>"}");
-            }
-            return reference?.TargetIdentifier;
         }
 
         private byte[] GetUtf8ContentBytes(string content, ContentEncoding encoding)
