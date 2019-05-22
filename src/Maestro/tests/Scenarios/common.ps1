@@ -221,9 +221,9 @@ function Darc-Disable-Default-Channel($channelName, $repoUri, $branch) {
 function Darc-Add-Subscription() {
     $darcParams = "add-subscription $args -q"
     $output = Darc-Command-Impl $darcParams
-    
-    if ($output -match "Successfully created new subscription with id '([a-f0-9-]+)'") {
-        $subscriptionId = $matches[1]
+    $subscriptionIdString = $output -match "Successfully created new subscription with id '([a-f0-9-]+)'"
+    if ($subscriptionIdString -and $subscriptionIdString[0] -match "'([a-f0-9-]+)'") {
+        $subscriptionId = $Matches[0].replace("'", "")
         if (-not $subscriptionId) {
             throw "Failed to extract subscription id"
         }
