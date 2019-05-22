@@ -992,27 +992,31 @@ namespace Microsoft.DotNet.DarcLib
 
                 if (!releaseDefinition.Artifacts[0].Alias.Equals("PrimaryArtifact"))
                 {
-                    throw new ArgumentException("The artifact source for the release pipeline should be named 'PrimaryArtifact'.");
+                    _logger.LogInformation($"The artifact source Alias for the release pipeline should be 'PrimaryArtifact' got '{releaseDefinition.Artifacts[0].Alias}'. Trying to patch it.");
+                    releaseDefinition.Artifacts[0].Alias = "PrimaryArtifact";
                 }
 
                 if (!releaseDefinition.Artifacts[0].Type.Equals("Build"))
                 {
-                    throw new ArgumentException("The artifact source for the release pipeline should have type 'Build'.");
+                    _logger.LogInformation($"The artifact source Type for the release pipeline should be 'Build' got '{releaseDefinition.Artifacts[0].Type}'. Trying to patch it.");
+                    releaseDefinition.Artifacts[0].Type = "Build";
                 }
 
                 if (!definitionReference.DefaultVersionType.Id.Equals("specificVersionType"))
                 {
-                    throw new ArgumentException("The artifact source for the release pipeline should be a specific version.");
+                    _logger.LogInformation($"The artifact source Id for the release pipeline should be 'specificVersionType' got '{definitionReference.DefaultVersionType.Id}'. Trying to patch it.");
+                    definitionReference.DefaultVersionType.Id = "specificVersionType";
                 }
 
                 if (!definitionReference.DefaultVersionType.Name.Equals("Specific version"))
                 {
-                    throw new ArgumentException("The artifact source for the release pipeline should be a specific version.");
+                    _logger.LogInformation($"The artifact source Name for the release pipeline should be 'Specific version' got '{definitionReference.DefaultVersionType.Name}'. Trying to patch it.");
+                    definitionReference.DefaultVersionType.Name = "Specific version";
                 }
             }
             else
             {
-                throw new ArgumentException($"More than one artifact source is defined in pipeline {releaseDefinition.Id}. Only one artifact source was expected.");
+                throw new ArgumentException($"{releaseDefinition.Artifacts.Count()} artifact sources are defined in pipeline {releaseDefinition.Id}. Only one artifact source was expected.");
             }
 
             var _serializerSettings = new JsonSerializerSettings
