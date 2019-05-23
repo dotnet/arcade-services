@@ -221,16 +221,24 @@ function Darc-Disable-Default-Channel($channelName, $repoUri, $branch) {
 function Darc-Add-Subscription() {
     $darcParams = "add-subscription $args -q"
     $output = Darc-Command-Impl $darcParams
-    $subscriptionIdString = $output -match "Successfully created new subscription with id '([a-f0-9-]+)'"
-    if ($subscriptionIdString -and $subscriptionIdString[0] -match "'([a-f0-9-]+)'") {
-        $subscriptionId = $Matches[0].replace("'", "")
+    $match = $output -match "Successfully created new subscription with id '([a-f0-9-]+)'"
+
+    # Batched subscriptions return a warning that non-batched subscriptions don't,
+    # the behavior of -match changes depending on whether the input is an array or a scalar
+    # so we check if the special $Matches variable has any content to determine if we should
+    # try another match
+    if ($match) {
+        if (!$Matches) {
+            $match[0] -match "'([a-f0-9-]+)'" | Out-Null
+        }
+        $subscriptionId = $Matches[1].replace("'", "")
         if (-not $subscriptionId) {
             throw "Failed to extract subscription id"
         }
         $global:subscriptionsToDelete += $subscriptionId
         $subscriptionId
     } else {
-        throw "Failed to create subscrption or parse subscription id"
+        throw "Failed to create subscription or parse subscription id"
     }
 }
 
