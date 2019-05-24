@@ -48,21 +48,22 @@ namespace Microsoft.DotNet.Darc.Operations
                 List<Asset> matchingAssets =
                     (await remote.GetAssetsAsync(name: _options.Name, version: _options.Version)).ToList();
 
-                string nameVersionAndChannel =
+                string queryDescriptionString =
                     $"name '{_options.Name}'{(!string.IsNullOrEmpty(_options.Version) ? $"and version '{_options.Version}'" : "")}" +
-                    $"{(targetChannel != null ? $" on channel '{targetChannel.Name}'" : "")}";
+                    $"{(targetChannel != null ? $" on channel '{targetChannel.Name}'" : "")} in the last {_options.MaxAgeInDays} days";
+
+                Console.WriteLine($"Looking up assets with {queryDescriptionString}");
 
                 // Walk the assets and look up the corresponding builds, potentially filtering based on channel
                 // if there is a target channel
                 bool foundMatching = false;
-                int lookups = _options.MaxBuildLookups;
+                int maxAgeInDays = _options.MaxAgeInDays;
+                var now = DateTimeOffset.Now;
+                int checkedAssets = 0;
+
                 foreach (var asset in matchingAssets)
                 {
-                    if (lookups == 0)
-                    {
-                        break;
-                    }
-                    lookups--;
+                    checkedAssets++;
 
                     // Get build info for asset
                     Build buildInfo = await remote.GetBuildAsync(asset.BuildId);
@@ -70,6 +71,11 @@ namespace Microsoft.DotNet.Darc.Operations
                     if (targetChannel != null && !buildInfo.Channels.Any(c => c.Id == targetChannel.Id))
                     {
                         continue;
+                    }
+
+                    if (now.Subtract(buildInfo.DateProduced).TotalDays > maxAgeInDays)
+                    {
+                        break;
                     }
 
                     foundMatching = true;
@@ -82,11 +88,11 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 if (!foundMatching)
                 {
-                    Console.WriteLine($"No assets found with {nameVersionAndChannel}");
-                    int remaining = matchingAssets.Count - _options.MaxBuildLookups;
+                    Console.WriteLine($"No assets found with {queryDescriptionString}");
+                    int remaining = matchingAssets.Count - checkedAssets;
                     if (remaining > 0)
                     {
-                        Console.WriteLine($"Skipping build lookup for {remaining} assets. Consider increasing --max-lookup to check the rest");
+                        Console.WriteLine($"Skipping build lookup for {remaining} assets. Consider increasing --max-age to check the rest.");
                     }
                 }
 

@@ -21,8 +21,8 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("channel", HelpText = "Look up the asset produced from builds applied to this channel.")]
         public string Channel { get; set; }
 
-        [Option("max-lookup", Default = 10, HelpText = "Maximum number of builds to look up.")]
-        public int MaxBuildLookups { get; set; }
+        [Option("max-age", Default = 30, HelpText = "Show builds with a max age of this many days.")]
+        public int MaxAgeInDays { get; set; }
 
         public override Operation GetOperation()
         {
