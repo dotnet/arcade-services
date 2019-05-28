@@ -302,28 +302,9 @@ namespace Microsoft.DotNet.DarcLib
                                                  int? buildId = null,
                                                  bool? nonShipping = null)
         {
-            // Start at the first page and go until we 404
-            List<Asset> assets = new List<Asset>();
-            int page = 0;
-            while (true)
-            {
-                try
-                {
-                    IReadOnlyList<Asset> assetPage = await _barClient.Assets.ListAssetsAsync(
-                        name: name,
-                        version: version,
-                        buildId: buildId,
-                        nonShipping: nonShipping,
-                        loadLocations: true,
-                        page: ++page);
-                    assets.AddRange(assetPage);
-                }
-                catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
-                {
-                    break;
-                }
-            }
-            return assets;
+            PagedResponse<Asset> pagedResponse = await _barClient.Assets.ListAssetsAsync(name: name,
+                version: version, buildId: buildId, loadLocations: true);
+            return await pagedResponse.EnumerateAll().ToListAsync(CancellationToken.None);
         }
 
         /// <summary>
