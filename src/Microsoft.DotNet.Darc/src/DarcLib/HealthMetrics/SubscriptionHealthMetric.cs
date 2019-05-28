@@ -28,7 +28,7 @@ namespace Microsoft.DotNet.DarcLib.HealthMetrics
     /// </summary>
     public class SubscriptionHealthMetric : HealthMetric
     {
-        public SubscriptionHealthMetric(string repo, string branch, ILogger logger, IRemoteFactory remoteFactory)
+        public SubscriptionHealthMetric(string repo, string branch, Func<DependencyDetail, bool> dependencySelector, ILogger logger, IRemoteFactory remoteFactory)
             : base(logger, remoteFactory)
         {
             Repository = repo;
@@ -37,10 +37,12 @@ namespace Microsoft.DotNet.DarcLib.HealthMetrics
             DependenciesMissingSubscriptions = Enumerable.Empty<DependencyDetail>();
             ConflictingSubscriptions = Enumerable.Empty<SubscriptionConflict>();
             UnusedSubscriptions = Enumerable.Empty<Subscription>();
+            DependencySelector = dependencySelector;
         }
 
         public readonly string Repository;
         public readonly string Branch;
+        public readonly Func<DependencyDetail, bool> DependencySelector;
         public List<Subscription> Subscriptions { get; private set; }
         public List<DependencyDetail> Dependencies { get; private set; }
 
@@ -87,11 +89,13 @@ namespace Microsoft.DotNet.DarcLib.HealthMetrics
                 .Where(s => s.TargetBranch.Equals(Branch, StringComparison.OrdinalIgnoreCase)).ToList();
 
             // Get the dependencies of the repository/branch. Skip pinned and subscriptions tied to another
-            // dependency (coherent parent)
+            // dependency (coherent parent), as well as those not selected by the dependency selector.
             try
             {
                 Dependencies = (await remote.GetDependenciesAsync(Repository, Branch))
-                    .Where(d => !d.Pinned && string.IsNullOrEmpty(d.CoherentParentDependencyName)).ToList();
+                    .Where(d => !d.Pinned && string.IsNullOrEmpty(d.CoherentParentDependencyName))
+                    .Where(d => DependencySelector(d))
+                    .ToList();
             }
             catch (DependencyFileNotFoundException)
             {

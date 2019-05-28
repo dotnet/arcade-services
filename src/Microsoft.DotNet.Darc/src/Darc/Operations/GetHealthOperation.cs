@@ -186,7 +186,8 @@ namespace Microsoft.DotNet.Darc.Operations
             return repoBranchCombinations.Select<(string repo, string branch), Func<Task<HealthMetricWithOutput>>>(t =>
                 async () =>
                 {
-                    SubscriptionHealthMetric healthMetric = new SubscriptionHealthMetric(t.repo, t.branch, Logger, remoteFactory);
+                    SubscriptionHealthMetric healthMetric = new SubscriptionHealthMetric(t.repo, t.branch, 
+                        d => true, Logger, remoteFactory);
 
                     await healthMetric.EvaluateAsync();
 
