@@ -55,10 +55,10 @@ try {
     Darc-Add-Channel $testChannelName "test"
 
     Write-Host "Adding a subscription from $source1RepoName to $targetRepoName"
-    $subscription1Id = Darc-Add-Subscription --channel `'$testChannelName`' --source-repo $source1RepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch --batchable --standard-automerge
+    $subscription1Id = Darc-Add-Subscription --channel `'$testChannelName`' --source-repo $source1RepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch --batchable
 
     Write-Host "Adding a subscription from $source2RepoName to $targetRepoName"
-    $subscription2Id = Darc-Add-Subscription --channel `'$testChannelName`' --source-repo $source2RepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch --batchable --standard-automerge
+    $subscription2Id = Darc-Add-Subscription --channel `'$testChannelName`' --source-repo $source2RepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch --batchable
 
     Write-Host "Set up build2 for intake into target repository"
     # Create a build for the first source repo
@@ -102,28 +102,28 @@ try {
     $expectedDependencies =@(
         "Name:             Foo"
         "Version:          1.1.0",
-        "Repo:             $sourceRepo1Uri",
+        "Repo:             $source1RepoUri",
         "Commit:           $sourceCommit",
         "Type:             Product",
         "Pinned:           False",
         "",
         "Name:             Bar",
         "Version:          2.1.0",
-        "Repo:             $sourceRepo1Uri",
+        "Repo:             $source1RepoUri",
         "Commit:           $sourceCommit",
         "Type:             Product",
         "Pinned:           False",
         "",
         "Name:             Pizza",
         "Version:          3.1.0",
-        "Repo:             $sourceRepo2Uri",
+        "Repo:             $source2RepoUri",
         "Commit:           $sourceCommit",
         "Type:             Product",
         "Pinned:           False",
         "",
         "Name:             Hamburger",
         "Version:          4.1.0",
-        "Repo:             $sourceRepo2Uri",
+        "Repo:             $source2RepoUri",
         "Commit:           $sourceCommit",
         "Type:             Product",
         "Pinned:           False",
