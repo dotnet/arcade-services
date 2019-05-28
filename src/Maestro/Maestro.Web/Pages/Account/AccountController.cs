@@ -90,7 +90,7 @@ namespace Maestro.Web.Pages.Account
         {
             string id = info.Principal.FindFirstValue(ClaimTypes.NameIdentifier);
             string name = info.Principal.FindFirstValue(ClaimTypes.Name);
-            string fullName = info.Principal.FindFirstValue("urn:github:name");
+            string fullName = info.Principal.FindFirstValue("urn:github:name") ?? name;
             string accessToken = info.AuthenticationTokens.First(t => t.Name == "access_token").Value;
 
             using (IDbContextTransaction txn = await Context.Database.BeginTransactionAsync())

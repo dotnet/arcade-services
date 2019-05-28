@@ -60,36 +60,23 @@ namespace Maestro.Web
                 }
 
                 JObject payload = JObject.Parse(await response.Content.ReadAsStringAsync());
-                identity.AddClaim(
-                    new Claim(
-                        ClaimTypes.NameIdentifier,
-                        payload.Value<string>("id"),
-                        ClaimValueTypes.String,
-                        Options.ClaimsIssuer));
-                identity.AddClaim(
-                    new Claim(
-                        ClaimTypes.Name,
-                        payload.Value<string>("login"),
-                        ClaimValueTypes.String,
-                        Options.ClaimsIssuer));
-                var email = payload.Value<string>("email");
-                if (email != null)
+                void AddClaim(string type, string value)
                 {
-                    identity.AddClaim(new Claim(ClaimTypes.Email, email, ClaimValueTypes.String, Options.ClaimsIssuer));
+                    if (string.IsNullOrEmpty(value))
+                        return;
+                    identity.AddClaim(
+                        new Claim(
+                            type,
+                            value,
+                            ClaimValueTypes.String,
+                            Options.ClaimsIssuer));
                 }
 
-                identity.AddClaim(
-                    new Claim(
-                        "urn:github:name",
-                        payload.Value<string>("name"),
-                        ClaimValueTypes.String,
-                        Options.ClaimsIssuer));
-                identity.AddClaim(
-                    new Claim(
-                        "urn:github:url",
-                        payload.Value<string>("url"),
-                        ClaimValueTypes.String,
-                        Options.ClaimsIssuer));
+                AddClaim(ClaimTypes.NameIdentifier, payload.Value<string>("id"));
+                AddClaim(ClaimTypes.Name, payload.Value<string>("login"));
+                AddClaim(ClaimTypes.Email, payload.Value<string>("email"));
+                AddClaim("urn:github:name", payload.Value<string>("name"));
+                AddClaim("urn:github:url", payload.Value<string>("url"));
 
                 var context = new OAuthCreatingTicketContext(
                     new ClaimsPrincipal(identity),
