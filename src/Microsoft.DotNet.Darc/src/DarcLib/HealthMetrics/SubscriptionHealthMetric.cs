@@ -118,7 +118,7 @@ namespace Microsoft.DotNet.DarcLib.HealthMetrics
             ComputeSubscriptionUse(latestAssets);
 
             // Determine the result. A conflict or missing subscription is an error.
-            // A non-flowing subscription or unused subscritpion is a warning
+            // A non-flowing subscription or unused subscription is a warning
             if (DependenciesMissingSubscriptions.Any() ||
                 ConflictingSubscriptions.Any())
             {
