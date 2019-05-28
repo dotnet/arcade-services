@@ -60,7 +60,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         mergePolicies = await remote.GetRepositoryMergePoliciesAsync(subscription.TargetRepository, subscription.TargetBranch);
                     }
 
-                    OutputHelpers.PrintMergePolicies(mergePolicies, "  ");
+                    Console.Write(UxHelpers.GetMergePoliciesDescription(mergePolicies, "  "));
 
                     // Currently the API only returns the last applied build for requests to specific subscriptions.
                     // This will be fixed, but for now, don't print the last applied build otherwise.

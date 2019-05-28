@@ -95,7 +95,8 @@ namespace Microsoft.DotNet.DarcLib
                 using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(
                     HttpMethod.Get,
                     $"repos/{owner}/{repo}/contents/{filePath}?ref={branch}",
-                    _logger))
+                    _logger,
+                    logFailure: false))
                 {
                     responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
                 }
@@ -444,11 +445,12 @@ namespace Microsoft.DotNet.DarcLib
             ILogger logger,
             string body = null,
             string versionOverride = null,
-            int retryCount = 15)
+            int retryCount = 15,
+            bool logFailure = true)
         {
             using (HttpClient client = CreateHttpClient())
             {
-                var requestManager = new HttpRequestManager(client, method, requestUri, logger, body, versionOverride);
+                var requestManager = new HttpRequestManager(client, method, requestUri, logger, body, versionOverride, logFailure);
                 return await requestManager.ExecuteAsync(retryCount);
             }
         }

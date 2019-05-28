@@ -57,7 +57,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 Console.WriteLine($"Assigning the following build to channel '{targetChannel.Name}':");
                 Console.WriteLine();
-                OutputHelpers.PrintBuild(build);
+                Console.Write(UxHelpers.GetBuildDescription(build));
 
                 await remote.AssignBuildToChannel(_options.Id, targetChannel.Id);
 

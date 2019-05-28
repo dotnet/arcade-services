@@ -83,7 +83,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     Console.WriteLine($"Will trigger the following {subscriptionsToTrigger.Count} subscriptions...");
                     foreach (var subscription in subscriptionsToTrigger)
                     {
-                        Console.WriteLine($"  {GetSubscriptionDescription(subscription)}");
+                        Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
                     }
 
                     char keyChar;
@@ -109,7 +109,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     // If noConfirm was passed, print out the subscriptions as we go
                     if (noConfirm)
                     {
-                        Console.WriteLine($"  {GetSubscriptionDescription(subscription)}");
+                        Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
                     }
                     await remote.TriggerSubscriptionAsync(subscription.Id.ToString());
                 }
@@ -122,11 +122,6 @@ namespace Microsoft.DotNet.Darc.Operations
                 Logger.LogError(e, "Unexpected error while triggering subscriptions.");
                 return Constants.ErrorCode;
             }
-        }
-
-        private string GetSubscriptionDescription(Subscription subscription)
-        {
-            return $"{subscription.SourceRepository} ({subscription.Channel.Name}) ==> '{subscription.TargetRepository}' ('{subscription.TargetBranch}')";
         }
     }
 }

@@ -73,7 +73,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 Console.WriteLine($"More than one channel matching the specified criteria. Please change your options to be more specific.");
                 foreach (DefaultChannel defaultChannel in matchingChannels)
                 {
-                    Console.WriteLine($"    {OutputHelpers.GetDefaultChannelDescriptionString(defaultChannel)}");
+                    Console.WriteLine($"    {UxHelpers.GetDefaultChannelDescriptionString(defaultChannel)}");
                 }
                 return null;
             }

@@ -81,9 +81,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     foundMatching = true;
 
                     Console.WriteLine($"{asset.Name} @ {asset.Version}");
-                    // Print build information
-                    OutputHelpers.PrintBuild(buildInfo);
-                    Console.WriteLine();
+                    Console.WriteLine(UxHelpers.GetBuildDescription(buildInfo));
                 }
 
                 if (!foundMatching)
