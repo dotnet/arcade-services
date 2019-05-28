@@ -169,19 +169,19 @@ namespace Microsoft.DotNet.Darc.Operations
             IRemoteFactory remoteFactory = new RemoteFactory(_options);
 
             // Compute the combinations that make sense.
-            var repoBranchCombinations = subscriptions
-                .Where(s => reposToEvaluate.Contains(s.TargetRepository))
-                .Where(s => channelsToEvaluate.Contains(s.Channel.Name))
-                .Select<Subscription, (string repo, string branch)>(s => (s.TargetRepository, s.TargetBranch))
-                .ToList();
             var defaultChannelsRepoBranchCombinations = defaultChannels
                 .Where(df => channelsToEvaluate.Contains(df.Channel.Name))
                 // Replace refs/heads/
                 .Where(df => reposToEvaluate.Contains(df.Repository))
                 .Select<DefaultChannel, (string repo, string branch)>(df => (df.Repository, df.Branch.Replace("refs/heads/", "")));
 
-            repoBranchCombinations.AddRange(defaultChannelsRepoBranchCombinations);
-            repoBranchCombinations = repoBranchCombinations.Distinct().ToList();
+            var repoBranchCombinations = subscriptions
+                .Where(s => reposToEvaluate.Contains(s.TargetRepository))
+                .Where(s => channelsToEvaluate.Contains(s.Channel.Name))
+                .Select<Subscription, (string repo, string branch)>(s => (s.TargetRepository, s.TargetBranch))
+                .ToHashSet();
+
+            repoBranchCombinations.UnionWith(defaultChannelsRepoBranchCombinations);
 
             return repoBranchCombinations.Select<(string repo, string branch), Func<Task<HealthMetricWithOutput>>>(t =>
                 async () =>
