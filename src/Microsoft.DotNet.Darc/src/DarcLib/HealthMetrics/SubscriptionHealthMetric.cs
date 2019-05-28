@@ -200,7 +200,7 @@ namespace Microsoft.DotNet.DarcLib.HealthMetrics
 
                         if (assetsToLatestInSubscription.TryGetValue(assetName, out Subscription otherSubscription))
                         {
-                            // Repos can publish the same asset twice for the same uild, so filter out those cases,
+                            // Repos can publish the same asset twice for the same build, so filter out those cases,
                             // as well as cases where the subscription is functionally the same (e.g. you have a twice daily
                             // and weekly subscription). Basically cases where the source repo and source channels are the same.
 
