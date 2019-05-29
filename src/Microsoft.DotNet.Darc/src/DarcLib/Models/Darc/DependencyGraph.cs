@@ -75,18 +75,28 @@ namespace Microsoft.DotNet.DarcLib
         /// Include toolset dependencies in the build.
         /// </summary>
         public bool IncludeToolset { get; set; }
+        
         /// <summary>
         /// Lookup build information for each node. Only valid for remote builds.
         /// </summary>
         public bool LookupBuilds { get; set; }
+        
         /// <summary>
         /// Type of node diff to perform. Local build only supports 'None' 
         /// </summary>
         public NodeDiff NodeDiff { get; set; } = NodeDiff.None;
+        
         /// <summary>
         /// Stop the graph build based on the provided options
         /// </summary>
         public EarlyBreakOn EarlyBuildBreak { get; set; } = EarlyBreakOn.NoEarlyBreak;
+
+        /// <summary>
+        ///     If true, cycles are computed as part of the graph build
+        ///     if cycles are encountered, and the Cycles member of DependencyGraph
+        ///     will be non-empty
+        /// </summary>
+        public bool ComputeCyclePaths { get; set; } = true;
     }
 
     public class DependencyGraph
@@ -100,7 +110,8 @@ namespace Microsoft.DotNet.DarcLib
             IEnumerable<DependencyGraphNode> allNodes,
             IEnumerable<DependencyGraphNode> incoherentNodes,
             IEnumerable<Build> contributingBuilds,
-            IEnumerable<DependencyDetail> dependenciesMissingBuilds)
+            IEnumerable<DependencyDetail> dependenciesMissingBuilds,
+            IEnumerable<IEnumerable<DependencyGraphNode>> cycles)
         {
             Root = root;
             UniqueDependencies = uniqueDependencies;
@@ -109,6 +120,7 @@ namespace Microsoft.DotNet.DarcLib
             IncoherentDependencies = incoherentDependencies;
             ContributingBuilds = contributingBuilds;
             DependenciesMissingBuilds = dependenciesMissingBuilds;
+            Cycles = cycles;
         }
 
         public DependencyGraphNode Root { get; set; }
@@ -146,6 +158,12 @@ namespace Microsoft.DotNet.DarcLib
         ///     be found.
         /// </summary>
         public IEnumerable<DependencyDetail> DependenciesMissingBuilds { get; set; }
+
+        /// <summary>
+        ///     A list of cycles.  Each cycle is represented as a list of nodes
+        ///     in the cycle.  The "topmost" node (closest to root of the graph) is the first node.
+        /// </summary>
+        public IEnumerable<IEnumerable<DependencyGraphNode>> Cycles { get; set; }
 
         /// <summary>
         ///     Builds a dependency graph given a root repo and commit using remotes.
@@ -467,6 +485,7 @@ namespace Microsoft.DotNet.DarcLib
             HashSet<Build> rootNodeBuilds = null;
             Dictionary<DependencyDetail, Build> dependencyCache =
                 new Dictionary<DependencyDetail, Build>(new DependencyDetailComparer());
+            List<LinkedList<DependencyGraphNode>> cycles = new List<LinkedList<DependencyGraphNode>>();
 
             EarlyBreakOnType breakOnType = options.EarlyBuildBreak.Type;
             HashSet<string> breakOn = null;
@@ -600,6 +619,12 @@ namespace Microsoft.DotNet.DarcLib
                         {
                             logger.LogInformation($"Node {node.Repository}@{node.Commit} " +
                                 $"introduces a cycle to {dependency.RepoUri}, skipping");
+
+                            if (options.ComputeCyclePaths)
+                            {
+                                var newCycles = ComputeCyclePaths(node, dependency.RepoUri);
+                                cycles.AddRange(newCycles);
+                            }
                             continue;
                         }
 
@@ -679,11 +704,13 @@ namespace Microsoft.DotNet.DarcLib
                             null,
                             node.VisitedNodes,
                             nodeContributingBuilds);
+                        
                         // Cache the dependency and add it to the visitation stack.
                         nodeCache.Add($"{dependency.RepoUri}@{dependency.Commit}", newNode);
                         nodesToVisit.Enqueue(newNode);
                         newNode.VisitedNodes.Add(dependency.RepoUri);
                         node.AddChild(newNode, dependency);
+                        
                         // Calculate incoherencies. If we've not yet visited the repo uri, add the
                         // new node based on its repo uri. Otherwise, add both the new node and the visited
                         // node to the incoherent nodes.
@@ -733,7 +760,50 @@ namespace Microsoft.DotNet.DarcLib
                                        nodeCache.Values,
                                        incoherentNodes,
                                        allContributingBuilds,
-                                       dependenciesMissingBuilds);
+                                       dependenciesMissingBuilds, cycles);
+        }
+
+        /// <summary>
+        ///     Given that the <paramref name="currentNode"/> introduces one or more cycles to <paramref name="repoCycleRoot"/>
+        ///     compute the cycles that it introduces.
+        /// </summary>
+        /// <param name="currentNode">Current node</param>
+        /// <param name="repoCycleRoot">Repo uri of dependency introducing cycle</param>
+        /// <returns>List of cycles</returns>
+        /// <remarks></remarks>
+        private static List<LinkedList<DependencyGraphNode>> ComputeCyclePaths(
+            DependencyGraphNode currentNode, string repoCycleRoot)
+        {
+            List<LinkedList<DependencyGraphNode>> allCyclesRootedAtNode = new List<LinkedList<DependencyGraphNode>>();
+
+            // Find all parents who have a path to the root node.  This set might also
+            // be the root node, since the root node has itself marked in VisitedNodes.
+            // After reaching the root along all paths, this set will be empty
+            var parentsInCycles = currentNode.Parents.Where(p => p.VisitedNodes.Contains(repoCycleRoot));
+
+            if (parentsInCycles.Any())
+            {
+                // Recurse into each parent, combining the returned cycles together and
+                // appending on the current node.
+                foreach (var parent in parentsInCycles)
+                {
+                    var cyclesRootedAtParentNode = ComputeCyclePaths(parent, repoCycleRoot);
+                    foreach (var cycleRootedAtNode in cyclesRootedAtParentNode)
+                    {
+                        cycleRootedAtNode.AddLast(currentNode);
+                        allCyclesRootedAtNode.Add(cycleRootedAtNode);
+                    }
+                }
+            }
+            else
+            {
+                // Create a segment containing just this node and return that
+                LinkedList<DependencyGraphNode> newCycleSegment = new LinkedList<DependencyGraphNode>();
+                allCyclesRootedAtNode.Add(newCycleSegment);
+                newCycleSegment.AddFirst(currentNode);
+            }
+
+            return allCyclesRootedAtNode;
         }
 
         /// <summary>
