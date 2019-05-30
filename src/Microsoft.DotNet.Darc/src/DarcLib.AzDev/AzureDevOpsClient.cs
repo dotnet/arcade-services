@@ -805,7 +805,7 @@ namespace Microsoft.DotNet.DarcLib
                 address += $"{projectName}/";
             }
 
-            var client = new HttpClient {
+            var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }) {
                 BaseAddress = new Uri(address)
             };
 

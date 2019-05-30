@@ -560,7 +560,7 @@ namespace Microsoft.DotNet.Darc.Operations
             bool anyShipping = false;
 
             Console.WriteLine($"Gathering drop for build {build.AzureDevOpsBuildNumber} of {repoUri}");
-            using (HttpClient client = new HttpClient())
+            using (HttpClient client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
                 var assets = await remote.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?)false : null));
                 foreach (var asset in assets)
