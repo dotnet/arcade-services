@@ -102,7 +102,7 @@ namespace ReleasePipelineRunner
                 Logger.LogError(ex, "Processing queue messages");
             }
 
-            return TimeSpan.FromSeconds(1);
+            return TimeSpan.FromMinutes(1)
         }
 
         /// <summary>
