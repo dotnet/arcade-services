@@ -9,12 +9,11 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 using YamlDotNet.Serialization;
 
 namespace Microsoft.DotNet.Darc.Models.PopUps
 {
-    public class AddSubscriptionPopUp : SubscriptionPopUp
+    public class AddSubscriptionPopUp : EditorPopUp
     {
         private readonly ILogger _logger;
         private SubscriptionData _yamlData;
@@ -23,8 +22,8 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
         public string TargetRepository => _yamlData.TargetRepository;
         public string TargetBranch => _yamlData.TargetBranch;
         public string UpdateFrequency => _yamlData.UpdateFrequency;
-        public List<MergePolicy> MergePolicies => ConvertMergePolicies(_yamlData.MergePolicies);
-        public bool Batchable => _yamlData.Batchable;
+        public List<MergePolicy> MergePolicies => MergePoliciesPopUpHelpers.ConvertMergePolicies(_yamlData.MergePolicies);
+        public bool Batchable => bool.Parse(_yamlData.Batchable);
 
         public AddSubscriptionPopUp(string path,
                                     ILogger logger,
@@ -39,7 +38,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                                     IEnumerable<string> suggestedRepositories,
                                     IEnumerable<string> availableUpdateFrequencies,
                                     IEnumerable<string> availableMergePolicyHelp)
-            : base(path, logger)
+            : base(path)
         {
             _logger = logger;
             _yamlData = new SubscriptionData
@@ -49,9 +48,9 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 TargetRepository = GetCurrentSettingForDisplay(targetRepository, "<required>", false),
                 TargetBranch = GetCurrentSettingForDisplay(targetBranch, "<required>", false),
                 UpdateFrequency = GetCurrentSettingForDisplay(updateFrequency, $"<'{string.Join("', '", Constants.AvailableFrequencies)}'>", false),
-                Batchable = batchable
+                Batchable = GetCurrentSettingForDisplay(batchable.ToString(), batchable.ToString(), false),
+                MergePolicies = MergePoliciesPopUpHelpers.ConvertMergePolicies(mergePolicies)
             };
-            _yamlData.MergePolicies = ConvertMergePolicies(mergePolicies);
 
             ISerializer serializer = new SerializerBuilder().Build();
             string yaml = serializer.Serialize(_yamlData);
@@ -113,7 +112,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             }
 
             // Validate the merge policies
-            if (!ValidateMergePolicies(ConvertMergePolicies(outputYamlData.MergePolicies)))
+            if (!MergePoliciesPopUpHelpers.ValidateMergePolicies(MergePoliciesPopUpHelpers.ConvertMergePolicies(outputYamlData.MergePolicies), _logger))
             {
                 return Constants.ErrorCode;
             }
@@ -193,7 +192,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             public string UpdateFrequency { get; set; }
 
             [YamlMember(Alias = batchableElement, ApplyNamingConventions = false)]
-            public bool Batchable { get; set; }
+            public string Batchable { get; set; }
 
             [YamlMember(Alias = mergePolicyElement, ApplyNamingConventions = false)]
             public List<MergePolicyData> MergePolicies { get; set; }

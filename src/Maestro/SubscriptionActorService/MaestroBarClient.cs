@@ -106,7 +106,7 @@ namespace SubscriptionActorService
             throw new NotImplementedException();
         }
 
-        public Task<IEnumerable<MergePolicy>> GetRepositoryMergePolicies(string repoUri, string branch)
+        public Task<IEnumerable<MergePolicy>> GetRepositoryMergePoliciesAsync(string repoUri, string branch)
         {
             throw new NotImplementedException();
         }
@@ -118,6 +118,16 @@ namespace SubscriptionActorService
         }
 
         public Task AssignBuildToChannel(int buildId, int channelId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IEnumerable<RepositoryBranch>> GetRepositoriesAsync(string repoUri = null, string branch = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SetRepositoryMergePoliciesAsync(string repoUri, string branch, List<MergePolicy> mergePolicies)
         {
             throw new NotImplementedException();
         }

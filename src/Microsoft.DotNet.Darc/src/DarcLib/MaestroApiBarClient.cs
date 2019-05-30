@@ -248,7 +248,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository uri</param>
         /// <param name="branch">Repository branch</param>
         /// <returns>List of merge policies</returns>
-        public async Task<IEnumerable<MergePolicy>> GetRepositoryMergePolicies(string repoUri, string branch)
+        public async Task<IEnumerable<MergePolicy>> GetRepositoryMergePoliciesAsync(string repoUri, string branch)
         {
             try
             {
@@ -259,6 +259,30 @@ namespace Microsoft.DotNet.DarcLib
                 // Return an empty list
                 return new List<MergePolicy>();
             }
+        }
+
+        /// <summary>
+        ///     Get a list of repository+branch combos and their associated merge policies.
+        /// </summary>
+        /// <param name="repoUri">Optional repository</param>
+        /// <param name="branch">Optional branch</param>
+        /// <returns>List of repository+branch combos</returns>
+        public async Task<IEnumerable<RepositoryBranch>> GetRepositoriesAsync(string repoUri = null, string branch = null)
+        {
+            return await _barClient.Repository.ListRepositoriesAsync(repository: repoUri, branch: branch);
+        }
+
+
+        /// <summary>
+        ///     Set the merge policies for batchable subscriptions applied to a specific repo and branch
+        /// </summary>
+        /// <param name="repoUri">Repository</param>
+        /// <param name="branch">Branch</param>
+        /// <param name="mergePolicies">Merge policies. May be empty.</param>
+        /// <returns>Task</returns>
+        public async Task SetRepositoryMergePoliciesAsync(string repoUri, string branch, List<MergePolicy> mergePolicies)
+        {
+            await _barClient.Repository.SetMergePoliciesAsync(repository: repoUri, branch: branch, body: mergePolicies.ToImmutableList());
         }
 
         #endregion
@@ -278,28 +302,9 @@ namespace Microsoft.DotNet.DarcLib
                                                  int? buildId = null,
                                                  bool? nonShipping = null)
         {
-            // Start at the first page and go until we 404
-            List<Asset> assets = new List<Asset>();
-            int page = 0;
-            while (true)
-            {
-                try
-                {
-                    IReadOnlyList<Asset> assetPage = await _barClient.Assets.ListAssetsAsync(
-                        name: name,
-                        version: version,
-                        buildId: buildId,
-                        nonShipping: nonShipping,
-                        loadLocations: true,
-                        page: ++page);
-                    assets.AddRange(assetPage);
-                }
-                catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
-                {
-                    break;
-                }
-            }
-            return assets;
+            PagedResponse<Asset> pagedResponse = await _barClient.Assets.ListAssetsAsync(name: name,
+                version: version, buildId: buildId, loadLocations: true);
+            return await pagedResponse.EnumerateAll().ToListAsync(CancellationToken.None);
         }
 
         /// <summary>

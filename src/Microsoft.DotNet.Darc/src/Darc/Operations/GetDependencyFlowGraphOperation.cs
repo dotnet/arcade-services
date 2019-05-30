@@ -148,11 +148,11 @@ namespace Microsoft.DotNet.Darc.Operations
             if (writeToSubgraphCluster)
             {
                 subgraphClusterWriter = new StringBuilder();
-                subgraphClusterWriter.AppendLine($"    subgraph cluster_{OutputHelpers.CalculateGraphVizNodeName(targetChannel.Name)} {{");
+                subgraphClusterWriter.AppendLine($"    subgraph cluster_{UxHelpers.CalculateGraphVizNodeName(targetChannel.Name)} {{");
                 subgraphClusterWriter.AppendLine($"        label = \"{targetChannel.Name}\"");
             }
 
-            using (StreamWriter writer = OutputHelpers.GetOutputFileStreamOrConsole(_options.GraphVizOutputFile))
+            using (StreamWriter writer = UxHelpers.GetOutputFileStreamOrConsole(_options.GraphVizOutputFile))
             {
                 await writer.WriteLineAsync("digraph repositoryGraph {");
                 await writer.WriteLineAsync("    node [shape=record]");
@@ -161,13 +161,13 @@ namespace Microsoft.DotNet.Darc.Operations
                     StringBuilder nodeBuilder = new StringBuilder();
 
                     // First add the node name
-                    nodeBuilder.Append($"    {OutputHelpers.CalculateGraphVizNodeName(node)}");
+                    nodeBuilder.Append($"    {UxHelpers.CalculateGraphVizNodeName(node)}");
 
                     // Then add the label.  label looks like [label="<info here>"]
                     nodeBuilder.Append("[label=\"");
 
                     // Append friendly repo name
-                    nodeBuilder.Append(OutputHelpers.GetSimpleRepoName(node.Repository));
+                    nodeBuilder.Append(UxHelpers.GetSimpleRepoName(node.Repository));
                     nodeBuilder.Append(@"\n");
 
                     // Append branch name
@@ -180,7 +180,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     // if they output to the subgraph cluster.
                     if (writeToSubgraphCluster && node.OutputChannels.Any(c => c == targetChannel.Name))
                     {
-                        subgraphClusterWriter.AppendLine($"        {OutputHelpers.CalculateGraphVizNodeName(node)}");
+                        subgraphClusterWriter.AppendLine($"        {UxHelpers.CalculateGraphVizNodeName(node)}");
                     }
 
                     // Write it out.
@@ -190,8 +190,8 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Now write all the edges
                 foreach (DependencyFlowEdge edge in graph.Edges)
                 {
-                    string fromNode = OutputHelpers.CalculateGraphVizNodeName(edge.From);
-                    string toNode = OutputHelpers.CalculateGraphVizNodeName(edge.To);
+                    string fromNode = UxHelpers.CalculateGraphVizNodeName(edge.From);
+                    string toNode = UxHelpers.CalculateGraphVizNodeName(edge.To);
                     string label = $"{edge.Subscription.Channel.Name} ({edge.Subscription.Policy.UpdateFrequency})";
 
                     if (writeToSubgraphCluster && edge.Subscription.Channel.Name == targetChannel.Name)

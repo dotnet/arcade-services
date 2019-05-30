@@ -170,6 +170,18 @@ function Darc-Command-Impl($darcParams) {
     Invoke-Expression $darcCommand
 }
 
+# Run darc set-repository-policies
+function Darc-Set-Repository-Policies($repo, $branch, $policiesParams) {
+    $darcParams = "set-repository-policies -q --repo '$repo' --branch '$branch' $policiesParams"
+    Darc-Command-Impl $darcParams
+}
+
+# Run darc get-repository-policies
+function Darc-Get-Repository-Policies($repo, $branch) {
+    $darcParams = "get-repository-policies --all --repo '$repo' --branch '$branch'"
+    Darc-Command-Impl $darcParams
+}
+
 # Run darc add-channel and record the channel for later deletion
 function Darc-Add-Channel($channelName, $classification) {
     $darcParams = "add-channel --name '$channelName' --classification '$classification'"
@@ -209,16 +221,24 @@ function Darc-Disable-Default-Channel($channelName, $repoUri, $branch) {
 function Darc-Add-Subscription() {
     $darcParams = "add-subscription $args -q"
     $output = Darc-Command-Impl $darcParams
-    
-    if ($output -match "Successfully created new subscription with id '([a-f0-9-]+)'") {
-        $subscriptionId = $matches[1]
+    $match = $output -match "Successfully created new subscription with id '([a-f0-9-]+)'"
+
+    # Batched subscriptions return a warning that non-batched subscriptions don't,
+    # the behavior of -match changes depending on whether the input is an array or a scalar
+    # so we check if the special $Matches variable has any content to determine if we should
+    # try another match
+    if ($match) {
+        if (!$Matches) {
+            $match[0] -match "'([a-f0-9-]+)'" | Out-Null
+        }
+        $subscriptionId = $Matches[1].replace("'", "")
         if (-not $subscriptionId) {
             throw "Failed to extract subscription id"
         }
         $global:subscriptionsToDelete += $subscriptionId
         $subscriptionId
     } else {
-        throw "Failed to create subscrption or parse subscription id"
+        throw "Failed to create subscription or parse subscription id"
     }
 }
 
@@ -455,6 +475,20 @@ function Check-AzDO-PullRequest-Created($targetRepoName, $targetBranch) {
     }
 }
 
+function Compare-Array-Output($expected, $actual) {
+    if ($expected.Count -ne $actual.Count) {
+        Write-Error "Expected $($expected.Count) lines, got $($actual.Count) lines."
+        return $false
+    }
+    for ($i = 0; $i -lt $expected.Count; $i++) {
+        if ($actual[$i] -ne $expected[$i]) {
+            Write-Error "Line $i not matched`nExpected '$($expected[$i])'`nActual   '$($actual[$i])'"
+            return $false
+        }
+    }
+    return $true
+}
+
 function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $targetRepoName, $targetBranch, $expectedDependencies) {
     $pullRequestBaseBranch = $pullRequest.sourceRefName.Replace('refs/heads/','')
 
@@ -470,16 +504,9 @@ function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $tar
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
         $dependencies = Darc-Command get-dependencies
-
-        if ($dependencies.Count -ne $expectedDependencies.Count) {
-            Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."
+        $equal = Compare-Array-Output $expectedDependencies $dependencies
+        if (-not $equal) {
             throw "PR did not have expected dependency updates."
-        }
-        for ($i = 0; $i -lt $expectedDependencies.Count; $i++) {
-            if ($dependencies[$i] -notmatch $expectedDependencies[$i]) {
-                Write-Error "Dependencies Line $i not matched`nExpected $($expectedDependencies[$i])`nActual $($dependencies[$i])"
-                throw "PR did not have expected dependency updates."
-            }
         }
         Write-Host "Finished validating PR contents"
         return $true

@@ -24,6 +24,10 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
+        Task<string> GetDarcVersionAsync(
+            CancellationToken cancellationToken = default
+        );
+
         Task<Asset> GetAssetAsync(
             int id,
             CancellationToken cancellationToken = default
@@ -170,6 +174,82 @@ namespace Microsoft.DotNet.Maestro.Client
                     Request = _req,
                     Response = _res,
                     Body = Client.Deserialize<IImmutableList<Asset>>(_responseContent),
+                };
+            }
+            catch (Exception)
+            {
+                _req?.Dispose();
+                _res?.Dispose();
+                throw;
+            }
+        }
+
+        partial void HandleFailedGetDarcVersionRequest(RestApiException ex);
+
+        public async Task<string> GetDarcVersionAsync(
+            CancellationToken cancellationToken = default
+        )
+        {
+            using (var _res = await GetDarcVersionInternalAsync(
+                cancellationToken
+            ).ConfigureAwait(false))
+            {
+                return _res.Body;
+            }
+        }
+
+        internal async Task OnGetDarcVersionFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedGetDarcVersionRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
+        }
+
+        internal async Task<HttpOperationResponse<string>> GetDarcVersionInternalAsync(
+            CancellationToken cancellationToken = default
+        )
+        {
+            const string apiVersion = "2019-01-16";
+
+            var _path = "/api/assets/darc-version";
+
+            var _query = new QueryBuilder();
+            _query.Add("api-version", Client.Serialize(apiVersion));
+
+            var _uriBuilder = new UriBuilder(Client.BaseUri);
+            _uriBuilder.Path = _uriBuilder.Path.TrimEnd('/') + _path;
+            _uriBuilder.Query = _query.ToString();
+            var _url = _uriBuilder.Uri;
+
+            HttpRequestMessage _req = null;
+            HttpResponseMessage _res = null;
+            try
+            {
+                _req = new HttpRequestMessage(HttpMethod.Get, _url);
+
+                if (Client.Credentials != null)
+                {
+                    await Client.Credentials.ProcessHttpRequestAsync(_req, cancellationToken).ConfigureAwait(false);
+                }
+
+                _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
+                if (!_res.IsSuccessStatusCode)
+                {
+                    await OnGetDarcVersionFailed(_req, _res);
+                }
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return new HttpOperationResponse<string>
+                {
+                    Request = _req,
+                    Response = _res,
+                    Body = Client.Deserialize<string>(_responseContent),
                 };
             }
             catch (Exception)

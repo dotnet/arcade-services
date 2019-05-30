@@ -53,6 +53,8 @@ namespace Microsoft.DotNet.Darc
             "- AllChecksSuccessful with the 'Comment requirements', 'Minimum number of reviewers', 'Required reviewers',",
             "  and 'Work item linking' ignored.",
             "- NoRequestedChanges",
+            "YAML format:",
+            "- Name: Standard",
             "",
             "AllChecksSuccessful - All PR checks must be successful, potentially ignoring a specified set of checks.",
             "Checks might be ignored if they are unrelated to PR validation. The check name corresponds to the string that shows up",

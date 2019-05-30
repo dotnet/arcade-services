@@ -271,7 +271,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="graph">Graph to log</param>
         private async Task LogFlatDependencyGraph(DependencyGraph graph)
         {
-            using (StreamWriter writer = OutputHelpers.GetOutputFileStreamOrConsole(_options.OutputFile))
+            using (StreamWriter writer = UxHelpers.GetOutputFileStreamOrConsole(_options.OutputFile))
             {
                 await writer.WriteLineAsync($"Repositories:");
                 foreach (DependencyGraphNode node in graph.Nodes)
@@ -284,7 +284,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
         private async Task LogDependencyGraph(DependencyGraph graph)
         {
-            using (StreamWriter writer = OutputHelpers.GetOutputFileStreamOrConsole(_options.OutputFile))
+            using (StreamWriter writer = UxHelpers.GetOutputFileStreamOrConsole(_options.OutputFile))
             {
                 await writer.WriteLineAsync($"Repositories:");
                 await LogDependencyGraphNode(writer, graph.Root, "  ");
@@ -309,7 +309,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <returns>Async task</returns>
         private async Task LogGraphViz(DependencyGraph graph)
         {
-            using (StreamWriter writer = OutputHelpers.GetOutputFileStreamOrConsole(_options.GraphVizOutputFile))
+            using (StreamWriter writer = UxHelpers.GetOutputFileStreamOrConsole(_options.GraphVizOutputFile))
             {
                 await writer.WriteLineAsync("digraph repositoryGraph {");
                 await writer.WriteLineAsync("    node [shape=record]");
@@ -318,13 +318,13 @@ namespace Microsoft.DotNet.Darc.Operations
                     StringBuilder nodeBuilder = new StringBuilder();
                     
                     // First add the node name
-                    nodeBuilder.Append($"    {OutputHelpers.CalculateGraphVizNodeName(node)}");
+                    nodeBuilder.Append($"    {UxHelpers.CalculateGraphVizNodeName(node)}");
                     
                     // Then add the label.  label looks like [label="<info here>"]
                     nodeBuilder.Append("[label=\"");
                     
                     // Append friendly repo name
-                    nodeBuilder.Append(OutputHelpers.GetSimpleRepoName(node.Repository));
+                    nodeBuilder.Append(UxHelpers.GetSimpleRepoName(node.Repository));
                     nodeBuilder.Append(@"\n");
                     
                     // Append short commit sha
@@ -371,7 +371,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     // Now write the edges
                     foreach (DependencyGraphNode childNode in node.Children)
                     {
-                        await writer.WriteLineAsync($"    {OutputHelpers.CalculateGraphVizNodeName(node)} -> {OutputHelpers.CalculateGraphVizNodeName(childNode)}");
+                        await writer.WriteLineAsync($"    {UxHelpers.CalculateGraphVizNodeName(node)} -> {UxHelpers.CalculateGraphVizNodeName(childNode)}");
                     }
                 }
 

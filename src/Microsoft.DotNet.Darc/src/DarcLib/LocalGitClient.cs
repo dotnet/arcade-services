@@ -302,7 +302,7 @@ namespace Microsoft.DotNet.DarcLib
                         try
                         {
                             _logger.LogDebug($"Attempting to check out {commit} in {repoDir}");
-                            LibGit2Sharp.Commands.Checkout(localRepo, commit, checkoutOptions);
+                            LibGit2SharpHelpers.SafeCheckout(localRepo, commit, checkoutOptions, _logger);
                             if (force)
                             {
                                 CleanRepoAndSubmodules(localRepo, _logger);
@@ -327,20 +327,7 @@ namespace Microsoft.DotNet.DarcLib
                                     }
                                 }
                                 _logger.LogDebug($"After fetch, attempting to checkout {commit} in {repoDir}");
-                                try
-                                {
-                                    LibGit2Sharp.Commands.Checkout(localRepo, commit, checkoutOptions);
-                                }
-                                catch
-                                {
-                                    _logger.LogDebug($"Couldn't checkout {commit} as a commit after fetch.  Attempting to resolve as a treeish.");
-                                    string resolvedReference = ParseReference(localRepo, commit, _logger);
-                                    if (resolvedReference != null)
-                                    {
-                                        _logger.LogDebug($"Resolved {commit} to {resolvedReference}, attempting to check out");
-                                        LibGit2Sharp.Commands.Checkout(localRepo, resolvedReference, checkoutOptions);
-                                    }
-                                }
+                                LibGit2SharpHelpers.SafeCheckout(localRepo, commit, checkoutOptions, _logger);
 
                                 if (force)
                                 {
@@ -465,34 +452,6 @@ namespace Microsoft.DotNet.DarcLib
                     }
                 }
             }
-        }
-
-        private static string ParseReference(LibGit2Sharp.Repository repo, string treeish, ILogger log)
-        {
-            LibGit2Sharp.Reference reference = null;
-            LibGit2Sharp.GitObject dummy;
-            try
-            {
-                repo.RevParse(treeish, out reference, out dummy);
-            }
-            catch
-            {
-                // nothing we can do
-            }
-            log.LogDebug($"Parsed {treeish} to mean {reference?.TargetIdentifier ?? "<invalid>"}");
-            if (reference == null)
-            {
-                try
-                {
-                    repo.RevParse($"origin/{treeish}", out reference, out dummy);
-                }
-                catch
-                {
-                    // nothing we can do
-                }
-                log.LogDebug($"Parsed origin/{treeish} to mean {reference?.TargetIdentifier ?? "<invalid>"}");
-            }
-            return reference?.TargetIdentifier;
         }
     }
 }
