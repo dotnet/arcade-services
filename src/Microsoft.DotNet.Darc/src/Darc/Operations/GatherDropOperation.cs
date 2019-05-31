@@ -823,7 +823,7 @@ namespace Microsoft.DotNet.Darc.Operations
         ///     Determine whether this location is an azure devops build url.
         /// </summary>
         /// <param name="location">Location</param>
-        /// <returns>True if the location is a sleet uri, false otherwise.</returns>
+        /// <returns>True if the location is an Azure Devops uri, false otherwise.</returns>
         /// <remarks>
         ///     Blob feed uris look like: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
         /// </remarks>
