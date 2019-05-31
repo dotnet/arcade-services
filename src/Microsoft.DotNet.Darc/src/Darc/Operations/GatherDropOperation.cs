@@ -9,7 +9,6 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -640,26 +639,73 @@ namespace Microsoft.DotNet.Darc.Operations
                 Successful = false,
                 Asset = asset
             };
+
             List<string> errors = new List<string>();
 
-            if (asset.Locations.Count == 0)
+            List<AssetLocation> assetLocations = new List<AssetLocation>(asset.Locations);
+
+            if (assetLocations.Count == 0)
             {
-                errors.Add($"Asset '{assetNameAndVersion}' has no known location information.");
+                // If there is no location information and the user wants workarounds, add a bunch
+                // of feeds.
+                if (!_options.NoWorkarounds)
+                {
+                    if (asset.Name.Contains("/"))
+                    {
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetclichecksums.blob.core.windows.net/dotnet/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetcli.blob.core.windows.net/dotnet/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/aspnet-aspnetcore/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/aspnet-aspnetcore-tooling/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/aspnet-entityframeworkcore/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/aspnet-extensions/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-sdk/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-toolset/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-windowsdesktop/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-coreclr/index.json"));
+                    }
+                    else
+                    {
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/aspnet-aspnetcore/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/aspnet-aspnetcore-tooling/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/aspnet-entityframeworkcore/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/aspnet-extensions/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-sdk/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-toolset/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-windowsdesktop/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-coreclr/index.json"));
+                    }
+                }
+                else
+                {
+                    errors.Add($"Asset '{assetNameAndVersion}' has no known location information.");
+                }
             }
-            else
+            
+            if (assetLocations.Count != 0)
             {
                 string subPath = Path.Combine(rootOutputDirectory, asset.NonShipping ? nonShippingSubPath : shippingSubPath);
 
                 // Walk the locations and attempt to gather the asset at each one, setting the output
-                // path based on the type. Note that if there are multiple locations and their types don't
-                // match, consider this an error.
-                LocationType locationType = asset.Locations[0].Type;
-                foreach (AssetLocation location in asset.Locations)
+                // path based on the type.
+                foreach (AssetLocation location in assetLocations)
                 {
-                    if (locationType != location.Type)
+                    var locationType = location.Type;
+
+                    // Make sure the location type ends up correct.  Currently in some cases,
+                    // 'none' ends up as the type, or some cases where the type is
+                    // is nuget feed but the
+                    if (!_options.NoWorkarounds)
                     {
-                        errors.Add($"Asset '{assetNameAndVersion}' has inconsistent location types ({locationType} vs. {location.Type})");
-                        break;
+                        if (!asset.Name.Contains("/") && !asset.Name.Contains(".nupkg"))
+                        {
+                            locationType = LocationType.NugetFeed;
+                        }
+                        else
+                        {
+                            locationType = LocationType.Container;
+                        }
                     }
 
                     switch (locationType)
@@ -670,6 +716,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         case LocationType.Container:
                             downloadedAsset = await DownloadBlobAsync(client, build, asset, location, subPath, errors);
                             break;
+                        case LocationType.None:
                         default:
                             errors.Add($"Unexpected location type {locationType}");
                             break;
@@ -773,14 +820,14 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        ///     Returns true if the location is a myget url.
+        ///     Determine whether this location is an azure devops build url.
         /// </summary>
         /// <param name="location">Location</param>
-        /// <returns>True if the location is a myget url, false otherwise.</returns>
+        /// <returns>True if the location is a sleet uri, false otherwise.</returns>
         /// <remarks>
-        ///     https://dotnet.myget.org/F/aspnetcore-dev/api/v3/index.json
+        ///     Blob feed uris look like: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
         /// </remarks>
-        private bool IsMyGetUrl(string location)
+        private bool IsAzureDevOpsArtifactsUrl(string location)
         {
             if (!Uri.TryCreate(location, UriKind.Absolute, out Uri locationUri))
             {
@@ -788,7 +835,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 return false;
             }
 
-            return locationUri.Host == "dotnet.myget.org" && location.EndsWith("/api/v3/index.json");
+            return locationUri.Host.Equals("dev.azure.com") && location.EndsWith("/artifacts");
         }
 
         private async Task<DownloadedAsset> DownloadBlobAsync(HttpClient client,
@@ -839,54 +886,35 @@ namespace Microsoft.DotNet.Darc.Operations
                     downloadedAsset.SourceLocation = finalUri2;
                     return downloadedAsset;
                 }
-                return downloadedAsset;
-            }
-            // WORKAROUND: Right now we don't have the ability to have multiple root build locations
-            // So the BAR location gets reported as the overall manifest location.  This isn't correct,
-            // but we're stuck with it for now until we redesign how the manifest merging is done.
-            // So if we see a myget url here, just look up the asset in the dotnetcli storage account.
-            if (IsMyGetUrl(assetLocation.Location) && assetLocation.Location.Contains("aspnetcore-dev"))
-            {
-                // First try to grab the asset from the dotnetcli storage account
-                string dotnetcliStorageUri = $"https://dotnetcli.blob.core.windows.net/dotnet/{asset.Name}";
-                if (await DownloadFileAsync(client, $"{dotnetcliStorageUri}", fullTargetPath, errors))
+                // Could be under assets/assets/ in some recent builds due to a bug in the release
+                // pipeline.
+                if (!_options.NoWorkarounds)
                 {
-                    downloadedAsset.Successful = true;
-                    downloadedAsset.SourceLocation = dotnetcliStorageUri;
-                    return downloadedAsset;
-                }
-                // AspNet symbol packages have incorrect names right now.  They are found on the drop share.
-                if (asset.Name.EndsWith(".symbols.nupkg"))
-                {
-                    string symbolPackageName = asset.Name;
-                    int lastSlash = asset.Name.LastIndexOf("/");
-                    if (lastSlash != -1)
-                    {
-                        symbolPackageName = asset.Name.Substring(lastSlash);
-                    }
-                    string shippingNonShippingFolder = asset.NonShipping ? "NonShipping" : "Shipping";
-                    string aspnetciSymbolSharePath = $@"\\aspnetci\drops\AspNetCore\master\{build.AzureDevOpsBuildNumber}\packages\Release\{shippingNonShippingFolder}\{symbolPackageName}";
-                    if (await DownloadFromShareAsync(aspnetciSymbolSharePath, fullTargetPath, errors))
+                    string finalUri3 = $"{finalBaseUri}assets/assets/{asset.Name}";
+                    if (await DownloadFileAsync(client, finalUri3, fullTargetPath, errors))
                     {
                         downloadedAsset.Successful = true;
-                        downloadedAsset.SourceLocation = aspnetciSymbolSharePath;
+                        downloadedAsset.SourceLocation = finalUri3;
                         return downloadedAsset;
                     }
                 }
                 return downloadedAsset;
             }
-            else
+            else if (IsAzureDevOpsArtifactsUrl(assetLocation.Location))
             {
-                if (string.IsNullOrEmpty(assetLocation.Location))
-                {
-                    errors.Add($"Asset location for {asset.Name} is not available.");
-                }
-                else
-                {
-                    errors.Add($"Blob uri '{assetLocation.Location} for {asset.Name} is of an unknown type");
-                }
+                // Do not attempt to download from AzDO.
                 return downloadedAsset;
             }
+            
+            if (string.IsNullOrEmpty(assetLocation.Location))
+            {
+                errors.Add($"Asset location for {asset.Name} is not available.");
+            }
+            else
+            {
+                errors.Add($"Blob uri '{assetLocation.Location} for {asset.Name} is of an unknown type");
+            }
+            return downloadedAsset;
         }
 
         private async Task<bool> DownloadFromShareAsync(string sourceFile, string targetFile, List<string> errors)
@@ -903,10 +931,17 @@ namespace Microsoft.DotNet.Darc.Operations
                 Directory.CreateDirectory(directory);
 
                 // Web client will overwrite, so avoid this if not desired by checking for file existence.
-                if (!_options.Overwrite && File.Exists(targetFile))
+                if (File.Exists(targetFile))
                 {
-                    errors.Add($"Failed to write {targetFile}. The file already exists.");
-                    return false;
+                    if (_options.SkipExisting)
+                    {
+                        return true;
+                    }
+                    else if (!_options.Overwrite)
+                    {
+                        errors.Add($"Failed to write {targetFile}. The file already exists.");
+                        return false;
+                    }
                 }
 
                 using (var wc = new WebClient())
@@ -945,6 +980,11 @@ namespace Microsoft.DotNet.Darc.Operations
 
             try
             {
+                if (_options.SkipExisting && File.Exists(targetFile))
+                {
+                    return true;
+                }
+
                 string directory = Path.GetDirectoryName(targetFile);
                 Directory.CreateDirectory(directory);
 
