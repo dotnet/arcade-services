@@ -652,29 +652,29 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     if (asset.Name.Contains("/"))
                     {
-                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetclichecksums.blob.core.windows.net/dotnet/index.json"));
                         assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetcli.blob.core.windows.net/dotnet/index.json"));
-                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetclichecksums.blob.core.windows.net/dotnet/index.json"));
                         assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/aspnet-aspnetcore/index.json"));
                         assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/aspnet-aspnetcore-tooling/index.json"));
                         assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/aspnet-entityframeworkcore/index.json"));
                         assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/aspnet-extensions/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-coreclr/index.json"));
                         assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-sdk/index.json"));
                         assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-toolset/index.json"));
                         assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-windowsdesktop/index.json"));
-                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-coreclr/index.json"));
                     }
                     else
                     {
-                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"));
                         assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/aspnet-aspnetcore/index.json"));
                         assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/aspnet-aspnetcore-tooling/index.json"));
                         assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/aspnet-entityframeworkcore/index.json"));
                         assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/aspnet-extensions/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-coreclr/index.json"));
                         assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-sdk/index.json"));
                         assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-toolset/index.json"));
                         assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-windowsdesktop/index.json"));
-                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-coreclr/index.json"));
                     }
                 }
                 else
@@ -693,9 +693,11 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     var locationType = location.Type;
 
-                    // Make sure the location type ends up correct.  Currently in some cases,
-                    // 'none' ends up as the type, or some cases where the type is
-                    // is nuget feed but the
+                    // Make sure the location type ends up correct. Currently in some cases,
+                    // we end up with 'none' or a symbol package ends up with nuget feed.
+                    // Generally we can make an assumption that if the path doesn't have a
+                    // '/' then it's a package.  Nuget packages also don't have '.nupkg' suffix
+                    // (they are just the package name).
                     if (!_options.NoWorkarounds)
                     {
                         if (!asset.Name.Contains("/") && !asset.Name.Contains(".nupkg"))
@@ -808,7 +810,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <remarks>
         ///     Blob feed uris look like: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
         /// </remarks>
-        private bool IsBlobFeedUrl(string location)
+        private static bool IsBlobFeedUrl(string location)
         {
             if (!Uri.TryCreate(location, UriKind.Absolute, out Uri locationUri))
             {
@@ -827,7 +829,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <remarks>
         ///     Blob feed uris look like: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
         /// </remarks>
-        private bool IsAzureDevOpsArtifactsUrl(string location)
+        private static bool IsAzureDevOpsArtifactsUrl(string location)
         {
             if (!Uri.TryCreate(location, UriKind.Absolute, out Uri locationUri))
             {
@@ -915,50 +917,6 @@ namespace Microsoft.DotNet.Darc.Operations
                 errors.Add($"Blob uri '{assetLocation.Location} for {asset.Name} is of an unknown type");
             }
             return downloadedAsset;
-        }
-
-        private async Task<bool> DownloadFromShareAsync(string sourceFile, string targetFile, List<string> errors)
-        {
-            if (_options.DryRun)
-            {
-                Console.WriteLine($"  {sourceFile} => {targetFile}.");
-                return true;
-            }
-
-            try
-            {
-                string directory = Path.GetDirectoryName(targetFile);
-                Directory.CreateDirectory(directory);
-
-                // Web client will overwrite, so avoid this if not desired by checking for file existence.
-                if (File.Exists(targetFile))
-                {
-                    if (_options.SkipExisting)
-                    {
-                        return true;
-                    }
-                    else if (!_options.Overwrite)
-                    {
-                        errors.Add($"Failed to write {targetFile}. The file already exists.");
-                        return false;
-                    }
-                }
-
-                using (var wc = new WebClient())
-                {
-                    Uri sourceUri = new Uri(sourceFile);
-                    await wc.DownloadFileTaskAsync(sourceUri, targetFile);
-                    Console.WriteLine($"  {sourceFile} => {targetFile}.");
-                }
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                errors.Add($"Failed to write {targetFile}: {e.Message}");
-            }
-
-            return false;
         }
 
         /// <summary>
