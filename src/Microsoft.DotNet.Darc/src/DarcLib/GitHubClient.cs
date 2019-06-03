@@ -461,7 +461,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>New http client</returns
         private HttpClient CreateHttpClient()
         {
-            var client = new HttpClient {BaseAddress = new Uri(GitHubApiUri)};
+            var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }) {BaseAddress = new Uri(GitHubApiUri)};
             client.DefaultRequestHeaders.Add("Authorization", $"Token {_personalAccessToken}");
             client.DefaultRequestHeaders.Add("User-Agent", _userAgent);
 

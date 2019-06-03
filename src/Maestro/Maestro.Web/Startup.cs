@@ -241,7 +241,7 @@ namespace Maestro.Web
             }
 
 
-            using (var client = new HttpClient())
+            using (var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
                 var uri = new UriBuilder(ApiRedirectTarget) {Path = ctx.Request.Path, Query = ctx.Request.QueryString.ToUriComponent(),};
                 await ctx.ProxyRequestAsync(client, uri.Uri.AbsoluteUri,
