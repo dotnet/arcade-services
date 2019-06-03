@@ -349,7 +349,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 throw new ArgumentNullException(nameof(mergedBuild));
             }
 
-            using (var client = new HttpClient())
+            using (var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
                 string repoIdentity = string.Empty;
                 string gitHubHost = "github.com";

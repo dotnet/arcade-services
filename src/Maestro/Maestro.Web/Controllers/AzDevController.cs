@@ -14,7 +14,7 @@ namespace Maestro.Web.Controllers
     {
         private static readonly Lazy<HttpClient> s_lazyClient = new Lazy<HttpClient>(CreateHttpClient);
         private static HttpClient CreateHttpClient() =>
-            new HttpClient
+            new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true })
             {
                 DefaultRequestHeaders =
                 {
