@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>$(NetFxTfm);netcoreapp2.1</TargetFrameworks>
@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.ServiceFabric" Version="6.3.162" />
-    <PackageReference Include="Microsoft.ServiceFabric.Actors" Version="3.2.162" />
-    <PackageReference Include="Microsoft.ServiceFabric.Data" Version="3.2.162" />
+    <PackageReference Include="Microsoft.ServiceFabric" Version="6.4.664" />
+    <PackageReference Include="Microsoft.ServiceFabric.Actors" Version="3.3.664" />
+    <PackageReference Include="Microsoft.ServiceFabric.Data" Version="3.3.664" />
   </ItemGroup>
 
 </Project>
