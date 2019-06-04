@@ -4,9 +4,9 @@
 
 using System;
 using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.AspNetCore.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.ApplicationInsights;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
