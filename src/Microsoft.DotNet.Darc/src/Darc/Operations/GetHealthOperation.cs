@@ -142,6 +142,35 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
+        ///     Get typical repository and branch combinations for use with repo+branch focused metrics.
+        /// </summary>
+        /// <param name="channelsToEvaluate">Channels that should be evaluated.</param>
+        /// <param name="reposToEvaluate">Repositories that should be evaluated.</param>
+        /// <param name="subscriptions">All subscriptions.</param>
+        /// <param name="defaultChannels">All default channel associations.</param>
+        /// <returns>Set of repo+branch combinations that should be evaluated.</returns>
+        private HashSet<(string repo, string branch)> GetRepositoryBranchCombinations(HashSet<string> channelsToEvaluate,
+            HashSet<string> reposToEvaluate, IEnumerable<Subscription> subscriptions, IEnumerable<DefaultChannel> defaultChannels)
+        {
+            // Compute the combinations that make sense.
+            IEnumerable<(string repo, string branch)> defaultChannelsRepoBranchCombinations = defaultChannels
+                .Where(df => channelsToEvaluate.Contains(df.Channel.Name))
+                // Replace refs/heads/
+                .Where(df => reposToEvaluate.Contains(df.Repository))
+                .Select<DefaultChannel, (string repo, string branch)>(df => (df.Repository, df.Branch.Replace("refs/heads/", "")));
+
+            HashSet<(string repo, string branch)> repoBranchCombinations = subscriptions
+                .Where(s => reposToEvaluate.Contains(s.TargetRepository))
+                .Where(s => channelsToEvaluate.Contains(s.Channel.Name))
+                .Select<Subscription, (string repo, string branch)>(s => (s.TargetRepository, s.TargetBranch))
+                .ToHashSet();
+
+            repoBranchCombinations.UnionWith(defaultChannelsRepoBranchCombinations);
+
+            return repoBranchCombinations;
+        }
+
+        /// <summary>
         ///     Compute the subscription health metrics to run based on the channels and input repositories
         /// </summary>
         /// <param name="channelsToEvaluate">Channels in the initial set.</param>
@@ -166,20 +195,8 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             IRemoteFactory remoteFactory = new RemoteFactory(_options);
 
-            // Compute the combinations that make sense.
-            var defaultChannelsRepoBranchCombinations = defaultChannels
-                .Where(df => channelsToEvaluate.Contains(df.Channel.Name))
-                // Replace refs/heads/
-                .Where(df => reposToEvaluate.Contains(df.Repository))
-                .Select<DefaultChannel, (string repo, string branch)>(df => (df.Repository, df.Branch.Replace("refs/heads/", "")));
-
-            var repoBranchCombinations = subscriptions
-                .Where(s => reposToEvaluate.Contains(s.TargetRepository))
-                .Where(s => channelsToEvaluate.Contains(s.Channel.Name))
-                .Select<Subscription, (string repo, string branch)>(s => (s.TargetRepository, s.TargetBranch))
-                .ToHashSet();
-
-            repoBranchCombinations.UnionWith(defaultChannelsRepoBranchCombinations);
+            HashSet<(string repo, string branch)> repoBranchCombinations =
+                GetRepositoryBranchCombinations(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels);
 
             return repoBranchCombinations.Select<(string repo, string branch), Func<Task<HealthMetricWithOutput>>>(t =>
                 async () =>
@@ -246,20 +263,8 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             IRemoteFactory remoteFactory = new RemoteFactory(_options);
 
-            // Compute the combinations that make sense.
-            var defaultChannelsRepoBranchCombinations = defaultChannels
-                .Where(df => channelsToEvaluate.Contains(df.Channel.Name))
-                // Replace refs/heads/
-                .Where(df => reposToEvaluate.Contains(df.Repository))
-                .Select<DefaultChannel, (string repo, string branch)>(df => (df.Repository, df.Branch.Replace("refs/heads/", "")));
-
-            var repoBranchCombinations = subscriptions
-                .Where(s => reposToEvaluate.Contains(s.TargetRepository))
-                .Where(s => channelsToEvaluate.Contains(s.Channel.Name))
-                .Select<Subscription, (string repo, string branch)>(s => (s.TargetRepository, s.TargetBranch))
-                .ToHashSet();
-
-            repoBranchCombinations.UnionWith(defaultChannelsRepoBranchCombinations);
+            HashSet<(string repo, string branch)> repoBranchCombinations =
+                GetRepositoryBranchCombinations(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels);
 
             return repoBranchCombinations.Select<(string repo, string branch), Func<Task<HealthMetricWithOutput>>>(t =>
                 async () =>

@@ -75,7 +75,7 @@ namespace Microsoft.DotNet.DarcLib
         /// Include toolset dependencies in the build.
         /// </summary>
         public bool IncludeToolset { get; set; }
-        
+
         /// <summary>
         /// Lookup build information for each node. Only valid for remote builds.
         /// </summary>
@@ -760,7 +760,8 @@ namespace Microsoft.DotNet.DarcLib
                                        nodeCache.Values,
                                        incoherentNodes,
                                        allContributingBuilds,
-                                       dependenciesMissingBuilds, cycles);
+                                       dependenciesMissingBuilds,
+                                       cycles);
         }
 
         /// <summary>
