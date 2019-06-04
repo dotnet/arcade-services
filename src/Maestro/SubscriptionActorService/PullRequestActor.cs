@@ -832,17 +832,17 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
 
         private int RemovePRDescriptionSection(string sectionStartMarker, string sectionEndMarker, ref StringBuilder description)
         {
-            // assume we should append at end
             int sectionStartIndex = description.ToString().IndexOf(sectionStartMarker);
             int sectionEndIndex = description.ToString().IndexOf(sectionEndMarker);
-            // if either marker is missing, just append at end and don't remove anything
-            // from the description
+
             if (sectionStartIndex != -1 && sectionEndIndex != -1)
             {
                 sectionEndIndex+= sectionEndMarker.Length;
                 description.Remove(sectionStartIndex, sectionEndIndex - sectionStartIndex);
                 return sectionStartIndex;
             }
+            // if either marker is missing, just append at end and don't remove anything
+            // from the description
             return description.Length;
         }
 
