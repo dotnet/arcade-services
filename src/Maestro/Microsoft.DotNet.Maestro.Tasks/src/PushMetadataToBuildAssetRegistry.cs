@@ -84,6 +84,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     Client.Models.Build recordedBuild = await client.Builds.CreateAsync(finalBuild, cancellationToken);
 
                     Log.LogMessage(MessageImportance.High, $"Metadata has been pushed. Build id in the Build Asset Registry is '{recordedBuild.Id}'");
+                    Log.LogMessage(MessageImportance.High, $"##vso[task.setvariable variable=BARBuildId;]{recordedBuild.Id}");
                 }
             }
             catch (Exception exc)
