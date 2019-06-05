@@ -84,7 +84,20 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     Client.Models.Build recordedBuild = await client.Builds.CreateAsync(finalBuild, cancellationToken);
 
                     Log.LogMessage(MessageImportance.High, $"Metadata has been pushed. Build id in the Build Asset Registry is '{recordedBuild.Id}'");
-                    Log.LogMessage(MessageImportance.High, $"##vso[task.setvariable variable=BARBuildId;]{recordedBuild.Id}");
+
+                    if (1 == 1)
+                    {
+                        var defaultChannels = await client.DefaultChannels.ListAsync(
+                            recordedBuild.GitHubBranch ?? recordedBuild.AzureDevOpsBranch,
+                            channelId: null, 
+                            enabled: true, 
+                            recordedBuild.GitHubRepository ?? recordedBuild.AzureDevOpsRepository);
+
+                        var defaultChannelsStr = string.Join(",", defaultChannels.Select(x => x.Channel.Id));
+
+                        Console.WriteLine($"##vso[task.setvariable variable=BARBuildId;]{recordedBuild.Id}");
+                        Console.WriteLine($"##vso[task.setvariable variable=DefaultChannels;]{defaultChannelsStr}");
+                    }
                 }
             }
             catch (Exception exc)
