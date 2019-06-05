@@ -27,7 +27,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 provider => new FixedApplicationInsightsLoggerProvider(
                     provider.GetRequiredService<TelemetryClient>(),
                     filter,
-                    provider.GetRequiredService<IOptions<ApplicationInsightsLoggerOptions>>()));
+                    provider.GetRequiredService<IOptions<
+#pragma warning disable CS0618 // Type or member is obsolete
+                        Microsoft.ApplicationInsights.AspNetCore.Logging.ApplicationInsightsLoggerOptions>>()));
+#pragma warning restore CS0618 // Type or member is obsolete
             return builder;
         }
     }
