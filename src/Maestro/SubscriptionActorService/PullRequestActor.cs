@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
@@ -579,7 +578,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     }
                     else
                     {
-                        titleBuilder.Append(repoNameForTitle);
+                        titleBuilder.Append($" {repoNameForTitle}");
                     }
                 }
 
@@ -614,57 +613,55 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
 
             try
             {
-                using (var description = new StringWriter())
+                var description = new StringBuilder();
+                description.AppendLine("This pull request updates the following dependencies");
+                description.AppendLine();
+
+                await CommitUpdatesAsync(requiredUpdates, description, darcRemote, targetRepository, newBranchName);
+
+                var inProgressPr = new InProgressPullRequest
                 {
-                    description.WriteLine("This pull request updates the following dependencies");
-                    description.WriteLine();
+                    // Calculate the subscriptions contained within the
+                    // update. Coherency updates do not have subscription info.
+                    ContainedSubscriptions = requiredUpdates
+                            .Where(u => !u.update.IsCoherencyUpdate)
+                            .Select(
+                            u => new SubscriptionPullRequestUpdate
+                            {
+                                SubscriptionId = u.update.SubscriptionId,
+                                BuildId = u.update.BuildId
+                            })
+                        .ToList()
+                };
 
-                    await CommitUpdatesAsync(requiredUpdates, description, darcRemote, targetRepository, newBranchName);
-
-                    var inProgressPr = new InProgressPullRequest
+                string prUrl = await darcRemote.CreatePullRequestAsync(
+                    targetRepository,
+                    new PullRequest
                     {
-                        // Calculate the subscriptions contained within the
-                        // update. Coherency updates do not have subscription info.
-                        ContainedSubscriptions = requiredUpdates
-                                .Where (u => !u.update.IsCoherencyUpdate)
-                                .Select(
-                                u => new SubscriptionPullRequestUpdate
-                                {
-                                    SubscriptionId = u.update.SubscriptionId,
-                                    BuildId = u.update.BuildId
-                                })
-                            .ToList()
-                    };
+                        Title = await ComputePullRequestTitleAsync(inProgressPr, targetBranch),
+                        Description = description.ToString(),
+                        BaseBranch = targetBranch,
+                        HeadBranch = newBranchName
+                    });
 
-                    string prUrl = await darcRemote.CreatePullRequestAsync(
-                        targetRepository,
-                        new PullRequest
-                        {
-                            Title = await ComputePullRequestTitleAsync(inProgressPr, targetBranch),
-                            Description = description.ToString(),
-                            BaseBranch = targetBranch,
-                            HeadBranch = newBranchName
-                        });
+                if (!string.IsNullOrEmpty(prUrl))
+                {
+                    inProgressPr.Url = prUrl;
 
-                    if (!string.IsNullOrEmpty(prUrl))
-                    {
-                        inProgressPr.Url = prUrl;
-
-                        await StateManager.SetStateAsync(PullRequest, inProgressPr);
-                        await StateManager.SaveStateAsync();
-                        await Reminders.TryRegisterReminderAsync(
-                            PullRequestCheck,
-                            null,
-                            TimeSpan.FromMinutes(5),
-                            TimeSpan.FromMinutes(5));
-                        return prUrl;
-                    }
-
-                    // Something wrong happened when trying to create the PR but didn't throw an exception (probably there was no diff). 
-                    // We need to delete the branch also in this case.
-                    await darcRemote.DeleteBranchAsync(targetRepository, newBranchName);
-                    return null;
+                    await StateManager.SetStateAsync(PullRequest, inProgressPr);
+                    await StateManager.SaveStateAsync();
+                    await Reminders.TryRegisterReminderAsync(
+                        PullRequestCheck,
+                        null,
+                        TimeSpan.FromMinutes(5),
+                        TimeSpan.FromMinutes(5));
+                    return prUrl;
                 }
+
+                // Something wrong happened when trying to create the PR but didn't throw an exception (probably there was no diff).
+                // We need to delete the branch also in this case.
+                await darcRemote.DeleteBranchAsync(targetRepository, newBranchName);
+                return null;
             }
             catch
             {
@@ -687,7 +684,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         /// <returns></returns>
         private async Task CommitUpdatesAsync(
             List<(UpdateAssetsParameters update, List<DependencyDetail> deps)> requiredUpdates,
-            StringWriter description,
+            StringBuilder description,
             IRemote darc,
             string targetRepository,
             string newBranchName)
@@ -700,68 +697,64 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             (UpdateAssetsParameters update, List<DependencyDetail> deps) coherencyUpdate =
                 requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
 
-            // To keep a PR to as few commits as possible, if the number of number
-            // of non-coherency updates is 1 then combine coherency updates with those.
+            // To keep a PR to as few commits as possible, if the number of
+            // non-coherency updates is 1 then combine coherency updates with those.
             // Otherwise, put all coherency updates in a separate commit.
             bool combineCoherencyWithNonCoherency = (nonCoherencyUpdates.Count == 1);
             foreach ((UpdateAssetsParameters update, List<DependencyDetail> deps) in nonCoherencyUpdates)
             {
-                using (var message = new StringWriter())
-                {
-                    List<DependencyDetail> dependenciesToCommit = deps;
-                    await CalculateCommitMessage(update, deps, message);
-                    await CalculatePRDescription(update, deps, description);
+                var message = new StringBuilder();
+                List<DependencyDetail> dependenciesToCommit = deps;
+                await CalculateCommitMessage(update, deps, message);
+                await CalculatePRDescription(update, deps, description);
 
-                    if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
-                    {
-                        await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                        await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, description);
-                        dependenciesToCommit.AddRange(coherencyUpdate.deps);
-                    }
-
-                    await darc.CommitUpdatesAsync(targetRepository, newBranchName, dependenciesToCommit, message.ToString());
-                }
-            }
-
-            // If the coherency update wasn't be combined, then
-            // add it now
-            if (!combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
-            {
-                using (var message = new StringWriter())
+                if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
                 {
                     await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
                     await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, description);
-                    await darc.CommitUpdatesAsync(targetRepository, newBranchName, coherencyUpdate.deps, message.ToString());
+                    dependenciesToCommit.AddRange(coherencyUpdate.deps);
                 }
+
+                await darc.CommitUpdatesAsync(targetRepository, newBranchName, dependenciesToCommit, message.ToString());
+            }
+
+            // If the coherency update wasn't combined, then
+            // add it now
+            if (!combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
+            {
+                var message = new StringBuilder();
+                await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
+                await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, description);
+                await darc.CommitUpdatesAsync(targetRepository, newBranchName, coherencyUpdate.deps, message.ToString());
             }
         }
 
-        private async Task CalculateCommitMessage(UpdateAssetsParameters update, List<DependencyDetail> deps, StringWriter message)
+        private async Task CalculateCommitMessage(UpdateAssetsParameters update, List<DependencyDetail> deps, StringBuilder message)
         {
             if (update.IsCoherencyUpdate)
             {
-                message.WriteLine("Dependency coherency updates");
-                message.WriteLine();
+                message.AppendLine("Dependency coherency updates");
+                message.AppendLine();
 
                 foreach (DependencyDetail dep in deps)
                 {
-                    message.WriteLine($"- {dep.Name} - {dep.Version} (parent: {dep.CoherentParentDependencyName})");
+                    message.AppendLine($"- {dep.Name} - {dep.Version} (parent: {dep.CoherentParentDependencyName})");
                 }
             }
             else
             {
                 string sourceRepository = update.SourceRepo;
                 Build build = await GetBuildAsync(update.BuildId);
-                message.WriteLine($"Update dependencies from {sourceRepository} build {build.AzureDevOpsBuildNumber}");
-                message.WriteLine();
+                message.AppendLine($"Update dependencies from {sourceRepository} build {build.AzureDevOpsBuildNumber}");
+                message.AppendLine();
 
                 foreach (DependencyDetail dep in deps)
                 {
-                    message.WriteLine($"- {dep.Name} - {dep.Version}");
+                    message.AppendLine($"- {dep.Name} - {dep.Version}");
                 }
             }
 
-            message.WriteLine();
+            message.AppendLine();
         }
 
         /// <summary>
@@ -775,46 +768,82 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         ///     Because PRs tend to be live for short periods of time, we can put more information
         ///     in the description than the commit message without worrying that links will go stale.
         /// </remarks>
-        private async Task CalculatePRDescription(UpdateAssetsParameters update, List<DependencyDetail> deps, StringWriter description)
+        private async Task CalculatePRDescription(UpdateAssetsParameters update, List<DependencyDetail> deps, StringBuilder description)
         {
+
+            //Find the Coherency section of the PR description
             if (update.IsCoherencyUpdate)
             {
-                description.WriteLine("## Coherency Updates");
-                description.WriteLine();
-                description.WriteLine("The following updates ensure that dependencies with a *CoherentParentDependency*");
-                description.WriteLine("attribute were produced in a build used as input to the parent dependency's build.");
-                description.WriteLine("See [Dependency Description Format](https://github.com/dotnet/arcade/blob/master/Documentation/DependencyDescriptionFormat.md#dependency-description-overview)");
-                description.WriteLine();
+                string sectionStartMarker = $"[marker]: <> (Begin:Coherency Updates)";
+                string sectionEndMarker = $"[marker]: <> (End:Coherency Updates)";
+                int sectionStartIndex = RemovePRDescriptionSection(sectionStartMarker, sectionEndMarker, ref description);
 
+                var coherencySection = new StringBuilder();
+                coherencySection.AppendLine(sectionStartMarker);
+                coherencySection.AppendLine("## Coherency Updates");
+                coherencySection.AppendLine();
+                coherencySection.AppendLine("The following updates ensure that dependencies with a *CoherentParentDependency*");
+                coherencySection.AppendLine("attribute were produced in a build used as input to the parent dependency's build.");
+                coherencySection.AppendLine("See [Dependency Description Format](https://github.com/dotnet/arcade/blob/master/Documentation/DependencyDescriptionFormat.md#dependency-description-overview)");
+                coherencySection.AppendLine();
 
                 foreach (DependencyDetail dep in deps)
                 {
-                    description.WriteLine($"- **{dep.Name}** -> {dep.Version} (parent: {dep.CoherentParentDependencyName})");
+                    coherencySection.AppendLine($"- **{dep.Name}** -> {dep.Version} (parent: {dep.CoherentParentDependencyName})");
                 }
+                coherencySection.AppendLine();
+                coherencySection.AppendLine(sectionEndMarker);
+                description.Insert(sectionStartIndex, coherencySection.ToString());
             }
             else
             {
                 string sourceRepository = update.SourceRepo;
+                Guid updateSubscriptionId = update.SubscriptionId;
                 Build build = await GetBuildAsync(update.BuildId);
-                description.WriteLine($"## From {sourceRepository}");
-                description.WriteLine($"- **Build**: {build.AzureDevOpsBuildNumber}");
-                description.WriteLine($"- **Date Produced**: {build.DateProduced.ToString("g")}");
+                string sectionStartMarker = $"[marker]: <> (Begin:{updateSubscriptionId})";
+                string sectionEndMarker = $"[marker]: <> (End:{updateSubscriptionId})";
+                int sectionStartIndex = RemovePRDescriptionSection(sectionStartMarker, sectionEndMarker, ref description);
+
+                var subscriptionSection = new StringBuilder();
+                subscriptionSection.AppendLine(sectionStartMarker);
+                subscriptionSection.AppendLine($"## From {sourceRepository}");
+                subscriptionSection.AppendLine($"- **Build**: {build.AzureDevOpsBuildNumber}");
+                subscriptionSection.AppendLine($"- **Date Produced**: {build.DateProduced.ToString("g")}");
                 // This is duplicated from the files changed, but is easier to read here.
-                description.WriteLine($"- **Commit**: {build.Commit}");
+                subscriptionSection.AppendLine($"- **Commit**: {build.Commit}");
                 string branch = build.AzureDevOpsBranch ?? build.GitHubBranch;
                 if (!string.IsNullOrEmpty(branch))
                 {
-                    description.WriteLine($"- **Branch**: {branch}");
+                    subscriptionSection.AppendLine($"- **Branch**: {branch}");
                 }
-                description.WriteLine($"- **Updates**:");
+                subscriptionSection.AppendLine($"- **Updates**:");
 
                 foreach (DependencyDetail dep in deps)
                 {
-                    description.WriteLine($"  - **{dep.Name}** -> {dep.Version}");
+                    subscriptionSection.AppendLine($"  - **{dep.Name}** -> {dep.Version}");
                 }
-            }
+                subscriptionSection.AppendLine();
+                subscriptionSection.AppendLine(sectionEndMarker);
+                description.Insert(sectionStartIndex, subscriptionSection.ToString());
 
-            description.WriteLine();
+            }
+            description.AppendLine();
+        }
+
+        private int RemovePRDescriptionSection(string sectionStartMarker, string sectionEndMarker, ref StringBuilder description)
+        {
+            int sectionStartIndex = description.ToString().IndexOf(sectionStartMarker);
+            int sectionEndIndex = description.ToString().IndexOf(sectionEndMarker);
+
+            if (sectionStartIndex != -1 && sectionEndIndex != -1)
+            {
+                sectionEndIndex+= sectionEndMarker.Length;
+                description.Remove(sectionStartIndex, sectionEndIndex - sectionStartIndex);
+                return sectionStartIndex;
+            }
+            // if either marker is missing, just append at end and don't remove anything
+            // from the description
+            return description.Length;
         }
 
         private async Task UpdatePullRequestAsync(InProgressPullRequest pr, List<UpdateAssetsParameters> updates)
@@ -850,14 +879,12 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                         BuildId = u.update.BuildId
                     }));
 
-            using (var description = new StringWriter(new StringBuilder(pullRequest.Description)))
-            {
-                await CommitUpdatesAsync(requiredUpdates, description, darcRemote, targetRepository, headBranch);
+            var description = new StringBuilder(pullRequest.Description);
+            await CommitUpdatesAsync(requiredUpdates, description, darcRemote, targetRepository, headBranch);
 
-                pullRequest.Description = description.ToString();
-                pullRequest.Title = await ComputePullRequestTitleAsync(pr, targetBranch);
-                await darcRemote.UpdatePullRequestAsync(pr.Url, pullRequest);
-            }
+            pullRequest.Description = description.ToString();
+            pullRequest.Title = await ComputePullRequestTitleAsync(pr, targetBranch);
+            await darcRemote.UpdatePullRequestAsync(pr.Url, pullRequest);
 
             await StateManager.SetStateAsync(PullRequest, pr);
             await StateManager.SaveStateAsync();
