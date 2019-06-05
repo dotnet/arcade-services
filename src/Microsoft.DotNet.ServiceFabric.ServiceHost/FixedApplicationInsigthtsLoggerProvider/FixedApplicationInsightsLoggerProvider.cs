@@ -19,7 +19,9 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         public FixedApplicationInsightsLoggerProvider(
             TelemetryClient telemetryClient,
             Func<string, LogLevel, bool> filter,
+#pragma warning disable CS0618 // Type or member is obsolete
             IOptions<ApplicationInsightsLoggerOptions> options)
+#pragma warning restore CS0618 // Type or member is obsolete
         {
             _telemetryClient = telemetryClient;
             // OFC the ApplicationInsights stuff is all internal so we can't inherit any of it
