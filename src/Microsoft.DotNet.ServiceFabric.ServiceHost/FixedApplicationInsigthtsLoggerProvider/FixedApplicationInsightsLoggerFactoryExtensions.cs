@@ -27,7 +27,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 provider => new FixedApplicationInsightsLoggerProvider(
                     provider.GetRequiredService<TelemetryClient>(),
                     filter,
-                    provider.GetRequiredService<IOptions<ApplicationInsightsLoggerOptions>>()));
+                    provider.GetRequiredService<IOptions<
+                        Microsoft.ApplicationInsights.AspNetCore.Logging.ApplicationInsightsLoggerOptions>>()));
             return builder;
         }
     }

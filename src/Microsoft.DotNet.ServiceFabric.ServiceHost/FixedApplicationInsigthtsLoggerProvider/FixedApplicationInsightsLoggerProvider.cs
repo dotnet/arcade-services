@@ -5,7 +5,7 @@
 using System;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.ApplicationInsights;
+using Microsoft.ApplicationInsights.AspNetCore.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
