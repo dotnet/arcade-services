@@ -5,16 +5,13 @@
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Net;
-using System.Threading.Tasks;
-using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.DarcLib.HealthMetrics;
+using Microsoft.DotNet.Maestro.Client.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -139,8 +136,38 @@ namespace Microsoft.DotNet.Darc.Operations
             var metricsToRun = new List<Func<Task<HealthMetricWithOutput>>>();
 
             metricsToRun.AddRange(ComputeSubscriptionHealthMetricsToRun(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels));
+            metricsToRun.AddRange(ComputeProductDependencyCycleMetricsToRun(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels));
 
             return metricsToRun;
+        }
+
+        /// <summary>
+        ///     Get typical repository and branch combinations for use with repo+branch focused metrics.
+        /// </summary>
+        /// <param name="channelsToEvaluate">Channels that should be evaluated.</param>
+        /// <param name="reposToEvaluate">Repositories that should be evaluated.</param>
+        /// <param name="subscriptions">All subscriptions.</param>
+        /// <param name="defaultChannels">All default channel associations.</param>
+        /// <returns>Set of repo+branch combinations that should be evaluated.</returns>
+        private HashSet<(string repo, string branch)> GetRepositoryBranchCombinations(HashSet<string> channelsToEvaluate,
+            HashSet<string> reposToEvaluate, IEnumerable<Subscription> subscriptions, IEnumerable<DefaultChannel> defaultChannels)
+        {
+            // Compute the combinations that make sense.
+            IEnumerable<(string repo, string branch)> defaultChannelsRepoBranchCombinations = defaultChannels
+                .Where(df => channelsToEvaluate.Contains(df.Channel.Name))
+                // Replace refs/heads/
+                .Where(df => reposToEvaluate.Contains(df.Repository))
+                .Select<DefaultChannel, (string repo, string branch)>(df => (df.Repository, df.Branch.Replace("refs/heads/", "")));
+
+            HashSet<(string repo, string branch)> repoBranchCombinations = subscriptions
+                .Where(s => reposToEvaluate.Contains(s.TargetRepository))
+                .Where(s => channelsToEvaluate.Contains(s.Channel.Name))
+                .Select<Subscription, (string repo, string branch)>(s => (s.TargetRepository, s.TargetBranch))
+                .ToHashSet();
+
+            repoBranchCombinations.UnionWith(defaultChannelsRepoBranchCombinations);
+
+            return repoBranchCombinations;
         }
 
         /// <summary>
@@ -168,20 +195,8 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             IRemoteFactory remoteFactory = new RemoteFactory(_options);
 
-            // Compute the combinations that make sense.
-            var defaultChannelsRepoBranchCombinations = defaultChannels
-                .Where(df => channelsToEvaluate.Contains(df.Channel.Name))
-                // Replace refs/heads/
-                .Where(df => reposToEvaluate.Contains(df.Repository))
-                .Select<DefaultChannel, (string repo, string branch)>(df => (df.Repository, df.Branch.Replace("refs/heads/", "")));
-
-            var repoBranchCombinations = subscriptions
-                .Where(s => reposToEvaluate.Contains(s.TargetRepository))
-                .Where(s => channelsToEvaluate.Contains(s.Channel.Name))
-                .Select<Subscription, (string repo, string branch)>(s => (s.TargetRepository, s.TargetBranch))
-                .ToHashSet();
-
-            repoBranchCombinations.UnionWith(defaultChannelsRepoBranchCombinations);
+            HashSet<(string repo, string branch)> repoBranchCombinations =
+                GetRepositoryBranchCombinations(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels);
 
             return repoBranchCombinations.Select<(string repo, string branch), Func<Task<HealthMetricWithOutput>>>(t =>
                 async () =>
@@ -239,11 +254,48 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        /// 
+        ///     Compute product dependency cycle metrics based on the input repositories and channels.
         /// </summary>
-        /// <param name="channels"></param>
+        /// <param name="channelsToEvaluate"></param>
         /// <returns></returns>
-        private HashSet<string> ComputeChannelsToEvaluate(IEnumerable<Channel> channels)
+        private List<Func<Task<HealthMetricWithOutput>>> ComputeProductDependencyCycleMetricsToRun(HashSet<string> channelsToEvaluate,
+            HashSet<string> reposToEvaluate, IEnumerable<Subscription> subscriptions, IEnumerable<DefaultChannel> defaultChannels)
+        {
+            IRemoteFactory remoteFactory = new RemoteFactory(_options);
+
+            HashSet<(string repo, string branch)> repoBranchCombinations =
+                GetRepositoryBranchCombinations(channelsToEvaluate, reposToEvaluate, subscriptions, defaultChannels);
+
+            return repoBranchCombinations.Select<(string repo, string branch), Func<Task<HealthMetricWithOutput>>>(t =>
+                async () =>
+                {
+                    ProductDependencyCyclesHealthMetric healthMetric = new ProductDependencyCyclesHealthMetric(t.repo, t.branch,
+                        Logger, remoteFactory);
+
+                    await healthMetric.EvaluateAsync();
+
+                    StringBuilder outputBuilder = new StringBuilder();
+
+                    if (healthMetric.Cycles.Any())
+                    {
+                        outputBuilder.AppendLine($"  Product Dependency Cycles:");
+                        foreach (var cycle in healthMetric.Cycles)
+                        {
+                            outputBuilder.AppendLine($"    {string.Join(" -> ", cycle)} -> ...");
+                        }
+                    }
+
+                    return new HealthMetricWithOutput(healthMetric, outputBuilder.ToString());
+                })
+            .ToList();
+        }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="channels"></param>
+            /// <returns></returns>
+            private HashSet<string> ComputeChannelsToEvaluate(IEnumerable<Channel> channels)
         {
             if (!string.IsNullOrEmpty(_options.Channel))
             {
