@@ -3,6 +3,7 @@
     <TargetFrameworks>$(NetFxTfm);netcoreapp2.1</TargetFrameworks>
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
     <LangVersion>7.1</LangVersion>
+    <NoWarn>$(NoWarn);612;618</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
