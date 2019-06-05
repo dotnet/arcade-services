@@ -85,12 +85,13 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                     Log.LogMessage(MessageImportance.High, $"Metadata has been pushed. Build id in the Build Asset Registry is '{recordedBuild.Id}'");
 
-                    if (1 == 1)
+                    // Only 'create' the AzDO (VSO) variables if running in an AzDO build
+                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BUILD_BUILDID")))
                     {
                         var defaultChannels = await client.DefaultChannels.ListAsync(
                             recordedBuild.GitHubBranch ?? recordedBuild.AzureDevOpsBranch,
-                            channelId: null, 
-                            enabled: true, 
+                            channelId: null,
+                            enabled: true,
                             recordedBuild.GitHubRepository ?? recordedBuild.AzureDevOpsRepository);
 
                         var defaultChannelsStr = string.Join(",", defaultChannels.Select(x => x.Channel.Id));
