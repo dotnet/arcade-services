@@ -558,7 +558,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 // or we'll list out the number of repos that are involved.
                 // Start building up the list. If we reach a max length, then backtrack and
                 // just note the number of input subscriptions.
-                string baseTitle = $"[{targetBranch}] Update dependencies from ";
+                string baseTitle = $"[{targetBranch}] Update dependencies from";
                 StringBuilder titleBuilder = new StringBuilder(baseTitle);
                 bool prefixComma = false;
                 const int maxTitleLength = 80;
@@ -578,7 +578,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     }
                     else
                     {
-                        titleBuilder.Append($" {repoNameForTitle}");
+                        titleBuilder.Append(" " + repoNameForTitle);
                     }
                 }
 
