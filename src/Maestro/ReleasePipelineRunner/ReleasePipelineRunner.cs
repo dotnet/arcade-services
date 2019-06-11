@@ -81,12 +81,51 @@ namespace ReleasePipelineRunner
                     if (maybeItem.HasValue)
                     {
                         ReleasePipelineRunnerItem item = maybeItem.Value;
-                        using (Logger.BeginScope(
-                            $"Triggering release pipelines associated with channel {item.ChannelId} for build {item.BuildId}.",
-                            item.BuildId,
-                            item.ChannelId))
+
+                        Build build = await Context.Builds
+                            .Where(b => b.Id == item.BuildId).FirstOrDefaultAsync();
+
+                        if (build == null)
                         {
-                            await RunAssociatedReleasePipelinesAsync(item.BuildId, item.ChannelId, cancellationToken);
+                            Logger.LogError($"Could not find the specified BAR Build {item.BuildId} to run a release pipeline.");
+                        }
+                        else if (build.AzureDevOpsBuildId == null)
+                        {
+                            // If something uses the old API version we won't have this information available.
+                            // This will also be the case if something adds an existing build (created using
+                            // the old API version) to a channel
+                            Logger.LogInformation($"barBuildInfo.AzureDevOpsBuildId is null for BAR Build.Id {build.Id}.");
+                        }
+                        else
+                        {
+                            AzureDevOpsClient azdoClient = await GetAzureDevOpsClientForAccount(build.AzureDevOpsAccount);
+
+                            var azdoBuild = await azdoClient.GetBuildAsync(
+                                build.AzureDevOpsAccount,
+                                build.AzureDevOpsProject,
+                                build.AzureDevOpsBuildId.Value);
+
+                            if (azdoBuild.Status.Equals("completed", StringComparison.OrdinalIgnoreCase))
+                            {
+                                if (azdoBuild.Status.Equals("succeeded", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    using (Logger.BeginScope(
+                                        $"Triggering release pipelines associated with channel {item.ChannelId} for build {item.BuildId}.",
+                                        item.BuildId,
+                                        item.ChannelId))
+                                    {
+                                        await RunAssociatedReleasePipelinesAsync(item.BuildId, item.ChannelId, cancellationToken);
+                                    }
+                                }
+                                else
+                                {
+                                    Logger.LogError($"Tried to trigger release pipeline for a non-succeeded build: {item.BuildId}");
+                                }
+                            }
+                            else
+                            {
+                                return TimeSpan.FromMinutes(1);
+                            }
                         }
                     }
 

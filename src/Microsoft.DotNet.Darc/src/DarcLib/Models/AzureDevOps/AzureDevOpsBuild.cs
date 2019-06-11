@@ -13,5 +13,9 @@ namespace Microsoft.DotNet.DarcLib
         public AzureDevOpsBuildDefinition Definition { get; set; }
 
         public AzureDevOpsProject Project { get; set; }
+
+        public string Status { get; set; }
+
+        public string Result { get; set; }
     }
 }
