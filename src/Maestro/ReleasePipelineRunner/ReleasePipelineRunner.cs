@@ -124,6 +124,7 @@ namespace ReleasePipelineRunner
                             }
                             else
                             {
+                                Logger.LogInformation($"AzDO build {azdoBuild.BuildNumber}/{azdoBuild.Definition.Name} with BAR BuildId {build.Id} is still in progress.");
                                 return TimeSpan.FromMinutes(1);
                             }
                         }
