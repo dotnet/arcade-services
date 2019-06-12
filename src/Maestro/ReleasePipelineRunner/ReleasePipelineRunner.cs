@@ -129,7 +129,7 @@ namespace ReleasePipelineRunner
 
                                     if (currentAttempts >= ReleasePipelineRunner.MaxRetriesChecksForFailedBuilds)
                                     {
-                                        Logger.LogError($"Cancelling the checks for this build {item.BuildId}. After now retries for it won't be published.");
+                                        Logger.LogError($"Cancelling the checks for build: {item.BuildId}. It won't be inserted into channel {item.ChannelId}");
                                     }
                                     else
                                     {
