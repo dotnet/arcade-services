@@ -43,7 +43,7 @@ if (Test-Path $darcVersion) {
 Write-Host
 
 # Set auth parameters
-$darcAuthParams = "--bar-uri $maestroInstallation --github-pat $githubPAT --azdev-pat $azdoPAT --password $maestroBearerToken"
+$darcAuthParams = @("--bar-uri", "$maestroInstallation", "--github-pat", "$githubPAT", "--azdev-pat", "$azdoPAT", "--password", "$maestroBearerToken")
 
 # Enable TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -159,13 +159,13 @@ function Teardown() {
 }
 
 function Darc-Command() {
-    $darcParams = $args
+    $darcParams = $args.Split(" ")
     Darc-Command-Impl $darcParams
 }
 
 function Darc-Command-Impl($darcParams) {
     Write-Host "Running 'darc $darcParams $darcAuthParams'"
-    $commandOutput = & $darcTool $darcParams $darcAuthParams; if ($LASTEXITCODE -ne 0) { Write-Host ${commandOutput};throw "Darc command exited with exit code: $LASTEXITCODE" } else { $commandOutput }
+    $commandOutput = & $darcTool @darcParams @darcAuthParams; if ($LASTEXITCODE -ne 0) { Write-Host ${commandOutput};throw "Darc command exited with exit code: $LASTEXITCODE" } else { $commandOutput }
 }
 
 # Run darc set-repository-policies
