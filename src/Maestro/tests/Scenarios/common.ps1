@@ -159,11 +159,12 @@ function Teardown() {
 }
 
 function Darc-Command() {
-    $darcParams = $args.Split(" ")
+    $darcParams = $args
     Darc-Command-Impl $darcParams
 }
 
 function Darc-Command-Impl($darcParams) {
+    $darcParams = $darcParams.Split(" ")
     Write-Host "Running 'darc $darcParams $darcAuthParams'"
     $commandOutput = & $darcTool @darcParams @darcAuthParams; if ($LASTEXITCODE -ne 0) { Write-Host ${commandOutput};throw "Darc command exited with exit code: $LASTEXITCODE" } else { $commandOutput }
 }
