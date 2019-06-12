@@ -331,9 +331,9 @@ function Get-Repo-Location($repoName) {
 function Git-Command($repoName) {
     Push-Location -Path $(Get-Repo-Location($repoName))
     try {
-        $gitParams = $args
+        $gitParams = $args.Split(" ")
         Write-Host "Running '$baseGitCommand' from $(Get-Location)"
-        $commandOutput = & git $gitParams; if ($LASTEXITCODE -ne 0) { throw "Git exited with exit code: $LASTEXITCODE" } else { $commandOutput }
+        $commandOutput = & git @gitParams; if ($LASTEXITCODE -ne 0) { throw "Git exited with exit code: $LASTEXITCODE" } else { $commandOutput }
     }
     finally {
         Pop-Location
