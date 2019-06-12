@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -516,7 +517,8 @@ namespace Microsoft.DotNet.DarcLib
                         Name = coherentAsset.Name,
                         Version = coherentAsset.Version,
                         RepoUri = buildRepoUri,
-                        Commit = buildForAsset.Commit
+                        Commit = buildForAsset.Commit,
+                        Locations = coherentAsset.Locations?.Select(l => l.Location)
                     };
 
                     toUpdate.Add(new DependencyUpdate
@@ -672,7 +674,8 @@ namespace Microsoft.DotNet.DarcLib
                     Commit = sourceCommit,
                     RepoUri = sourceRepoUri,
                     Version = asset.Version,
-                    Name = asset.Name
+                    Name = asset.Name,
+                    Locations = asset.Locations?.Select(l => l.Location)
                 };
 
                 toUpdate.Add(matchingDependencyByName, newDependency);
@@ -739,12 +742,16 @@ namespace Microsoft.DotNet.DarcLib
             List<DependencyDetail> itemsToUpdate,
             string message)
         {
+            IEnumerable<DependencyDetail> oldDependencies = await GetDependenciesAsync(repoUri, branch, loadAssetLocations: true);
+            itemsToUpdate = (await AddAssetLocationToDependenciesAsync(itemsToUpdate)).ToList();
+
             CheckForValidGitClient();
             GitFileContentContainer fileContainer =
-                await _fileManager.UpdateDependencyFiles(itemsToUpdate, repoUri, branch);
+                await _fileManager.UpdateDependencyFiles(itemsToUpdate, repoUri, branch, oldDependencies);
             List<GitFile> filesToCommit = new List<GitFile>();
 
-            // If we are updating the arcade sdk we need to update the eng/common files and the dotnet versions as well
+            // If we are updating the arcade sdk we need to update the eng/common files
+            // and the sdk versions in global.json
             DependencyDetail arcadeItem = itemsToUpdate.FirstOrDefault(
                 i => string.Equals(i.Name, "Microsoft.DotNet.Arcade.Sdk", StringComparison.OrdinalIgnoreCase));
 
@@ -945,12 +952,21 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Matching dependency information.</returns>
         public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri,
                                                                               string branchOrCommit,
-                                                                              string name = null)
+                                                                              string name = null,
+                                                                              bool loadAssetLocations = false)
         {
             CheckForValidGitClient();
-            return (await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branchOrCommit)).Where(
+            var dependencies = (await _fileManager.ParseVersionDetailsXmlAsync(repoUri, branchOrCommit)).Where(
                 dependency => string.IsNullOrEmpty(name) || dependency.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+            if (loadAssetLocations)
+            {
+                dependencies = await AddAssetLocationToDependenciesAsync(dependencies);
+            }
+
+            return dependencies;
         }
+
 
         /// <summary>
         ///     Clone a remote repo
@@ -1068,6 +1084,28 @@ namespace Microsoft.DotNet.DarcLib
                 return repoGlobalJson;
             }
 
+        }
+
+        private async Task<IEnumerable<DependencyDetail>> AddAssetLocationToDependenciesAsync(IEnumerable<DependencyDetail> dependencies)
+        {
+            foreach (var dependency in dependencies)
+            {
+                var matchingAssets = await GetAssetsAsync(dependency.Name, dependency.Version);
+
+                // Always look at the 'latest' asset to get the right asset even in stable build scenarios
+                var latestAsset = matchingAssets.OrderByDescending(a => a.BuildId).FirstOrDefault();
+                if (latestAsset != null)
+                {
+                    IEnumerable<String> currentAssetLocations = latestAsset.Locations?.Select(l => l.Location);
+                    if (currentAssetLocations == null)
+                    {
+                        continue;
+                    }
+
+                    dependency.Locations = currentAssetLocations;
+                }
+            }
+            return dependencies;
         }
     }
 }

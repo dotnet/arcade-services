@@ -475,7 +475,7 @@ namespace Microsoft.DotNet.Darc.Tests
         private void RepoHasDependencies(Mock<IRemote> dependencyGraphRemoteMock, 
             string repo, string commit, List<DependencyDetail> dependencies)
         {
-            dependencyGraphRemoteMock.Setup(m => m.GetDependenciesAsync(repo, commit, null)).ReturnsAsync(dependencies);
+            dependencyGraphRemoteMock.Setup(m => m.GetDependenciesAsync(repo, commit, null, false)).ReturnsAsync(dependencies);
         }
 
         private void BuildProducesAssets(Mock<IBarClient> barClientMock, string repo,

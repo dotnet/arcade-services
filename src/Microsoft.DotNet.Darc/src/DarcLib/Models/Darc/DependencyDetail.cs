@@ -2,11 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.DotNet.Maestro.Client.Models;
+using System.Collections;
+using System.Collections.Generic;
+
 namespace Microsoft.DotNet.DarcLib
 {
     public class DependencyDetail
     {
-        public DependencyDetail() { }
+        public DependencyDetail()
+        {
+            Locations = new List<string>();
+        }
+
         public DependencyDetail(DependencyDetail other)
         {
             Name = other.Name;
@@ -16,6 +24,7 @@ namespace Microsoft.DotNet.DarcLib
             Pinned = other.Pinned;
             Type = other.Type;
             CoherentParentDependencyName = other.CoherentParentDependencyName;
+            Locations = other.Locations;
         }
 
         public string Name { get; set; }
@@ -81,5 +90,10 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// 
         public string CoherentParentDependencyName { get; set; }
+
+        /// <summary>
+        /// Asset locations for the dependency
+        /// </summary>
+        public IEnumerable<string> Locations { get; set; }
     }
 }
