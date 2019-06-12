@@ -46,6 +46,8 @@ namespace ReleasePipelineRunner
         public IDependencyUpdater DependencyUpdater { get; }
 
         private const string RunningPipelineDictionaryName = "runningPipelines";
+        private static int DelayBetweenBuildStatusChecksInMinutes = 30;
+        private static int MaxRetriesChecksForFailedBuilds = 24;
         private static HashSet<string> InProgressStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "notstarted", "scheduled", "queued", "inprogress", "undefined" };
         private static HashSet<string> StopStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "canceled", "rejected" };
 
@@ -60,7 +62,8 @@ namespace ReleasePipelineRunner
                     new ReleasePipelineRunnerItem
                     {
                         BuildId = buildId,
-                        ChannelId = channelId
+                        ChannelId = channelId,
+                        NumberOfRetriesMade = 0
                     });
                 await tx.CommitAsync();
             }
@@ -70,11 +73,6 @@ namespace ReleasePipelineRunner
         {
             IReliableConcurrentQueue<ReleasePipelineRunnerItem> queue =
                 await StateManager.GetOrAddAsync<IReliableConcurrentQueue<ReleasePipelineRunnerItem>>("queue");
-
-            // Key: BAR BuildId of a build that has completed execution but didn't finish successfully (i.e., the build can be retried).
-            // Value: (how many times we have checked the build succeeded, moment after which we should check again the build status)
-            IReliableDictionary<int, (int, DateTime)> queuItemsRetryInfo =
-                await StateManager.GetOrAddAsync<IReliableDictionary<int, (int, DateTime)>>("queuItemsRetryInfo");
 
             try
             {
@@ -86,28 +84,6 @@ namespace ReleasePipelineRunner
                     if (maybeItem.HasValue)
                     {
                         ReleasePipelineRunnerItem item = maybeItem.Value;
-
-                        var maybeItemInfo = await queuItemsRetryInfo.TryGetValueAsync(tx, item.BuildId);
-
-                        if (maybeItemInfo.HasValue)
-                        {
-                            var itemInfo = maybeItemInfo.Value;
-
-                            if (DateTime.Compare(DateTime.UtcNow, itemInfo.Item2) < 0)
-                            {
-                                // We need to wait more. Put current item at the back of the queue
-                                await queue.EnqueueAsync(
-                                    tx,
-                                    new ReleasePipelineRunnerItem
-                                    {
-                                        BuildId = item.BuildId,
-                                        ChannelId = item.ChannelId
-                                    });
-                                await tx.CommitAsync();
-
-                                return TimeSpan.FromMinutes(1);
-                            }
-                        }
 
                         Build build = await Context.Builds
                             .Where(b => b.Id == item.BuildId).FirstOrDefaultAsync();
@@ -143,46 +119,31 @@ namespace ReleasePipelineRunner
                                     {
                                         await RunAssociatedReleasePipelinesAsync(item.BuildId, item.ChannelId, cancellationToken);
                                     }
-
-                                    // Remove any retry info that might have been around
-                                    await queuItemsRetryInfo.TryRemoveAsync(tx, item.BuildId);
                                 }
                                 else
                                 {
-                                    int currentAttempts = maybeItemInfo.HasValue ? maybeItemInfo.Value.Item1 + 1 : 1;
+                                    int currentAttempts = item.NumberOfRetriesMade + 1;
 
-                                    Logger.LogError($"Tried to trigger release pipeline for a non-succeeded build: {item.BuildId}. This was attempt number {currentAttempts} of a maximum of 24.");
+                                    Logger.LogError($"Tried to trigger release pipeline for a non-succeeded build: {item.BuildId}. " +
+                                        $"This was attempt number {currentAttempts} of a maximum of 24.");
 
-                                    if (maybeItemInfo.HasValue && currentAttempts >= 24)
+                                    if (currentAttempts >= ReleasePipelineRunner.MaxRetriesChecksForFailedBuilds)
                                     {
-                                        // Have we retried enough for this build? Currently wait 12 hours or 24 retries.
-
-                                        Logger.LogError($"Cancelling the checks for this build {item.BuildId}. Retries won't be published.");
-
-                                        await queuItemsRetryInfo.TryRemoveAsync(tx, item.BuildId);
+                                        Logger.LogError($"Cancelling the checks for this build {item.BuildId}. After now retries for it won't be published.");
                                     }
                                     else
                                     {
-                                        // We haven't retried enough. Put the item back at the end of the queue.
-
-                                        await queue.EnqueueAsync(
-                                            tx,
-                                            new ReleasePipelineRunnerItem
-                                            {
-                                                BuildId = item.BuildId,
-                                                ChannelId = item.ChannelId
-                                            });
-
-                                        await queuItemsRetryInfo.SetAsync(tx, 
-                                            item.BuildId, 
-                                            (currentAttempts, DateTime.UtcNow.AddMinutes(30)));
+                                        // Build finished unsucessfully but it can still be retried and finished sucessfully.
+                                        EnqueueBuildStatusCheck(item, currentAttempts + 1);
                                     }
                                 }
                             }
                             else
                             {
                                 Logger.LogInformation($"AzDO build {azdoBuild.BuildNumber}/{azdoBuild.Definition.Name} with BAR BuildId {build.Id} is still in progress.");
-                                return TimeSpan.FromMinutes(1);
+
+                                // Build didn't finish yet. Let's wait some time and try again.
+                                EnqueueBuildStatusCheck(item, 0);
                             }
                         }
                     }
@@ -200,6 +161,24 @@ namespace ReleasePipelineRunner
             }
 
             return TimeSpan.FromMinutes(1);
+        }
+
+        private async void EnqueueBuildStatusCheck(ReleasePipelineRunnerItem item, int newNumberOfRetriesMade)
+        {
+            await Task.Delay(TimeSpan.FromMinutes(ReleasePipelineRunner.DelayBetweenBuildStatusChecksInMinutes));
+
+            IReliableConcurrentQueue<ReleasePipelineRunnerItem> queue =
+                await StateManager.GetOrAddAsync<IReliableConcurrentQueue<ReleasePipelineRunnerItem>>("queue");
+
+            using (ITransaction tx = StateManager.CreateTransaction())
+            {
+                await queue.EnqueueAsync(tx, new ReleasePipelineRunnerItem
+                    {
+                        BuildId = item.BuildId,
+                        ChannelId = item.ChannelId,
+                        NumberOfRetriesMade = newNumberOfRetriesMade
+                });
+            }
         }
 
         /// <summary>
