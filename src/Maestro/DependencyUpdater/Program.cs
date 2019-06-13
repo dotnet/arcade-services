@@ -34,7 +34,7 @@ namespace DependencyUpdater
                                 (provider, options) =>
                                 {
                                     var config = provider.GetRequiredService<IConfigurationRoot>();
-                                    options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
+                                    options.UseSqlServer("Server=tcp:maestro-int-server.database.windows.net,1433;Initial Catalog=BuildAssetRegistry;Persist Security Info=False;User ID=Maestro_Access;Password=UxQewU{gx@dgm0gjrfqhoz18msFT7_&#$!~<vl_czd=is:gx;MultipleActiveResultSets=True;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;");
                                 });
                         });
                 });
