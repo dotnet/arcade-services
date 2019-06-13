@@ -154,7 +154,7 @@ namespace ReleasePipelineRunner
                 int currentAttempts = item.NumberOfRetriesMade + 1;
 
                 Logger.LogError($"Tried to trigger release pipeline for a non-succeeded build: {item.BuildId}. " +
-                    $"This was attempt number {currentAttempts} of a maximum of 24.");
+                    $"This was attempt number {currentAttempts} of a maximum of {ReleasePipelineRunner.MaxRetriesChecksForFailedBuilds}.");
 
                 if (currentAttempts >= ReleasePipelineRunner.MaxRetriesChecksForFailedBuilds)
                 {
@@ -163,7 +163,7 @@ namespace ReleasePipelineRunner
                 else
                 {
                     // Build finished unsucessfully but it can still be retried and finished sucessfully.
-                    EnqueueBuildStatusCheck(item, currentAttempts + 1);
+                    EnqueueBuildStatusCheck(item, currentAttempts);
                 }
             }
         }
