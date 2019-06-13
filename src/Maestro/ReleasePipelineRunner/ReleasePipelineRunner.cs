@@ -46,6 +46,8 @@ namespace ReleasePipelineRunner
         public IDependencyUpdater DependencyUpdater { get; }
 
         private const string RunningPipelineDictionaryName = "runningPipelines";
+        private static int DelayBetweenBuildStatusChecksInMinutes = 30;
+        private static int MaxRetriesChecksForFailedBuilds = 24;
         private static HashSet<string> InProgressStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "notstarted", "scheduled", "queued", "inprogress", "undefined" };
         private static HashSet<string> StopStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "canceled", "rejected" };
 
@@ -60,7 +62,8 @@ namespace ReleasePipelineRunner
                     new ReleasePipelineRunnerItem
                     {
                         BuildId = buildId,
-                        ChannelId = channelId
+                        ChannelId = channelId,
+                        NumberOfRetriesMade = 0
                     });
                 await tx.CommitAsync();
             }
@@ -81,12 +84,41 @@ namespace ReleasePipelineRunner
                     if (maybeItem.HasValue)
                     {
                         ReleasePipelineRunnerItem item = maybeItem.Value;
-                        using (Logger.BeginScope(
-                            $"Triggering release pipelines associated with channel {item.ChannelId} for build {item.BuildId}.",
-                            item.BuildId,
-                            item.ChannelId))
+
+                        Build build = await Context.Builds
+                            .Where(b => b.Id == item.BuildId).FirstOrDefaultAsync();
+
+                        if (build == null)
                         {
-                            await RunAssociatedReleasePipelinesAsync(item.BuildId, item.ChannelId, cancellationToken);
+                            Logger.LogError($"Could not find the specified BAR Build {item.BuildId} to run a release pipeline.");
+                        }
+                        else if (build.AzureDevOpsBuildId == null)
+                        {
+                            // If something uses the old API version we won't have this information available.
+                            // This will also be the case if something adds an existing build (created using
+                            // the old API version) to a channel
+                            Logger.LogInformation($"barBuildInfo.AzureDevOpsBuildId is null for BAR Build.Id {build.Id}.");
+                        }
+                        else
+                        {
+                            AzureDevOpsClient azdoClient = await GetAzureDevOpsClientForAccount(build.AzureDevOpsAccount);
+
+                            var azdoBuild = await azdoClient.GetBuildAsync(
+                                build.AzureDevOpsAccount,
+                                build.AzureDevOpsProject,
+                                build.AzureDevOpsBuildId.Value);
+
+                            if (azdoBuild.Status.Equals("completed", StringComparison.OrdinalIgnoreCase))
+                            {
+                                await HandleCompletedBuild(item, azdoBuild, cancellationToken);
+                            }
+                            else
+                            {
+                                Logger.LogInformation($"AzDO build {azdoBuild.BuildNumber}/{azdoBuild.Definition.Name} with BAR BuildId {build.Id} is still in progress.");
+
+                                // Build didn't finish yet. Let's wait some time and try again.
+                                EnqueueBuildStatusCheck(item, 0);
+                            }
                         }
                     }
 
@@ -102,7 +134,58 @@ namespace ReleasePipelineRunner
                 Logger.LogError(ex, "Processing queue messages");
             }
 
-            return TimeSpan.FromSeconds(1);
+            return TimeSpan.FromMinutes(1);
+        }
+
+        private async Task HandleCompletedBuild(ReleasePipelineRunnerItem item, AzureDevOpsBuild azdoBuild, CancellationToken cancellationToken)
+        {
+            if (azdoBuild.Result.Equals("succeeded", StringComparison.OrdinalIgnoreCase))
+            {
+                using (Logger.BeginScope(
+                    $"Triggering release pipelines associated with channel {item.ChannelId} for build {item.BuildId}.",
+                    item.BuildId,
+                    item.ChannelId))
+                {
+                    await RunAssociatedReleasePipelinesAsync(item.BuildId, item.ChannelId, cancellationToken);
+                }
+            }
+            else
+            {
+                int currentAttempts = item.NumberOfRetriesMade + 1;
+
+                Logger.LogError($"Tried to trigger release pipeline for a non-succeeded build: {item.BuildId}. " +
+                    $"This was attempt number {currentAttempts} of a maximum of {ReleasePipelineRunner.MaxRetriesChecksForFailedBuilds}.");
+
+                if (currentAttempts >= ReleasePipelineRunner.MaxRetriesChecksForFailedBuilds)
+                {
+                    Logger.LogError($"Cancelling the checks for this build {item.BuildId}. After now retries for it won't be published.");
+                }
+                else
+                {
+                    // Build finished unsucessfully but it can still be retried and finished sucessfully.
+                    EnqueueBuildStatusCheck(item, currentAttempts);
+                }
+            }
+        }
+
+        private async void EnqueueBuildStatusCheck(ReleasePipelineRunnerItem item, int newNumberOfRetriesMade)
+        {
+            await Task.Delay(TimeSpan.FromMinutes(ReleasePipelineRunner.DelayBetweenBuildStatusChecksInMinutes));
+
+            IReliableConcurrentQueue<ReleasePipelineRunnerItem> queue =
+                await StateManager.GetOrAddAsync<IReliableConcurrentQueue<ReleasePipelineRunnerItem>>("queue");
+
+            using (ITransaction tx = StateManager.CreateTransaction())
+            {
+                await queue.EnqueueAsync(tx, new ReleasePipelineRunnerItem
+                    {
+                        BuildId = item.BuildId,
+                        ChannelId = item.ChannelId,
+                        NumberOfRetriesMade = newNumberOfRetriesMade
+                });
+
+                await tx.CommitAsync();
+            }
         }
 
         /// <summary>

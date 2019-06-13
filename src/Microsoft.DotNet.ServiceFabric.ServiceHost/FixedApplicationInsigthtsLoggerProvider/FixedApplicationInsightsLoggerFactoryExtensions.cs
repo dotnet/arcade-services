@@ -4,9 +4,9 @@
 
 using System;
 using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.AspNetCore.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.ApplicationInsights;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
@@ -27,7 +27,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 provider => new FixedApplicationInsightsLoggerProvider(
                     provider.GetRequiredService<TelemetryClient>(),
                     filter,
-                    provider.GetRequiredService<IOptions<ApplicationInsightsLoggerOptions>>()));
+                    provider.GetRequiredService<IOptions<
+#pragma warning disable CS0618 // Type or member is obsolete
+                        Microsoft.ApplicationInsights.AspNetCore.Logging.ApplicationInsightsLoggerOptions>>()));
+#pragma warning restore CS0618 // Type or member is obsolete
             return builder;
         }
     }

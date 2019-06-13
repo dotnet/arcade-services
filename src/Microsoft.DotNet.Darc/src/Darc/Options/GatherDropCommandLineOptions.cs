@@ -58,6 +58,16 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("channel", HelpText = "Download the latest from this channel. Matched on substring.")]
         public string Channel { get; set; }
 
+        [Option("no-workarounds", HelpText = "Do not allow workarounds when gathering the drop.")]
+        public bool NoWorkarounds { get; set; }
+
+        [Option("skip-existing", HelpText = "Skip files that already exist at the destination.")]
+        public bool SkipExisting { get; set; }
+
+        [Option("latest-location", HelpText = "Download assets from their latest known location.")]
+        public bool LatestLocation { get; set; }
+
+
         public override Operation GetOperation()
         {
             return new GatherDropOperation(this);

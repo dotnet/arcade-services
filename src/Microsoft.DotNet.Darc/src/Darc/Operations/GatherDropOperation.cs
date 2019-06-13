@@ -9,7 +9,6 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -560,7 +559,7 @@ namespace Microsoft.DotNet.Darc.Operations
             bool anyShipping = false;
 
             Console.WriteLine($"Gathering drop for build {build.AzureDevOpsBuildNumber} of {repoUri}");
-            using (HttpClient client = new HttpClient())
+            using (HttpClient client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
                 var assets = await remote.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?)false : null));
                 foreach (var asset in assets)
@@ -640,45 +639,63 @@ namespace Microsoft.DotNet.Darc.Operations
                 Successful = false,
                 Asset = asset
             };
+
             List<string> errors = new List<string>();
 
-            if (asset.Locations.Count == 0)
+            List<AssetLocation> assetLocations = new List<AssetLocation>(asset.Locations);
+
+            if (assetLocations.Count == 0)
             {
-                errors.Add($"Asset '{assetNameAndVersion}' has no known location information.");
+                // If there is no location information and the user wants workarounds, add a bunch
+                // of feeds.
+                if (!_options.NoWorkarounds)
+                {
+                    if (asset.Name.Contains("/"))
+                    {
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetcli.blob.core.windows.net/dotnet/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetclichecksums.blob.core.windows.net/dotnet/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/aspnet-aspnetcore/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/aspnet-aspnetcore-tooling/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/aspnet-entityframeworkcore/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/aspnet-extensions/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-coreclr/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-sdk/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-toolset/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.Container, "https://dotnetfeed.blob.core.windows.net/dotnet-windowsdesktop/index.json"));
+                    }
+                    else
+                    {
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/aspnet-aspnetcore/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/aspnet-aspnetcore-tooling/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/aspnet-entityframeworkcore/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/aspnet-extensions/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-coreclr/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-sdk/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-toolset/index.json"));
+                        assetLocations.Add(new AssetLocation(0, LocationType.NugetFeed, "https://dotnetfeed.blob.core.windows.net/dotnet-windowsdesktop/index.json"));
+                    }
+                }
+                else
+                {
+                    errors.Add($"Asset '{assetNameAndVersion}' has no known location information.");
+                }
             }
             else
             {
-                string subPath = Path.Combine(rootOutputDirectory, asset.NonShipping ? nonShippingSubPath : shippingSubPath);
-
-                // Walk the locations and attempt to gather the asset at each one, setting the output
-                // path based on the type. Note that if there are multiple locations and their types don't
-                // match, consider this an error.
-                LocationType locationType = asset.Locations[0].Type;
-                foreach (AssetLocation location in asset.Locations)
+                if (_options.LatestLocation)
                 {
-                    if (locationType != location.Type)
-                    {
-                        errors.Add($"Asset '{assetNameAndVersion}' has inconsistent location types ({locationType} vs. {location.Type})");
-                        break;
-                    }
+                    downloadedAsset = await DownloadAssetFromLatestLocation(client, build, asset, assetLocations, rootOutputDirectory, errors);
+                }
+                else
+                {
+                    downloadedAsset = await DownloadAssetFromAnyLocationAsync(client, build, asset, assetLocations, rootOutputDirectory, errors);
+                }
 
-                    switch (locationType)
-                    {
-                        case LocationType.NugetFeed:
-                            downloadedAsset = await DownloadNugetPackageAsync(client, build, asset, location, subPath, errors);
-                            break;
-                        case LocationType.Container:
-                            downloadedAsset = await DownloadBlobAsync(client, build, asset, location, subPath, errors);
-                            break;
-                        default:
-                            errors.Add($"Unexpected location type {locationType}");
-                            break;
-                    }
-
-                    if (downloadedAsset.Successful)
-                    {
-                        return downloadedAsset;
-                    }
+                if (downloadedAsset.Successful)
+                {
+                    return downloadedAsset;
                 }
             }
 
@@ -694,6 +711,112 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
+        /// Download a single asset from any of its locations. Iterate over the asset's locations
+        /// until the asset download succeed or all locations have been tested.
+        /// </summary>
+        private async Task<DownloadedAsset> DownloadAssetFromAnyLocationAsync(HttpClient client,
+                                                                            Build build, 
+                                                                            Asset asset, 
+                                                                            List<AssetLocation> assetLocations, 
+                                                                            string rootOutputDirectory, 
+                                                                            List<string> errors)
+        {
+            // Walk the locations and attempt to gather the asset at each one, setting the output
+            // path based on the type. Stops at the first successfull download.
+            foreach (AssetLocation location in assetLocations)
+            {
+                var downloadedAsset = await DownloadAssetFromLocation(client,
+                    build,
+                    asset,
+                    location,
+                    rootOutputDirectory,
+                    errors);
+
+                if (downloadedAsset.Successful)
+                {
+                    return downloadedAsset;
+                }
+            }
+
+            return new DownloadedAsset()
+            {
+                Successful = false,
+                Asset = asset
+            };
+        }
+
+        /// <summary>
+        /// Download a single asset from the latest asset location registered.
+        /// </summary>
+        private async Task<DownloadedAsset> DownloadAssetFromLatestLocation(HttpClient client,
+                                                                            Build build,
+                                                                            Asset asset,
+                                                                            List<AssetLocation> assetLocations,
+                                                                            string rootOutputDirectory,
+                                                                            List<string> errors)
+        {
+            AssetLocation latestLocation = assetLocations.OrderByDescending(al => al.Id).First();
+
+            return await DownloadAssetFromLocation(client, 
+                build, 
+                asset, 
+                latestLocation, 
+                rootOutputDirectory, 
+                errors);
+        }
+
+        /// <summary>
+        /// Download an asset from the asset location provided.
+        /// </summary>
+        private async Task<DownloadedAsset> DownloadAssetFromLocation(HttpClient client,
+                                                                            Build build,
+                                                                            Asset asset,
+                                                                            AssetLocation location,
+                                                                            string rootOutputDirectory,
+                                                                            List<string> errors)
+        {
+            var subPath = Path.Combine(rootOutputDirectory, asset.NonShipping ? nonShippingSubPath : shippingSubPath);
+
+            var locationType = location.Type;
+
+            // Make sure the location type ends up correct. Currently in some cases,
+            // we end up with 'none' or a symbol package ends up with nuget feed.
+            // Generally we can make an assumption that if the path doesn't have a
+            // '/' then it's a package.  Nuget packages also don't have '.nupkg' suffix
+            // (they are just the package name).
+            if (!_options.NoWorkarounds)
+            {
+                if (!asset.Name.Contains("/") && !asset.Name.Contains(".nupkg"))
+                {
+                    locationType = LocationType.NugetFeed;
+                }
+                else
+                {
+                    locationType = LocationType.Container;
+                }
+            }
+
+            switch (locationType)
+            {
+                case LocationType.NugetFeed:
+                    return await DownloadNugetPackageAsync(client, build, asset, location, subPath, errors);
+                case LocationType.Container:
+                    return await DownloadBlobAsync(client, build, asset, location, subPath, errors);
+                case LocationType.None:
+                default:
+                    errors.Add($"Unexpected location type {locationType}");
+                    break;
+            }
+
+            return new DownloadedAsset()
+            {
+                Successful = false,
+                Asset = asset
+            };
+        }
+
+
+        /// <summary>
         ///     Download a nuget package.
         /// </summary>
         /// <param name="client">Http client for use in downloading</param>
@@ -702,11 +825,11 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="subPath">Root path to download file to.</param>
         /// <returns>True if package could be downloaded, false otherwise.</returns>
         private async Task<DownloadedAsset> DownloadNugetPackageAsync(HttpClient client,
-                                                                      Build build,
-                                                                      Asset asset,
-                                                                      AssetLocation assetLocation,
-                                                                      string subPath,
-                                                                      List<string> errors)
+                                                                    Build build,
+                                                                    Asset asset,
+                                                                    AssetLocation assetLocation,
+                                                                    string subPath,
+                                                                    List<string> errors)
         {
             // Attempt to figure out how to download this. If the location is a blob storage account, then
             // strip off index.json, append 'flatcontainer', the asset name (lower case), then the version,
@@ -761,7 +884,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <remarks>
         ///     Blob feed uris look like: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
         /// </remarks>
-        private bool IsBlobFeedUrl(string location)
+        private static bool IsBlobFeedUrl(string location)
         {
             if (!Uri.TryCreate(location, UriKind.Absolute, out Uri locationUri))
             {
@@ -773,14 +896,14 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        ///     Returns true if the location is a myget url.
+        ///     Determine whether this location is an azure devops build url.
         /// </summary>
         /// <param name="location">Location</param>
-        /// <returns>True if the location is a myget url, false otherwise.</returns>
+        /// <returns>True if the location is an Azure Devops uri, false otherwise.</returns>
         /// <remarks>
-        ///     https://dotnet.myget.org/F/aspnetcore-dev/api/v3/index.json
+        ///     Blob feed uris look like: https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json
         /// </remarks>
-        private bool IsMyGetUrl(string location)
+        private static bool IsAzureDevOpsArtifactsUrl(string location)
         {
             if (!Uri.TryCreate(location, UriKind.Absolute, out Uri locationUri))
             {
@@ -788,7 +911,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 return false;
             }
 
-            return locationUri.Host == "dotnet.myget.org" && location.EndsWith("/api/v3/index.json");
+            return locationUri.Host.Equals("dev.azure.com") && location.EndsWith("/artifacts");
         }
 
         private async Task<DownloadedAsset> DownloadBlobAsync(HttpClient client,
@@ -839,91 +962,35 @@ namespace Microsoft.DotNet.Darc.Operations
                     downloadedAsset.SourceLocation = finalUri2;
                     return downloadedAsset;
                 }
-                return downloadedAsset;
-            }
-            // WORKAROUND: Right now we don't have the ability to have multiple root build locations
-            // So the BAR location gets reported as the overall manifest location.  This isn't correct,
-            // but we're stuck with it for now until we redesign how the manifest merging is done.
-            // So if we see a myget url here, just look up the asset in the dotnetcli storage account.
-            if (IsMyGetUrl(assetLocation.Location) && assetLocation.Location.Contains("aspnetcore-dev"))
-            {
-                // First try to grab the asset from the dotnetcli storage account
-                string dotnetcliStorageUri = $"https://dotnetcli.blob.core.windows.net/dotnet/{asset.Name}";
-                if (await DownloadFileAsync(client, $"{dotnetcliStorageUri}", fullTargetPath, errors))
+                // Could be under assets/assets/ in some recent builds due to a bug in the release
+                // pipeline.
+                if (!_options.NoWorkarounds)
                 {
-                    downloadedAsset.Successful = true;
-                    downloadedAsset.SourceLocation = dotnetcliStorageUri;
-                    return downloadedAsset;
-                }
-                // AspNet symbol packages have incorrect names right now.  They are found on the drop share.
-                if (asset.Name.EndsWith(".symbols.nupkg"))
-                {
-                    string symbolPackageName = asset.Name;
-                    int lastSlash = asset.Name.LastIndexOf("/");
-                    if (lastSlash != -1)
-                    {
-                        symbolPackageName = asset.Name.Substring(lastSlash);
-                    }
-                    string shippingNonShippingFolder = asset.NonShipping ? "NonShipping" : "Shipping";
-                    string aspnetciSymbolSharePath = $@"\\aspnetci\drops\AspNetCore\master\{build.AzureDevOpsBuildNumber}\packages\Release\{shippingNonShippingFolder}\{symbolPackageName}";
-                    if (await DownloadFromShareAsync(aspnetciSymbolSharePath, fullTargetPath, errors))
+                    string finalUri3 = $"{finalBaseUri}assets/assets/{asset.Name}";
+                    if (await DownloadFileAsync(client, finalUri3, fullTargetPath, errors))
                     {
                         downloadedAsset.Successful = true;
-                        downloadedAsset.SourceLocation = aspnetciSymbolSharePath;
+                        downloadedAsset.SourceLocation = finalUri3;
                         return downloadedAsset;
                     }
                 }
                 return downloadedAsset;
             }
-            else
+            else if (IsAzureDevOpsArtifactsUrl(assetLocation.Location))
             {
-                if (string.IsNullOrEmpty(assetLocation.Location))
-                {
-                    errors.Add($"Asset location for {asset.Name} is not available.");
-                }
-                else
-                {
-                    errors.Add($"Blob uri '{assetLocation.Location} for {asset.Name} is of an unknown type");
-                }
+                // Do not attempt to download from AzDO.
                 return downloadedAsset;
             }
-        }
-
-        private async Task<bool> DownloadFromShareAsync(string sourceFile, string targetFile, List<string> errors)
-        {
-            if (_options.DryRun)
+            
+            if (string.IsNullOrEmpty(assetLocation.Location))
             {
-                Console.WriteLine($"  {sourceFile} => {targetFile}.");
-                return true;
+                errors.Add($"Asset location for {asset.Name} is not available.");
             }
-
-            try
+            else
             {
-                string directory = Path.GetDirectoryName(targetFile);
-                Directory.CreateDirectory(directory);
-
-                // Web client will overwrite, so avoid this if not desired by checking for file existence.
-                if (!_options.Overwrite && File.Exists(targetFile))
-                {
-                    errors.Add($"Failed to write {targetFile}. The file already exists.");
-                    return false;
-                }
-
-                using (var wc = new WebClient())
-                {
-                    Uri sourceUri = new Uri(sourceFile);
-                    await wc.DownloadFileTaskAsync(sourceUri, targetFile);
-                    Console.WriteLine($"  {sourceFile} => {targetFile}.");
-                }
-
-                return true;
+                errors.Add($"Blob uri '{assetLocation.Location} for {asset.Name} is of an unknown type");
             }
-            catch (Exception e)
-            {
-                errors.Add($"Failed to write {targetFile}: {e.Message}");
-            }
-
-            return false;
+            return downloadedAsset;
         }
 
         /// <summary>
@@ -945,6 +1012,11 @@ namespace Microsoft.DotNet.Darc.Operations
 
             try
             {
+                if (_options.SkipExisting && File.Exists(targetFile))
+                {
+                    return true;
+                }
+
                 string directory = Path.GetDirectoryName(targetFile);
                 Directory.CreateDirectory(directory);
 
