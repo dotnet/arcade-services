@@ -50,7 +50,7 @@ namespace SubscriptionActorService
                                 (provider, options) =>
                                 {
                                     var config = provider.GetRequiredService<IConfigurationRoot>();
-                                    options.UseSqlServer(Configuration.GetSection("BuildAssetRegistry")["ConnectionString"]);
+                                    options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
                                 });
                             services.Configure<GitHubTokenProviderOptions>(
                                 (options, provider) =>
