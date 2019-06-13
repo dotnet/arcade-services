@@ -110,33 +110,7 @@ namespace ReleasePipelineRunner
 
                             if (azdoBuild.Status.Equals("completed", StringComparison.OrdinalIgnoreCase))
                             {
-                                if (azdoBuild.Status.Equals("succeeded", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    using (Logger.BeginScope(
-                                        $"Triggering release pipelines associated with channel {item.ChannelId} for build {item.BuildId}.",
-                                        item.BuildId,
-                                        item.ChannelId))
-                                    {
-                                        await RunAssociatedReleasePipelinesAsync(item.BuildId, item.ChannelId, cancellationToken);
-                                    }
-                                }
-                                else
-                                {
-                                    int currentAttempts = item.NumberOfRetriesMade + 1;
-
-                                    Logger.LogError($"Tried to trigger release pipeline for a non-succeeded build: {item.BuildId}. " +
-                                        $"This was attempt number {currentAttempts} of a maximum of 24.");
-
-                                    if (currentAttempts >= ReleasePipelineRunner.MaxRetriesChecksForFailedBuilds)
-                                    {
-                                        Logger.LogError($"Cancelling the checks for this build {item.BuildId}. After now retries for it won't be published.");
-                                    }
-                                    else
-                                    {
-                                        // Build finished unsucessfully but it can still be retried and finished sucessfully.
-                                        EnqueueBuildStatusCheck(item, currentAttempts + 1);
-                                    }
-                                }
+                                await HandleCompletedBuild(item, azdoBuild, cancellationToken);
                             }
                             else
                             {
@@ -163,6 +137,37 @@ namespace ReleasePipelineRunner
             return TimeSpan.FromMinutes(1);
         }
 
+        private async Task HandleCompletedBuild(ReleasePipelineRunnerItem item, AzureDevOpsBuild azdoBuild, CancellationToken cancellationToken)
+        {
+            if (azdoBuild.Result.Equals("succeeded", StringComparison.OrdinalIgnoreCase))
+            {
+                using (Logger.BeginScope(
+                    $"Triggering release pipelines associated with channel {item.ChannelId} for build {item.BuildId}.",
+                    item.BuildId,
+                    item.ChannelId))
+                {
+                    await RunAssociatedReleasePipelinesAsync(item.BuildId, item.ChannelId, cancellationToken);
+                }
+            }
+            else
+            {
+                int currentAttempts = item.NumberOfRetriesMade + 1;
+
+                Logger.LogError($"Tried to trigger release pipeline for a non-succeeded build: {item.BuildId}. " +
+                    $"This was attempt number {currentAttempts} of a maximum of 24.");
+
+                if (currentAttempts >= ReleasePipelineRunner.MaxRetriesChecksForFailedBuilds)
+                {
+                    Logger.LogError($"Cancelling the checks for this build {item.BuildId}. After now retries for it won't be published.");
+                }
+                else
+                {
+                    // Build finished unsucessfully but it can still be retried and finished sucessfully.
+                    EnqueueBuildStatusCheck(item, currentAttempts + 1);
+                }
+            }
+        }
+
         private async void EnqueueBuildStatusCheck(ReleasePipelineRunnerItem item, int newNumberOfRetriesMade)
         {
             await Task.Delay(TimeSpan.FromMinutes(ReleasePipelineRunner.DelayBetweenBuildStatusChecksInMinutes));
@@ -178,6 +183,8 @@ namespace ReleasePipelineRunner
                         ChannelId = item.ChannelId,
                         NumberOfRetriesMade = newNumberOfRetriesMade
                 });
+
+                await tx.CommitAsync();
             }
         }
 
