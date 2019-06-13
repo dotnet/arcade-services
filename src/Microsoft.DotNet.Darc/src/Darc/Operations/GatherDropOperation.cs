@@ -692,6 +692,11 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     downloadedAsset = await DownloadAssetFromAnyLocationAsync(client, build, asset, assetLocations, rootOutputDirectory, errors);
                 }
+
+                if (downloadedAsset.Successful)
+                {
+                    return downloadedAsset;
+                }
             }
 
             // If none of the download attempts succeeded, then we should print out all the error
@@ -750,7 +755,7 @@ namespace Microsoft.DotNet.Darc.Operations
                                                                             string rootOutputDirectory,
                                                                             List<string> errors)
         {
-            AssetLocation latestLocation = assetLocations.OrderBy(al => al.Id).First();
+            AssetLocation latestLocation = assetLocations.OrderByDescending(al => al.Id).First();
 
             return await DownloadAssetFromLocation(client, 
                 build, 
