@@ -32,7 +32,7 @@ if (Test-Path $darcVersion) {
     Write-Host "Using local darc binary $darcTool"
 } else {
     Write-Host "Temporary testing location located at $testRoot"
-    $darcInstallArguments = @( "--tool-path", "$testRoot", "--version", "$darcVersion", "Microsoft.DotNet.Darc" )
+    $darcInstallArguments = @( "--tool-path", $testRoot, "--version", $darcVersion, "Microsoft.DotNet.Darc" )
     if ($darcPackageSource) {
         $darcInstallArguments += @( "--add-source", "${darcPackageSource}" )
     }
@@ -43,7 +43,7 @@ if (Test-Path $darcVersion) {
 Write-Host
 
 # Set auth parameters
-$darcAuthParams = @("--bar-uri", "$maestroInstallation", "--github-pat", "$githubPAT", "--azdev-pat", "$azdoPAT", "--password", "$maestroBearerToken")
+$darcAuthParams = @("--bar-uri", $maestroInstallation, "--github-pat", $githubPAT, "--azdev-pat", $azdoPAT, "--password", $maestroBearerToken)
 
 # Enable TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -92,7 +92,7 @@ function Teardown() {
     foreach ($channel in $global:channelsToDelete) {
         try {
             Write-Host "Deleting channel $channel"
-            Darc-Command delete-channel --name `'$channel`'
+            Darc-Command delete-channel --name $channel
         } catch {
             Write-Warning "Failed to delete channel $channel"
             Write-Warning $_
@@ -166,7 +166,13 @@ function Darc-Command() {
 function Darc-Command-Impl($darcParams) {
     $darcParams = $darcParams.Split(" ")
     Write-Host "Running 'darc $darcParams $darcAuthParams'"
-    $commandOutput = & $darcTool @darcParams @darcAuthParams; if ($LASTEXITCODE -ne 0) { Write-Host ${commandOutput};throw "Darc command exited with exit code: $LASTEXITCODE" } else { $commandOutput }
+    $commandOutput = & $darcTool @darcParams @darcAuthParams
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host ${commandOutput}
+      throw "Darc command exited with exit code: $LASTEXITCODE"
+    } else {
+      $commandOutput
+    }
 }
 
 # Run darc set-repository-policies

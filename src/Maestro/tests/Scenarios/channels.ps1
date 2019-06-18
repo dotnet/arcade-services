@@ -13,13 +13,13 @@ try {
 
     # Import common tooling and prep for tests
     . $PSScriptRoot/common.ps1
-    
+
     Write-Host "Channel management tests..."
     Write-Host
 
     # Test channel name
     $newChannelName = Get-Random
-    
+
     # Add a new channel
     Write-Host "Creating channel '$newChannelName'"
     Darc-Add-Channel $newChannelName 'test'
@@ -34,7 +34,7 @@ try {
     }
 
     Write-Host "Removing '$newChannelName'"
-    Darc-Command delete-channel --name `'$newChannelName`'
+    Darc-Command delete-channel --name $newChannelName
 
     # Get the channel and make sure it's no longer there
     $channels = Darc-Command get-channels
