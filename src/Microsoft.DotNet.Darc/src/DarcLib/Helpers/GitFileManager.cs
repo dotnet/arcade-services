@@ -931,7 +931,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 var parsedFeed = ParseMaestroManagedFeed(feed);
 
-                string key = $"darc-{parsedFeed.repoName}-{parsedFeed.type}-{parsedFeed.sha.Substring(0, 7)}";
+                string key = $"darc-{parsedFeed.type}-{parsedFeed.repoName}-{parsedFeed.sha.Substring(0, 7)}";
                 if (!string.IsNullOrEmpty(parsedFeed.subVersion))
                 {
                     key += "-" + parsedFeed.subVersion;
