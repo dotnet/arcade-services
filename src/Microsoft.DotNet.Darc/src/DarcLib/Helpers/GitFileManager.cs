@@ -24,7 +24,7 @@ namespace Microsoft.DotNet.DarcLib
 
         // Matches package feeds like
         // https://dnceng.pkgs.visualstudio.com/public/_packaging/darc-pub-arcade-fd8184c3fcde81eb27ca4c061c6e171f418d753f-1
-        private const string ManagedFeedPattern =
+        private const string MaestroManagedFeedPattern =
             @"https://(\w+).pkgs.visualstudio.com/(public/){0,1}_packaging/darc-(int|pub)-(.+?)-([A-Fa-f0-9]{40})-?(\d*)";
 
         public GitFileManager(IGitRepo gitRepo, ILogger logger)
@@ -220,7 +220,7 @@ namespace Microsoft.DotNet.DarcLib
 
             // Combine the two sets of dependencies. If an asset is present in the itemsToUpdate,
             // prefer that one over the old dependencies
-            Dictionary<String, HashSet<string>> itemsToUpdateLocations = GetAssetLocationMapping(itemsToUpdate);
+            Dictionary<string, HashSet<string>> itemsToUpdateLocations = GetAssetLocationMapping(itemsToUpdate);
 
             if (oldDependencies != null)
             {
@@ -235,7 +235,7 @@ namespace Microsoft.DotNet.DarcLib
 
             // At this point we only care about the Maestro managed locations for the assets. 
             // Flatten the dictionary into a set that has all the managed feeds
-            HashSet<string> managedFeeds = FlattenLocations(itemsToUpdateLocations, IsManagedFeed);
+            HashSet<string> managedFeeds = FlattenLocations(itemsToUpdateLocations, IsMaestroMagedFeed);
 
             var updatedNugetConfig = UpdatePackageSources(nugetConfig, managedFeeds);
 
@@ -250,15 +250,15 @@ namespace Microsoft.DotNet.DarcLib
             return fileContainer;
         }
 
-        private bool IsManagedFeed(string feed)
+        private bool IsMaestroMagedFeed(string feed)
         {
-            return Regex.IsMatch(feed, ManagedFeedPattern);
+            return Regex.IsMatch(feed, MaestroManagedFeedPattern);
         }
 
-        private XmlDocument UpdatePackageSources(XmlDocument nugetConfig, HashSet<string> managedFeeds)
+        private XmlDocument UpdatePackageSources(XmlDocument nugetConfig, HashSet<string> maestroManagedFeeds)
         {
-            var unmanagedSources = GetPackageSources(nugetConfig, f => !IsManagedFeed(f));
-            var allSources = GetManagedPackageSources(managedFeeds).OrderByDescending(t => t.feed).ToList();
+            var unmanagedSources = GetPackageSources(nugetConfig, f => !IsMaestroMagedFeed(f));
+            var allSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
 
             // Place unmanaged sources below the managed ones.
             allSources.AddRange(unmanagedSources);
@@ -532,7 +532,6 @@ namespace Microsoft.DotNet.DarcLib
                     }
                 }
             }
-
 
             // Update the global json too, even if there was an element in the props file, in case
             // it was listed in both
@@ -907,7 +906,7 @@ namespace Microsoft.DotNet.DarcLib
             XmlNodeList nodes = nugetConfig.SelectNodes("//configuration/packageSources/add");
             foreach (XmlNode node in nodes)
             {
-                if (node.NodeType != XmlNodeType.Comment && node.NodeType != XmlNodeType.Whitespace)
+                if (node.NodeType == XmlNodeType.Element)
                 {
                     var keyContent = node.Attributes["key"]?.Value;
                     var valueContent = node.Attributes["value"]?.Value;
@@ -930,7 +929,7 @@ namespace Microsoft.DotNet.DarcLib
 
             foreach (string feed in feeds)
             {
-                var parsedFeed = ParseManagedPackageFeed(feed);
+                var parsedFeed = ParseMaestroManagedFeed(feed);
 
                 string key = $"darc-{parsedFeed.repoName}-{parsedFeed.sha.Substring(0, 7)}";
                 if (!string.IsNullOrEmpty(parsedFeed.subVersion))
@@ -942,21 +941,22 @@ namespace Microsoft.DotNet.DarcLib
             return sources;
         }
 
-        private (string org, string repoName, string sha, string subVersion) ParseManagedPackageFeed(string feed)
+        private (string org, string repoName, string type, string sha, string subVersion) ParseMaestroManagedFeed(string feed)
         {
-            var match = Regex.Match(feed, ManagedFeedPattern);
+            var match = Regex.Match(feed, MaestroManagedFeedPattern);
             if (match.Success)
             {
                 string org = match.Groups[1].Value;
                 string repo = match.Groups[4].Value;
+                string type = match.Groups[3].Value;
                 string sha = match.Groups[5].Value;
                 string subVersion = match.Groups[6].Value;
-                return (org, repo, sha, subVersion);
+                return (org, repo, type, sha, subVersion);
             }
             else
             {
-                _logger.LogError($"Unable to parse feed { feed } as a darc managed feed");
-                throw new ArgumentException($"feed { feed } is not a valid darc managed feed");
+                _logger.LogError($"Unable to parse feed { feed } as a Maestro managed feed");
+                throw new ArgumentException($"feed { feed } is not a valid Maestro managed feed");
             }
         }
 

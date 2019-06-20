@@ -168,8 +168,11 @@ namespace SubscriptionActorService
             return builds.Select(b => ToClientModelBuild(b));
         }
 
-        public async Task<IEnumerable<Asset>> GetAssetsAsync(string name = null,
-            string version = null, int? buildId = null, bool? nonShipping = null)
+        public async Task<IEnumerable<Asset>> GetAssetsAsync(
+            string name = null,
+            string version = null,
+            int? buildId = null,
+            bool? nonShipping = null)
         {
             IQueryable<Maestro.Data.Models.Asset> assets = _context.Assets;
             if (name != null)
@@ -194,7 +197,6 @@ namespace SubscriptionActorService
                 .ToListAsync();
 
             return assetList.Select(a => ToClientModelAsset(a));
-
         }
 
         private AssetLocation ToClientAssetLocation(Maestro.Data.Models.AssetLocation other)
@@ -204,8 +206,13 @@ namespace SubscriptionActorService
 
         private Asset ToClientModelAsset(Maestro.Data.Models.Asset other)
         {
-            return new Asset(other.Id, other.BuildId, other.NonShipping,
-                other.Name, other.Version, other.Locations?.Select(l => ToClientAssetLocation(l)).ToImmutableList());
+            return new Asset(
+                other.Id,
+                other.BuildId,
+                other.NonShipping,
+                other.Name,
+                other.Version,
+                other.Locations?.Select(l => ToClientAssetLocation(l)).ToImmutableList());
         }
 
         private Build ToClientModelBuild(Maestro.Data.Models.Build other)

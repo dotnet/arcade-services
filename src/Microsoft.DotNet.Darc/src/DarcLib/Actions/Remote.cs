@@ -949,6 +949,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository to get dependencies from</param>
         /// <param name="branchOrCommit">Commit to get dependencies at</param>
         /// <param name="name">Optional name of specific dependency to get information on</param>
+        /// <param name="loadAssetLocations">Optional switch to include the asset locations</param>
         /// <returns>Matching dependency information.</returns>
         public async Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri,
                                                                               string branchOrCommit,
