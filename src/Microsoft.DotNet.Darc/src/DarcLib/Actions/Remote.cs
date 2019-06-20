@@ -968,7 +968,6 @@ namespace Microsoft.DotNet.DarcLib
             return dependencies;
         }
 
-
         /// <summary>
         ///     Clone a remote repo
         /// </summary>
