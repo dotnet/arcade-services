@@ -114,6 +114,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private bool IsStableBuild(BuildData finalBuild)
         {
+            // This regex will match strings that start with "digit.digit.digit-anything".
+            // Essentially it will match version strings that has a "-" separator on it.
+            // For instance, it will match "1.0.0-preview1" but won't match "1.0.0".
             Regex regex = new Regex("^[0-9].[0-9].[0-9]-.*$");
 
             return finalBuild.Assets
