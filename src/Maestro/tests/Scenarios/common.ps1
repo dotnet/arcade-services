@@ -177,47 +177,47 @@ function Darc-Command-Impl($darcParams) {
 
 # Run darc set-repository-policies
 function Darc-Set-Repository-Policies($repo, $branch, $policiesParams) {
-    $darcParams = "set-repository-policies -q --repo '$repo' --branch '$branch' $policiesParams"
+    $darcParams = "set-repository-policies -q --repo $repo --branch $branch $policiesParams"
     Darc-Command-Impl $darcParams
 }
 
 # Run darc get-repository-policies
 function Darc-Get-Repository-Policies($repo, $branch) {
-    $darcParams = "get-repository-policies --all --repo '$repo' --branch '$branch'"
+    $darcParams = "get-repository-policies --all --repo $repo --branch $branch"
     Darc-Command-Impl $darcParams
 }
 
 # Run darc add-channel and record the channel for later deletion
 function Darc-Add-Channel($channelName, $classification) {
-    $darcParams = "add-channel --name '$channelName' --classification '$classification'"
+    $darcParams = "add-channel --name $channelName --classification $classification"
     Darc-Command-Impl $darcParams
     $global:channelsToDelete += $channelName
 }
 
 function Darc-Delete-Channel($channelName) {
-    $darcParams = "delete-channel --name '$channelName'"
+    $darcParams = "delete-channel --name $channelName"
     Darc-Command-Impl $darcParams
 }
 
 # Run darc add-channel and record the channel for later deletion
 function Darc-Add-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "add-default-channel --channel '$channelName' --repo '$repoUri' --branch '$branch'"
+    $darcParams = "add-default-channel --channel $channelName --repo $repoUri --branch $branch"
     Darc-Command-Impl $darcParams
     $global:defaultChannelsToDelete += @{ channel = $channelName; repo = $repoUri; branch = $branch }
 }
 
 function Darc-Delete-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "delete-default-channel --channel '$channelName' --repo '$repoUri' --branch '$branch'"
+    $darcParams = "delete-default-channel --channel $channelName --repo $repoUri --branch $branch"
     Darc-Command-Impl $darcParams
 }
 
 function Darc-Enable-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "default-channel-status --channel '$channelName' --repo '$repoUri' --branch '$branch' --enable"
+    $darcParams = "default-channel-status --channel $channelName --repo $repoUri --branch $branch --enable"
     Darc-Command-Impl $darcParams
 }
 
 function Darc-Disable-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "default-channel-status --channel '$channelName' --repo '$repoUri' --branch '$branch' --disable"
+    $darcParams = "default-channel-status --channel $channelName --repo $repoUri --branch $branch --disable"
     Darc-Command-Impl $darcParams
 }
 
@@ -338,8 +338,8 @@ function Get-Repo-Location($repoName) {
 function Git-Command($repoName) {
     Push-Location -Path $(Get-Repo-Location($repoName))
     try {
-        $gitParams = $args.Split(" ")
-        Write-Host "Running '$baseGitCommand' from $(Get-Location)"
+        $gitParams = $args.ToString().Split(" ")
+        Write-Host "Running $baseGitCommand from $(Get-Location)"
         $commandOutput = & git @gitParams; if ($LASTEXITCODE -ne 0) { throw "Git exited with exit code: $LASTEXITCODE" } else { $commandOutput }
     }
     finally {
