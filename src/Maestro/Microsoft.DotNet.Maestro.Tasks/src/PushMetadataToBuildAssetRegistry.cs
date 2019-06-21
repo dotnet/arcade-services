@@ -97,10 +97,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                         var defaultChannelsStr = string.Join(",", defaultChannels.Select(x => x.Channel.Id));
 
-                        Console.WriteLine($"##vso[task.setvariable variable=BARBuildId;isOutput=true;]{recordedBuild.Id}");
-                        Console.WriteLine($"##vso[task.setvariable variable=DefaultChannels;isOutput=true;]{defaultChannelsStr}");
-                        Console.WriteLine($"##vso[task.setvariable variable=IsStableBuild;isOutput=true;]{IsStableBuild(finalBuild)}");
-                        Console.WriteLine($"##vso[task.setvariable variable=IsInternalBuild;isOutput=true;]{recordedBuild.GitHubRepository == null && recordedBuild.GitHubBranch == null}");
+                        Console.WriteLine($"##vso[task.setvariable variable=BARBuildId]{recordedBuild.Id}");
+                        Console.WriteLine($"##vso[task.setvariable variable=DefaultChannels]{defaultChannelsStr}");
+                        Console.WriteLine($"##vso[task.setvariable variable=IsStableBuild]{IsStableBuild(finalBuild)}");
+                        Console.WriteLine($"##vso[task.setvariable variable=IsInternalBuild]{recordedBuild.GitHubRepository == null && recordedBuild.GitHubBranch == null}");
                     }
                 }
             }
