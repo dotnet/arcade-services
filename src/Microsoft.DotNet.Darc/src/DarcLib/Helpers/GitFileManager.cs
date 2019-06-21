@@ -260,7 +260,6 @@ namespace Microsoft.DotNet.DarcLib
             var unmanagedSources = GetPackageSources(nugetConfig, f => !IsMaestroMagedFeed(f));
             var managedSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
 
-
             // Reconstruct the PackageSources section with the feeds
             XmlNode packageSourcesNode = nugetConfig.SelectSingleNode("//configuration/packageSources");
             if (packageSourcesNode == null)
@@ -274,7 +273,6 @@ namespace Microsoft.DotNet.DarcLib
             packageSourcesNode.AppendChild(nugetConfig.CreateComment(
                 "Begin: Package sources managed by Dependency Flow automation. Do not edit the sources below."));
             AppendToPackageSources(nugetConfig, packageSourcesNode, managedSources);
-
             packageSourcesNode.AppendChild(nugetConfig.CreateComment(
                 "End: Package sources managed by Dependency Flow automation. Do not edit the sources above."));
 
