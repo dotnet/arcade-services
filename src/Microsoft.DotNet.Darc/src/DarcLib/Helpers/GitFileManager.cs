@@ -258,10 +258,8 @@ namespace Microsoft.DotNet.DarcLib
         private XmlDocument UpdatePackageSources(XmlDocument nugetConfig, HashSet<string> maestroManagedFeeds)
         {
             var unmanagedSources = GetPackageSources(nugetConfig, f => !IsMaestroMagedFeed(f));
-            var allSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
+            var managedSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
 
-            // Place unmanaged sources below the managed ones.
-            allSources.AddRange(unmanagedSources);
 
             // Reconstruct the PackageSources section with the feeds
             XmlNode packageSourcesNode = nugetConfig.SelectSingleNode("//configuration/packageSources");
@@ -273,13 +271,26 @@ namespace Microsoft.DotNet.DarcLib
             packageSourcesNode.RemoveAll();
             SetElement(nugetConfig, packageSourcesNode, "clear");
 
-            foreach ((string key, string feed) in allSources)
+            packageSourcesNode.AppendChild(nugetConfig.CreateComment(
+                "Begin: Package sources managed by Dependency Flow automation. Do not edit the sources below."));
+            AppendToPackageSources(nugetConfig, packageSourcesNode, managedSources);
+
+            packageSourcesNode.AppendChild(nugetConfig.CreateComment(
+                "End: Package sources managed by Dependency Flow automation. Do not edit the sources above."));
+
+            AppendToPackageSources(nugetConfig, packageSourcesNode, unmanagedSources);
+
+            return nugetConfig;
+        }
+
+        private static void AppendToPackageSources(XmlDocument nugetConfig, XmlNode packageSourcesNode, List<(string key, string feed)> sources)
+        {
+            foreach ((string key, string feed) in sources)
             {
                 XmlNode addNode = SetElement(nugetConfig, packageSourcesNode, VersionFiles.AddElement, replace: false);
                 SetAttribute(nugetConfig, addNode, VersionFiles.KeyAttributeName, key);
                 SetAttribute(nugetConfig, addNode, VersionFiles.ValueAttributeName, feed);
             }
-            return nugetConfig;
         }
 
         public async Task AddDependencyToVersionDetailsAsync(
