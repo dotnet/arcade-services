@@ -14,13 +14,16 @@ namespace Microsoft.DotNet.DarcLib
 
         public GitFile GlobalJson { get; set; }
 
+        public GitFile NugetConfig { get; set; }
+
         public List<GitFile> GetFilesToCommit()
         {
             var gitHubCommitsMap = new List<GitFile>
             {
                 VersionDetailsXml,
                 VersionProps,
-                GlobalJson
+                GlobalJson,
+                NugetConfig
             };
 
             return gitHubCommitsMap;

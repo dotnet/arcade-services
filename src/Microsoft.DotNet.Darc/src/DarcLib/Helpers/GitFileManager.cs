@@ -2,12 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 
@@ -17,6 +21,11 @@ namespace Microsoft.DotNet.DarcLib
     {
         private readonly IGitRepo _gitClient;
         private readonly ILogger _logger;
+
+        // Matches package feeds like
+        // https://dnceng.pkgs.visualstudio.com/public/_packaging/darc-pub-arcade-fd8184c3fcde81eb27ca4c061c6e171f418d753f-1
+        private const string MaestroManagedFeedPattern =
+            @"https://(\w+).pkgs.visualstudio.com/(public/){0,1}_packaging/darc-(int|pub)-(.+?)-([A-Fa-f0-9]{40})-?(\d*)";
 
         public GitFileManager(IGitRepo gitRepo, ILogger logger)
         {
@@ -57,6 +66,16 @@ namespace Microsoft.DotNet.DarcLib
             return JObject.Parse(fileContent);
         }
 
+        public XmlDocument ReadNugetConfigAsync(string fileContent)
+        {
+            return ReadXmlFile(fileContent);
+        }
+
+        public async Task<XmlDocument> ReadNugetConfigAsync(string repoUri, string branch)
+        {
+            return await ReadXmlFileAsync(VersionFiles.NugetConfig, repoUri, branch);
+        }
+
         public IEnumerable<DependencyDetail> ParseVersionDetailsXml(string fileContents, bool includePinned = true)
         {
             _logger.LogInformation($"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}'...");
@@ -80,7 +99,6 @@ namespace Microsoft.DotNet.DarcLib
                     $"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}' in repo '{repoUri}'...");
             }
 
-            var dependencyDetails = new List<DependencyDetail>();
             XmlDocument document = await ReadVersionDetailsXmlAsync(repoUri, branch);
 
             return GetDependencyDetails(document, includePinned: includePinned);
@@ -131,25 +149,31 @@ namespace Microsoft.DotNet.DarcLib
             attribute.Value = value;
         }
 
-        private static void SetElement(XmlDocument document, XmlNode node, string name, string value)
+        private static XmlNode SetElement(XmlDocument document, XmlNode node, string name, string value = null, bool replace = true)
         {
             XmlNode element = node.SelectSingleNode(name);
-            if (element == null)
+            if (element == null || !replace)
             {
                 element = node.AppendChild(document.CreateElement(name));
             }
 
-            element.InnerText = value;
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                element.InnerText = value;
+            }
+            return element;
         }
 
         public async Task<GitFileContentContainer> UpdateDependencyFiles(
             IEnumerable<DependencyDetail> itemsToUpdate,
             string repoUri,
-            string branch)
+            string branch,
+            IEnumerable<DependencyDetail> oldDependencies = null)
         {
             XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
             XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch);
             JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch);
+            XmlDocument nugetConfig = await ReadNugetConfigAsync(repoUri, branch);
 
             foreach (DependencyDetail itemToUpdate in itemsToUpdate)
             {
@@ -194,14 +218,77 @@ namespace Microsoft.DotNet.DarcLib
                 UpdateVersionFiles(versionProps, globalJson, itemToUpdate);
             }
 
+            // Combine the two sets of dependencies. If an asset is present in the itemsToUpdate,
+            // prefer that one over the old dependencies
+            Dictionary<string, HashSet<string>> itemsToUpdateLocations = GetAssetLocationMapping(itemsToUpdate);
+
+            if (oldDependencies != null)
+            {
+                foreach (DependencyDetail dependency in oldDependencies)
+                {
+                    if (!itemsToUpdateLocations.ContainsKey(dependency.Name) && dependency.Locations != null)
+                    {
+                        itemsToUpdateLocations.Add(dependency.Name, new HashSet<string>(dependency.Locations));
+                    }
+                }
+            }
+
+            // At this point we only care about the Maestro managed locations for the assets. 
+            // Flatten the dictionary into a set that has all the managed feeds
+            HashSet<string> managedFeeds = FlattenLocations(itemsToUpdateLocations, IsMaestroMagedFeed);
+
+            var updatedNugetConfig = UpdatePackageSources(nugetConfig, managedFeeds);
+
             var fileContainer = new GitFileContentContainer
             {
                 GlobalJson = new GitFile(VersionFiles.GlobalJson, globalJson),
                 VersionDetailsXml = new GitFile(VersionFiles.VersionDetailsXml, versionDetails),
-                VersionProps = new GitFile(VersionFiles.VersionProps, versionProps)
+                VersionProps = new GitFile(VersionFiles.VersionProps, versionProps),
+                NugetConfig = new GitFile(VersionFiles.NugetConfig, updatedNugetConfig)
             };
 
             return fileContainer;
+        }
+
+        private bool IsMaestroMagedFeed(string feed)
+        {
+            return Regex.IsMatch(feed, MaestroManagedFeedPattern);
+        }
+
+        private XmlDocument UpdatePackageSources(XmlDocument nugetConfig, HashSet<string> maestroManagedFeeds)
+        {
+            var unmanagedSources = GetPackageSources(nugetConfig, f => !IsMaestroMagedFeed(f));
+            var managedSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
+
+            // Reconstruct the PackageSources section with the feeds
+            XmlNode packageSourcesNode = nugetConfig.SelectSingleNode("//configuration/packageSources");
+            if (packageSourcesNode == null)
+            {
+                _logger.LogError("Did not find a <packageSources> element in NuGet.config");
+                return nugetConfig;
+            }
+            packageSourcesNode.RemoveAll();
+            SetElement(nugetConfig, packageSourcesNode, "clear");
+
+            packageSourcesNode.AppendChild(nugetConfig.CreateComment(
+                "Begin: Package sources managed by Dependency Flow automation. Do not edit the sources below."));
+            AppendToPackageSources(nugetConfig, packageSourcesNode, managedSources);
+            packageSourcesNode.AppendChild(nugetConfig.CreateComment(
+                "End: Package sources managed by Dependency Flow automation. Do not edit the sources above."));
+
+            AppendToPackageSources(nugetConfig, packageSourcesNode, unmanagedSources);
+
+            return nugetConfig;
+        }
+
+        private static void AppendToPackageSources(XmlDocument nugetConfig, XmlNode packageSourcesNode, List<(string key, string feed)> sources)
+        {
+            foreach ((string key, string feed) in sources)
+            {
+                XmlNode addNode = SetElement(nugetConfig, packageSourcesNode, VersionFiles.AddElement, replace: false);
+                SetAttribute(nugetConfig, addNode, VersionFiles.KeyAttributeName, key);
+                SetAttribute(nugetConfig, addNode, VersionFiles.ValueAttributeName, feed);
+            }
         }
 
         public async Task AddDependencyToVersionDetailsAsync(
@@ -734,7 +821,7 @@ namespace Microsoft.DotNet.DarcLib
             return Task.FromResult(result);
         }
 
-        private IEnumerable<DependencyDetail> GetDependencyDetails(XmlDocument document, string branch = null, bool includePinned = true)
+        private IEnumerable<DependencyDetail> GetDependencyDetails(XmlDocument document, bool includePinned = true)
         {
             List<DependencyDetail> dependencyDetails = new List<DependencyDetail>();
 
@@ -805,6 +892,98 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             return dependencyDetails.Where(d => !d.Pinned);
+        }
+
+        private HashSet<string> FlattenLocations(Dictionary<string, HashSet<string>> assetLocationMap, Func<string, bool> filter = null)
+        {
+            HashSet<string> managedFeeds = new HashSet<string>();
+
+            foreach (HashSet<string> locations in assetLocationMap.Values)
+            {
+                IEnumerable<string> filteredLocations = filter != null ?
+                    locations.Where(filter) :
+                    locations;
+
+                managedFeeds.UnionWith(filteredLocations);
+            }
+            return managedFeeds;
+        }
+
+        private List<(string key, string feed)> GetPackageSources(XmlDocument nugetConfig, Func<string, bool> filter = null)
+        {
+            var sources = new List<(string key, string feed)>();
+            XmlNodeList nodes = nugetConfig.SelectNodes("//configuration/packageSources/add");
+            foreach (XmlNode node in nodes)
+            {
+                if (node.NodeType == XmlNodeType.Element)
+                {
+                    var keyContent = node.Attributes["key"]?.Value;
+                    var valueContent = node.Attributes["value"]?.Value;
+                    if (keyContent != null && valueContent != null)
+                    {
+                        if (filter != null && !filter(valueContent))
+                        {
+                            continue;
+                        }
+                        sources.Add((keyContent, valueContent));
+                    }
+                }
+            }
+            return sources;
+        }
+
+        private List<(string key, string feed)> GetManagedPackageSources(HashSet<string> feeds)
+        {
+            var sources = new List<(string key, string feed)>();
+
+            foreach (string feed in feeds)
+            {
+                var parsedFeed = ParseMaestroManagedFeed(feed);
+
+                string key = $"darc-{parsedFeed.type}-{parsedFeed.repoName}-{parsedFeed.sha.Substring(0, 7)}";
+                if (!string.IsNullOrEmpty(parsedFeed.subVersion))
+                {
+                    key += "-" + parsedFeed.subVersion;
+                }
+                sources.Add((key, feed));
+            }
+            return sources;
+        }
+
+        private (string org, string repoName, string type, string sha, string subVersion) ParseMaestroManagedFeed(string feed)
+        {
+            var match = Regex.Match(feed, MaestroManagedFeedPattern);
+            if (match.Success)
+            {
+                string org = match.Groups[1].Value;
+                string repo = match.Groups[4].Value;
+                string type = match.Groups[3].Value;
+                string sha = match.Groups[5].Value;
+                string subVersion = match.Groups[6].Value;
+                return (org, repo, type, sha, subVersion);
+            }
+            else
+            {
+                _logger.LogError($"Unable to parse feed { feed } as a Maestro managed feed");
+                throw new ArgumentException($"feed { feed } is not a valid Maestro managed feed");
+            }
+        }
+
+        private Dictionary<string, HashSet<string>> GetAssetLocationMapping(IEnumerable<DependencyDetail> dependencies)
+        {
+            var assetLocationMappings = new Dictionary<string, HashSet<string>>();
+
+            foreach (var dependency in dependencies)
+            {
+                if (!assetLocationMappings.ContainsKey(dependency.Name))
+                {
+                    assetLocationMappings[dependency.Name] = new HashSet<string>();
+                }
+
+                assetLocationMappings[dependency.Name].UnionWith(dependency.Locations ?? Enumerable.Empty<string>());
+            }
+
+            return assetLocationMappings;
         }
     }
 }
