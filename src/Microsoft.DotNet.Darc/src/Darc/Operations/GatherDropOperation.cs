@@ -682,52 +682,20 @@ namespace Microsoft.DotNet.Darc.Operations
                     errors.Add($"Asset '{assetNameAndVersion}' has no known location information.");
                 }
             }
-            
-            if (assetLocations.Count != 0)
+            else
             {
-                string subPath = Path.Combine(rootOutputDirectory, asset.NonShipping ? nonShippingSubPath : shippingSubPath);
-
-                // Walk the locations and attempt to gather the asset at each one, setting the output
-                // path based on the type.
-                foreach (AssetLocation location in assetLocations)
+                if (_options.LatestLocation)
                 {
-                    var locationType = location.Type;
+                    downloadedAsset = await DownloadAssetFromLatestLocation(client, build, asset, assetLocations, rootOutputDirectory, errors);
+                }
+                else
+                {
+                    downloadedAsset = await DownloadAssetFromAnyLocationAsync(client, build, asset, assetLocations, rootOutputDirectory, errors);
+                }
 
-                    // Make sure the location type ends up correct. Currently in some cases,
-                    // we end up with 'none' or a symbol package ends up with nuget feed.
-                    // Generally we can make an assumption that if the path doesn't have a
-                    // '/' then it's a package.  Nuget packages also don't have '.nupkg' suffix
-                    // (they are just the package name).
-                    if (!_options.NoWorkarounds)
-                    {
-                        if (!asset.Name.Contains("/") && !asset.Name.Contains(".nupkg"))
-                        {
-                            locationType = LocationType.NugetFeed;
-                        }
-                        else
-                        {
-                            locationType = LocationType.Container;
-                        }
-                    }
-
-                    switch (locationType)
-                    {
-                        case LocationType.NugetFeed:
-                            downloadedAsset = await DownloadNugetPackageAsync(client, build, asset, location, subPath, errors);
-                            break;
-                        case LocationType.Container:
-                            downloadedAsset = await DownloadBlobAsync(client, build, asset, location, subPath, errors);
-                            break;
-                        case LocationType.None:
-                        default:
-                            errors.Add($"Unexpected location type {locationType}");
-                            break;
-                    }
-
-                    if (downloadedAsset.Successful)
-                    {
-                        return downloadedAsset;
-                    }
+                if (downloadedAsset.Successful)
+                {
+                    return downloadedAsset;
                 }
             }
 
@@ -743,6 +711,112 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
+        /// Download a single asset from any of its locations. Iterate over the asset's locations
+        /// until the asset download succeed or all locations have been tested.
+        /// </summary>
+        private async Task<DownloadedAsset> DownloadAssetFromAnyLocationAsync(HttpClient client,
+                                                                            Build build, 
+                                                                            Asset asset, 
+                                                                            List<AssetLocation> assetLocations, 
+                                                                            string rootOutputDirectory, 
+                                                                            List<string> errors)
+        {
+            // Walk the locations and attempt to gather the asset at each one, setting the output
+            // path based on the type. Stops at the first successfull download.
+            foreach (AssetLocation location in assetLocations)
+            {
+                var downloadedAsset = await DownloadAssetFromLocation(client,
+                    build,
+                    asset,
+                    location,
+                    rootOutputDirectory,
+                    errors);
+
+                if (downloadedAsset.Successful)
+                {
+                    return downloadedAsset;
+                }
+            }
+
+            return new DownloadedAsset()
+            {
+                Successful = false,
+                Asset = asset
+            };
+        }
+
+        /// <summary>
+        /// Download a single asset from the latest asset location registered.
+        /// </summary>
+        private async Task<DownloadedAsset> DownloadAssetFromLatestLocation(HttpClient client,
+                                                                            Build build,
+                                                                            Asset asset,
+                                                                            List<AssetLocation> assetLocations,
+                                                                            string rootOutputDirectory,
+                                                                            List<string> errors)
+        {
+            AssetLocation latestLocation = assetLocations.OrderByDescending(al => al.Id).First();
+
+            return await DownloadAssetFromLocation(client, 
+                build, 
+                asset, 
+                latestLocation, 
+                rootOutputDirectory, 
+                errors);
+        }
+
+        /// <summary>
+        /// Download an asset from the asset location provided.
+        /// </summary>
+        private async Task<DownloadedAsset> DownloadAssetFromLocation(HttpClient client,
+                                                                            Build build,
+                                                                            Asset asset,
+                                                                            AssetLocation location,
+                                                                            string rootOutputDirectory,
+                                                                            List<string> errors)
+        {
+            var subPath = Path.Combine(rootOutputDirectory, asset.NonShipping ? nonShippingSubPath : shippingSubPath);
+
+            var locationType = location.Type;
+
+            // Make sure the location type ends up correct. Currently in some cases,
+            // we end up with 'none' or a symbol package ends up with nuget feed.
+            // Generally we can make an assumption that if the path doesn't have a
+            // '/' then it's a package.  Nuget packages also don't have '.nupkg' suffix
+            // (they are just the package name).
+            if (!_options.NoWorkarounds)
+            {
+                if (!asset.Name.Contains("/") && !asset.Name.Contains(".nupkg"))
+                {
+                    locationType = LocationType.NugetFeed;
+                }
+                else
+                {
+                    locationType = LocationType.Container;
+                }
+            }
+
+            switch (locationType)
+            {
+                case LocationType.NugetFeed:
+                    return await DownloadNugetPackageAsync(client, build, asset, location, subPath, errors);
+                case LocationType.Container:
+                    return await DownloadBlobAsync(client, build, asset, location, subPath, errors);
+                case LocationType.None:
+                default:
+                    errors.Add($"Unexpected location type {locationType}");
+                    break;
+            }
+
+            return new DownloadedAsset()
+            {
+                Successful = false,
+                Asset = asset
+            };
+        }
+
+
+        /// <summary>
         ///     Download a nuget package.
         /// </summary>
         /// <param name="client">Http client for use in downloading</param>
@@ -751,11 +825,11 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="subPath">Root path to download file to.</param>
         /// <returns>True if package could be downloaded, false otherwise.</returns>
         private async Task<DownloadedAsset> DownloadNugetPackageAsync(HttpClient client,
-                                                                      Build build,
-                                                                      Asset asset,
-                                                                      AssetLocation assetLocation,
-                                                                      string subPath,
-                                                                      List<string> errors)
+                                                                    Build build,
+                                                                    Asset asset,
+                                                                    AssetLocation assetLocation,
+                                                                    string subPath,
+                                                                    List<string> errors)
         {
             // Attempt to figure out how to download this. If the location is a blob storage account, then
             // strip off index.json, append 'flatcontainer', the asset name (lower case), then the version,

@@ -85,7 +85,7 @@ namespace SubscriptionActorService.Tests
             DarcRemotes[TargetRepo]
                 .Verify(r => r.GetRequiredNonCoherencyUpdatesAsync(SourceRepo, NewCommit, Capture.In(assets), Capture.In(dependencies)));
             DarcRemotes[TargetRepo]
-                .Verify(r => r.GetDependenciesAsync(TargetRepo, TargetBranch, null));
+                .Verify(r => r.GetDependenciesAsync(TargetRepo, TargetBranch, null, false));
             DarcRemotes[TargetRepo]
                 .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object));
             assets.Should()

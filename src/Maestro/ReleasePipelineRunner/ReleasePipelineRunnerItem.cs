@@ -14,5 +14,8 @@ namespace ReleasePipelineRunner
 
         [DataMember]
         public int ChannelId { get; set; }
+
+        [DataMember]
+        public int NumberOfRetriesMade { get; set; }
     }
 }

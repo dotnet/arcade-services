@@ -60,12 +60,13 @@ try {
     Write-Host "Adding a subscription from $source2RepoName to $targetRepoName"
     $subscription2Id = Darc-Add-Subscription --channel $testChannelName --source-repo $source2RepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch --batchable
 
-    Write-Host "Set up build2 for intake into target repository"
+    Write-Host "Set up build1 for intake into target repository"
     # Create a build for the first source repo
     $build1Id = New-Build -repository $source1RepoUri -branch $sourceBranch -commit $sourceCommit -buildNumber $sourceBuildNumber -assets $source1Assets
     # Add the build to the target channel
     Add-Build-To-Channel $build1Id $testChannelName
 
+    Write-Host "Set up build2 for intake into target repository"
     # Create a build for the second  source repo
     $build2Id = New-Build -repository $source2RepoUri -branch $sourceBranch -commit $sourceCommit -buildNumber $sourceBuildNumber -assets $source2Assets
     # Add the build to the target channel

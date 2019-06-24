@@ -243,8 +243,9 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository to get dependencies from</param>
         /// <param name="branchOrCommit">Commit to get dependencies at</param>
         /// <param name="name">Optional name of specific dependency to get information on</param>
+        /// <param name="loadLocations">Optional switch to populate dependency locations from BAR</param>
         /// <returns>Matching dependency information.</returns>
-        Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri, string branchOrCommit, string name = null);
+        Task<IEnumerable<DependencyDetail>> GetDependenciesAsync(string repoUri, string branchOrCommit, string name = null, bool loadLocations = false);
 
         /// <summary>
         ///     Given a repo and branch, determine what updates are required to satisfy

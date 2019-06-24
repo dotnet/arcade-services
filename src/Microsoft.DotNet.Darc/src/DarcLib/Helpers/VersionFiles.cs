@@ -25,6 +25,10 @@ namespace Microsoft.DotNet.DarcLib
         public const string VersionAttributeName = "Version";
         public const string CoherentParentAttributeName = "CoherentParentDependency";
         public const string PinnedAttributeName = "Pinned";
+        public const string NugetConfig = "NuGet.config";
+        public const string AddElement = "add";
+        public const string KeyAttributeName = "key";
+        public const string ValueAttributeName = "value";
 
         private static string GetVersionPropsElementBaseName(string dependencyName)
         {
