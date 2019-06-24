@@ -164,7 +164,9 @@ function Darc-Command() {
 }
 
 function Darc-Command-Impl($darcParams) {
-    $darcParams = $darcParams.Split(" ")
+    if ($darcParams.GetType().Name -ne "Object[]") {
+        $darcParams = $darcParams.ToString().Split(" ")
+    }
     Write-Host "Running 'darc $darcParams $darcAuthParams'"
     $commandOutput = & $darcTool @darcParams @darcAuthParams
     if ($LASTEXITCODE -ne 0) {
