@@ -139,7 +139,8 @@ namespace ReleasePipelineRunner
 
         private async Task HandleCompletedBuild(ReleasePipelineRunnerItem item, AzureDevOpsBuild azdoBuild, CancellationToken cancellationToken)
         {
-            if (azdoBuild.Result.Equals("succeeded", StringComparison.OrdinalIgnoreCase))
+            if (azdoBuild.Result.Equals("succeeded", StringComparison.OrdinalIgnoreCase) ||
+                azdoBuild.Result.Equals("partiallySucceeded", StringComparison.OrdinalIgnoreCase))
             {
                 using (Logger.BeginScope(
                     $"Triggering release pipelines associated with channel {item.ChannelId} for build {item.BuildId}.",

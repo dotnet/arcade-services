@@ -14,5 +14,8 @@ namespace Maestro.Contracts
 
         [DataMember]
         public string Version { get; set; }
+
+        [DataMember]
+        public string[] Locations { get; set; }
     }
 }

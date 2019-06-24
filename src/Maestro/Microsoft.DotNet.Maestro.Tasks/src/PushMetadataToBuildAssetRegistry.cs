@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
@@ -96,8 +97,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                         var defaultChannelsStr = string.Join(",", defaultChannels.Select(x => x.Channel.Id));
 
-                        Console.WriteLine($"##vso[task.setvariable variable=BARBuildId;]{recordedBuild.Id}");
-                        Console.WriteLine($"##vso[task.setvariable variable=DefaultChannels;]{defaultChannelsStr}");
+                        Console.WriteLine($"##vso[task.setvariable variable=BARBuildId]{recordedBuild.Id}");
+                        Console.WriteLine($"##vso[task.setvariable variable=DefaultChannels]{defaultChannelsStr}");
+                        Console.WriteLine($"##vso[task.setvariable variable=IsStableBuild]{IsStableBuild(finalBuild)}");
+                        Console.WriteLine($"##vso[task.setvariable variable=IsInternalBuild]{recordedBuild.GitHubRepository == null && recordedBuild.GitHubBranch == null}");
                     }
                 }
             }
@@ -107,6 +110,17 @@ namespace Microsoft.DotNet.Maestro.Tasks
             }
 
             return !Log.HasLoggedErrors;
+        }
+
+        private bool IsStableBuild(BuildData finalBuild)
+        {
+            // This regex will match strings that start with "digit.digit.digit-anything".
+            // Essentially it will match version strings that has a "-" separator on it.
+            // For instance, it will match "1.0.0-preview1" but won't match "1.0.0".
+            Regex regex = new Regex("^[0-9].[0-9].[0-9]-.*$");
+
+            return finalBuild.Assets
+                .All(ad => !regex.Match(ad.Version).Success);
         }
 
         private async Task<IImmutableList<BuildRef>> GetBuildDependenciesAsync(
