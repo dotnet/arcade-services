@@ -60,7 +60,7 @@ try {
     $defaultChannelsToDelete += @{ channel = $testChannelName; repo = $sourceRepoUri; branch = $sourceBranch }
 
     Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
-    $subscriptionId = Darc-Add-Subscription --channel `'$testChannelName`' --source-repo $sourceRepoUri --target-repo $targetRepoUri --update-frequency everyBuild --target-branch $targetBranch
+    $subscriptionId = Darc-Add-Subscription --channel $testChannelName --source-repo $sourceRepoUri --target-repo $targetRepoUri --update-frequency everyBuild --target-branch $targetBranch
     $subscriptionsToDelete += $subscriptionId
 
     Write-Host "Cloning target repo to prepare the target branch"
@@ -89,7 +89,7 @@ try {
     $buildId = New-Build -repository $sourceRepoUri -branch $sourceBranch -commit $sourceCommit -buildNumber $sourceBuildNumber -assets $assets "true"
     Write-Host "Created build: $buildId"
 
-    # Release Pipeline will run, and if it finishes, add the build to the channel. 
+    # Release Pipeline will run, and if it finishes, add the build to the channel.
     # This will trigger the dependency update. If we don't see the PR created after 10 attempts
     # and the build is not in the channel, fail the test
 

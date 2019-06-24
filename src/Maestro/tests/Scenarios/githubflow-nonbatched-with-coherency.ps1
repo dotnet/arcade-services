@@ -65,7 +65,7 @@ try {
     Darc-Add-Channel $testChannelName "test"
 
     Write-Host "Adding a subscription from $parentSourceRepoName to $targetRepoName"
-    $subscriptionId = Darc-Add-Subscription --channel `'$testChannelName`' --source-repo $parentSourceRepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch
+    $subscriptionId = Darc-Add-Subscription --channel $testChannelName --source-repo $parentSourceRepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch
 
     Write-Host "Set up new builds for intake into target repository"
     # Create a build for the parent source repo.
