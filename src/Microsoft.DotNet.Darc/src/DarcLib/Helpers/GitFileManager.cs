@@ -235,7 +235,7 @@ namespace Microsoft.DotNet.DarcLib
 
             // At this point we only care about the Maestro managed locations for the assets. 
             // Flatten the dictionary into a set that has all the managed feeds
-            HashSet<string> managedFeeds = FlattenLocations(itemsToUpdateLocations, IsMaestroMagedFeed);
+            HashSet<string> managedFeeds = FlattenLocations(itemsToUpdateLocations, IsMaestroManagedFeed);
 
             var updatedNugetConfig = UpdatePackageSources(nugetConfig, managedFeeds);
 
@@ -250,15 +250,13 @@ namespace Microsoft.DotNet.DarcLib
             return fileContainer;
         }
 
-        private bool IsMaestroMagedFeed(string feed)
+        private bool IsMaestroManagedFeed(string feed)
         {
             return Regex.IsMatch(feed, MaestroManagedFeedPattern);
         }
 
         private XmlDocument UpdatePackageSources(XmlDocument nugetConfig, HashSet<string> maestroManagedFeeds)
         {
-            var unmanagedSources = GetPackageSources(nugetConfig, f => !IsMaestroMagedFeed(f));
-            var managedSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
 
             // Reconstruct the PackageSources section with the feeds
             XmlNode packageSourcesNode = nugetConfig.SelectSingleNode("//configuration/packageSources");
@@ -270,12 +268,18 @@ namespace Microsoft.DotNet.DarcLib
             packageSourcesNode.RemoveAll();
             SetElement(nugetConfig, packageSourcesNode, "clear");
 
-            packageSourcesNode.AppendChild(nugetConfig.CreateComment(
-                "Begin: Package sources managed by Dependency Flow automation. Do not edit the sources below."));
-            AppendToPackageSources(nugetConfig, packageSourcesNode, managedSources);
-            packageSourcesNode.AppendChild(nugetConfig.CreateComment(
-                "End: Package sources managed by Dependency Flow automation. Do not edit the sources above."));
+            // Maestro managed sources should go first if there are any.
+            if (maestroManagedFeeds.Count > 0)
+            {
+                packageSourcesNode.AppendChild(nugetConfig.CreateComment(
+                    "Begin: Package sources managed by Dependency Flow automation. Do not edit the sources below."));
+                var managedSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
+                AppendToPackageSources(nugetConfig, packageSourcesNode, managedSources);
+                packageSourcesNode.AppendChild(nugetConfig.CreateComment(
+                    "End: Package sources managed by Dependency Flow automation. Do not edit the sources above."));
+            }
 
+            var unmanagedSources = GetPackageSources(nugetConfig, f => !IsMaestroManagedFeed(f));
             AppendToPackageSources(nugetConfig, packageSourcesNode, unmanagedSources);
 
             return nugetConfig;
