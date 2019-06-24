@@ -264,6 +264,8 @@ namespace Microsoft.DotNet.DarcLib
                 _logger.LogError("Did not find a <packageSources> element in NuGet.config");
                 return nugetConfig;
             }
+            var unmanagedSources = GetPackageSources(nugetConfig, f => !IsMaestroManagedFeed(f));
+            var managedSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
             packageSourcesNode.RemoveAll();
             SetElement(nugetConfig, packageSourcesNode, "clear");
 
@@ -272,13 +274,12 @@ namespace Microsoft.DotNet.DarcLib
             {
                 packageSourcesNode.AppendChild(nugetConfig.CreateComment(
                     "Begin: Package sources managed by Dependency Flow automation. Do not edit the sources below."));
-                var managedSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
                 AppendToPackageSources(nugetConfig, packageSourcesNode, managedSources);
                 packageSourcesNode.AppendChild(nugetConfig.CreateComment(
                     "End: Package sources managed by Dependency Flow automation. Do not edit the sources above."));
             }
 
-            var unmanagedSources = GetPackageSources(nugetConfig, f => !IsMaestroManagedFeed(f));
+            
             AppendToPackageSources(nugetConfig, packageSourcesNode, unmanagedSources);
 
             return nugetConfig;
