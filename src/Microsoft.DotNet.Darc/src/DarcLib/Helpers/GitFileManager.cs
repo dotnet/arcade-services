@@ -25,7 +25,7 @@ namespace Microsoft.DotNet.DarcLib
         // Matches package feeds like
         // https://dnceng.pkgs.visualstudio.com/public/_packaging/darc-pub-arcade-fd8184c3fcde81eb27ca4c061c6e171f418d753f-1
         private const string MaestroManagedFeedPattern =
-            @"https://(\w+).pkgs.visualstudio.com/(public/){0,1}_packaging/darc-(int|pub)-(.+?)-([A-Fa-f0-9]{40})-?(\d*)";
+            @"https://(\w+).pkgs.visualstudio.com/(public/){0,1}_packaging/darc-(int|pub)-(.+?)-([A-Fa-f0-9]{40})-?(\d*)/nuget/v3/index.json";
 
         public GitFileManager(IGitRepo gitRepo, ILogger logger)
         {
