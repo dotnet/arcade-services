@@ -279,7 +279,6 @@ namespace Microsoft.DotNet.DarcLib
                     "End: Package sources managed by Dependency Flow automation. Do not edit the sources above."));
             }
 
-            
             AppendToPackageSources(nugetConfig, packageSourcesNode, unmanagedSources);
 
             return nugetConfig;
