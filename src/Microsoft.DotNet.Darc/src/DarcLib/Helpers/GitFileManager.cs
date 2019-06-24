@@ -257,7 +257,6 @@ namespace Microsoft.DotNet.DarcLib
 
         private XmlDocument UpdatePackageSources(XmlDocument nugetConfig, HashSet<string> maestroManagedFeeds)
         {
-
             // Reconstruct the PackageSources section with the feeds
             XmlNode packageSourcesNode = nugetConfig.SelectSingleNode("//configuration/packageSources");
             if (packageSourcesNode == null)
