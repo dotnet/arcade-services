@@ -83,7 +83,7 @@ namespace Maestro.Web
                 Build build = context.Builds
                     .Include(b => b.Assets)
                     .ThenInclude(a => a.Locations)
-                    .Where(b => b.Id == entity.BuildId).FirstOrDefault();
+                    .FirstOrDefault(b => b.Id == entity.BuildId);
 
                 if (build == null)
                 {
