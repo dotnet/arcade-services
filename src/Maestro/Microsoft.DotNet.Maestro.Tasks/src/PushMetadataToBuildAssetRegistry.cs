@@ -100,7 +100,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         Console.WriteLine($"##vso[task.setvariable variable=BARBuildId]{recordedBuild.Id}");
                         Console.WriteLine($"##vso[task.setvariable variable=DefaultChannels]{defaultChannelsStr}");
                         Console.WriteLine($"##vso[task.setvariable variable=IsStableBuild]{IsStableBuild(finalBuild)}");
-                        Console.WriteLine($"##vso[task.setvariable variable=IsInternalBuild]{recordedBuild.GitHubRepository == null && recordedBuild.GitHubBranch == null}");
                     }
                 }
             }
