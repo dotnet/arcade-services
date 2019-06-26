@@ -76,12 +76,37 @@ namespace Maestro.Web
 
             Triggers<BuildChannel>.Inserted += entry =>
             {
-                DbContext context = entry.Context;
+                BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
+                ILogger<Startup> logger = context.GetService<ILogger<Startup>>();
                 BuildChannel entity = entry.Entity;
 
-                var queue = context.GetService<BackgroundQueue>();
-                var dependencyUpdater = context.GetService<IDependencyUpdater>();
-                queue.Post(() => dependencyUpdater.StartUpdateDependenciesAsync(entity.BuildId, entity.ChannelId));
+                Build build = context.Builds
+                    .Include(b => b.Assets)
+                    .ThenInclude(a => a.Locations)
+                    .FirstOrDefault(b => b.Id == entity.BuildId);
+
+                if (build == null)
+                {
+                    logger.LogError($"Could not find build with id {entity.BuildId} in BAR. Skipping dependency update.");
+                }
+                else
+                {
+                    bool hasAssetsWithPublishedLocations = build.Assets
+                        .Any(a => a.Locations.Any(al => al.Type != LocationType.None && !al.Location.EndsWith("/artifacts")));
+
+                    if (hasAssetsWithPublishedLocations)
+                    {
+                        var queue = context.GetService<BackgroundQueue>();
+                        var dependencyUpdater = context.GetService<IDependencyUpdater>();
+
+                        queue.Post(() => dependencyUpdater.StartUpdateDependenciesAsync(entity.BuildId, entity.ChannelId));
+                    }
+                    else
+                    {
+                        logger.LogInformation($"Skipping Dependency update for Build {entity.BuildId} because it contains no assets in valid locations");
+                    }
+                }
+
             };
         }
 
