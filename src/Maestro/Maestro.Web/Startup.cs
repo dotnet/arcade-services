@@ -49,6 +49,10 @@ namespace Maestro.Web
 {
     public partial class Startup
     {
+        // TODO: Remove once the repo in this list is ready to onboard to yaml publishing.
+        private static readonly HashSet<string> ReposWithoutAssetLocationAllowList =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "https://github.com/aspnet/AspNetCore" };
+
         static Startup()
         {
             Triggers<BuildChannel>.Inserting += entry =>
@@ -94,7 +98,7 @@ namespace Maestro.Web
                     bool hasAssetsWithPublishedLocations = build.Assets
                         .Any(a => a.Locations.Any(al => al.Type != LocationType.None && !al.Location.EndsWith("/artifacts")));
 
-                    if (hasAssetsWithPublishedLocations)
+                    if (hasAssetsWithPublishedLocations || ReposWithoutAssetLocationAllowList.Contains(build.GitHubRepository))
                     {
                         var queue = context.GetService<BackgroundQueue>();
                         var dependencyUpdater = context.GetService<IDependencyUpdater>();
