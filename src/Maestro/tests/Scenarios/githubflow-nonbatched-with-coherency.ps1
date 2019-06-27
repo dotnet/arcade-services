@@ -61,7 +61,7 @@ try {
     $targetRepoUri = Get-Github-RepoUri $targetRepoName
 
     Write-Host "Creating a test channel '$testChannelName'"
-    try { Darc-Command delete-channel --name `'$testChannelName`' } catch {}
+    try { Darc-Command delete-channel --name $testChannelName } catch {}
     Darc-Add-Channel $testChannelName "test"
 
     Write-Host "Adding a subscription from $parentSourceRepoName to $targetRepoName"
