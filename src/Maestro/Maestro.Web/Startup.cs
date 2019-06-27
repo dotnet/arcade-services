@@ -49,6 +49,7 @@ namespace Maestro.Web
 {
     public partial class Startup
     {
+        // https://github.com/dotnet/core-eng/issues/6819
         // TODO: Remove once the repo in this list is ready to onboard to yaml publishing.
         private static readonly HashSet<string> ReposWithoutAssetLocationAllowList =
             new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "https://github.com/aspnet/AspNetCore" };
