@@ -140,7 +140,7 @@ namespace Microsoft.DotNet.Darc.Operations
                                     accumulatedDependencies.Add(stripped);
                                 }
                             }
-			    Logger.LogDebug($"done looking for dependencies in {repoPath} at {repo.Commit}");
+                            Logger.LogDebug($"done looking for dependencies in {repoPath} at {repo.Commit}");
                         }
                         catch (DirectoryNotFoundException)
                         {
@@ -228,6 +228,8 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 await HandleMasterCopyWithDefaultGitDir(remoteFactory, repoUrl, masterGitRepoPath, masterRepoGitDirPath, log);
             }
+            Local local = new Local(log, masterGitRepoPath);
+            local.AddRemoteIfMissing(masterGitRepoPath, repoUrl);
         }
 
         private static async Task HandleMasterCopyWithDefaultGitDir(RemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath, ILogger log)
