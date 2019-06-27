@@ -9,7 +9,6 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -472,7 +471,7 @@ namespace Microsoft.DotNet.DarcLib
                 string remoteName = Guid.NewGuid().ToString();
                 repo.Network.Remotes.Add(remoteName, repoUrl);
                 _logger.LogDebug($"Fetching new commits from {repoUrl} into {repoDir}");
-                Commands.Fetch(repo, remoteName, new[] { $"+refs/heads/*:refs/remotes/{remoteName}/*" }, new FetchOptions(), $"Fetching {repoUrl} into {repoDir}");
+                LibGit2Sharp.Commands.Fetch(repo, remoteName, new[] { $"+refs/heads/*:refs/remotes/{remoteName}/*" }, new LibGit2Sharp.FetchOptions(), $"Fetching {repoUrl} into {repoDir}");
             }
         }
     }
