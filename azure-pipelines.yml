@@ -199,12 +199,12 @@ stages:
       # This is to enable SDL runs part of Post-Build Validation Stage
       SDLValidationParameters:
         enable: true
-        params: ' -SourceToolsList @("policheck","credscan")
+        params: '-SourceToolsList @("policheck","credscan")
         -TsaInstanceURL "https://devdiv.visualstudio.com/"
         -TsaProjectName "DEVDIV"
         -TsaNotificationEmail "subal@microsoft.com"
         -TsaCodebaseAdmin "REDMOND\\subal"
-        -TsaBugAreaPath "DevDiv\\NET\\NET Core "
+        -TsaBugAreaPath "DevDiv\\NET\\NET Core"
         -TsaIterationPath "DevDiv"
         -TsaRepositoryName "Arcade-Services"
         -TsaCodebaseName "Arcade-Services"
