@@ -63,7 +63,7 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                 new Line("A subscription maps a build of a source repository that has been applied to a specific channel", true),
                 new Line("onto a specific branch in a target repository.  The subscription has a trigger (update frequency)", true),
                 new Line("and merge policy. If a subscription is batchable, no merge policy should be provided, and the", true),
-                new Line("set-repository-policies command should be used instead to set policies on the repo + branch level. ", true),
+                new Line("set-repository-policies command should be used instead to set policies on the repository + branch level. ", true),
                 new Line("For additional information about subscriptions, please see", true),
                 new Line("https://github.com/dotnet/arcade/blob/master/Documentation/BranchesChannelsAndSubscriptions.md", true),
                 new Line("", true),
