@@ -1,4 +1,4 @@
-# Globals 
+# Globals
 [string]$maestroInstallation = if (-not $maestroInstallation) { throw "Please supply the Maestro installation with -maestroInstallation"} else { $maestroInstallation }
 [string]$maestroBearerToken = if (-not $maestroBearerToken) { throw "Please supply the Maestro bearer token with -maestroBearerToken"} else { $maestroBearerToken }
 [string]$githubPAT = if (-not $githubPAT) { throw "Please supply the github PAT with -githubPAT"} else { $githubPAT }
@@ -9,7 +9,7 @@
 [string]$azdoAccount = if (-not $azdoAccount) { "dnceng" } else { $azdoAccount }
 [string]$azdoProject = if (-not $azdoProject) { "internal" } else { $azdoProject }
 [string]$azdoApiVersion = if (-not $azdoApiVersion) { "5.0-preview.1" } else { $azdoApiVersion }
-[string]$darcPackageSource = if (-not $darcPackageSource) {""} else { $darcPackageSource } 
+[string]$darcPackageSource = if (-not $darcPackageSource) {""} else { $darcPackageSource }
 [string]$barApiVersion = "2019-01-16"
 $global:gitHubPRsToClose = @()
 $global:githubBranchesToDelete = @()
@@ -32,18 +32,18 @@ if (Test-Path $darcVersion) {
     Write-Host "Using local darc binary $darcTool"
 } else {
     Write-Host "Temporary testing location located at $testRoot"
-    $darcInstallCommand = "dotnet tool install --tool-path $testRoot --version $darcVersion `"Microsoft.DotNet.Darc`""
+    $darcInstallArguments = @( "--tool-path", $testRoot, "--version", $darcVersion, "Microsoft.DotNet.Darc" )
     if ($darcPackageSource) {
-        $darcInstallCommand += " --add-source ${darcPackageSource}"
+        $darcInstallArguments += @( "--add-source", "${darcPackageSource}" )
     }
-    Write-Host "Installing Darc: $darcInstallCommand"
-    Invoke-Expression $darcInstallCommand
+    Write-Host "Installing Darc: dotnet tool install $darcInstallArguments"
+    & dotnet tool install @darcInstallArguments
     $darcTool = Join-Path -Path $testRoot -ChildPath "darc"
 }
 Write-Host
 
 # Set auth parameters
-$darcAuthParams = "--bar-uri $maestroInstallation --github-pat $githubPAT --azdev-pat $azdoPAT --password $maestroBearerToken"
+$darcAuthParams = @("--bar-uri", $maestroInstallation, "--github-pat", $githubPAT, "--azdev-pat", $azdoPAT, "--password", $maestroBearerToken)
 
 # Enable TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -92,7 +92,7 @@ function Teardown() {
     foreach ($channel in $global:channelsToDelete) {
         try {
             Write-Host "Deleting channel $channel"
-            Darc-Command delete-channel --name `'$channel`'
+            Darc-Command delete-channel --name $channel
         } catch {
             Write-Warning "Failed to delete channel $channel"
             Write-Warning $_
@@ -119,7 +119,7 @@ function Teardown() {
             Write-Warning "Failed to remove github branch $($branch.branch) in $($branch.repo)"
             Write-Warning $_
         }
-    } 
+    }
 
     Write-Host "Cleaning $($global:gitHubPRsToClose.Count) github PRs"
     foreach ($pr in $global:gitHubPRsToClose) {
@@ -164,55 +164,62 @@ function Darc-Command() {
 }
 
 function Darc-Command-Impl($darcParams) {
-    $baseDarcCommand = "& $darcTool $darcParams" 
+    if ($darcParams.GetType().Name -ne "Object[]") {
+        $darcParams = $darcParams.ToString().Split(" ")
+    }
     Write-Host "Running 'darc $darcParams $darcAuthParams'"
-    $darcCommand = "`$commandOutput = $baseDarcCommand $darcAuthParams; if (`$LASTEXITCODE -ne 0) { Write-Host `${commandOutput};throw `"Darc command exited with exit code: `$LASTEXITCODE`" } else { `$commandOutput }"
-    Invoke-Expression $darcCommand
+    $commandOutput = & $darcTool @darcParams @darcAuthParams
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host ${commandOutput}
+      throw "Darc command exited with exit code: $LASTEXITCODE"
+    } else {
+      $commandOutput
+    }
 }
 
 # Run darc set-repository-policies
 function Darc-Set-Repository-Policies($repo, $branch, $policiesParams) {
-    $darcParams = "set-repository-policies -q --repo '$repo' --branch '$branch' $policiesParams"
+    $darcParams = "set-repository-policies -q --repo $repo --branch $branch $policiesParams"
     Darc-Command-Impl $darcParams
 }
 
 # Run darc get-repository-policies
 function Darc-Get-Repository-Policies($repo, $branch) {
-    $darcParams = "get-repository-policies --all --repo '$repo' --branch '$branch'"
+    $darcParams = "get-repository-policies --all --repo $repo --branch $branch"
     Darc-Command-Impl $darcParams
 }
 
 # Run darc add-channel and record the channel for later deletion
 function Darc-Add-Channel($channelName, $classification) {
-    $darcParams = "add-channel --name '$channelName' --classification '$classification'"
+    $darcParams = "add-channel --name $channelName --classification $classification"
     Darc-Command-Impl $darcParams
     $global:channelsToDelete += $channelName
 }
 
 function Darc-Delete-Channel($channelName) {
-    $darcParams = "delete-channel --name '$channelName'"
+    $darcParams = "delete-channel --name $channelName"
     Darc-Command-Impl $darcParams
 }
 
 # Run darc add-channel and record the channel for later deletion
 function Darc-Add-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "add-default-channel --channel '$channelName' --repo '$repoUri' --branch '$branch'"
+    $darcParams = "add-default-channel --channel $channelName --repo $repoUri --branch $branch"
     Darc-Command-Impl $darcParams
     $global:defaultChannelsToDelete += @{ channel = $channelName; repo = $repoUri; branch = $branch }
 }
 
 function Darc-Delete-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "delete-default-channel --channel '$channelName' --repo '$repoUri' --branch '$branch'"
+    $darcParams = "delete-default-channel --channel $channelName --repo $repoUri --branch $branch"
     Darc-Command-Impl $darcParams
 }
 
 function Darc-Enable-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "default-channel-status --channel '$channelName' --repo '$repoUri' --branch '$branch' --enable"
+    $darcParams = "default-channel-status --channel $channelName --repo $repoUri --branch $branch --enable"
     Darc-Command-Impl $darcParams
 }
 
 function Darc-Disable-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "default-channel-status --channel '$channelName' --repo '$repoUri' --branch '$branch' --disable"
+    $darcParams = "default-channel-status --channel $channelName --repo $repoUri --branch $branch --disable"
     Darc-Command-Impl $darcParams
 }
 
@@ -245,7 +252,7 @@ function Darc-Add-Subscription() {
 function Trigger-Subscription($subscriptionId) {
     $headers = Get-Bar-Headers 'text/plain'
     Write-Host "Triggering subscription $subscriptionId"
-    
+
     $uri = "$maestroInstallation/api/subscriptions/$subscriptionId/trigger?api-version=$barApiVersion"
 
     Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
@@ -277,7 +284,7 @@ function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publis
     if (!$publishUsingPipelines) {
         $publishUsingPipelines = "false"
     }
-    
+
     $headers = Get-Bar-Headers 'text/plain'
     $body = @{
         gitHubRepository = $repository;
@@ -296,7 +303,7 @@ function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publis
     $bodyJson = ConvertTo-Json $body
     Write-Host "Creating Build:"
     Write-Host $bodyJson
-    
+
     $uri = "$maestroInstallation/api/builds?api-version=$barApiVersion"
 
     Write-Host "Creating a new build in the Build Asset Registry..."
@@ -312,7 +319,7 @@ function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publis
 function Get-Build($id) {
     $headers = Get-Bar-Headers 'application/json'
     Write-Host "Getting Build $id"
-    
+
     $uri = "$maestroInstallation/api/builds/${id}?api-version=$barApiVersion"
 
     $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Get | ConvertFrom-Json
@@ -334,10 +341,11 @@ function Git-Command($repoName) {
     Push-Location -Path $(Get-Repo-Location($repoName))
     try {
         $gitParams = $args
-        $baseGitCommand = "git $gitParams" 
-        Write-Host "Running '$baseGitCommand' from $(Get-Location)"
-        $gitCommand = "`$commandOutput = $baseGitCommand; if (`$LASTEXITCODE -ne 0) { throw 'Git exited with exit code: `$LASTEXITCODE' } else { `$commandOutput }"
-        Invoke-Expression $gitCommand
+        if ($gitParams.GetType().Name -ne "Object[]") {
+            $gitParams = $gitParams.ToString().Split(" ")
+        }
+        Write-Host "Running $baseGitCommand from $(Get-Location)"
+        $commandOutput = & git @gitParams; if ($LASTEXITCODE -ne 0) { throw "Git exited with exit code: $LASTEXITCODE" } else { $commandOutput }
     }
     finally {
         Pop-Location

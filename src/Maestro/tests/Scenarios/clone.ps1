@@ -132,9 +132,9 @@ try {
     Write-Host
 
     $sourceRepoUri = Get-Github-RepoUri $sourceRepoName
-    
+
     Write-Host "Cloning repo $sourceRepoUri at $sourceRepoVersion with depth 2 and include-toolset=false"
-    try { Darc-Command clone --repo $sourceRepoUri --version `'$sourceRepoVersion`' --git-dir-folder `'$gitDirFolder`' --ignore-repos `'$reposToIgnore`' --repos-folder `'$reposFolder`' --depth 2 } catch {}
+    try { Darc-Command clone --repo $sourceRepoUri --version $sourceRepoVersion --git-dir-folder $gitDirFolder --ignore-repos $reposToIgnore --repos-folder $reposFolder --depth 2 } catch {}
 
     $expectedRepos = @(
         [Tuple]::Create("cli.204f425b6f061d0b8a01faf46f762ecf71436f68",                     "E9C194F021B0E91C9494B16FB6EAA52CC443E865BE5D33EFB6303232A0D80005"),
@@ -180,7 +180,7 @@ try {
     $reposToIgnore += ";https://github.com/dotnet/arcade"
 
     Write-Host "Cloning repo $sourceRepoUri at $sourceRepoVersion with depth 4 and include-toolset=true"
-    try { Darc-Command clone --repo `'$sourceRepoUri`' --version `'$sourceRepoVersion`' --git-dir-folder `'$gitDirFolder`' --ignore-repos `'$reposToIgnore`' --repos-folder `'$reposFolder`' --depth 4 --include-toolset } catch {}
+    try { Darc-Command clone --repo $sourceRepoUri --version $sourceRepoVersion --git-dir-folder $gitDirFolder --ignore-repos $reposToIgnore --repos-folder $reposFolder --depth 4 --include-toolset } catch {}
 
     $expectedRepos = @(
         [Tuple]::Create("cli.204f425b6f061d0b8a01faf46f762ecf71436f68",                     "E9C194F021B0E91C9494B16FB6EAA52CC443E865BE5D33EFB6303232A0D80005"),

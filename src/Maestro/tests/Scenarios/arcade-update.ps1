@@ -38,11 +38,11 @@ try {
     $targetRepoUri = Get-Github-RepoUri $targetRepoName
 
     Write-Host "Creating a test channel '$testChannelName'"
-    try { Darc-Command delete-channel --name `'$testChannelName`' } catch {}
+    try { Darc-Command delete-channel --name $testChannelName } catch {}
     Darc-Add-Channel $testChannelName "test"
 
     Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
-    $subscriptionId = Darc-Add-Subscription --channel `'$testChannelName`' --source-repo $sourceRepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch
+    $subscriptionId = Darc-Add-Subscription --channel $testChannelName --source-repo $sourceRepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch
 
     Write-Host "Set up build for intake into target repository"
     # Create a build for the source repo
@@ -67,7 +67,7 @@ try {
 
     Write-Host "Pushing branch to remote"
     # Commit and push
-    Git-Command $targetRepoName commit -am `"Add dependencies.`"
+    Git-Command $targetRepoName commit -am "Add dependencies."
     Git-Command $targetRepoName push origin HEAD
     $global:githubBranchesToDelete += @{ branch = $targetBranch; repo = $targetRepoName}
 

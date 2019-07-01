@@ -44,7 +44,7 @@ try {
     Darc-Add-Channel $testChannelName "test"
 
     Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
-    $subscriptionId = Darc-Add-Subscription --channel `'$testChannelName`' --source-repo $sourceRepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch
+    $subscriptionId = Darc-Add-Subscription --channel $testChannelName --source-repo $sourceRepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch
 
     Write-Host "Set up build for intake into target repository"
     # Create a build for the source repo
