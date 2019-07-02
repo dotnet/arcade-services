@@ -165,7 +165,7 @@ function Darc-Command() {
 
 function Darc-Command-Impl($darcParams) {
     if ($darcParams.GetType().Name -ne "Object[]") {
-        $darcParams = $darcParams.ToString() -split ' (?=".+")'
+        $darcParams = $darcParams.ToString() -split ' (?="[^`"]+")'
         $darcParams | ForEach-Object {
             if (-not ($_ -match '".+"')) {
                 $params = $_.ToString().Split(" ")
