@@ -165,7 +165,20 @@ function Darc-Command() {
 
 function Darc-Command-Impl($darcParams) {
     if ($darcParams.GetType().Name -ne "Object[]") {
-        $darcParams = $darcParams.ToString().Split(" ")
+        $darcParams = $darcParams.ToString() -split ' (?=".+")'
+        $darcParams | ForEach-Object {
+            if (-not ($_ -match '".+"')) {
+                $params = $_.ToString().Split(" ")
+                $index = $darcParams.IndexOf($_)
+                if ($index -eq 0) {
+                    $darcParams = $params + $darcParams[1..($darcParams.Length - 1 )]
+                } elseif ($index -eq ($darcParams.Length - 1)) {
+                    $darcParams = $darcParams[0..($darcParams.Length - 2)] + $params
+                } else {
+                    $darcParams = $darcParams[0..($index - 1)] + $params + $darcParams[($index + 2)..($darcParams.Length - 1 )]
+                }
+            }
+        }
     }
     Write-Host "Running 'darc $darcParams $darcAuthParams'"
     $commandOutput = & $darcTool @darcParams @darcAuthParams
