@@ -199,7 +199,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         {
             var buildsManifestMetadata = new List<BuildData>();
 
-            foreach (string manifestPath in Directory.GetFiles(manifestsFolderPath))
+            foreach (string manifestPath in Directory.GetFiles(manifestsFolderPath, "*.xml", SearchOption.AllDirectories))
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
