@@ -947,7 +947,7 @@ namespace Microsoft.DotNet.DarcLib
 
             foreach (string feed in feeds)
             {
-                var parsedFeed = ParseFeed(feed);
+                var parsedFeed = ParseMaestroManagedFeed(feed);
 
                 string key = $"darc-{parsedFeed.type}-{parsedFeed.repoName}-{parsedFeed.sha.Substring(0, 7)}";
                 if (!string.IsNullOrEmpty(parsedFeed.subVersion))
@@ -959,7 +959,7 @@ namespace Microsoft.DotNet.DarcLib
             return sources;
         }
 
-        private (string org, string repoName, string type, string sha, string subVersion) ParseFeed(string feed)
+        private (string org, string repoName, string type, string sha, string subVersion) ParseMaestroManagedFeed(string feed)
         {
             var match = Regex.Match(feed, MaestroManagedFeedPattern);
 
@@ -978,8 +978,8 @@ namespace Microsoft.DotNet.DarcLib
             }
             else
             {
-                _logger.LogError($"Unable to parse feed '{ feed }' ");
-                throw new ArgumentException($"feed { feed } is not a valid Maestro managed feed or Azure Storage proxy feed.");
+                _logger.LogError($"Unable to parse feed { feed } as a Maestro managed feed");
+                throw new ArgumentException($"feed { feed } is not a valid Maestro managed feed");
             }
         }
 
