@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace Microsoft.DotNet.DarcLib.Helpers
@@ -37,35 +38,72 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                                    || e is NameConflictException
                                    || e is LibGit2SharpException)
             {
-                log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e.ToString()})." + 
-                                "  Attempting to checkout by individual files.");
-                SafeCheckoutByIndividualFiles(repo, commit, options, log);
+                log.LogInformation($"Checkout of {repo.Info.WorkingDirectory} at {commit} failed, fetching before attempting individual files.");
+                FetchRepo(repo, log);
+                try
+                {
+                    log.LogDebug($"Post-fetch, trying to checkout {repo.Info.WorkingDirectory} at {commit} again");
+                    Commands.Checkout(repo, commit, options);
+                }
+                catch
+                {
+                    log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e.ToString()})." +
+                                    "  Attempting to checkout by individual files.");
+                    SafeCheckoutByIndividualFiles(repo, commit, options, log);
+                }
             }
             catch
             {
-                log.LogDebug($"Couldn't checkout {commit} as a commit.  Attempting to resolve as a treeish.");
-                string resolvedReference = ParseReference(repo, commit, log);
-                if (resolvedReference != null)
+                log.LogInformation($"Couldn't checkout {commit}, attempting fetch.");
+                FetchRepo(repo, log);
+                try
                 {
-                    log.LogDebug($"Resolved {commit} to {resolvedReference}, attempting to check out");
-                    try
+                    log.LogDebug($"Post-fetch, trying to checkout {repo.Info.WorkingDirectory} at {commit} again");
+                    Commands.Checkout(repo, commit, options);
+                }
+                catch
+                {
+                    log.LogDebug($"Couldn't checkout {commit} as a commit.  Attempting to resolve as a treeish.");
+                    string resolvedReference = ParseReference(repo, commit, log);
+                    if (resolvedReference != null)
                     {
-                        log.LogDebug($"Trying checkout of {repo.Info.WorkingDirectory} at {resolvedReference}");
-                        Commands.Checkout(repo, resolvedReference, options);
+                        log.LogDebug($"Resolved {commit} to {resolvedReference}, attempting to check out");
+                        try
+                        {
+                            log.LogDebug($"Trying checkout of {repo.Info.WorkingDirectory} at {resolvedReference}");
+                            Commands.Checkout(repo, resolvedReference, options);
+                        }
+                        catch (Exception e) when (e is InvalidSpecificationException
+                                               || e is NameConflictException
+                                               || e is LibGit2SharpException)
+                        {
+                            log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e.ToString()})." +
+                                            "  Attempting to checkout by individual files.");
+                            SafeCheckoutByIndividualFiles(repo, resolvedReference, options, log);
+                        }
                     }
-                    catch (Exception e) when (e is InvalidSpecificationException
-                                           || e is NameConflictException
-                                           || e is LibGit2SharpException)
+                    else
                     {
-                        log.LogWarning($"Couldn't check out one or more files, possibly due to path length limitations ({e.ToString()})." + 
-                                        "  Attempting to checkout by individual files.");
-                        SafeCheckoutByIndividualFiles(repo, resolvedReference, options, log);
+                        log.LogError($"Couldn't resolve {commit} as a commit or treeish.  Checkout of {repo.Info.WorkingDirectory} failed.");
+                        throw new ArgumentException($"Couldn't resolve {commit} as a commit or treeish.  Checkout of {repo.Info.WorkingDirectory} failed.");
                     }
                 }
-                else
+            }
+        }
+
+        private static void FetchRepo(Repository repo, ILogger log)
+        {
+            foreach (LibGit2Sharp.Remote remote in repo.Network.Remotes)
+            {
+                try
                 {
-                    log.LogError($"Couldn't resolve {commit} as a commit or treeish.  Checkout of {repo.Info.WorkingDirectory} failed.");
-                    throw new ArgumentException($"Couldn't resolve {commit} as a commit or treeish.  Checkout of {repo.Info.WorkingDirectory} failed.");
+                    IEnumerable<string> refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
+                    log.LogDebug($"Fetching {string.Join(";", refSpecs)} from {remote.Url} in {repo.Info.Path}");
+                    LibGit2Sharp.Commands.Fetch(repo, remote.Name, refSpecs, new FetchOptions(), $"Fetching {repo.Info.Path} from {remote.Url}");
+                }
+                catch (Exception e)
+                {
+                    log.LogWarning($"Fetch of {remote.Url} for {repo.Info.Path} failed: {e.ToString()}.  Are you offline?");
                 }
             }
         }

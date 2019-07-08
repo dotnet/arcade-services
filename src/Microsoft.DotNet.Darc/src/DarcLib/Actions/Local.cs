@@ -142,5 +142,15 @@ namespace Microsoft.DotNet.DarcLib
         {
             _gitClient.Checkout(_repo, commit, force);
         }
+
+        /// <summary>
+        /// Add a remote to the local repo if it does not already exist, and attempt to fetch new commits.
+        /// </summary>
+        /// <param name="repoDir">The directory of the local repo</param>
+        /// <param name="repoUrl">The remote URL to add</param>
+        public void AddRemoteIfMissing(string repoDir, string repoUrl)
+        {
+            _gitClient.AddRemoteIfMissing(repoDir, repoUrl);
+        }
     }
 }
