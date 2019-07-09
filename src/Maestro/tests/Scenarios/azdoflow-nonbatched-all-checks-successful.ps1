@@ -45,7 +45,7 @@ try {
     Darc-Add-Channel -channelName $testChannelName -classification "test"
 
     Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
-    $subscriptionId = Darc-Add-Subscription @( "--channel", "$testChannelName", "--source-repo", "$sourceRepoUri", "--target-repo", "$targetRepoUri", "--update-frequency", "none", "--target-branch", "$targetBranch", "--all-checks-passed", "--ignore-checks", "Work item linking'" )
+    $subscriptionId = Darc-Add-Subscription @( "--channel", "$testChannelName", "--source-repo", "$sourceRepoUri", "--target-repo", "$targetRepoUri", "--update-frequency", "none", "--target-branch", "$targetBranch", "--all-checks-passed", "--ignore-checks", "Work item linking" )
 
     Write-Host "Set up build for intake into target repository"
     # Create a build for the source repo
