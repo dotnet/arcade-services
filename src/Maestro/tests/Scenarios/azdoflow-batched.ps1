@@ -52,7 +52,7 @@ try {
     $targetRepoUri = Get-AzDO-RepoUri $targetRepoName
 
     Write-Host "Creating a test channel '$testChannelName'"
-    Darc-Add-Channel -channelName $testChannelName -classifcation "test"
+    Darc-Add-Channel -channelName $testChannelName -classification "test"
 
     Write-Host "Adding a subscription from $source1RepoName to $targetRepoName"
     $subscription1Id = Darc-Add-Subscription @( "--channel", "$testChannelName", "--source-repo", "$source1RepoUri", "--target-repo", "$targetRepoUri", "--update-frequency", "none", "--target-branch", "$targetBranch", "--batchable" )
