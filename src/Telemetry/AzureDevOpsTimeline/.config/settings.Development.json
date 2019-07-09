@@ -1,0 +1,7 @@
+{
+    "KeyVaultUri": "https://maestrolocal.vault.azure.net/",
+
+    "KustoIngestConnectionString": "",
+    "InitialDelay": "0:00:00",
+    "Interval": "0:05:00"
+}

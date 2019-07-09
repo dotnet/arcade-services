@@ -8,8 +8,10 @@
     <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <SignAssembly>false</SignAssembly>
     <LangVersion>7.1</LangVersion>
+    <RootNamespace>Microsoft.DotNet.AzureDevOpsTimeline</RootNamespace>
+    <AssemblyName>Microsoft.DotNet.AzureDevOpsTimeline</AssemblyName>
   </PropertyGroup>
-
+  
   <ItemGroup>
     <Content Include=".config\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -18,6 +20,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.KeyVault" Version="$(MicrosoftAzureKeyVaultVersion)" />
+    <PackageReference Include="Microsoft.Azure.Kusto.Ingest" Version="7.0.1-preview" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.1.1" />
     <PackageReference Include="Microsoft.ServiceFabric" Version="6.4.664" />
@@ -27,8 +30,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
-    <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />
-    <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
   </ItemGroup>
 
 </Project>
