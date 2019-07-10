@@ -28,7 +28,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
     public static class ServiceHostRemoting
     {
         internal static IServiceRemotingListener CreateServiceRemotingListener<TImplementation>(
-            StatefulServiceContext context,
+            ServiceContext context,
             Type[] ifaces,
             ILifetimeScope container)
         {
