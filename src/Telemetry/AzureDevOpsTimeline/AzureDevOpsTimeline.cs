@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Kusto.Cloud.Platform.Utils;
@@ -202,6 +203,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     {
                         var augIssue =
                             new AugmentedTimelineIssue(build.Id, record.Id, iIssue, record.Issues[iIssue]);
+                        augIssue.Bucket = GetBucket(augIssue);
                         issueCache.Add(augIssue);
                         issues.Add(augIssue);
                     }
@@ -319,7 +321,21 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("Type", b.Raw.Type, KustoDataTypes.String),
                     new KustoValue("Category", b.Raw.Category, KustoDataTypes.String),
                     new KustoValue("Message", b.Raw.Message, KustoDataTypes.String),
+                    new KustoValue("Bucket", b.Bucket, KustoDataTypes.String),
                 });
+        }
+
+        private static string GetBucket(AugmentedTimelineIssue augIssue)
+        {
+            string message = augIssue?.Raw?.Message;
+            if (string.IsNullOrEmpty(message))
+                return null;
+
+            Match match = Regex.Match(message, @"\(NETCORE_ENGINEERING_TELEMETRY=([^)]*)\)");
+            if (!match.Success)
+                return null;
+
+            return match.Groups[1].Value;
         }
 
         private static void FillAugmentedOrder(
@@ -385,6 +401,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             public int Index { get; }
             public Issue Raw { get; }
             public string AugmentedIndex { get; set; }
+            public string Bucket { get; set; }
         }
     }
 }
