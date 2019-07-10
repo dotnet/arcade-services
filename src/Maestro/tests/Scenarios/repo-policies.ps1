@@ -36,7 +36,7 @@ try {
     
     Write-Host ""
     Write-Host "Setting repository merge policy to standard"
-    Darc-Set-Repository-Policies -repo $repoUri -branch $branchName -policyParams @( "--standard-automerge" )
+    Darc-Set-Repository-Policies -repo $repoUri -branch $branchName -policiesParams @( "--standard-automerge" )
     $output = Darc-Get-Repository-Policies $repoUri $branchName
     $expected = @(
         "$repoUri @ $branchName",
@@ -50,7 +50,7 @@ try {
     
     Write-Host ""
     Write-Host "Setting repository merge policy to all checks successful"
-    Darc-Set-Repository-Policies -repo $repoUri -branch $branchName -policyParams @( "--all-checks-passed", "--ignore-checks", "A,B" )
+    Darc-Set-Repository-Policies -repo $repoUri -branch $branchName -policiesParams @( "--all-checks-passed", "--ignore-checks", "A,B" )
     $output = Darc-Get-Repository-Policies -repo $repoUri -branch $branchName
     $expected = @(
         "$repoUri @ $branchName",
