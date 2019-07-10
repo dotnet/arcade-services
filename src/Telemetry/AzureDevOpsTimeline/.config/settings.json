@@ -12,5 +12,6 @@
 
     "InitialDelay": "1:00:00",
     "Interval": "1:00:00",
-    "ParallelRequests": 5
+    "BuildBatchSize": 1000, 
+    "ParallelRequests": 4
 }

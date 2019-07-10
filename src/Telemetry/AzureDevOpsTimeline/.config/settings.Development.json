@@ -3,5 +3,6 @@
 
     "KustoIngestConnectionString": "",
     "InitialDelay": "0:00:00",
-    "Interval": "0:05:00"
+    "Interval": "0:30:00",
+    "BuildBatchSize":  1000 
 }

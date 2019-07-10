@@ -50,16 +50,22 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             string project,
             string continuationToken,
             DateTimeOffset? minTime,
+            int? limit,
             CancellationToken cancellationToken)
         {
             StringBuilder builder = GetProjectApiRootBuilder(project);
             builder.Append("/build/builds?");
             builder.Append($"continuationToken={continuationToken}&");
-            builder.Append("queryOrder=finishTimeDescending&");
-
+            builder.Append("queryOrder=finishTimeAscending&");
+            
             if (minTime.HasValue)
             {
                 builder.Append($"minTime={minTime.Value.UtcDateTime:O}&");
+            }
+
+            if (limit.HasValue)
+            {
+                builder.Append($"$top={limit}&");
             }
 
             builder.Append("statusFilter=completed&");
@@ -73,19 +79,20 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         public async Task<Build[]> ListBuilds(
             string project,
             CancellationToken cancellationToken,
-            DateTimeOffset? minTime = default)
+            DateTimeOffset? minTime = default,
+            int? limit = default)
         {
             var buildList = new List<Build>();
             string continuationToken = null;
             do
             {
-                JsonResult result = await ListBuildsRaw(project, continuationToken, minTime, cancellationToken);
+                JsonResult result = await ListBuildsRaw(project, continuationToken, minTime, limit, cancellationToken);
                 continuationToken = result.ContinuationToken;
                 JObject root = JObject.Parse(result.Body);
                 var array = (JArray) root["value"];
                 var builds = array.ToObject<Build[]>();
                 buildList.AddRange(builds);
-            } while (continuationToken != null);
+            } while (continuationToken != null && (!limit.HasValue || buildList.Count < limit.Value));
 
             return buildList.ToArray();
         }
@@ -115,16 +122,31 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             await _parallelism.WaitAsync(cancellationToken);
             try
             {
-                using (HttpResponseMessage response = await _httpClient.GetAsync(uri, cancellationToken))
+                int retry = 5;
+                while (true)
                 {
-                    response.EnsureSuccessStatusCode();
-                    string responseBody = await response.Content.ReadAsStringAsync();
-                    response.Headers.TryGetValues("x-ms-continuationtoken",
-                        out IEnumerable<string> continuationTokenHeaders);
-                    string continuationToken = continuationTokenHeaders?.FirstOrDefault();
-                    var result = new JsonResult(responseBody, continuationToken);
+                    try
+                    {
+                        using (HttpResponseMessage response = await _httpClient.GetAsync(uri, cancellationToken))
+                        {
+                            response.EnsureSuccessStatusCode();
+                            string responseBody = await response.Content.ReadAsStringAsync();
+                            response.Headers.TryGetValues("x-ms-continuationtoken",
+                                out IEnumerable<string> continuationTokenHeaders);
+                            string continuationToken = continuationTokenHeaders?.FirstOrDefault();
+                            var result = new JsonResult(responseBody, continuationToken);
 
-                    return result;
+                            return result;
+                        }
+                    }
+                    catch (OperationCanceledException e) when (e.CancellationToken == cancellationToken)
+                    {
+                        throw;
+                    }
+                    catch (Exception) when (retry -- > 0)
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                    }
                 }
             }
             finally

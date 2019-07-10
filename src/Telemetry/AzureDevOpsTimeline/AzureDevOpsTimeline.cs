@@ -8,7 +8,9 @@ using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Kusto.Cloud.Platform.Utils;
 using Kusto.Data.Common;
+using Kusto.Data.Exceptions;
 using Kusto.Data.Net.Client;
 using Kusto.Ingest;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
@@ -22,11 +24,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
     /// </summary>
     internal sealed class AzureDevOpsTimeline : IServiceImplementation
     {
-        private readonly ILogger<AzureDevOpsTimeline> _logger;
+        private readonly Extensions.Logging.ILogger<AzureDevOpsTimeline> _logger;
         private readonly IOptionsSnapshot<AzureDevOpsTimelineOptions> _options;
 
         public AzureDevOpsTimeline(
-            ILogger<AzureDevOpsTimeline> logger,
+            Extensions.Logging.ILogger<AzureDevOpsTimeline> logger,
             IOptionsSnapshot<AzureDevOpsTimelineOptions> options)
         {
             _logger = logger;
@@ -35,6 +37,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
         public async Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
         {
+            TraceSourceManager.SetTraceVerbosityForAll(TraceVerbosity.Fatal);
+
             await Wait(_options.Value.InitialDelay, cancellationToken, TimeSpan.FromHours(1));
 
             while (!cancellationToken.IsCancellationRequested)
@@ -72,31 +76,15 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         {
             // Fetch them again, we just waited an hour
             AzureDevOpsTimelineOptions options = _options.Value;
-
-            DateTimeOffset latest;
-            using (ICslQueryProvider query =
-                KustoClientFactory.CreateCslQueryProvider(options.KustoQueryConnectionString))
-            using (IDataReader result = await query.ExecuteQueryAsync(
-                options.KustoDatabase,
-                "TimelineBuilds | summarize max(FinishTime)",
-                new ClientRequestProperties()
-            ))
-            {
-                if (!result.Read())
-                {
-                    latest = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(30));
-                    _logger.LogWarning($"No previous time found, using {latest.LocalDateTime:O}");
-                }
-                else
-                {
-                    latest = result.GetDateTime(0);
-                    _logger.LogInformation($"... fetched previous time of {latest.LocalDateTime:O}");
-                }
-            }
-
+            
             if (!int.TryParse(options.ParallelRequests, out int parallelRequests) || parallelRequests < 1)
             {
                 parallelRequests = 5;
+            }
+
+            if (!int.TryParse(options.BuildBatchSize, out int buildBatchSize) || buildBatchSize < 1)
+            {
+                buildBatchSize = 1000;
             }
 
             _logger.LogTrace(
@@ -112,22 +100,55 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 options.AzureDevOpsAccessToken
             );
 
-            _logger.LogInformation($"Fetching builds since {latest.LocalDateTime:O}...");
+
+
             foreach (string project in options.AzureDevOpsProjects.Split(';'))
             {
-                await RunProject(azureServer, project, latest, options, cancellationToken);
+                await RunProject(azureServer, project, buildBatchSize, options, cancellationToken);
             }
         }
 
         private async Task RunProject(
             AzureDevOpsClient azureServer,
             string project,
-            DateTimeOffset latest,
+            int buildBatchSize,
             AzureDevOpsTimelineOptions options,
             CancellationToken cancellationToken)
         {
+
+            DateTimeOffset latest;
+            try
+            {
+                using (ICslQueryProvider query =
+                    KustoClientFactory.CreateCslQueryProvider(options.KustoQueryConnectionString))
+                using (IDataReader result = await query.ExecuteQueryAsync(
+                    options.KustoDatabase,
+                    // This isn't use controlled, so I'm not worried about the Kusto injection
+                    $"TimelineBuilds | where Project == '{project}' | summarize max(FinishTime)",
+                    new ClientRequestProperties()
+                ))
+                {
+                    if (!result.Read())
+                    {
+                        latest = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(30));
+                        _logger.LogWarning($"No previous time found, using {latest.LocalDateTime:O}");
+                    }
+                    else
+                    {
+                        latest = result.GetDateTime(0);
+                        _logger.LogInformation($"... fetched previous time of {latest.LocalDateTime:O}");
+                    }
+                }
+            }
+            catch(SemanticException e) when (e.SemanticErrors == "'where' operator: Failed to resolve column or scalar expression named 'Project'")
+            {
+                // The Project column isn't there, we probably reinitalized the tables
+                latest = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(30));
+                _logger.LogWarning($"No table column 'Project' found, assumed reinialization: using {latest.LocalDateTime:O}");
+            }
+
             _logger.LogInformation("Reading project {project}", project);
-            Build[] builds = await GetBuildsAsync(azureServer, project, latest, cancellationToken);
+            Build[] builds = await GetBuildsAsync(azureServer, project, latest, buildBatchSize, cancellationToken);
             _logger.LogTrace("... found {builds} builds...", builds.Length);
 
             if (builds.Length == 0)
@@ -223,10 +244,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 b => new[]
                 {
                     new KustoValue("BuildId", b.Id.ToString(), KustoDataTypes.Int),
-                    new KustoValue("Status", b.Status.ToString(), KustoDataTypes.String),
-                    new KustoValue("Result", b.Result.ToString(), KustoDataTypes.String),
+                    new KustoValue("Status", b.Status, KustoDataTypes.String),
+                    new KustoValue("Result", b.Result, KustoDataTypes.String),
                     new KustoValue("Repository", b.Repository.Name, KustoDataTypes.String),
-                    new KustoValue("Reason", b.Reason.ToString(), KustoDataTypes.String),
+                    new KustoValue("Reason", b.Reason, KustoDataTypes.String),
                     new KustoValue("BuildNumber", b.BuildNumber, KustoDataTypes.String),
                     new KustoValue("QueueTime", b.QueueTime, KustoDataTypes.DateTime),
                     new KustoValue("StartTime", b.StartTime, KustoDataTypes.DateTime),
@@ -265,20 +286,20 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("Name", b.Raw.Name, KustoDataTypes.String),
                     new KustoValue("StartTime", b.Raw.StartTime, KustoDataTypes.DateTime),
                     new KustoValue("FinishTime", b.Raw.FinishTime, KustoDataTypes.DateTime),
-                    new KustoValue("Result", b.Raw.Result.ToString(), KustoDataTypes.String),
+                    new KustoValue("Result", b.Raw.Result, KustoDataTypes.String),
                     new KustoValue("ResultCode", b.Raw.ResultCode, KustoDataTypes.String),
                     new KustoValue("ChangeId", b.Raw.ChangeId.ToString(), KustoDataTypes.Int),
                     new KustoValue("LastModified", b.Raw.LastModified, KustoDataTypes.DateTime),
                     new KustoValue("WorkerName", b.Raw.WorkerName, KustoDataTypes.String),
-                    new KustoValue("Details", b.Raw.Details.Url, KustoDataTypes.String),
+                    new KustoValue("Details", b.Raw.Details?.Url, KustoDataTypes.String),
                     new KustoValue("ErrorCount", b.Raw.ErrorCount.ToString(), KustoDataTypes.Int),
                     new KustoValue("WarningCount", b.Raw.WarningCount.ToString(), KustoDataTypes.Int),
                     new KustoValue("Url", b.Raw.Url, KustoDataTypes.String),
-                    new KustoValue("LogId", b.Raw.Log.Id.ToString(), KustoDataTypes.Int),
-                    new KustoValue("LogUri", b.Raw.Log.Url, KustoDataTypes.String),
-                    new KustoValue("TaskId", b.Raw.Task.Id.ToString(), KustoDataTypes.Int),
-                    new KustoValue("TaskName", b.Raw.Task.Name, KustoDataTypes.String),
-                    new KustoValue("TaskVersion", b.Raw.Task.Version, KustoDataTypes.String),
+                    new KustoValue("LogId", b.Raw.Log?.Id.ToString(), KustoDataTypes.Int),
+                    new KustoValue("LogUri", b.Raw.Log?.Url, KustoDataTypes.String),
+                    new KustoValue("TaskId", b.Raw.Task?.Id, KustoDataTypes.Int),
+                    new KustoValue("TaskName", b.Raw.Task?.Name, KustoDataTypes.String),
+                    new KustoValue("TaskVersion", b.Raw.Task?.Version, KustoDataTypes.String),
                     new KustoValue("Attempt", b.Raw.Attempt.ToString(), KustoDataTypes.Int),
                 });
 
@@ -330,9 +351,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             AzureDevOpsClient azureServer,
             string project,
             DateTimeOffset minDateTime,
+            int limit,
             CancellationToken cancellationToken)
         {
-            return await azureServer.ListBuilds(project, cancellationToken, minDateTime);
+            return await azureServer.ListBuilds(project, cancellationToken, minDateTime, limit);
         }
 
         private class AugmentedTimelineRecord

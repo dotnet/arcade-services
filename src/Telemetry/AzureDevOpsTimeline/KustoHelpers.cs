@@ -28,7 +28,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             int size = 5;
             using (var stream = new MemoryStream())
             {
-                using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
+                using (var writer = new StreamWriter(stream, new UTF8Encoding(false), 1024, leaveOpen: true))
                 {
                     foreach (T d in data)
                     {

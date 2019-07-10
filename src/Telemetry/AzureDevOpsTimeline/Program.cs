@@ -39,6 +39,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                                 o.ParallelRequests = c["ParallelRequests"];
                                 o.InitialDelay = c["InitialDelay"];
                                 o.Interval = c["Interval"];
+                                o.BuildBatchSize = c["BuildBatchSize"];
                             });
                         });
                 });
