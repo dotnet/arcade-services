@@ -174,7 +174,7 @@ try {
         "wpf.git"
     )
 
-    Check-Expected $expectedRepos $expectedMasterRepos $expectedGitDirs
+    Check-Expected -repos $expectedRepos -masterRepos $expectedMasterRepos -gitDirs $expectedGitDirs
 
     # more repos with file names that are too long
     $reposToIgnore += ";https://github.com/dotnet/arcade"
