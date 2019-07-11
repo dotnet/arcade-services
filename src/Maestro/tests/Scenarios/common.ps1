@@ -56,7 +56,7 @@ function Teardown() {
     foreach ($subscriptionId in $global:subscriptionsToDelete) {
         try {
             Write-Host "Deleting $subscriptionId"
-            Darc-Command -darcParams @( "delete-subscription", "--id", "$subscriptionId" )
+            Darc-Command "delete-subscription" "--id" "$subscriptionId" 
         } catch {
             Write-Warning "Failed to delete subscription with id $subscriptionId"
             Write-Warning $_
@@ -92,7 +92,7 @@ function Teardown() {
     foreach ($channel in $global:channelsToDelete) {
         try {
             Write-Host "Deleting channel $channel"
-            Darc-Command -darcParams @( "delete-channel", "--name", "$channel" )
+            Darc-Command "delete-channel" "--name" "$channel" 
         } catch {
             Write-Warning "Failed to delete channel $channel"
             Write-Warning $_
@@ -158,7 +158,7 @@ function Teardown() {
     Remove-Item -Path $testRoot -Recurse -Force | Out-Null
 }
 
-function Darc-Command($darcParams) {
+function Darc-Command([Parameter(ValueFromRemainingArguments=$true)]$darcParams) {
     Write-Host "Running 'darc $($darcParams) $darcAuthParams'"
     $commandOutput = & $darcTool @darcParams @darcAuthParams
     if ($LASTEXITCODE -ne 0) {
@@ -217,7 +217,7 @@ function Darc-Disable-Default-Channel($channelName, $repoUri, $branch) {
 
 # Run darc add-subscription with the specified parameters, extract out the subscription id,
 # and record it for teardown later. Implicitly passes -q
-function Darc-Add-Subscription($darcParams) {
+function Darc-Add-Subscription([Parameter(ValueFromRemainingArguments=$true)]$darcParams) {
     $darcParams = @( "add-subscription" ) + $darcParams + @( "-q" )
     $output = Darc-Command -darcParams $darcParams
     $match = $output -match "Successfully created new subscription with id '([a-f0-9-]+)'"
@@ -378,7 +378,7 @@ function Add-Pipeline-To-Channel($channelName, $pipelineId) {
 
     Write-Host "Adding pipeline ${pipelineId} to channel ${channelId} in the Build Asset Registry..."
 
-    $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
+    Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
 
     $global:channelPipelinesToDelete[$channelName] += $pipelineId
 }
@@ -503,7 +503,7 @@ function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $tar
 
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        $dependencies = Darc-Command -darcParams @( "get-dependencies" )
+        $dependencies = Darc-Command  "get-dependencies" 
         $equal = Compare-Array-Output $expectedDependencies $dependencies
         if (-not $equal) {
             throw "PR did not have expected dependency updates."
@@ -697,7 +697,7 @@ function Validate-Github-PullRequest-Contents($pullRequest, $expectedPRTitle, $t
     Git-Command $targetRepoName checkout $pullRequestBaseBranch
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        $dependencies = Darc-Command -darcParams @( "get-dependencies" )
+        $dependencies = Darc-Command  "get-dependencies" 
 
         if ($dependencies.Count -ne $expectedDependencies.Count) {
             Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."

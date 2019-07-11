@@ -8,7 +8,6 @@ param(
 )
 
 $subscriptionId = $null
-$pullRequestBaseBranch = $null
 $testChannelName = Get-Random
 $sourceRepoName = "maestro-test1"
 $targetRepoName = "maestro-test2"
@@ -60,7 +59,7 @@ try {
     $defaultChannelsToDelete += @{ channel = $testChannelName; repo = $sourceRepoUri; branch = $sourceBranch }
 
     Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
-    $subscriptionId = Darc-Add-Subscription -darcParams @( "--channel", "$testChannelName", "--source-repo", "$sourceRepoUri", "--target-repo", "$targetRepoUri", "--update-frequency", "everyBuild", "--target-branch", "$targetBranch" )
+    $subscriptionId = Darc-Add-Subscription "--channel" "$testChannelName" "--source-repo" "$sourceRepoUri" "--target-repo" "$targetRepoUri" "--update-frequency" "everyBuild" "--target-branch" "$targetBranch" 
     $subscriptionsToDelete += $subscriptionId
 
     Write-Host "Cloning target repo to prepare the target branch"
@@ -72,8 +71,8 @@ try {
     # Add the foo and bar dependencies
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        Darc-Command -darcParams @( "add-dependency", "--name", "Foo", "--type", "product", "--repo", "$sourceRepoUri" )
-        Darc-Command -darcParams @( "add-dependency", "--name", "Bar", "--type", "product", "--repo", "$sourceRepoUri" )
+        Darc-Command "add-dependency" "--name" "Foo" "--type" "product" "--repo" "$sourceRepoUri" 
+        Darc-Command "add-dependency" "--name" "Bar" "--type" "product" "--repo" "$sourceRepoUri" 
     }
     finally {
         Pop-Location

@@ -53,10 +53,10 @@ try {
     Darc-Add-Channel -channelName $testChannelName -classification "test"
 
     Write-Host "Adding a subscription from $source1RepoName to $targetRepoName"
-    $subscription1Id = Darc-Add-Subscription -darcParams @( "--channel", "$testChannelName", "--source-repo", "$source1RepoUri", "--target-repo", "$targetRepoUri", "--update-frequency", "none", "--target-branch", "$targetBranch", "--batchable" )
+    $subscription1Id = Darc-Add-Subscription "--channel" "$testChannelName" "--source-repo" "$source1RepoUri" "--target-repo" "$targetRepoUri" "--update-frequency" "none" "--target-branch" "$targetBranch" "--batchable" 
 
     Write-Host "Adding a subscription from $source2RepoName to $targetRepoName"
-    $subscription2Id = Darc-Add-Subscription -darcParams @( "--channel", "$testChannelName", "--source-repo", "$source2RepoUri", "--target-repo", "$targetRepoUri", "--update-frequency", "none", "--target-branch", "$targetBranch", "--batchable" )
+    $subscription2Id = Darc-Add-Subscription  "--channel" "$testChannelName" "--source-repo" "$source2RepoUri" "--target-repo" "$targetRepoUri" "--update-frequency" "none" "--target-branch" "$targetBranch" "--batchable" 
 
     Write-Host "Set up build1 for intake into target repository"
     # Create a build for the first source repo
@@ -78,10 +78,10 @@ try {
     Write-Host "Adding dependencies to target repo"
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        Darc-Command -darcParams @("add-dependency", "--name", "Foo", "--type", "product", "--repo", "$source1RepoUri")
-        Darc-Command -darcParams @("add-dependency", "--name", "Bar", "--type", "product", "--repo", "$source1RepoUri")
-        Darc-Command -darcParams @("add-dependency", "--name", "Pizza", "--type", "product", "--repo", "$source2RepoUri")
-        Darc-Command -darcParams @("add-dependency", "--name", "Hamburger", "--type", "product", "--repo", "$source2RepoUri")
+        Darc-Command "add-dependency" "--name" "Foo" "--type" "product" "--repo" "$source1RepoUri"
+        Darc-Command "add-dependency" "--name" "Bar" "--type" "product" "--repo" "$source1RepoUri"
+        Darc-Command "add-dependency" "--name" "Pizza" "--type" "product" "--repo" "$source2RepoUri"
+        Darc-Command "add-dependency" "--name" "Hamburger" "--type" "product" "--repo" "$source2RepoUri"
     }
     finally {
         Pop-Location

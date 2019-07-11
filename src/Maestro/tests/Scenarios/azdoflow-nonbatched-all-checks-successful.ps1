@@ -7,7 +7,6 @@ param(
 )
 
 $subscriptionId = $null
-$pullRequestBaseBranch = $null
 $sourceRepoName = "maestro-test1"
 $targetRepoName = "maestro-test2"
 $testChannelName = Get-Random
@@ -45,7 +44,7 @@ try {
     Darc-Add-Channel -channelName $testChannelName -classification "test"
 
     Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
-    $subscriptionId = Darc-Add-Subscription -darcParams @( "--channel", "$testChannelName", "--source-repo", "$sourceRepoUri", "--target-repo", "$targetRepoUri", "--update-frequency", "none", "--target-branch", "$targetBranch", "--all-checks-passed", "--ignore-checks", "Work item linking" )
+    $subscriptionId = Darc-Add-Subscription "--channel" "$testChannelName" "--source-repo" "$sourceRepoUri" "--target-repo" "$targetRepoUri" "--update-frequency" "none" "--target-branch" "$targetBranch" "--all-checks-passed" "--ignore-checks" "Work item linking" 
 
     Write-Host "Set up build for intake into target repository"
     # Create a build for the source repo
@@ -62,8 +61,8 @@ try {
     # Add the foo and bar dependencies
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        Darc-Command -darcParams @("add-dependency", "--name", "Foo", "--type", "product", "--repo", "$sourceRepoUri")
-        Darc-Command -darcParams @("add-dependency", "--name", "Bar", "--type", "product", "--repo", "$sourceRepoUri")
+        Darc-Command "add-dependency" "--name" "Foo" "--type" "product" "--repo" "$sourceRepoUri"
+        Darc-Command "add-dependency" "--name" "Bar" "--type" "product" "--repo" "$sourceRepoUri"
     }
     finally {
         Pop-Location
