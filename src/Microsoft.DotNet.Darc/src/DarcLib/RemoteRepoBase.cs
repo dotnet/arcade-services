@@ -85,6 +85,15 @@ namespace Microsoft.DotNet.DarcLib
                                     byte[] contentBytes = GetUtf8ContentBytes(file.Content, file.ContentEncoding);
                                     await stream.WriteAsync(contentBytes, 0, contentBytes.Length);
                                 }
+                                LibGit2Sharp.Blob fileBlob = localRepo.ObjectDatabase.CreateBlob(filePath);
+
+                                var fileMode = (LibGit2Sharp.Mode)Convert.ToInt32(file.Mode, 8);
+                                if (!Enum.IsDefined(typeof(LibGit2Sharp.Mode), fileMode) || fileMode == LibGit2Sharp.Mode.Nonexistent)
+                                {
+                                    _logger.LogInformation($"Could not detect file mode {file.Mode} for file {file.FilePath}. Assigning non-executable mode.");
+                                    fileMode = LibGit2Sharp.Mode.NonExecutableFile;
+                                }
+                                localRepo.Index.Add(fileBlob, file.FilePath, fileMode);
                             }
                             else
                             {
@@ -92,7 +101,7 @@ namespace Microsoft.DotNet.DarcLib
                             }
                         }
 
-                        LibGit2Sharp.Commands.Stage(localRepo, "*");
+                        localRepo.Index.Write();
 
                         LibGit2Sharp.Signature author = new LibGit2Sharp.Signature(dotnetMaestro, $"@{dotnetMaestro}", DateTime.Now);
                         LibGit2Sharp.Signature commiter = author;
