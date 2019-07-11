@@ -132,6 +132,19 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 builder => { builder.RegisterType<TService>().As<TService>().InstancePerDependency(); });
         }
 
+        public ServiceHost RegisterStatelessService<TService>(string serviceTypeName)
+            where TService : IServiceImplementation
+        {
+            RegisterStatelessService(
+                serviceTypeName,
+                context => new DelegatedStatelessService<TService>(
+                    context,
+                    ApplyConfigurationToServices,
+                    ApplyConfigurationToContainer));
+            return ConfigureContainer(
+                builder => { builder.RegisterType<TService>().As<TService>().InstancePerDependency(); });
+        }
+
         private void RegisterActorService<TService, TActor>(
             Func<StatefulServiceContext, ActorTypeInformation, TService> ctor)
             where TService : ActorService where TActor : Actor
@@ -283,10 +296,15 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
             Func<KeyVaultClient> clientFactory = () => GetKeyVaultClient(env);
             string keyVaultUri = bootstrapConfig["KeyVaultUri"];
+            string reloadTimeString = bootstrapConfig["KeyVaultReloadTime"];
+            if (!TimeSpan.TryParse(reloadTimeString, out var reloadTime))
+            {
+                reloadTime = TimeSpan.FromMinutes(5);
+            }
 
             return new ConfigurationBuilder().SetBasePath(env.ContentRootPath)
-                .AddKeyVaultMappedJsonFile(".config/settings.json", keyVaultUri, clientFactory)
-                .AddKeyVaultMappedJsonFile($".config/settings.{env.EnvironmentName}.json", keyVaultUri, clientFactory)
+                .AddKeyVaultMappedJsonFile(".config/settings.json", keyVaultUri, reloadTime, clientFactory)
+                .AddKeyVaultMappedJsonFile($".config/settings.{env.EnvironmentName}.json", keyVaultUri, reloadTime, clientFactory)
                 .Build();
         }
     }

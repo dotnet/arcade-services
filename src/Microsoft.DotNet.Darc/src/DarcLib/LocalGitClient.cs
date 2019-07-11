@@ -453,5 +453,26 @@ namespace Microsoft.DotNet.DarcLib
                 }
             }
         }
+
+        /// <summary>
+        ///     Add a remote to a local repo if does not already exist, and attempt to fetch commits.
+        /// </summary>
+        /// <param name="repoUrl"></param>
+        public void AddRemoteIfMissing(string repoDir, string repoUrl)
+        {
+            using (LibGit2Sharp.Repository repo = new LibGit2Sharp.Repository(repoDir))
+            {
+                if (repo.Network.Remotes.Any(remote => remote.Url.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase)))
+                {
+                    return;
+                }
+                _logger.LogDebug($"Adding {repoUrl} remote to {repoDir}");
+                // remote names don't matter, make sure it's unique
+                string remoteName = Guid.NewGuid().ToString();
+                repo.Network.Remotes.Add(remoteName, repoUrl);
+                _logger.LogDebug($"Fetching new commits from {repoUrl} into {repoDir}");
+                LibGit2Sharp.Commands.Fetch(repo, remoteName, new[] { $"+refs/heads/*:refs/remotes/{remoteName}/*" }, new LibGit2Sharp.FetchOptions(), $"Fetching {repoUrl} into {repoDir}");
+            }
+        }
     }
 }

@@ -16,9 +16,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             this IConfigurationBuilder builder,
             string path,
             string vaultUri,
+            TimeSpan reloadTime,
             Func<KeyVaultClient> clientFactory)
         {
-            return AddKeyVaultMappedJsonFile(builder, null, path, false, false, vaultUri, clientFactory);
+            return AddKeyVaultMappedJsonFile(builder, null, path, false, false, vaultUri, reloadTime, clientFactory);
         }
 
         public static IConfigurationBuilder AddKeyVaultMappedJsonFile(
@@ -28,6 +29,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             bool optional,
             bool reloadOnChange,
             string vaultUri,
+            TimeSpan reloadTime,
             Func<KeyVaultClient> clientFactory)
         {
             if (builder == null)
@@ -46,7 +48,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 path = Path.GetFileName(path);
             }
 
-            var source = new KeyVaultMappedJsonConfigurationSource(clientFactory, vaultUri)
+            var source = new KeyVaultMappedJsonConfigurationSource(clientFactory, vaultUri, reloadTime)
             {
                 FileProvider = provider,
                 Path = path,

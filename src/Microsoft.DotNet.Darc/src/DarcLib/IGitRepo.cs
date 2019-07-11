@@ -163,6 +163,13 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="commit">Tag, branch, or commit to checkout</param>
         /// <param name="force">True to force the checkout (loses work)</param>
         void Checkout(string repoPath, string commit, bool force);
+
+        /// <summary>
+        ///     Add a remote to local repo if it does not already exist, and attempt to fetch commits.
+        /// </summary>
+        /// <param name="repoDir">The local repo directory</param>
+        /// <param name="repoUrl">The remote URL to add</param>
+        void AddRemoteIfMissing(string repoDir, string repoUrl);
     }
 
     public class PullRequest

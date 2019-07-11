@@ -11,7 +11,8 @@ $testScripts = (
     'arcade-update.ps1',
     'azdoflow-batched.ps1',
     'azdoflow-nonbatched.ps1',
-    'azdoflow-nonbatched-all-checks-successful.ps1',
+    # Disabled until https://github.com/dotnet/arcade/issues/3242 is fixed
+    # 'azdoflow-nonbatched-all-checks-successful.ps1',
     'channels.ps1',
     'clone.ps1',
     'default-channels.ps1',
