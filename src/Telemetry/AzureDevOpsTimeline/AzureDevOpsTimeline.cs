@@ -275,7 +275,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("Type", b.validationResult.Result, KustoDataTypes.String),
                     new KustoValue("Category", "ValidationResult", KustoDataTypes.String),
                     new KustoValue("Message", b.validationResult.Message, KustoDataTypes.String),
-                    new KustoValue("Bucket", null, KustoDataTypes.String),
+                    new KustoValue("Bucket", "ValidationResult", KustoDataTypes.String),
                 });
 
             _logger.LogInformation("Saving TimelineRecords...");
