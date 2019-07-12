@@ -1,12 +1,18 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.8\build\Microsoft.VisualStudio.Azure.Fabric.Application.props" Condition="Exists('..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.8\build\Microsoft.VisualStudio.Azure.Fabric.Application.props')" />
+  <PropertyGroup>
+    <ImportDirectoryBuildProps>false</ImportDirectoryBuildProps>
+    <ImportDirectoryBuildTargets>false</ImportDirectoryBuildTargets>
+    <PackageLocation Condition=" '$(Build_ArtifactStagingDirectory)' != '' ">$(Build_ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication\applicationpackage</PackageLocation>
+  </PropertyGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>f9c22c96-6e04-428d-b3f9-3d49ac04cbb6</ProjectGuid>
-    <ProjectVersion>2.5</ProjectVersion>
+    <ProjectVersion>2.2</ProjectVersion>
     <MinToolsVersion>1.5</MinToolsVersion>
-    <SupportedMSBuildNuGetPackageVersion>1.6.8</SupportedMSBuildNuGetPackageVersion>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <SupportedMSBuildNuGetPackageVersion>1.6.6</SupportedMSBuildNuGetPackageVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <ApplicationDebugMode>AutoUpgrade</ApplicationDebugMode>
   </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -24,6 +30,7 @@
     <None Include="ApplicationParameters\Prod.xml" />
     <None Include="ApplicationParameters\Local.1Node.xml" />
     <None Include="ApplicationParameters\Local.5Node.xml" />
+    <Content Include="PublishProfiles\Int.xml" />
     <None Include="PublishProfiles\Prod.xml" />
     <None Include="PublishProfiles\Local.1Node.xml" />
     <None Include="PublishProfiles\Local.5Node.xml" />
@@ -41,6 +48,17 @@
     <DebugProfile>PublishProfiles\Local.1Node.xml</DebugProfile>
   </PropertyGroup>
   <Import Project="$(ApplicationProjectTargetsPath)" Condition="Exists('$(ApplicationProjectTargetsPath)')" />
+  <Target Name="Test">
+    <!-- Required target for arcade SDK -->
+  </Target>
+  <Target Name="Pack" DependsOnTargets="Package">
+  </Target>
+  <Target Name="IntegrationTest">
+    <!-- Required target for arcade SDK -->
+  </Target>
+  <Target Name="PerformanceTest">
+    <!-- Required target for arcade SDK -->
+  </Target>
   <Import Project="..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.8\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets" Condition="Exists('..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.8\build\Microsoft.VisualStudio.Azure.Fabric.Application.targets')" />
   <Target Name="ValidateMSBuildFiles" BeforeTargets="PrepareForBuild">
     <Error Condition="!Exists('..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.8\build\Microsoft.VisualStudio.Azure.Fabric.Application.props')" Text="Unable to find the '..\..\..\packages\Microsoft.VisualStudio.Azure.Fabric.MSBuild.1.6.8\build\Microsoft.VisualStudio.Azure.Fabric.Application.props' file. Please restore the 'Microsoft.VisualStudio.Azure.Fabric.MSBuild' Nuget package." />
