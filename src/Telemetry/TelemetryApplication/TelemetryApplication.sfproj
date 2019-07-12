@@ -30,7 +30,7 @@
     <None Include="ApplicationParameters\Prod.xml" />
     <None Include="ApplicationParameters\Local.1Node.xml" />
     <None Include="ApplicationParameters\Local.5Node.xml" />
-    <Content Include="PublishProfiles\Int.xml" />
+    <None Include="PublishProfiles\Int.xml" />
     <None Include="PublishProfiles\Prod.xml" />
     <None Include="PublishProfiles\Local.1Node.xml" />
     <None Include="PublishProfiles\Local.5Node.xml" />
