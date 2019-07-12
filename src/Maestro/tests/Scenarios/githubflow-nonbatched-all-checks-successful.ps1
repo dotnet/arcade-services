@@ -41,11 +41,11 @@ try {
     $targetRepoUri = Get-Github-RepoUri $targetRepoName
 
     Write-Host "Creating a test channel '$testChannelName'"
-    try { Darc-Command "delete-channel" "--name" "$testChannelName"  } catch {}
+    try { Darc-Command delete-channel --name "$testChannelName"  } catch {}
     Darc-Add-Channel $testChannelName "test"
 
     Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
-    $subscriptionId = Darc-Add-Subscription "--channel" "$testChannelName" "--source-repo" "$sourceRepoUri" "--target-repo" "$targetRepoUri" "--update-frequency" "none" "--target-branch" "$targetBranch" "--all-checks-passed" "--ignore-checks" "license/cla"
+    $subscriptionId = Darc-Add-Subscription --channel "$testChannelName" --source-repo "$sourceRepoUri" --target-repo "$targetRepoUri" --update-frequency none --target-branch "$targetBranch" --all-checks-passed --ignore-checks license/cla
 
     Write-Host "Set up build for intake into target repository"
     # Create a build for the source repo
@@ -62,8 +62,8 @@ try {
     # Add the foo and bar dependencies
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        Darc-Command "add-dependency" "--name" "Foo" "--type" "product" "--repo" "$sourceRepoUri" 
-        Darc-Command "add-dependency" "--name" "Bar" "--type" "product" "--repo" "$sourceRepoUri" 
+        Darc-Command add-dependency --name Foo --type product --repo $sourceRepoUri 
+        Darc-Command add-dependency --name Bar --type product --repo $sourceRepoUri 
     }
     finally {
         Pop-Location

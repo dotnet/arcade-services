@@ -56,7 +56,7 @@ function Teardown() {
     foreach ($subscriptionId in $global:subscriptionsToDelete) {
         try {
             Write-Host "Deleting $subscriptionId"
-            Darc-Command "delete-subscription" "--id" "$subscriptionId" 
+            Darc-Command delete-subscription --id "$subscriptionId" 
         } catch {
             Write-Warning "Failed to delete subscription with id $subscriptionId"
             Write-Warning $_
@@ -92,7 +92,7 @@ function Teardown() {
     foreach ($channel in $global:channelsToDelete) {
         try {
             Write-Host "Deleting channel $channel"
-            Darc-Command "delete-channel" "--name" "$channel" 
+            Darc-Command delete-channel --name "$channel" 
         } catch {
             Write-Warning "Failed to delete channel $channel"
             Write-Warning $_
@@ -503,7 +503,7 @@ function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $tar
 
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        $dependencies = Darc-Command  "get-dependencies" 
+        $dependencies = Darc-Command get-dependencies 
         $equal = Compare-Array-Output $expectedDependencies $dependencies
         if (-not $equal) {
             throw "PR did not have expected dependency updates."
@@ -697,7 +697,7 @@ function Validate-Github-PullRequest-Contents($pullRequest, $expectedPRTitle, $t
     Git-Command $targetRepoName checkout $pullRequestBaseBranch
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        $dependencies = Darc-Command  "get-dependencies" 
+        $dependencies = Darc-Command  get-dependencies 
 
         if ($dependencies.Count -ne $expectedDependencies.Count) {
             Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."
