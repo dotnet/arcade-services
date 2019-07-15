@@ -248,27 +248,34 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("BuildId", b.Id.ToString(), KustoDataTypes.Int),
                     new KustoValue("Status", b.Status, KustoDataTypes.String),
                     new KustoValue("Result", b.Result, KustoDataTypes.String),
-                    new KustoValue("Repository", b.Repository.Name, KustoDataTypes.String),
+                    new KustoValue("Repository", b.Repository?.Name ?? b.Repository?.Id, KustoDataTypes.String),
                     new KustoValue("Reason", b.Reason, KustoDataTypes.String),
                     new KustoValue("BuildNumber", b.BuildNumber, KustoDataTypes.String),
                     new KustoValue("QueueTime", b.QueueTime, KustoDataTypes.DateTime),
                     new KustoValue("StartTime", b.StartTime, KustoDataTypes.DateTime),
                     new KustoValue("FinishTime", b.FinishTime, KustoDataTypes.DateTime),
-                    new KustoValue("Project", b.Project.Name, KustoDataTypes.String),
+                    new KustoValue("Project", b.Project?.Name, KustoDataTypes.String),
+                    new KustoValue("DefinitionId", b.Definition?.Id.ToString(), KustoDataTypes.String),
+                    new KustoValue("Definition", $"{b.Definition?.Path}\\{b.Definition?.Name}", KustoDataTypes.String),
                 });
 
             _logger.LogInformation("Saving TimelineValidationMessages...");
             await KustoHelpers.WriteDataToKustoInMemoryAsync(
                 ingest,
                 options.KustoDatabase,
-                "TimelineValidationMessages",
+                "TimelineIssues",
                 _logger,
                 validationResults,
                 b => new[]
                 {
                     new KustoValue("BuildId", b.buildId.ToString(), KustoDataTypes.Int),
-                    new KustoValue("Result", b.validationResult.Result, KustoDataTypes.String),
+                    new KustoValue("RecordId", null, KustoDataTypes.String),
+                    new KustoValue("Index", null, KustoDataTypes.Int),
+                    new KustoValue("Path", null, KustoDataTypes.String),
+                    new KustoValue("Type", b.validationResult.Result, KustoDataTypes.String),
+                    new KustoValue("Category", "ValidationResult", KustoDataTypes.String),
                     new KustoValue("Message", b.validationResult.Message, KustoDataTypes.String),
+                    new KustoValue("Bucket", "ValidationResult", KustoDataTypes.String),
                 });
 
             _logger.LogInformation("Saving TimelineRecords...");
