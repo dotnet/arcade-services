@@ -201,7 +201,7 @@ namespace Microsoft.DotNet.DarcLib
             }
             catch (Exception exc)
             {
-                throw new Exception($"Something went wrong when checking out {repoUri} in {repoDir}", exc);
+                throw new DarcException($"Something went wrong when checking out {repoUri} in {repoDir}", exc);
             }
         }
 
