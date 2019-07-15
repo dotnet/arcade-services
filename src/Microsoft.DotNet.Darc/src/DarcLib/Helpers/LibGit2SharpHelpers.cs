@@ -91,6 +91,25 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             }
         }
 
+        /// <summary>
+        /// Adds a file to the repo's index respecting the original file's mode.
+        /// </summary>
+        /// <param name="repo">Repo to add the files to</param>
+        /// <param name="file">Original GitFile to add</param>
+        /// <param name="fullPath">Final path for the file to be added</param>
+        /// <param name="log">Logger</param>
+        internal static void AddFileToIndex(Repository repo, GitFile file, string fullPath, ILogger log)
+        {
+            var fileMode = (Mode)Convert.ToInt32(file.Mode, 8);
+            if (!Enum.IsDefined(typeof(Mode), fileMode) || fileMode == Mode.Nonexistent)
+            {
+                log.LogInformation($"Could not detect file mode {file.Mode} for file {file.FilePath}. Assigning non-executable mode.");
+                fileMode = Mode.NonExecutableFile;
+            }
+            Blob fileBlob = repo.ObjectDatabase.CreateBlob(fullPath);
+            repo.Index.Add(fileBlob, file.FilePath, fileMode);
+        }
+
         private static void FetchRepo(Repository repo, ILogger log)
         {
             foreach (LibGit2Sharp.Remote remote in repo.Network.Remotes)

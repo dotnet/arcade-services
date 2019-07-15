@@ -85,15 +85,8 @@ namespace Microsoft.DotNet.DarcLib
                                     byte[] contentBytes = GetUtf8ContentBytes(file.Content, file.ContentEncoding);
                                     await stream.WriteAsync(contentBytes, 0, contentBytes.Length);
                                 }
-                                LibGit2Sharp.Blob fileBlob = localRepo.ObjectDatabase.CreateBlob(filePath);
 
-                                var fileMode = (LibGit2Sharp.Mode)Convert.ToInt32(file.Mode, 8);
-                                if (!Enum.IsDefined(typeof(LibGit2Sharp.Mode), fileMode) || fileMode == LibGit2Sharp.Mode.Nonexistent)
-                                {
-                                    _logger.LogInformation($"Could not detect file mode {file.Mode} for file {file.FilePath}. Assigning non-executable mode.");
-                                    fileMode = LibGit2Sharp.Mode.NonExecutableFile;
-                                }
-                                localRepo.Index.Add(fileBlob, file.FilePath, fileMode);
+                                LibGit2SharpHelpers.AddFileToIndex(localRepo, file, filePath, _logger);
                             }
                             else
                             {
