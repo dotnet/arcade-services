@@ -38,11 +38,11 @@ try {
     $targetRepoUri = Get-Github-RepoUri $targetRepoName
 
     Write-Host "Creating a test channel '$testChannelName'"
-    try { Darc-Command delete-channel --name $testChannelName } catch {}
-    Darc-Add-Channel $testChannelName "test"
+    try { Darc-Command delete-channel --name "$testChannelName"  } catch {}
+    Darc-Add-Channel -channelName $testChannelName -classification "test"
 
     Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
-    $subscriptionId = Darc-Add-Subscription --channel $testChannelName --source-repo $sourceRepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch
+    $subscriptionId = Darc-Add-Subscription --channel "$testChannelName" --source-repo "$sourceRepoUri" --target-repo "$targetRepoUri" --update-frequency none --target-branch "$targetBranch" 
 
     Write-Host "Set up build for intake into target repository"
     # Create a build for the source repo
@@ -59,7 +59,7 @@ try {
     # Add the Arcade SDK dependency
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        Darc-Command add-dependency --name 'Microsoft.Dotnet.Arcade.Sdk' --type toolset --repo $sourceRepoUri
+        Darc-Command add-dependency --name Microsoft.Dotnet.Arcade.Sdk --type toolset --repo "$sourceRepoUri"
     }
     finally {
         Pop-Location

@@ -38,17 +38,17 @@ try {
     $repoUri = Get-Github-RepoUri $repoName
 
     Write-Host "Creating test channels"
-    try { Darc-Delete-Channel $testChannel1Name } catch {}
-    try { Darc-Delete-Channel $testChannel2Name } catch {}
-    Darc-Add-Channel $testChannel1Name "test"
-    Darc-Add-Channel $testChannel2Name "test"
+    try { Darc-Delete-Channel -channelName $testChannel1Name } catch {}
+    try { Darc-Delete-Channel -channelName "$testChannel2Name" } catch {}
+    Darc-Add-Channel -channelName $testChannel1Name -classification "test"
+    Darc-Add-Channel -channelName $testChannel2Name -classification "test"
 
     # Adding default channels'
     Write-Host "Creating default channels"
-    try { Darc-Delete-Default-Channel $testChannel1Name $repoUri $branchName } catch {}
-    try { Darc-Delete-Default-Channel $testChannel2Name $repoUri $branchName } catch {}
-    Darc-Add-Default-Channel $testChannel1Name $repoUri $branchName
-    Darc-Add-Default-Channel $testChannel2Name $repoUri $branchName
+    try { Darc-Delete-Default-Channel -channelName $testChannel1Name -repoUri $repoUri -branch $branchName } catch {}
+    try { Darc-Delete-Default-Channel -channelName $testChannel2Name -repoUri $repoUri -branch $branchName } catch {}
+    Darc-Add-Default-Channel -channelName $testChannel1Name -repoUri $repoUri -branch $branchName
+    Darc-Add-Default-Channel -channelName $testChannel2Name -repoUri $repoUri -branch $branchName
 
     Write-Host "Set up build for intake into target repository"
 
@@ -73,7 +73,7 @@ try {
 
     # Disable the default channel, then create a new build and ensure it doesn't get assigned to that channel
 
-    Darc-Disable-Default-Channel $testChannel1Name $repoUri $branchName
+    Darc-Disable-Default-Channel -channelName $testChannel1Name -repoUri $repoUri -branch $branchName
 
     # Create a build for the source repo
     $buildId = New-Build -repository $repoUri -branch $branchName -commit $commit -buildNumber $buildNumber -assets $assets
@@ -95,8 +95,8 @@ try {
 
     # Invert the default channel enable/disable and then try one more time
 
-    Darc-Enable-Default-Channel $testChannel1Name $repoUri $branchName
-    Darc-Disable-Default-Channel $testChannel2Name $repoUri $branchName
+    Darc-Enable-Default-Channel -channelName $testChannel1Name -repoUri $repoUri -branch $branchName
+    Darc-Disable-Default-Channel -channelName $testChannel2Name -repoUri $repoUri -branch $branchName
 
     # Create a build for the source repo
     $buildId = New-Build -repository $repoUri -branch $branchName -commit $commit -buildNumber $buildNumber -assets $assets

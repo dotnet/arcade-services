@@ -8,7 +8,6 @@ param(
 )
 
 $subscriptionId = $null
-$pullRequestBaseBranch = $null
 $testChannelName = Get-Random
 $childSourceRepoName = "maestro-test1"
 $parentSourceRepoName = "maestro-test2"
@@ -61,11 +60,11 @@ try {
     $targetRepoUri = Get-Github-RepoUri $targetRepoName
 
     Write-Host "Creating a test channel '$testChannelName'"
-    try { Darc-Command delete-channel --name $testChannelName } catch {}
-    Darc-Add-Channel $testChannelName "test"
+    try { Darc-Command delete-channel --name "$testChannelName" } catch {}
+    Darc-Add-Channel -channelName $testChannelName -classification "test"
 
     Write-Host "Adding a subscription from $parentSourceRepoName to $targetRepoName"
-    $subscriptionId = Darc-Add-Subscription --channel $testChannelName --source-repo $parentSourceRepoUri --target-repo $targetRepoUri --update-frequency none --target-branch $targetBranch
+    $subscriptionId = Darc-Add-Subscription --channel "$testChannelName" --source-repo "$parentSourceRepoUri" --target-repo "$targetRepoUri" --update-frequency none --target-branch "$targetBranch" 
 
     Write-Host "Set up new builds for intake into target repository"
     # Create a build for the parent source repo.
@@ -87,9 +86,9 @@ try {
     # Add the foo and bar dependencies
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        Darc-Command add-dependency --name 'Foo' --type product --repo $parentSourceRepoUri
-        Darc-Command add-dependency --name 'Bar' --type product --repo $parentSourceRepoUri
-        Darc-Command add-dependency --name 'Baz' --type product --repo $childSourceRepoUri --coherent-parent "Foo"
+        Darc-Command add-dependency --name Foo --type product --repo "$parentSourceRepoUri" 
+        Darc-Command add-dependency --name Bar --type product --repo "$parentSourceRepoUri" 
+        Darc-Command add-dependency --name Baz --type product --repo "$childSourceRepoUri" --coherent-parent Foo 
     }
     finally {
         Pop-Location

@@ -56,7 +56,7 @@ function Teardown() {
     foreach ($subscriptionId in $global:subscriptionsToDelete) {
         try {
             Write-Host "Deleting $subscriptionId"
-            Darc-Command delete-subscription --id $subscriptionId
+            Darc-Command delete-subscription --id "$subscriptionId" 
         } catch {
             Write-Warning "Failed to delete subscription with id $subscriptionId"
             Write-Warning $_
@@ -67,7 +67,7 @@ function Teardown() {
     foreach ($defaultChannel in $global:defaultChannelsToDelete) {
         try {
             Write-Host "Deleting default channel $($defaultChannel.repo)@$($defaultChannel.branch) -> $($defaultChannel.channel)"
-            Darc-Delete-Default-Channel $defaultChannel.channel $defaultChannel.repo $defaultChannel.branch
+            Darc-Delete-Default-Channel -channelName $defaultChannel.channel -repoUri $defaultChannel.repo -branch $defaultChannel.branch
         } catch {
             Write-Warning "Failed to delete default channel $($defaultChannel.repo)@$($defaultChannel.branch) -> $($defaultChannel.channel)"
             Write-Warning $_
@@ -92,7 +92,7 @@ function Teardown() {
     foreach ($channel in $global:channelsToDelete) {
         try {
             Write-Host "Deleting channel $channel"
-            Darc-Command delete-channel --name $channel
+            Darc-Command delete-channel --name "$channel" 
         } catch {
             Write-Warning "Failed to delete channel $channel"
             Write-Warning $_
@@ -158,16 +158,8 @@ function Teardown() {
     Remove-Item -Path $testRoot -Recurse -Force | Out-Null
 }
 
-function Darc-Command() {
-    $darcParams = $args
-    Darc-Command-Impl $darcParams
-}
-
-function Darc-Command-Impl($darcParams) {
-    if ($darcParams.GetType().Name -ne "Object[]") {
-        $darcParams = $darcParams.ToString().Split(" ")
-    }
-    Write-Host "Running 'darc $darcParams $darcAuthParams'"
+function Darc-Command([Parameter(ValueFromRemainingArguments=$true)]$darcParams) {
+    Write-Host "Running 'darc $($darcParams) $darcAuthParams'"
     $commandOutput = & $darcTool @darcParams @darcAuthParams
     if ($LASTEXITCODE -ne 0) {
       Write-Host ${commandOutput}
@@ -179,55 +171,55 @@ function Darc-Command-Impl($darcParams) {
 
 # Run darc set-repository-policies
 function Darc-Set-Repository-Policies($repo, $branch, $policiesParams) {
-    $darcParams = "set-repository-policies -q --repo $repo --branch $branch $policiesParams"
-    Darc-Command-Impl $darcParams
+    $darcParams = @( "set-repository-policies", "-q", "--repo", "$repo", "--branch", "$branch" ) + $policiesParams
+    Darc-Command -darcParams $darcParams
 }
 
 # Run darc get-repository-policies
 function Darc-Get-Repository-Policies($repo, $branch) {
-    $darcParams = "get-repository-policies --all --repo $repo --branch $branch"
-    Darc-Command-Impl $darcParams
+    $darcParams = @( "get-repository-policies", "--all", "--repo", "$repo", "--branch", "$branch" )
+    Darc-Command -darcParams $darcParams
 }
 
 # Run darc add-channel and record the channel for later deletion
 function Darc-Add-Channel($channelName, $classification) {
-    $darcParams = "add-channel --name $channelName --classification $classification"
-    Darc-Command-Impl $darcParams
+    $darcParams = @("add-channel", "--name", "$channelName", "--classification", "$classification" )
+    Darc-Command -darcParams $darcParams
     $global:channelsToDelete += $channelName
 }
 
 function Darc-Delete-Channel($channelName) {
-    $darcParams = "delete-channel --name $channelName"
-    Darc-Command-Impl $darcParams
+    $darcParams = @( "delete-channel", "--name", "$channelName" )
+    Darc-Command -darcParams $darcParams
 }
 
 # Run darc add-channel and record the channel for later deletion
 function Darc-Add-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "add-default-channel --channel $channelName --repo $repoUri --branch $branch"
-    Darc-Command-Impl $darcParams
+    $darcParams = @( "add-default-channel", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch" )
+    Darc-Command -darcParams $darcParams
     $global:defaultChannelsToDelete += @{ channel = $channelName; repo = $repoUri; branch = $branch }
 }
 
 function Darc-Delete-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "delete-default-channel --channel $channelName --repo $repoUri --branch $branch"
-    Darc-Command-Impl $darcParams
+    $darcParams = @( "delete-default-channel", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch" )
+    Darc-Command -darcParams $darcParams
 }
 
 function Darc-Enable-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "default-channel-status --channel $channelName --repo $repoUri --branch $branch --enable"
-    Darc-Command-Impl $darcParams
+    $darcParams = @( "default-channel-status", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch", "--enable" )
+    Darc-Command -darcParams $darcParams
 }
 
 function Darc-Disable-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "default-channel-status --channel $channelName --repo $repoUri --branch $branch --disable"
-    Darc-Command-Impl $darcParams
+    $darcParams = @( "default-channel-status", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch", "--disable" )
+    Darc-Command -darcParams $darcParams
 }
 
 # Run darc add-subscription with the specified parameters, extract out the subscription id,
 # and record it for teardown later. Implicitly passes -q
-function Darc-Add-Subscription() {
-    $darcParams = "add-subscription $args -q"
-    $output = Darc-Command-Impl $darcParams
+function Darc-Add-Subscription([Parameter(ValueFromRemainingArguments=$true)]$darcParams) {
+    $darcParams = @( "add-subscription" ) + $darcParams + @( "-q" )
+    $output = Darc-Command -darcParams $darcParams
     $match = $output -match "Successfully created new subscription with id '([a-f0-9-]+)'"
 
     # Batched subscriptions return a warning that non-batched subscriptions don't,
@@ -386,7 +378,7 @@ function Add-Pipeline-To-Channel($channelName, $pipelineId) {
 
     Write-Host "Adding pipeline ${pipelineId} to channel ${channelId} in the Build Asset Registry..."
 
-    $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
+    Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
 
     $global:channelPipelinesToDelete[$channelName] += $pipelineId
 }
@@ -408,11 +400,11 @@ function Remove-Pipeline-From-Channel($channelName, $pipelineId) {
 #
 
 function Get-AzDO-RepoAuthUri($repoName) {
-    "https://${azdoUser}:${azdoPAT}@dev.azure.com/${azdoAccount}/${azdoProject}/_git/${repoName}"
+    return "https://${azdoUser}:${azdoPAT}@dev.azure.com/${azdoAccount}/${azdoProject}/_git/${repoName}"
 }
 
 function Get-AzDO-RepoUri($repoName) {
-    "https://dev.azure.com/${azdoAccount}/${azdoProject}/_git/${repoName}"
+    return "https://dev.azure.com/${azdoAccount}/${azdoProject}/_git/${repoName}"
 }
 
 function AzDO-Clone($repoName) {
@@ -511,7 +503,7 @@ function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $tar
 
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        $dependencies = Darc-Command get-dependencies
+        $dependencies = Darc-Command get-dependencies 
         $equal = Compare-Array-Output $expectedDependencies $dependencies
         if (-not $equal) {
             throw "PR did not have expected dependency updates."
@@ -525,12 +517,12 @@ function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $tar
 
 function Check-NonBatched-AzDO-PullRequest($sourceRepoName, $targetRepoName, $targetBranch, $expectedDependencies, $complete = $false) {
     $expectedPRTitle = "[$targetBranch] Update dependencies from $azdoAccount/$azdoProject/$sourceRepoName"
-    return Check-AzDO-PullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies $complete
+    return Check-AzDO-PullRequest -expectedPRTitle $expectedPRTitle -targetRepoName $targetRepoName -targetBranch $targetBranch -expectedDependencies $expectedDependencies -complete $complete
 }
 
 function Check-Batched-AzDO-PullRequest($sourceRepoCount, $targetRepoName, $targetBranch, $expectedDependencies) {
     $expectedPRTitle = "[$targetBranch] Update dependencies from $sourceRepoCount repositories"
-    return Check-AzDO-PullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies $false
+    return Check-AzDO-PullRequest -expectedPRTitle $expectedPRTitle -targetRepoName $targetRepoName -targetBranch $targetBranch -exptectedDependencies $expectedDependencies -complete $false
 }
 
 function Check-AzDO-PullRequest($expectedPRTitle, $targetRepoName, $targetBranch, $exptectedDependencies, $complete)
@@ -540,7 +532,7 @@ function Check-AzDO-PullRequest($expectedPRTitle, $targetRepoName, $targetBranch
     if (!$pullRequest) {
         return $false
     }
-    Validate-AzDO-PullRequest-Contents $pullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies
+    Validate-AzDO-PullRequest-Contents -pullRequest $pullRequest -expectedPRTitle $expectedPRTitle -targetRepoName $targetRepoName -targetBranch $targetBranch -expectedDependencies $expectedDependencies
     if ($complete) {
         Check-AzDO-PullRequest-Completed $targetRepoName $pullRequest.pullRequestId
     }
@@ -705,7 +697,7 @@ function Validate-Github-PullRequest-Contents($pullRequest, $expectedPRTitle, $t
     Git-Command $targetRepoName checkout $pullRequestBaseBranch
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        $dependencies = Darc-Command get-dependencies
+        $dependencies = Darc-Command  get-dependencies 
 
         if ($dependencies.Count -ne $expectedDependencies.Count) {
             Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."
