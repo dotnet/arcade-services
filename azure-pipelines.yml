@@ -208,8 +208,7 @@ stages:
       enableSymbolValidation: false
       # This is to enable SDL runs part of Post-Build Validation Stage
       SDLValidationParameters:
-        # Disabled until https://github.com/dotnet/arcade/issues/3294 is resolved
-        enable: false
+        enable: true
         params: '-SourceToolsList @("policheck","credscan")
         -TsaInstanceURL "https://devdiv.visualstudio.com/"
         -TsaProjectName "DEVDIV"
