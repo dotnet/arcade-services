@@ -292,7 +292,7 @@ function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publis
         assets = $assets;
         publishUsingPipelines = $publishUsingPipelines;
     }
-    $bodyJson = ConvertTo-Json $body
+    $bodyJson = ConvertTo-Json $body -Depth 4
     Write-Host "Creating Build:"
     Write-Host $bodyJson
 
@@ -515,17 +515,54 @@ function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $tar
     }
 }
 
-function Check-NonBatched-AzDO-PullRequest($sourceRepoName, $targetRepoName, $targetBranch, $expectedDependencies, $complete = $false) {
+function Validate-Feeds-NugetConfig($targetRepoName, $expectedFeeds, $notExpectedFeeds) {
+    try {
+        # there's a good chance we're already there.
+        Push-Location -Path $(Get-Repo-Location $targetRepoName) -ErrorAction SilentlyContinue
+        [xml]$nugetConfig = Get-Content "NuGet.config"
+        $currentFeeds = $nugetConfig.Configuration.PackageSources.Add.Value
+        $missingFeeds = $expectedFeeds.Where{$_ -notin $currentFeeds}
+        if ($missingFeeds) {
+            Write-Error "Missing feeds! `n Expected: $expectedFeeds `n Found: $currentFeeds"
+            throw "PR did not have expected feeds"
+        }
+        $wrongFeeds = $currentFeeds.Where{$_ -in $notExpectedFeeds}
+        if ($wrongFeeds) {
+            Write-Error "Incorrect feeds present! `n Did not expect $wrongFeeds to be part of the PR"
+            throw "PR had extra unexpected feeds"
+        }
+        Write-Host "Finished validating feeds"
+        return $true
+    } finally {
+        Pop-Location
+    }
+}
+
+function Check-NonBatched-AzDO-PullRequest($sourceRepoName, $targetRepoName, $targetBranch, $expectedDependencies, $complete = $false, $expectedFeeds = @(), $notExpectedFeeds = @()) {
     $expectedPRTitle = "[$targetBranch] Update dependencies from $azdoAccount/$azdoProject/$sourceRepoName"
-    return Check-AzDO-PullRequest -expectedPRTitle $expectedPRTitle -targetRepoName $targetRepoName -targetBranch $targetBranch -expectedDependencies $expectedDependencies -complete $complete
+    return Check-AzDO-PullRequest `
+        -expectedPRTitle $expectedPRTitle `
+        -targetRepoName $targetRepoName `
+        -targetBranch $targetBranch `
+        -expectedDependencies $expectedDependencies `
+        -complete $complete `
+        -expectedFeeds $expectedFeeds `
+        -notExpectedFeeds $notExpectedFeeds
 }
 
-function Check-Batched-AzDO-PullRequest($sourceRepoCount, $targetRepoName, $targetBranch, $expectedDependencies) {
+function Check-Batched-AzDO-PullRequest($sourceRepoCount, $targetRepoName, $targetBranch, $expectedDependencies, $expectedFeeds = @(), $notExpectedFeeds = @()) {
     $expectedPRTitle = "[$targetBranch] Update dependencies from $sourceRepoCount repositories"
-    return Check-AzDO-PullRequest -expectedPRTitle $expectedPRTitle -targetRepoName $targetRepoName -targetBranch $targetBranch -exptectedDependencies $expectedDependencies -complete $false
+    return Check-AzDO-PullRequest `
+        -expectedPRTitle $expectedPRTitle `
+        -targetRepoName $targetRepoName `
+        -targetBranch $targetBranch `
+        -exptectedDependencies $expectedDependencies `
+        -complete $false `
+        -expectedFeeds $expectedFeeds `
+        -notExpectedFeeds $notExpectedFeeds
 }
 
-function Check-AzDO-PullRequest($expectedPRTitle, $targetRepoName, $targetBranch, $exptectedDependencies, $complete)
+function Check-AzDO-PullRequest($expectedPRTitle, $targetRepoName, $targetBranch, $exptectedDependencies, $complete, $expectedFeeds, $notExpectedFeeds)
 {
     Write-Host "Checking Opened PR in $targetBranch $targetRepoName ..."
     $pullRequest = Check-AzDO-PullRequest-Created $targetRepoName $targetBranch
@@ -533,6 +570,11 @@ function Check-AzDO-PullRequest($expectedPRTitle, $targetRepoName, $targetBranch
         return $false
     }
     Validate-AzDO-PullRequest-Contents -pullRequest $pullRequest -expectedPRTitle $expectedPRTitle -targetRepoName $targetRepoName -targetBranch $targetBranch -expectedDependencies $expectedDependencies
+    if ($expectedFeeds.count -gt 0) {
+        Write-Host "Validating Nuget feeds in PR branch"
+        Write-Host "Expected feeds: $expectedFeeds"
+        Validate-Feeds-NugetConfig $targetRepoName $expectedFeeds $notExpectedFeeds
+    }
     if ($complete) {
         Check-AzDO-PullRequest-Completed $targetRepoName $pullRequest.pullRequestId
     }

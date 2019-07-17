@@ -12,6 +12,7 @@ $testScripts = (
     'azdoflow-batched.ps1',
     'azdoflow-nonbatched.ps1',
     'azdoflow-nonbatched-all-checks-successful.ps1',
+    'azdoflow-feedflow.ps1',
     'channels.ps1',
     'clone.ps1',
     'default-channels.ps1',
