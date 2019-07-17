@@ -120,10 +120,11 @@ try {
     Write-Host "Waiting on PR to be opened in $targetRepoUri"
     $success = Check-NonBatched-AzDO-PullRequest $sourceRepoName $targetRepoName $targetBranch $expectedDependencies $false $expectedFeeds $notExpectedFeeds
 
-    if (!$success) {
-        throw "Pull request failed to open."
-    } else {
+    if ($success) {
         Write-Host "Test passed"
+        
+    } else {
+        throw "Pull request failed to open."
     }
 } finally {
     Teardown
