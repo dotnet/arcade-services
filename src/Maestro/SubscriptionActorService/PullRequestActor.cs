@@ -298,15 +298,28 @@ namespace SubscriptionActorService
                     return (null, false);
                 }
 
-                bool? result = await ActionRunner.ExecuteAction(() => SynchronizePullRequestAsync(pr.Url));
-                if (result == true)
-                {
-                    return (pr, true);
-                }
+                SynchronizePullRequestResult result = await ActionRunner.ExecuteAction(() => SynchronizePullRequestAsync(pr.Url));
 
-                if (result == false)
+                switch (result)
                 {
-                    return (pr, false);
+                    // If the PR was merged or closed, we are done with it and the actor doesn't
+                    // need to periodically run the synchronization any longer.
+                    case SynchronizePullRequestResult.Completed:
+                    case SynchronizePullRequestResult.UnknownPR:
+                        await Reminders.TryUnregisterReminderAsync(PullRequestCheck);
+                        return (null, false);
+                    case SynchronizePullRequestResult.InProgressCanUpdate:
+                        return (pr, true);
+                    case SynchronizePullRequestResult.InProgressCannotUpdate:
+                        return (pr, false);
+                    case SynchronizePullRequestResult.Invalid:
+                        // We could have gotten here if there was an exception during
+                        // the synchronization process. This was typical in the past
+                        // when we would regularly get credential exceptions on github tokens
+                        // that were just obtained. We don't want to unregister the reminder in these cases.
+                        return (null, false);
+                    default:
+                        throw new NotImplementedException($"Unknown pull request synchronization result {result}");
                 }
             }
 
@@ -317,22 +330,19 @@ namespace SubscriptionActorService
         /// <summary>
         ///     Synchronizes a pull request
         /// </summary>
-        /// <param name="prUrl"></param>
+        /// <param name="prUrl">Pull request url.</param>
         /// <returns>
-        ///     An <see cref="ActionResult{bool?}" /> containing:
-        ///     <see langref="null" /> when there is no pull request;
-        ///     <see langref="true" /> when there is a PR and it can be updated;
-        ///     <see langref="false" /> when there is a PR and it cannot be updated
+        ///    Result of the synchronization
         /// </returns>
         [ActionMethod("Synchronizing Pull Request: '{url}'")]
-        private async Task<ActionResult<bool?>> SynchronizePullRequestAsync(string prUrl)
+        private async Task<ActionResult<SynchronizePullRequestResult>> SynchronizePullRequestAsync(string prUrl)
         {
             ConditionalValue<InProgressPullRequest> maybePr =
                 await StateManager.TryGetStateAsync<InProgressPullRequest>(PullRequest);
             if (!maybePr.HasValue || maybePr.Value.Url != prUrl)
             {
                 return ActionResult.Create(
-                    (bool?) null,
+                    SynchronizePullRequestResult.UnknownPR,
                     $"Not Applicable: Pull Request '{prUrl}' is not tracked by maestro anymore.");
             }
 
@@ -341,43 +351,49 @@ namespace SubscriptionActorService
 
             InProgressPullRequest pr = maybePr.Value;
             PrStatus status = await darc.GetPullRequestStatusAsync(prUrl);
-            ActionResult<bool?> checkPolicyResult = null;
             switch (status)
             {
+                // If the PR is currently open, then evaluate the merge policies, which will potentially
+                // merge the PR if they are successul.
                 case PrStatus.Open:
-                    checkPolicyResult = await CheckMergePolicyAsync(prUrl, darc);
-                    if (checkPolicyResult.Result == true)
-                    {
-                        goto case PrStatus.Merged;
-                    }
+                    ActionResult<MergePolicyCheckResult> checkPolicyResult = await CheckMergePolicyAsync(prUrl, darc);
 
-                    if (checkPolicyResult.Result == false)
+                    switch (checkPolicyResult.Result)
                     {
-                        return ActionResult.Create((bool?) true, checkPolicyResult.Message);
+                        case MergePolicyCheckResult.Merged:
+                            await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                            await StateManager.RemoveStateAsync(PullRequest);
+                            return ActionResult.Create(SynchronizePullRequestResult.Completed, checkPolicyResult.Message);
+                        case MergePolicyCheckResult.NoPolicies:
+                        case MergePolicyCheckResult.FailedPolicies:
+                        case MergePolicyCheckResult.FailedToMerge:
+                            return ActionResult.Create(SynchronizePullRequestResult.InProgressCanUpdate, checkPolicyResult.Message);
+                        case MergePolicyCheckResult.PendingPolicies:
+                            return ActionResult.Create(SynchronizePullRequestResult.InProgressCannotUpdate, checkPolicyResult.Message);
+                        default:
+                            throw new NotImplementedException($"Unknown merge policy check result {checkPolicyResult.Result}");
                     }
-
-                    return ActionResult.Create((bool?) false, checkPolicyResult.Message);
                 case PrStatus.Merged:
-                    await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
-
-                    goto case PrStatus.Closed;
                 case PrStatus.Closed:
+                    // If the PR has been merged, update the subscription information
+                    if (status == PrStatus.Merged)
+                    {
+                        await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                    }
                     await StateManager.RemoveStateAsync(PullRequest);
-                    break;
+                    return ActionResult.Create(SynchronizePullRequestResult.Completed, $"PR Has been manually {status}");
                 default:
-                    Logger.LogError("Unknown pr status '{status}'", status);
-                    break;
+                    throw new NotImplementedException($"Unknown pr status '{status}'");
             }
-
-            if (checkPolicyResult != null)
-            {
-                return ActionResult.Create((bool?) null, checkPolicyResult.Message);
-            }
-
-            return ActionResult.Create((bool?) null, $"PR Has been manually {status}");
         }
 
-        private async Task<ActionResult<bool?>> CheckMergePolicyAsync(string prUrl, IRemote darc)
+        /// <summary>
+        ///     Check the merge policies for a PR and merge if they have succeeded.
+        /// </summary>
+        /// <param name="prUrl">Pull request URL</param>
+        /// <param name="darc">Darc remote</param>
+        /// <returns>Result of the policy check.</returns>
+        private async Task<ActionResult<MergePolicyCheckResult>> CheckMergePolicyAsync(string prUrl, IRemote darc)
         {
             IReadOnlyList<MergePolicyDefinition> policyDefinitions = await GetMergePolicyDefinitions();
             MergePolicyEvaluationResult result = await MergePolicyEvaluator.EvaluateAsync(
@@ -394,8 +410,9 @@ namespace SubscriptionActorService
 This pull request has not been merged because Maestro++ is waiting on the following merge policies.
 
 {string.Join("\n", result.Results.OrderBy(r => r.Policy == null ? " " : r.Policy.Name).Select(DisplayPolicy))}");
+
                 return ActionResult.Create(
-                    result.Pending ? (bool?) null : false,
+                    result.Pending ? MergePolicyCheckResult.PendingPolicies : MergePolicyCheckResult.FailedPolicies,
                     $"NOT Merged: PR '{prUrl}' failed policies {string.Join(", ", result.Results.Where(r => r.Success == null || r.Success == false).Select(r => r.Policy?.Name + r.Message))}");
             }
 
@@ -423,14 +440,14 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 if (merged)
                 {
                     return ActionResult.Create(
-                        (bool?) true,
+                        MergePolicyCheckResult.Merged,
                         $"Merged: PR '{prUrl}' passed policies {string.Join(", ", policyDefinitions.Select(p => p.Name))}");
                 }
 
-                return ActionResult.Create((bool?) false, $"NOT Merged: PR '{prUrl}' has merge conflicts.");
+                return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{prUrl}' has merge conflicts.");
             }
 
-            return ActionResult.Create((bool?) false, "NOT Merged: There are no merge policies");
+            return ActionResult.Create(MergePolicyCheckResult.NoPolicies, "NOT Merged: There are no merge policies");
         }
 
         private string DisplayPolicy(MergePolicyEvaluationResult.SingleResult result)
@@ -483,6 +500,9 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         ///     If at least one merge policy calls <see cref="IMergePolicyEvaluationContext.Pending" /> and
         ///     no merge policy calls <see cref="IMergePolicyEvaluationContext.Fail" /> then the pull request is considered
         ///     not-updateable.
+        ///
+        ///     PRs are marked as non-updateable so that we can allow pull request checks to complete on a PR prior
+        ///     to pushing additional commits.
         /// </remarks>
         /// <returns></returns>
         [ActionMethod("Updating assets for subscription: {subscriptionId}, build: {buildId}")]
