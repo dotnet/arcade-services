@@ -4,7 +4,6 @@
 
 using Microsoft.Extensions.Options;
 using System;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Maestro.AzureDevOps

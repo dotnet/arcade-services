@@ -241,7 +241,7 @@ namespace DependencyUpdater
                 }
                 catch (Exception e)
                 {
-                    Logger.LogError(e, "Failed to update subscription '{subscriptionId}' with build '{buildId}'");
+                    Logger.LogError(e, $"Failed to update subscription '{subscriptionId}' with build '{buildId}'");
                 }
             }
         }
