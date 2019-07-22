@@ -319,7 +319,8 @@ namespace SubscriptionActorService
                         // that were just obtained. We don't want to unregister the reminder in these cases.
                         return (null, false);
                     default:
-                        throw new NotImplementedException($"Unknown pull request synchronization result {result}");
+                        Logger.LogError($"Unknown pull request synchronization result {result}");
+                        break;
                 }
             }
 
