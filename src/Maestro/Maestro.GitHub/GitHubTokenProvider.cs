@@ -35,6 +35,7 @@ namespace Maestro.GitHub
                     var product = new ProductHeaderValue(Options.ApplicationName, Options.ApplicationVersion);
                     var appClient = new Octokit.GitHubClient(product) { Credentials = new Credentials(jwt, AuthenticationType.Bearer) };
                     AccessToken token = await appClient.GitHubApps.CreateInstallationToken(installationId);
+                    _logger.LogInformation($"New token obtained for GitHub installation {installationId}. Expires at {token.ExpiresAt}.");
                     return token.Token;
                 },
                 ex => _logger.LogError(ex, $"Failed to get a github token for installation id {installationId}, retrying"),
