@@ -15,7 +15,10 @@
     <Parameter Name="CredentialType" Value="None" />
   </Section>
   <Section Name="TransportSettings">
-    <Parameter Name="OperationTimeoutInSeconds" Value="900" />
+    <!-- Default OperationTimeout is 5 minutes which for some of the operations like publishing files into a branch
+         is not enough. We first changed it to 10 minutes but turned out that was not enough for some repos, changing to
+         20 now so we are safe (the longest we've seen process take is 12 minutes) -->
+    <Parameter Name="OperationTimeoutInSeconds" Value="1200" />
   </Section>
   <!-- The content will be generated during build -->
 </Settings>

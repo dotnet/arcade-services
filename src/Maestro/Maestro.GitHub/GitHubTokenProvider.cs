@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
@@ -17,7 +18,7 @@ namespace Maestro.GitHub
     public class GitHubTokenProvider : IGitHubTokenProvider
     {
         private readonly IOptions<GitHubTokenProviderOptions> _options;
-        private readonly Dictionary<long, AccessToken> _tokenCache;
+        private readonly ConcurrentDictionary<long, AccessToken> _tokenCache;
         public ILogger<GitHubTokenProvider> _logger;
 
         public GitHubTokenProvider(IOptions<GitHubTokenProviderOptions> options,
@@ -25,7 +26,7 @@ namespace Maestro.GitHub
         {
             _options = options;
             _logger = logger;
-            _tokenCache = new Dictionary<long, AccessToken>();
+            _tokenCache = new ConcurrentDictionary<long, AccessToken>();
         }
 
         public GitHubTokenProviderOptions Options => _options.Value;
@@ -74,9 +75,9 @@ namespace Maestro.GitHub
 
             AccessToken token = _tokenCache[installationId];
 
-            // If the cached token will expire in less than 15 minutes we won't use it and let GetTokenForInstallation generate a new one
+            // If the cached token will expire in less than 30 minutes we won't use it and let GetTokenForInstallation generate a new one
             // and update the cache
-            if (DateTimeOffset.Now.Subtract(token.ExpiresAt).TotalMinutes < 15)
+            if (DateTimeOffset.Now.Subtract(token.ExpiresAt).TotalMinutes < 30)
             {
                 return false;
             }
@@ -87,14 +88,7 @@ namespace Maestro.GitHub
 
         private void UpdateTokenCache(long installationId, AccessToken accessToken)
         {
-            if (_tokenCache.ContainsKey(installationId))
-            {
-                _tokenCache[installationId] = accessToken;
-            }
-            else
-            {
-                _tokenCache.Add(installationId, accessToken);
-            }
+            _tokenCache.AddOrUpdate(installationId, accessToken, (installation, token) => token = accessToken);
         }
     }
 }
