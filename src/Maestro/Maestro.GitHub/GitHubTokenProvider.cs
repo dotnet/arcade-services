@@ -33,10 +33,10 @@ namespace Maestro.GitHub
 
         public async Task<string> GetTokenForInstallation(long installationId)
         {
-            if (TryGetCachedToken(installationId, out string cachedToken))
+            if (TryGetCachedToken(installationId, out AccessToken cachedToken))
             {
                 _logger.LogInformation($"Cached token obtained for GitHub installation {installationId}. Expires at {cachedToken.ExpiresAt}.");
-                return cachedToken;
+                return cachedToken.Token;
             }
 
             return await ExponentialRetry.RetryAsync(
@@ -66,7 +66,7 @@ namespace Maestro.GitHub
             return generator.CreateEncodedJwtToken();
         }
 
-        private bool TryGetCachedToken(long installationId, out string cachedToken)
+        private bool TryGetCachedToken(long installationId, out AccessToken cachedToken)
         {
             cachedToken = null;
 
@@ -84,7 +84,7 @@ namespace Maestro.GitHub
                 return false;
             }
 
-            cachedToken = token.Token;
+            cachedToken = token;
             return true;
         }
 
