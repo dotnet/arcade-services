@@ -6,10 +6,10 @@ namespace SubscriptionActorService
 {
     public enum SynchronizePullRequestResult
     {
-        Invalid,
-        UnknownPR,
-        Completed,
-        InProgressCanUpdate,
-        InProgressCannotUpdate,
+        Invalid = 0,
+        UnknownPR = 1,
+        Completed = 2,
+        InProgressCanUpdate = 3,
+        InProgressCannotUpdate = 4,
     }
 }

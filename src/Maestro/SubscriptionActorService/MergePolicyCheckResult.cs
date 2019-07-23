@@ -6,10 +6,10 @@ namespace SubscriptionActorService
 {
     public enum MergePolicyCheckResult
     {
-        NoPolicies,
-        PendingPolicies,
-        FailedPolicies,
-        FailedToMerge,
-        Merged,
+        NoPolicies = 0,
+        PendingPolicies = 1,
+        FailedPolicies = 2,
+        FailedToMerge = 3,
+        Merged = 4,
     }
 }
