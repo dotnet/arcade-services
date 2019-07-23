@@ -33,9 +33,10 @@ namespace Maestro.GitHub
 
         public async Task<string> GetTokenForInstallation(long installationId)
         {
-            if (TryGetCachedToken(installationId, out string cachedToken))
+            if (TryGetCachedToken(installationId, out AccessToken cachedToken))
             {
-                return cachedToken;
+                _logger.LogInformation($"Cached token obtained for GitHub installation {installationId}. Expires at {cachedToken.ExpiresAt}.");
+                return cachedToken.Token;
             }
 
             return await ExponentialRetry.RetryAsync(
@@ -45,6 +46,7 @@ namespace Maestro.GitHub
                     var product = new ProductHeaderValue(Options.ApplicationName, Options.ApplicationVersion);
                     var appClient = new Octokit.GitHubClient(product) { Credentials = new Credentials(jwt, AuthenticationType.Bearer) };
                     AccessToken token = await appClient.GitHubApps.CreateInstallationToken(installationId);
+                    _logger.LogInformation($"New token obtained for GitHub installation {installationId}. Expires at {token.ExpiresAt}.");
                     UpdateTokenCache(installationId, token);
                     return token.Token;
                 },
@@ -64,7 +66,7 @@ namespace Maestro.GitHub
             return generator.CreateEncodedJwtToken();
         }
 
-        private bool TryGetCachedToken(long installationId, out string cachedToken)
+        private bool TryGetCachedToken(long installationId, out AccessToken cachedToken)
         {
             cachedToken = null;
 
@@ -82,7 +84,7 @@ namespace Maestro.GitHub
                 return false;
             }
 
-            cachedToken = token.Token;
+            cachedToken = token;
             return true;
         }
 
