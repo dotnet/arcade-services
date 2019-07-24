@@ -1,4 +1,4 @@
-# Globals 
+# Globals
 [string]$maestroInstallation = if (-not $maestroInstallation) { throw "Please supply the Maestro installation with -maestroInstallation"} else { $maestroInstallation }
 [string]$maestroBearerToken = if (-not $maestroBearerToken) { throw "Please supply the Maestro bearer token with -maestroBearerToken"} else { $maestroBearerToken }
 [string]$githubPAT = if (-not $githubPAT) { throw "Please supply the github PAT with -githubPAT"} else { $githubPAT }
@@ -9,7 +9,7 @@
 [string]$azdoAccount = if (-not $azdoAccount) { "dnceng" } else { $azdoAccount }
 [string]$azdoProject = if (-not $azdoProject) { "internal" } else { $azdoProject }
 [string]$azdoApiVersion = if (-not $azdoApiVersion) { "5.0-preview.1" } else { $azdoApiVersion }
-[string]$darcPackageSource = if (-not $darcPackageSource) {""} else { $darcPackageSource } 
+[string]$darcPackageSource = if (-not $darcPackageSource) {""} else { $darcPackageSource }
 [string]$barApiVersion = "2019-01-16"
 $global:gitHubPRsToClose = @()
 $global:githubBranchesToDelete = @()
@@ -32,18 +32,18 @@ if (Test-Path $darcVersion) {
     Write-Host "Using local darc binary $darcTool"
 } else {
     Write-Host "Temporary testing location located at $testRoot"
-    $darcInstallCommand = "dotnet tool install --tool-path $testRoot --version $darcVersion `"Microsoft.DotNet.Darc`""
+    $darcInstallArguments = @( "--tool-path", $testRoot, "--version", $darcVersion, "Microsoft.DotNet.Darc" )
     if ($darcPackageSource) {
-        $darcInstallCommand += " --add-source ${darcPackageSource}"
+        $darcInstallArguments += @( "--add-source", "${darcPackageSource}" )
     }
-    Write-Host "Installing Darc: $darcInstallCommand"
-    Invoke-Expression $darcInstallCommand
+    Write-Host "Installing Darc: dotnet tool install $darcInstallArguments"
+    & dotnet tool install @darcInstallArguments
     $darcTool = Join-Path -Path $testRoot -ChildPath "darc"
 }
 Write-Host
 
 # Set auth parameters
-$darcAuthParams = "--bar-uri $maestroInstallation --github-pat $githubPAT --azdev-pat $azdoPAT --password $maestroBearerToken"
+$darcAuthParams = @("--bar-uri", $maestroInstallation, "--github-pat", $githubPAT, "--azdev-pat", $azdoPAT, "--password", $maestroBearerToken)
 
 # Enable TLS 1.2
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -56,7 +56,7 @@ function Teardown() {
     foreach ($subscriptionId in $global:subscriptionsToDelete) {
         try {
             Write-Host "Deleting $subscriptionId"
-            Darc-Command delete-subscription --id $subscriptionId
+            Darc-Command delete-subscription --id "$subscriptionId" 
         } catch {
             Write-Warning "Failed to delete subscription with id $subscriptionId"
             Write-Warning $_
@@ -67,7 +67,7 @@ function Teardown() {
     foreach ($defaultChannel in $global:defaultChannelsToDelete) {
         try {
             Write-Host "Deleting default channel $($defaultChannel.repo)@$($defaultChannel.branch) -> $($defaultChannel.channel)"
-            Darc-Delete-Default-Channel $defaultChannel.channel $defaultChannel.repo $defaultChannel.branch
+            Darc-Delete-Default-Channel -channelName $defaultChannel.channel -repoUri $defaultChannel.repo -branch $defaultChannel.branch
         } catch {
             Write-Warning "Failed to delete default channel $($defaultChannel.repo)@$($defaultChannel.branch) -> $($defaultChannel.channel)"
             Write-Warning $_
@@ -92,7 +92,7 @@ function Teardown() {
     foreach ($channel in $global:channelsToDelete) {
         try {
             Write-Host "Deleting channel $channel"
-            Darc-Command delete-channel --name `'$channel`'
+            Darc-Command delete-channel --name "$channel" 
         } catch {
             Write-Warning "Failed to delete channel $channel"
             Write-Warning $_
@@ -119,7 +119,7 @@ function Teardown() {
             Write-Warning "Failed to remove github branch $($branch.branch) in $($branch.repo)"
             Write-Warning $_
         }
-    } 
+    }
 
     Write-Host "Cleaning $($global:gitHubPRsToClose.Count) github PRs"
     foreach ($pr in $global:gitHubPRsToClose) {
@@ -158,69 +158,68 @@ function Teardown() {
     Remove-Item -Path $testRoot -Recurse -Force | Out-Null
 }
 
-function Darc-Command() {
-    $darcParams = $args
-    Darc-Command-Impl $darcParams
-}
-
-function Darc-Command-Impl($darcParams) {
-    $baseDarcCommand = "& $darcTool $darcParams" 
-    Write-Host "Running 'darc $darcParams $darcAuthParams'"
-    $darcCommand = "`$commandOutput = $baseDarcCommand $darcAuthParams; if (`$LASTEXITCODE -ne 0) { Write-Host `${commandOutput};throw `"Darc command exited with exit code: `$LASTEXITCODE`" } else { `$commandOutput }"
-    Invoke-Expression $darcCommand
+function Darc-Command([Parameter(ValueFromRemainingArguments=$true)]$darcParams) {
+    Write-Host "Running 'darc $($darcParams) $darcAuthParams'"
+    $commandOutput = & $darcTool @darcParams @darcAuthParams
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host ${commandOutput}
+      throw "Darc command exited with exit code: $LASTEXITCODE"
+    } else {
+      $commandOutput
+    }
 }
 
 # Run darc set-repository-policies
 function Darc-Set-Repository-Policies($repo, $branch, $policiesParams) {
-    $darcParams = "set-repository-policies -q --repo '$repo' --branch '$branch' $policiesParams"
-    Darc-Command-Impl $darcParams
+    $darcParams = @( "set-repository-policies", "-q", "--repo", "$repo", "--branch", "$branch" ) + $policiesParams
+    Darc-Command -darcParams $darcParams
 }
 
 # Run darc get-repository-policies
 function Darc-Get-Repository-Policies($repo, $branch) {
-    $darcParams = "get-repository-policies --all --repo '$repo' --branch '$branch'"
-    Darc-Command-Impl $darcParams
+    $darcParams = @( "get-repository-policies", "--all", "--repo", "$repo", "--branch", "$branch" )
+    Darc-Command -darcParams $darcParams
 }
 
 # Run darc add-channel and record the channel for later deletion
 function Darc-Add-Channel($channelName, $classification) {
-    $darcParams = "add-channel --name '$channelName' --classification '$classification'"
-    Darc-Command-Impl $darcParams
+    $darcParams = @("add-channel", "--name", "$channelName", "--classification", "$classification" )
+    Darc-Command -darcParams $darcParams
     $global:channelsToDelete += $channelName
 }
 
 function Darc-Delete-Channel($channelName) {
-    $darcParams = "delete-channel --name '$channelName'"
-    Darc-Command-Impl $darcParams
+    $darcParams = @( "delete-channel", "--name", "$channelName" )
+    Darc-Command -darcParams $darcParams
 }
 
 # Run darc add-channel and record the channel for later deletion
 function Darc-Add-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "add-default-channel --channel '$channelName' --repo '$repoUri' --branch '$branch'"
-    Darc-Command-Impl $darcParams
+    $darcParams = @( "add-default-channel", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch" )
+    Darc-Command -darcParams $darcParams
     $global:defaultChannelsToDelete += @{ channel = $channelName; repo = $repoUri; branch = $branch }
 }
 
 function Darc-Delete-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "delete-default-channel --channel '$channelName' --repo '$repoUri' --branch '$branch'"
-    Darc-Command-Impl $darcParams
+    $darcParams = @( "delete-default-channel", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch" )
+    Darc-Command -darcParams $darcParams
 }
 
 function Darc-Enable-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "default-channel-status --channel '$channelName' --repo '$repoUri' --branch '$branch' --enable"
-    Darc-Command-Impl $darcParams
+    $darcParams = @( "default-channel-status", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch", "--enable" )
+    Darc-Command -darcParams $darcParams
 }
 
 function Darc-Disable-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = "default-channel-status --channel '$channelName' --repo '$repoUri' --branch '$branch' --disable"
-    Darc-Command-Impl $darcParams
+    $darcParams = @( "default-channel-status", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch", "--disable" )
+    Darc-Command -darcParams $darcParams
 }
 
 # Run darc add-subscription with the specified parameters, extract out the subscription id,
 # and record it for teardown later. Implicitly passes -q
-function Darc-Add-Subscription() {
-    $darcParams = "add-subscription $args -q"
-    $output = Darc-Command-Impl $darcParams
+function Darc-Add-Subscription([Parameter(ValueFromRemainingArguments=$true)]$darcParams) {
+    $darcParams = @( "add-subscription" ) + $darcParams + @( "-q" )
+    $output = Darc-Command -darcParams $darcParams
     $match = $output -match "Successfully created new subscription with id '([a-f0-9-]+)'"
 
     # Batched subscriptions return a warning that non-batched subscriptions don't,
@@ -245,7 +244,7 @@ function Darc-Add-Subscription() {
 function Trigger-Subscription($subscriptionId) {
     $headers = Get-Bar-Headers 'text/plain'
     Write-Host "Triggering subscription $subscriptionId"
-    
+
     $uri = "$maestroInstallation/api/subscriptions/$subscriptionId/trigger?api-version=$barApiVersion"
 
     Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
@@ -277,7 +276,7 @@ function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publis
     if (!$publishUsingPipelines) {
         $publishUsingPipelines = "false"
     }
-    
+
     $headers = Get-Bar-Headers 'text/plain'
     $body = @{
         gitHubRepository = $repository;
@@ -293,10 +292,10 @@ function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publis
         assets = $assets;
         publishUsingPipelines = $publishUsingPipelines;
     }
-    $bodyJson = ConvertTo-Json $body
+    $bodyJson = ConvertTo-Json $body -Depth 4
     Write-Host "Creating Build:"
     Write-Host $bodyJson
-    
+
     $uri = "$maestroInstallation/api/builds?api-version=$barApiVersion"
 
     Write-Host "Creating a new build in the Build Asset Registry..."
@@ -312,7 +311,7 @@ function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publis
 function Get-Build($id) {
     $headers = Get-Bar-Headers 'application/json'
     Write-Host "Getting Build $id"
-    
+
     $uri = "$maestroInstallation/api/builds/${id}?api-version=$barApiVersion"
 
     $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Get | ConvertFrom-Json
@@ -334,10 +333,11 @@ function Git-Command($repoName) {
     Push-Location -Path $(Get-Repo-Location($repoName))
     try {
         $gitParams = $args
-        $baseGitCommand = "git $gitParams" 
-        Write-Host "Running '$baseGitCommand' from $(Get-Location)"
-        $gitCommand = "`$commandOutput = $baseGitCommand; if (`$LASTEXITCODE -ne 0) { throw 'Git exited with exit code: `$LASTEXITCODE' } else { `$commandOutput }"
-        Invoke-Expression $gitCommand
+        if ($gitParams.GetType().Name -ne "Object[]") {
+            $gitParams = $gitParams.ToString().Split(" ")
+        }
+        Write-Host "Running $baseGitCommand from $(Get-Location)"
+        $commandOutput = & git @gitParams; if ($LASTEXITCODE -ne 0) { throw "Git exited with exit code: $LASTEXITCODE" } else { $commandOutput }
     }
     finally {
         Pop-Location
@@ -378,7 +378,7 @@ function Add-Pipeline-To-Channel($channelName, $pipelineId) {
 
     Write-Host "Adding pipeline ${pipelineId} to channel ${channelId} in the Build Asset Registry..."
 
-    $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
+    Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
 
     $global:channelPipelinesToDelete[$channelName] += $pipelineId
 }
@@ -400,11 +400,11 @@ function Remove-Pipeline-From-Channel($channelName, $pipelineId) {
 #
 
 function Get-AzDO-RepoAuthUri($repoName) {
-    "https://${azdoUser}:${azdoPAT}@dev.azure.com/${azdoAccount}/${azdoProject}/_git/${repoName}"
+    return "https://${azdoUser}:${azdoPAT}@dev.azure.com/${azdoAccount}/${azdoProject}/_git/${repoName}"
 }
 
 function Get-AzDO-RepoUri($repoName) {
-    "https://dev.azure.com/${azdoAccount}/${azdoProject}/_git/${repoName}"
+    return "https://dev.azure.com/${azdoAccount}/${azdoProject}/_git/${repoName}"
 }
 
 function AzDO-Clone($repoName) {
@@ -503,7 +503,7 @@ function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $tar
 
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        $dependencies = Darc-Command get-dependencies
+        $dependencies = Darc-Command get-dependencies 
         $equal = Compare-Array-Output $expectedDependencies $dependencies
         if (-not $equal) {
             throw "PR did not have expected dependency updates."
@@ -515,24 +515,66 @@ function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $tar
     }
 }
 
-function Check-NonBatched-AzDO-PullRequest($sourceRepoName, $targetRepoName, $targetBranch, $expectedDependencies, $complete = $false) {
+function Validate-Feeds-NugetConfig($targetRepoName, $expectedFeeds, $notExpectedFeeds) {
+    try {
+        # there's a good chance we're already there.
+        Push-Location -Path $(Get-Repo-Location $targetRepoName) -ErrorAction SilentlyContinue
+        [xml]$nugetConfig = Get-Content "NuGet.config"
+        $currentFeeds = $nugetConfig.Configuration.PackageSources.Add.Value
+        $missingFeeds = $expectedFeeds.Where{$_ -notin $currentFeeds}
+        if ($missingFeeds) {
+            Write-Error "Missing feeds! `n Expected: $expectedFeeds `n Found: $currentFeeds"
+            throw "PR did not have expected feeds"
+        }
+        $wrongFeeds = $currentFeeds.Where{$_ -in $notExpectedFeeds}
+        if ($wrongFeeds) {
+            Write-Error "Incorrect feeds present! `n Did not expect $wrongFeeds to be part of the PR"
+            throw "PR had extra unexpected feeds"
+        }
+        Write-Host "Finished validating feeds"
+        return $true
+    } finally {
+        Pop-Location
+    }
+}
+
+function Check-NonBatched-AzDO-PullRequest($sourceRepoName, $targetRepoName, $targetBranch, $expectedDependencies, $complete = $false, $expectedFeeds = @(), $notExpectedFeeds = @()) {
     $expectedPRTitle = "[$targetBranch] Update dependencies from $azdoAccount/$azdoProject/$sourceRepoName"
-    return Check-AzDO-PullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies $complete
+    return Check-AzDO-PullRequest `
+        -expectedPRTitle $expectedPRTitle `
+        -targetRepoName $targetRepoName `
+        -targetBranch $targetBranch `
+        -expectedDependencies $expectedDependencies `
+        -complete $complete `
+        -expectedFeeds $expectedFeeds `
+        -notExpectedFeeds $notExpectedFeeds
 }
 
-function Check-Batched-AzDO-PullRequest($sourceRepoCount, $targetRepoName, $targetBranch, $expectedDependencies) {
+function Check-Batched-AzDO-PullRequest($sourceRepoCount, $targetRepoName, $targetBranch, $expectedDependencies, $expectedFeeds = @(), $notExpectedFeeds = @()) {
     $expectedPRTitle = "[$targetBranch] Update dependencies from $sourceRepoCount repositories"
-    return Check-AzDO-PullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies $false
+    return Check-AzDO-PullRequest `
+        -expectedPRTitle $expectedPRTitle `
+        -targetRepoName $targetRepoName `
+        -targetBranch $targetBranch `
+        -exptectedDependencies $expectedDependencies `
+        -complete $false `
+        -expectedFeeds $expectedFeeds `
+        -notExpectedFeeds $notExpectedFeeds
 }
 
-function Check-AzDO-PullRequest($expectedPRTitle, $targetRepoName, $targetBranch, $exptectedDependencies, $complete)
+function Check-AzDO-PullRequest($expectedPRTitle, $targetRepoName, $targetBranch, $exptectedDependencies, $complete, $expectedFeeds, $notExpectedFeeds)
 {
     Write-Host "Checking Opened PR in $targetBranch $targetRepoName ..."
     $pullRequest = Check-AzDO-PullRequest-Created $targetRepoName $targetBranch
     if (!$pullRequest) {
         return $false
     }
-    Validate-AzDO-PullRequest-Contents $pullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies
+    Validate-AzDO-PullRequest-Contents -pullRequest $pullRequest -expectedPRTitle $expectedPRTitle -targetRepoName $targetRepoName -targetBranch $targetBranch -expectedDependencies $expectedDependencies
+    if ($expectedFeeds.count -gt 0) {
+        Write-Host "Validating Nuget feeds in PR branch"
+        Write-Host "Expected feeds: $expectedFeeds"
+        Validate-Feeds-NugetConfig $targetRepoName $expectedFeeds $notExpectedFeeds
+    }
     if ($complete) {
         Check-AzDO-PullRequest-Completed $targetRepoName $pullRequest.pullRequestId
     }
@@ -697,7 +739,7 @@ function Validate-Github-PullRequest-Contents($pullRequest, $expectedPRTitle, $t
     Git-Command $targetRepoName checkout $pullRequestBaseBranch
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        $dependencies = Darc-Command get-dependencies
+        $dependencies = Darc-Command  get-dependencies 
 
         if ($dependencies.Count -ne $expectedDependencies.Count) {
             Write-Error "Expected $($expectedDependencies.Count) dependencies, Actual $($dependencies.Count) dependencies."

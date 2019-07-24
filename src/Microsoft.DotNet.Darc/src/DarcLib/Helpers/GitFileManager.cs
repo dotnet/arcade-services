@@ -23,9 +23,14 @@ namespace Microsoft.DotNet.DarcLib
         private readonly ILogger _logger;
 
         // Matches package feeds like
-        // https://dnceng.pkgs.visualstudio.com/public/_packaging/darc-pub-arcade-fd8184c3fcde81eb27ca4c061c6e171f418d753f-1
+        // https://dnceng.pkgs.visualstudio.com/public/_packaging/darc-pub-arcade-fd8184c3fcde81eb27ca4c061c6e171f418d753f-1/nuget/v3/index.json
         private const string MaestroManagedFeedPattern =
-            @"https://(\w+).pkgs.visualstudio.com/(public/){0,1}_packaging/darc-(int|pub)-(.+?)-([A-Fa-f0-9]{7,40})-?(\d*)/nuget/v\d+/index.json";
+            @"https://(?<organization>\w+).pkgs.visualstudio.com/(public/){0,1}_packaging/darc-(?<type>(int|pub))-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)/nuget/v\d+/index.json";
+
+        // Matches package feeds like
+        // https://dotnet-feed-internal.azurewebsites.net/container/dotnet-core-internal/sig/dsdfasdfasdf234234s/se/2020-02-02/darc-int-dotnet-arcade-services-babababababe-08/index.json
+        private const string AzureStorageProxyFeedPattern =
+            @"https://([a-z-]+).azurewebsites.net/container/([^/]+)/sig/\w+/se/([0-9]{4}-[0-9]{2}-[0-9]{2})/darc-(?<type>int)-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)/index.json";
 
         public GitFileManager(IGitRepo gitRepo, ILogger logger)
         {
@@ -252,7 +257,8 @@ namespace Microsoft.DotNet.DarcLib
 
         private bool IsMaestroManagedFeed(string feed)
         {
-            return Regex.IsMatch(feed, MaestroManagedFeedPattern);
+            return Regex.IsMatch(feed, MaestroManagedFeedPattern) || 
+                Regex.IsMatch(feed, AzureStorageProxyFeedPattern);
         }
 
         private XmlDocument UpdatePackageSources(XmlDocument nugetConfig, HashSet<string> maestroManagedFeeds)
@@ -956,13 +962,18 @@ namespace Microsoft.DotNet.DarcLib
         private (string org, string repoName, string type, string sha, string subVersion) ParseMaestroManagedFeed(string feed)
         {
             var match = Regex.Match(feed, MaestroManagedFeedPattern);
+
+            match = match.Success ? 
+                match : 
+                Regex.Match(feed, AzureStorageProxyFeedPattern);
+
             if (match.Success)
             {
-                string org = match.Groups[1].Value;
-                string repo = match.Groups[4].Value;
-                string type = match.Groups[3].Value;
-                string sha = match.Groups[5].Value;
-                string subVersion = match.Groups[6].Value;
+                string org = match.Groups["organization"].Value;
+                string repo = match.Groups["repository"].Value;
+                string type = match.Groups["type"].Value;
+                string sha = match.Groups["sha"].Value;
+                string subVersion = match.Groups["subversion"].Value;
                 return (org, repo, type, sha, subVersion);
             }
             else

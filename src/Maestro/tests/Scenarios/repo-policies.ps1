@@ -24,7 +24,7 @@ try {
     $repoUri = Get-Github-RepoUri $repoName
     
     Write-Host "Setting repository merge policy to empty"
-    Darc-Set-Repository-Policies $repoUri $branchName
+    Darc-Set-Repository-Policies -repo $repoUri -branch $branchName
     $output = Darc-Get-Repository-Policies $repoUri $branchName
     $expected = @(
         "$repoUri @ $branchName",
@@ -36,7 +36,7 @@ try {
     
     Write-Host ""
     Write-Host "Setting repository merge policy to standard"
-    Darc-Set-Repository-Policies $repoUri $branchName "--standard-automerge"
+    Darc-Set-Repository-Policies -repo $repoUri -branch $branchName -policiesParams @( "--standard-automerge" )
     $output = Darc-Get-Repository-Policies $repoUri $branchName
     $expected = @(
         "$repoUri @ $branchName",
@@ -50,8 +50,8 @@ try {
     
     Write-Host ""
     Write-Host "Setting repository merge policy to all checks successful"
-    Darc-Set-Repository-Policies $repoUri $branchName "--all-checks-passed --ignore-checks A,B"
-    $output = Darc-Get-Repository-Policies $repoUri $branchName
+    Darc-Set-Repository-Policies -repo $repoUri -branch $branchName -policiesParams @( "--all-checks-passed", "--ignore-checks", "A,B" )
+    $output = Darc-Get-Repository-Policies -repo $repoUri -branch $branchName
     $expected = @(
         "$repoUri @ $branchName",
         "- Merge Policies:",

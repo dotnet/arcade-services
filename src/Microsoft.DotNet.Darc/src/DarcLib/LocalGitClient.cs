@@ -149,45 +149,59 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
-            foreach (GitFile file in filesToCommit.Where(f => f.Operation != GitFileOperation.Delete))
+            string repoDir = LocalHelpers.GetRootDir(_logger);
+            try
             {
-                switch (file.Operation)
+                using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoDir))
                 {
-                    case GitFileOperation.Add:
-                        string parentDirectory = Directory.GetParent(file.FilePath).FullName;
+                    foreach (GitFile file in filesToCommit.Where(f => f.Operation != GitFileOperation.Delete))
+                    {
+                        switch (file.Operation)
+                        {
+                            case GitFileOperation.Add:
+                                string parentDirectory = Directory.GetParent(file.FilePath).FullName;
 
-                        if (!Directory.Exists(parentDirectory))
-                        {
-                            Directory.CreateDirectory(parentDirectory);
-                        }
+                                if (!Directory.Exists(parentDirectory))
+                                {
+                                    Directory.CreateDirectory(parentDirectory);
+                                }
 
-                        string fullPath = Path.Combine(repoUri, file.FilePath);
-                        using (var streamWriter = new StreamWriter(fullPath))
-                        {
-                            string finalContent;
-                            switch (file.ContentEncoding)
-                            {
-                                case ContentEncoding.Utf8:
-                                    finalContent = file.Content;
-                                    break;
-                                case ContentEncoding.Base64:
-                                    byte[] bytes = Convert.FromBase64String(file.Content);
-                                    finalContent = Encoding.UTF8.GetString(bytes);
-                                    break;
-                                default:
-                                    throw new DarcException($"Unknown file content encoding {file.ContentEncoding}");
-                            }
-                            finalContent = NormalizeLineEndings(fullPath, finalContent);
-                            await streamWriter.WriteAsync(finalContent);
+                                string fullPath = Path.Combine(repoUri, file.FilePath);
+                                using (var streamWriter = new StreamWriter(fullPath))
+                                {
+                                    string finalContent;
+                                    switch (file.ContentEncoding)
+                                    {
+                                        case ContentEncoding.Utf8:
+                                            finalContent = file.Content;
+                                            break;
+                                        case ContentEncoding.Base64:
+                                            byte[] bytes = Convert.FromBase64String(file.Content);
+                                            finalContent = Encoding.UTF8.GetString(bytes);
+                                            break;
+                                        default:
+                                            throw new DarcException($"Unknown file content encoding {file.ContentEncoding}");
+                                    }
+                                    finalContent = NormalizeLineEndings(fullPath, finalContent);
+                                    await streamWriter.WriteAsync(finalContent);
+
+                                    LibGit2SharpHelpers.AddFileToIndex(localRepo, file, fullPath, _logger);
+                                }
+                                break;
+                            case GitFileOperation.Delete:
+                                if (File.Exists(file.FilePath))
+                                {
+                                    File.Delete(file.FilePath);
+                                }
+                                break;
                         }
-                        break;
-                    case GitFileOperation.Delete:
-                        if (File.Exists(file.FilePath))
-                        {
-                            File.Delete(file.FilePath);
-                        }
-                        break;
+                    }
+                    LibGit2Sharp.Commands.Stage(localRepo, filesToCommit.Select(f => f.FilePath));
                 }
+            }
+            catch (Exception exc)
+            {
+                throw new DarcException($"Something went wrong when checking out {repoUri} in {repoDir}", exc);
             }
         }
 
@@ -451,6 +465,27 @@ namespace Microsoft.DotNet.DarcLib
                         log.LogDebug($"{sub.Name} doesn't have a .gitdir redirect at {subRepoGitFilePath}, skipping delete");
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        ///     Add a remote to a local repo if does not already exist, and attempt to fetch commits.
+        /// </summary>
+        /// <param name="repoUrl"></param>
+        public void AddRemoteIfMissing(string repoDir, string repoUrl)
+        {
+            using (LibGit2Sharp.Repository repo = new LibGit2Sharp.Repository(repoDir))
+            {
+                if (repo.Network.Remotes.Any(remote => remote.Url.Equals(repoUrl, StringComparison.InvariantCultureIgnoreCase)))
+                {
+                    return;
+                }
+                _logger.LogDebug($"Adding {repoUrl} remote to {repoDir}");
+                // remote names don't matter, make sure it's unique
+                string remoteName = Guid.NewGuid().ToString();
+                repo.Network.Remotes.Add(remoteName, repoUrl);
+                _logger.LogDebug($"Fetching new commits from {repoUrl} into {repoDir}");
+                LibGit2Sharp.Commands.Fetch(repo, remoteName, new[] { $"+refs/heads/*:refs/remotes/{remoteName}/*" }, new LibGit2Sharp.FetchOptions(), $"Fetching {repoUrl} into {repoDir}");
             }
         }
     }

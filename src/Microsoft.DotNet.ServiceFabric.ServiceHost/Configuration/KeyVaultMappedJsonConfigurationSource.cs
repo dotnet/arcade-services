@@ -14,13 +14,18 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
     public class KeyVaultMappedJsonConfigurationSource : JsonConfigurationSource
     {
+        private readonly TimeSpan _reloadTime;
         private readonly Lazy<KeyVaultClient> _client;
 
         private readonly string KeyVaultKeyPrefix = "[vault(";
         private readonly string KeyVaultKeySuffix = ")]";
 
-        public KeyVaultMappedJsonConfigurationSource(Func<KeyVaultClient> clientFactory, string vaultUri)
+        public KeyVaultMappedJsonConfigurationSource(
+            Func<KeyVaultClient> clientFactory,
+            string vaultUri,
+            TimeSpan reloadTime)
         {
+            _reloadTime = reloadTime;
             VaultUri = vaultUri;
             _client = new Lazy<KeyVaultClient>(clientFactory);
         }
@@ -31,7 +36,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         public override IConfigurationProvider Build(IConfigurationBuilder builder)
         {
             FileProvider = FileProvider ?? builder.GetFileProvider();
-            return new KeyVaultMappedJsonConfigurationProvider(this);
+            return new KeyVaultMappedJsonConfigurationProvider(this, _reloadTime);
         }
 
         public IDictionary<string, string> MapKeyVaultReferences(IDictionary<string, string> data)

@@ -8,7 +8,6 @@ param(
 )
 
 $subscriptionId = $null
-$pullRequestBaseBranch = $null
 $testChannelName = Get-Random
 $sourceRepoName = "maestro-test1"
 $targetRepoName = "maestro-test2"
@@ -43,8 +42,8 @@ try {
     $targetRepoUri = Get-Github-RepoUri $targetRepoName
 
     Write-Host "Creating test channel"
-    try { Darc-Delete-Channel $testChannelName } catch {}
-    Darc-Add-Channel $testChannelName "test"
+    try { Darc-Delete-Channel -channelName $testChannelName } catch {}
+    Darc-Add-Channel -channelName $testChannelName -classification "test"
 
     Write-Host "Creating test pipeline"
     $pipelineId = Create-Pipeline $testReleasePipelineId
@@ -55,12 +54,12 @@ try {
     Write-Host "Associated test release pipeline $pipelineId to test channel"
 
     Write-Host "Creating default channel"
-    try { Darc-Delete-Default-Channel $testChannelName $sourceRepoUri $sourceBranch } catch {}
-    Darc-Add-Default-Channel $testChannelName $sourceRepoUri $sourceBranch
+    try { Darc-Delete-Default-Channel -channelName $testChannelName -repoUri $sourceRepoUri -branch $sourceBranch } catch {}
+    Darc-Add-Default-Channel -channelName $testChannelName -repoUri $sourceRepoUri -branch $sourceBranch
     $defaultChannelsToDelete += @{ channel = $testChannelName; repo = $sourceRepoUri; branch = $sourceBranch }
 
     Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
-    $subscriptionId = Darc-Add-Subscription --channel `'$testChannelName`' --source-repo $sourceRepoUri --target-repo $targetRepoUri --update-frequency everyBuild --target-branch $targetBranch
+    $subscriptionId = Darc-Add-Subscription --channel "$testChannelName" --source-repo "$sourceRepoUri" --target-repo "$targetRepoUri" --update-frequency everyBuild --target-branch "$targetBranch" 
     $subscriptionsToDelete += $subscriptionId
 
     Write-Host "Cloning target repo to prepare the target branch"
@@ -72,8 +71,8 @@ try {
     # Add the foo and bar dependencies
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        Darc-Command add-dependency --name 'Foo' --type product --repo $sourceRepoUri
-        Darc-Command add-dependency --name 'Bar' --type product --repo $sourceRepoUri
+        Darc-Command add-dependency --name Foo --type product --repo "$sourceRepoUri" 
+        Darc-Command add-dependency --name Bar --type product --repo "$sourceRepoUri" 
     }
     finally {
         Pop-Location
@@ -89,7 +88,7 @@ try {
     $buildId = New-Build -repository $sourceRepoUri -branch $sourceBranch -commit $sourceCommit -buildNumber $sourceBuildNumber -assets $assets "true"
     Write-Host "Created build: $buildId"
 
-    # Release Pipeline will run, and if it finishes, add the build to the channel. 
+    # Release Pipeline will run, and if it finishes, add the build to the channel.
     # This will trigger the dependency update. If we don't see the PR created after 10 attempts
     # and the build is not in the channel, fail the test
 

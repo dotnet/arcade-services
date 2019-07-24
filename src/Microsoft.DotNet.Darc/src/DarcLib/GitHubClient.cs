@@ -882,5 +882,15 @@ namespace Microsoft.DotNet.DarcLib
         {
             throw new NotImplementedException($"Cannot checkout a remote repo.");
         }
+
+        /// <summary>
+        ///     Does not apply to remote repositories.
+        /// </summary>
+        /// <param name="repoDir">Ignored</param>
+        /// <param name="repoUrl">Ignored</param>
+        public void AddRemoteIfMissing(string repoDir, string repoUrl)
+        {
+            throw new NotImplementedException($"Cannot add a remote to a remote repo.");
+        }
     }
 }

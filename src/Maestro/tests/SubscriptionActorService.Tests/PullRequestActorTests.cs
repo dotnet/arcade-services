@@ -18,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
+using Microsoft.VisualStudio.Services.Zeus;
 using Moq;
 using Xunit;
 using Asset = Maestro.Contracts.Asset;
@@ -227,7 +228,7 @@ namespace SubscriptionActorService.Tests
                     });
         }
 
-        private IDisposable WithExistingPullRequest(bool updatable)
+        private IDisposable WithExistingPullRequest(SynchronizePullRequestResult checkResult)
         {
             var pr = new InProgressPullRequest
             {
@@ -244,10 +245,10 @@ namespace SubscriptionActorService.Tests
             StateManager.SetStateAsync(PullRequestActorImplementation.PullRequest, pr);
             ExpectedActorState.Add(PullRequestActorImplementation.PullRequest, pr);
 
-            ActionRunner.Setup(r => r.ExecuteAction(It.IsAny<Expression<Func<Task<ActionResult<bool?>>>>>()))
-                .ReturnsAsync(updatable);
+            ActionRunner.Setup(r => r.ExecuteAction(It.IsAny<Expression<Func<Task<ActionResult<SynchronizePullRequestResult>>>>>()))
+                .ReturnsAsync(checkResult);
 
-            if (updatable)
+            if (checkResult == SynchronizePullRequestResult.InProgressCanUpdate)
             {
                 DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
                     .Setup(r => r.GetPullRequestAsync(InProgressPrUrl))
@@ -262,8 +263,8 @@ namespace SubscriptionActorService.Tests
             return Disposable.Create(
                 () =>
                 {
-                    ActionRunner.Verify(r => r.ExecuteAction(It.IsAny<Expression<Func<Task<ActionResult<bool?>>>>>()));
-                    if (updatable)
+                    ActionRunner.Verify(r => r.ExecuteAction(It.IsAny<Expression<Func<Task<ActionResult<SynchronizePullRequestResult>>>>>()));
+                    if (checkResult == SynchronizePullRequestResult.InProgressCanUpdate)
                     {
                         DarcRemotes[TargetRepo].Verify(r => r.GetPullRequestAsync(InProgressPrUrl));
                     }
@@ -446,7 +447,7 @@ namespace SubscriptionActorService.Tests
 
                 GivenAPendingUpdateReminder();
                 AndPendingUpdates(b);
-                using (WithExistingPullRequest(false))
+                using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCannotUpdate))
                 {
                     await WhenProcessPendingUpdatesAsyncIsCalled();
                     // Nothing happens
@@ -469,7 +470,7 @@ namespace SubscriptionActorService.Tests
                 AndPendingUpdates(b);
                 WithRequireNonCoherencyUpdates(b);
                 WithNoRequiredCoherencyUpdates();
-                using (WithExistingPullRequest(true))
+                using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCanUpdate))
                 {
                     await WhenProcessPendingUpdatesAsyncIsCalled();
                     ThenUpdateReminderIsRemoved();
@@ -550,7 +551,7 @@ namespace SubscriptionActorService.Tests
 
                 WithRequireNonCoherencyUpdates(b);
                 WithNoRequiredCoherencyUpdates();
-                using (WithExistingPullRequest(true))
+                using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCanUpdate))
                 {
                     await WhenUpdateAssetsAsyncIsCalled(b);
 
@@ -577,7 +578,7 @@ namespace SubscriptionActorService.Tests
 
                 WithRequireNonCoherencyUpdates(b);
                 WithNoRequiredCoherencyUpdates();
-                using (WithExistingPullRequest(false))
+                using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCannotUpdate))
                 {
                     await WhenUpdateAssetsAsyncIsCalled(b);
 

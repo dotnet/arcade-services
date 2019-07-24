@@ -85,6 +85,8 @@ namespace Microsoft.DotNet.DarcLib
                                     byte[] contentBytes = GetUtf8ContentBytes(file.Content, file.ContentEncoding);
                                     await stream.WriteAsync(contentBytes, 0, contentBytes.Length);
                                 }
+
+                                LibGit2SharpHelpers.AddFileToIndex(localRepo, file, filePath, _logger);
                             }
                             else
                             {
@@ -92,7 +94,7 @@ namespace Microsoft.DotNet.DarcLib
                             }
                         }
 
-                        LibGit2Sharp.Commands.Stage(localRepo, "*");
+                        localRepo.Index.Write();
 
                         LibGit2Sharp.Signature author = new LibGit2Sharp.Signature(dotnetMaestro, $"@{dotnetMaestro}", DateTime.Now);
                         LibGit2Sharp.Signature commiter = author;
