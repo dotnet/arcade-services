@@ -110,9 +110,16 @@ namespace SubscriptionActorService
         {
             Logger.LogInformation($"Updating {SubscriptionId} with latest build id {updateBuildId}");
             Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);
-            subscription.LastAppliedBuildId = updateBuildId;
-            Context.Subscriptions.Update(subscription);
-            await Context.SaveChangesAsync();
+            if (subscription != null)
+            {
+                subscription.LastAppliedBuildId = updateBuildId;
+                Context.Subscriptions.Update(subscription);
+                await Context.SaveChangesAsync();
+            }
+            else
+            {
+                Logger.LogInformation($"Could not find subscription with ID {SubscriptionId}. Skipping latestBuild update.");
+            }
         }
 
 
