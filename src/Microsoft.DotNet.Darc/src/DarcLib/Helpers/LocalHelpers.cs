@@ -104,6 +104,50 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             return null;
         }
 
+        /// <summary>
+        /// Since LibGit2Sharp doesn't support neither sparse checkout not shallow clone
+        /// we implement the flow ourselves.
+        /// </summary>
+        /// <param name="repoUri">The repo to clone Uri</param>
+        /// <param name="branch">The branch to checkout</param>
+        /// <param name="workingDirectory">The working directory</param>
+        /// <param name="_logger">The logger</param>
+        /// <param name="remote">The name of the remote</param>
+        /// <param name="user">User name</param>
+        /// <param name="pat">User's personal access token</param>
+        /// <param name="repoFolderName">The name of the folder where the repo is located</param>
+        /// <returns>The full path of the cloned repo</returns>
+        public static string SparseAndShallowCheckout(
+            string repoUri,
+            string branch,
+            string workingDirectory,
+            ILogger _logger,
+            string remote,
+            string user,
+            string pat,
+            string repoFolderName = "clonedRepo")
+        {
+            ExecuteCommand("git", $"init {repoFolderName}", _logger, workingDirectory);
+
+            workingDirectory = Path.Combine(workingDirectory, repoFolderName);
+            remote = remote.Replace("https://", $"https://{user}:{pat}@");
+
+            ExecuteCommand("git", $"remote add {remote} {repoUri}", _logger, workingDirectory);
+            ExecuteCommand("git", "config core.sparsecheckout true", _logger, workingDirectory);
+            ExecuteCommand("cmd", "/c echo eng/ >> .git/info/sparse-checkout", _logger, workingDirectory);
+            ExecuteCommand("cmd", $"/c echo /{VersionFiles.NugetConfig} >> .git/info/sparse-checkout", _logger, workingDirectory);
+            ExecuteCommand("cmd", $"/c echo /{VersionFiles.GlobalJson} >> .git/info/sparse-checkout", _logger, workingDirectory);
+
+            string result = ExecuteCommand("git", $"pull --depth=1 origin {branch}", _logger, workingDirectory);
+
+            if (result == null)
+            {
+                return null;
+            }
+
+            return workingDirectory;
+        }
+
         public static string ExecuteCommand(string fileName, string arguments, ILogger logger, string workingDirectory = null)
         {
             string output = null;

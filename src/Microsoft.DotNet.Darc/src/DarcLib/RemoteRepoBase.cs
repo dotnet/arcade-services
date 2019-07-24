@@ -23,10 +23,10 @@ namespace Microsoft.DotNet.DarcLib
         protected string TemporaryRepositoryPath { get; set; }
 
         /// <summary>
-        /// We used to group commits in a tree object so there would be only one commit per 
-        /// change but this doesn't work for trees that end up being too big (around 20K files).
-        /// By using LibGit2Sharp we still group changes in one and we don't need to create a new
-        /// tree. Everything happens locally in the host executing the push.
+        /// Cloning big repos takes a considerable amount of time when checking out the files. When
+        /// working on batched subscription, the operation could take more than an hour causing the
+        /// GitHub token to expire. By doing sparse and shallow checkout, we only deal with the files
+        /// we need avoiding to check the complete repo shaving time from the overall push process
         /// </summary>
         /// <param name="filesToCommit">Collection of files to update.</param>
         /// <param name="repoUri">The repository to push the files to.</param>
@@ -45,77 +45,50 @@ namespace Microsoft.DotNet.DarcLib
             using (_logger.BeginScope("Pushing files to {branch}", branch))
             {
                 string tempRepoFolder = Path.Combine(TemporaryRepositoryPath, Path.GetRandomFileName());
+                string remote = "origin";
 
                 try
                 {
-                    string repoPath = LibGit2Sharp.Repository.Clone(
-                        repoUri,
-                        tempRepoFolder,
-                        new LibGit2Sharp.CloneOptions
-                        {
-                            BranchName = branch,
-                            Checkout = true,
-                            CredentialsProvider = (url, user, cred) =>
-                            new LibGit2Sharp.UsernamePasswordCredentials
-                            {
-                                // The PAT is actually the only thing that matters here, the username
-                                // will be ignored.
-                                Username = dotnetMaestro,
-                                Password = pat
-                            }
-                        });
+                    string clonedRepo = null;
 
-                    using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoPath))
+                    using (_logger.BeginScope("Sparse and shallow checkout of branch {branch} in {repoUri}...", branch, repoUri))
                     {
-                        foreach (GitFile file in filesToCommit)
+                        clonedRepo = LocalHelpers.SparseAndShallowCheckout(repoUri, branch, tempRepoFolder, _logger, remote, dotnetMaestro, pat);
+                    }
+
+                    if (clonedRepo == null)
+                    {
+                        throw new DarcException($"Something failed while trying to sparse and shalllow checkout branch {branch} in {repoUri}");
+                    }
+
+                    foreach (GitFile file in filesToCommit)
+                    {
+                        string filePath = Path.Combine(clonedRepo, file.FilePath);
+
+                        if (file.Operation == GitFileOperation.Add)
                         {
-                            string filePath = Path.Combine(tempRepoFolder, file.FilePath);
-
-                            if (file.Operation == GitFileOperation.Add)
+                            if (!File.Exists(filePath))
                             {
-                                if (!File.Exists(filePath))
-                                {
-                                    string parentFolder = Directory.GetParent(filePath).FullName;
+                                string parentFolder = Directory.GetParent(filePath).FullName;
 
-                                    Directory.CreateDirectory(parentFolder);
-                                }
-
-                                using (FileStream stream = File.Create(filePath))
-                                {
-                                    byte[] contentBytes = GetUtf8ContentBytes(file.Content, file.ContentEncoding);
-                                    await stream.WriteAsync(contentBytes, 0, contentBytes.Length);
-                                }
-
-                                LibGit2SharpHelpers.AddFileToIndex(localRepo, file, filePath, _logger);
+                                Directory.CreateDirectory(parentFolder);
                             }
-                            else
+
+                            using (FileStream stream = File.Create(filePath))
                             {
-                                File.Delete(Path.Combine(tempRepoFolder, file.FilePath));
+                                byte[] contentBytes = GetUtf8ContentBytes(file.Content, file.ContentEncoding);
+                                await stream.WriteAsync(contentBytes, 0, contentBytes.Length);
                             }
                         }
-
-                        localRepo.Index.Write();
-
-                        LibGit2Sharp.Signature author = new LibGit2Sharp.Signature(dotnetMaestro, $"@{dotnetMaestro}", DateTime.Now);
-                        LibGit2Sharp.Signature commiter = author;
-                        localRepo.Commit(commitMessage, author, commiter, new LibGit2Sharp.CommitOptions
+                        else
                         {
-                            AllowEmptyCommit = false,
-                            PrettifyMessage = true
-                        });
-
-                        localRepo.Network.Push(localRepo.Branches[branch], new LibGit2Sharp.PushOptions
-                        {
-                            CredentialsProvider = (url, user, cred) =>
-                            new LibGit2Sharp.UsernamePasswordCredentials
-                            {
-                                // The PAT is actually the only thing that matters here, the username
-                                // will be ignored.
-                                Username = dotnetMaestro,
-                                Password = pat
-                            }
-                        });
+                            File.Delete(Path.Combine(tempRepoFolder, file.FilePath));
+                        }
                     }
+
+                    LocalHelpers.ExecuteCommand("git", "add -A", _logger, clonedRepo);
+                    LocalHelpers.ExecuteCommand("git", $"commit -m \"{commitMessage}\"", _logger, clonedRepo);
+                    LocalHelpers.ExecuteCommand("git", $"push {remote} {branch}", _logger, clonedRepo);
                 }
                 catch (LibGit2Sharp.EmptyCommitException)
                 {
