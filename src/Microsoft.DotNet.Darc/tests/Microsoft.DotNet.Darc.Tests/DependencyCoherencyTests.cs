@@ -455,6 +455,95 @@ namespace Microsoft.DotNet.Darc.Tests
             });
         }
 
+        /// <summary>
+        ///     Coherent dependency test with two 3 repo chains that have a common element.
+        ///     This should show only a single update for each element.
+        /// </summary>
+        /// <returns></returns>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CoherencyUpdateTests10(bool pinHead)
+        {
+            // Initialize
+            Mock<IBarClient> barClientMock = new Mock<IBarClient>();
+            Remote remote = new Remote(null, barClientMock.Object, NullLogger.Instance);
+
+            // Mock the remote used by build dependency graph to gather dependency details.
+            Mock<IRemote> dependencyGraphRemoteMock = new Mock<IRemote>();
+
+            // Always return the main remote.
+            var remoteFactoryMock = new Mock<IRemoteFactory>();
+            remoteFactoryMock.Setup(m => m.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>())).ReturnsAsync(dependencyGraphRemoteMock.Object);
+            remoteFactoryMock.Setup(m => m.GetBarOnlyRemoteAsync(It.IsAny<ILogger>())).ReturnsAsync(remote);
+
+            List<DependencyDetail> existingDetails = new List<DependencyDetail>();
+            DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: pinHead);
+            DependencyDetail depB = AddDependency(existingDetails, "depB", "v3", "repoB", "commit2", pinned: false, coherentParent: "depA");
+            // Both C and D depend on B
+            DependencyDetail depC = AddDependency(existingDetails, "depC", "v0", "repoC", "commit3", pinned: false, coherentParent: "depB");
+            DependencyDetail depD = AddDependency(existingDetails, "depD", "v50", "repoD", "commit5", pinned: false, coherentParent: "depB");
+
+            BuildProducesAssets(barClientMock, "repoA", "commit1", new List<(string name, string version)>
+            {
+                ("depA", "v1")
+            });
+
+            List<DependencyDetail> repoADeps = new List<DependencyDetail>();
+            AddDependency(repoADeps, "depY", "v42", "repoB", "commit5", pinned: false);
+            RepoHasDependencies(dependencyGraphRemoteMock, "repoA", "commit1", repoADeps);
+
+            BuildProducesAssets(barClientMock, "repoB", "commit5", new List<(string name, string version)>
+            {
+                ("depB", "v10"),
+                ("depY", "v42"),
+            });
+
+            List<DependencyDetail> repoBDeps = new List<DependencyDetail>();
+            AddDependency(repoBDeps, "depQ", "v66", "repoD", "commit35", pinned: false);
+            AddDependency(repoBDeps, "depZ", "v64", "repoC", "commit7", pinned: false);
+            RepoHasDependencies(dependencyGraphRemoteMock, "repoB", "commit5", repoBDeps);
+
+            BuildProducesAssets(barClientMock, "repoC", "commit7", new List<(string name, string version)>
+            {
+                ("depC", "v1000"),
+                ("depZ", "v64"),
+            });
+
+            BuildProducesAssets(barClientMock, "repoD", "commit35", new List<(string name, string version)>
+            {
+                ("depD", "v1001"),
+                ("depQ", "v66"),
+            });
+
+            // This should bring B and C in line.
+            List<DependencyUpdate> coherencyUpdates =
+                await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object);
+
+            Assert.Collection(coherencyUpdates,
+            u =>
+            {
+                Assert.Equal(depC, u.From);
+                Assert.Equal("v1000", u.To.Version);
+                Assert.Equal("commit7", u.To.Commit);
+                Assert.Equal("repoC", u.To.RepoUri);
+            },
+            u =>
+            {
+                Assert.Equal(depB, u.From);
+                Assert.Equal("v10", u.To.Version);
+                Assert.Equal("commit5", u.To.Commit);
+                Assert.Equal("repoB", u.To.RepoUri);
+            },
+            u =>
+            {
+                Assert.Equal(depD, u.From);
+                Assert.Equal("v1001", u.To.Version);
+                Assert.Equal("commit35", u.To.Commit);
+                Assert.Equal("repoD", u.To.RepoUri);
+            });
+        }
+
         private DependencyDetail AddDependency(List<DependencyDetail> details, string name,
             string version, string repo, string commit, bool pinned = false, string coherentParent = null)
         {

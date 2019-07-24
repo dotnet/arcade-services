@@ -431,13 +431,7 @@ namespace Microsoft.DotNet.DarcLib
             HashSet<DependencyDetail> visited = new HashSet<DependencyDetail>();
             foreach (DependencyDetail dependency in leavesOfCoherencyTrees)
             {
-                // If the dependency was already updated, then skip it (could have been part of a larger
-                // dependency chain)
-                if (visited.Contains(dependency))
-                {
-                    continue;
-                }
-
+                // Build the update list.
                 // Walk to head of dependency tree, keeping track of elements along the way.
                 // If we hit a pinned dependency in the walk, that means we can't move
                 // the dependency and therefore it is effectively the "head" of the subtree.
@@ -452,6 +446,25 @@ namespace Microsoft.DotNet.DarcLib
                         d.Name.Equals(currentDependency.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
                     currentDependency = parentCoherentDependency ?? throw new DarcException($"Dependency {currentDependency.Name} has non-existent parent " +
                             $"dependency {currentDependency.CoherentParentDependencyName}");
+
+                    // An interesting corner case develops here. If we have two dependency
+                    // chains that have a common element in the middle of the chain, then we can end up updating the common
+                    // elements more than once unnecessarily. For example, let's say we have two chains:
+                    // A->B->C
+                    // D->B->C
+                    // The walk of the first chain item will update B based on C, then the second chain will also update B based on C.
+                    // We can break out of the chain building if we see a node already visited.
+                    // However, we should ensure that we get the updated version of the head of this chain, rather than
+                    // the current version.
+                    if (visited.Contains(currentDependency))
+                    {
+                        DependencyUpdate alreadyUpdated = toUpdate.FirstOrDefault(alreadyUpdatedDep => alreadyUpdatedDep.From == currentDependency);
+                        if (alreadyUpdated != null)
+                        {
+                            currentDependency = alreadyUpdated.To;
+                        }
+                        break;
+                    }
                 }
 
                 DependencyGraphNode rootNode = null;
@@ -466,7 +479,7 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     _logger.LogInformation($"Node not found in cache, starting graph build at " +
                         $"{currentDependency.RepoUri}@{currentDependency.Commit}");
-                    rootNode = await BuildGraphAtDependency(remoteFactory, currentDependency, updateList, nodeCache);
+                    rootNode = await BuildGraphAtDependencyAsync(remoteFactory, currentDependency, updateList, nodeCache);
                 }
 
                 List<DependencyDetail> leftToFind = new List<DependencyDetail>(updateList);
@@ -483,7 +496,7 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         _logger.LogInformation($"Asset {dependencyInUpdateChain.Name} was not found in cached graph, rebuilding from " +
                             $"{currentDependency.RepoUri}@{currentDependency.Commit}");
-                        rootNode = await BuildGraphAtDependency(remoteFactory, currentDependency, leftToFind, nodeCache);
+                        rootNode = await BuildGraphAtDependencyAsync(remoteFactory, currentDependency, leftToFind, nodeCache);
                         // And attempt to find again.
                         (coherentAsset, buildForAsset) =
                             FindAssetInBuildTree(dependencyInUpdateChain.Name, rootNode);
@@ -534,7 +547,7 @@ namespace Microsoft.DotNet.DarcLib
             return toUpdate;
         }
 
-        private async Task<DependencyGraphNode> BuildGraphAtDependency(
+        private async Task<DependencyGraphNode> BuildGraphAtDependencyAsync(
             IRemoteFactory remoteFactory,
             DependencyDetail rootDependency,
             List<DependencyDetail> updateList,
