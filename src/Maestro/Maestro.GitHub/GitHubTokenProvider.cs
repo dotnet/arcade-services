@@ -79,7 +79,7 @@ namespace Maestro.GitHub
 
             // If the cached token will expire in less than 30 minutes we won't use it and let GetTokenForInstallation generate a new one
             // and update the cache
-            if (DateTimeOffset.Now.Subtract(token.ExpiresAt).TotalMinutes < 30)
+            if (token.ExpiresAt.Subtract(DateTimeOffset.Now).TotalMinutes < 30)
             {
                 return false;
             }
