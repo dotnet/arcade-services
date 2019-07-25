@@ -484,7 +484,13 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
             {
                 ISubscriptionActor actor = SubscriptionActorFactory(new ActorId(update.SubscriptionId));
-                await actor.UpdateForMergedPullRequestAsync(update.BuildId);
+                if (!await actor.UpdateForMergedPullRequestAsync(update.BuildId))
+                {
+                    Logger.LogInformation($"Failed to update subscription {update.SubscriptionId} for merged PR.");
+                    await Reminders.TryUnregisterReminderAsync(PullRequestCheck);
+                    await Reminders.TryUnregisterReminderAsync(PullRequestUpdate);
+                    await StateManager.TryRemoveStateAsync(PullRequest);
+                }
             }
         }
 

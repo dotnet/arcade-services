@@ -11,6 +11,6 @@ namespace Maestro.Contracts
     {
         Task<string> RunActionAsync(string method, string arguments);
         Task UpdateAsync(int buildId);
-        Task UpdateForMergedPullRequestAsync(int updateBuildId);
+        Task<bool> UpdateForMergedPullRequestAsync(int updateBuildId);
     }
 }
