@@ -37,7 +37,7 @@ namespace SubscriptionActorService
                 throw new NotImplementedException();
             }
 
-            public Task UpdateForMergedPullRequestAsync(int updateBuildId)
+            public Task<bool> UpdateForMergedPullRequestAsync(int updateBuildId)
             {
                 throw new NotImplementedException();
             }
@@ -106,7 +106,7 @@ namespace SubscriptionActorService
             return ActionRunner.ExecuteAction(() => UpdateAsync(buildId));
         }
 
-        public async Task UpdateForMergedPullRequestAsync(int updateBuildId)
+        public async Task<bool> UpdateForMergedPullRequestAsync(int updateBuildId)
         {
             Logger.LogInformation($"Updating {SubscriptionId} with latest build id {updateBuildId}");
             Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);
@@ -115,13 +115,14 @@ namespace SubscriptionActorService
                 subscription.LastAppliedBuildId = updateBuildId;
                 Context.Subscriptions.Update(subscription);
                 await Context.SaveChangesAsync();
+                return true;
             }
             else
             {
                 Logger.LogInformation($"Could not find subscription with ID {SubscriptionId}. Skipping latestBuild update.");
+                return false;
             }
         }
-
 
         [ActionMethod("Updating subscription for build {buildId}")]
         public async Task<ActionResult<bool>> UpdateAsync(int buildId)
