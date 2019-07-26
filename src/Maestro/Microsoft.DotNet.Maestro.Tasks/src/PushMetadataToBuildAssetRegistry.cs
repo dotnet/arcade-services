@@ -95,7 +95,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             enabled: true,
                             recordedBuild.GitHubRepository ?? recordedBuild.AzureDevOpsRepository);
 
-                        var defaultChannelsStr = string.Join(",", defaultChannels.Select(x => x.Channel.Id));
+                        var defaultChannelsStr = "[" + string.Join("][", defaultChannels.Select(x => x.Channel.Id)) + "]";
 
                         Console.WriteLine($"##vso[task.setvariable variable=BARBuildId]{recordedBuild.Id}");
                         Console.WriteLine($"##vso[task.setvariable variable=DefaultChannels]{defaultChannelsStr}");
