@@ -209,7 +209,7 @@ namespace Microsoft.DotNet.DarcLib
                     }
                     else
                     {
-                        throw new DarcException("The use of the same asset, even with a different version, is currently not " +
+                        throw new DarcException($"The use of the same asset '{itemToUpdate.Name}', even with a different version, is currently not " +
                             "supported.");
                     }
                 }
