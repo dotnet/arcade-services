@@ -75,7 +75,7 @@ namespace Microsoft.DotNet.DarcLib
                                 await stream.WriteAsync(contentBytes, 0, contentBytes.Length);
                             }
                         }
-                        else
+                        else if (file.Operation == GitFileOperation.Delete)
                         {
                             File.Delete(filePath);
                         }
@@ -96,7 +96,7 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     try
                     {
-                        // .git/objects hierarchy ar marked asread-only so we need to unset the read-only attribute otherwise an UnauthorizedAccessException is thrown.
+                        // .git/objects hierarchy are marked as read-only so we need to unset the read-only attribute otherwise an UnauthorizedAccessException is thrown.
                         GitFileManager.NormalizeAttributes(tempRepoFolder);
                         Directory.Delete(tempRepoFolder, true);
                     }
