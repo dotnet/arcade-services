@@ -56,10 +56,4 @@
     <MicrosoftDotNetMaestroTasksPackage>Microsoft.DotNet.Maestro.Tasks</MicrosoftDotNetMaestroTasksPackage>
     <MicrosoftDotNetSwaggerGeneratorMSBuildPackage>Microsoft.DotNet.SwaggerGenerator.MSBuild</MicrosoftDotNetSwaggerGeneratorMSBuildPackage>
   </PropertyGroup>
-  <PropertyGroup>
-    <RestoreSources>
-      $(RestoreSources);
-      https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
-    </RestoreSources>
-  </PropertyGroup>
 </Project>
