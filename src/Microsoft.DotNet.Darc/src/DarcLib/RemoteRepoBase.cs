@@ -56,11 +56,6 @@ namespace Microsoft.DotNet.DarcLib
                         clonedRepo = LocalHelpers.SparseAndShallowCheckout(repoUri, branch, tempRepoFolder, _logger, remote, dotnetMaestro, pat);
                     }
 
-                    if (clonedRepo == null)
-                    {
-                        throw new DarcException($"Something failed while trying to sparse and shalllow checkout branch {branch} in {repoUri}");
-                    }
-
                     foreach (GitFile file in filesToCommit)
                     {
                         string filePath = Path.Combine(clonedRepo, file.FilePath);
@@ -82,17 +77,14 @@ namespace Microsoft.DotNet.DarcLib
                         }
                         else
                         {
-                            File.Delete(Path.Combine(tempRepoFolder, file.FilePath));
+                            File.Delete(filePath);
                         }
+
+                        LocalHelpers.ExecuteCommand("git", $"add {filePath}", _logger, clonedRepo);
                     }
 
-                    LocalHelpers.ExecuteCommand("git", "add -A", _logger, clonedRepo);
                     LocalHelpers.ExecuteCommand("git", $"commit -m \"{commitMessage}\"", _logger, clonedRepo);
                     LocalHelpers.ExecuteCommand("git", $"push {remote} {branch}", _logger, clonedRepo);
-                }
-                catch (LibGit2Sharp.EmptyCommitException)
-                {
-                    _logger.LogInformation("There was nothing to commit...");
                 }
                 catch (Exception exc)
                 {
@@ -102,19 +94,20 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 finally
                 {
-
                     try
                     {
-                        // Libgit2Sharp behaves similarly to git and marks files under the .git/objects hierarchy as read-only, 
-                        // thus if the read-only attribute is not unset an UnauthorizedAccessException is thrown.
+                        // .git/objects hierarchy ar marked asread-only so we need to unset the read-only attribute otherwise an UnauthorizedAccessException is thrown.
                         GitFileManager.NormalizeAttributes(tempRepoFolder);
-
                         Directory.Delete(tempRepoFolder, true);
                     }
                     catch (DirectoryNotFoundException)
                     {
                         // If the directory wasn't found, that means that the clone operation above failed
                         // but this error isn't interesting at all.
+                    }
+                    catch (Exception exc)
+                    {
+                        throw new Exception($"Something went wrong while trying to delete the folder {tempRepoFolder}", exc);
                     }
                 }
             }

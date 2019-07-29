@@ -127,23 +127,20 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             string pat,
             string repoFolderName = "clonedRepo")
         {
-            ExecuteCommand("git", $"init {repoFolderName}", _logger, workingDirectory);
+            Directory.CreateDirectory(workingDirectory);
+
+            ExecuteGitShallowSparseCommand("git", $"init {repoFolderName}", _logger, workingDirectory);
 
             workingDirectory = Path.Combine(workingDirectory, repoFolderName);
-            remote = remote.Replace("https://", $"https://{user}:{pat}@");
+            repoUri = repoUri.Replace("https://", $"https://{user}:{pat}@");
 
-            ExecuteCommand("git", $"remote add {remote} {repoUri}", _logger, workingDirectory);
-            ExecuteCommand("git", "config core.sparsecheckout true", _logger, workingDirectory);
-            ExecuteCommand("cmd", "/c echo eng/ >> .git/info/sparse-checkout", _logger, workingDirectory);
-            ExecuteCommand("cmd", $"/c echo /{VersionFiles.NugetConfig} >> .git/info/sparse-checkout", _logger, workingDirectory);
-            ExecuteCommand("cmd", $"/c echo /{VersionFiles.GlobalJson} >> .git/info/sparse-checkout", _logger, workingDirectory);
-
-            string result = ExecuteCommand("git", $"pull --depth=1 origin {branch}", _logger, workingDirectory);
-
-            if (result == null)
-            {
-                return null;
-            }
+            ExecuteGitShallowSparseCommand("git", $"remote add {remote} {repoUri}", _logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("git", "config core.sparsecheckout true", _logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("cmd", "/c echo eng/ >> .git/info/sparse-checkout", _logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("cmd", $"/c echo /{VersionFiles.NugetConfig} >> .git/info/sparse-checkout", _logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("cmd", $"/c echo /{VersionFiles.GlobalJson} >> .git/info/sparse-checkout", _logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("git", $"pull --depth=1 {remote} {branch}", _logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("git", $"checkout {branch}", _logger, workingDirectory);
 
             return workingDirectory;
         }
@@ -181,6 +178,19 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             }
 
             return output;
+        }
+
+        private static void ExecuteGitShallowSparseCommand(string fileName, string arguments, ILogger logger, string workingDirectory)
+        {
+            using (logger.BeginScope("Executing command {fileName} {arguments} in {workingDirectory}...", fileName, arguments, workingDirectory))
+            {
+                string result = ExecuteCommand(fileName, arguments, logger, workingDirectory);
+
+                if (result == null)
+                {
+                    throw new DarcException($"Something failed when executing command {fileName} {arguments} in {workingDirectory}");
+                }
+            }
         }
     }
 }
