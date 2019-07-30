@@ -170,7 +170,7 @@ namespace ReleasePipelineRunner
         }
 
         private async void EnqueueBuildStatusCheck(ReleasePipelineRunnerItem item, int newNumberOfRetriesMade)
-        {       
+        {
             await Task.Delay(TimeSpan.FromMinutes(ReleasePipelineRunner.DelayBetweenBuildStatusChecksInMinutes));
 
             IReliableConcurrentQueue<ReleasePipelineRunnerItem> queue =
