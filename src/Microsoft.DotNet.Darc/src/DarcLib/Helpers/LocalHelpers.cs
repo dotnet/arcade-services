@@ -132,16 +132,16 @@ namespace Microsoft.DotNet.DarcLib.Helpers
         {
             Directory.CreateDirectory(workingDirectory);
 
-            ExecuteGitShallowSparseCommand("git", $"init {repoFolderName}", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand($"init {repoFolderName}", logger, workingDirectory);
 
             workingDirectory = Path.Combine(workingDirectory, repoFolderName);
             repoUri = repoUri.Replace("https://", $"https://{user}:{pat}@");
 
-            ExecuteGitShallowSparseCommand("git", $"remote add {remote} {repoUri}", logger, workingDirectory);
-            ExecuteGitShallowSparseCommand("git", "config core.sparsecheckout true", logger, workingDirectory);
-            ExecuteGitShallowSparseCommand("git", "config core.longpaths true", logger, workingDirectory);
-            ExecuteGitShallowSparseCommand("git", $"config user.name {user}", logger, workingDirectory);
-            ExecuteGitShallowSparseCommand("git", $"config user.email {email}", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand($"remote add {remote} {repoUri}", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("config core.sparsecheckout true", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("config core.longpaths true", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand($"config user.name {user}", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand($"config user.email {email}", logger, workingDirectory);
 
             List<string> sparseCommands = new List<string>
             {
@@ -150,28 +150,15 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                 $"echo /{VersionFiles.GlobalJson} >> .git/info/sparse-checkout"
             };
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                string sparseBat = "sparse.bat";
-                File.AppendAllLines(Path.Combine(workingDirectory, sparseBat), sparseCommands);
-                ExecuteGitShallowSparseCommand("cmd", $"/C {sparseBat}", logger, workingDirectory);
-            }
-            else
-            {
-                string sparseShellFilePath = Path.Combine(workingDirectory, "sparse.sh");
-                File.AppendAllLines(sparseShellFilePath, sparseCommands);
-                File.AppendAllText(Path.Combine(workingDirectory, "chmod.sh"), $"chmod +x '{sparseShellFilePath}'");
-                ExecuteGitShallowSparseCommand("bash", "chmod.sh", logger, workingDirectory);
-                ExecuteGitShallowSparseCommand("bash", "sparce.sh", logger, workingDirectory);
-            }
+            File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), sparseCommands);
 
-            ExecuteGitShallowSparseCommand("git", $"pull --depth=1 {remote} {branch}", logger, workingDirectory);
-            ExecuteGitShallowSparseCommand("git", $"checkout {branch}", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand($"pull --depth=1 {remote} {branch}", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand($"checkout {branch}", logger, workingDirectory);
 
             return workingDirectory;
         }
 
-        public static string ExecuteCommand(string fileName, string arguments, ILogger logger, string workingDirectory = null)
+        public static string ExecuteCommand(string command, string arguments, ILogger logger, string workingDirectory = null)
         {
             string output = null;
 
@@ -182,7 +169,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    FileName = fileName,
+                    FileName = command,
                     CreateNoWindow = true,
                     WorkingDirectory = workingDirectory ?? Environment.CurrentDirectory
                 };
@@ -200,21 +187,21 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             }
             catch (Exception exc)
             {
-                logger.LogWarning($"Something failed while trying to execute '{fileName} {arguments}'. Exception: {exc.Message}");
+                logger.LogWarning($"Something failed while trying to execute '{command} {arguments}'. Exception: {exc.Message}");
             }
 
             return output;
         }
 
-        private static void ExecuteGitShallowSparseCommand(string fileName, string arguments, ILogger logger, string workingDirectory)
+        private static void ExecuteGitShallowSparseCommand(string arguments, ILogger logger, string workingDirectory)
         {
-            using (logger.BeginScope("Executing command {fileName} {arguments} in {workingDirectory}...", fileName, arguments, workingDirectory))
+            using (logger.BeginScope("Executing command git {arguments} in {workingDirectory}...", arguments, workingDirectory))
             {
-                string result = ExecuteCommand(fileName, arguments, logger, workingDirectory);
+                string result = ExecuteCommand("git", arguments, logger, workingDirectory);
 
                 if (result == null)
                 {
-                    throw new DarcException($"Something failed when executing command {fileName} {arguments} in {workingDirectory}");
+                    throw new DarcException($"Something failed when executing command git {arguments} in {workingDirectory}");
                 }
             }
         }
