@@ -112,9 +112,10 @@ namespace Microsoft.DotNet.DarcLib.Helpers
         /// <param name="repoUri">The repo to clone Uri</param>
         /// <param name="branch">The branch to checkout</param>
         /// <param name="workingDirectory">The working directory</param>
-        /// <param name="_logger">The logger</param>
+        /// <param name="logger">The logger</param>
         /// <param name="remote">The name of the remote</param>
         /// <param name="user">User name</param>
+        /// <param name="email">User's email</param>
         /// <param name="pat">User's personal access token</param>
         /// <param name="repoFolderName">The name of the folder where the repo is located</param>
         /// <returns>The full path of the cloned repo</returns>
@@ -122,7 +123,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             string repoUri,
             string branch,
             string workingDirectory,
-            ILogger _logger,
+            ILogger logger,
             string remote,
             string user,
             string email,
@@ -131,16 +132,16 @@ namespace Microsoft.DotNet.DarcLib.Helpers
         {
             Directory.CreateDirectory(workingDirectory);
 
-            ExecuteGitShallowSparseCommand("git", $"init {repoFolderName}", _logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("git", $"init {repoFolderName}", logger, workingDirectory);
 
             workingDirectory = Path.Combine(workingDirectory, repoFolderName);
             repoUri = repoUri.Replace("https://", $"https://{user}:{pat}@");
 
-            ExecuteGitShallowSparseCommand("git", $"remote add {remote} {repoUri}", _logger, workingDirectory);
-            ExecuteGitShallowSparseCommand("git", "config core.sparsecheckout true", _logger, workingDirectory);
-            ExecuteGitShallowSparseCommand("git", "config core.longpaths true", _logger, workingDirectory);
-            ExecuteGitShallowSparseCommand("git", $"config user.name {user}", _logger, workingDirectory);
-            ExecuteGitShallowSparseCommand("git", $"config user.email {email}", _logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("git", $"remote add {remote} {repoUri}", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("git", "config core.sparsecheckout true", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("git", "config core.longpaths true", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("git", $"config user.name {user}", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("git", $"config user.email {email}", logger, workingDirectory);
 
             List<string> sparseCommands = new List<string>
             {
@@ -153,19 +154,19 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             {
                 string sparseBat = "sparse.bat";
                 File.AppendAllLines(Path.Combine(workingDirectory, sparseBat), sparseCommands);
-                ExecuteGitShallowSparseCommand("cmd", $"/C {sparseBat}", _logger, workingDirectory);
+                ExecuteGitShallowSparseCommand("cmd", $"/C {sparseBat}", logger, workingDirectory);
             }
             else
             {
                 string sparseShellFilePath = Path.Combine(workingDirectory, "sparse.sh");
                 File.AppendAllLines(sparseShellFilePath, sparseCommands);
                 File.AppendAllText(Path.Combine(workingDirectory, "chmod.sh"), $"chmod +x '{sparseShellFilePath}'");
-                ExecuteGitShallowSparseCommand("bash", "chmod.sh", _logger, workingDirectory);
-                ExecuteGitShallowSparseCommand("bash", "sparce.sh", _logger, workingDirectory);
+                ExecuteGitShallowSparseCommand("bash", "chmod.sh", logger, workingDirectory);
+                ExecuteGitShallowSparseCommand("bash", "sparce.sh", logger, workingDirectory);
             }
 
-            ExecuteGitShallowSparseCommand("git", $"pull --depth=1 {remote} {branch}", _logger, workingDirectory);
-            ExecuteGitShallowSparseCommand("git", $"checkout {branch}", _logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("git", $"pull --depth=1 {remote} {branch}", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("git", $"checkout {branch}", logger, workingDirectory);
 
             return workingDirectory;
         }

@@ -819,7 +819,15 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
-            return this.CommitFilesAsync(filesToCommit, repoUri, branch, commitMessage, _logger, Client.Credentials.Password);
+            return this.CommitFilesAsync(
+                filesToCommit, 
+                repoUri, 
+                branch, 
+                commitMessage, 
+                _logger, 
+                Client.Credentials.Password, 
+                "dotnet-maestro[bot]", 
+                "dotnet-maestro[bot]@users.noreply.github.com");
         }
 
         /// <summary>

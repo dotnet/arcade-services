@@ -39,11 +39,10 @@ namespace Microsoft.DotNet.DarcLib
             string branch,
             string commitMessage,
             ILogger _logger,
-            string pat)
+            string pat,
+            string dotnetMaestroName,
+            string dotnetMaestroEmail)
         {
-            string dotnetMaestroName = "dotnet-maestro[bot]";
-            string dotnetMaestroEmail = "dotnet-maestro[bot]@users.noreply.github.com";
-
             using (_logger.BeginScope("Pushing files to {branch}", branch))
             {
                 string tempRepoFolder = Path.Combine(TemporaryRepositoryPath, Path.GetRandomFileName());
