@@ -46,7 +46,7 @@ namespace ReleasePipelineRunner
         public IDependencyUpdater DependencyUpdater { get; }
 
         private const string RunningPipelineDictionaryName = "runningPipelines";
-        private static int DelayBetweenBuildStatusChecksInMinutes = 30;
+        private static int DelayBetweenBuildStatusChecksInMinutes = 15;
         private static int MaxRetriesChecksForFailedBuilds = 24;
         private static HashSet<string> InProgressStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "notstarted", "scheduled", "queued", "inprogress", "undefined" };
         private static HashSet<string> StopStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "canceled", "rejected" };
@@ -170,7 +170,7 @@ namespace ReleasePipelineRunner
         }
 
         private async void EnqueueBuildStatusCheck(ReleasePipelineRunnerItem item, int newNumberOfRetriesMade)
-        {
+        {       
             await Task.Delay(TimeSpan.FromMinutes(ReleasePipelineRunner.DelayBetweenBuildStatusChecksInMinutes));
 
             IReliableConcurrentQueue<ReleasePipelineRunnerItem> queue =
