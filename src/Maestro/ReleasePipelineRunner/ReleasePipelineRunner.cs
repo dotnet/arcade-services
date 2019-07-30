@@ -440,7 +440,7 @@ namespace ReleasePipelineRunner
 
             Build build = Context.Builds.Where(b => b.Id == buildId).First();
             string whereToCreateIssue = "https://github.com/dotnet/arcade";
-            string fyiHandles = "@JohnTortugo, @jcagme";
+            string fyiHandles = "@JohnTortugo, @riarenas";
             string gitHubToken = null, azureDevOpsToken = null;
             string repo = build.GitHubRepository ?? build.AzureDevOpsRepository;
 

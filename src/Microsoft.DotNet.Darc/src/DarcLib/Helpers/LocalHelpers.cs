@@ -143,14 +143,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             ExecuteGitShallowSparseCommand($"config user.name {user}", logger, workingDirectory);
             ExecuteGitShallowSparseCommand($"config user.email {email}", logger, workingDirectory);
 
-            List<string> sparseCommands = new List<string>
-            {
-                "echo eng/ >> .git/info/sparse-checkout",
-                $"echo /{VersionFiles.NugetConfig} >> .git/info/sparse-checkout",
-                $"echo /{VersionFiles.GlobalJson} >> .git/info/sparse-checkout"
-            };
-
-            File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), sparseCommands);
+            File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), new[] { "eng/", $"/{VersionFiles.NugetConfig}", $"/{VersionFiles.GlobalJson}" });
 
             ExecuteGitShallowSparseCommand($"pull --depth=1 {remote} {branch}", logger, workingDirectory);
             ExecuteGitShallowSparseCommand($"checkout {branch}", logger, workingDirectory);

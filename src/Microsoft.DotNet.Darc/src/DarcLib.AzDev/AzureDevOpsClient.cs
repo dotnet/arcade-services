@@ -931,7 +931,7 @@ namespace Microsoft.DotNet.DarcLib
                 commitMessage, 
                 _logger, 
                 _personalAccessToken, 
-                "DotNet Bot",
+                "DotNet-Bot",
                 "dn-bot@microsoft.com");
         }
 
