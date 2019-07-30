@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -124,6 +125,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             ILogger _logger,
             string remote,
             string user,
+            string email,
             string pat,
             string repoFolderName = "clonedRepo")
         {
@@ -136,9 +138,32 @@ namespace Microsoft.DotNet.DarcLib.Helpers
 
             ExecuteGitShallowSparseCommand("git", $"remote add {remote} {repoUri}", _logger, workingDirectory);
             ExecuteGitShallowSparseCommand("git", "config core.sparsecheckout true", _logger, workingDirectory);
-            ExecuteGitShallowSparseCommand("cmd", "/c echo eng/ >> .git/info/sparse-checkout", _logger, workingDirectory);
-            ExecuteGitShallowSparseCommand("cmd", $"/c echo /{VersionFiles.NugetConfig} >> .git/info/sparse-checkout", _logger, workingDirectory);
-            ExecuteGitShallowSparseCommand("cmd", $"/c echo /{VersionFiles.GlobalJson} >> .git/info/sparse-checkout", _logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("git", "config core.longpaths true", _logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("git", $"config user.name {user}", _logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("git", $"config user.email {email}", _logger, workingDirectory);
+
+            List<string> sparseCommands = new List<string>
+            {
+                "echo eng/ >> .git/info/sparse-checkout",
+                $"echo /{VersionFiles.NugetConfig} >> .git/info/sparse-checkout",
+                $"echo /{VersionFiles.GlobalJson} >> .git/info/sparse-checkout"
+            };
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                string sparseBat = "sparse.bat";
+                File.AppendAllLines(Path.Combine(workingDirectory, sparseBat), sparseCommands);
+                ExecuteGitShallowSparseCommand("cmd", $"/C {sparseBat}", _logger, workingDirectory);
+            }
+            else
+            {
+                string sparseShellFilePath = Path.Combine(workingDirectory, "sparse.sh");
+                File.AppendAllLines(sparseShellFilePath, sparseCommands);
+                File.AppendAllText(Path.Combine(workingDirectory, "chmod.sh"), $"chmod +x '{sparseShellFilePath}'");
+                ExecuteGitShallowSparseCommand("bash", "chmod.sh", _logger, workingDirectory);
+                ExecuteGitShallowSparseCommand("bash", "sparce.sh", _logger, workingDirectory);
+            }
+
             ExecuteGitShallowSparseCommand("git", $"pull --depth=1 {remote} {branch}", _logger, workingDirectory);
             ExecuteGitShallowSparseCommand("git", $"checkout {branch}", _logger, workingDirectory);
 

@@ -41,7 +41,9 @@ namespace Microsoft.DotNet.DarcLib
             ILogger _logger,
             string pat)
         {
-            string dotnetMaestro = "dotnet-maestro";
+            string dotnetMaestroName = "dotnet-maestro[bot]";
+            string dotnetMaestroEmail = "dotnet-maestro[bot]@users.noreply.github.com";
+
             using (_logger.BeginScope("Pushing files to {branch}", branch))
             {
                 string tempRepoFolder = Path.Combine(TemporaryRepositoryPath, Path.GetRandomFileName());
@@ -53,7 +55,7 @@ namespace Microsoft.DotNet.DarcLib
 
                     using (_logger.BeginScope("Sparse and shallow checkout of branch {branch} in {repoUri}...", branch, repoUri))
                     {
-                        clonedRepo = LocalHelpers.SparseAndShallowCheckout(repoUri, branch, tempRepoFolder, _logger, remote, dotnetMaestro, pat);
+                        clonedRepo = LocalHelpers.SparseAndShallowCheckout(repoUri, branch, tempRepoFolder, _logger, remote, dotnetMaestroName, dotnetMaestroEmail, pat);
                     }
 
                     foreach (GitFile file in filesToCommit)
