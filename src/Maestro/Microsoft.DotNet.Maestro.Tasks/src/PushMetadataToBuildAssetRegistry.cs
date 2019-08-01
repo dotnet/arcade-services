@@ -34,6 +34,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         public bool PublishUsingPipelines { get; set; } = false;
 
+        private bool IsStableBuild { get; set; } = false;
+
         public string RepoRoot { get; set; }
 
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
@@ -99,7 +101,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                         Console.WriteLine($"##vso[task.setvariable variable=BARBuildId]{recordedBuild.Id}");
                         Console.WriteLine($"##vso[task.setvariable variable=DefaultChannels]{defaultChannelsStr}");
-                        Console.WriteLine($"##vso[task.setvariable variable=IsStableBuild]{IsStableBuild(finalBuild)}");
+                        Console.WriteLine($"##vso[task.setvariable variable=IsStableBuild]{IsStableBuild}");
                     }
                 }
             }
@@ -109,17 +111,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
             }
 
             return !Log.HasLoggedErrors;
-        }
-
-        private bool IsStableBuild(BuildData finalBuild)
-        {
-            // This regex will match strings that start with "digit.digit.digit-anything".
-            // Essentially it will match version strings that has a "-" separator on it.
-            // For instance, it will match "1.0.0-preview1" but won't match "1.0.0".
-            Regex regex = new Regex("^[0-9].[0-9].[0-9]-.*$");
-
-            return finalBuild.Assets
-                .All(ad => !regex.Match(ad.Version).Success);
         }
 
         private async Task<IImmutableList<BuildRef>> GetBuildDependenciesAsync(
@@ -239,6 +230,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             LocationType.Container,
                             blob.NonShipping);
                     }
+
+                    // For now we aren't persisting this property, so we just record this info in the task scope
+                    IsStableBuild = bool.Parse(manifest.IsStable.ToLower());
 
                     // The AzureDevOps properties can be null in the Manifest, but maestro needs them. Read them from the environment if they are null in the manifest.
                     var buildInfo = new BuildData(
