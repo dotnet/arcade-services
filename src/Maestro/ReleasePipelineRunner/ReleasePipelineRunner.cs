@@ -199,12 +199,35 @@ namespace ReleasePipelineRunner
         {
             Logger.LogInformation($"Starting release pipeline for {buildId} in {channelId}");
             Build build = await Context.Builds
+                .Include(b => b.BuildChannels)
                 .Where(b => b.Id == buildId).FirstOrDefaultAsync();
 
             if (build == null)
             {
                 Logger.LogError($"Could not find the specified BAR Build {buildId} to run a release pipeline.");
                 return;
+            }
+
+            if (build.BuildChannels.Any(c => c.ChannelId == channelId))
+            {
+                Logger.LogInformation($"BAR build {buildId} is already in channel {channelId}. Skipping running releases for it.");
+                return;
+            }
+
+            // Check if we're already processing releases for this build in this channel
+            var runningPipelines =
+                await StateManager.GetOrAddAsync<IReliableDictionary<int, IList<ReleasePipelineStatusItem>>>(RunningPipelineDictionaryName);
+            using (ITransaction tx = StateManager.CreateTransaction())
+            {
+                var runningPipelinesForBuild = await runningPipelines.TryGetValueAsync(tx, buildId);
+                if (runningPipelinesForBuild.HasValue)
+                {
+                    if (runningPipelinesForBuild.Value.Any(i => i.ChannelId == channelId))
+                    {
+                        Logger.LogInformation($"Releases already in progress for build {buildId} and channel {channelId}. Skipping running new releases.");
+                        return;
+                    }
+                }
             }
 
             // If something uses the old API version we won't have this information available.
@@ -241,8 +264,6 @@ namespace ReleasePipelineRunner
                 build.AzureDevOpsProject,
                 build.AzureDevOpsBuildId.Value);
 
-            var runningPipelines =
-                await StateManager.GetOrAddAsync<IReliableDictionary<int, IList<ReleasePipelineStatusItem>>>(RunningPipelineDictionaryName);
             List<ReleasePipelineStatusItem> releaseList = new List<ReleasePipelineStatusItem>();
 
             Logger.LogInformation($"Found {channel.ChannelReleasePipelines.Count} pipeline(s) for channel {channelId}");
