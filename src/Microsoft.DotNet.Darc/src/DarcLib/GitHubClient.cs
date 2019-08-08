@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -34,7 +35,7 @@ namespace Microsoft.DotNet.DarcLib
         private static readonly Regex PullRequestUriPattern =
             new Regex(@"^/repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)$");
 
-        private readonly Lazy<Octokit.GitHubClient> _lazyClient;
+        private readonly Lazy<Octokit.IGitHubClient> _lazyClient;
         private readonly ILogger _logger;
         private readonly string _personalAccessToken;
         private readonly JsonSerializerSettings _serializerSettings;
@@ -48,8 +49,8 @@ namespace Microsoft.DotNet.DarcLib
             _product = new ProductHeaderValue("DarcLib", version);
         }
 
-        public GitHubClient(string accessToken, ILogger logger, string temporaryRepositoryPath)
-            : base(temporaryRepositoryPath)
+        public GitHubClient(string accessToken, ILogger logger, string temporaryRepositoryPath, IMemoryCache cache)
+            : base(temporaryRepositoryPath, cache)
         {
             _personalAccessToken = accessToken;
             _logger = logger;
@@ -58,10 +59,10 @@ namespace Microsoft.DotNet.DarcLib
                 ContractResolver = new CamelCasePropertyNamesContractResolver(),
                 NullValueHandling = NullValueHandling.Ignore
             };
-            _lazyClient = new Lazy<Octokit.GitHubClient>(CreateGitHubClientClient);
+            _lazyClient = new Lazy<Octokit.IGitHubClient>(CreateGitHubClientClient);
         }
 
-        public Octokit.GitHubClient Client => _lazyClient.Value;
+        public virtual Octokit.IGitHubClient Client => _lazyClient.Value;
 
         /// <summary>
         ///     Retrieve the contents of a repository file as a string
@@ -404,30 +405,77 @@ namespace Microsoft.DotNet.DarcLib
                     .Select(
                         async treeItem =>
                         {
-                            Blob blob = await ExponentialRetry.RetryAsync(
+                            return await GetGitTreeItem(path, treeItem, owner, repo);
+                        }));
+            return files.ToList();
+        }
+
+        /// <summary>
+        ///     Get a tree item blob from github, using the cache if it exists.
+        /// </summary>
+        /// <param name="path">Base path of final git file</param>
+        /// <param name="treeItem">Tree item to retrieve</param>
+        /// <param name="owner">Organization</param>
+        /// <param name="repo">Repository</param>
+        /// <returns>Git file with tree item contents.</returns>
+        public async Task<GitFile> GetGitTreeItem(string path, TreeItem treeItem, string owner, string repo)
+        {
+            // If we have a cache available here, attempt to get the value in the cache
+            // before making the request. Generally, we are requesting the same files for each
+            // arcade update sent to the each repository daily per subscription. This is inefficient, as it means we
+            // request each file N times, where N is the number of subscriptions. The number of files (M),
+            // is non-trivial, so reducing N*M to M is vast improvement.
+            // Use the treeItem.Sha as the key. I think it is overkill to hash the repo and owner into
+            // the key.
+
+            if (Cache != null)
+            {
+                return await Cache.GetOrCreateAsync(treeItem.Sha, async (entry) =>
+                {
+                    return await GetGitItemImpl(path, treeItem, owner, repo);
+                });
+            }
+            else
+            {
+                return await GetGitItemImpl(path, treeItem, owner, repo);
+            }
+        }
+
+        /// <summary>
+        ///     Get a tree item blob from github.
+        /// </summary>
+        /// <param name="path">Base path of final git file</param>
+        /// <param name="treeItem">Tree item to retrieve</param>
+        /// <param name="owner">Organization</param>
+        /// <param name="repo">Repository</param>
+        /// <returns>Git file with tree item contents.</returns>
+        private async Task<GitFile> GetGitItemImpl(string path, TreeItem treeItem, string owner, string repo)
+        {
+            Octokit.Blob blob = await ExponentialRetry.RetryAsync(
                                 async () => await Client.Git.Blob.Get(owner, repo, treeItem.Sha),
                                 ex => _logger.LogError(ex, $"Failed to get blob at sha {treeItem.Sha}"),
                                 ex => ex is ApiException apiex && apiex.StatusCode >= HttpStatusCode.InternalServerError);
 
-                            ContentEncoding encoding;
-                            switch (blob.Encoding.Value)
-                            {
-                                case EncodingType.Base64:
-                                    encoding = ContentEncoding.Base64;
-                                    break;
-                                case EncodingType.Utf8:
-                                    encoding = ContentEncoding.Utf8;
-                                    break;
-                                default:
-                                    throw new NotImplementedException($"Unknown github encoding type {blob.Encoding.StringValue}");
+            ContentEncoding encoding;
+            switch (blob.Encoding.Value)
+            {
+                case EncodingType.Base64:
+                    encoding = ContentEncoding.Base64;
+                    break;
+                case EncodingType.Utf8:
+                    encoding = ContentEncoding.Utf8;
+                    break;
+                default:
+                    throw new NotImplementedException($"Unknown github encoding type {blob.Encoding.StringValue}");
 
-                            }
-                            return new GitFile(
-                                path + "/" + treeItem.Path,
-                                blob.Content,
-                                encoding) {Mode = treeItem.Mode};
-                        }));
-            return files.ToList();
+            }
+            GitFile newFile = new GitFile(
+                path + "/" + treeItem.Path,
+                blob.Content,
+                encoding)
+            { Mode = treeItem.Mode };
+
+            return newFile;
         }
 
         /// <summary>
@@ -670,7 +718,7 @@ namespace Microsoft.DotNet.DarcLib
 
         private Octokit.GitHubClient CreateGitHubClientClient()
         {
-            return new Octokit.GitHubClient(_product) {Credentials = new Credentials(_personalAccessToken)};
+            return new Octokit.GitHubClient(_product) {Credentials = new Octokit.Credentials(_personalAccessToken)};
         }
 
         private async Task<TreeResponse> GetRecursiveTreeAsync(string owner, string repo, string treeSha)
@@ -819,7 +867,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
-            return this.CommitFilesAsync(filesToCommit, repoUri, branch, commitMessage, _logger, Client.Credentials.Password);
+            return this.CommitFilesAsync(filesToCommit, repoUri, branch, commitMessage, _logger, _personalAccessToken);
         }
 
         /// <summary>
@@ -871,7 +919,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public void Clone(string repoUri, string commit, string targetDirectory, string gitDirectory = null)
         {
-            this.Clone(repoUri, commit, targetDirectory, _logger, Client.Credentials.Password, gitDirectory);
+            this.Clone(repoUri, commit, targetDirectory, _logger, _personalAccessToken, gitDirectory);
         }
 
         /// <summary>
