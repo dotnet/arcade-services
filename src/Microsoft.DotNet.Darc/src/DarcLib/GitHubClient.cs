@@ -422,7 +422,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             // If we have a cache available here, attempt to get the value in the cache
             // before making the request. Generally, we are requesting the same files for each
-            // arcade update sent to the each repository daily per subscription. This is inefficient, as it means we
+            // arcade update sent to each repository daily per subscription. This is inefficient, as it means we
             // request each file N times, where N is the number of subscriptions. The number of files (M),
             // is non-trivial, so reducing N*M to M is vast improvement.
             // Use the treeItem.Sha as the key. I think it is overkill to hash the repo and owner into
@@ -434,7 +434,7 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     GitFile file = await GetGitItemImpl(path, treeItem, owner, repo);
 
-                    // Size the size of the entry. The size is not computed by the caching system
+                    // Set the size of the entry. The size is not computed by the caching system
                     // (it has no way to do so). There are two bytes per each character in a string.
                     // We do not really need to worry about the size of the GitFile class itself,
                     // just the variable length elements.
