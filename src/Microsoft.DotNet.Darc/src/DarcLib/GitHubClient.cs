@@ -434,7 +434,7 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     GitFile file = await GetGitItemImpl(path, treeItem, owner, repo);
 
-                    // Size the size of the entry. The size is not computed by the caching system
+                    // Set the size of the entry. The size is not computed by the caching system
                     // (it has no way to do so). There are two bytes per each character in a string.
                     // We do not really need to worry about the size of the GitFile class itself,
                     // just the variable length elements.
