@@ -18,6 +18,7 @@ namespace Microsoft.DotNet.Darc.Tests
     {
         private object _key;
         private object _value;
+        private long? _size;
 
         public SimpleCacheEntry(object key)
         {
@@ -36,7 +37,7 @@ namespace Microsoft.DotNet.Darc.Tests
         public IList<PostEvictionCallbackRegistration> PostEvictionCallbacks => throw new NotImplementedException();
 
         public CacheItemPriority Priority { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public long? Size { get => 0; set => Size = 0; }
+        public long? Size { get => _size; set => _size = value; }
 
         public void Dispose() { }
     }
@@ -67,6 +68,9 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             if (cache.TryGetValue(key, out ICacheEntry existingEntry))
             {
+                // GitHubClient should be setting the size of the 
+                // entries (they should be non-zero).
+                Assert.True(existingEntry.Size > 0);
                 CacheHits++;
                 value = existingEntry.Value;
                 return true;
