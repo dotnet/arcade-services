@@ -174,15 +174,6 @@ namespace Maestro.Web
                     options.UseSqlServer(Configuration.GetSection("BuildAssetRegistry")["ConnectionString"]);
                 });
 
-            services.AddMemoryCache(options =>
-                {
-                    // The cache is generally targeted towards small objects, like
-                    // files returned from GitHub or Azure DevOps, to reduce API calls.
-                    // Limit the cache size to 64MB to avoid
-                    // large amounts of growth if the service is alive for long periods of time.
-                    options.SizeLimit = 1024 * 1024 * 64;
-                });
-
             services.AddMvc()
                 .SetCompatibilityVersion(CompatibilityVersion.Version_2_1)
                 .AddFluentValidation(options => options.RegisterValidatorsFromAssemblyContaining<Startup>())

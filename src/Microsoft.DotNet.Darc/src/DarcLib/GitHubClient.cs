@@ -2,6 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
+using Octokit;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,12 +18,6 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
-using Octokit;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -432,7 +432,15 @@ namespace Microsoft.DotNet.DarcLib
             {
                 return await Cache.GetOrCreateAsync(treeItem.Sha, async (entry) =>
                 {
-                    return await GetGitItemImpl(path, treeItem, owner, repo);
+                    GitFile file = await GetGitItemImpl(path, treeItem, owner, repo);
+
+                    // Size the size of the entry. The size is not computed by the caching system
+                    // (it has no way to do so). There are two bytes per each character in a string.
+                    // We do not really need to worry about the size of the GitFile class itself,
+                    // just the variable length elements.
+                    entry.Size = 2 * (file.Content.Length + file.FilePath.Length + file.Mode.Length);
+
+                    return file;
                 });
             }
             else
