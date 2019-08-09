@@ -36,7 +36,7 @@ namespace Microsoft.DotNet.Darc.Tests
         public IList<PostEvictionCallbackRegistration> PostEvictionCallbacks => throw new NotImplementedException();
 
         public CacheItemPriority Priority { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public long? Size { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public long? Size { get => 0; set => Size = 0; }
 
         public void Dispose() { }
     }
