@@ -50,7 +50,9 @@ namespace Microsoft.DotNet.Darc.Helpers
             {
                 gitClient = new GitHubClient(darcSettings.GitRepoPersonalAccessToken,
                                              logger,
-                                             temporaryRepositoryRoot);
+                                             temporaryRepositoryRoot,
+                                             // Caching not in use for Darc local client.
+                                             null);
             }
             else if (darcSettings.GitType == GitRepoType.AzureDevOps)
             {

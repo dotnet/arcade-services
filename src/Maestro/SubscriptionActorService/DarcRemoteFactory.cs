@@ -11,6 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Maestro.Data;
 using System.IO;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace SubscriptionActorService
 {
@@ -20,11 +21,13 @@ namespace SubscriptionActorService
             IConfigurationRoot configuration,
             IGitHubTokenProvider gitHubTokenProvider,
             IAzureDevOpsTokenProvider azureDevOpsTokenProvider,
+            IMemoryCache memoryCache,
             BuildAssetRegistryContext context)
         {
             Configuration = configuration;
             GitHubTokenProvider = gitHubTokenProvider;
             AzureDevOpsTokenProvider = azureDevOpsTokenProvider;
+            Cache = memoryCache;
             Context = context;
         }
         
@@ -32,6 +35,7 @@ namespace SubscriptionActorService
         public IGitHubTokenProvider GitHubTokenProvider { get; }
         public IAzureDevOpsTokenProvider AzureDevOpsTokenProvider { get; }
         public BuildAssetRegistryContext Context { get; }
+        public IMemoryCache Cache { get; set; }
 
         public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
         {
@@ -67,7 +71,7 @@ namespace SubscriptionActorService
                         }
 
                         gitClient = new GitHubClient(await GitHubTokenProvider.GetTokenForInstallation(installationId),
-                            logger, temporaryRepositoryRoot);
+                            logger, temporaryRepositoryRoot, Cache);
                         break;
                     case "dev.azure.com":
                         gitClient = new AzureDevOpsClient(await AzureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl),
