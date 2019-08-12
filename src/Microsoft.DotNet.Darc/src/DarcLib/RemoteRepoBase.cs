@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -15,12 +16,19 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class RemoteRepoBase
     {
-        protected RemoteRepoBase(string temporaryRepositoryPath)
+        protected RemoteRepoBase(string temporaryRepositoryPath, IMemoryCache cache)
         {
             TemporaryRepositoryPath = temporaryRepositoryPath;
+            Cache = cache;
         }
 
         protected string TemporaryRepositoryPath { get; set; }
+        
+        /// <summary>
+        /// Generic memory cache that may be supplied by the creator of the
+        /// Remote for the purposes of caching remote responses.
+        /// </summary>
+        protected IMemoryCache Cache { get; set;}
 
         /// <summary>
         /// Cloning big repos takes a considerable amount of time when checking out the files. When

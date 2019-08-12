@@ -60,6 +60,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
             set => AzureDevOpsBuildDefinitionId = !string.IsNullOrEmpty(value) ? int.Parse(value) : default(int?);
         }
 
+        [XmlAttribute(AttributeName = "IsStable")]
+        public string IsStable { get; set; } = "false";
+
         [XmlAttribute(AttributeName = "AzureDevOpsAccount")]
         public string AzureDevOpsAccount { get; set; }
 
