@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -104,7 +105,53 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             return null;
         }
 
-        public static string ExecuteCommand(string fileName, string arguments, ILogger logger, string workingDirectory = null)
+        /// <summary>
+        /// Since LibGit2Sharp doesn't support neither sparse checkout not shallow clone
+        /// we implement the flow ourselves.
+        /// </summary>
+        /// <param name="repoUri">The repo to clone Uri</param>
+        /// <param name="branch">The branch to checkout</param>
+        /// <param name="workingDirectory">The working directory</param>
+        /// <param name="logger">The logger</param>
+        /// <param name="remote">The name of the remote</param>
+        /// <param name="user">User name</param>
+        /// <param name="email">User's email</param>
+        /// <param name="pat">User's personal access token</param>
+        /// <param name="repoFolderName">The name of the folder where the repo is located</param>
+        /// <returns>The full path of the cloned repo</returns>
+        public static string SparseAndShallowCheckout(
+            string repoUri,
+            string branch,
+            string workingDirectory,
+            ILogger logger,
+            string remote,
+            string user,
+            string email,
+            string pat,
+            string repoFolderName = "clonedRepo")
+        {
+            Directory.CreateDirectory(workingDirectory);
+
+            ExecuteGitShallowSparseCommand($"init {repoFolderName}", logger, workingDirectory);
+
+            workingDirectory = Path.Combine(workingDirectory, repoFolderName);
+            repoUri = repoUri.Replace("https://", $"https://{user}:{pat}@");
+
+            ExecuteGitShallowSparseCommand($"remote add {remote} {repoUri}", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("config core.sparsecheckout true", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand("config core.longpaths true", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand($"config user.name {user}", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand($"config user.email {email}", logger, workingDirectory);
+
+            File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), new[] { "eng/", $"/{VersionFiles.NugetConfig}", $"/{VersionFiles.GlobalJson}" });
+
+            ExecuteGitShallowSparseCommand($"pull --depth=1 {remote} {branch}", logger, workingDirectory);
+            ExecuteGitShallowSparseCommand($"checkout {branch}", logger, workingDirectory);
+
+            return workingDirectory;
+        }
+
+        public static string ExecuteCommand(string command, string arguments, ILogger logger, string workingDirectory = null)
         {
             string output = null;
 
@@ -115,7 +162,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    FileName = fileName,
+                    FileName = command,
                     CreateNoWindow = true,
                     WorkingDirectory = workingDirectory ?? Environment.CurrentDirectory
                 };
@@ -133,10 +180,23 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             }
             catch (Exception exc)
             {
-                logger.LogWarning($"Something failed while trying to execute '{fileName} {arguments}'. Exception: {exc.Message}");
+                logger.LogWarning($"Something failed while trying to execute '{command} {arguments}'. Exception: {exc.Message}");
             }
 
             return output;
+        }
+
+        private static void ExecuteGitShallowSparseCommand(string arguments, ILogger logger, string workingDirectory)
+        {
+            using (logger.BeginScope("Executing command git {arguments} in {workingDirectory}...", arguments, workingDirectory))
+            {
+                string result = ExecuteCommand("git", arguments, logger, workingDirectory);
+
+                if (result == null)
+                {
+                    throw new DarcException($"Something failed when executing command git {arguments} in {workingDirectory}");
+                }
+            }
         }
     }
 }

@@ -927,7 +927,15 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
-            return this.CommitFilesAsync(filesToCommit, repoUri, branch, commitMessage, _logger, _personalAccessToken);
+            return this.CommitFilesAsync(
+                filesToCommit, 
+                repoUri, 
+                branch, 
+                commitMessage, 
+                _logger, 
+                _personalAccessToken, 
+                "DotNet-Bot",
+                "dn-bot@microsoft.com");
         }
 
         /// <summary>
