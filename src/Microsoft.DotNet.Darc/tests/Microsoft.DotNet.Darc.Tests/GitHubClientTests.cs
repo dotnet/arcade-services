@@ -8,8 +8,10 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Primitives;
 using Moq;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Xunit;
 
 namespace Microsoft.DotNet.Darc.Tests
@@ -37,7 +39,20 @@ namespace Microsoft.DotNet.Darc.Tests
         public IList<PostEvictionCallbackRegistration> PostEvictionCallbacks => throw new NotImplementedException();
 
         public CacheItemPriority Priority { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public long? Size { get => _size; set => _size = value; }
+        public long? Size
+        {
+            get => _size;
+            set
+            {
+                // The caching implementation does not work if Size on the caching entry is set only using the property
+                // setter. You must use SetSize instead of the setter. To avoid this mistake, grab the calling method
+                // and check that it is called SetSize. This check is pretty weak (implementation specific), but it's easy to
+                // make the mistake.  So just avoid it.
+                StackTrace stackTrace = new StackTrace();
+                Assert.Equal("SetSize", stackTrace.GetFrame(1).GetMethod().Name);
+                _size = value;
+            }
+        }
 
         public void Dispose() { }
     }
