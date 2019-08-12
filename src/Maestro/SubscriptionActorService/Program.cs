@@ -44,14 +44,10 @@ namespace SubscriptionActorService
                             services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
                             services.AddGitHubTokenProvider();
                             services.AddAzureDevOpsTokenProvider();
-                            services.AddMemoryCache(options =>
-                            {
-                                // The cache is generally targeted towards small objects, like
-                                // files returned from GitHub or Azure DevOps, to reduce API calls.
-                                // Limit the cache size to 64MB to avoid
-                                // large amounts of growth if the service is alive for long periods of time.
-                                options.SizeLimit = 1024 * 1024 * 64;
-                            });
+                            // We do not use AddMemoryCache here. We use our own cache because we wish to
+                            // use a sized cache and some components, such as EFCore, do not implement their caching
+                            // in such a way that will work with sizing.
+                            services.AddSingleton<DarcRemoteMemoryCache>();
                             services.AddSingleton(
                                 provider => ServiceHostConfiguration.Get(
                                     provider.GetRequiredService<IHostingEnvironment>()));

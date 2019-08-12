@@ -438,8 +438,7 @@ namespace Microsoft.DotNet.DarcLib
                     // (it has no way to do so). There are two bytes per each character in a string.
                     // We do not really need to worry about the size of the GitFile class itself,
                     // just the variable length elements.
-                    // Note: SetSize must be used for the cache instead of the Size property setter.
-                    entry.SetSize(2 * (file.Content.Length + file.FilePath.Length + file.Mode.Length));
+                    entry.Size = 2 * (file.Content.Length + file.FilePath.Length + file.Mode.Length);
 
                     return file;
                 });

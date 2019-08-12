@@ -21,7 +21,7 @@ namespace SubscriptionActorService
             IConfigurationRoot configuration,
             IGitHubTokenProvider gitHubTokenProvider,
             IAzureDevOpsTokenProvider azureDevOpsTokenProvider,
-            IMemoryCache memoryCache,
+            DarcRemoteMemoryCache memoryCache,
             BuildAssetRegistryContext context)
         {
             Configuration = configuration;
@@ -35,7 +35,7 @@ namespace SubscriptionActorService
         public IGitHubTokenProvider GitHubTokenProvider { get; }
         public IAzureDevOpsTokenProvider AzureDevOpsTokenProvider { get; }
         public BuildAssetRegistryContext Context { get; }
-        public IMemoryCache Cache { get; set; }
+        public DarcRemoteMemoryCache Cache { get; set; }
 
         public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
         {
@@ -71,7 +71,7 @@ namespace SubscriptionActorService
                         }
 
                         gitClient = new GitHubClient(await GitHubTokenProvider.GetTokenForInstallation(installationId),
-                            logger, temporaryRepositoryRoot, Cache);
+                            logger, temporaryRepositoryRoot, Cache.Cache);
                         break;
                     case "dev.azure.com":
                         gitClient = new AzureDevOpsClient(await AzureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl),
