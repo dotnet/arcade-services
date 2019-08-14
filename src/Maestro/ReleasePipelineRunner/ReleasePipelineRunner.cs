@@ -438,7 +438,8 @@ namespace ReleasePipelineRunner
         {
             IAzureDevOpsTokenProvider azdoTokenProvider = Context.GetService<IAzureDevOpsTokenProvider>();
             string accessToken = await azdoTokenProvider.GetTokenForAccount(account);
-            return new AzureDevOpsClient(accessToken, Logger, null);
+            // The release pipeline runner does not need a git client.
+            return new AzureDevOpsClient(null, accessToken, Logger, null);
         }
 
         private async Task<List<BuildChannel>> AddFinishedBuildChannelsIfNotPresent(HashSet<BuildChannel> buildChannelsToAdd)
