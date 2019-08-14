@@ -98,6 +98,9 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         public bool ComputeCyclePaths { get; set; } = true;
 
+        /// <summary>
+        ///     Location of git executable for use if any git commands need to be run.
+        /// </summary>
         public string GitExecutable { get; set; } = "git";
     }
 

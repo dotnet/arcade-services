@@ -92,7 +92,7 @@ namespace Microsoft.DotNet.Darc.Tests
         private async void TreeItemCacheTest(bool enableCache)
         {
             SimpleCache cache = enableCache ? new SimpleCache() : null;
-            Mock<GitHubClient> client = new Mock<GitHubClient>(null, NullLogger.Instance, null, cache);
+            Mock<GitHubClient> client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, cache);
 
             List<(string, string, Octokit.TreeItem)> treeItemsToGet = new List<(string, string, Octokit.TreeItem)>
             {
