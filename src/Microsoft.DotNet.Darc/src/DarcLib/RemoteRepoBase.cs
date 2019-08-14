@@ -103,7 +103,7 @@ namespace Microsoft.DotNet.DarcLib
                     }
 
                     LocalHelpers.ExecuteCommand(GitExecutable, $"commit -m \"{commitMessage}\"", _logger, clonedRepo);
-                    LocalHelpers.ExecuteCommand(GitExecutable, $"push {remote} {branch}", _logger, clonedRepo);
+                    LocalHelpers.ExecuteCommand(GitExecutable, $"-c core.askpass= -c credential.helper= push {remote} {branch}", _logger, clonedRepo);
                 }
                 catch (Exception exc)
                 {
