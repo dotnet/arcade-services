@@ -97,6 +97,8 @@ namespace Microsoft.DotNet.DarcLib
         ///     will be non-empty
         /// </summary>
         public bool ComputeCyclePaths { get; set; } = true;
+
+        public string GitExecutable { get; set; } = "git";
     }
 
     public class DependencyGraph
@@ -589,6 +591,7 @@ namespace Microsoft.DotNet.DarcLib
                         remoteFactory,
                         remote,
                         logger,
+                        options.GitExecutable,
                         node.Repository,
                         node.Commit,
                         options.IncludeToolset,
@@ -847,7 +850,8 @@ namespace Microsoft.DotNet.DarcLib
             string commit,
             IEnumerable<string> remotesMap,
             string reposFolder,
-            ILogger logger)
+            ILogger logger,
+            string gitExecutable)
         {
             string repoPath = null;
 
@@ -878,11 +882,11 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     // If a repo folder or a mapping was not set we use the current parent's 
                     // parent folder.
-                    string parent = LocalHelpers.GetRootDir(logger);
+                    string parent = LocalHelpers.GetRootDir(gitExecutable, logger);
                     folder = Directory.GetParent(parent).FullName;
                 }
 
-                repoPath = LocalHelpers.GetRepoPathFromFolder(folder, commit, logger);
+                repoPath = LocalHelpers.GetRepoPathFromFolder(gitExecutable, folder, commit, logger);
 
                 if (string.IsNullOrEmpty(repoPath))
                 {
@@ -899,6 +903,7 @@ namespace Microsoft.DotNet.DarcLib
             IRemoteFactory remoteFactory,
             bool remote,
             ILogger logger,
+            string gitExecutable,
             string repoUri,
             string commit,
             bool includeToolset,
@@ -932,12 +937,13 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 else
                 {
-                    string repoPath = GetRepoPath(repoUri, commit, remotesMap, reposFolder, logger);
+                    string repoPath = GetRepoPath(repoUri, commit, remotesMap, reposFolder, logger, gitExecutable);
 
                     if (!string.IsNullOrEmpty(repoPath))
                     {
                         Local local = new Local(logger);
                         string fileContents = LocalHelpers.GitShow(
+                            gitExecutable,
                             repoPath,
                             commit,
                             VersionFiles.VersionDetailsXml,

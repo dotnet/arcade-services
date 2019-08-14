@@ -115,8 +115,8 @@ namespace Microsoft.DotNet.Darc.Operations
                     graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                         remoteFactory,
                         rootDependencies,
-                        _options.RepoUri ?? LocalHelpers.GetRootDir(Logger),
-                        _options.Version ?? LocalHelpers.GetGitCommit(Logger),
+                        _options.RepoUri ?? LocalHelpers.GetRootDir(_options.GitLocation, Logger),
+                        _options.Version ?? LocalHelpers.GetGitCommit(_options.GitLocation, Logger),
                         graphBuildOptions,
                         Logger);
                 }
@@ -150,8 +150,8 @@ namespace Microsoft.DotNet.Darc.Operations
                         rootDependencies,
                         graphBuildOptions,
                         Logger,
-                        LocalHelpers.GetRootDir(Logger),
-                        LocalHelpers.GetGitCommit(Logger),
+                        LocalHelpers.GetRootDir(_options.GitLocation, Logger),
+                        LocalHelpers.GetGitCommit(_options.GitLocation, Logger),
                         _options.ReposFolder,
                         _options.RemotesMap);
                 }

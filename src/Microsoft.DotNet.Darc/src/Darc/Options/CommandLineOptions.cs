@@ -27,6 +27,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("debug", HelpText = "Turn on debug output.")]
         public bool Debug { get; set; }
 
+        [Option("git", Default = "git", HelpText = "Git executable used for internal commands.")]
+        public string GitLocation { get; set; }
+
         public abstract Operation GetOperation();
     }
 }
