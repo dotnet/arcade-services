@@ -27,9 +27,12 @@ $testRoot = Join-Path -Path $testRootBase -ChildPath $([System.IO.Path]::GetRand
 New-Item -Path $testRoot -ItemType Directory | Out-Null
 
 $darcTool = ""
+$darcCommandPrefix = ""
 if (Test-Path $darcVersion) {
-    $darcTool = "dotnet $darcVersion"
-    Write-Host "Using local darc binary $darcTool"
+    # Set the tool to 'dotnet', and the command prefix to the darc binary
+    $darcTool = "dotnet"
+    $darcCommandPrefix = $darcVersion
+    Write-Host "Using local darc binary $darcCommandPrefix"
 } else {
     Write-Host "Temporary testing location located at $testRoot"
     $darcInstallArguments = @( "--tool-path", $testRoot, "--version", $darcVersion, "Microsoft.DotNet.Darc" )
@@ -56,7 +59,7 @@ function Teardown() {
     foreach ($subscriptionId in $global:subscriptionsToDelete) {
         try {
             Write-Host "Deleting $subscriptionId"
-            Darc-Command delete-subscription --id "$subscriptionId" 
+            Darc-Delete-Subscription "$subscriptionId" 
         } catch {
             Write-Warning "Failed to delete subscription with id $subscriptionId"
             Write-Warning $_
@@ -158,9 +161,28 @@ function Teardown() {
     Remove-Item -Path $testRoot -Recurse -Force | Out-Null
 }
 
+function Darc-Command-WithPipeline([Parameter(ValueFromPipeline=$true)]$pipelineParams, [Parameter(ValueFromRemainingArguments=$true)]$darcParams) {
+    $finalParams = $darcParams
+    if ($darcCommandPrefix) {
+        $finalParams = ,"$darcCommandPrefix" + $finalParams
+    }
+    Write-Host "Running 'pipelineParams | $darcTool $finalParams $darcAuthParams'"
+    $commandOutput = $pipelineParams| & $darcTool @finalParams @darcAuthParams
+    if ($LASTEXITCODE -ne 0) {
+      Write-Host ${commandOutput}
+      throw "Darc command exited with exit code: $LASTEXITCODE"
+    } else {
+      $commandOutput
+    }
+}
+
 function Darc-Command([Parameter(ValueFromRemainingArguments=$true)]$darcParams) {
-    Write-Host "Running 'darc $($darcParams) $darcAuthParams'"
-    $commandOutput = & $darcTool @darcParams @darcAuthParams
+    $finalParams = $darcParams
+    if ($darcCommandPrefix) {
+        $finalParams = ,"$darcCommandPrefix" + $finalParams
+    }
+    Write-Host "Running '$darcTool $finalParams $darcAuthParams'"
+    $commandOutput = & $darcTool @finalParams @darcAuthParams
     if ($LASTEXITCODE -ne 0) {
       Write-Host ${commandOutput}
       throw "Darc command exited with exit code: $LASTEXITCODE"
@@ -215,11 +237,15 @@ function Darc-Disable-Default-Channel($channelName, $repoUri, $branch) {
     Darc-Command -darcParams $darcParams
 }
 
-# Run darc add-subscription with the specified parameters, extract out the subscription id,
-# and record it for teardown later. Implicitly passes -q
-function Darc-Add-Subscription([Parameter(ValueFromRemainingArguments=$true)]$darcParams) {
-    $darcParams = @( "add-subscription" ) + $darcParams + @( "-q" )
-    $output = Darc-Command -darcParams $darcParams
+function Darc-Delete-Subscription($subscriptionId) {
+    Darc-Command delete-subscription --id $subscriptionId
+}
+
+function Darc-Get-Subscription($subscriptionId) {
+    Darc-Command get-subscriptions --ids $subscriptionId
+}
+
+function Darc-Add-Subscription-Process-Output($output) {
     $match = $output -match "Successfully created new subscription with id '([a-f0-9-]+)'"
 
     # Batched subscriptions return a warning that non-batched subscriptions don't,
@@ -232,13 +258,27 @@ function Darc-Add-Subscription([Parameter(ValueFromRemainingArguments=$true)]$da
         }
         $subscriptionId = $Matches[1].replace("'", "")
         if (-not $subscriptionId) {
-            throw "Failed to extract subscription id"
+            throw "Failed to extract subscription id`n${output}"
         }
         $global:subscriptionsToDelete += $subscriptionId
         $subscriptionId
     } else {
-        throw "Failed to create subscription or parse subscription id"
+        throw "Failed to create subscription or parse subscription id`n${output}"
     }
+}
+
+# Run darc add-subscription with the specified parameters, extract out the subscription id,
+# and record it for teardown later. Implicitly passes -q
+function Darc-Add-Subscription([Parameter(ValueFromRemainingArguments=$true)]$darcParams) {
+    $darcParams = @( "add-subscription" ) + $darcParams + @( "-q" )
+    $output = Darc-Command -darcParams $darcParams
+    Darc-Add-Subscription-Process-Output $output
+}
+
+function Darc-Add-Subscription-From-Yaml($yamlText) {
+    $darcParams = @( "add-subscription", "--read-stdin" )
+    $output = $yamlText | Darc-Command-WithPipeline -darcParams $darcParams
+    Darc-Add-Subscription-Process-Output $output
 }
 
 function Trigger-Subscription($subscriptionId) {
@@ -481,7 +521,7 @@ function Compare-Array-Output($expected, $actual) {
         return $false
     }
     for ($i = 0; $i -lt $expected.Count; $i++) {
-        if ($actual[$i] -ne $expected[$i]) {
+        if ($actual[$i] -notmatch $expected[$i]) {
             Write-Error "Line $i not matched`nExpected '$($expected[$i])'`nActual   '$($actual[$i])'"
             return $false
         }
@@ -673,6 +713,16 @@ function Close-GitHub-PullRequest($targetRepoName, $prId) {
         state="closed"
     } | ConvertTo-Json
     Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Patch -Body $body | Out-Null
+}
+
+function Validate-Subscription-Info($subscriptionId, $expectedInfo){
+
+    $subscriptionInfo = Darc-Get-Subscription $subscriptionId
+
+    if (-not $(Compare-Array-Output $expectedInfo $subscriptionInfo)) {
+        throw "Subscription did not have expected info"
+    }
+    Write-Host "Finished validating subscription info"
 }
 
 function Get-GitHub-PullRequests($targetRepoName, $targetBranch) {

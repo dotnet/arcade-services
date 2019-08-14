@@ -24,9 +24,9 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             {
                 foreach (MergePolicy policy in mergePolicies)
                 {
-                    switch (policy.Name)
+                    switch (policy.Name.ToLower())
                     {
-                        case "AllChecksSuccessful":
+                        case "allcheckssuccessful":
                             // Should either have no properties, or one called "ignoreChecks"
                             if (policy.Properties != null &&
                                 (policy.Properties.Count > 1 ||
@@ -37,14 +37,14 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
                                 return false;
                             }
                             break;
-                        case "Standard":
+                        case "standard":
                             break;
-                        case "NoRequestedChanges":
+                        case "norequestedchanges":
                             break;
-                        case "NoExtraCommits":
+                        case "noextracommits":
                             break;
                         default:
-                            logger.LogError($"Unknown merge policy {policy.Name}");
+                            logger.LogError($"Unknown merge policy '{policy.Name}'");
                             return false;
                     }
                 }

@@ -5,6 +5,7 @@
 using Microsoft.DotNet.Darc.Models;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.Work.WebApi;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -29,6 +30,57 @@ namespace Microsoft.DotNet.Darc.Helpers
             _logger = logger;
         }
 
+        /// <summary>
+        ///     Rather than popping up the window, read the result of the popup from
+        ///     stdin and process the contents.  This is primarily used for testing purposes.
+        /// </summary>
+        /// <param name="popUp">Popup to run</param>
+        /// <returns>Success or error code</returns>
+        public int ReadFromStdIn(EditorPopUp popUp)
+        {
+            int result = Constants.ErrorCode;
+
+            try
+            {
+                // File to write from stdin to, which will be processed by the popup closing handler
+                string path = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName(), popUp.Path);
+                string dirPath = Path.GetDirectoryName(path);
+
+                Directory.CreateDirectory(dirPath);
+                using (System.IO.StreamWriter streamWriter = new StreamWriter(path))
+                {
+                    string line;
+                    while ((line = Console.ReadLine()) != null)
+                    {
+                        streamWriter.WriteLineAsync(line);
+                    }
+                }
+
+                // Now run the closed event and process the contents
+                IList<Line> contents = popUp.OnClose(path);
+                result = popUp.ProcessContents(contents);
+                Directory.Delete(dirPath, true);
+                if (result != Constants.SuccessCode)
+                {
+                    _logger.LogError("Inputs were invalid.");
+                }
+
+                return result;
+            }
+            catch (Exception exc)
+            {
+                _logger.LogError(exc, $"There was an exception running the popup.");
+                result = Constants.ErrorCode;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        ///     Pop up the editor and allow the user to edit the contents.
+        /// </summary>
+        /// <param name="popUp">Popup to run</param>
+        /// <returns>Success or error code</returns>
         public int PopUp(EditorPopUp popUp)
         {
             if (string.IsNullOrEmpty(_editorPath))

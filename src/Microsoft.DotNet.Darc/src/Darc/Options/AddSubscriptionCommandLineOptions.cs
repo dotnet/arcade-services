@@ -49,6 +49,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option('q', "quiet", HelpText = "Non-interactive mode (requires all elements to be passed on the command line).")]
         public bool Quiet { get; set; }
 
+        [Option("read-stdin", HelpText = "Interactive mode style (YAML), but read input from stdin. Implies -q")]
+        public bool ReadStandardIn { get; set; }
+
         public override Operation GetOperation()
         {
             return new AddSubscriptionOperation(this);
