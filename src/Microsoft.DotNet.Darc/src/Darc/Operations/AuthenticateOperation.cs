@@ -35,7 +35,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 AuthenticateEditorPopUp initEditorPopUp = new AuthenticateEditorPopUp("authenticate-settings/authenticate-todo", Logger);
 
-                UxManager uxManager = new UxManager(Logger);
+                UxManager uxManager = new UxManager(_options.GitLocation, Logger);
                 return Task.FromResult<int>(uxManager.PopUp(initEditorPopUp));
             }
         }

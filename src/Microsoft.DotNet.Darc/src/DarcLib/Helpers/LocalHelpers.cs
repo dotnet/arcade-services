@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -12,9 +13,9 @@ namespace Microsoft.DotNet.DarcLib.Helpers
 {
     public static class LocalHelpers
     {
-        public static string GetEditorPath(ILogger logger)
+        public static string GetEditorPath(string gitLocation, ILogger logger)
         {
-            string editor = ExecuteCommand("git", "config --get core.editor", logger);
+            string editor = ExecuteCommand(gitLocation, "config --get core.editor", logger);
 
             // If there is nothing set in core.editor we try to default it to notepad if running in Windows, if not default it to
             // vim
@@ -40,9 +41,9 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             return editor;
         }
 
-        public static string GetRootDir(ILogger logger)
+        public static string GetRootDir(string gitLocation, ILogger logger)
         {
-            string dir = ExecuteCommand("git", "rev-parse --show-toplevel", logger);
+            string dir = ExecuteCommand(gitLocation, "rev-parse --show-toplevel", logger);
 
             if (string.IsNullOrEmpty(dir))
             {
@@ -57,9 +58,9 @@ namespace Microsoft.DotNet.DarcLib.Helpers
         /// </summary>
         /// <param name="logger"></param>
         /// <returns></returns>
-        public static string GetGitCommit(ILogger logger)
+        public static string GetGitCommit(string gitLocation, ILogger logger)
         {
-            string commit = ExecuteCommand("git", "rev-parse HEAD", logger);
+            string commit = ExecuteCommand(gitLocation, "rev-parse HEAD", logger);
 
             if (string.IsNullOrEmpty(commit))
             {
@@ -69,9 +70,9 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             return commit;
         }
 
-        public static string GitShow(string repoFolderPath, string commit, string fileName, ILogger logger)
+        public static string GitShow(string gitLocation, string repoFolderPath, string commit, string fileName, ILogger logger)
         {
-            string fileContents = ExecuteCommand("git", $"show {commit}:{fileName}", logger, repoFolderPath);
+            string fileContents = ExecuteCommand(gitLocation, $"show {commit}:{fileName}", logger, repoFolderPath);
 
             if (string.IsNullOrEmpty(fileContents))
             {
@@ -89,11 +90,11 @@ namespace Microsoft.DotNet.DarcLib.Helpers
         /// <param name="commit">The commit to search for in a repo folder.</param>
         /// <param name="logger">The logger.</param>
         /// <returns></returns>
-        public static string GetRepoPathFromFolder(string sourceFolder, string commit, ILogger logger)
+        public static string GetRepoPathFromFolder(string gitLocation, string sourceFolder, string commit, ILogger logger)
         {
             foreach (string directory in Directory.GetDirectories(sourceFolder))
             {
-                string containsCommand = ExecuteCommand("git", $"branch --contains {commit}", logger, directory);
+                string containsCommand = ExecuteCommand(gitLocation, $"branch --contains {commit}", logger, directory);
 
                 if (!string.IsNullOrEmpty(containsCommand))
                 {
@@ -104,8 +105,60 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             return null;
         }
 
-        public static string ExecuteCommand(string fileName, string arguments, ILogger logger, string workingDirectory = null)
+        /// <summary>
+        /// Since LibGit2Sharp doesn't support neither sparse checkout not shallow clone
+        /// we implement the flow ourselves.
+        /// </summary>
+        /// <param name="repoUri">The repo to clone Uri</param>
+        /// <param name="branch">The branch to checkout</param>
+        /// <param name="workingDirectory">The working directory</param>
+        /// <param name="logger">The logger</param>
+        /// <param name="remote">The name of the remote</param>
+        /// <param name="user">User name</param>
+        /// <param name="email">User's email</param>
+        /// <param name="pat">User's personal access token</param>
+        /// <param name="repoFolderName">The name of the folder where the repo is located</param>
+        /// <returns>The full path of the cloned repo</returns>
+        public static string SparseAndShallowCheckout(
+            string gitLocation,
+            string repoUri,
+            string branch,
+            string workingDirectory,
+            ILogger logger,
+            string remote,
+            string user,
+            string email,
+            string pat,
+            string repoFolderName = "clonedRepo")
         {
+            Directory.CreateDirectory(workingDirectory);
+
+            ExecuteGitCommand(gitLocation, $"init {repoFolderName}", logger, workingDirectory);
+
+            workingDirectory = Path.Combine(workingDirectory, repoFolderName);
+            repoUri = repoUri.Replace("https://", $"https://{user}:{pat}@");
+
+            ExecuteGitCommand(gitLocation, $"remote add {remote} {repoUri}", logger, workingDirectory, secretToMask: pat);
+            ExecuteGitCommand(gitLocation, "config core.sparsecheckout true", logger, workingDirectory);
+            ExecuteGitCommand(gitLocation, "config core.longpaths true", logger, workingDirectory);
+            ExecuteGitCommand(gitLocation, $"config user.name {user}", logger, workingDirectory);
+            ExecuteGitCommand(gitLocation, $"config user.email {email}", logger, workingDirectory);
+
+            File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), new[] { "eng/", $"/{VersionFiles.NugetConfig}", $"/{VersionFiles.GlobalJson}" });
+
+            ExecuteGitCommand(gitLocation, $"-c core.askpass= -c credential.helper= pull --depth=1 {remote} {branch}", logger, workingDirectory, secretToMask: pat);
+            ExecuteGitCommand(gitLocation, $"checkout {branch}", logger, workingDirectory);
+
+            return workingDirectory;
+        }
+
+        public static string ExecuteCommand(string command, string arguments, ILogger logger, string workingDirectory = null)
+        {
+            if (string.IsNullOrEmpty(command))
+            {
+                throw new ArgumentException("Executable command must be non-empty");
+            }
+
             string output = null;
 
             try
@@ -115,7 +168,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    FileName = fileName,
+                    FileName = command,
                     CreateNoWindow = true,
                     WorkingDirectory = workingDirectory ?? Environment.CurrentDirectory
                 };
@@ -133,10 +186,32 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             }
             catch (Exception exc)
             {
-                logger.LogWarning($"Something failed while trying to execute '{fileName} {arguments}'. Exception: {exc.Message}");
+                logger.LogWarning($"Something failed while trying to execute '{command} {arguments}'. Exception: {exc.Message}");
             }
 
             return output;
+        }
+
+        /// <summary>
+        ///     Execute a git command
+        /// </summary>
+        /// <param name="gitLocation">Location of git.exe</param>
+        /// <param name="arguments">Arguments to git</param>
+        /// <param name="logger">Logger</param>
+        /// <param name="workingDirectory">Working directory</param>
+        /// <param name="secretToMask">Mask this secret when calling the logger.</param>
+        private static void ExecuteGitCommand(string gitLocation, string arguments, ILogger logger, string workingDirectory, string secretToMask = null)
+        {
+            string maskedArguments = secretToMask == null ? arguments : arguments.Replace(secretToMask, "***");
+            using (logger.BeginScope("Executing command git {maskedArguments} in {workingDirectory}...", maskedArguments, workingDirectory))
+            {
+                string result = ExecuteCommand(gitLocation, arguments, logger, workingDirectory);
+
+                if (result == null)
+                {
+                    throw new DarcException($"Something failed when executing command git {maskedArguments} in {workingDirectory}");
+                }
+            }
         }
     }
 }

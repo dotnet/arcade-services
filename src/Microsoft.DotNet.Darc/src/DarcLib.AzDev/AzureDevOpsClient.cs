@@ -55,8 +55,11 @@ namespace Microsoft.DotNet.DarcLib
         ///     PAT for Azure DevOps. This PAT should cover all
         ///     organizations that may be accessed in a single operation.
         /// </param>
-        public AzureDevOpsClient(string accessToken, ILogger logger, string temporaryRepositoryPath)
-            : base (temporaryRepositoryPath)
+        /// <remarks>
+        ///     The AzureDevopsClient currently does not utilize the memory cache
+        /// </remarks>
+        public AzureDevOpsClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath)
+            : base (gitExecutable, temporaryRepositoryPath, null)
         {
             _personalAccessToken = accessToken;
             _logger = logger;
@@ -924,7 +927,15 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
-            return this.CommitFilesAsync(filesToCommit, repoUri, branch, commitMessage, _logger, _personalAccessToken);
+            return this.CommitFilesAsync(
+                filesToCommit, 
+                repoUri, 
+                branch, 
+                commitMessage, 
+                _logger, 
+                _personalAccessToken, 
+                "DotNet-Bot",
+                "dn-bot@microsoft.com");
         }
 
         /// <summary>

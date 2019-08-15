@@ -23,11 +23,16 @@ namespace Microsoft.DotNet.DarcLib
         // TODO: Make these not constants and instead attempt to give more accurate information commit, branch, repo name, etc.)
         private readonly string _repo;
 
+        /// <summary>
+        ///     Passed to the local helpers, causing git to be chosen from the path
+        /// </summary>
+        private const string GitExecutable = "git";
+
         public Local(ILogger logger, string overrideRootPath = null)
         {
-            _repo = overrideRootPath ?? LocalHelpers.GetRootDir(logger);
+            _repo = overrideRootPath ?? LocalHelpers.GetRootDir(GitExecutable, logger);
             _logger = logger;
-            _gitClient = new LocalGitClient(_logger);
+            _gitClient = new LocalGitClient(GitExecutable, _logger);
             _fileManager = new GitFileManager(_gitClient, _logger);
         }
 

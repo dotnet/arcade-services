@@ -22,10 +22,10 @@ namespace Microsoft.DotNet.Darc.Helpers
         private readonly ILogger _logger;
         private bool _popUpClosed = false;
 
-        public UxManager(ILogger logger)
+        public UxManager(string gitLocation, ILogger logger)
         {
-            _editorPath = LocalHelpers.GetEditorPath(logger);
-            _rootDir = LocalHelpers.GetRootDir(logger);
+            _editorPath = LocalHelpers.GetEditorPath(gitLocation, logger);
+            _rootDir = LocalHelpers.GetRootDir(gitLocation, logger);
             _logger = logger;
         }
 
