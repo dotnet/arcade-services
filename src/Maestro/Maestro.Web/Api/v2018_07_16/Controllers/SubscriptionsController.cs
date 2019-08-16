@@ -209,7 +209,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             if (doUpdate)
             {
-                Data.Models.Subscription equivalentSubscription = await FindEquivalentSubsription(subscription);
+                Data.Models.Subscription equivalentSubscription = await FindEquivalentSubscription(subscription);
                 if (equivalentSubscription != null)
                 {
                     return BadRequest(
@@ -389,7 +389,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             Data.Models.Subscription subscriptionModel = subscription.ToDb();
             subscriptionModel.Channel = channel;
 
-            Data.Models.Subscription equivalentSubscription = await FindEquivalentSubsription(subscriptionModel);
+            Data.Models.Subscription equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
             if (equivalentSubscription != null)
             {
                 return Conflict(
@@ -419,7 +419,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// </summary>
         /// <param name="updatedOrNewSubscription">Subscription model with updated data.</param>
         /// <returns>Subscription if it is found, null otherwise</returns>
-        private async Task<Data.Models.Subscription> FindEquivalentSubsription(Data.Models.Subscription updatedOrNewSubscription)
+        private async Task<Data.Models.Subscription> FindEquivalentSubscription(Data.Models.Subscription updatedOrNewSubscription)
         {
             return await _context.Subscriptions.FirstOrDefaultAsync(sub =>
                 sub.SourceRepository.Equals(updatedOrNewSubscription.SourceRepository, StringComparison.OrdinalIgnoreCase) &&
