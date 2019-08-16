@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.Darc
         public const int MaxPopupTries = 3;
         public static string DarcDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".darc");
 
-        public const string AllCheckSuccessfulMergePolicyName = "AllChecksSuccessul";
+        public const string AllCheckSuccessfulMergePolicyName = "AllChecksSuccessful";
         public const string StandardMergePolicyName = "Standard";
         public const string NoExtraCommitsMergePolicyName = "NoExtraCommits";
         public const string NoRequestedChangesMergePolicyName = "NoRequestedChanges";
