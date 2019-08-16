@@ -16,12 +16,22 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class RemoteRepoBase
     {
-        protected RemoteRepoBase(string temporaryRepositoryPath, IMemoryCache cache)
+        protected RemoteRepoBase(string gitExecutable, string temporaryRepositoryPath, IMemoryCache cache)
         {
             TemporaryRepositoryPath = temporaryRepositoryPath;
+            GitExecutable = gitExecutable;
             Cache = cache;
         }
 
+        /// <summary>
+        ///     Location of the git executable. Can be "git" or full path to temporary download location
+        ///     used in the Maestro context.
+        /// </summary>
+        protected string GitExecutable { get; set; }
+
+        /// <summary>
+        ///     Location where repositories should be cloned.
+        /// </summary>
         protected string TemporaryRepositoryPath { get; set; }
         
         /// <summary>
@@ -62,7 +72,7 @@ namespace Microsoft.DotNet.DarcLib
 
                     using (_logger.BeginScope("Sparse and shallow checkout of branch {branch} in {repoUri}...", branch, repoUri))
                     {
-                        clonedRepo = LocalHelpers.SparseAndShallowCheckout(repoUri, branch, tempRepoFolder, _logger, remote, dotnetMaestroName, dotnetMaestroEmail, pat);
+                        clonedRepo = LocalHelpers.SparseAndShallowCheckout(GitExecutable, repoUri, branch, tempRepoFolder, _logger, remote, dotnetMaestroName, dotnetMaestroEmail, pat);
                     }
 
                     foreach (GitFile file in filesToCommit)
@@ -89,11 +99,11 @@ namespace Microsoft.DotNet.DarcLib
                             File.Delete(filePath);
                         }
 
-                        LocalHelpers.ExecuteCommand("git", $"add {filePath}", _logger, clonedRepo);
+                        LocalHelpers.ExecuteCommand(GitExecutable, $"add {filePath}", _logger, clonedRepo);
                     }
 
-                    LocalHelpers.ExecuteCommand("git", $"commit -m \"{commitMessage}\"", _logger, clonedRepo);
-                    LocalHelpers.ExecuteCommand("git", $"push {remote} {branch}", _logger, clonedRepo);
+                    LocalHelpers.ExecuteCommand(GitExecutable, $"commit -m \"{commitMessage}\"", _logger, clonedRepo);
+                    LocalHelpers.ExecuteCommand(GitExecutable, $"-c core.askpass= -c credential.helper= push {remote} {branch}", _logger, clonedRepo);
                 }
                 catch (Exception exc)
                 {

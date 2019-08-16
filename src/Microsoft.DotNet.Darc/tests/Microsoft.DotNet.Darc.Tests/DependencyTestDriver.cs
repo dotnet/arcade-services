@@ -56,7 +56,7 @@ namespace Microsoft.DotNet.Darc.Tests
             CopyDirectory(RootInputsPath, TemporaryRepositoryPath);
 
             // Set up a git file manager
-            _gitClient = new LocalGitClient(NullLogger.Instance);
+            _gitClient = new LocalGitClient("git", NullLogger.Instance);
             _gitFileManager = new GitFileManager(GitClient, NullLogger.Instance);
         }
 

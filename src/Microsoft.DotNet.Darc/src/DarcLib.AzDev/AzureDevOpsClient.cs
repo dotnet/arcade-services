@@ -58,8 +58,8 @@ namespace Microsoft.DotNet.DarcLib
         /// <remarks>
         ///     The AzureDevopsClient currently does not utilize the memory cache
         /// </remarks>
-        public AzureDevOpsClient(string accessToken, ILogger logger, string temporaryRepositoryPath)
-            : base (temporaryRepositoryPath, null)
+        public AzureDevOpsClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath)
+            : base (gitExecutable, temporaryRepositoryPath, null)
         {
             _personalAccessToken = accessToken;
             _logger = logger;
