@@ -43,7 +43,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("not-batchable", HelpText = "Get only non-batchable subscriptions.")]
         public bool NotBatchable { get; set; }
 
-        [Option("ids", Separator = ',', HelpText = "Get only only subscriptions with these ids.")]
+        [Option("ids", Separator = ',', HelpText = "Get only subscriptions with these ids.")]
         public IEnumerable<string> SubscriptionIds { get; set; }
 
         public bool SubcriptionFilter(Subscription subscription)
