@@ -49,7 +49,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 mergePolicies.Add(
                     new MergePolicy
                     {
-                        Name = "NoExtraCommits"
+                        Name = Constants.NoExtraCommitsMergePolicyName
                     });
             }
 
@@ -58,9 +58,9 @@ namespace Microsoft.DotNet.Darc.Operations
                 mergePolicies.Add(
                     new MergePolicy
                     {
-                        Name = "AllChecksSuccessful",
+                        Name = Constants.AllCheckSuccessfulMergePolicyName,
                         Properties = ImmutableDictionary.Create<string, JToken>()
-                            .Add("ignoreChecks", JToken.FromObject(_options.IgnoreChecks))
+                            .Add(Constants.IgnoreChecksMergePolicyPropertyName, JToken.FromObject(_options.IgnoreChecks))
                     });
             }
 
@@ -69,7 +69,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 mergePolicies.Add(
                     new MergePolicy
                     {
-                        Name = "NoRequestedChanges",
+                        Name = Constants.NoRequestedChangesMergePolicyName,
                         Properties = ImmutableDictionary.Create<string, JToken>()
                     });
             }
@@ -79,7 +79,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 mergePolicies.Add(
                     new MergePolicy
                     {
-                        Name = "Standard",
+                        Name = Constants.StandardMergePolicyName,
                         Properties = ImmutableDictionary.Create<string, JToken>()
                     });
             }

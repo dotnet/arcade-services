@@ -16,6 +16,12 @@ namespace Microsoft.DotNet.Darc
         public const int MaxPopupTries = 3;
         public static string DarcDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".darc");
 
+        public const string AllCheckSuccessfulMergePolicyName = "AllChecksSuccessul";
+        public const string StandardMergePolicyName = "Standard";
+        public const string NoExtraCommitsMergePolicyName = "NoExtraCommits";
+        public const string NoRequestedChangesMergePolicyName = "NoRequestedChanges";
+        public const string IgnoreChecksMergePolicyPropertyName = "ignoreChecks";
+
         /// <summary>
         /// Available update frequencies for subscriptions.  Currently the enumeration values aren't available
         /// through the generated API client.  When/if they ever are, this can be removed.
@@ -45,35 +51,35 @@ namespace Microsoft.DotNet.Darc
             "Each policy may have a set of required properties." +
             "See below for available merge policies:",
             "",
-            "Standard - Corresponds to either StandardGitHub or StandardAzureDevOps depending on the target repo type",
+            $"{StandardMergePolicyName} - Corresponds to either StandardGitHub or StandardAzureDevOps depending on the target repo type",
             "The standard github merge policy is:",
-            "- AllChecksSuccessful with the 'WIP' and 'license/cla' checks ignored.",
-            "- NoRequestedChanges",
+            $"- {AllCheckSuccessfulMergePolicyName} with the 'WIP' and 'license/cla' checks ignored.",
+            $"- {NoRequestedChangesMergePolicyName}",
             "The standard Azure DevOps merge policy is:",
-            "- AllChecksSuccessful with the 'Comment requirements', 'Minimum number of reviewers', 'Required reviewers',",
+            $"- {AllCheckSuccessfulMergePolicyName} with the 'Comment requirements', 'Minimum number of reviewers', 'Required reviewers',",
             "  and 'Work item linking' ignored.",
-            "- NoRequestedChanges",
+            $"- {NoRequestedChangesMergePolicyName}",
             "YAML format:",
-            "- Name: Standard",
+            $"- Name: {StandardMergePolicyName}",
             "",
-            "AllChecksSuccessful - All PR checks must be successful, potentially ignoring a specified set of checks.",
+            $"{AllCheckSuccessfulMergePolicyName} - All PR checks must be successful, potentially ignoring a specified set of checks.",
             "Checks might be ignored if they are unrelated to PR validation. The check name corresponds to the string that shows up",
             "in GitHub/Azure DevOps.",
             "YAML format:",
-            "- Name: AllChecksSuccessful",
+            $"- Name: {AllCheckSuccessfulMergePolicyName}",
             "  Properties:",
-            "    ignoreChecks:",
+            $"    {IgnoreChecksMergePolicyPropertyName}:",
             "    - WIP",
             "    - license/cla",
             "    - <other check names>",
             "",
-            "NoExtraCommits - If additional non-bot commits appear in the PR, the PR should not be merged.",
+            $"{NoExtraCommitsMergePolicyName} - If additional non-bot commits appear in the PR, the PR should not be merged.",
             "YAML format:",
-            "- Name: NoExtraCommits",
+            $"- Name: {NoExtraCommitsMergePolicyName}",
             "",
-            "NoRequestedChanges - If changes are requested on the PR (or the PR is rejected), it will not be merged.",
+            $"{NoRequestedChangesMergePolicyName} - If changes are requested on the PR (or the PR is rejected), it will not be merged.",
             "YAML format:",
-            "- Name: NoRequestedChanges",
+            $"- Name: {NoRequestedChangesMergePolicyName}",
         };
     }
 }

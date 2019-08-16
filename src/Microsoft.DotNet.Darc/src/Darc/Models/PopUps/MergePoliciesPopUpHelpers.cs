@@ -4,6 +4,7 @@
 
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -24,28 +25,28 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             {
                 foreach (MergePolicy policy in mergePolicies)
                 {
-                    switch (policy.Name.ToLower())
+                    if (policy.Name.Equals(Constants.AllCheckSuccessfulMergePolicyName, StringComparison.OrdinalIgnoreCase))
                     {
-                        case "allcheckssuccessful":
-                            // Should either have no properties, or one called "ignoreChecks"
-                            if (policy.Properties != null &&
-                                (policy.Properties.Count > 1 ||
-                                (policy.Properties.Count == 1 &&
-                                !policy.Properties.TryGetValue("ignoreChecks", out _))))
-                            {
-                                logger.LogError($"AllChecksSuccessful merge policy should have no properties, or an 'ignoreChecks' property. See help.");
-                                return false;
-                            }
-                            break;
-                        case "standard":
-                            break;
-                        case "norequestedchanges":
-                            break;
-                        case "noextracommits":
-                            break;
-                        default:
-                            logger.LogError($"Unknown merge policy '{policy.Name}'");
+                        // Should either have no properties, or one called "ignoreChecks"
+                        if (policy.Properties != null &&
+                            (policy.Properties.Count > 1 ||
+                            (policy.Properties.Count == 1 &&
+                            !policy.Properties.TryGetValue(Constants.IgnoreChecksMergePolicyPropertyName, out _))))
+                        {
+                            logger.LogError($"{Constants.AllCheckSuccessfulMergePolicyName} merge policy should have no properties, or an '{Constants.IgnoreChecksMergePolicyPropertyName}' property. See help.");
                             return false;
+                        }
+                    }
+                    else if (policy.Name.Equals(Constants.StandardMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
+                             policy.Name.Equals(Constants.NoExtraCommitsMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
+                             policy.Name.Equals(Constants.NoRequestedChangesMergePolicyName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // All good
+                    }
+                    else
+                    {
+                        logger.LogError($"Unknown merge policy '{policy.Name}'");
+                        return false;
                     }
                 }
             }
