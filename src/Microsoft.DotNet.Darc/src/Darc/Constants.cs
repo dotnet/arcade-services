@@ -57,7 +57,7 @@ namespace Microsoft.DotNet.Darc
             $"- {NoRequestedChangesMergePolicyName}",
             "The standard Azure DevOps merge policy is:",
             $"- {AllCheckSuccessfulMergePolicyName} with the 'Comment requirements', 'Minimum number of reviewers', 'Required reviewers',",
-            "  and 'Work item linking' ignored.",
+            "  and 'Work item linking' checks ignored.",
             $"- {NoRequestedChangesMergePolicyName}",
             "YAML format:",
             $"- Name: {StandardMergePolicyName}",
