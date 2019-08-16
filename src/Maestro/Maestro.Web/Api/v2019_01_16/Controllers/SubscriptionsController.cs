@@ -191,7 +191,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                 Data.Models.Subscription equivalentSubscription = await FindEquivalentSubsription(subscription);
                 if (equivalentSubscription != null)
                 {
-                    return BadRequest(
+                    return Conflict(
                             new ApiError(
                                 "the request is invalid",
                                 new[]
@@ -323,9 +323,9 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         }
 
         /// <summary>
-        ///     Find an existing subscription in the database with the same key data as the existing subscription.
+        ///     Find an existing subscription in the database with the same key data as the subscription we are adding/updating
         ///     
-        ///     This should be called before updating or adding new subscriptiohs to the database
+        ///     This should be called before updating or adding new subscriptions to the database
         /// </summary>
         /// <param name="updatedOrNewSubscription">Subscription model with updated data.</param>
         /// <returns>Subscription if it is found, null otherwise</returns>

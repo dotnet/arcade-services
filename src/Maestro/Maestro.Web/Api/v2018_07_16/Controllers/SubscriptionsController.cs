@@ -392,7 +392,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             Data.Models.Subscription equivalentSubscription = await FindEquivalentSubsription(subscriptionModel);
             if (equivalentSubscription != null)
             {
-                return BadRequest(
+                return Conflict(
                         new ApiError(
                             "the request is invalid",
                             new[]
@@ -411,21 +411,16 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 },
                 new Subscription(subscriptionModel));
         }
-        
+
         /// <summary>
-        ///     Find an existing subscription in the database with the same key data as the existing subscription.
+        ///     Find an existing subscription in the database with the same key data as the subscription we are adding/updating
         ///     
-        ///     This should be called before updating or adding new subscriptiohs to the database
+        ///     This should be called before updating or adding new subscriptions to the database
         /// </summary>
         /// <param name="updatedOrNewSubscription">Subscription model with updated data.</param>
         /// <returns>Subscription if it is found, null otherwise</returns>
         private async Task<Data.Models.Subscription> FindEquivalentSubsription(Data.Models.Subscription updatedOrNewSubscription)
         {
-            // Compare subscriptions based on the 4 key elements:
-            // - Channel
-            // - Source repo
-            // - Target repo
-            // - Target branch
             return await _context.Subscriptions.FirstOrDefaultAsync(sub =>
                 sub.SourceRepository.Equals(updatedOrNewSubscription.SourceRepository, StringComparison.OrdinalIgnoreCase) &&
                 sub.ChannelId == updatedOrNewSubscription.Channel.Id &&

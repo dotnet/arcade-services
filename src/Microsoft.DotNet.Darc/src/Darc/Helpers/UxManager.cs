@@ -69,7 +69,7 @@ namespace Microsoft.DotNet.Darc.Helpers
             }
             catch (Exception exc)
             {
-                _logger.LogError(exc, $"There was an exception running the popup.");
+                _logger.LogError(exc, "There was an exception processing YAML input from stdin.");
                 result = Constants.ErrorCode;
             }
 
