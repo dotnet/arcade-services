@@ -19,14 +19,12 @@ namespace Microsoft.DotNet.Darc.Helpers
     public class UxManager
     {
         private readonly string _editorPath;
-        private readonly string _rootDir;
         private readonly ILogger _logger;
         private bool _popUpClosed = false;
 
         public UxManager(string gitLocation, ILogger logger)
         {
             _editorPath = LocalHelpers.GetEditorPath(gitLocation, logger);
-            _rootDir = LocalHelpers.GetRootDir(gitLocation, logger);
             _logger = logger;
         }
 
