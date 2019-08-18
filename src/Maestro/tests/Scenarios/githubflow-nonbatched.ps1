@@ -19,11 +19,11 @@ $sourceBranch = "master"
 $sourceAssets = @(
     @{
         name = "Foo"
-        version = "1\.1\.0"
+        version = "1.1.0"
     },
     @{
         name = "Bar"
-        version = "2\.1\.0"
+        version = "2.1.0"
     }
 )
 
@@ -82,7 +82,7 @@ try {
 
     Write-Host "Waiting on PR to be opened in $targetRepoUri"
 
-    $expectedDependencies =@(
+    $expectedDependencies = @(
         "Name:             Foo"
         "Version:          1\.1\.0",
         "Repo:             $sourceRepoUri",
