@@ -43,7 +43,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
         {
             // Disallow two things:
             // - Merge policies set on batchable subscriptions. They should be set as a repository policy
-            // - More than version of a single policy.
+            // - More than one instance of a single policy.
             if (MergePolicies != null && MergePolicies.Count != 0)
             {
                 if (Batchable)
