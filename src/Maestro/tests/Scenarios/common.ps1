@@ -170,7 +170,7 @@ function Darc-Command-WithPipeline([Parameter(ValueFromPipeline=$true)]$pipeline
     $commandOutput = $pipelineParams| & $darcTool @finalParams @darcAuthParams
     if ($LASTEXITCODE -ne 0) {
       Write-Host ${commandOutput}
-      throw "Darc command exited with exit code: $LASTEXITCODE"
+      throw "Darc command exited with exit code: $LASTEXITCODE`n${commandOutput}"
     } else {
       $commandOutput
     }
@@ -185,7 +185,7 @@ function Darc-Command([Parameter(ValueFromRemainingArguments=$true)]$darcParams)
     $commandOutput = & $darcTool @finalParams @darcAuthParams
     if ($LASTEXITCODE -ne 0) {
       Write-Host ${commandOutput}
-      throw "Darc command exited with exit code: $LASTEXITCODE"
+      throw "Darc command exited with exit code: $LASTEXITCODE`n${commandOutput}"
     } else {
       $commandOutput
     }

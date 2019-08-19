@@ -41,11 +41,23 @@ namespace Maestro.Web.Api.v2018_07_16.Models
 
         public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
         {
-            if (Batchable && MergePolicies != null && MergePolicies.Count != 0)
+            // Disallow two things:
+            // - Merge policies set on batchable subscriptions. They should be set as a repository policy
+            // - More than version of a single policy.
+            if (MergePolicies != null && MergePolicies.Count != 0)
             {
-                yield return new ValidationResult(
-                    "Batchable Subscriptions cannot have any merge policies.",
-                    new[] {nameof(MergePolicies), nameof(Batchable)});
+                if (Batchable)
+                {
+                    yield return new ValidationResult(
+                        "Batchable Subscriptions cannot have any merge policies.",
+                        new[] { nameof(MergePolicies), nameof(Batchable) });
+                }
+                else if (MergePolicies.Select(policy => policy.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != MergePolicies.Count)
+                {
+                    yield return new ValidationResult(
+                        "Subscriptions may not have duplicates of merge policies.",
+                        new[] { nameof(MergePolicies) });
+                }
             }
         }
 
