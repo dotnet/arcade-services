@@ -142,6 +142,37 @@ Merge Policies:
     Validate-Subscription-Info $subscriptionId $expectedSubscriptionInfo
     Darc-Delete-Subscription $subscriptionId
 
+    # Attempt to add multiple of the same merge policy checks. Should fail.
+$yaml=@"
+Channel: $channel1Name
+Source Repository URL: $repo1Uri
+Target Repository URL: $repo3Uri
+Target Branch: master
+Update Frequency: everyweek
+Batchable: false
+Merge Policies:
+- Name: AllChecksSuccessful
+  Properties:
+    ignoreChecks:
+    - WIP
+    - license/cla
+- Name: AllChecksSuccessful
+  Properties:
+    ignoreChecks:
+    - WIP
+    - MySpecialCheck
+"@
+    try {
+        Darc-Add-Subscription-From-Yaml $yaml
+        throw "darc add-subscription should fail when creating a subscription with conflicting merge policies."
+    } catch {
+        if (-not ($_ -match ".*Subscriptions may not have duplicates of merge policies.*")) {
+            throw "darc add-subscription should fail when creating a subscription with conflicting merge policies"
+        } else {
+            Write-Host "Maestro successfully blocked creation of subscription with conflicting merge policies."
+        }
+    }
+
     # Duplicate subscription tests
 
     Write-Host ""
@@ -152,7 +183,7 @@ Merge Policies:
         Darc-Add-Subscription --channel "$channel1Name" --source-repo "$repo1Uri" --target-repo "$repo2Uri" --update-frequency everyDay --target-branch "master"
         throw "darc add-subscription should fail when creating an equivalent subscription."
     } catch {
-        if (-not $_.Message -match "The subscription .* already performs the same update.") {
+        if (-not ($_ -match ".*The subscription .* already performs the same update.*")) {
             throw "darc add-subscription should fail when creating an equivalent subscription"
         } else {
             Write-Host "Maestro successfully blocked creation of duplicate subscription"
@@ -163,7 +194,7 @@ Merge Policies:
         Darc-Add-Subscription --channel "$channel1Name" --source-repo "$($repo1Uri.toUpper())" --target-repo "$repo2Uri" --update-frequency everyDay --target-branch "master"
         throw "darc add-subscription should fail when creating an equivalent subscription."
     } catch {
-        if (-not $_.Message -match "The subscription .* already performs the same update.") {
+        if (-not ($_ -match ".*The subscription .* already performs the same update.*")) {
             throw "darc add-subscription should fail when creating an equivalent subscription"
         } else {
             Write-Host "Maestro successfully blocked creation of duplicate subscription"
