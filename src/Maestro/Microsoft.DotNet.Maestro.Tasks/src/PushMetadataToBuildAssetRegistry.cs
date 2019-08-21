@@ -38,6 +38,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         public string RepoRoot { get; set; }
 
+        private const string SearchPattern = "*.xml";
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
         public void Cancel()
@@ -71,6 +72,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 else
                 {
                     List<BuildData> buildsManifestMetadata = GetBuildManifestsMetadata(ManifestsPath, cancellationToken);
+
+                    if (buildsManifestMetadata.Count == 0)
+                    {
+                        Log.LogError($"No build manifests found matching the search pattern {SearchPattern} in {ManifestsPath}");
+                        return !Log.HasLoggedErrors;
+                    }
 
                     BuildData finalBuild = MergeBuildManifests(buildsManifestMetadata);
 
@@ -190,7 +197,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         {
             var buildsManifestMetadata = new List<BuildData>();
 
-            foreach (string manifestPath in Directory.GetFiles(manifestsFolderPath, "*.xml", SearchOption.AllDirectories))
+            foreach (string manifestPath in Directory.GetFiles(manifestsFolderPath, SearchPattern, SearchOption.AllDirectories))
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
