@@ -276,6 +276,16 @@ namespace ReleasePipelineRunner
                     string project = pipeline.ReleasePipeline.Project;
                     int pipelineId = pipeline.ReleasePipeline.PipelineIdentifier;
 
+                    // If the release definition is in a separate organization or project than the
+                    // build, running the release won't work. This is not that interesting anymore as the repos that have
+                    // this issue are on stages. So we can just skip them.
+                    if (!organization.Equals(build.AzureDevOpsAccount, StringComparison.OrdinalIgnoreCase) ||
+                        !project.Equals(build.AzureDevOpsProject, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Logger.LogWarning($"Skipping release of build {build.Id} because it is not in the same organzation or project as the release definition.");
+                        continue;
+                    }
+
                     Logger.LogInformation($"Going to create a release using pipeline {organization}/{project}/{pipelineId}");
 
                     AzureDevOpsReleaseDefinition pipeDef = await azdoClient.GetReleaseDefinitionAsync(organization, project, pipelineId);
