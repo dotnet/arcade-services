@@ -44,10 +44,10 @@
     <WindowsAzureStorageVersion>8.5.0</WindowsAzureStorageVersion>
     <XUnitVersion>2.4.1-pre.build.4059</XUnitVersion>
     <XUnitVSRunnerVersion>2.4.1-pre.build.4059</XUnitVSRunnerVersion>
-    <MicrosoftDotNetSignToolVersion>1.0.0-beta.19373.6</MicrosoftDotNetSignToolVersion>
-    <MicrosoftDotNetBuildTasksFeedVersion>2.2.0-beta.19373.6</MicrosoftDotNetBuildTasksFeedVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>1.0.0-beta.19373.6</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
-    <MicrosoftDotNetGitIssueManagerVersion>1.0.0-beta.19373.6</MicrosoftDotNetGitIssueManagerVersion>
+    <MicrosoftDotNetSignToolVersion>1.0.0-beta.19412.1</MicrosoftDotNetSignToolVersion>
+    <MicrosoftDotNetBuildTasksFeedVersion>2.2.0-beta.19412.1</MicrosoftDotNetBuildTasksFeedVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>1.0.0-beta.19412.1</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
+    <MicrosoftDotNetGitIssueManagerVersion>1.0.0-beta.19412.1</MicrosoftDotNetGitIssueManagerVersion>
   </PropertyGroup>
   <!--Package names-->
   <PropertyGroup>
@@ -55,11 +55,5 @@
     <MicrosoftDotNetBuildTasksFeedPackage>Microsoft.DotNet.Build.Tasks.Feed</MicrosoftDotNetBuildTasksFeedPackage>
     <MicrosoftDotNetMaestroTasksPackage>Microsoft.DotNet.Maestro.Tasks</MicrosoftDotNetMaestroTasksPackage>
     <MicrosoftDotNetSwaggerGeneratorMSBuildPackage>Microsoft.DotNet.SwaggerGenerator.MSBuild</MicrosoftDotNetSwaggerGeneratorMSBuildPackage>
-  </PropertyGroup>
-  <PropertyGroup>
-    <RestoreSources>
-      $(RestoreSources);
-      https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json;
-    </RestoreSources>
   </PropertyGroup>
 </Project>

@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using Microsoft.DotNet.DarcLib;
+using Autofac.Core;
 
 namespace SubscriptionActorService
 {
@@ -43,6 +44,10 @@ namespace SubscriptionActorService
                             services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
                             services.AddGitHubTokenProvider();
                             services.AddAzureDevOpsTokenProvider();
+                            // We do not use AddMemoryCache here. We use our own cache because we wish to
+                            // use a sized cache and some components, such as EFCore, do not implement their caching
+                            // in such a way that will work with sizing.
+                            services.AddSingleton<DarcRemoteMemoryCache>();
                             services.AddSingleton(
                                 provider => ServiceHostConfiguration.Get(
                                     provider.GetRequiredService<IHostingEnvironment>()));

@@ -138,7 +138,7 @@ namespace Microsoft.DotNet.Darc.Operations
                                              Constants.AvailableFrequencies,
                                              Constants.AvailableMergePolicyYamlHelp);
 
-                UxManager uxManager = new UxManager(Logger);
+                UxManager uxManager = new UxManager(_options.GitLocation, Logger);
                 int exitCode = uxManager.PopUp(initEditorPopUp);
                 if (exitCode != Constants.SuccessCode)
                 {

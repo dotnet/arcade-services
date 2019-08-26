@@ -17,13 +17,15 @@ namespace Microsoft.DotNet.DarcLib
     public class LocalGitClient : IGitRepo
     {
         private ILogger _logger;
+        private string _gitExecutable;
 
         /// <summary>
         ///     Construct a new local git client
         /// </summary>
         /// <param name="path">Current path</param>
-        public LocalGitClient(ILogger logger)
+        public LocalGitClient(string gitExecutable, ILogger logger)
         {
+            _gitExecutable = gitExecutable;
             _logger = logger;
         }
 
@@ -68,7 +70,7 @@ namespace Microsoft.DotNet.DarcLib
 
         public Task<List<GitFile>> GetFilesAtCommitAsync(string repoUri, string commit, string path)
         {
-            string repoDir = LocalHelpers.GetRootDir(_logger);
+            string repoDir = LocalHelpers.GetRootDir(_gitExecutable, _logger);
             string sourceFolder = Path.Combine(repoDir, path);
             return Task.Run(() => Directory.GetFiles(
                 sourceFolder,
@@ -149,7 +151,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public async Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
-            string repoDir = LocalHelpers.GetRootDir(_logger);
+            string repoDir = LocalHelpers.GetRootDir(_gitExecutable, _logger);
             try
             {
                 using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoDir))
@@ -223,7 +225,7 @@ namespace Microsoft.DotNet.DarcLib
             const string crlf = "\r\n";
             const string lf = "\n";
             // Check gitAttributes to determine whether the file has eof handling set.
-            string eofAttr = LocalHelpers.ExecuteCommand("git", $"check-attr eol -- {filePath}", _logger);
+            string eofAttr = LocalHelpers.ExecuteCommand(_gitExecutable, $"check-attr eol -- {filePath}", _logger);
             if (string.IsNullOrEmpty(eofAttr) ||
                 eofAttr.Contains("eol: unspecified") ||
                 eofAttr.Contains("eol: auto"))
