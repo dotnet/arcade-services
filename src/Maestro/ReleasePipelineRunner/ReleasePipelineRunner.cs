@@ -271,7 +271,8 @@ namespace ReleasePipelineRunner
             if (channel.ChannelReleasePipelines.Select(pipeline => 
                 pipeline.ReleasePipeline.Organization).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1)
             {
-                throw new NotImplementedException("Multiple pipelines in different organizations are not supported.");
+                Logger.LogError($"Multiple pipelines in different organizations are not supported (channel {channel.Id}).");
+                return;
             }
 
             foreach (ChannelReleasePipeline pipeline in channel.ChannelReleasePipelines)
