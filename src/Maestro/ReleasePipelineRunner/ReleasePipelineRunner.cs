@@ -268,6 +268,13 @@ namespace ReleasePipelineRunner
 
             Logger.LogInformation($"Found {channel.ChannelReleasePipelines.Count} pipeline(s) for channel {channelId}");
 
+            if (channel.ChannelReleasePipelines.Select(pipeline => 
+                pipeline.ReleasePipeline.Organization).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1)
+            {
+                Logger.LogError($"Multiple pipelines in different organizations are not supported (channel {channel.Id}).");
+                return;
+            }
+
             foreach (ChannelReleasePipeline pipeline in channel.ChannelReleasePipelines)
             {
                 try
@@ -275,6 +282,23 @@ namespace ReleasePipelineRunner
                     string organization = pipeline.ReleasePipeline.Organization;
                     string project = pipeline.ReleasePipeline.Project;
                     int pipelineId = pipeline.ReleasePipeline.PipelineIdentifier;
+
+                    // If the release definition is in a separate organization or project than the
+                    // build, running the release won't work. This is not that interesting anymore as the repos that have
+                    // this issue are on stages. So we can just skip them.
+                    if (!organization.Equals(build.AzureDevOpsAccount, StringComparison.OrdinalIgnoreCase) ||
+                        !project.Equals(build.AzureDevOpsProject, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Logger.LogWarning($"Skipping release of build {build.Id} because it is not in the same organzation or project as the release definition.");
+                        await AddFinishedBuildChannelsIfNotPresent(new HashSet<BuildChannel> {
+                            new BuildChannel
+                            {
+                                BuildId = buildId,
+                                ChannelId = channelId
+                            }
+                        });
+                        break;
+                    }
 
                     Logger.LogInformation($"Going to create a release using pipeline {organization}/{project}/{pipelineId}");
 
