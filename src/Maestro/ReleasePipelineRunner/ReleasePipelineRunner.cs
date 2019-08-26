@@ -268,6 +268,13 @@ namespace ReleasePipelineRunner
 
             Logger.LogInformation($"Found {channel.ChannelReleasePipelines.Count} pipeline(s) for channel {channelId}");
 
+            if (channel.ChannelReleasePipelines.Select(pipeline => 
+                pipeline.ReleasePipeline.Organization).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1)
+            {
+                Logger.LogError($"Multiple pipelines in different organizations are not supported (channel {channel.Id}).");
+                return;
+            }
+
             foreach (ChannelReleasePipeline pipeline in channel.ChannelReleasePipelines)
             {
                 try
@@ -283,7 +290,14 @@ namespace ReleasePipelineRunner
                         !project.Equals(build.AzureDevOpsProject, StringComparison.OrdinalIgnoreCase))
                     {
                         Logger.LogWarning($"Skipping release of build {build.Id} because it is not in the same organzation or project as the release definition.");
-                        continue;
+                        await AddFinishedBuildChannelsIfNotPresent(new HashSet<BuildChannel> {
+                            new BuildChannel
+                            {
+                                BuildId = buildId,
+                                ChannelId = channelId
+                            }
+                        });
+                        break;
                     }
 
                     Logger.LogInformation($"Going to create a release using pipeline {organization}/{project}/{pipelineId}");
