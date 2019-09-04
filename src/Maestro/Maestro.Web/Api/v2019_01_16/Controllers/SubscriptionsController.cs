@@ -336,7 +336,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             // - Source repo
             // - Target repo
             // - Target branch
-            // - Not the same subscription id (for updatess)
+            // - Not the same subscription id (for updates)
             return await _context.Subscriptions.FirstOrDefaultAsync(sub =>
                 sub.SourceRepository.Equals(updatedOrNewSubscription.SourceRepository, StringComparison.OrdinalIgnoreCase) &&
                 sub.ChannelId == updatedOrNewSubscription.Channel.Id &&
