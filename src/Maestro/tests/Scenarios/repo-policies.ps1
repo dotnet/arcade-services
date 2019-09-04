@@ -22,18 +22,18 @@ try {
     Write-Host
 
     $repoUri = Get-Github-RepoUri $repoName
-    
+
     Write-Host "Setting repository merge policy to empty"
     Darc-Set-Repository-Policies -repo $repoUri -branch $branchName
     $output = Darc-Get-Repository-Policies $repoUri $branchName
     $expected = @(
         "$repoUri @ $branchName",
-        "- Merge Policies: []"
+        "- Merge Policies: \[\]"
         )
     if (-not $(Compare-Array-Output $expected $output)) {
         throw "Repository merge policies should have been cleared, but were not"
     }
-    
+
     Write-Host ""
     Write-Host "Setting repository merge policy to standard"
     Darc-Set-Repository-Policies -repo $repoUri -branch $branchName -policiesParams @( "--standard-automerge" )
@@ -47,7 +47,7 @@ try {
         Write-Host $output
         throw "Repository merge policies should be standard, but were not"
     }
-    
+
     Write-Host ""
     Write-Host "Setting repository merge policy to all checks successful"
     Darc-Set-Repository-Policies -repo $repoUri -branch $branchName -policiesParams @( "--all-checks-passed", "--ignore-checks", "A,B" )
@@ -57,16 +57,16 @@ try {
         "- Merge Policies:",
         "  AllChecksSuccessful",
         "    ignoreChecks = ",
-        "                   [",
+        "                   \[",
         "                     `"A`",",
         "                     `"B`"",
-        "                   ]"
+        "                   \]"
         )
     if (-not $(Compare-Array-Output $expected $output)) {
         Write-Host $output
         throw "Repository merge policies should be allcheckssuccessful, but were not"
     }
-    
+
     Write-Host "Test Passed"
 
 } finally {

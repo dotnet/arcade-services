@@ -49,7 +49,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 mergePolicies.Add(
                     new MergePolicy
                     {
-                        Name = "NoExtraCommits"
+                        Name = Constants.NoExtraCommitsMergePolicyName
                     });
             }
 
@@ -58,9 +58,9 @@ namespace Microsoft.DotNet.Darc.Operations
                 mergePolicies.Add(
                     new MergePolicy
                     {
-                        Name = "AllChecksSuccessful",
+                        Name = Constants.AllCheckSuccessfulMergePolicyName,
                         Properties = ImmutableDictionary.Create<string, JToken>()
-                            .Add("ignoreChecks", JToken.FromObject(_options.IgnoreChecks))
+                            .Add(Constants.IgnoreChecksMergePolicyPropertyName, JToken.FromObject(_options.IgnoreChecks))
                     });
             }
 
@@ -69,7 +69,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 mergePolicies.Add(
                     new MergePolicy
                     {
-                        Name = "NoRequestedChanges",
+                        Name = Constants.NoRequestedChangesMergePolicyName,
                         Properties = ImmutableDictionary.Create<string, JToken>()
                     });
             }
@@ -79,7 +79,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 mergePolicies.Add(
                     new MergePolicy
                     {
-                        Name = "Standard",
+                        Name = Constants.StandardMergePolicyName,
                         Properties = ImmutableDictionary.Create<string, JToken>()
                     });
             }
@@ -100,7 +100,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
             // If in quiet (non-interactive mode), ensure that all options were passed, then
             // just call the remote API
-            if (_options.Quiet)
+            if (_options.Quiet && !_options.ReadStandardIn)
             {
                 if (string.IsNullOrEmpty(channel) ||
                     string.IsNullOrEmpty(sourceRepository) ||
@@ -123,7 +123,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // Help the user along with a form.  We'll use the API to gather suggested values
                 // from existing subscriptions based on the input parameters.
-                AddSubscriptionPopUp initEditorPopUp =
+                AddSubscriptionPopUp addSubscriptionPopup =
                     new AddSubscriptionPopUp("add-subscription/add-subscription-todo",
                                              Logger,
                                              channel,
@@ -139,18 +139,18 @@ namespace Microsoft.DotNet.Darc.Operations
                                              Constants.AvailableMergePolicyYamlHelp);
 
                 UxManager uxManager = new UxManager(_options.GitLocation, Logger);
-                int exitCode = uxManager.PopUp(initEditorPopUp);
+                int exitCode = _options.ReadStandardIn ? uxManager.ReadFromStdIn(addSubscriptionPopup) : uxManager.PopUp(addSubscriptionPopup);
                 if (exitCode != Constants.SuccessCode)
                 {
                     return exitCode;
                 }
-                channel = initEditorPopUp.Channel;
-                sourceRepository = initEditorPopUp.SourceRepository;
-                targetRepository = initEditorPopUp.TargetRepository;
-                targetBranch = initEditorPopUp.TargetBranch;
-                updateFrequency = initEditorPopUp.UpdateFrequency;
-                mergePolicies = initEditorPopUp.MergePolicies;
-                batchable = initEditorPopUp.Batchable; 
+                channel = addSubscriptionPopup.Channel;
+                sourceRepository = addSubscriptionPopup.SourceRepository;
+                targetRepository = addSubscriptionPopup.TargetRepository;
+                targetBranch = addSubscriptionPopup.TargetBranch;
+                updateFrequency = addSubscriptionPopup.UpdateFrequency;
+                mergePolicies = addSubscriptionPopup.MergePolicies;
+                batchable = addSubscriptionPopup.Batchable; 
             }
 
             try

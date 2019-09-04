@@ -209,6 +209,18 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             if (doUpdate)
             {
+                Data.Models.Subscription equivalentSubscription = await FindEquivalentSubscription(subscription);
+                if (equivalentSubscription != null)
+                {
+                    return BadRequest(
+                            new ApiError(
+                                "the request is invalid",
+                                new[]
+                                {
+                                $"The subscription '{equivalentSubscription.Id}' already performs the same update."
+                                }));
+                }
+
                 _context.Subscriptions.Update(subscription);
                 await _context.SaveChangesAsync();
             }
@@ -376,6 +388,19 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             Data.Models.Subscription subscriptionModel = subscription.ToDb();
             subscriptionModel.Channel = channel;
+
+            Data.Models.Subscription equivalentSubscription = await FindEquivalentSubscription(subscriptionModel);
+            if (equivalentSubscription != null)
+            {
+                return Conflict(
+                        new ApiError(
+                            "the request is invalid",
+                            new[]
+                            {
+                                $"The subscription '{equivalentSubscription.Id}' already performs the same update."
+                            }));
+            }
+
             await _context.Subscriptions.AddAsync(subscriptionModel);
             await _context.SaveChangesAsync();
             return CreatedAtRoute(
@@ -385,6 +410,22 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                     id = subscriptionModel.Id
                 },
                 new Subscription(subscriptionModel));
+        }
+
+        /// <summary>
+        ///     Find an existing subscription in the database with the same key data as the subscription we are adding/updating
+        ///     
+        ///     This should be called before updating or adding new subscriptions to the database
+        /// </summary>
+        /// <param name="updatedOrNewSubscription">Subscription model with updated data.</param>
+        /// <returns>Subscription if it is found, null otherwise</returns>
+        private async Task<Data.Models.Subscription> FindEquivalentSubscription(Data.Models.Subscription updatedOrNewSubscription)
+        {
+            return await _context.Subscriptions.FirstOrDefaultAsync(sub =>
+                sub.SourceRepository.Equals(updatedOrNewSubscription.SourceRepository, StringComparison.OrdinalIgnoreCase) &&
+                sub.ChannelId == updatedOrNewSubscription.Channel.Id &&
+                sub.TargetRepository.Equals(updatedOrNewSubscription.TargetRepository, StringComparison.OrdinalIgnoreCase) &&
+                sub.TargetBranch.Equals(updatedOrNewSubscription.TargetBranch, StringComparison.OrdinalIgnoreCase));
         }
     }
 }

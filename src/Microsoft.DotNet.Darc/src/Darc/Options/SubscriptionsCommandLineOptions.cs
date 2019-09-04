@@ -6,6 +6,8 @@ using CommandLine;
 using System.Text.RegularExpressions;
 using System;
 using Microsoft.DotNet.Maestro.Client.Models;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Microsoft.DotNet.Darc.Options
 {
@@ -41,6 +43,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("not-batchable", HelpText = "Get only non-batchable subscriptions.")]
         public bool NotBatchable { get; set; }
 
+        [Option("ids", Separator = ',', HelpText = "Get only subscriptions with these ids.")]
+        public IEnumerable<string> SubscriptionIds { get; set; }
+
         public bool SubcriptionFilter(Subscription subscription)
         {
             return (SubscriptionParameterMatches(TargetRepository, subscription.TargetRepository) &&
@@ -48,7 +53,8 @@ namespace Microsoft.DotNet.Darc.Options
                     SubscriptionParameterMatches(SourceRepository, subscription.SourceRepository) &&
                     SubscriptionParameterMatches(Channel, subscription.Channel.Name) &&
                     SubscriptionEnabledParameterMatches(subscription) &&
-                    SubscriptionBatchableParameterMatches(subscription));
+                    SubscriptionBatchableParameterMatches(subscription) &&
+                    SubscriptionIdsParameterMatches(subscription));
         }
 
         public bool SubscriptionEnabledParameterMatches(Subscription subscription)
@@ -63,6 +69,11 @@ namespace Microsoft.DotNet.Darc.Options
             return (Batchable && subscription.Policy.Batchable) ||
                    (NotBatchable && !subscription.Policy.Batchable) ||
                    (!Batchable && !NotBatchable);
+        }
+
+        public bool SubscriptionIdsParameterMatches(Subscription subscription)
+        {
+            return !SubscriptionIds.Any() || SubscriptionIds.Any(id => id.Equals(subscription.Id.ToString(), StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>

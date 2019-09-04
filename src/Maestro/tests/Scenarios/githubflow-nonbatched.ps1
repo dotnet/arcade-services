@@ -46,7 +46,7 @@ try {
     Darc-Add-Channel -channelName $testChannelName -classification "test"
 
     Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
-    $subscriptionId = Darc-Add-Subscription --channel "$testChannelName" --source-repo "$sourceRepoUri" --target-repo "$targetRepoUri" --update-frequency none --target-branch "$targetBranch" 
+    $subscriptionId = Darc-Add-Subscription --channel "$testChannelName" --source-repo "$sourceRepoUri" --target-repo "$targetRepoUri" --update-frequency none --target-branch "$targetBranch"
 
     Write-Host "Set up build for intake into target repository"
     # Create a build for the source repo
@@ -63,8 +63,8 @@ try {
     # Add the foo and bar dependencies
     try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        Darc-Command add-dependency --name Foo --type product --repo "$sourceRepoUri" 
-        Darc-Command add-dependency --name Bar --type product --repo "$sourceRepoUri" 
+        Darc-Command add-dependency --name Foo --type product --repo "$sourceRepoUri"
+        Darc-Command add-dependency --name Bar --type product --repo "$sourceRepoUri"
     }
     finally {
         Pop-Location
@@ -82,16 +82,16 @@ try {
 
     Write-Host "Waiting on PR to be opened in $targetRepoUri"
 
-    $expectedDependencies =@(
+    $expectedDependencies = @(
         "Name:             Foo"
-        "Version:          1.1.0",
+        "Version:          1\.1\.0",
         "Repo:             $sourceRepoUri",
         "Commit:           $sourceCommit",
         "Type:             Product",
         "Pinned:           False",
         "",
         "Name:             Bar",
-        "Version:          2.1.0",
+        "Version:          2\.1\.0",
         "Repo:             $sourceRepoUri",
         "Commit:           $sourceCommit",
         "Type:             Product",
