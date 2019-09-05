@@ -12,8 +12,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
@@ -60,6 +62,14 @@ namespace Microsoft.DotNet.Darc.Operations
         const string assetsSubPath = "assets";
         const string nonShippingSubPath = "nonshipping";
         const string shippingSubPath = "shipping";
+
+        // Regular expression used to check that an AssetLocation matches the format of
+        // an Azure DevOps Feed. Such feeds look like:
+        //      - https://pkgs.dev.azure.com/dnceng/public/_packaging/public-feed-name/nuget/v3/index.json
+        //      - https://pkgs.dev.azure.com/dnceng/_packaging/internal-feed-name/nuget/v3/index.json
+        public const string AzDoNuGetFeedPattern =
+            @"https://pkgs.dev.azure.com/(?<account>[a-zA-Z0-9]+)/(?<visibility>[a-zA-Z0-9-]+/)?_packaging/(?<feed>.+)/nuget/v3/index.json";
+
 
         public override async Task<int> ExecuteAsync()
         {
@@ -856,6 +866,37 @@ namespace Microsoft.DotNet.Darc.Operations
                     };
                 }
             }
+            else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out var feedAccount, out var feedVisibility, out var feedName))
+            {
+                string packageContentUrl = $"https://pkgs.dev.azure.com/{feedAccount}/{feedVisibility}_apis/packaging/feeds/{feedName}/nuget/packages/{asset.Name}/versions/{asset.Version}/content";
+
+                string fullTargetPath = Path.Combine(subPath, packagesSubPath, $"{asset.Name}.{asset.Version}.nupkg");
+
+                // feedVisibility == "" means that the feed is internal.
+                if (string.IsNullOrEmpty(feedVisibility))
+                {
+                    if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
+                    {
+                        LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
+                        _options.AzureDevOpsPat = localSettings.AzureDevOpsToken;
+                    }
+
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                        "Basic",
+                        Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _options.AzureDevOpsPat))));
+                }
+
+                if (await DownloadFileAsync(client, packageContentUrl, fullTargetPath, errors))
+                {
+                    return new DownloadedAsset()
+                    {
+                        Successful = true,
+                        Asset = asset,
+                        SourceLocation = packageContentUrl,
+                        TargetLocation = fullTargetPath
+                    };
+                }
+            }
             else
             {
                 string assetNameAndVersion = GetAssetNameForLogging(asset);
@@ -893,6 +934,28 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             return locationUri.Host.EndsWith("blob.core.windows.net") && location.EndsWith("/index.json");
+        }
+
+        /// <summary>
+        ///     Determine whether this location is an Azure DevOps Feed URL.
+        /// </summary>
+        /// <param name="location">Location</param>
+        /// <returns>True if the location is an AzDO Feed URL, false otherwise.</returns>
+        /// <remarks>
+        ///     AzDO feed uris look like: 
+        ///         - https://pkgs.dev.azure.com/dnceng/public/_packaging/public-feed-name/nuget/v3/index.json
+        ///         - https://pkgs.dev.azure.com/dnceng/_packaging/internal-feed-name/nuget/v3/index.json
+        /// </remarks>
+        private static bool IsAzureDevOpsFeedUrl(string location, out string feedAccount, out string feedVisibility, out string feedName)
+        {
+            var parsedUri = Regex.Match(location, AzDoNuGetFeedPattern);
+
+            // If the pattern doesn't match these groups will return an empty string
+            feedAccount = parsedUri.Groups["account"].Value;
+            feedVisibility = parsedUri.Groups["visibility"].Value;
+            feedName = parsedUri.Groups["feed"].Value;
+
+            return parsedUri.Success;
         }
 
         /// <summary>
