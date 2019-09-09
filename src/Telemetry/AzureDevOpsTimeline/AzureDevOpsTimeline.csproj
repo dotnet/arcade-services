@@ -11,12 +11,7 @@
     <RootNamespace>Microsoft.DotNet.AzureDevOpsTimeline</RootNamespace>
     <AssemblyName>Microsoft.DotNet.AzureDevOpsTimeline</AssemblyName>
   </PropertyGroup>
-  
-  <ItemGroup>
-    <Content Include=".config\*.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.KeyVault" Version="$(MicrosoftAzureKeyVaultVersion)" />
@@ -30,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
+    <ProjectReference Include="..\..\Shared\Shared.csproj" />
   </ItemGroup>
 
 </Project>
