@@ -46,7 +46,7 @@ namespace ReleasePipelineRunner
         public IDependencyUpdater DependencyUpdater { get; }
 
         private const string RunningPipelineDictionaryName = "runningPipelines";
-        private static int DelayBetweenBuildStatusChecksInMinutes = 15;
+        private static int DelayBetweenBuildStatusChecksInMinutes = 10;
         private static int MaxRetriesChecksForFailedBuilds = 24;
         private static HashSet<string> InProgressStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "notstarted", "scheduled", "queued", "inprogress", "undefined" };
         private static HashSet<string> StopStatuses = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "canceled", "rejected" };
@@ -71,67 +71,77 @@ namespace ReleasePipelineRunner
 
         public async Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
         {
+
             IReliableConcurrentQueue<ReleasePipelineRunnerItem> queue =
                 await StateManager.GetOrAddAsync<IReliableConcurrentQueue<ReleasePipelineRunnerItem>>("queue");
 
-            try
+            Logger.LogInformation($"Processing builds waiting to start release pipelines. There are {queue.Count} items in the queue.");
+
+            // While there are items in the queue, pop them off and process them, then tell the runner to wait a minute before trying again
+            // Note that EnqueueBuildStatusCheck will return immediately but wait a period of time (DelayBetweenBuildStatusChecksInMinutes)
+            // before queuing the build for checking again
+            while (queue.Count > 0)
             {
-                using (ITransaction tx = StateManager.CreateTransaction())
+                try
                 {
-                    ConditionalValue<ReleasePipelineRunnerItem> maybeItem = await queue.TryDequeueAsync(
-                        tx,
-                        cancellationToken);
-                    if (maybeItem.HasValue)
+                    using (ITransaction tx = StateManager.CreateTransaction())
                     {
-                        ReleasePipelineRunnerItem item = maybeItem.Value;
-
-                        Build build = await Context.Builds
-                            .Where(b => b.Id == item.BuildId).FirstOrDefaultAsync();
-
-                        if (build == null)
+                        ConditionalValue<ReleasePipelineRunnerItem> maybeItem = await queue.TryDequeueAsync(
+                            tx,
+                            cancellationToken);
+                        if (maybeItem.HasValue)
                         {
-                            Logger.LogError($"Could not find the specified BAR Build {item.BuildId} to run a release pipeline.");
-                        }
-                        else if (build.AzureDevOpsBuildId == null)
-                        {
-                            // If something uses the old API version we won't have this information available.
-                            // This will also be the case if something adds an existing build (created using
-                            // the old API version) to a channel
-                            Logger.LogInformation($"barBuildInfo.AzureDevOpsBuildId is null for BAR Build.Id {build.Id}.");
-                        }
-                        else
-                        {
-                            AzureDevOpsClient azdoClient = await GetAzureDevOpsClientForAccount(build.AzureDevOpsAccount);
+                            ReleasePipelineRunnerItem item = maybeItem.Value;
 
-                            var azdoBuild = await azdoClient.GetBuildAsync(
-                                build.AzureDevOpsAccount,
-                                build.AzureDevOpsProject,
-                                build.AzureDevOpsBuildId.Value);
+                            Build build = await Context.Builds
+                                .Where(b => b.Id == item.BuildId).FirstOrDefaultAsync();
 
-                            if (azdoBuild.Status.Equals("completed", StringComparison.OrdinalIgnoreCase))
+                            if (build == null)
                             {
-                                await HandleCompletedBuild(item, azdoBuild, cancellationToken);
+                                Logger.LogError($"Could not find the specified BAR Build {item.BuildId} to run a release pipeline.");
+                            }
+                            else if (build.AzureDevOpsBuildId == null)
+                            {
+                                // If something uses the old API version we won't have this information available.
+                                // This will also be the case if something adds an existing build (created using
+                                // the old API version) to a channel
+                                Logger.LogInformation($"barBuildInfo.AzureDevOpsBuildId is null for BAR Build.Id {build.Id}.");
                             }
                             else
                             {
-                                Logger.LogInformation($"AzDO build {azdoBuild.BuildNumber}/{azdoBuild.Definition.Name} with BAR BuildId {build.Id} is still in progress.");
+                                AzureDevOpsClient azdoClient = await GetAzureDevOpsClientForAccount(build.AzureDevOpsAccount);
 
-                                // Build didn't finish yet. Let's wait some time and try again.
-                                EnqueueBuildStatusCheck(item, 0);
+                                var azdoBuild = await azdoClient.GetBuildAsync(
+                                    build.AzureDevOpsAccount,
+                                    build.AzureDevOpsProject,
+                                    build.AzureDevOpsBuildId.Value);
+
+                                if (azdoBuild.Status.Equals("completed", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    await HandleCompletedBuild(item, azdoBuild, cancellationToken);
+                                }
+                                else
+                                {
+                                    Logger.LogInformation($"AzDO build {azdoBuild.BuildNumber}/{azdoBuild.Definition.Name} with BAR BuildId {build.Id} is still in progress.");
+
+                                    // Build didn't finish yet. Let's wait some time and try again.
+                                    EnqueueBuildStatusCheck(item, 0);
+                                }
                             }
                         }
-                    }
 
-                    await tx.CommitAsync();
+                        await tx.CommitAsync();
+                    }
                 }
-            }
-            catch (TaskCanceledException tcex) when (tcex.CancellationToken == cancellationToken)
-            {
-                return TimeSpan.MaxValue;
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex, "Processing queue messages");
+                catch (TaskCanceledException tcex) when (tcex.CancellationToken == cancellationToken)
+                {
+                    return TimeSpan.MaxValue;
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Processing queue messages");
+                    break;
+                }
             }
 
             return TimeSpan.FromMinutes(1);
