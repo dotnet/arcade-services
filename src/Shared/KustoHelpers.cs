@@ -12,7 +12,7 @@ using Kusto.Data.Common;
 using Kusto.Ingest;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.DotNet.AzureDevOpsTimeline
+namespace Microsoft.DotNet.Shared
 {
     public static class KustoHelpers
     {
