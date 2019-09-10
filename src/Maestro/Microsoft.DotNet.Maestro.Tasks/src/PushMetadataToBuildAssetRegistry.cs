@@ -358,6 +358,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 mergedBuild.Assets = mergedBuild.Assets.AddRange(build.Assets);
             }
 
+            // Remove duplicated assets based on the top level properties of the asset.
+            // The AssetLocations property isn't set at this point yet.
+            mergedBuild.Assets = mergedBuild.Assets.Distinct().ToImmutableList();
+
             LookupForMatchingGitHubRepository(mergedBuild);
 
             return mergedBuild;
