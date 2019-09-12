@@ -966,7 +966,15 @@ namespace Microsoft.DotNet.DarcLib
 
         private (string org, string repoName, string type, string sha, string subVersion) ParseMaestroManagedFeed(string feed)
         {
-            var match = Regex.Match(feed, MaestroManagedFeedPattern);
+            Match match = null;
+            foreach (string pattern in MaestroManagedFeedPatterns)
+            {
+                match = Regex.Match(feed, pattern);
+                if (match.Success)
+                {
+                    break;
+                }
+            }
 
             match = match.Success ? 
                 match : 
