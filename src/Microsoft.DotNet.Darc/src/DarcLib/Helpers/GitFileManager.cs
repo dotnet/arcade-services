@@ -22,10 +22,15 @@ namespace Microsoft.DotNet.DarcLib
         private readonly IGitRepo _gitClient;
         private readonly ILogger _logger;
 
-        // Matches package feeds like
-        // https://dnceng.pkgs.visualstudio.com/public/_packaging/darc-pub-arcade-fd8184c3fcde81eb27ca4c061c6e171f418d753f-1/nuget/v3/index.json
-        private const string MaestroManagedFeedPattern =
-            @"https://(?<organization>\w+).pkgs.visualstudio.com/(public/){0,1}_packaging/darc-(?<type>(int|pub))-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)/nuget/v\d+/index.json";
+        private readonly string[] MaestroManagedFeedPatterns =
+        {
+            // Matches package feeds like
+            // https://dnceng.pkgs.visualstudio.com/public/_packaging/darc-pub-arcade-fd8184c3fcde81eb27ca4c061c6e171f418d753f-1/nuget/v3/index.json
+            @"https://(?<organization>\w+).pkgs.visualstudio.com/(public/){0,1}_packaging/darc-(?<type>(int|pub))-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)/nuget/v\d+/index.json",
+            // Matches package feeds like
+            // https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-wpf-8182abc8/nuget/v3/index.json
+            @"https://pkgs.dev.azure.com/(?<organization>\w+)/(public/){0,1}_packaging/darc-(?<type>(int|pub))-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)/nuget/v\d+/index.json"
+        };
 
         // Matches package feeds like
         // https://dotnet-feed-internal.azurewebsites.net/container/dotnet-core-internal/sig/dsdfasdfasdf234234s/se/2020-02-02/darc-int-dotnet-arcade-services-babababababe-08/index.json
@@ -257,7 +262,7 @@ namespace Microsoft.DotNet.DarcLib
 
         private bool IsMaestroManagedFeed(string feed)
         {
-            return Regex.IsMatch(feed, MaestroManagedFeedPattern) || 
+            return MaestroManagedFeedPatterns.Any(p => Regex.IsMatch(feed, p)) || 
                 Regex.IsMatch(feed, AzureStorageProxyFeedPattern);
         }
 
