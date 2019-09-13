@@ -272,7 +272,7 @@ namespace Microsoft.DotNet.DarcLib
                 Regex.IsMatch(feed, AzureStorageProxyFeedPattern);
         }
 
-        private XmlDocument UpdatePackageSources(XmlDocument nugetConfig, HashSet<string> maestroManagedFeeds)
+        public XmlDocument UpdatePackageSources(XmlDocument nugetConfig, HashSet<string> maestroManagedFeeds)
         {
             // Reconstruct the PackageSources section with the feeds
             XmlNode packageSourcesNode = nugetConfig.SelectSingleNode("//configuration/packageSources");

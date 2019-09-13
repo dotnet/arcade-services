@@ -49,12 +49,7 @@ namespace Microsoft.DotNet.DarcLib
 
         public GitFileOperation Operation { get; set; } = GitFileOperation.Add;
 
-        /// <summary>
-        /// Get an formatted XML document for writing to the repository
-        /// </summary>
-        /// <param name="xmlDocument">Xml document</param>
-        /// <returns>String with formatted xml</returns>
-        public static string GetIndentedXmlBody(XmlDocument xmlDocument)
+        private static string GetIndentedXmlBody(XmlDocument xmlDocument)
         {
             MemoryStream mStream = new MemoryStream();
             XmlTextWriter writer = new XmlTextWriter(mStream, Encoding.Unicode);
