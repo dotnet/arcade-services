@@ -64,9 +64,13 @@ namespace Microsoft.DotNet.Darc.Tests
             string expectedOutputText = await File.ReadAllTextAsync(outputNugetPath);
 
             // Dump the output xml using the git file manager
-            string actualOutputText = GitFile.GetIndentedXmlBody(updatedConfigFile);
+            GitFile file = new GitFile(null, updatedConfigFile);
 
-            Assert.Equal(expectedOutputText, actualOutputText);
+            // Normalize the \r\n newlines in the expected output to \n if they
+            // exist (GitFile normalizes these before writing)
+            expectedOutputText = expectedOutputText.Replace(Environment.NewLine, "\n");
+
+            Assert.Equal(expectedOutputText, file.Content);
         }
     }
 }

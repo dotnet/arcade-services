@@ -266,7 +266,7 @@ namespace Microsoft.DotNet.DarcLib
                 Regex.IsMatch(feed, AzureStorageProxyFeedPattern);
         }
 
-        private XmlDocument UpdatePackageSources(XmlDocument nugetConfig, HashSet<string> maestroManagedFeeds)
+        public XmlDocument UpdatePackageSources(XmlDocument nugetConfig, HashSet<string> maestroManagedFeeds)
         {
             // Reconstruct the PackageSources section with the feeds
             XmlNode packageSourcesNode = nugetConfig.SelectSingleNode("//configuration/packageSources");
@@ -275,6 +275,59 @@ namespace Microsoft.DotNet.DarcLib
                 _logger.LogError("Did not find a <packageSources> element in NuGet.config");
                 return nugetConfig;
             }
+            // The goal here is to preserve comments the user has added, adding or replacing the
+            // existing block of managed package sources.
+
+            const string clearPackageSourcesElementName = "clear";
+            const string addPackageSourcesElementName = "add";
+
+            XmlNode managedBlockCommentStartNode = null;
+            XmlNode currentNode = packageSourcesNode.FirstChild;
+            XmlNode clearNode = null;
+
+            while (currentNode != null)
+            {
+                if (currentNode.NodeType == XmlNodeType.Comment)
+                {
+
+                }
+                else if (currentNode.NodeType == XmlNodeType.Element)
+                {
+                    switch (currentNode.Name)
+                    {
+                        case clearPackageSourcesElementName:
+                            clearNode = currentNode;
+                            break;
+                        case addPackageSourcesElementName:
+                            // Get the feed value
+                            var feedValue = currentNode.Attributes["value"];
+                            if (feedValue == null)
+                            {
+                                // This is unexpected, error
+                                _logger.LogError("NuGet.config 'add' element did not have a feed 'value' attribute.");
+                                return nugetConfig;
+                            }
+                            if (IsMaestroManagedFeed(feedValue.Value))
+                            {
+                                var nextNodeToWalk = currentNode.NextSibling;
+                                packageSourcesNode.RemoveChild(currentNode);
+                                currentNode = nextNodeToWalk;
+                            }
+                            break;
+                        default:
+                            currentNode = currentNode.NextSibling;
+                            // Just continue onward
+                            break;
+                    }
+                }
+                else 
+                {
+                    // Whitespace or other node type we don't know about,
+                    // preserve it.
+                    currentNode = currentNode.NextSibling;
+                }
+            }
+
             var unmanagedSources = GetPackageSources(nugetConfig, f => !IsMaestroManagedFeed(f));
             var managedSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
             packageSourcesNode.RemoveAll();
