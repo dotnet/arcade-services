@@ -37,6 +37,12 @@ namespace Microsoft.DotNet.DarcLib
         private const string AzureStorageProxyFeedPattern =
             @"https://([a-z-]+).azurewebsites.net/container/([^/]+)/sig/\w+/se/([0-9]{4}-[0-9]{2}-[0-9]{2})/darc-(?<type>int)-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)/index.json";
 
+        private const string MaestroBeginComment =
+            "Begin: Package sources managed by Dependency Flow automation. Do not edit the sources below.";
+
+        private const string MaestroEndComment =
+            "End: Package sources managed by Dependency Flow automation. Do not edit the sources above.";
+
         public GitFileManager(IGitRepo gitRepo, ILogger logger)
         {
             _gitClient = gitRepo;
@@ -275,87 +281,93 @@ namespace Microsoft.DotNet.DarcLib
                 _logger.LogError("Did not find a <packageSources> element in NuGet.config");
                 return nugetConfig;
             }
-            // The goal here is to preserve comments the user has added, adding or replacing the
-            // existing block of managed package sources.
 
-            const string clearPackageSourcesElementName = "clear";
             const string addPackageSourcesElementName = "add";
 
-            XmlNode managedBlockCommentStartNode = null;
             XmlNode currentNode = packageSourcesNode.FirstChild;
-            XmlNode clearNode = null;
 
+            var managedSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
+
+            // Remove all managed feeds and Maestro's comments
             while (currentNode != null)
             {
-                if (currentNode.NodeType == XmlNodeType.Comment)
+                if (currentNode.NodeType == XmlNodeType.Element)
                 {
-
-                }
-                else if (currentNode.NodeType == XmlNodeType.Element)
-                {
-                    switch (currentNode.Name)
+                    if (currentNode.Name.Equals(addPackageSourcesElementName, StringComparison.OrdinalIgnoreCase))
                     {
-                        case clearPackageSourcesElementName:
-                            clearNode = currentNode;
-                            break;
-                        case addPackageSourcesElementName:
-                            // Get the feed value
-                            var feedValue = currentNode.Attributes["value"];
-                            if (feedValue == null)
-                            {
-                                // This is unexpected, error
-                                _logger.LogError("NuGet.config 'add' element did not have a feed 'value' attribute.");
-                                return nugetConfig;
-                            }
-                            if (IsMaestroManagedFeed(feedValue.Value))
-                            {
-                                var nextNodeToWalk = currentNode.NextSibling;
-                                packageSourcesNode.RemoveChild(currentNode);
-                                currentNode = nextNodeToWalk;
-                            }
-                            break;
-                        default:
-                            currentNode = currentNode.NextSibling;
-                            // Just continue onward
-                            break;
+                        // Get the feed value
+                        var feedValue = currentNode.Attributes["value"];
+                        if (feedValue == null)
+                        {
+                            // This is unexpected, error
+                            _logger.LogError("NuGet.config 'add' element did not have a feed 'value' attribute.");
+                            return nugetConfig;
+                        }
+
+                        if (IsMaestroManagedFeed(feedValue.Value))
+                        {
+                            var nextNodeToWalk = currentNode.NextSibling;
+                            packageSourcesNode.RemoveChild(currentNode);
+                            currentNode = nextNodeToWalk;
+
+                            continue;
+                        }
                     }
                 }
-                else 
+                else if (currentNode.NodeType == XmlNodeType.Comment)
                 {
-                    // Whitespace or other node type we don't know about,
-                    // preserve it.
-                    currentNode = currentNode.NextSibling;
+                    if (currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase) 
+                        || currentNode.Value.Equals(MaestroEndComment, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var nextNodeToWalk = currentNode.NextSibling;
+                        packageSourcesNode.RemoveChild(currentNode);
+                        currentNode = nextNodeToWalk;
+
+                        continue;
+                    }
                 }
+
+                currentNode = currentNode.NextSibling;
             }
 
-            var unmanagedSources = GetPackageSources(nugetConfig, f => !IsMaestroManagedFeed(f));
-            var managedSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
-            packageSourcesNode.RemoveAll();
-            SetElement(nugetConfig, packageSourcesNode, "clear");
-
-            // Maestro managed sources should go first if there are any.
-            if (maestroManagedFeeds.Count > 0)
-            {
-                packageSourcesNode.AppendChild(nugetConfig.CreateComment(
-                    "Begin: Package sources managed by Dependency Flow automation. Do not edit the sources below."));
-                AppendToPackageSources(nugetConfig, packageSourcesNode, managedSources);
-                packageSourcesNode.AppendChild(nugetConfig.CreateComment(
-                    "End: Package sources managed by Dependency Flow automation. Do not edit the sources above."));
-            }
-
-            AppendToPackageSources(nugetConfig, packageSourcesNode, unmanagedSources);
+            InsertManagedPackagesBlock(nugetConfig, packageSourcesNode, managedSources);
 
             return nugetConfig;
         }
 
-        private static void AppendToPackageSources(XmlDocument nugetConfig, XmlNode packageSourcesNode, List<(string key, string feed)> sources)
+        // Insert the following structure at the beginning of the nodes pointed by `packageSourcesNode`.
+        // <clear/>
+        // <MaestroBeginComment />
+        // managedSources*
+        // <MaestroEndComment />
+        private static void InsertManagedPackagesBlock(XmlDocument nugetConfig, XmlNode packageSourcesNode, List<(string key, string feed)> managedSources)
         {
-            foreach ((string key, string feed) in sources)
+            if (managedSources.Count <= 0)
             {
-                XmlNode addNode = SetElement(nugetConfig, packageSourcesNode, VersionFiles.AddElement, replace: false);
-                SetAttribute(nugetConfig, addNode, VersionFiles.KeyAttributeName, key);
-                SetAttribute(nugetConfig, addNode, VersionFiles.ValueAttributeName, feed);
+                return;
             }
+
+            if (packageSourcesNode.FirstChild.NodeType != XmlNodeType.Element
+                || !packageSourcesNode.FirstChild.Name.Equals("clear", StringComparison.OrdinalIgnoreCase))
+            {
+                SetElement(nugetConfig, packageSourcesNode, VersionFiles.ClearElement);
+            }
+
+            // Add beginning comment
+            packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), packageSourcesNode.FirstChild);
+
+            XmlNode prevNode = packageSourcesNode.FirstChild;
+            foreach ((string key, string feed) in managedSources)
+            {
+                var newElement = nugetConfig.CreateElement(VersionFiles.AddElement);
+
+                SetAttribute(nugetConfig, newElement, VersionFiles.KeyAttributeName, key);
+                SetAttribute(nugetConfig, newElement, VersionFiles.ValueAttributeName, feed);
+
+                prevNode = packageSourcesNode.InsertAfter(newElement, prevNode);
+            }
+
+            packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), packageSourcesNode.FirstChild);
         }
 
         public async Task AddDependencyToVersionDetailsAsync(
