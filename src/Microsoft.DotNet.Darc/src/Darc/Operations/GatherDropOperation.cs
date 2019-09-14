@@ -811,7 +811,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 case LocationType.NugetFeed:
                     return await DownloadNugetPackageAsync(client, build, asset, location, subPath, errors);
                 case LocationType.Container:
-                    return await DownloadBlobAsync(client, build, asset, location, subPath, errors);
+                    return await DownloadBlobAsync(client, asset, location, subPath, errors);
                 case LocationType.None:
                 default:
                     errors.Add($"Unexpected location type {locationType}");
@@ -845,6 +845,10 @@ namespace Microsoft.DotNet.Darc.Operations
             // strip off index.json, append 'flatcontainer', the asset name (lower case), then the version,
             // then {asset name}.{version}.nupkg
 
+            string fullSubPath = Path.Combine(subPath, packagesSubPath);
+            // Construct the final path, using the correct casing rather than the blob feed casing.
+            string fullTargetPath = Path.Combine(fullSubPath, $"{asset.Name}.{asset.Version}.nupkg");
+
             if (IsBlobFeedUrl(assetLocation.Location))
             {
                 // Construct the source uri.
@@ -853,8 +857,6 @@ namespace Microsoft.DotNet.Darc.Operations
                 string finalUri = assetLocation.Location.Substring(0, assetLocation.Location.Length - "index.json".Length);
                 finalUri += $"flatcontainer/{name}/{version}/{name}.{version}.nupkg";
 
-                // Construct the final path, using the correct casing rather than the blob feed casing.
-                string fullTargetPath = Path.Combine(subPath, packagesSubPath, $"{asset.Name}.{asset.Version}.nupkg");
                 if (await DownloadFileAsync(client, finalUri, fullTargetPath, errors))
                 {
                     return new DownloadedAsset()
@@ -866,35 +868,12 @@ namespace Microsoft.DotNet.Darc.Operations
                     };
                 }
             }
-            else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out var feedAccount, out var feedVisibility, out var feedName))
+            else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out string feedAccount, out string feedVisibility, out string feedName))
             {
-                string packageContentUrl = $"https://pkgs.dev.azure.com/{feedAccount}/{feedVisibility}_apis/packaging/feeds/{feedName}/nuget/packages/{asset.Name}/versions/{asset.Version}/content";
-
-                string fullTargetPath = Path.Combine(subPath, packagesSubPath, $"{asset.Name}.{asset.Version}.nupkg");
-
-                // feedVisibility == "" means that the feed is internal.
-                if (string.IsNullOrEmpty(feedVisibility))
+                DownloadedAsset result =  await DownloadAssetFromAzureDevOpsFeedAsync(client, asset, feedAccount, feedVisibility, feedName, fullTargetPath, errors);
+                if (result != null)
                 {
-                    if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
-                    {
-                        LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
-                        _options.AzureDevOpsPat = localSettings.AzureDevOpsToken;
-                    }
-
-                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
-                        "Basic",
-                        Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _options.AzureDevOpsPat))));
-                }
-
-                if (await DownloadFileAsync(client, packageContentUrl, fullTargetPath, errors))
-                {
-                    return new DownloadedAsset()
-                    {
-                        Successful = true,
-                        Asset = asset,
-                        SourceLocation = packageContentUrl,
-                        TargetLocation = fullTargetPath
-                    };
+                    return result;
                 }
             }
             else
@@ -915,6 +894,46 @@ namespace Microsoft.DotNet.Darc.Operations
                 Successful = false,
                 Asset = asset
             };
+        }
+
+        private async Task<DownloadedAsset> DownloadAssetFromAzureDevOpsFeedAsync(HttpClient client,
+                                                                                Asset asset,
+                                                                                string feedAccount,
+                                                                                string feedVisibility,
+                                                                                string feedName,
+                                                                                string fullTargetPath,
+                                                                                List<string> errors)
+        {
+            string packageContentUrl = $"https://pkgs.dev.azure.com/{feedAccount}/{feedVisibility}_apis/packaging/feeds/{feedName}/nuget/packages/{asset.Name}/versions/{asset.Version}/content";
+
+            // feedVisibility == "" means that the feed is internal.
+            if (string.IsNullOrEmpty(feedVisibility))
+            {
+                if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
+                {
+                    LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
+                    _options.AzureDevOpsPat = localSettings.AzureDevOpsToken;
+                }
+
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                    "Basic",
+                    Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _options.AzureDevOpsPat))));
+            }
+
+            if (await DownloadFileAsync(client, packageContentUrl, fullTargetPath, errors))
+            {
+                return new DownloadedAsset()
+                {
+                    Successful = true,
+                    Asset = asset,
+                    SourceLocation = packageContentUrl,
+                    TargetLocation = fullTargetPath
+                };
+            }
+            else
+            {
+                return null;
+            }
         }
 
         /// <summary>
@@ -978,7 +997,6 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         private async Task<DownloadedAsset> DownloadBlobAsync(HttpClient client,
-                                                                Build build,
                                                                 Asset asset,
                                                                 AssetLocation assetLocation,
                                                                 string subPath,
@@ -1036,12 +1054,62 @@ namespace Microsoft.DotNet.Darc.Operations
                         downloadedAsset.SourceLocation = finalUri3;
                         return downloadedAsset;
                     }
+
+                    // Could also not be under /assets, so strip that from the url
+                    string finalUri4 = finalUri1.Replace("assets/", "", StringComparison.OrdinalIgnoreCase);
+                    if (await DownloadFileAsync(client, finalUri4, fullTargetPath, errors))
+                    {
+                        downloadedAsset.Successful = true;
+                        downloadedAsset.SourceLocation = finalUri4;
+                        return downloadedAsset;
+                    }
                 }
                 return downloadedAsset;
             }
-            else if (IsAzureDevOpsArtifactsUrl(assetLocation.Location))
+            else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out string feedAccount, out string feedVisibility, out string feedName))
             {
-                // Do not attempt to download from AzDO.
+                // If we are here, it means this is a symbols package or a nupkg published as a blob,
+                // remove some known paths from the name
+
+                string replacedName = asset.Name.Replace("assets/", "", StringComparison.OrdinalIgnoreCase);
+                replacedName = replacedName.Replace("symbols/", "", StringComparison.OrdinalIgnoreCase);
+                replacedName = replacedName.Replace("sdk/", "", StringComparison.OrdinalIgnoreCase);
+                replacedName = replacedName.Replace(".symbols", "", StringComparison.OrdinalIgnoreCase);
+                replacedName = replacedName.Replace(".nupkg", "", StringComparison.OrdinalIgnoreCase);
+
+                // blob packages sometimes confuse x86 and x64 as being part of the version
+                string replacedVersion = asset.Version.Replace("64.", "");
+                replacedVersion = replacedVersion.Replace("86.", "");
+
+                // finally, remove the version from the name
+                replacedName = replacedName.Replace($".{replacedVersion}", "", StringComparison.OrdinalIgnoreCase);
+
+                // create a temp asset with the mangled name and version
+                Asset mangledAsset = new Asset(asset.Id,
+                    asset.BuildId,
+                    asset.NonShipping,
+                    replacedName,
+                    replacedVersion,
+                    asset.Locations);
+
+                DownloadedAsset result = await DownloadAssetFromAzureDevOpsFeedAsync(client,
+                    mangledAsset,
+                    feedAccount,
+                    feedVisibility,
+                    feedName,
+                    fullTargetPath,
+                    errors);
+
+                if (result != null)
+                {
+                    return new DownloadedAsset
+                    {
+                        Asset = asset,
+                        SourceLocation = result.SourceLocation,
+                        Successful = result.Successful,
+                        TargetLocation = fullTargetPath
+                    };
+                }
                 return downloadedAsset;
             }
             
