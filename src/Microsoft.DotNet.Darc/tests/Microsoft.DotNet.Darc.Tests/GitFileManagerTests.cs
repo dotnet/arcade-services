@@ -21,7 +21,6 @@ namespace Microsoft.DotNet.Darc.Tests
         const string OutputNugetConfigFile = "NuGet.output.config";
 
         [Theory]
-        [InlineData("NoManagedFeedsToAdd", new string[0])]
         [InlineData("RemoveAllManagedFeeds", new string[0])]
         [InlineData("AddFeedsToNuGetConfigWithoutManagedFeeds", new string[] {
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-standard-a5b5f2e1/nuget/v3/index.json",
