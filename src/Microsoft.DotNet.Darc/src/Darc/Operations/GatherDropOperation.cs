@@ -10,7 +10,6 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.Tracing;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -1092,8 +1091,6 @@ namespace Microsoft.DotNet.Darc.Operations
                     replacedName,
                     replacedVersion,
                     asset.Locations);
-
-                bool isSymbolPackage = asset.Name.EndsWith(".symbols.nupkg", StringComparison.OrdinalIgnoreCase);
 
                 DownloadedAsset result = await DownloadAssetFromAzureDevOpsFeedAsync(client,
                     mangledAsset,
