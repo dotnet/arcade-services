@@ -1154,6 +1154,14 @@ namespace Microsoft.DotNet.Darc.Operations
                 return true;
             }
 
+            // Use a temporary in progress file name so we don't end up with corrupted
+            // half downloaded files.
+            string temporaryFileName = $"{targetFile}.inProgress";
+            if (File.Exists(temporaryFileName))
+            {
+                File.Delete(temporaryFileName);
+            }
+
             try
             {
                 if (_options.SkipExisting && File.Exists(targetFile))
@@ -1165,7 +1173,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 Directory.CreateDirectory(directory);
 
                 // Ensure the parent target directory has been created.
-                using (FileStream outStream = new FileStream(targetFile,
+                using (FileStream outStream = new FileStream(temporaryFileName,
                                                       _options.Overwrite ? FileMode.Create : FileMode.CreateNew,
                                                       FileAccess.Write))
                 {
@@ -1176,6 +1184,10 @@ namespace Microsoft.DotNet.Darc.Operations
                         downloadOutput.AppendLine("Done");
                     }
                 }
+
+                // Rename file to the target file name.
+                File.Move(temporaryFileName, targetFile);
+
                 return true;
             }
             catch (IOException e)
@@ -1188,6 +1200,13 @@ namespace Microsoft.DotNet.Darc.Operations
                 // from a separate location will fail.
                 File.Delete(targetFile);
                 errors.Add($"Failed to download {sourceUri}: {e.Message}");
+            }
+            finally
+            {
+                if (File.Exists(temporaryFileName))
+                {
+                    File.Delete(temporaryFileName);
+                }
             }
             return false;
         }
