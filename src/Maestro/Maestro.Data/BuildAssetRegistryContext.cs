@@ -75,6 +75,8 @@ namespace Maestro.Data
         public DbQuery<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory { get; set; }
         public DbQuery<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory { get; set; }
 
+        public DbSet<DependencyFlowEvent> DependencyFlowEvents { get; set; }
+
 
         public override Task<int> SaveChangesAsync(
             bool acceptAllChangesOnSuccess,

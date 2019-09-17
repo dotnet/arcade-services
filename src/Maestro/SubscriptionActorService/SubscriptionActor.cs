@@ -41,6 +41,11 @@ namespace SubscriptionActorService
             {
                 throw new NotImplementedException();
             }
+
+            public Task<bool> AddDependencyFlowEventAsync(string flowEvent, string reason, string flowType)
+            {
+                throw new NotImplementedException();
+            }
         }
     }
 
@@ -110,6 +115,7 @@ namespace SubscriptionActorService
         {
             Logger.LogInformation($"Updating {SubscriptionId} with latest build id {updateBuildId}");
             Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);
+            
             if (subscription != null)
             {
                 subscription.LastAppliedBuildId = updateBuildId;
@@ -120,6 +126,32 @@ namespace SubscriptionActorService
             else
             {
                 Logger.LogInformation($"Could not find subscription with ID {SubscriptionId}. Skipping latestBuild update.");
+                return false;
+            }
+        }
+
+        public async Task<bool> AddDependencyFlowEventAsync(string flowEvent, string reason, string flowType)
+        {
+            Logger.LogInformation($"Adding dependency flow event for {SubscriptionId} with {flowEvent} {reason} {flowType}");
+            Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);
+            if (subscription != null)
+            {
+                DependencyFlowEvent dfe = new DependencyFlowEvent { 
+                        SourceRepository = subscription.SourceRepository,
+                        TargetRepository = subscription.TargetRepository,
+                        ChannelId = subscription.ChannelId,
+                        Timestamp = DateTimeOffset.UtcNow,
+                        Event = flowEvent,
+                        Reason = reason,
+                        FlowType = flowType
+                        };
+                Context.DependencyFlowEvents.Add(dfe);
+                await Context.SaveChangesAsync();
+                return true;
+            }
+            else
+            {
+                Logger.LogInformation($"Could not find subscription with ID {SubscriptionId}. Skipping adding dependency flow event.");
                 return false;
             }
         }

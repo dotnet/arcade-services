@@ -136,5 +136,6 @@ try {
         Write-Host "Test passed"
     }
 } finally {
+    $_
     Teardown
 }

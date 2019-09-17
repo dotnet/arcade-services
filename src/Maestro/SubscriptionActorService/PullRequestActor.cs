@@ -358,11 +358,13 @@ namespace SubscriptionActorService
                 // merge the PR if they are successul.
                 case PrStatus.Open:
                     ActionResult<MergePolicyCheckResult> checkPolicyResult = await CheckMergePolicyAsync(prUrl, darc);
+                    pr.MergePolicyResult = checkPolicyResult.Result;
 
                     switch (checkPolicyResult.Result)
                     {
                         case MergePolicyCheckResult.Merged:
                             await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                            await AddDependencyFlowEventsAsync(pr.ContainedSubscriptions, "Completed", "Merged Automatically");
                             await StateManager.RemoveStateAsync(PullRequest);
                             return ActionResult.Create(SynchronizePullRequestResult.Completed, checkPolicyResult.Message);
                         case MergePolicyCheckResult.NoPolicies:
@@ -381,6 +383,8 @@ namespace SubscriptionActorService
                     {
                         await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
                     }
+
+                    await AddDependencyFlowEventsAsync(pr.ContainedSubscriptions, "Completed", $"{status} Manually - {pr.MergePolicyResult}");
                     await StateManager.RemoveStateAsync(PullRequest);
                     return ActionResult.Create(SynchronizePullRequestResult.Completed, $"PR Has been manually {status}");
                 default:
@@ -494,6 +498,19 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             }
         }
 
+        private async Task AddDependencyFlowEventsAsync(
+            IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates, string flowEvent, string reason)
+        {
+            foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
+            {
+                ISubscriptionActor actor = SubscriptionActorFactory(new ActorId(update.SubscriptionId));
+                if (!await actor.AddDependencyFlowEventAsync(flowEvent, reason, "PR"))
+                {
+                    Logger.LogInformation($"Failed to add dependency flow event for {update.SubscriptionId}.");
+                }
+            }
+        }
+
         /// <summary>
         ///     Applies or queues asset updates for the target repository and branch from the given build and list of assets.
         /// </summary>
@@ -554,6 +571,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             if (pr != null)
             {
                 await UpdatePullRequestAsync(pr, new List<UpdateAssetsParameters> {updateParameter});
+                await AddDependencyFlowEventsAsync(pr.ContainedSubscriptions, "Updated", $"{pr.MergePolicyResult}");
                 return ActionResult.Create<object>(null, $"Pull Request '{pr.Url}' updated.");
             }
 
@@ -674,6 +692,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 if (!string.IsNullOrEmpty(prUrl))
                 {
                     inProgressPr.Url = prUrl;
+
+                    await AddDependencyFlowEventsAsync(inProgressPr.ContainedSubscriptions, "Created", $"New PR");
 
                     await StateManager.SetStateAsync(PullRequest, inProgressPr);
                     await StateManager.SaveStateAsync();
