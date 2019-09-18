@@ -183,6 +183,12 @@ namespace SubscriptionActorService.Tests
                 .Verify(s => s.UpdateForMergedPullRequestAsync(withBuild.Id));
         }
 
+        private void AndDependencyFlowEventsShouldBeAdded(string flowEvent, string reason)
+        {
+            SubscriptionActors[new ActorId(Subscription.Id)]
+                .Verify(s => s.AddDependencyFlowEventAsync(flowEvent, reason, "PR"));
+        }
+
         private void WithRequireNonCoherencyUpdates(Build fromBuild)
         {
             DarcRemotes.GetOrAddValue(TargetRepo, CreateMock<IRemote>)
@@ -230,10 +236,12 @@ namespace SubscriptionActorService.Tests
 
         private IDisposable WithExistingPullRequest(SynchronizePullRequestResult checkResult)
         {
-            var pr = new InProgressPullRequest
+            AfterDbUpdateActions.Add(() =>
             {
-                Url = InProgressPrUrl,
-                ContainedSubscriptions = new List<SubscriptionPullRequestUpdate>
+                var pr = new InProgressPullRequest
+                {
+                    Url = InProgressPrUrl,
+                    ContainedSubscriptions = new List<SubscriptionPullRequestUpdate>
                 {
                     new SubscriptionPullRequestUpdate
                     {
@@ -241,10 +249,11 @@ namespace SubscriptionActorService.Tests
                         SubscriptionId = Subscription.Id
                     }
                 }
-            };
-            StateManager.SetStateAsync(PullRequestActorImplementation.PullRequest, pr);
-            ExpectedActorState.Add(PullRequestActorImplementation.PullRequest, pr);
-
+                };
+                StateManager.SetStateAsync(PullRequestActorImplementation.PullRequest, pr);
+                ExpectedActorState.Add(PullRequestActorImplementation.PullRequest, pr);
+            });
+            
             ActionRunner.Setup(r => r.ExecuteAction(It.IsAny<Expression<Func<Task<ActionResult<SynchronizePullRequestResult>>>>>()))
                 .ReturnsAsync(checkResult);
 
@@ -533,6 +542,7 @@ namespace SubscriptionActorService.Tests
                 AndCreatePullRequestShouldHaveBeenCalled();
                 AndShouldHavePullRequestCheckReminder();
                 AndShouldHaveInProgressPullRequestState(b);
+                AndDependencyFlowEventsShouldBeAdded("Created", "New PR");
             }
 
             [Theory]
@@ -551,14 +561,15 @@ namespace SubscriptionActorService.Tests
 
                 WithRequireNonCoherencyUpdates(b);
                 WithNoRequiredCoherencyUpdates();
+          
                 using (WithExistingPullRequest(SynchronizePullRequestResult.InProgressCanUpdate))
                 {
                     await WhenUpdateAssetsAsyncIsCalled(b);
-
                     ThenGetRequiredUpdatesShouldHaveBeenCalled(b);
                     AndCommitUpdatesShouldHaveBeenCalled(b);
                     AndUpdatePullRequestShouldHaveBeenCalled();
                     AndShouldHavePullRequestCheckReminder();
+                    AndDependencyFlowEventsShouldBeAdded("Updated", "NoPolicies");
                 }
             }
 
