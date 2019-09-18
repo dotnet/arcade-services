@@ -364,7 +364,11 @@ namespace SubscriptionActorService
                     {
                         case MergePolicyCheckResult.Merged:
                             await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
-                            await AddDependencyFlowEventsAsync(pr.ContainedSubscriptions, DependencyFlowEventType.Completed, DependencyFlowEventReason.AutomaticallyMerged, checkPolicyResult.Result);
+                            await AddDependencyFlowEventsAsync(
+                                pr.ContainedSubscriptions, 
+                                DependencyFlowEventType.Completed, 
+                                DependencyFlowEventReason.AutomaticallyMerged, 
+                                checkPolicyResult.Result);
                             await StateManager.RemoveStateAsync(PullRequest);
                             return ActionResult.Create(SynchronizePullRequestResult.Completed, checkPolicyResult.Message);
                         case MergePolicyCheckResult.NoPolicies:
@@ -384,9 +388,15 @@ namespace SubscriptionActorService
                         await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
                     }
 
-                    DependencyFlowEventReason reason = status == PrStatus.Merged ? DependencyFlowEventReason.ManuallyMerged : DependencyFlowEventReason.ManuallyClosed;
+                    DependencyFlowEventReason reason = status == PrStatus.Merged ? 
+                        DependencyFlowEventReason.ManuallyMerged : 
+                        DependencyFlowEventReason.ManuallyClosed;
 
-                    await AddDependencyFlowEventsAsync(pr.ContainedSubscriptions, DependencyFlowEventType.Completed, reason, pr.MergePolicyResult);
+                    await AddDependencyFlowEventsAsync(
+                        pr.ContainedSubscriptions, 
+                        DependencyFlowEventType.Completed, 
+                        reason, 
+                        pr.MergePolicyResult);
                     await StateManager.RemoveStateAsync(PullRequest);
                     return ActionResult.Create(SynchronizePullRequestResult.Completed, $"PR Has been manually {status}");
                 default:
@@ -508,11 +518,11 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         {
             string updateReason = reason == DependencyFlowEventReason.New || 
                                   reason == DependencyFlowEventReason.AutomaticallyMerged ? 
-                                  $"{reason}" : $"{reason}{policy}";
+                                 reason.ToString() : $"{reason.ToString()}{policy.ToString()}";
             foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
             {
                 ISubscriptionActor actor = SubscriptionActorFactory(new ActorId(update.SubscriptionId));
-                if (!await actor.AddDependencyFlowEventAsync($"{flowEvent}", updateReason, "PR"))
+                if (!await actor.AddDependencyFlowEventAsync(flowEvent.ToString(), updateReason, "PR"))
                 {
                     Logger.LogInformation($"Failed to add dependency flow event for {update.SubscriptionId}.");
                 }
@@ -579,7 +589,11 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             if (pr != null)
             {
                 await UpdatePullRequestAsync(pr, new List<UpdateAssetsParameters> {updateParameter});
-                await AddDependencyFlowEventsAsync(pr.ContainedSubscriptions, DependencyFlowEventType.Updated, DependencyFlowEventReason.FailedUpdate, pr.MergePolicyResult);
+                await AddDependencyFlowEventsAsync(
+                    pr.ContainedSubscriptions, 
+                    DependencyFlowEventType.Updated, 
+                    DependencyFlowEventReason.FailedUpdate, 
+                    pr.MergePolicyResult);
                 return ActionResult.Create<object>(null, $"Pull Request '{pr.Url}' updated.");
             }
 
@@ -701,7 +715,11 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 {
                     inProgressPr.Url = prUrl;
 
-                    await AddDependencyFlowEventsAsync(inProgressPr.ContainedSubscriptions, DependencyFlowEventType.Created, DependencyFlowEventReason.New, MergePolicyCheckResult.PendingPolicies);
+                    await AddDependencyFlowEventsAsync(
+                        inProgressPr.ContainedSubscriptions, 
+                        DependencyFlowEventType.Created, 
+                        DependencyFlowEventReason.New, 
+                        MergePolicyCheckResult.PendingPolicies);
 
                     await StateManager.SetStateAsync(PullRequest, inProgressPr);
                     await StateManager.SaveStateAsync();
