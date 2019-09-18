@@ -38,5 +38,15 @@ namespace Microsoft.DotNet.DarcLib
             string decodedContent = GetDecodedContent(gitRepo, content);
             return Encoding.UTF8.GetBytes(decodedContent);
         }
-    }
+
+        const string refsHeadsPrefix = "refs/heads/";
+        public static string NormalizeBranchName(string branch)
+        {
+            if (branch.StartsWith(refsHeadsPrefix))
+            {
+                return branch.Substring(refsHeadsPrefix.Length);
+            }
+            return branch;
+        }
+}
 }
