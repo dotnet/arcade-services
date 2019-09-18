@@ -21,7 +21,6 @@ $global:defaultChannelsToDelete = @()
 $global:pipelinesToDelete = @()
 $global:channelPipelinesToDelete = @{}
 
-Write-Host $maestroInstallation
 # Get a temporary directory for a test root. Use the agent work folder if running under azdo, use the temp path if not.
 $testRootBase = if ($env:AGENT_WORKFOLDER) { $env:AGENT_WORKFOLDER } else { $([System.IO.Path]::GetTempPath()) }
 $testRoot = Join-Path -Path $testRootBase -ChildPath $([System.IO.Path]::GetRandomFileName())
@@ -338,8 +337,6 @@ function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publis
     Write-Host $bodyJson
 
     $uri = "$maestroInstallation/api/builds?api-version=$barApiVersion"
-
-    Write-Host $uri
 
     Write-Host "Creating a new build in the Build Asset Registry..."
 

@@ -26,6 +26,7 @@ $sourceAssets = @(
 try {
     Write-Host
     Write-Host "Arcade dependency flow"
+    Write-Host
 
     # Import common tooling and prep for tests
     . $PSScriptRoot/common.ps1
