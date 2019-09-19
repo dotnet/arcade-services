@@ -5,10 +5,8 @@
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.Services.Invitation;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -70,40 +68,6 @@ namespace Microsoft.DotNet.Darc.Operations
                 if (targetChannel != null)
                 {
                     flowGraph.PruneGraph(node => IsInterestingNode(targetChannel, node), edge => IsInterestingEdge(edge));
-                }
-
-                // For each node, determine number of changes that are made for a change starting at that node.
-                // That is, the number of times each every other node is visited by a walk starting there.
-                foreach (var node in flowGraph.Nodes)
-                {
-                    Dictionary<DependencyFlowNode, int> visitCounts = new Dictionary<DependencyFlowNode, int>();
-                    Stack<DependencyFlowNode> visitStack = new Stack<DependencyFlowNode>();
-                    visitStack.Push(node);
-                    while (visitStack.Count != 0)
-                    {
-                        var currentNode = visitStack.Pop();
-                        if (visitCounts.ContainsKey(currentNode))
-                        {
-                            visitCounts[currentNode]++;
-                        }
-                        else
-                        {
-                            visitCounts.Add(currentNode, 1);
-                        }
-                        foreach (var edge in currentNode.OutgoingEdges)
-                        {
-                            visitStack.Push(edge.To);
-                        }
-                    }
-
-                    Console.WriteLine($"{node.Repository}:");
-                    int total = 0;
-                    foreach (var visitCount in visitCounts)
-                    {
-                        Console.WriteLine($"  {visitCount.Key.Repository} = {visitCount.Value}");
-                        total += visitCount.Value;
-                    }
-                    Console.WriteLine($"  Total = {total}");
                 }
 
                 await LogGraphViz(targetChannel, flowGraph);
