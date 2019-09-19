@@ -27,6 +27,7 @@ namespace Microsoft.DotNet.DarcLib
         public const string PinnedAttributeName = "Pinned";
         public const string NugetConfig = "NuGet.config";
         public const string AddElement = "add";
+        public const string ClearElement = "clear";
         public const string KeyAttributeName = "key";
         public const string ValueAttributeName = "value";
 
