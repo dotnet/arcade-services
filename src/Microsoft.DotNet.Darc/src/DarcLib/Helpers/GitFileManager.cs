@@ -353,7 +353,6 @@ namespace Microsoft.DotNet.DarcLib
                 SetElement(nugetConfig, packageSourcesNode, VersionFiles.ClearElement);
             }
 
-            // Add beginning comment
             packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), packageSourcesNode.FirstChild);
 
             XmlNode prevNode = packageSourcesNode.FirstChild;
