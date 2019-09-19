@@ -128,10 +128,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
             var local = new Local(logger, RepoRoot);
             IEnumerable<DependencyDetail> dependencies = await local.GetDependenciesAsync();
             var builds = new Dictionary<int, bool>();
-            var assetCache = new Dictionary<(string name, string version), int>();
+            var assetCache = new Dictionary<(string name, string version, string commit), int>();
+            var buildCache = new Dictionary<int, Client.Models.Build>();
             foreach (var dep in dependencies)
             {
-                var buildId = await GetBuildId(dep, client, assetCache, cancellationToken);
+                var buildId = await GetBuildId(dep, client, buildCache, assetCache, cancellationToken);
                 if (buildId == null)
                 {
                     Log.LogMessage(
@@ -159,14 +160,32 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return builds.Select(t => new BuildRef(t.Key, t.Value)).ToImmutableList();
         }
 
-        private static async Task<int?> GetBuildId(DependencyDetail dep, IMaestroApi client, Dictionary<(string name, string version), int> assetCache, CancellationToken cancellationToken)
+        private static async Task<int?> GetBuildId(DependencyDetail dep, IMaestroApi client, Dictionary<int, Client.Models.Build> buildCache,
+            Dictionary<(string name, string version, string commit), int> assetCache, CancellationToken cancellationToken)
         {
-            if (assetCache.TryGetValue((dep.Name, dep.Version), out int value))
+            if (assetCache.TryGetValue((dep.Name, dep.Version, dep.Commit), out int value))
             {
                 return value;
             }
             var assets = await client.Assets.ListAssetsAsync(name: dep.Name, version: dep.Version, cancellationToken: cancellationToken);
-            var buildId = assets.OrderByDescending(a => a.Id).FirstOrDefault()?.BuildId;
+            List<Asset> matchingAssetsFromSameSha = new List<Asset>();
+
+            // Filter out those assets which do not have matching commits
+            foreach (Asset asset in assets)
+            {
+                if (!buildCache.TryGetValue(asset.BuildId, out Client.Models.Build producingBuild))
+                {
+                    producingBuild = await client.Builds.GetBuildAsync(asset.BuildId);
+                    buildCache.Add(asset.BuildId, producingBuild);
+                }
+
+                if (producingBuild.Commit == dep.Commit)
+                {
+                    matchingAssetsFromSameSha.Add(asset);
+                }
+            }
+
+            var buildId = matchingAssetsFromSameSha.OrderByDescending(a => a.Id).FirstOrDefault()?.BuildId;
             if (!buildId.HasValue)
             {
                 return null;
@@ -177,9 +196,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
             var build = await client.Builds.GetBuildAsync(buildId.Value, cancellationToken);
             foreach (var asset in build.Assets)
             {
-                if (!assetCache.ContainsKey((asset.Name, asset.Version)))
+                if (!assetCache.ContainsKey((asset.Name, asset.Version, build.Commit)))
                 {
-                    assetCache.Add((asset.Name, asset.Version), build.Id);
+                    assetCache.Add((asset.Name, asset.Version, build.Commit), build.Id);
                 }
             }
 
@@ -357,6 +376,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                 mergedBuild.Assets = mergedBuild.Assets.AddRange(build.Assets);
             }
+
+            // Remove duplicated assets based on the top level properties of the asset.
+            // The AssetLocations property isn't set at this point yet.
+            mergedBuild.Assets = mergedBuild.Assets.Distinct(new AssetDataComparer()).ToImmutableList();
 
             LookupForMatchingGitHubRepository(mergedBuild);
 

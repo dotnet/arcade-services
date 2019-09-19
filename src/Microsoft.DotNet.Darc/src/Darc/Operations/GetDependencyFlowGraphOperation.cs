@@ -42,6 +42,13 @@ namespace Microsoft.DotNet.Darc.Operations
                         Channel = await barOnlyRemote.GetChannelAsync(".NET Tools - Latest")
                     }
                 );
+                defaultChannels.Add(
+                    new DefaultChannel(0, "https://github.com/dotnet/arcade", true)
+                    {
+                        Branch = "refs/heads/release/3.x",
+                        Channel = await barOnlyRemote.GetChannelAsync(".NET 3 Tools")
+                    }
+                );
                 List<Subscription> subscriptions = (await barOnlyRemote.GetSubscriptionsAsync()).ToList();
 
                 // Build, then prune out what we don't want to see if the user specified
