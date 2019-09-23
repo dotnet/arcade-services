@@ -42,7 +42,7 @@ namespace SubscriptionActorService
                 throw new NotImplementedException();
             }
 
-            public Task<bool> AddDependencyFlowEventAsync(string flowEvent, string reason, string flowType)
+            public Task<bool> AddDependencyFlowEventAsync(int updateBuildId, string flowEvent, string reason, string flowType)
             {
                 throw new NotImplementedException();
             }
@@ -130,7 +130,7 @@ namespace SubscriptionActorService
             }
         }
 
-        public async Task<bool> AddDependencyFlowEventAsync(string flowEvent, string reason, string flowType)
+        public async Task<bool> AddDependencyFlowEventAsync(int updateBuildId, string flowEvent, string reason, string flowType)
         {
             Logger.LogInformation($"Adding dependency flow event for {SubscriptionId} with {flowEvent} {reason} {flowType}");
             Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);
@@ -140,6 +140,7 @@ namespace SubscriptionActorService
                         SourceRepository = subscription.SourceRepository,
                         TargetRepository = subscription.TargetRepository,
                         ChannelId = subscription.ChannelId,
+                        BuildId = updateBuildId,
                         Timestamp = DateTimeOffset.UtcNow,
                         Event = flowEvent,
                         Reason = reason,
@@ -160,6 +161,8 @@ namespace SubscriptionActorService
         public async Task<ActionResult<bool>> UpdateAsync(int buildId)
         {
             Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);
+
+            await AddDependencyFlowEventAsync(buildId, DependencyFlowEventType.Fired.ToString(), DependencyFlowEventReason.New.ToString(), "PR");
 
             Logger.LogInformation($"Looking up build {buildId}");
 

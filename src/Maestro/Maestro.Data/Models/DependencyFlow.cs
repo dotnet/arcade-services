@@ -22,6 +22,10 @@ namespace Maestro.Data.Models
 
         public int? ChannelId { get; set; }
 
+        public int BuildId { get; set; }
+
+        public Build Build { get; set; }
+
         /// <summary>
         ///     The dependency flow PR/Branch event: Created, Updated, Completed
         /// </summary>

@@ -183,10 +183,10 @@ namespace SubscriptionActorService.Tests
                 .Verify(s => s.UpdateForMergedPullRequestAsync(withBuild.Id));
         }
 
-        private void AndDependencyFlowEventsShouldBeAdded(DependencyFlowEventType flowEvent, string reason)
+        private void AndDependencyFlowEventsShouldBeAdded()
         {
             SubscriptionActors[new ActorId(Subscription.Id)]
-                .Verify(s => s.AddDependencyFlowEventAsync($"{flowEvent}", reason, "PR"));
+                .Verify(s => s.AddDependencyFlowEventAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), "PR"));
         }
 
         private void WithRequireNonCoherencyUpdates(Build fromBuild)
@@ -488,6 +488,7 @@ namespace SubscriptionActorService.Tests
                     AndCommitUpdatesShouldHaveBeenCalled(b);
                     AndUpdatePullRequestShouldHaveBeenCalled();
                     AndShouldHavePullRequestCheckReminder();
+                    AndDependencyFlowEventsShouldBeAdded();
                 }
             }
         }
@@ -542,7 +543,7 @@ namespace SubscriptionActorService.Tests
                 AndCreatePullRequestShouldHaveBeenCalled();
                 AndShouldHavePullRequestCheckReminder();
                 AndShouldHaveInProgressPullRequestState(b);
-                AndDependencyFlowEventsShouldBeAdded(DependencyFlowEventType.Created, $"{DependencyFlowEventReason.New}");
+                AndDependencyFlowEventsShouldBeAdded();
             }
 
             [Theory]
@@ -569,7 +570,7 @@ namespace SubscriptionActorService.Tests
                     AndCommitUpdatesShouldHaveBeenCalled(b);
                     AndUpdatePullRequestShouldHaveBeenCalled();
                     AndShouldHavePullRequestCheckReminder();
-                    AndDependencyFlowEventsShouldBeAdded(DependencyFlowEventType.Updated, $"{DependencyFlowEventReason.FailedUpdate}{MergePolicyCheckResult.NoPolicies}");
+                    AndDependencyFlowEventsShouldBeAdded();
                 }
             }
 

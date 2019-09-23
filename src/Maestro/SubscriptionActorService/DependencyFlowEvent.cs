@@ -6,9 +6,10 @@ namespace SubscriptionActorService
 {
     public enum DependencyFlowEventType
     {
-        Created = 0,
-        Updated = 1,
-        Completed = 2,
+        Fired = 0,
+        Created = 1,
+        Updated = 2,
+        Completed = 3,
     }
 
     public enum DependencyFlowEventReason
@@ -18,5 +19,6 @@ namespace SubscriptionActorService
         ManuallyMerged = 2,
         ManuallyClosed = 3,
         FailedUpdate = 4,
+        NothingToDo = 5,
     }
 }
