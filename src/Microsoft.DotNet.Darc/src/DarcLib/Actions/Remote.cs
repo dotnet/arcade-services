@@ -1103,10 +1103,26 @@ namespace Microsoft.DotNet.DarcLib
         {
             foreach (var dependency in dependencies)
             {
-                var matchingAssets = await GetAssetsAsync(dependency.Name, dependency.Version);
+                Dictionary<int, Build> buildCache = new Dictionary<int, Build>();
+                IEnumerable<Asset> matchingAssets = await GetAssetsAsync(dependency.Name, dependency.Version);
+                List<Asset> matchingAssetsFromSameSha = new List<Asset>();
+
+                foreach (var asset in matchingAssets)
+                {
+                    if (!buildCache.TryGetValue(asset.BuildId, out Build producingBuild))
+                    {
+                        producingBuild = await GetBuildAsync(asset.BuildId);
+                        buildCache.Add(asset.BuildId, producingBuild);
+                    }
+
+                    if (producingBuild.Commit == dependency.Commit)
+                    {
+                        matchingAssetsFromSameSha.Add(asset);
+                    }
+                }
 
                 // Always look at the 'latest' asset to get the right asset even in stable build scenarios
-                var latestAsset = matchingAssets.OrderByDescending(a => a.BuildId).FirstOrDefault();
+                var latestAsset = matchingAssetsFromSameSha.OrderByDescending(a => a.BuildId).FirstOrDefault();
                 if (latestAsset != null)
                 {
                     IEnumerable<String> currentAssetLocations = latestAsset.Locations?.Select(l => l.Location);

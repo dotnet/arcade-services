@@ -9,11 +9,14 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
@@ -60,6 +63,14 @@ namespace Microsoft.DotNet.Darc.Operations
         const string assetsSubPath = "assets";
         const string nonShippingSubPath = "nonshipping";
         const string shippingSubPath = "shipping";
+
+        // Regular expression used to check that an AssetLocation matches the format of
+        // an Azure DevOps Feed. Such feeds look like:
+        //      - https://pkgs.dev.azure.com/dnceng/public/_packaging/public-feed-name/nuget/v3/index.json
+        //      - https://pkgs.dev.azure.com/dnceng/_packaging/internal-feed-name/nuget/v3/index.json
+        public const string AzDoNuGetFeedPattern =
+            @"https://pkgs.dev.azure.com/(?<account>[a-zA-Z0-9]+)/(?<visibility>[a-zA-Z0-9-]+/)?_packaging/(?<feed>.+)/nuget/v3/index.json";
+
 
         public override async Task<int> ExecuteAsync()
         {
@@ -555,19 +566,19 @@ namespace Microsoft.DotNet.Darc.Operations
                 Directory.CreateDirectory(outputDirectory);
             }
 
-            List<DownloadedAsset> downloadedAssets = new List<DownloadedAsset>();
+            ConcurrentBag<DownloadedAsset> downloadedAssets = new ConcurrentBag<DownloadedAsset>();
             bool anyShipping = false;
 
             Console.WriteLine($"Gathering drop for build {build.AzureDevOpsBuildNumber} of {repoUri}");
             using (HttpClient client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
                 var assets = await remote.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?)false : null));
-                foreach (var asset in assets)
+                await Task.WhenAll(assets.Select(async asset =>
                 {
                     DownloadedAsset downloadedAsset = await DownloadAssetAsync(client, build, asset, outputDirectory);
                     if (downloadedAsset == null)
                     {
-                        continue;
+                        // Do nothing, decided not to download.
                     }
                     else if (!downloadedAsset.Successful)
                     {
@@ -575,7 +586,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         if (!_options.ContinueOnError)
                         {
                             Console.WriteLine($"Aborting download.");
-                            break;
+                            return;
                         }
                     }
                     else
@@ -583,7 +594,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         anyShipping |= !asset.NonShipping;
                         downloadedAssets.Add(downloadedAsset);
                     }
-                }
+                }));
             }
 
             DownloadedBuild newBuild = new DownloadedBuild
@@ -619,20 +630,21 @@ namespace Microsoft.DotNet.Darc.Operations
         ///     {root dir}\nonshipping\packages - packages
         /// </remarks>
         private async Task<DownloadedAsset> DownloadAssetAsync(HttpClient client,
-                                                                            Build build,
-                                                                            Asset asset,
-                                                                            string rootOutputDirectory)
+                                                                Build build,
+                                                                Asset asset,
+                                                                string rootOutputDirectory)
         {
             string assetNameAndVersion = GetAssetNameForLogging(asset);
-            if (_options.IncludeNonShipping || !asset.NonShipping)
-            {
-                Console.WriteLine($"  Downloading asset {assetNameAndVersion}");
-            }
-            else
+            if (!_options.IncludeNonShipping && asset.NonShipping)
             {
                 Console.WriteLine($"  Skipping non-shipping asset {assetNameAndVersion}");
                 return null;
             }
+
+            // String builder for the purposes of ensuring that we don't have a lot
+            // of interleaved output in the download info.
+            StringBuilder downloadOutput = new StringBuilder();
+            downloadOutput.AppendLine($"  Downloading asset {assetNameAndVersion}");
 
             DownloadedAsset downloadedAsset = new DownloadedAsset()
             {
@@ -686,26 +698,28 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 if (_options.LatestLocation)
                 {
-                    downloadedAsset = await DownloadAssetFromLatestLocation(client, build, asset, assetLocations, rootOutputDirectory, errors);
+                    downloadedAsset = await DownloadAssetFromLatestLocation(client, build, asset, assetLocations, rootOutputDirectory, errors, downloadOutput);
                 }
                 else
                 {
-                    downloadedAsset = await DownloadAssetFromAnyLocationAsync(client, build, asset, assetLocations, rootOutputDirectory, errors);
+                    downloadedAsset = await DownloadAssetFromAnyLocationAsync(client, build, asset, assetLocations, rootOutputDirectory, errors, downloadOutput);
                 }
 
                 if (downloadedAsset.Successful)
                 {
+                    Console.Write(downloadOutput.ToString());
                     return downloadedAsset;
                 }
             }
 
             // If none of the download attempts succeeded, then we should print out all the error
             // information.
-            Console.WriteLine($"    Failed to download asset, errors shown below:");
+            downloadOutput.AppendLine($"    Failed to download asset, errors shown below:");
             foreach (string error in errors)
             {
-                Console.WriteLine($"      {error}");
+                downloadOutput.AppendLine($"      {error}");
             }
+            Console.Write(downloadOutput.ToString());
 
             return downloadedAsset;
         }
@@ -719,7 +733,8 @@ namespace Microsoft.DotNet.Darc.Operations
                                                                             Asset asset, 
                                                                             List<AssetLocation> assetLocations, 
                                                                             string rootOutputDirectory, 
-                                                                            List<string> errors)
+                                                                            List<string> errors,
+                                                                            StringBuilder downloadOutput)
         {
             // Walk the locations and attempt to gather the asset at each one, setting the output
             // path based on the type. Stops at the first successfull download.
@@ -730,7 +745,8 @@ namespace Microsoft.DotNet.Darc.Operations
                     asset,
                     location,
                     rootOutputDirectory,
-                    errors);
+                    errors,
+                    downloadOutput);
 
                 if (downloadedAsset.Successful)
                 {
@@ -753,7 +769,8 @@ namespace Microsoft.DotNet.Darc.Operations
                                                                             Asset asset,
                                                                             List<AssetLocation> assetLocations,
                                                                             string rootOutputDirectory,
-                                                                            List<string> errors)
+                                                                            List<string> errors,
+                                                                            StringBuilder downloadOutput)
         {
             AssetLocation latestLocation = assetLocations.OrderByDescending(al => al.Id).First();
 
@@ -762,7 +779,8 @@ namespace Microsoft.DotNet.Darc.Operations
                 asset, 
                 latestLocation, 
                 rootOutputDirectory, 
-                errors);
+                errors,
+                downloadOutput);
         }
 
         /// <summary>
@@ -773,7 +791,8 @@ namespace Microsoft.DotNet.Darc.Operations
                                                                             Asset asset,
                                                                             AssetLocation location,
                                                                             string rootOutputDirectory,
-                                                                            List<string> errors)
+                                                                            List<string> errors,
+                                                                            StringBuilder downloadOutput)
         {
             var subPath = Path.Combine(rootOutputDirectory, asset.NonShipping ? nonShippingSubPath : shippingSubPath);
 
@@ -799,9 +818,9 @@ namespace Microsoft.DotNet.Darc.Operations
             switch (locationType)
             {
                 case LocationType.NugetFeed:
-                    return await DownloadNugetPackageAsync(client, build, asset, location, subPath, errors);
+                    return await DownloadNugetPackageAsync(client, build, asset, location, subPath, errors, downloadOutput);
                 case LocationType.Container:
-                    return await DownloadBlobAsync(client, build, asset, location, subPath, errors);
+                    return await DownloadBlobAsync(client, asset, location, subPath, errors, downloadOutput);
                 case LocationType.None:
                 default:
                     errors.Add($"Unexpected location type {locationType}");
@@ -829,11 +848,16 @@ namespace Microsoft.DotNet.Darc.Operations
                                                                     Asset asset,
                                                                     AssetLocation assetLocation,
                                                                     string subPath,
-                                                                    List<string> errors)
+                                                                    List<string> errors,
+                                                                    StringBuilder downloadOutput)
         {
             // Attempt to figure out how to download this. If the location is a blob storage account, then
             // strip off index.json, append 'flatcontainer', the asset name (lower case), then the version,
             // then {asset name}.{version}.nupkg
+
+            string fullSubPath = Path.Combine(subPath, packagesSubPath);
+            // Construct the final path, using the correct casing rather than the blob feed casing.
+            string fullTargetPath = Path.Combine(fullSubPath, $"{asset.Name}.{asset.Version}.nupkg");
 
             if (IsBlobFeedUrl(assetLocation.Location))
             {
@@ -843,9 +867,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 string finalUri = assetLocation.Location.Substring(0, assetLocation.Location.Length - "index.json".Length);
                 finalUri += $"flatcontainer/{name}/{version}/{name}.{version}.nupkg";
 
-                // Construct the final path, using the correct casing rather than the blob feed casing.
-                string fullTargetPath = Path.Combine(subPath, packagesSubPath, $"{asset.Name}.{asset.Version}.nupkg");
-                if (await DownloadFileAsync(client, finalUri, fullTargetPath, errors))
+                if (await DownloadFileAsync(client, finalUri, fullTargetPath, errors, downloadOutput))
                 {
                     return new DownloadedAsset()
                     {
@@ -854,6 +876,14 @@ namespace Microsoft.DotNet.Darc.Operations
                         SourceLocation = finalUri,
                         TargetLocation = fullTargetPath
                     };
+                }
+            }
+            else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out string feedAccount, out string feedVisibility, out string feedName))
+            {
+                DownloadedAsset result =  await DownloadAssetFromAzureDevOpsFeedAsync(client, asset, feedAccount, feedVisibility, feedName, fullTargetPath, errors, downloadOutput);
+                if (result != null)
+                {
+                    return result;
                 }
             }
             else
@@ -876,6 +906,47 @@ namespace Microsoft.DotNet.Darc.Operations
             };
         }
 
+        private async Task<DownloadedAsset> DownloadAssetFromAzureDevOpsFeedAsync(HttpClient client,
+                                                                                Asset asset,
+                                                                                string feedAccount,
+                                                                                string feedVisibility,
+                                                                                string feedName,
+                                                                                string fullTargetPath,
+                                                                                List<string> errors,
+                                                                                StringBuilder downloadOutput)
+        {
+            string packageContentUrl = $"https://pkgs.dev.azure.com/{feedAccount}/{feedVisibility}_apis/packaging/feeds/{feedName}/nuget/packages/{asset.Name}/versions/{asset.Version}/content";
+
+            // feedVisibility == "" means that the feed is internal.
+            if (string.IsNullOrEmpty(feedVisibility))
+            {
+                if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
+                {
+                    LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
+                    _options.AzureDevOpsPat = localSettings.AzureDevOpsToken;
+                }
+
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                    "Basic",
+                    Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _options.AzureDevOpsPat))));
+            }
+
+            if (await DownloadFileAsync(client, packageContentUrl, fullTargetPath, errors, downloadOutput))
+            {
+                return new DownloadedAsset()
+                {
+                    Successful = true,
+                    Asset = asset,
+                    SourceLocation = packageContentUrl,
+                    TargetLocation = fullTargetPath
+                };
+            }
+            else
+            {
+                return null;
+            }
+        }
+
         /// <summary>
         ///     Determine whether this location is a blob feed (sleet) uri.
         /// </summary>
@@ -893,6 +964,28 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             return locationUri.Host.EndsWith("blob.core.windows.net") && location.EndsWith("/index.json");
+        }
+
+        /// <summary>
+        ///     Determine whether this location is an Azure DevOps Feed URL.
+        /// </summary>
+        /// <param name="location">Location</param>
+        /// <returns>True if the location is an AzDO Feed URL, false otherwise.</returns>
+        /// <remarks>
+        ///     AzDO feed uris look like: 
+        ///         - https://pkgs.dev.azure.com/dnceng/public/_packaging/public-feed-name/nuget/v3/index.json
+        ///         - https://pkgs.dev.azure.com/dnceng/_packaging/internal-feed-name/nuget/v3/index.json
+        /// </remarks>
+        private static bool IsAzureDevOpsFeedUrl(string location, out string feedAccount, out string feedVisibility, out string feedName)
+        {
+            var parsedUri = Regex.Match(location, AzDoNuGetFeedPattern);
+
+            // If the pattern doesn't match these groups will return an empty string
+            feedAccount = parsedUri.Groups["account"].Value;
+            feedVisibility = parsedUri.Groups["visibility"].Value;
+            feedName = parsedUri.Groups["feed"].Value;
+
+            return parsedUri.Success;
         }
 
         /// <summary>
@@ -915,11 +1008,11 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         private async Task<DownloadedAsset> DownloadBlobAsync(HttpClient client,
-                                                                Build build,
                                                                 Asset asset,
                                                                 AssetLocation assetLocation,
                                                                 string subPath,
-                                                                List<string> errors)
+                                                                List<string> errors,
+                                                                StringBuilder downloadOutput)
         {
             // Normalize the asset name.  Sometimes the upload to the BAR will have
             // "assets/" prepended to it and sometimes not (depending on the Maestro tasks version).
@@ -950,13 +1043,13 @@ namespace Microsoft.DotNet.Darc.Operations
                 string finalBaseUri = assetLocation.Location.Substring(0, assetLocation.Location.Length - "index.json".Length);
                 string finalUri1 = $"{finalBaseUri}{asset.Name}";
                 string finalUri2 = $"{finalBaseUri}assets/{asset.Name}";
-                if (await DownloadFileAsync(client, finalUri1, fullTargetPath, errors))
+                if (await DownloadFileAsync(client, finalUri1, fullTargetPath, errors, downloadOutput))
                 {
                     downloadedAsset.Successful = true;
                     downloadedAsset.SourceLocation = finalUri1;
                     return downloadedAsset;
                 }
-                if (await DownloadFileAsync(client, finalUri2, fullTargetPath, errors))
+                if (await DownloadFileAsync(client, finalUri2, fullTargetPath, errors, downloadOutput))
                 {
                     downloadedAsset.Successful = true;
                     downloadedAsset.SourceLocation = finalUri2;
@@ -967,18 +1060,69 @@ namespace Microsoft.DotNet.Darc.Operations
                 if (!_options.NoWorkarounds)
                 {
                     string finalUri3 = $"{finalBaseUri}assets/assets/{asset.Name}";
-                    if (await DownloadFileAsync(client, finalUri3, fullTargetPath, errors))
+                    if (await DownloadFileAsync(client, finalUri3, fullTargetPath, errors, downloadOutput))
                     {
                         downloadedAsset.Successful = true;
                         downloadedAsset.SourceLocation = finalUri3;
                         return downloadedAsset;
                     }
+
+                    // Could also not be under /assets, so strip that from the url
+                    string finalUri4 = finalUri1.Replace("assets/", "", StringComparison.OrdinalIgnoreCase);
+                    if (await DownloadFileAsync(client, finalUri4, fullTargetPath, errors, downloadOutput))
+                    {
+                        downloadedAsset.Successful = true;
+                        downloadedAsset.SourceLocation = finalUri4;
+                        return downloadedAsset;
+                    }
                 }
                 return downloadedAsset;
             }
-            else if (IsAzureDevOpsArtifactsUrl(assetLocation.Location))
+            else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out string feedAccount, out string feedVisibility, out string feedName))
             {
-                // Do not attempt to download from AzDO.
+                // If we are here, it means this is a symbols package or a nupkg published as a blob,
+                // remove some known paths from the name
+
+                string replacedName = asset.Name.Replace("assets/", "", StringComparison.OrdinalIgnoreCase);
+                replacedName = replacedName.Replace("symbols/", "", StringComparison.OrdinalIgnoreCase);
+                replacedName = replacedName.Replace("sdk/", "", StringComparison.OrdinalIgnoreCase);
+                replacedName = replacedName.Replace(".symbols", "", StringComparison.OrdinalIgnoreCase);
+                replacedName = replacedName.Replace(".nupkg", "", StringComparison.OrdinalIgnoreCase);
+
+                // blob packages sometimes confuse x86 and x64 as being part of the version
+                string replacedVersion = asset.Version.Replace("64.", "");
+                replacedVersion = replacedVersion.Replace("86.", "");
+
+                // finally, remove the version from the name
+                replacedName = replacedName.Replace($".{replacedVersion}", "", StringComparison.OrdinalIgnoreCase);
+
+                // create a temp asset with the mangled name and version
+                Asset mangledAsset = new Asset(asset.Id,
+                    asset.BuildId,
+                    asset.NonShipping,
+                    replacedName,
+                    replacedVersion,
+                    asset.Locations);
+
+                DownloadedAsset result = await DownloadAssetFromAzureDevOpsFeedAsync(client,
+                    mangledAsset,
+                    feedAccount,
+                    feedVisibility,
+                    feedName,
+                    fullTargetPath,
+                    errors,
+                    downloadOutput);
+
+                if (result != null)
+                {
+                    return new DownloadedAsset
+                    {
+                        Asset = asset,
+                        SourceLocation = result.SourceLocation,
+                        Successful = result.Successful,
+                        TargetLocation = fullTargetPath
+                    };
+                }
                 return downloadedAsset;
             }
             
@@ -1002,12 +1146,20 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="sourceUri">Source uri</param>
         /// <param name="targetFile">Target file path. Directories are created.</param>
         /// <returns>Error message if the </returns>
-        private async Task<bool> DownloadFileAsync(HttpClient client, string sourceUri, string targetFile, List<string> errors)
+        private async Task<bool> DownloadFileAsync(HttpClient client, string sourceUri, string targetFile, List<string> errors, StringBuilder downloadOutput)
         {
             if (_options.DryRun)
             {
-                Console.WriteLine($"  {sourceUri} => {targetFile}.");
+                downloadOutput.AppendLine($"  {sourceUri} => {targetFile}.");
                 return true;
+            }
+
+            // Use a temporary in progress file name so we don't end up with corrupted
+            // half downloaded files.
+            string temporaryFileName = $"{targetFile}.inProgress";
+            if (File.Exists(temporaryFileName))
+            {
+                File.Delete(temporaryFileName);
             }
 
             try
@@ -1021,17 +1173,21 @@ namespace Microsoft.DotNet.Darc.Operations
                 Directory.CreateDirectory(directory);
 
                 // Ensure the parent target directory has been created.
-                using (FileStream outStream = new FileStream(targetFile,
+                using (FileStream outStream = new FileStream(temporaryFileName,
                                                       _options.Overwrite ? FileMode.Create : FileMode.CreateNew,
                                                       FileAccess.Write))
                 {
                     using (var inStream = await client.GetStreamAsync(sourceUri))
                     {
-                        Console.Write($"  {sourceUri} => {targetFile}...");
+                        downloadOutput.Append($"  {sourceUri} => {targetFile}...");
                         await inStream.CopyToAsync(outStream);
-                        Console.WriteLine("Done");
+                        downloadOutput.AppendLine("Done");
                     }
                 }
+
+                // Rename file to the target file name.
+                File.Move(temporaryFileName, targetFile);
+
                 return true;
             }
             catch (IOException e)
@@ -1044,6 +1200,13 @@ namespace Microsoft.DotNet.Darc.Operations
                 // from a separate location will fail.
                 File.Delete(targetFile);
                 errors.Add($"Failed to download {sourceUri}: {e.Message}");
+            }
+            finally
+            {
+                if (File.Exists(temporaryFileName))
+                {
+                    File.Delete(temporaryFileName);
+                }
             }
             return false;
         }
