@@ -191,7 +191,8 @@ namespace SubscriptionActorService.Tests
                     It.IsAny<DependencyFlowEventType>(), 
                     It.IsAny<DependencyFlowEventReason>(), 
                     It.IsAny<MergePolicyCheckResult>(), 
-                    "PR"));
+                    "PR",
+                    It.IsAny<string>()));
         }
 
         private void WithRequireNonCoherencyUpdates(Build fromBuild)

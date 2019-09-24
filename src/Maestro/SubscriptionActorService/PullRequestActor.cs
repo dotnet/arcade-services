@@ -368,7 +368,8 @@ namespace SubscriptionActorService
                                 pr.ContainedSubscriptions, 
                                 DependencyFlowEventType.Completed, 
                                 DependencyFlowEventReason.AutomaticallyMerged, 
-                                checkPolicyResult.Result);
+                                checkPolicyResult.Result,
+                                prUrl);
                             await StateManager.RemoveStateAsync(PullRequest);
                             return ActionResult.Create(SynchronizePullRequestResult.Completed, checkPolicyResult.Message);
                         case MergePolicyCheckResult.NoPolicies:
@@ -396,7 +397,8 @@ namespace SubscriptionActorService
                         pr.ContainedSubscriptions, 
                         DependencyFlowEventType.Completed, 
                         reason, 
-                        pr.MergePolicyResult);
+                        pr.MergePolicyResult,
+                        prUrl);
                     await StateManager.RemoveStateAsync(PullRequest);
                     return ActionResult.Create(SynchronizePullRequestResult.Completed, $"PR Has been manually {status}");
                 default:
@@ -514,13 +516,14 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates, 
             DependencyFlowEventType flowEvent, 
             DependencyFlowEventReason reason, 
-            MergePolicyCheckResult policy)
+            MergePolicyCheckResult policy,
+            string prUrl)
         {
             
             foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
             {
                 ISubscriptionActor actor = SubscriptionActorFactory(new ActorId(update.SubscriptionId));
-                if (!await actor.AddDependencyFlowEventAsync(update.BuildId, flowEvent, reason, policy, "PR"))
+                if (!await actor.AddDependencyFlowEventAsync(update.BuildId, flowEvent, reason, policy, "PR", prUrl))
                 {
                     Logger.LogInformation($"Failed to add dependency flow event for {update.SubscriptionId}.");
                 }
@@ -592,7 +595,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     pr.ContainedSubscriptions, 
                     DependencyFlowEventType.Updated, 
                     DependencyFlowEventReason.FailedUpdate, 
-                    pr.MergePolicyResult);
+                    pr.MergePolicyResult,
+                    pr.Url);
                 await UpdatePullRequestAsync(pr, new List<UpdateAssetsParameters> {updateParameter});
                 return ActionResult.Create<object>(null, $"Pull Request '{pr.Url}' updated.");
             }
@@ -719,7 +723,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                         inProgressPr.ContainedSubscriptions, 
                         DependencyFlowEventType.Created, 
                         DependencyFlowEventReason.New, 
-                        MergePolicyCheckResult.PendingPolicies);
+                        MergePolicyCheckResult.PendingPolicies,
+                        prUrl);
 
                     await StateManager.SetStateAsync(PullRequest, inProgressPr);
                     await StateManager.SaveStateAsync();
@@ -736,7 +741,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                         inProgressPr.ContainedSubscriptions, 
                         DependencyFlowEventType.Completed, 
                         DependencyFlowEventReason.NothingToDo, 
-                        MergePolicyCheckResult.PendingPolicies);
+                        MergePolicyCheckResult.PendingPolicies,
+                        null);
 
                 // Something wrong happened when trying to create the PR but didn't throw an exception (probably there was no diff).
                 // We need to delete the branch also in this case.
@@ -965,7 +971,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                         pr.ContainedSubscriptions.Except(previousSubscriptions), 
                         DependencyFlowEventType.Created, 
                         DependencyFlowEventReason.New, 
-                        MergePolicyCheckResult.PendingPolicies);
+                        MergePolicyCheckResult.PendingPolicies,
+                        pr.Url);
 
             var description = new StringBuilder(pullRequest.Description);
             await CommitUpdatesAsync(requiredUpdates, description, darcRemote, targetRepository, headBranch);

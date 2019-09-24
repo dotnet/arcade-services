@@ -47,7 +47,8 @@ namespace SubscriptionActorService
                 DependencyFlowEventType flowEvent, 
                 DependencyFlowEventReason reason, 
                 MergePolicyCheckResult policy,
-                string flowType)
+                string flowType,
+                string url)
             {
                 throw new NotImplementedException();
             }
@@ -140,7 +141,8 @@ namespace SubscriptionActorService
             DependencyFlowEventType flowEvent, 
             DependencyFlowEventReason reason, 
             MergePolicyCheckResult policy,
-            string flowType)
+            string flowType,
+            string url)
         {
             string updateReason = reason == DependencyFlowEventReason.New || 
                                   reason == DependencyFlowEventReason.AutomaticallyMerged ? 
@@ -158,7 +160,8 @@ namespace SubscriptionActorService
                         Timestamp = DateTimeOffset.UtcNow,
                         Event = flowEvent.ToString(),
                         Reason = updateReason,
-                        FlowType = flowType
+                        FlowType = flowType,
+                        Url = url
                         };
                 Context.DependencyFlowEvents.Add(dfe);
                 await Context.SaveChangesAsync();
@@ -181,7 +184,8 @@ namespace SubscriptionActorService
                 DependencyFlowEventType.Fired, 
                 DependencyFlowEventReason.New, 
                 MergePolicyCheckResult.PendingPolicies, 
-                "PR");
+                "PR",
+                null);
 
             Logger.LogInformation($"Looking up build {buildId}");
 

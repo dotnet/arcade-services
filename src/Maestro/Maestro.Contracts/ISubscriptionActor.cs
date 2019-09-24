@@ -12,6 +12,6 @@ namespace Maestro.Contracts
         Task<string> RunActionAsync(string method, string arguments);
         Task UpdateAsync(int buildId);
         Task<bool> UpdateForMergedPullRequestAsync(int updateBuildId);
-        Task<bool> AddDependencyFlowEventAsync(int updateBuildId, DependencyFlowEventType flowEvent, DependencyFlowEventReason reason, MergePolicyCheckResult policy, string flowType);
+        Task<bool> AddDependencyFlowEventAsync(int updateBuildId, DependencyFlowEventType flowEvent, DependencyFlowEventReason reason, MergePolicyCheckResult policy, string flowType, string url);
     }
 }
