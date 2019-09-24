@@ -516,13 +516,11 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             DependencyFlowEventReason reason, 
             MergePolicyCheckResult policy)
         {
-            string updateReason = reason == DependencyFlowEventReason.New || 
-                                  reason == DependencyFlowEventReason.AutomaticallyMerged ? 
-                                 reason.ToString() : $"{reason.ToString()}{policy.ToString()}";
+            
             foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
             {
                 ISubscriptionActor actor = SubscriptionActorFactory(new ActorId(update.SubscriptionId));
-                if (!await actor.AddDependencyFlowEventAsync(update.BuildId, flowEvent.ToString(), updateReason, "PR"))
+                if (!await actor.AddDependencyFlowEventAsync(update.BuildId, flowEvent, reason, policy, "PR"))
                 {
                     Logger.LogInformation($"Failed to add dependency flow event for {update.SubscriptionId}.");
                 }

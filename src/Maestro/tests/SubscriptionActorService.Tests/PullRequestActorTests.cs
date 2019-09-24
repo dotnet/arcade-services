@@ -186,7 +186,12 @@ namespace SubscriptionActorService.Tests
         private void AndDependencyFlowEventsShouldBeAdded()
         {
             SubscriptionActors[new ActorId(Subscription.Id)]
-                .Verify(s => s.AddDependencyFlowEventAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(), "PR"));
+                .Verify(s => s.AddDependencyFlowEventAsync(
+                    It.IsAny<int>(), 
+                    It.IsAny<DependencyFlowEventType>(), 
+                    It.IsAny<DependencyFlowEventReason>(), 
+                    It.IsAny<MergePolicyCheckResult>(), 
+                    "PR"));
         }
 
         private void WithRequireNonCoherencyUpdates(Build fromBuild)

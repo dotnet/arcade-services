@@ -42,7 +42,12 @@ namespace SubscriptionActorService
                 throw new NotImplementedException();
             }
 
-            public Task<bool> AddDependencyFlowEventAsync(int updateBuildId, string flowEvent, string reason, string flowType)
+            public Task<bool> AddDependencyFlowEventAsync(
+                int updateBuildId, 
+                DependencyFlowEventType flowEvent, 
+                DependencyFlowEventReason reason, 
+                MergePolicyCheckResult policy,
+                string flowType)
             {
                 throw new NotImplementedException();
             }
@@ -130,9 +135,18 @@ namespace SubscriptionActorService
             }
         }
 
-        public async Task<bool> AddDependencyFlowEventAsync(int updateBuildId, string flowEvent, string reason, string flowType)
+        public async Task<bool> AddDependencyFlowEventAsync(
+            int updateBuildId, 
+            DependencyFlowEventType flowEvent, 
+            DependencyFlowEventReason reason, 
+            MergePolicyCheckResult policy,
+            string flowType)
         {
-            Logger.LogInformation($"Adding dependency flow event for {SubscriptionId} with {flowEvent} {reason} {flowType}");
+            string updateReason = reason == DependencyFlowEventReason.New || 
+                                  reason == DependencyFlowEventReason.AutomaticallyMerged ? 
+                                 reason.ToString() : $"{reason.ToString()}{policy.ToString()}";
+
+            Logger.LogInformation($"Adding dependency flow event for {SubscriptionId} with {flowEvent} {updateReason} {flowType}");
             Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);
             if (subscription != null)
             {
@@ -142,8 +156,8 @@ namespace SubscriptionActorService
                         ChannelId = subscription.ChannelId,
                         BuildId = updateBuildId,
                         Timestamp = DateTimeOffset.UtcNow,
-                        Event = flowEvent,
-                        Reason = reason,
+                        Event = flowEvent.ToString(),
+                        Reason = updateReason,
                         FlowType = flowType
                         };
                 Context.DependencyFlowEvents.Add(dfe);
@@ -162,7 +176,12 @@ namespace SubscriptionActorService
         {
             Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);
 
-            await AddDependencyFlowEventAsync(buildId, DependencyFlowEventType.Fired.ToString(), DependencyFlowEventReason.New.ToString(), "PR");
+            await AddDependencyFlowEventAsync(
+                buildId, 
+                DependencyFlowEventType.Fired, 
+                DependencyFlowEventReason.New, 
+                MergePolicyCheckResult.PendingPolicies, 
+                "PR");
 
             Logger.LogInformation($"Looking up build {buildId}");
 

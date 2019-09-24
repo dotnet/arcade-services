@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
+using Maestro.Contracts;
 
 namespace SubscriptionActorService
 {
