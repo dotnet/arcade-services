@@ -588,15 +588,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             }
 
             if (pr != null)
-            {
-                // Mark all previous dependency updates as updated. All new dependencies should not be
-                // marked as update as they are new.
-                await AddDependencyFlowEventsAsync(
-                    pr.ContainedSubscriptions, 
-                    DependencyFlowEventType.Updated, 
-                    DependencyFlowEventReason.FailedUpdate, 
-                    pr.MergePolicyResult,
-                    pr.Url);
+            {   
                 await UpdatePullRequestAsync(pr, new List<UpdateAssetsParameters> {updateParameter});
                 return ActionResult.Create<object>(null, $"Pull Request '{pr.Url}' updated.");
             }
@@ -958,6 +950,16 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             {
                 pr.ContainedSubscriptions.RemoveAll(s => s.SubscriptionId == update.update.SubscriptionId);
             }
+
+            // Mark all previous dependency updates that are being updated as Updated. All new dependencies should not be
+            // marked as update as they are new. Any dependency not being updated should not be marked as failed
+            await AddDependencyFlowEventsAsync(
+                previousSubscriptions.Except(pr.ContainedSubscriptions), 
+                DependencyFlowEventType.Updated, 
+                DependencyFlowEventReason.FailedUpdate, 
+                pr.MergePolicyResult,
+                pr.Url);
+                        
             pr.ContainedSubscriptions.AddRange(requiredUpdates
                 .Where( u => !u.update.IsCoherencyUpdate)
                 .Select(
@@ -967,12 +969,13 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                         BuildId = u.update.BuildId
                     }));
 
+            // Mark any new dependency updates as Created
             await AddDependencyFlowEventsAsync(
-                        pr.ContainedSubscriptions.Except(previousSubscriptions), 
-                        DependencyFlowEventType.Created, 
-                        DependencyFlowEventReason.New, 
-                        MergePolicyCheckResult.PendingPolicies,
-                        pr.Url);
+                pr.ContainedSubscriptions.Except(previousSubscriptions), 
+                DependencyFlowEventType.Created, 
+                DependencyFlowEventReason.New, 
+                MergePolicyCheckResult.PendingPolicies,
+                pr.Url);
 
             var description = new StringBuilder(pullRequest.Description);
             await CommitUpdatesAsync(requiredUpdates, description, darcRemote, targetRepository, headBranch);
