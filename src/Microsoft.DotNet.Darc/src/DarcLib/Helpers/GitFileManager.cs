@@ -306,10 +306,7 @@ namespace Microsoft.DotNet.DarcLib
 
                         if (IsMaestroManagedFeed(feedValue.Value))
                         {
-                            var nextNodeToWalk = currentNode.NextSibling;
-                            packageSourcesNode.RemoveChild(currentNode);
-                            currentNode = nextNodeToWalk;
-
+                            currentNode = RemoveCurrentNode(currentNode);
                             continue;
                         }
                     }
@@ -317,10 +314,7 @@ namespace Microsoft.DotNet.DarcLib
                     // It will be added when we add the maestro managed sources.
                     else if (currentNode.Name.Equals(VersionFiles.ClearElement, StringComparison.OrdinalIgnoreCase))
                     {
-                        var nextNodeToWalk = currentNode.NextSibling;
-                        packageSourcesNode.RemoveChild(currentNode);
-                        currentNode = nextNodeToWalk;
-
+                        currentNode = RemoveCurrentNode(currentNode);
                         continue;
                     }
                 }
@@ -329,10 +323,7 @@ namespace Microsoft.DotNet.DarcLib
                     if (currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase) 
                         || currentNode.Value.Equals(MaestroEndComment, StringComparison.OrdinalIgnoreCase))
                     {
-                        var nextNodeToWalk = currentNode.NextSibling;
-                        packageSourcesNode.RemoveChild(currentNode);
-                        currentNode = nextNodeToWalk;
-
+                        currentNode = RemoveCurrentNode(currentNode);
                         continue;
                     }
                 }
@@ -343,6 +334,18 @@ namespace Microsoft.DotNet.DarcLib
             InsertManagedPackagesBlock(nugetConfig, packageSourcesNode, managedSources);
 
             return nugetConfig;
+        }
+
+        /// <summary>
+        /// Remove the current node and return the next node that should be walked
+        /// </summary>
+        /// <param name="toRemove">Node to remove</param>
+        /// <returns>Next node to walk</returns>
+        private static XmlNode RemoveCurrentNode(XmlNode toRemove)
+        {
+            var nextNodeToWalk = toRemove.NextSibling;
+            toRemove.ParentNode.RemoveChild(toRemove);
+            return nextNodeToWalk;
         }
 
         // Insert the following structure at the beginning of the nodes pointed by `packageSourcesNode`.
