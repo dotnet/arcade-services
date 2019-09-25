@@ -313,6 +313,16 @@ namespace Microsoft.DotNet.DarcLib
                             continue;
                         }
                     }
+                    // Remove the clear element wherever it is.
+                    // It will be added when we add the maestro managed sources.
+                    else if (currentNode.Name.Equals(VersionFiles.ClearElement, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var nextNodeToWalk = currentNode.NextSibling;
+                        packageSourcesNode.RemoveChild(currentNode);
+                        currentNode = nextNodeToWalk;
+
+                        continue;
+                    }
                 }
                 else if (currentNode.NodeType == XmlNodeType.Comment)
                 {
@@ -342,18 +352,15 @@ namespace Microsoft.DotNet.DarcLib
         // <MaestroEndComment />
         private static void InsertManagedPackagesBlock(XmlDocument nugetConfig, XmlNode packageSourcesNode, List<(string key, string feed)> managedSources)
         {
+            var clearNode = nugetConfig.CreateElement(VersionFiles.ClearElement);
+            packageSourcesNode.PrependChild(clearNode);
+
             if (managedSources.Count <= 0)
             {
                 return;
             }
 
-            if (packageSourcesNode.FirstChild.NodeType != XmlNodeType.Element
-                || !packageSourcesNode.FirstChild.Name.Equals("clear", StringComparison.OrdinalIgnoreCase))
-            {
-                SetElement(nugetConfig, packageSourcesNode, VersionFiles.ClearElement);
-            }
-
-            packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), packageSourcesNode.FirstChild);
+            packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), clearNode);
 
             XmlNode prevNode = packageSourcesNode.FirstChild;
             foreach ((string key, string feed) in managedSources)
@@ -536,12 +543,12 @@ namespace Microsoft.DotNet.DarcLib
                 $"Dependency '{dependencyName}' with version '{version}' successfully added to global.json");
         }
 
-        private XmlDocument ReadXmlFile(string fileContent)
+        public static XmlDocument ReadXmlFile(string fileContent)
         {
             return GetXmlDocument(fileContent);
         }
 
-        private XmlDocument GetXmlDocument(string fileContent)
+        public static XmlDocument GetXmlDocument(string fileContent)
         {
             XmlDocument document = new XmlDocument
             {
@@ -631,7 +638,7 @@ namespace Microsoft.DotNet.DarcLib
 
             foreach (JProperty property in token.Children<JProperty>())
             {
-                if (property.Name == versionElementName)
+                if (property.Name.Equals(versionElementName, StringComparison.OrdinalIgnoreCase))
                 {
                     property.Value = new JValue(itemToUpdate.Version);
                     break;
