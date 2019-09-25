@@ -38,6 +38,8 @@ namespace Microsoft.DotNet.Darc.Tests
         [InlineData("RemoveManagedFromFromOutside", new string[] {
             "https://pkgs.dev.azure.com/dnceng/_packaging/darc-int-dotnet-arcade-b0437974/nuget/v3/index.json",
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
+        [InlineData("WhiteSpaceCorrectlyFormatted", new string[] {
+            "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-core-setup-7d57652f/nuget/v3/index.json" })]
         public async Task UpdatePackageSourcesTests(string testName, string[] managedFeeds)
         {
             GitFileManager gitFileManager = new GitFileManager(null, NullLogger.Instance);
@@ -48,8 +50,8 @@ namespace Microsoft.DotNet.Darc.Tests
                 ConfigFilesInput,
                 testName,
                 InputNugetConfigFile);
-            XmlDocument inputNuGetConfigFile = new XmlDocument();
-            inputNuGetConfigFile.Load(inputNugetPath);
+            string inputXmlContent = await File.ReadAllTextAsync(inputNugetPath);
+            var inputNuGetConfigFile = GitFileManager.ReadXmlFile(inputXmlContent);
 
             XmlDocument updatedConfigFile = 
                 gitFileManager.UpdatePackageSources(inputNuGetConfigFile, new HashSet<string>(managedFeeds));
