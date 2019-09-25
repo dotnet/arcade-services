@@ -773,6 +773,12 @@
     <None Update="inputs\NugetConfigFiles\AddFeedsToNuGetConfigWithoutManagedFeeds\NuGet.output.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="inputs\NugetConfigFiles\WhiteSpaceCorrectlyFormatted\NuGet.input.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="inputs\NugetConfigFiles\WhiteSpaceCorrectlyFormatted\NuGet.output.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="inputs\NugetConfigFiles\NoManagedFeedsToAdd\NuGet.input.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
