@@ -952,7 +952,9 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             }
 
             // Mark all previous dependency updates that are being updated as Updated. All new dependencies should not be
-            // marked as update as they are new. Any dependency not being updated should not be marked as failed
+            // marked as update as they are new. Any dependency not being updated should not be marked as failed.
+            // At this point, pr.ContainedSubscriptions only containes the subscriptions that were not updated,
+            // so everything that is in the previous list but not in the current list were updated.
             await AddDependencyFlowEventsAsync(
                 previousSubscriptions.Except(pr.ContainedSubscriptions), 
                 DependencyFlowEventType.Updated, 
@@ -969,7 +971,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                         BuildId = u.update.BuildId
                     }));
 
-            // Mark any new dependency updates as Created
+            // Mark any new dependency updates as Created. Any subscriptions that are in pr.ContainedSubscriptions
+            // but were not in the previous list of subscripitons are new
             await AddDependencyFlowEventsAsync(
                 pr.ContainedSubscriptions.Except(previousSubscriptions), 
                 DependencyFlowEventType.Created, 
