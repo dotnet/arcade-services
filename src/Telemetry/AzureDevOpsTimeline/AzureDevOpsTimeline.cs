@@ -148,7 +148,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 latest = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(30));
                 _logger.LogWarning($"No table column 'Project' found, assumed reinialization: using {latest.LocalDateTime:O}");
             }
-
             _logger.LogInformation("Reading project {project}", project);
             Build[] builds = await GetBuildsAsync(azureServer, project, latest, buildBatchSize, cancellationToken);
             _logger.LogTrace("... found {builds} builds...", builds.Length);
@@ -258,6 +257,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("Project", b.Project?.Name, KustoDataTypes.String),
                     new KustoValue("DefinitionId", b.Definition?.Id.ToString(), KustoDataTypes.String),
                     new KustoValue("Definition", $"{b.Definition?.Path}\\{b.Definition?.Name}", KustoDataTypes.String),
+                    new KustoValue("SourceBranch", b.SourceBranch, KustoDataTypes.String),
                 });
 
             _logger.LogInformation("Saving TimelineValidationMessages...");
