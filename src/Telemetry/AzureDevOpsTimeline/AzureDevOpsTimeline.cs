@@ -151,7 +151,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             _logger.LogInformation("Reading project {project}", project);
             Build[] builds = await GetBuildsAsync(azureServer, project, latest, buildBatchSize, cancellationToken);
             _logger.LogTrace("... found {builds} builds...", builds.Length);
-
             if (builds.Length == 0)
             {
                 _logger.LogTrace("No work to do");
@@ -258,6 +257,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("DefinitionId", b.Definition?.Id.ToString(), KustoDataTypes.String),
                     new KustoValue("Definition", $"{b.Definition?.Path}\\{b.Definition?.Name}", KustoDataTypes.String),
                     new KustoValue("SourceBranch", b.SourceBranch, KustoDataTypes.String),
+                    new KustoValue("Organization", options.AzureDevOpsOrganization, KustoDataTypes.String),
                 });
 
             _logger.LogInformation("Saving TimelineValidationMessages...");
@@ -277,6 +277,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("Category", "ValidationResult", KustoDataTypes.String),
                     new KustoValue("Message", b.validationResult.Message, KustoDataTypes.String),
                     new KustoValue("Bucket", "ValidationResult", KustoDataTypes.String),
+                    new KustoValue("Organization", options.AzureDevOpsOrganization, KustoDataTypes.String),
                 });
 
             _logger.LogInformation("Saving TimelineRecords...");
@@ -311,6 +312,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("TaskName", b.Raw.Task?.Name, KustoDataTypes.String),
                     new KustoValue("TaskVersion", b.Raw.Task?.Version, KustoDataTypes.String),
                     new KustoValue("Attempt", b.Raw.Attempt.ToString(), KustoDataTypes.Int),
+                    new KustoValue("Organization", options.AzureDevOpsOrganization, KustoDataTypes.String),
                 });
 
             _logger.LogInformation("Saving TimelineIssues...");
@@ -330,6 +332,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("Category", b.Raw.Category, KustoDataTypes.String),
                     new KustoValue("Message", b.Raw.Message, KustoDataTypes.String),
                     new KustoValue("Bucket", b.Bucket, KustoDataTypes.String),
+                    new KustoValue("Organization", options.AzureDevOpsOrganization, KustoDataTypes.String),
                 });
         }
 
