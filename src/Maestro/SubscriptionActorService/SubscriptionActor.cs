@@ -41,6 +41,17 @@ namespace SubscriptionActorService
             {
                 throw new NotImplementedException();
             }
+
+            public Task<bool> AddDependencyFlowEventAsync(
+                int updateBuildId, 
+                DependencyFlowEventType flowEvent, 
+                DependencyFlowEventReason reason, 
+                MergePolicyCheckResult policy,
+                string flowType,
+                string url)
+            {
+                throw new NotImplementedException();
+            }
         }
     }
 
@@ -110,6 +121,7 @@ namespace SubscriptionActorService
         {
             Logger.LogInformation($"Updating {SubscriptionId} with latest build id {updateBuildId}");
             Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);
+            
             if (subscription != null)
             {
                 subscription.LastAppliedBuildId = updateBuildId;
@@ -124,10 +136,56 @@ namespace SubscriptionActorService
             }
         }
 
+        public async Task<bool> AddDependencyFlowEventAsync(
+            int updateBuildId, 
+            DependencyFlowEventType flowEvent, 
+            DependencyFlowEventReason reason, 
+            MergePolicyCheckResult policy,
+            string flowType,
+            string url)
+        {
+            string updateReason = reason == DependencyFlowEventReason.New || 
+                                  reason == DependencyFlowEventReason.AutomaticallyMerged ? 
+                                 reason.ToString() : $"{reason.ToString()}{policy.ToString()}";
+
+            Logger.LogInformation($"Adding dependency flow event for {SubscriptionId} with {flowEvent} {updateReason} {flowType}");
+            Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);
+            if (subscription != null)
+            {
+                DependencyFlowEvent dfe = new DependencyFlowEvent { 
+                        SourceRepository = subscription.SourceRepository,
+                        TargetRepository = subscription.TargetRepository,
+                        ChannelId = subscription.ChannelId,
+                        BuildId = updateBuildId,
+                        Timestamp = DateTimeOffset.UtcNow,
+                        Event = flowEvent.ToString(),
+                        Reason = updateReason,
+                        FlowType = flowType,
+                        Url = url
+                        };
+                Context.DependencyFlowEvents.Add(dfe);
+                await Context.SaveChangesAsync();
+                return true;
+            }
+            else
+            {
+                Logger.LogInformation($"Could not find subscription with ID {SubscriptionId}. Skipping adding dependency flow event.");
+                return false;
+            }
+        }
+
         [ActionMethod("Updating subscription for build {buildId}")]
         public async Task<ActionResult<bool>> UpdateAsync(int buildId)
         {
             Subscription subscription = await Context.Subscriptions.FindAsync(SubscriptionId);
+
+            await AddDependencyFlowEventAsync(
+                buildId, 
+                DependencyFlowEventType.Fired, 
+                DependencyFlowEventReason.New, 
+                MergePolicyCheckResult.PendingPolicies, 
+                "PR",
+                null);
 
             Logger.LogInformation($"Looking up build {buildId}");
 
