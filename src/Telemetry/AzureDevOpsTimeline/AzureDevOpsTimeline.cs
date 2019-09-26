@@ -148,9 +148,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 latest = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(30));
                 _logger.LogWarning($"No table column 'Project' found, assumed reinialization: using {latest.LocalDateTime:O}");
             }
+
             _logger.LogInformation("Reading project {project}", project);
             Build[] builds = await GetBuildsAsync(azureServer, project, latest, buildBatchSize, cancellationToken);
             _logger.LogTrace("... found {builds} builds...", builds.Length);
+
             if (builds.Length == 0)
             {
                 _logger.LogTrace("No work to do");
