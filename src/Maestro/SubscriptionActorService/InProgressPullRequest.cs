@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
+using Maestro.Contracts;
 
 namespace SubscriptionActorService
 {
@@ -13,6 +14,9 @@ namespace SubscriptionActorService
     {
         [DataMember]
         public string Url { get; set; }
+
+        [DataMember]
+        public MergePolicyCheckResult MergePolicyResult { get; set; }
 
         [DataMember]
         public List<SubscriptionPullRequestUpdate> ContainedSubscriptions { get; set; }

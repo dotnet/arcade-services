@@ -358,11 +358,18 @@ namespace SubscriptionActorService
                 // merge the PR if they are successul.
                 case PrStatus.Open:
                     ActionResult<MergePolicyCheckResult> checkPolicyResult = await CheckMergePolicyAsync(prUrl, darc);
+                    pr.MergePolicyResult = checkPolicyResult.Result;
 
                     switch (checkPolicyResult.Result)
                     {
                         case MergePolicyCheckResult.Merged:
                             await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
+                            await AddDependencyFlowEventsAsync(
+                                pr.ContainedSubscriptions, 
+                                DependencyFlowEventType.Completed, 
+                                DependencyFlowEventReason.AutomaticallyMerged, 
+                                checkPolicyResult.Result,
+                                prUrl);
                             await StateManager.RemoveStateAsync(PullRequest);
                             return ActionResult.Create(SynchronizePullRequestResult.Completed, checkPolicyResult.Message);
                         case MergePolicyCheckResult.NoPolicies:
@@ -381,6 +388,17 @@ namespace SubscriptionActorService
                     {
                         await UpdateSubscriptionsForMergedPRAsync(pr.ContainedSubscriptions);
                     }
+
+                    DependencyFlowEventReason reason = status == PrStatus.Merged ? 
+                        DependencyFlowEventReason.ManuallyMerged : 
+                        DependencyFlowEventReason.ManuallyClosed;
+
+                    await AddDependencyFlowEventsAsync(
+                        pr.ContainedSubscriptions, 
+                        DependencyFlowEventType.Completed, 
+                        reason, 
+                        pr.MergePolicyResult,
+                        prUrl);
                     await StateManager.RemoveStateAsync(PullRequest);
                     return ActionResult.Create(SynchronizePullRequestResult.Completed, $"PR Has been manually {status}");
                 default:
@@ -494,6 +512,24 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             }
         }
 
+        private async Task AddDependencyFlowEventsAsync(
+            IEnumerable<SubscriptionPullRequestUpdate> subscriptionPullRequestUpdates, 
+            DependencyFlowEventType flowEvent, 
+            DependencyFlowEventReason reason, 
+            MergePolicyCheckResult policy,
+            string prUrl)
+        {
+            
+            foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
+            {
+                ISubscriptionActor actor = SubscriptionActorFactory(new ActorId(update.SubscriptionId));
+                if (!await actor.AddDependencyFlowEventAsync(update.BuildId, flowEvent, reason, policy, "PR", prUrl))
+                {
+                    Logger.LogInformation($"Failed to add dependency flow event for {update.SubscriptionId}.");
+                }
+            }
+        }
+
         /// <summary>
         ///     Applies or queues asset updates for the target repository and branch from the given build and list of assets.
         /// </summary>
@@ -552,7 +588,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             }
 
             if (pr != null)
-            {
+            {   
                 await UpdatePullRequestAsync(pr, new List<UpdateAssetsParameters> {updateParameter});
                 return ActionResult.Create<object>(null, $"Pull Request '{pr.Url}' updated.");
             }
@@ -675,6 +711,13 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 {
                     inProgressPr.Url = prUrl;
 
+                    await AddDependencyFlowEventsAsync(
+                        inProgressPr.ContainedSubscriptions, 
+                        DependencyFlowEventType.Created, 
+                        DependencyFlowEventReason.New, 
+                        MergePolicyCheckResult.PendingPolicies,
+                        prUrl);
+
                     await StateManager.SetStateAsync(PullRequest, inProgressPr);
                     await StateManager.SaveStateAsync();
                     await Reminders.TryRegisterReminderAsync(
@@ -684,6 +727,14 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                         TimeSpan.FromMinutes(5));
                     return prUrl;
                 }
+
+                // If we did not create a PR, then mark the dependency flow as completed as nothing to do.
+                await AddDependencyFlowEventsAsync(
+                        inProgressPr.ContainedSubscriptions, 
+                        DependencyFlowEventType.Completed, 
+                        DependencyFlowEventReason.NothingToDo, 
+                        MergePolicyCheckResult.PendingPolicies,
+                        null);
 
                 // Something wrong happened when trying to create the PR but didn't throw an exception (probably there was no diff).
                 // We need to delete the branch also in this case.
@@ -889,6 +940,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             PullRequest pullRequest = await darcRemote.GetPullRequestAsync(pr.Url);
             string headBranch = pullRequest.HeadBranch;
 
+            List<SubscriptionPullRequestUpdate> previousSubscriptions = new List<SubscriptionPullRequestUpdate>(pr.ContainedSubscriptions);
+
             // Update the list of contained subscriptions with the new subscription update.
             // Replace all existing updates for the subscription id with the new update.
             // This avoids a potential issue where we may update the last applied build id
@@ -897,6 +950,18 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             {
                 pr.ContainedSubscriptions.RemoveAll(s => s.SubscriptionId == update.update.SubscriptionId);
             }
+
+            // Mark all previous dependency updates that are being updated as Updated. All new dependencies should not be
+            // marked as update as they are new. Any dependency not being updated should not be marked as failed.
+            // At this point, pr.ContainedSubscriptions only containes the subscriptions that were not updated,
+            // so everything that is in the previous list but not in the current list were updated.
+            await AddDependencyFlowEventsAsync(
+                previousSubscriptions.Except(pr.ContainedSubscriptions), 
+                DependencyFlowEventType.Updated, 
+                DependencyFlowEventReason.FailedUpdate, 
+                pr.MergePolicyResult,
+                pr.Url);
+                        
             pr.ContainedSubscriptions.AddRange(requiredUpdates
                 .Where( u => !u.update.IsCoherencyUpdate)
                 .Select(
@@ -905,6 +970,15 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                         SubscriptionId = u.update.SubscriptionId,
                         BuildId = u.update.BuildId
                     }));
+
+            // Mark any new dependency updates as Created. Any subscriptions that are in pr.ContainedSubscriptions
+            // but were not in the previous list of subscripitons are new
+            await AddDependencyFlowEventsAsync(
+                pr.ContainedSubscriptions.Except(previousSubscriptions), 
+                DependencyFlowEventType.Created, 
+                DependencyFlowEventReason.New, 
+                MergePolicyCheckResult.PendingPolicies,
+                pr.Url);
 
             var description = new StringBuilder(pullRequest.Description);
             await CommitUpdatesAsync(requiredUpdates, description, darcRemote, targetRepository, headBranch);

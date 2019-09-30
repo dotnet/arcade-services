@@ -24,7 +24,7 @@ namespace Microsoft.DotNet.Darc
         public static Channel ResolveSingleChannel(IEnumerable<Channel> channels, string desiredChannel)
         {
             // Retrieve the channel by name, matching substring. If more than one channel 
-            // matches, then let the user know they need to be more specific
+            // matches (and none is an exact match), then let the user know they need to be more specific
             IEnumerable<Channel> matchingChannels = channels.Where(c => c.Name.Contains(desiredChannel, StringComparison.OrdinalIgnoreCase));
 
             if (!matchingChannels.Any())
@@ -39,6 +39,15 @@ namespace Microsoft.DotNet.Darc
             }
             else if (matchingChannels.Count() != 1)
             {
+                Channel exactMatchingChannel = matchingChannels
+                    .Where(c => c.Name.Equals(desiredChannel, StringComparison.OrdinalIgnoreCase))
+                    .SingleOrDefault();
+
+                if (exactMatchingChannel != null)
+                {
+                    return exactMatchingChannel;
+                }
+
                 Console.WriteLine($"Multiple channels found with name containing '{desiredChannel}', please select one");
                 foreach (Channel channel in matchingChannels)
                 {

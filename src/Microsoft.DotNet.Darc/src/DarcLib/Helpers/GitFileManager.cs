@@ -37,6 +37,12 @@ namespace Microsoft.DotNet.DarcLib
         private const string AzureStorageProxyFeedPattern =
             @"https://([a-z-]+).azurewebsites.net/container/([^/]+)/sig/\w+/se/([0-9]{4}-[0-9]{2}-[0-9]{2})/darc-(?<type>int)-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)/index.json";
 
+        private const string MaestroBeginComment =
+            "Begin: Package sources managed by Dependency Flow automation. Do not edit the sources below.";
+
+        private const string MaestroEndComment =
+            "End: Package sources managed by Dependency Flow automation. Do not edit the sources above.";
+
         public GitFileManager(IGitRepo gitRepo, ILogger logger)
         {
             _gitClient = gitRepo;
@@ -266,7 +272,7 @@ namespace Microsoft.DotNet.DarcLib
                 Regex.IsMatch(feed, AzureStorageProxyFeedPattern);
         }
 
-        private XmlDocument UpdatePackageSources(XmlDocument nugetConfig, HashSet<string> maestroManagedFeeds)
+        public XmlDocument UpdatePackageSources(XmlDocument nugetConfig, HashSet<string> maestroManagedFeeds)
         {
             // Reconstruct the PackageSources section with the feeds
             XmlNode packageSourcesNode = nugetConfig.SelectSingleNode("//configuration/packageSources");
@@ -275,34 +281,102 @@ namespace Microsoft.DotNet.DarcLib
                 _logger.LogError("Did not find a <packageSources> element in NuGet.config");
                 return nugetConfig;
             }
-            var unmanagedSources = GetPackageSources(nugetConfig, f => !IsMaestroManagedFeed(f));
-            var managedSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
-            packageSourcesNode.RemoveAll();
-            SetElement(nugetConfig, packageSourcesNode, "clear");
 
-            // Maestro managed sources should go first if there are any.
-            if (maestroManagedFeeds.Count > 0)
+            const string addPackageSourcesElementName = "add";
+
+            XmlNode currentNode = packageSourcesNode.FirstChild;
+
+            var managedSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
+
+            // Remove all managed feeds and Maestro's comments
+            while (currentNode != null)
             {
-                packageSourcesNode.AppendChild(nugetConfig.CreateComment(
-                    "Begin: Package sources managed by Dependency Flow automation. Do not edit the sources below."));
-                AppendToPackageSources(nugetConfig, packageSourcesNode, managedSources);
-                packageSourcesNode.AppendChild(nugetConfig.CreateComment(
-                    "End: Package sources managed by Dependency Flow automation. Do not edit the sources above."));
+                if (currentNode.NodeType == XmlNodeType.Element)
+                {
+                    if (currentNode.Name.Equals(addPackageSourcesElementName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Get the feed value
+                        var feedValue = currentNode.Attributes["value"];
+                        if (feedValue == null)
+                        {
+                            // This is unexpected, error
+                            _logger.LogError("NuGet.config 'add' element did not have a feed 'value' attribute.");
+                            return nugetConfig;
+                        }
+
+                        if (IsMaestroManagedFeed(feedValue.Value))
+                        {
+                            currentNode = RemoveCurrentNode(currentNode);
+                            continue;
+                        }
+                    }
+                    // Remove the clear element wherever it is.
+                    // It will be added when we add the maestro managed sources.
+                    else if (currentNode.Name.Equals(VersionFiles.ClearElement, StringComparison.OrdinalIgnoreCase))
+                    {
+                        currentNode = RemoveCurrentNode(currentNode);
+                        continue;
+                    }
+                }
+                else if (currentNode.NodeType == XmlNodeType.Comment)
+                {
+                    if (currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase) 
+                        || currentNode.Value.Equals(MaestroEndComment, StringComparison.OrdinalIgnoreCase))
+                    {
+                        currentNode = RemoveCurrentNode(currentNode);
+                        continue;
+                    }
+                }
+
+                currentNode = currentNode.NextSibling;
             }
 
-            AppendToPackageSources(nugetConfig, packageSourcesNode, unmanagedSources);
+            InsertManagedPackagesBlock(nugetConfig, packageSourcesNode, managedSources);
 
             return nugetConfig;
         }
 
-        private static void AppendToPackageSources(XmlDocument nugetConfig, XmlNode packageSourcesNode, List<(string key, string feed)> sources)
+        /// <summary>
+        /// Remove the current node and return the next node that should be walked
+        /// </summary>
+        /// <param name="toRemove">Node to remove</param>
+        /// <returns>Next node to walk</returns>
+        private static XmlNode RemoveCurrentNode(XmlNode toRemove)
         {
-            foreach ((string key, string feed) in sources)
+            var nextNodeToWalk = toRemove.NextSibling;
+            toRemove.ParentNode.RemoveChild(toRemove);
+            return nextNodeToWalk;
+        }
+
+        // Insert the following structure at the beginning of the nodes pointed by `packageSourcesNode`.
+        // <clear/>
+        // <MaestroBeginComment />
+        // managedSources*
+        // <MaestroEndComment />
+        private static void InsertManagedPackagesBlock(XmlDocument nugetConfig, XmlNode packageSourcesNode, List<(string key, string feed)> managedSources)
+        {
+            var clearNode = nugetConfig.CreateElement(VersionFiles.ClearElement);
+            packageSourcesNode.PrependChild(clearNode);
+
+            if (managedSources.Count <= 0)
             {
-                XmlNode addNode = SetElement(nugetConfig, packageSourcesNode, VersionFiles.AddElement, replace: false);
-                SetAttribute(nugetConfig, addNode, VersionFiles.KeyAttributeName, key);
-                SetAttribute(nugetConfig, addNode, VersionFiles.ValueAttributeName, feed);
+                return;
             }
+
+            packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroEndComment), clearNode);
+
+            XmlNode prevNode = packageSourcesNode.FirstChild;
+            foreach ((string key, string feed) in managedSources)
+            {
+                var newElement = nugetConfig.CreateElement(VersionFiles.AddElement);
+
+                SetAttribute(nugetConfig, newElement, VersionFiles.KeyAttributeName, key);
+                SetAttribute(nugetConfig, newElement, VersionFiles.ValueAttributeName, feed);
+
+                prevNode = packageSourcesNode.InsertAfter(newElement, prevNode);
+            }
+
+            packageSourcesNode.InsertAfter(nugetConfig.CreateComment(MaestroBeginComment), packageSourcesNode.FirstChild);
         }
 
         public async Task AddDependencyToVersionDetailsAsync(
@@ -472,12 +546,12 @@ namespace Microsoft.DotNet.DarcLib
                 $"Dependency '{dependencyName}' with version '{version}' successfully added to global.json");
         }
 
-        private XmlDocument ReadXmlFile(string fileContent)
+        public static XmlDocument ReadXmlFile(string fileContent)
         {
             return GetXmlDocument(fileContent);
         }
 
-        private XmlDocument GetXmlDocument(string fileContent)
+        public static XmlDocument GetXmlDocument(string fileContent)
         {
             XmlDocument document = new XmlDocument
             {
@@ -567,7 +641,7 @@ namespace Microsoft.DotNet.DarcLib
 
             foreach (JProperty property in token.Children<JProperty>())
             {
-                if (property.Name == versionElementName)
+                if (property.Name.Equals(versionElementName, StringComparison.OrdinalIgnoreCase))
                 {
                     property.Value = new JValue(itemToUpdate.Version);
                     break;
