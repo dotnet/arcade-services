@@ -80,7 +80,23 @@ namespace Microsoft.DotNet.Darc.Operations
                     foundMatching = true;
 
                     Console.WriteLine($"{asset.Name} @ {asset.Version}");
-                    Console.WriteLine(UxHelpers.GetBuildDescription(buildInfo));
+                    Console.Write(UxHelpers.GetBuildDescription(buildInfo));
+                    Console.WriteLine("Locations:");
+                    if (asset.Locations.Any())
+                    {
+                        foreach (var location in asset.Locations)
+                        {
+                            if (location.IsValid)
+                            {
+                                Console.WriteLine($"- {location.Location} ({location.Type})");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("- None");
+                    }
+                    Console.WriteLine();
                 }
 
                 if (!foundMatching)
