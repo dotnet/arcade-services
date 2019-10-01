@@ -42,7 +42,7 @@ namespace Microsoft.DotNet.DarcLib
         const string refsHeadsPrefix = "refs/heads/";
         public static string NormalizeBranchName(string branch)
         {
-            if (branch.StartsWith(refsHeadsPrefix))
+            if (branch != null && branch.StartsWith(refsHeadsPrefix))
             {
                 return branch.Substring(refsHeadsPrefix.Length);
             }
