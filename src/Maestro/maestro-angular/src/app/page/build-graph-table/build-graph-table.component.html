@@ -67,6 +67,7 @@
     <th>Repository</th>
     <th>Date Produced</th>
     <th>Build Number</th>
+    <th>Staleness</th>
     <th>Commit</th>
     <th>Link</th>
   </thead>
@@ -110,6 +111,14 @@
           [title]="!isCoherent(node) ? 'A newer build of this same repository is in the tree' : (hasIncoherentDependencies(node) ? 'This build relies on dependencies that are incoherent' : '')" 
           [style.visibility]="(!isCoherent(node) || hasIncoherentDependencies(node)) ? 'visible' : 'hidden'"></fa-icon>
         {{node.build.azureDevOpsBuildNumber}}
+      </td>
+      <td>
+        <span [style.display]="node.build.staleness == '0' ? 'inline' : 'none'">
+          latest
+        </span>
+        <div [style.display]="node.build.staleness != '0' ? 'inline' : 'none'">
+          {{node.build.staleness}} behind
+        </div>
       </td>
       <td class="text-monospace">
         <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 
