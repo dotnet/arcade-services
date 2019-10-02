@@ -29,7 +29,7 @@ namespace Microsoft.DotNet.Metrics
         {
             if (dimensions?.Count > 9)
             {
-                throw new ArgumentException("Maximum of 4 dimensions supported", nameof(dimensions));
+                throw new ArgumentException("Maximum of 9 dimensions supported", nameof(dimensions));
             }
 
             if (dimensions == null || dimensions.Count == 0)
