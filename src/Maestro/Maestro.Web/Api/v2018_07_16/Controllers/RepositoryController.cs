@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.ServiceFabric.Actors;
 using System;
@@ -63,7 +64,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             if (!string.IsNullOrEmpty(branch))
             {
-                query = query.Where(r => r.BranchName == branch);
+                query = query.Where(r => r.BranchName == IGitRepoExtension.NormalizeBranchName(branch));
             }
 
             return Ok(query.AsEnumerable().Select(r => new RepositoryBranch(r)).ToList());
