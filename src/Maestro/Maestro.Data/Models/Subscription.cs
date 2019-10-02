@@ -14,7 +14,6 @@ namespace Maestro.Data.Models
     {
         private string _sourceRepository;
         private string _targetRepository;
-        private string _branch;
 
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -50,17 +49,7 @@ namespace Maestro.Data.Models
             }
         }
 
-        public string TargetBranch
-        {
-            get
-            {
-                return IGitRepoExtension.NormalizeBranchName(_branch);
-            }
-            set
-            {
-                _branch = IGitRepoExtension.NormalizeBranchName(value);
-            }
-        }
+        public string TargetBranch { get; set; }
 
         [Column("Policy")]
         public string PolicyString { get; set; }

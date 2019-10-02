@@ -38,6 +38,7 @@ namespace Microsoft.DotNet.DarcLib
             string decodedContent = GetDecodedContent(gitRepo, content);
             return Encoding.UTF8.GetBytes(decodedContent);
         }
+<<<<<<< HEAD
 
         const string refsHeadsPrefix = "refs/heads/";
         public static string NormalizeBranchName(string branch)
@@ -49,4 +50,7 @@ namespace Microsoft.DotNet.DarcLib
             return branch;
         }
 }
+=======
+    }
+>>>>>>> parent of 8d5521f... Normalize branch names by removing refs/heads (#648)
 }
