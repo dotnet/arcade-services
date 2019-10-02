@@ -4,14 +4,16 @@ using Maestro.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Maestro.Data.Migrations
 {
     [DbContext(typeof(BuildAssetRegistryContext))]
-    partial class BuildAssetRegistryContextModelSnapshot : ModelSnapshot
+    [Migration("20190918164228_DependencyFlowEventTableMakeChannelIdNullable")]
+    partial class DependencyFlowEventTableMakeChannelIdNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -274,8 +276,6 @@ namespace Maestro.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-                    b.Property<int>("BuildId");
-
                     b.Property<int?>("ChannelId");
 
                     b.Property<string>("Event");
@@ -292,11 +292,9 @@ namespace Maestro.Data.Migrations
 
                     b.Property<DateTimeOffset>("Timestamp");
 
-                    b.Property<string>("Url");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("BuildId");
+                    b.HasIndex("ChannelId");
 
                     b.ToTable("DependencyFlowEvents");
                 });
@@ -695,10 +693,9 @@ namespace Maestro.Data.Migrations
 
             modelBuilder.Entity("Maestro.Data.Models.DependencyFlowEvent", b =>
                 {
-                    b.HasOne("Maestro.Data.Models.Build", "Build")
+                    b.HasOne("Maestro.Data.Models.Channel", "Channel")
                         .WithMany()
-                        .HasForeignKey("BuildId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .HasForeignKey("ChannelId");
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.RepositoryBranch", b =>

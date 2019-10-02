@@ -219,7 +219,9 @@ function Darc-Delete-Channel($channelName) {
 function Darc-Add-Default-Channel($channelName, $repoUri, $branch) {
     $darcParams = @( "add-default-channel", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch" )
     Darc-Command -darcParams $darcParams
-    $global:defaultChannelsToDelete += @{ channel = $channelName; repo = $repoUri; branch = $branch }
+    # We sometimes call add-default-channel with a refs/heads/ prefix, which
+    # will get stripped away by the DB.
+    $global:defaultChannelsToDelete += @{ channel = $channelName; repo = $repoUri; branch = $branch.ToString().Replace("refs/heads/", "") }
 }
 
 function Darc-Delete-Default-Channel($channelName, $repoUri, $branch) {
@@ -532,7 +534,20 @@ function Compare-Array-Output($expected, $actual) {
 function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $targetRepoName, $targetBranch, $expectedDependencies) {
     $pullRequestBaseBranch = $pullRequest.sourceRefName.Replace('refs/heads/','')
 
-    if ($pullRequest.title -ne $expectedPRTitle) {
+    # Depending on how quickly each dependency update comes through,
+    # we might have to wait for the title to be updated correctly for batched Subscriptions
+    $tries = 3
+    $validTitle = $false;
+    while ($tries-- -gt 0 -and (-not $validTitle)) {
+        Write-Host "Validating PR title. $tries tries remaining..."
+        if ($pullRequest.title -eq $expectedPRTitle) {
+            $validTitle = $true
+            break
+        }
+        Start-Sleep 30
+    }
+
+    if (-not $validTitle) {
         throw "Expected PR title to be $expectedPRTitle, was $($pullrequest.title)"
     }
 
@@ -779,7 +794,21 @@ function Check-Github-PullRequest-Created($targetRepoName, $targetBranch) {
 
 function Validate-Github-PullRequest-Contents($pullRequest, $expectedPRTitle, $targetRepoName, $targetBranch, $expectedDependencies) {
     $pullRequestBaseBranch = $pullRequest.head.ref
-    if ($pullRequest.title -ne $expectedPRTitle) {
+
+    # Depending on how quickly each dependency update comes through,
+    # we might have to wait for the title to be updated correctly for batched Subscriptions
+    $tries = 3
+    $validTitle = $false
+    while ($tries-- -gt 0) {
+        Write-Host "Validating PR title. $tries tries remaining..."
+        if ($pullRequest.title -eq $expectedPRTitle) {
+            $validTitle = $true
+            break
+        }
+        Start-Sleep 30
+    }
+
+    if (-not $validTitle) {
         throw "Expected PR title to be $expectedPRTitle, was $($pullrequest.title)"
     }
 
