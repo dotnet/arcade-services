@@ -219,9 +219,7 @@ function Darc-Delete-Channel($channelName) {
 function Darc-Add-Default-Channel($channelName, $repoUri, $branch) {
     $darcParams = @( "add-default-channel", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch" )
     Darc-Command -darcParams $darcParams
-    # We sometimes call add-default-channel with a refs/heads/ prefix, which
-    # will get stripped away by the DB.
-    $global:defaultChannelsToDelete += @{ channel = $channelName; repo = $repoUri; branch = $branch.ToString().Replace("refs/heads/", "") }
+    $global:defaultChannelsToDelete += @{ channel = $channelName; repo = $repoUri; branch = $branch }
 }
 
 function Darc-Delete-Default-Channel($channelName, $repoUri, $branch) {

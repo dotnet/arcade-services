@@ -239,7 +239,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-            if (body == null)
+            if (body == default)
             {
                 throw new ArgumentNullException(nameof(body));
             }
@@ -268,7 +268,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 _req = new HttpRequestMessage(HttpMethod.Post, _url);
 
                 string _requestContent = null;
-                if (body != null)
+                if (body != default)
                 {
                     _requestContent = Client.Serialize(body);
                     _req.Content = new StringContent(_requestContent, Encoding.UTF8)
