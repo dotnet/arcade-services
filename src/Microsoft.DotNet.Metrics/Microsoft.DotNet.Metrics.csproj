@@ -2,12 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
-    <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
-    <SignAssembly>false</SignAssembly>
     <LangVersion>latest</LangVersion>
-    <RootNamespace>Microsoft.DotNet.Metrics</RootNamespace>
-    <AssemblyName>Microsoft.DotNet.Metrics</AssemblyName>
     <IsPackable>true</IsPackable>
     <IsShipping>false</IsShipping>
   </PropertyGroup>
