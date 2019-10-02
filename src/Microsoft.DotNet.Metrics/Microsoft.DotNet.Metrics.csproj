@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -9,6 +9,7 @@
     <RootNamespace>Microsoft.DotNet.Metrics</RootNamespace>
     <AssemblyName>Microsoft.DotNet.Metrics</AssemblyName>
     <IsPackable>true</IsPackable>
+    <IsShipping>false</IsShipping>
   </PropertyGroup>
 
   <ItemGroup>
