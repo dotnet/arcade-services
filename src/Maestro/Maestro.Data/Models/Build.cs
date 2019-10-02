@@ -150,7 +150,5 @@ namespace Maestro.Data.Models
         public int DependentBuildId { get; set; }
         public Build DependentBuild { get; set; }
         public bool IsProduct { get; set; }
-        [NotMapped]
-        public int Staleness { get; set; }
     }
 }

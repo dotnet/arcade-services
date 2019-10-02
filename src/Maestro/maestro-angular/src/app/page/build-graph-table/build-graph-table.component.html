@@ -113,12 +113,12 @@
         {{node.build.azureDevOpsBuildNumber}}
       </td>
       <td>
-        <span [style.display]="node.build.staleness == '0' ? 'inline' : 'none'">
+        <span *ngIf="node.build.staleness == '0'">
           latest
         </span>
-        <div [style.display]="node.build.staleness != '0' ? 'inline' : 'none'">
+        <span *ngIf="node.build.staleness != '0'">
           {{node.build.staleness}} behind
-        </div>
+        </span>
       </td>
       <td class="text-monospace">
         <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 
