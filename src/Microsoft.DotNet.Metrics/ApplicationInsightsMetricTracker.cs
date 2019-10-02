@@ -29,7 +29,7 @@ namespace Microsoft.DotNet.Metrics
         {
             if (dimensions?.Count > 9)
             {
-                throw new ArgumentException("Maximum of 4 dimensions supported", nameof(dimensions));
+                throw new ArgumentException("Maximum of 9 dimensions supported", nameof(dimensions));
             }
 
             if (dimensions == null || dimensions.Count == 0)
@@ -45,7 +45,7 @@ namespace Microsoft.DotNet.Metrics
             // lead to a hard to understand interface, so I'm not doing that right now
             List<KeyValuePair<string, string>> pairs = dimensions.OrderBy(d => d.Key).ToList();
 
-            // Yes, this long switch is necessary, since each number of dimensions is it's own overload
+            // Yes, this long switch is necessary, since each number of dimensions is its own overload
             switch (pairs.Count)
             {
                 case 1:
