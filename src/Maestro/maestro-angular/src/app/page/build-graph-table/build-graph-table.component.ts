@@ -106,9 +106,7 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
     node.hasIncoherentDependenciesIncludingToolsets = hasIncoherentDependencies(node.build, result, true);
 
     // If node is incoherent with product check to make sure there aren't any cycles in the dependencies
-    let cycles = hasCycles(node.build, result);
-    node.hasCycles = cycles[0];
-    node.cyclePath = cycles[1];
+    [node.hasCycles, node.cyclePath] = hasCycles(node.build, result);
   }
 
   result = result.reverse();
@@ -199,10 +197,10 @@ function hasCycles(build:Build, buildData: BuildData[]): [boolean,string?] {
   // a cycle with the current repository
   if (currentBuildData && repository)
   {
-    let dependencyCycle = dependencyHasCycle(currentBuildData,buildData, repository)
-    if (dependencyCycle[0])
+    let [hasCycle, cyclePath] = dependencyHasCycle(currentBuildData,buildData, repository)
+    if (hasCycle)
     {
-      let newCycle = [getRepo(currentBuildData.build), dependencyCycle[1]];
+      let newCycle = [getRepo(currentBuildData.build), cyclePath];
       return [true, newCycle.join('->\n')];
     }
     return dependencyHasCycle(currentBuildData, buildData, repository);
@@ -229,10 +227,10 @@ function dependencyHasCycle(currentBuildData: BuildData, buildData:BuildData[], 
           
           // Check the dependencies of the current dependency to see if they result in a cycle.
           // Break on the first cycle found
-          let dependencyCycle = dependencyHasCycle(depBuildData,buildData, repository)
-          if (dependencyCycle[0])
+          let [hasCycle, cyclePath] = dependencyHasCycle(depBuildData,buildData, repository)
+          if (hasCycle)
           {
-            let newCycle = [getRepo(depBuildData.build), dependencyCycle[1]];
+            let newCycle = [getRepo(depBuildData.build), cyclePath];
             return [true, newCycle.join('->\n')];
           }
         }
