@@ -55,7 +55,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             {
                 // Normalize the branch name to not include refs/heads
                 string normalizedBranchName = IGitRepoExtension.NormalizeBranchName(branch);
-                query = query.Where(dc => dc.Branch == normalizedBranch);
+                query = query.Where(dc => dc.Branch == normalizedBranchName);
             }
 
             if (channelId.HasValue)
