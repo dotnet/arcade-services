@@ -246,7 +246,7 @@ export class BuildComponent implements OnInit, OnChanges {
           )
         }),
       )),
-      tap((subscriptions) => console.log("getting subscriptions"));
+      tap(() => console.log("getting subscriptions"));
   }
 
   public ngOnChanges() {
