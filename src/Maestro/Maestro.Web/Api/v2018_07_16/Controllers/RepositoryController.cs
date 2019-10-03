@@ -64,7 +64,8 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             if (!string.IsNullOrEmpty(branch))
             {
-                query = query.Where(r => r.BranchName == IGitRepoExtension.NormalizeBranchName(branch));
+                string normalizedBranchName = IGitRepoExtension.NormalizeBranchName(branch);
+                query = query.Where(r => r.BranchName == normalizedBranchName);
             }
 
             return Ok(query.AsEnumerable().Select(r => new RepositoryBranch(r)).ToList());
