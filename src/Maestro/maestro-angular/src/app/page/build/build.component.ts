@@ -1,9 +1,9 @@
 import { Component, OnInit, OnChanges } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
-import { map, shareReplay, switchMap, filter, distinctUntilChanged, tap } from 'rxjs/operators';
+import { map, shareReplay, switchMap, filter, distinctUntilChanged, tap, combineLatest } from 'rxjs/operators';
 import { isAfter, compareAsc, parseISO } from "date-fns";
 
-import { BuildGraph, Build } from 'src/maestro-client/models';
+import { BuildGraph, Build, Subscription } from 'src/maestro-client/models';
 import { Observable, of, timer, OperatorFunction } from 'rxjs';
 import { BuildStatusService } from 'src/app/services/build-status.service';
 import { BuildStatus } from 'src/app/model/build-status';
@@ -12,6 +12,7 @@ import { tapLog } from 'src/helpers';
 import { BuildService } from 'src/app/services/build.service';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { Loading, WrappedError } from 'src/stateful/helpers';
+import { MaestroService } from 'src/maestro-client/maestro';
 
 interface AzDevBuildInfo {
   isMostRecent: boolean;
@@ -44,7 +45,7 @@ const elementInStyle = style({
   ],
 })
 export class BuildComponent implements OnInit, OnChanges {
-  public constructor(private route: ActivatedRoute, private buildService: BuildService, private buildStatusService: BuildStatusService) { }
+  public constructor(private route: ActivatedRoute, private buildService: BuildService, private buildStatusService: BuildStatusService, private maestroService: MaestroService) { }
 
   public graph$!: Observable<StatefulResult<BuildGraph>>;
   public build$!: Observable<StatefulResult<Build>>;
@@ -59,12 +60,15 @@ export class BuildComponent implements OnInit, OnChanges {
   public toastDate?: Date;
   public acceptToast?: () => void;
 
+  public includeSubToolsets: boolean = false;
+  public subscriptionsList$!: Observable<StatefulResult<Subscription[]>>;
+
   public view$?: Observable<string>;
 
-  private toastNewBuild(): OperatorFunction<number,number> {
+  private toastNewBuild(): OperatorFunction<number, number> {
     const self = this;
     let haveBuild = false;
-    return function(source: Observable<number>) {
+    return function (source: Observable<number>) {
       return new Observable<number>(observer => {
         const sourceSub = source.subscribe({
           next(buildId) {
@@ -114,7 +118,7 @@ export class BuildComponent implements OnInit, OnChanges {
         if (tabName == null) {
           throw new Error("tabName was null");
         }
-        return {buildId, channelId, repository, tabName};
+        return { buildId, channelId, repository, tabName };
       }),
       tap(v => {
         console.log("Params: ", v);
@@ -138,10 +142,10 @@ export class BuildComponent implements OnInit, OnChanges {
     } | undefined = undefined;
     const buildId$ = params$.pipe(
       filter(params => {
-        if(prevParams) {
+        if (prevParams) {
           if (prevParams.buildId === params.buildId &&
-              prevParams.channelId === params.channelId &&
-              prevParams.repository === params.repository) {
+            prevParams.channelId === params.channelId &&
+            prevParams.repository === params.repository) {
             // If the important parameters haven't changed don't reload the build
             return false;
           }
@@ -210,7 +214,7 @@ export class BuildComponent implements OnInit, OnChanges {
             return true;
           }
           // emit only the first "Loading" instance so refreshes don't cause the loading spinner to show up
-          if (!emittedLoading)  {
+          if (!emittedLoading) {
             emittedLoading = true;
             return true;
           }
@@ -218,6 +222,31 @@ export class BuildComponent implements OnInit, OnChanges {
         }),
       ),
     );
+
+    this.subscriptionsList$ = this.build$.pipe(
+      statefulPipe(
+        combineLatest(params$),
+        statefulSwitchMap(([build, params]) => {
+          const currentChannelId = +params.channelId;
+          return this.maestroService.subscriptions.listSubscriptionsAsync({
+            channelId: currentChannelId,
+            targetRepository: this.getRepo(build),
+          }).pipe(
+            map(subs => {
+              const result: Record<string, Subscription[]> = {};
+              for (let sub of subs) {
+                const key = sub.targetBranch || "Unknown Branch";
+                if (!result[key]) {
+                  result[key] = [];
+                }
+                result[key].push(sub);
+              }
+              return result;
+            }),
+          )
+        }),
+      )),
+      tap((subscriptions) => console.log("getting subscriptions"));
   }
 
   public ngOnChanges() {
@@ -225,9 +254,9 @@ export class BuildComponent implements OnInit, OnChanges {
 
   public haveAzDevInfo(build: Build): boolean {
     return !!build.azureDevOpsAccount &&
-           !!build.azureDevOpsProject &&
-           !!build.azureDevOpsBuildDefinitionId &&
-           !!build.azureDevOpsBranch;
+      !!build.azureDevOpsProject &&
+      !!build.azureDevOpsBuildDefinitionId &&
+      !!build.azureDevOpsBranch;
   }
 
 

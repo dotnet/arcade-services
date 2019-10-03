@@ -1,0 +1,26 @@
+<ul class="nav nav-tabs">
+  <ng-container *ngFor="let item of subscriptionsList | keyvalue">
+    <li class='nav-item' >
+      <a [ngClass]="{ active: item.key===currentTab, 'nav-link': true}" style="cursor: pointer;"
+        (click)="currentTab=item.key">{{item.key}}</a>
+    </li>
+  </ng-container>
+</ul>
+<table class="table table-sm table-hover mb-0" style="white-space: nowrap;">
+  <thead>
+    <th>Source Repository</th>
+    <th>Enabled</th>
+  </thead>
+  <tbody>
+    <ng-container *ngFor="let item of subscriptionsList[currentTab]">
+      <tr>
+        <td>
+          {{item.sourceRepository}}
+        </td>
+        <td>
+          {{item.enabled}}
+        </td>
+      </tr>
+    </ng-container>
+  </tbody>
+</table>
