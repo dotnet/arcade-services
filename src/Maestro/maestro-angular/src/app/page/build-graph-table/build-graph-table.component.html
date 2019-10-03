@@ -74,6 +74,7 @@
     </th>
     <th>Repository</th>
     <th>Date Produced</th>
+    <th></th>
     <th>Build Number</th>
     <th>Commit</th>
     <th>Link</th>
@@ -114,20 +115,19 @@
         <mc-time-ago [value]="node.build.dateProduced"></mc-time-ago>
       </td>
       <td>
-        <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 
-          [title]="!isCoherent(node) ? 'A newer build of this same repository is in the tree' : (hasIncoherentDependencies(node) ? 'This build relies on dependencies that are incoherent' : '')" 
-          [style.visibility]="(!isCoherent(node) || hasIncoherentDependencies(node)) ? 'visible' : 'hidden'"></fa-icon>
         <fa-icon [icon]="hasCycle(node) ? 'redo' : 'exclamation-triangle'" 
           [title]="hasCycle(node) ? 'Build contains a dependency cycle: \n' + cyclePath(node) : ''" 
           [style.visibility]="hasCycle(node) ? 'visible' : 'hidden'"></fa-icon>
+      </td>
+      <td>
+        <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 
+          [title]="!isCoherent(node) ? 'A newer build of this same repository is in the tree' : (hasIncoherentDependencies(node) ? 'This build relies on dependencies that are incoherent' : '')" 
+          [style.visibility]="(!isCoherent(node) || hasIncoherentDependencies(node)) ? 'visible' : 'hidden'"></fa-icon>
         {{node.build.azureDevOpsBuildNumber}}
       </td>
       <td class="text-monospace">
         <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 
         [style.visibility]="(!isCoherent(node) || hasIncoherentDependencies(node)) ? 'visible' : 'hidden'"></fa-icon>
-        <fa-icon [icon]="hasCycle(node) ? 'redo' : 'exclamation-triangle'" 
-          [title]="hasCycle(node) ? 'Build contains a dependency cycle: \n' + cyclePath(node) : ''" 
-          [style.visibility]="hasCycle(node) ? 'visible' : 'hidden'"></fa-icon>
         <a *ngIf="(node.build | commitLink) as link; else noCommitLink" [href]="link" target="_blank">
           {{node.build.commit | slice:0:7}}
           <fa-icon icon="external-link-alt"></fa-icon>
