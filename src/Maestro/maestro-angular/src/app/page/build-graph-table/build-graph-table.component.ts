@@ -201,9 +201,9 @@ function hasCycles(build:Build, buildData: BuildData[]): [boolean,string?] {
     if (hasCycle)
     {
       let newCycle = [getRepo(currentBuildData.build), cyclePath];
-      return [true, newCycle.join('->\n')];
+      cyclePath = newCycle.join('->\n');
     }
-    return dependencyHasCycle(currentBuildData, buildData, repository);
+    return [hasCycle, cyclePath]
   }
   return [false, undefined];
 }
@@ -385,14 +385,6 @@ export class BuildGraphTableComponent implements OnChanges {
       return node.coherent.withAll;
     }
     return node.coherent.withProduct;
-  }
-
-  public hasCycle(node: BuildData) {
-    return node.hasCycles;
-  }
-
-  public cyclePath(node:BuildData) {
-    return node.cyclePath;
   }
 
   public hasIncoherentDependencies(node: BuildData) {

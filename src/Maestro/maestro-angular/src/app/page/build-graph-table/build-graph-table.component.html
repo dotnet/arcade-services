@@ -115,9 +115,9 @@
         <mc-time-ago [value]="node.build.dateProduced"></mc-time-ago>
       </td>
       <td>
-        <fa-icon [icon]="hasCycle(node) ? 'redo' : 'exclamation-triangle'" 
-          [title]="hasCycle(node) ? 'Build contains a dependency cycle: \n' + cyclePath(node) : ''" 
-          [style.visibility]="hasCycle(node) ? 'visible' : 'hidden'"></fa-icon>
+        <fa-icon [icon]="node.hasCycles ? 'redo' : 'exclamation-triangle'" 
+          [title]="node.hasCycles ? 'Build contains a dependency cycle: \n' + node.cyclePath : ''" 
+          [style.visibility]="node.hasCycles ? 'visible' : 'hidden'"></fa-icon>
       </td>
       <td>
         <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 
