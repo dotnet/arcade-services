@@ -117,6 +117,9 @@ namespace Maestro.Data.Models
         public List<BuildChannel> BuildChannels { get; set; }
 
         [NotMapped]
+        public int Staleness { get; set; }
+
+        [NotMapped]
         public List<BuildDependency> DependentBuildIds { get; set; }
     }
 
