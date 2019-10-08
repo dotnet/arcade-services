@@ -38,14 +38,14 @@ namespace Microsoft.DotNet.Darc.Operations
                 defaultChannels.Add(
                     new DefaultChannel(0, "https://github.com/dotnet/arcade", true)
                     {
-                        Branch = "master",
+                        Branch = "refs/heads/master",
                         Channel = await barOnlyRemote.GetChannelAsync(".NET Tools - Latest")
                     }
                 );
                 defaultChannels.Add(
                     new DefaultChannel(0, "https://github.com/dotnet/arcade", true)
                     {
-                        Branch = "release/3.x",
+                        Branch = "refs/heads/release/3.x",
                         Channel = await barOnlyRemote.GetChannelAsync(".NET 3 Tools")
                     }
                 );

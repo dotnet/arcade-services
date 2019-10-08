@@ -11,7 +11,6 @@ $testChannel1Name = Get-Random
 $testChannel2Name = Get-Random
 $repoName = "maestro-test1"
 $branchName = Get-Random
-$branchNameWithRefsHeads = "refs/heads/$branchName"
 $buildNumber = Get-Random
 $commit = Get-Random
 $assets = @(
@@ -47,12 +46,9 @@ try {
     # Adding default channels'
     Write-Host "Creating default channels"
     try { Darc-Delete-Default-Channel -channelName $testChannel1Name -repoUri $repoUri -branch $branchName } catch {}
-    try { Darc-Delete-Default-Channel -channelName $testChannel2Name -repoUri $repoUri -branch $branchNameWithRefsHeads } catch {}
+    try { Darc-Delete-Default-Channel -channelName $testChannel2Name -repoUri $repoUri -branch $branchName } catch {}
     Darc-Add-Default-Channel -channelName $testChannel1Name -repoUri $repoUri -branch $branchName
-    Darc-Add-Default-Channel -channelName $testChannel2Name -repoUri $repoUri -branch $branchNameWithRefsHeads
-
-    # Retrieve the default channel and ensure that the refs/heads section was removed
-
+    Darc-Add-Default-Channel -channelName $testChannel2Name -repoUri $repoUri -branch $branchName
 
     Write-Host "Set up build for intake into target repository"
 
@@ -68,9 +64,6 @@ try {
     if ($buildInfo.channels.length -ne 2) {
         throw "Expected to see build in 2 channels, got ${$buildInfo.channels.length}"
     }
-    if ($buildInfo.gitHubBranch -ne $branchName){
-        throw "Expected to see build branch was $branchName but was ${$buildInfo.gitHubBranch}"
-    }
     $success = ((($buildInfo.channels[0].name -eq $testChannel1Name) -or ($buildInfo.channels[1].name -eq $testChannel1Name)) `
         -and (($buildInfo.channels[0].name -eq $testChannel2Name -or $buildInfo.channels[1].name -eq $testChannel2Name)))
 
@@ -83,7 +76,7 @@ try {
     Darc-Disable-Default-Channel -channelName $testChannel1Name -repoUri $repoUri -branch $branchName
 
     # Create a build for the source repo
-    $buildId = New-Build -repository $repoUri -branch $branchNameWithRefsHeads -commit $commit -buildNumber $buildNumber -assets $assets
+    $buildId = New-Build -repository $repoUri -branch $branchName -commit $commit -buildNumber $buildNumber -assets $assets
 
     # Look up the build and ensure that the channels were added
 
