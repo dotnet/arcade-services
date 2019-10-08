@@ -96,7 +96,7 @@ namespace Microsoft.DotNet.Maestro.Client
             var _path = "/api/pipelines";
 
             var _query = new QueryBuilder();
-            if (pipelineIdentifier != default)
+            if (pipelineIdentifier != default(int))
             {
                 _query.Add("pipelineIdentifier", Client.Serialize(pipelineIdentifier));
             }
@@ -193,7 +193,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw new ArgumentNullException(nameof(organization));
             }
 
-            if (pipelineIdentifier == default)
+            if (pipelineIdentifier == default(int))
             {
                 throw new ArgumentNullException(nameof(pipelineIdentifier));
             }
@@ -208,7 +208,7 @@ namespace Microsoft.DotNet.Maestro.Client
             var _path = "/api/pipelines";
 
             var _query = new QueryBuilder();
-            if (pipelineIdentifier != default)
+            if (pipelineIdentifier != default(int))
             {
                 _query.Add("pipelineIdentifier", Client.Serialize(pipelineIdentifier));
             }
@@ -294,7 +294,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-            if (id == default)
+            if (id == default(int))
             {
                 throw new ArgumentNullException(nameof(id));
             }
@@ -379,7 +379,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-            if (id == default)
+            if (id == default(int))
             {
                 throw new ArgumentNullException(nameof(id));
             }
