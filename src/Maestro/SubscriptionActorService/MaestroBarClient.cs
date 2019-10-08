@@ -217,7 +217,7 @@ namespace SubscriptionActorService
 
         private Build ToClientModelBuild(Maestro.Data.Models.Build other)
         {
-            return new Build(other.Id, other.DateProduced, other.PublishUsingPipelines, other.Commit,
+            return new Build(other.Id, other.DateProduced, other.Staleness, other.PublishUsingPipelines, other.Commit,
                 null, other.Assets?.Select(a => ToClientModelAsset(a)).ToImmutableList(), null)
             {
                 AzureDevOpsBranch = other.AzureDevOpsBranch,
