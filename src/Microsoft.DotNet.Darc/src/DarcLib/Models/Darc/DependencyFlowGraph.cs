@@ -170,34 +170,19 @@ namespace Microsoft.DotNet.DarcLib
             return new DependencyFlowGraph(nodes.Select(kv => kv.Value).ToList(), edges);
         }
 
-        private static string NormalizeBranch(string branch)
-        {
-            // Normalize branch names. Branch names may have "refs/heads" prepended.
-            // Remove if they do.
-            const string refsHeadsPrefix = "refs/heads/";
-            string normalizedBranch = branch;
-            if (normalizedBranch.StartsWith(refsHeadsPrefix))
-            {
-                normalizedBranch = normalizedBranch.Substring(refsHeadsPrefix.Length);
-            }
-
-            return normalizedBranch;
-        }
-
         private static DependencyFlowNode GetOrCreateNode(
             string repo,
             string branch,
             Dictionary<string, DependencyFlowNode> nodes)
         {
-            string normalizedBranch = NormalizeBranch(branch);
-            string key = $"{repo}@{normalizedBranch}";
+            string key = $"{repo}@{branch}";
             if (nodes.TryGetValue(key, out DependencyFlowNode existingNode))
             {
                 return existingNode;
             }
             else
             {
-                DependencyFlowNode newNode = new DependencyFlowNode(repo, normalizedBranch);
+                DependencyFlowNode newNode = new DependencyFlowNode(repo, branch);
                 nodes.Add(key, newNode);
                 return newNode;
             }

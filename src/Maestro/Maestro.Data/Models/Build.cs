@@ -16,6 +16,8 @@ namespace Maestro.Data.Models
     {
         private string _azureDevOpsRepository;
         private string _gitHubRepository;
+        private string _azureDevOpsBranch;
+        private string _githubBranch;
 
         static Build()
         {
@@ -68,8 +70,19 @@ namespace Maestro.Data.Models
             }
         }
 
-        public string AzureDevOpsBranch { get; set; }
-      
+        public string AzureDevOpsBranch
+        {
+            get
+            {
+                return AzureDevOpsClient.NormalizeUrl(_azureDevOpsBranch);
+            }
+
+            set
+            {
+                _azureDevOpsBranch = AzureDevOpsClient.NormalizeUrl(value);
+            }
+        }
+
         public string GitHubRepository
         {
             get
@@ -83,7 +96,17 @@ namespace Maestro.Data.Models
             }
         }
 
-        public string GitHubBranch { get; set; }
+        public string GitHubBranch
+        {
+            get
+            {
+                return IGitRepoExtension.NormalizeBranchName(_githubBranch);
+            }
+            set
+            {
+                _githubBranch = IGitRepoExtension.NormalizeBranchName(value);
+            }
+        }
 
         public bool PublishUsingPipelines { get; set; }
 

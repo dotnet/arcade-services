@@ -30,10 +30,22 @@ namespace Maestro.Data.Models
             }
         }
 
+        private string _branch;
+
         [StringLength(100)]
         [Column(TypeName = "varchar(100)")]
         [Required]
-        public string Branch { get; set; }
+        public string Branch
+        {
+            get
+            {
+                return IGitRepoExtension.NormalizeBranchName(_branch);
+            }
+            set
+            {
+                _branch = IGitRepoExtension.NormalizeBranchName(value);
+            }
+        }
 
         [Required]
         public int ChannelId { get; set; }
