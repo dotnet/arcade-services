@@ -8,6 +8,8 @@ using System;
 using Microsoft.DotNet.Maestro.Client.Models;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.DotNet.DarcLib;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Options
 {
@@ -24,6 +26,13 @@ namespace Microsoft.DotNet.Darc.Options
 
         [Option("target-branch", HelpText = "Filter by target branch (matches substring unless --exact or --regex is passed).")]
         public string TargetBranch { get; set; }
+
+        [Option("frequencies", Separator = ',', Default = new string[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", },
+            HelpText = @"Filter by subscription update frequency.")]
+        public IEnumerable<string> Frequencies { get; set; }
+
+        [Option("default-channel", HelpText = "Filter to subscriptions that target repo+branches that apply by default to the specified channel.")]
+        public string DefaultChannelTarget { get; set; }
 
         [Option("exact", SetName = "exact", HelpText = "Match subscription parameters exactly (cannot be used with --regex).")]
         public bool ExactMatch { get; set; }
@@ -46,7 +55,16 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("ids", Separator = ',', HelpText = "Get only subscriptions with these ids.")]
         public IEnumerable<string> SubscriptionIds { get; set; }
 
-        public bool SubcriptionFilter(Subscription subscription)
+        public async Task<IEnumerable<Subscription>> FilterSubscriptions(IRemote remote)
+        {
+            IEnumerable<DefaultChannel> defaultChannels = await remote.GetDefaultChannelsAsync();
+            return (await remote.GetSubscriptionsAsync()).Where(subscription =>
+            {
+                return SubcriptionFilter(subscription, defaultChannels);
+            });
+        }
+
+        public bool SubcriptionFilter(Subscription subscription, IEnumerable<DefaultChannel> defaultChannels)
         {
             return (SubscriptionParameterMatches(TargetRepository, subscription.TargetRepository) &&
                     SubscriptionParameterMatches(TargetBranch, subscription.TargetBranch) &&
@@ -54,7 +72,9 @@ namespace Microsoft.DotNet.Darc.Options
                     SubscriptionParameterMatches(Channel, subscription.Channel.Name) &&
                     SubscriptionEnabledParameterMatches(subscription) &&
                     SubscriptionBatchableParameterMatches(subscription) &&
-                    SubscriptionIdsParameterMatches(subscription));
+                    SubscriptionIdsParameterMatches(subscription) &&
+                    SubscriptionFrequenciesParameterMatches(subscription) &&
+                    SubscriptionDefaultChannelTargetParameterMatches(subscription, defaultChannels));
         }
 
         public bool SubscriptionEnabledParameterMatches(Subscription subscription)
@@ -74,6 +94,18 @@ namespace Microsoft.DotNet.Darc.Options
         public bool SubscriptionIdsParameterMatches(Subscription subscription)
         {
             return !SubscriptionIds.Any() || SubscriptionIds.Any(id => id.Equals(subscription.Id.ToString(), StringComparison.OrdinalIgnoreCase));
+        }
+
+        public bool SubscriptionFrequenciesParameterMatches(Subscription subscription)
+        {
+            return !Frequencies.Any() || Frequencies.Any(frequency => frequency.Equals(subscription.Policy.UpdateFrequency.ToString(), StringComparison.OrdinalIgnoreCase));
+        }
+
+        public bool SubscriptionDefaultChannelTargetParameterMatches(Subscription subscription, IEnumerable<DefaultChannel> defaultChannels)
+        {
+            return string.IsNullOrEmpty(DefaultChannelTarget) || defaultChannels
+                .Where(dc => SubscriptionParameterMatches(DefaultChannelTarget, dc.Channel.Name))
+                .Any(dc => dc.Branch.Contains(subscription.TargetBranch, StringComparison.OrdinalIgnoreCase) && dc.Repository.Equals(subscription.TargetRepository, StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>
