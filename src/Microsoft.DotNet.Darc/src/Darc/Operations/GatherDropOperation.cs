@@ -17,6 +17,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
@@ -573,28 +574,41 @@ namespace Microsoft.DotNet.Darc.Operations
             using (HttpClient client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
                 var assets = await remote.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?)false : null));
-                await Task.WhenAll(assets.Select(async asset =>
+                using (var clientThrottle = new SemaphoreSlim(_options.MaxConcurrentDownloads, _options.MaxConcurrentDownloads))
                 {
-                    DownloadedAsset downloadedAsset = await DownloadAssetAsync(client, build, asset, outputDirectory);
-                    if (downloadedAsset == null)
+                    await Task.WhenAll(assets.Select(async asset =>
                     {
-                        // Do nothing, decided not to download.
-                    }
-                    else if (!downloadedAsset.Successful)
-                    {
-                        success = false;
-                        if (!_options.ContinueOnError)
+                        await clientThrottle.WaitAsync();
+
+                        try
                         {
-                            Console.WriteLine($"Aborting download.");
-                            return;
+                            DownloadedAsset downloadedAsset = await DownloadAssetAsync(client, build, asset, outputDirectory);
+                            if (downloadedAsset == null)
+                            {
+                                // Do nothing, decided not to download.
+                            }
+                            else if (!downloadedAsset.Successful)
+                            {
+                                success = false;
+                                if (!_options.ContinueOnError)
+                                {
+                                    Console.WriteLine($"Aborting download.");
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                anyShipping |= !asset.NonShipping;
+                                downloadedAssets.Add(downloadedAsset);
+                            }
+
                         }
-                    }
-                    else
-                    {
-                        anyShipping |= !asset.NonShipping;
-                        downloadedAssets.Add(downloadedAsset);
-                    }
-                }));
+                        finally
+                        {
+                            clientThrottle.Release();
+                        }
+                    }));
+                }
             }
 
             DownloadedBuild newBuild = new DownloadedBuild
