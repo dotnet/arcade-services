@@ -51,8 +51,36 @@ try {
     Darc-Add-Default-Channel -channelName $testChannel1Name -repoUri $repoUri -branch $branchName
     Darc-Add-Default-Channel -channelName $testChannel2Name -repoUri $repoUri -branch $branchNameWithRefsHeads
 
-    # Retrieve the default channel and ensure that the refs/heads section was removed
-
+    # Retrieve the default channel and ensure that the refs/heads section was removed,
+    # and ensure that when we query via the API, 'refs/heads' is appropriately stripped out.
+    # The publishing infrastructure uses the REST api, while darc uses a query of all default channels and then
+    # substring filters for a more flexible user experience.
+    $defaultChannels = Darc-Get-Default-Channel-From-Api -repoUri $repoUri -branch $branchName
+    if ($defaultChannels.Count -ne 2) {
+        throw "Unexpected number of default channels"
+    }
+    if (($defaultChannels[0].channel.name -ne $testChannel1Name) -and 
+        ($defaultChannels[1].channel.name -ne $testChannel1Name)) {
+        Write-Host $defaultChannels
+        throw "Expected to find default channel $testChannel1Name for $repoUri on $branchName"
+    }
+    if (($defaultChannels[0].channel.name -ne $testChannel2Name) -and 
+        ($defaultChannels[1].channel.name -ne $testChannel2Name)) {
+        throw "Expected to find default channel $testChannel2Name for $repoUri on $branchName"
+    }
+    
+    $defaultChannelsWithRefsHeads = Darc-Get-Default-Channel-From-Api -repoUri $repoUri -branch $branchNameWithRefsHeads
+    if ($defaultChannels.Count -ne 2) {
+        throw "Unexpected number of default channels"
+    }
+    if (($defaultChannels[0].channel.name -ne $testChannel1Name) -and 
+        ($defaultChannels[1].channel.name -ne $testChannel1Name)) {
+        throw "Expected to find default channel $testChannel1Name for $repoUri on $branchName"
+    }
+    if (($defaultChannels[0].channel.name -ne $testChannel2Name) -and 
+        ($defaultChannels[1].channel.name -ne $testChannel2Name)) {
+        throw "Expected to find default channel $testChannel2Name for $repoUri on $branchName"
+    }
 
     Write-Host "Set up build for intake into target repository"
 

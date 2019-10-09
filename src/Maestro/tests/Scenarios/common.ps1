@@ -239,6 +239,14 @@ function Darc-Disable-Default-Channel($channelName, $repoUri, $branch) {
     Darc-Command -darcParams $darcParams
 }
 
+function Darc-Get-Default-Channel-From-Api($repoUri, $branch) {
+    $headers = Get-Bar-Headers 'text/plain'
+    $uri = "$maestroInstallation/api/default-channels?repository=$repoUri&branch=$branch&api-version=${barApiVersion}"
+    $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Get
+    $jsonResponse = $response | ConvertFrom-Json
+    return $jsonResponse
+}
+
 function Darc-Delete-Subscription($subscriptionId) {
     Darc-Command delete-subscription --id $subscriptionId
 }
