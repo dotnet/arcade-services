@@ -54,7 +54,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
                 {
                     return false;
                 }
-                if (Policy == null)
+                if (Policy == default(SubscriptionPolicy))
                 {
                     return false;
                 }

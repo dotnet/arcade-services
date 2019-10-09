@@ -155,8 +155,9 @@ namespace Microsoft.DotNet.Darc.Operations
             // Compute the combinations that make sense.
             IEnumerable<(string repo, string branch)> defaultChannelsRepoBranchCombinations = defaultChannels
                 .Where(df => channelsToEvaluate.Contains(df.Channel.Name))
+                // Replace refs/heads/
                 .Where(df => reposToEvaluate.Contains(df.Repository))
-                .Select<DefaultChannel, (string repo, string branch)>(df => (df.Repository, df.Branch));
+                .Select<DefaultChannel, (string repo, string branch)>(df => (df.Repository, df.Branch.Replace("refs/heads/", "")));
 
             HashSet<(string repo, string branch)> repoBranchCombinations = subscriptions
                 .Where(s => reposToEvaluate.Contains(s.TargetRepository))

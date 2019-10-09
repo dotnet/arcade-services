@@ -141,27 +141,27 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _query.Add("buildNumber", Client.Serialize(buildNumber));
             }
-            if (channelId != default)
+            if (channelId != default(int))
             {
                 _query.Add("channelId", Client.Serialize(channelId));
             }
-            if (notBefore != default)
+            if (notBefore != default(DateTimeOffset))
             {
                 _query.Add("notBefore", Client.Serialize(notBefore));
             }
-            if (notAfter != default)
+            if (notAfter != default(DateTimeOffset))
             {
                 _query.Add("notAfter", Client.Serialize(notAfter));
             }
-            if (loadCollections != default)
+            if (loadCollections != default(bool))
             {
                 _query.Add("loadCollections", Client.Serialize(loadCollections));
             }
-            if (page != default)
+            if (page != default(int))
             {
                 _query.Add("page", Client.Serialize(page));
             }
-            if (perPage != default)
+            if (perPage != default(int))
             {
                 _query.Add("perPage", Client.Serialize(perPage));
             }
@@ -239,7 +239,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-            if (body == null)
+            if (body == default(BuildData))
             {
                 throw new ArgumentNullException(nameof(body));
             }
@@ -268,7 +268,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 _req = new HttpRequestMessage(HttpMethod.Post, _url);
 
                 string _requestContent = null;
-                if (body != null)
+                if (body != default(BuildData))
                 {
                     _requestContent = Client.Serialize(body);
                     _req.Content = new StringContent(_requestContent, Encoding.UTF8)
@@ -341,7 +341,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-            if (id == default)
+            if (id == default(int))
             {
                 throw new ArgumentNullException(nameof(id));
             }
@@ -426,7 +426,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-            if (id == default)
+            if (id == default(int))
             {
                 throw new ArgumentNullException(nameof(id));
             }
@@ -546,19 +546,19 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _query.Add("buildNumber", Client.Serialize(buildNumber));
             }
-            if (channelId != default)
+            if (channelId != default(int))
             {
                 _query.Add("channelId", Client.Serialize(channelId));
             }
-            if (notBefore != default)
+            if (notBefore != default(DateTimeOffset))
             {
                 _query.Add("notBefore", Client.Serialize(notBefore));
             }
-            if (notAfter != default)
+            if (notAfter != default(DateTimeOffset))
             {
                 _query.Add("notAfter", Client.Serialize(notAfter));
             }
-            if (loadCollections != default)
+            if (loadCollections != default(bool))
             {
                 _query.Add("loadCollections", Client.Serialize(loadCollections));
             }

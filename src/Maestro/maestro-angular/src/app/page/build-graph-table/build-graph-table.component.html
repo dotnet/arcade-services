@@ -11,18 +11,18 @@
       </tr>
       <tr>
         <td>
-        <span class="align-self-center" style="padding-right: 1rem;"><fa-icon icon="angle-up"></fa-icon></span>
+          <span class="align-self-center" style="padding-right: 1rem;"><fa-icon icon="angle-up"></fa-icon></span>
         </td>
         <td>
-        <span>This node is a parent of the focused node.</span>
+          <span>This node is a parent of the focused node.</span>
         </td>
       </tr>
       <tr>
         <td>
-        <span class="align-self-center" style="padding-right: 1rem;"><fa-icon icon="angle-right"></fa-icon></span>
+          <span class="align-self-center" style="padding-right: 1rem;"><fa-icon icon="angle-right"></fa-icon></span>
         </td>
         <td>
-        <span>This node is a child of the focused node.</span>
+          <span>This node is a child of the focused node.</span>
         </td>
       </tr>
       <tr>
@@ -32,7 +32,7 @@
         </span>
         </td>
         <td>
-        <span>This node is a different build of the same repository as the focused node.</span>
+          <span>This node is a different build of the same repository as the focused node.</span>
         </td>
       </tr>
       <tr>
@@ -51,6 +51,14 @@
           <span class='table-warning'>This node has incoherent dependencies</span>
         </td>
       </tr>
+      <tr>
+        <td>
+          <span class="align-self-center" style="padding-right: 1rem;"><fa-icon icon="redo"></fa-icon></span>
+        </td>
+        <td>
+          <span>This node has a dependency cycle.</span>
+        </td>
+      </tr>
     </tbody>
   </table>
   <p>
@@ -66,7 +74,9 @@
     </th>
     <th>Repository</th>
     <th>Date Produced</th>
+    <th></th>
     <th>Build Number</th>
+    <th>Build Staleness</th>
     <th>Commit</th>
     <th>Link</th>
   </thead>
@@ -106,10 +116,23 @@
         <mc-time-ago [value]="node.build.dateProduced"></mc-time-ago>
       </td>
       <td>
+        <fa-icon [icon]="node.hasCycles ? 'redo' : 'exclamation-triangle'" 
+          [title]="node.hasCycles ? 'Build contains a dependency cycle: \n' + node.cyclePath : ''" 
+          [style.visibility]="node.hasCycles ? 'visible' : 'hidden'"></fa-icon>
+      </td>
+      <td>
         <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 
           [title]="!isCoherent(node) ? 'A newer build of this same repository is in the tree' : (hasIncoherentDependencies(node) ? 'This build relies on dependencies that are incoherent' : '')" 
           [style.visibility]="(!isCoherent(node) || hasIncoherentDependencies(node)) ? 'visible' : 'hidden'"></fa-icon>
         {{node.build.azureDevOpsBuildNumber}}
+      </td>
+      <td>
+        <span *ngIf="node.build.staleness == '0'">
+          latest
+        </span>
+        <span *ngIf="node.build.staleness != '0'">
+          {{node.build.staleness}} behind
+        </span>
       </td>
       <td class="text-monospace">
         <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 

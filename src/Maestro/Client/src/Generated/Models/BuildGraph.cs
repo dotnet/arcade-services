@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         {
             get
             {
-                if (Builds == null)
+                if (Builds == default(IImmutableDictionary<string, Build>))
                 {
                     return false;
                 }

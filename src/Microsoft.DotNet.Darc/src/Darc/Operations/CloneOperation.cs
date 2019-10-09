@@ -62,7 +62,14 @@ namespace Microsoft.DotNet.Darc.Operations
                     IEnumerable<StrippedDependency> stripped = rootDependencies.Select(d => StrippedDependency.GetDependency(d));
                     foreach (StrippedDependency d in stripped)
                     {
-                        accumulatedDependencies.Add(d);
+                        if (_options.IgnoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            Logger.LogDebug($"Skipping ignored repo {d.RepoUri} (at {d.Commit})");
+                        }
+                        else
+                        {
+                            accumulatedDependencies.Add(d);
+                        }
                     }
                     Logger.LogInformation($"Found {rootDependencies.Count()} local dependencies.  Starting deep clone...");
                 }

@@ -19,6 +19,7 @@ import {
   faTimesCircle,
   faQuestionCircle,
   faLock,
+  faRedo,
   faLockOpen,
 } from "@fortawesome/free-solid-svg-icons";
 import {
@@ -120,5 +121,6 @@ library.add(
   faQuestionCircle,
   farQuestionCircle,
   faLock,
+  faRedo,
   faLockOpen,
 );

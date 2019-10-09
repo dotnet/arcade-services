@@ -16,8 +16,6 @@ namespace Maestro.Data.Models
     {
         private string _azureDevOpsRepository;
         private string _gitHubRepository;
-        private string _azureDevOpsBranch;
-        private string _githubBranch;
 
         static Build()
         {
@@ -70,19 +68,8 @@ namespace Maestro.Data.Models
             }
         }
 
-        public string AzureDevOpsBranch
-        {
-            get
-            {
-                return AzureDevOpsClient.NormalizeUrl(_azureDevOpsBranch);
-            }
-
-            set
-            {
-                _azureDevOpsBranch = AzureDevOpsClient.NormalizeUrl(value);
-            }
-        }
-
+        public string AzureDevOpsBranch { get; set; }
+      
         public string GitHubRepository
         {
             get
@@ -96,17 +83,7 @@ namespace Maestro.Data.Models
             }
         }
 
-        public string GitHubBranch
-        {
-            get
-            {
-                return IGitRepoExtension.NormalizeBranchName(_githubBranch);
-            }
-            set
-            {
-                _githubBranch = IGitRepoExtension.NormalizeBranchName(value);
-            }
-        }
+        public string GitHubBranch { get; set; }
 
         public bool PublishUsingPipelines { get; set; }
 
@@ -115,6 +92,9 @@ namespace Maestro.Data.Models
         public List<Asset> Assets { get; set; }
 
         public List<BuildChannel> BuildChannels { get; set; }
+
+        [NotMapped]
+        public int Staleness { get; set; }
 
         [NotMapped]
         public List<BuildDependency> DependentBuildIds { get; set; }
