@@ -156,7 +156,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoDir))
                 {
-                    foreach (GitFile file in filesToCommit.Where(f => f.Operation != GitFileOperation.Delete))
+                    foreach (GitFile file in filesToCommit)
                     {
                         switch (file.Operation)
                         {
@@ -198,7 +198,6 @@ namespace Microsoft.DotNet.DarcLib
                                 break;
                         }
                     }
-                    LibGit2Sharp.Commands.Stage(localRepo, filesToCommit.Select(f => f.FilePath));
                 }
             }
             catch (Exception exc)
