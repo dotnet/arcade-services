@@ -143,6 +143,34 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             return Ok(new Models.Build(build));
         }
 
+        [HttpPatch("{buildId}")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "Update a build with new information.")]
+        [ValidateModelState]
+        public virtual async Task<IActionResult> Update(int buildId, [FromBody, Required] BuildUpdate buildUpdate)
+        {
+            Data.Models.Build build = await _context.Builds.Where(b => b.Id == buildId).FirstOrDefaultAsync();
+
+            if (build == null)
+            {
+                return NotFound();
+            }
+
+            bool doUpdate = false;
+            if (buildUpdate.Released.HasValue)
+            {
+                build.Released = buildUpdate.Released.Value;
+                doUpdate = true;
+            }
+
+            if (doUpdate)
+            {
+                _context.Builds.Update(build);
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new Models.Build(build));
+        }
+
         [ApiRemoved]
         public sealed override Task<IActionResult> Create(v2018_07_16.Models.BuildData build)
         {

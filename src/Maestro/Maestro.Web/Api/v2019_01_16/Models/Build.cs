@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
 using Maestro.Web.Api.v2019_01_16.Models;
+using Octokit;
 
 namespace Maestro.Web.Api.v2019_01_16.Models
 {
@@ -39,6 +40,7 @@ namespace Maestro.Web.Api.v2019_01_16.Models
             Assets = other.Assets?.Select(a => new v2018_07_16.Models.Asset(a)).ToList();
             Dependencies = other.DependentBuildIds?.Select(d => new BuildRef(d.DependentBuildId, d.IsProduct)).ToList();
             Staleness = other.Staleness;
+            Released = other.Released;
         }
 
         public int Id { get; }
@@ -74,5 +76,7 @@ namespace Maestro.Web.Api.v2019_01_16.Models
         public List<BuildRef> Dependencies { get; }
 
         public int Staleness { get; }
+
+        public bool Released { get; }
     }
 }
