@@ -141,27 +141,27 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _query.Add("buildNumber", Client.Serialize(buildNumber));
             }
-            if (channelId != default(int))
+            if (channelId != default(int?))
             {
                 _query.Add("channelId", Client.Serialize(channelId));
             }
-            if (notBefore != default(DateTimeOffset))
+            if (notBefore != default(DateTimeOffset?))
             {
                 _query.Add("notBefore", Client.Serialize(notBefore));
             }
-            if (notAfter != default(DateTimeOffset))
+            if (notAfter != default(DateTimeOffset?))
             {
                 _query.Add("notAfter", Client.Serialize(notAfter));
             }
-            if (loadCollections != default(bool))
+            if (loadCollections != default(bool?))
             {
                 _query.Add("loadCollections", Client.Serialize(loadCollections));
             }
-            if (page != default(int))
+            if (page != default(int?))
             {
                 _query.Add("page", Client.Serialize(page));
             }
-            if (perPage != default(int))
+            if (perPage != default(int?))
             {
                 _query.Add("perPage", Client.Serialize(perPage));
             }
@@ -546,19 +546,19 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _query.Add("buildNumber", Client.Serialize(buildNumber));
             }
-            if (channelId != default(int))
+            if (channelId != default(int?))
             {
                 _query.Add("channelId", Client.Serialize(channelId));
             }
-            if (notBefore != default(DateTimeOffset))
+            if (notBefore != default(DateTimeOffset?))
             {
                 _query.Add("notBefore", Client.Serialize(notBefore));
             }
-            if (notAfter != default(DateTimeOffset))
+            if (notAfter != default(DateTimeOffset?))
             {
                 _query.Add("notAfter", Client.Serialize(notAfter));
             }
-            if (loadCollections != default(bool))
+            if (loadCollections != default(bool?))
             {
                 _query.Add("loadCollections", Client.Serialize(loadCollections));
             }

@@ -96,7 +96,7 @@ namespace Microsoft.DotNet.Maestro.Client
             var _path = "/api/pipelines";
 
             var _query = new QueryBuilder();
-            if (pipelineIdentifier != default(int))
+            if (pipelineIdentifier != default(int?))
             {
                 _query.Add("pipelineIdentifier", Client.Serialize(pipelineIdentifier));
             }

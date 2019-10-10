@@ -422,11 +422,11 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _query.Add("branch", Client.Serialize(branch));
             }
-            if (page != default(int))
+            if (page != default(int?))
             {
                 _query.Add("page", Client.Serialize(page));
             }
-            if (perPage != default(int))
+            if (perPage != default(int?))
             {
                 _query.Add("perPage", Client.Serialize(perPage));
             }
