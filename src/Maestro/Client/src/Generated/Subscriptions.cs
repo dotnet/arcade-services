@@ -134,11 +134,11 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _query.Add("targetRepository", Client.Serialize(targetRepository));
             }
-            if (channelId != default(int))
+            if (channelId != default(int?))
             {
                 _query.Add("channelId", Client.Serialize(channelId));
             }
-            if (enabled != default(bool))
+            if (enabled != default(bool?))
             {
                 _query.Add("enabled", Client.Serialize(enabled));
             }
@@ -766,11 +766,11 @@ namespace Microsoft.DotNet.Maestro.Client
             _path = _path.Replace("{id}", Client.Serialize(id));
 
             var _query = new QueryBuilder();
-            if (page != default(int))
+            if (page != default(int?))
             {
                 _query.Add("page", Client.Serialize(page));
             }
-            if (perPage != default(int))
+            if (perPage != default(int?))
             {
                 _query.Add("perPage", Client.Serialize(perPage));
             }

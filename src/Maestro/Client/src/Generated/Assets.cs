@@ -125,23 +125,23 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _query.Add("version", Client.Serialize(version));
             }
-            if (buildId != default(int))
+            if (buildId != default(int?))
             {
                 _query.Add("buildId", Client.Serialize(buildId));
             }
-            if (nonShipping != default(bool))
+            if (nonShipping != default(bool?))
             {
                 _query.Add("nonShipping", Client.Serialize(nonShipping));
             }
-            if (loadLocations != default(bool))
+            if (loadLocations != default(bool?))
             {
                 _query.Add("loadLocations", Client.Serialize(loadLocations));
             }
-            if (page != default(int))
+            if (page != default(int?))
             {
                 _query.Add("page", Client.Serialize(page));
             }
-            if (perPage != default(int))
+            if (perPage != default(int?))
             {
                 _query.Add("perPage", Client.Serialize(perPage));
             }

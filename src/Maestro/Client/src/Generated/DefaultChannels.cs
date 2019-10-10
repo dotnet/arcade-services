@@ -112,11 +112,11 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _query.Add("branch", Client.Serialize(branch));
             }
-            if (channelId != default(int))
+            if (channelId != default(int?))
             {
                 _query.Add("channelId", Client.Serialize(channelId));
             }
-            if (enabled != default(bool))
+            if (enabled != default(bool?))
             {
                 _query.Add("enabled", Client.Serialize(enabled));
             }
