@@ -1,0 +1,60 @@
+variables:
+  # Cannot use key:value syntax in root defined variables
+  - name: _TeamName
+    value: DotNetCore
+  - name: _PublishUsingPipelines
+    value: true
+  - name: _DotNetArtifactsCategory
+    value: .NETCore
+  - name: TargetVmName
+    value: grafana
+
+stages:
+- stage: deploy
+  displayName: Deploy grafana server
+  # Three phases for each of the three OSes we want to run on
+  jobs:
+  - template: /eng/common/templates/jobs/jobs.yml
+    parameters:
+      enableMicrobuild: false
+      enablePublishBuildArtifacts: false
+      enablePublishTestResults: false
+      enablePublishBuildAssets: false
+      enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
+      enableTelemetry: false
+      helixRepo: dotnet/arcade-services
+      jobs:
+      - job: Windows_NT
+        timeoutInMinutes: 90
+        pool:
+          vmImage: windows-2019
+
+        steps:
+        - checkout: self
+          clean: true
+
+        - task: AzureFileCopy@3
+          displayName: Copy grafana-init to VM
+          inputs:
+            sourcePath: $(Build.SourcesDirectory)\src\Monitoring\grafana-init
+            azureSubscription: Dotnet Engineering services
+            destination: azureVMs
+            resourceGroup: monitoring
+            resourceFilteringMethod: tags
+            machineNames: $(TargetVmName)
+            vmsAdminUserName: grafana-admin
+            vmsAdminPassword: $(grafana-admin-password)
+            targetPath: /tmp/grafana-init/
+
+        - task: AzureCLI@2
+          displayName: Execute grafana-init/setup.sh on VM
+          inputs:
+            azureSubscription: Dotnet Engineering services
+            scriptType: batch
+            scriptLocation: inlineScript
+            inlineScript: >-
+              az vm run-command invoke
+              -g monitoring
+              -n $(TargetVmName)
+              --command-id RunShellScript
+              --scripts "sudo bash /tmp/grafana-init/setup.sh; sudo rm -f -r /tmp/grafana-init"

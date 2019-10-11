@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import re
 import sys
@@ -6,12 +8,11 @@ import subprocess
 from azure.keyvault import KeyVaultClient
 from msrestazure.azure_active_directory import MSIAuthentication
 
-#credentials = MSIAuthentication(resource='https://vault.azure.net')
-#kv = KeyVaultClient(credentials)
+credentials = MSIAuthentication(resource='https://vault.azure.net')
+kv = KeyVaultClient(credentials)
 
 
 def get_secret(vault: str, name: str) -> str:
-    return "Pizza {} -- {}".format(vault, name)
     bundle = kv.get_secret('https://{}.vault.azure.net'.format(vault), name, '')
     return bundle.value
 
