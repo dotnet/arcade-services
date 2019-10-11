@@ -50,6 +50,10 @@ EOT
 
 # Reset grafana-server and start it up again (or the first time)
 systemctl stop grafana-server
+
+# update any plugins while it's stopped
+grafana-cli plugins update-all
+
 systemctl daemon-reload
 systemctl enable grafana-server
 systemctl restart grafana-server
