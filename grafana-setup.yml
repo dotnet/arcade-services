@@ -8,6 +8,8 @@ variables:
     value: .NETCore
   - name: TargetVmName
     value: grafana
+  - name: GrafanaBinPath
+    value: /usr/sbin/grafana-server
 
 stages:
 - stage: deploy
@@ -57,4 +59,4 @@ stages:
               -g monitoring
               -n $(TargetVmName)
               --command-id RunShellScript
-              --scripts "sudo bash /tmp/grafana-init/setup.sh; sudo rm -f -r /tmp/grafana-init"
+              --scripts "sudo bash /tmp/grafana-init/setup.sh $(GrafanaBinPath); sudo rm -f -r /tmp/grafana-init"
