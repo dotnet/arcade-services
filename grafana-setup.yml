@@ -19,7 +19,6 @@ variables:
 stages:
 - stage: deploy
   displayName: Deploy grafana server
-  # Three phases for each of the three OSes we want to run on
   jobs:
   - template: /eng/common/templates/jobs/jobs.yml
     parameters:
