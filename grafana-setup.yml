@@ -8,8 +8,9 @@ variables:
     value: .NETCore
   - name: TargetVmName
     value: grafana
+  # This can be overridden if we are using a locally built fork
   - name: GrafanaBinPath
-    value: /usr/sbin/grafana-server
+    value: ""
 
 stages:
 - stage: deploy
