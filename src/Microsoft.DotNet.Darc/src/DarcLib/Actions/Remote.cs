@@ -756,7 +756,7 @@ namespace Microsoft.DotNet.DarcLib
             string message)
         {
             IEnumerable<DependencyDetail> oldDependencies = await GetDependenciesAsync(repoUri, branch, loadAssetLocations: true);
-            itemsToUpdate = (await AddAssetLocationToDependenciesAsync(itemsToUpdate)).ToList();
+            await AddAssetLocationToDependenciesAsync(itemsToUpdate);
 
             CheckForValidGitClient();
             GitFileContentContainer fileContainer =
@@ -975,7 +975,7 @@ namespace Microsoft.DotNet.DarcLib
 
             if (loadAssetLocations)
             {
-                dependencies = await AddAssetLocationToDependenciesAsync(dependencies);
+                await AddAssetLocationToDependenciesAsync(dependencies);
             }
 
             return dependencies;
@@ -1099,7 +1099,12 @@ namespace Microsoft.DotNet.DarcLib
 
         }
 
-        private async Task<IEnumerable<DependencyDetail>> AddAssetLocationToDependenciesAsync(IEnumerable<DependencyDetail> dependencies)
+        /// <summary>
+        ///     Update a list of dependencies with asset locations.
+        /// </summary>
+        /// <param name="dependencies">Dependencies to load locations for</param>
+        /// <returns>Async task</returns>
+        public async Task AddAssetLocationToDependenciesAsync(IEnumerable<DependencyDetail> dependencies)
         {
             foreach (var dependency in dependencies)
             {
@@ -1134,7 +1139,6 @@ namespace Microsoft.DotNet.DarcLib
                     dependency.Locations = currentAssetLocations;
                 }
             }
-            return dependencies;
         }
     }
 }

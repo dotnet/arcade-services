@@ -410,6 +410,13 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>List of assets.</returns>
         Task<IEnumerable<Asset>> GetAssetsAsync(string name = null, string version = null, int? buildId = null, bool? nonShipping = null);
 
+        /// <summary>
+        ///     Update a list of dependencies with asset locations.
+        /// </summary>
+        /// <param name="dependencies">Dependencies to load locations for</param>
+        /// <returns>Async task</returns>
+        Task AddAssetLocationToDependenciesAsync(IEnumerable<DependencyDetail> dependencies);
+
         #endregion
     }
 }
