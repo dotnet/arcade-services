@@ -6,6 +6,10 @@ variables:
     value: true
   - name: _DotNetArtifactsCategory
     value: .NETCore
+  - name: TargetSubscription
+    value: Dotnet Engineering services
+  - name: TargetResourceGroup
+    value: monitoring
   - name: TargetVmName
     value: grafana
   # This can be overridden if we are using a locally built fork
@@ -40,9 +44,9 @@ stages:
           displayName: Copy grafana-init to VM
           inputs:
             sourcePath: $(Build.SourcesDirectory)\src\Monitoring\grafana-init
-            azureSubscription: Dotnet Engineering services
+            azureSubscription: $(TargetSubscription)
             destination: azureVMs
-            resourceGroup: monitoring
+            resourceGroup: $(TargetResourceGroup)
             resourceFilteringMethod: tags
             machineNames: $(TargetVmName)
             vmsAdminUserName: grafana-admin
@@ -52,12 +56,12 @@ stages:
         - task: AzureCLI@2
           displayName: Execute grafana-init/setup.sh on VM
           inputs:
-            azureSubscription: Dotnet Engineering services
+            azureSubscription: $(TargetSubscription)
             scriptType: batch
             scriptLocation: inlineScript
             inlineScript: >-
               az vm run-command invoke
-              -g monitoring
+              -g $(TargetResourceGroup)
               -n $(TargetVmName)
               --command-id RunShellScript
-              --scripts "sudo bash /tmp/grafana-init/setup.sh $(GrafanaBinPath); sudo rm -f -r /tmp/grafana-init"
+              --scripts "sudo bash /tmp/grafana-init/setup.sh $(GrafanaBinPath)"
