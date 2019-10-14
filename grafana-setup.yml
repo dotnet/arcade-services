@@ -9,9 +9,7 @@ variables:
   # This can be overridden if we are using a locally built fork
   - group: Dotnet Grafana
   # Variables we want to be settable, so can't be defined here:
-  # GrafanaBinPath: ""
-  # TargetVmName: grafana
-  # TargetResourceGroup: monitoring
+  # GrafanaBinPath: /usr/sbin/grafana-server
 
 stages:
 - stage: deploy
@@ -38,8 +36,6 @@ stages:
 
         - powershell: |
             if (-not (Test-Path env:GrafanaBinPath)) { Write-Host "Missing GrafanaBinPath, ensure required variables are defined"; exit 1}
-            if (-not (Test-Path env:TargetVmName)) { Write-Host "Missing TargetVmName, ensure required variables are defined"; exit 1}
-            if (-not (Test-Path env:TargetResourceGroup)) { Write-Host "Missing TargetResourceGroup, ensure required variables are defined"; exit 1}
             Write-Host "All required variables defined"
           displayName: Ensure variables defined
         
