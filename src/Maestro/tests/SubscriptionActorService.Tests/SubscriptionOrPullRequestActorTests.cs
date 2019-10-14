@@ -148,7 +148,7 @@ namespace SubscriptionActorService.Tests
                             {
                                 Build = build,
                                 Channel = Channel,
-                                DateAdded = DateTimeOffset.UtcNow
+                                DateTimeAdded = DateTimeOffset.UtcNow
                             });
                     }
                 });

@@ -295,7 +295,7 @@ namespace ReleasePipelineRunner
                             {
                                 BuildId = buildId,
                                 ChannelId = channelId,
-                                DateAdded = DateTimeOffset.UtcNow
+                                DateTimeAdded = DateTimeOffset.UtcNow
                             }
                         });
                         break;
@@ -422,7 +422,7 @@ namespace ReleasePipelineRunner
                                 {
                                     BuildId = buildId,
                                     ChannelId = channelId,
-                                    DateAdded = DateTimeOffset.UtcNow
+                                    DateTimeAdded = DateTimeOffset.UtcNow
                                 });
                             }
                             else

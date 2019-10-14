@@ -10,8 +10,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Maestro.Data.Migrations
 {
     [DbContext(typeof(BuildAssetRegistryContext))]
-    [Migration("20191014170741_AddDateAddedToBuildChannels")]
-    partial class AddDateAddedToBuildChannels
+    [Migration("20191014230420_AddDateTimeAddedToBuildChannels")]
+    partial class AddDateTimeAddedToBuildChannels
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -185,7 +185,7 @@ namespace Maestro.Data.Migrations
 
                     b.Property<int>("ChannelId");
 
-                    b.Property<DateTimeOffset>("DateAdded");
+                    b.Property<DateTimeOffset>("DateTimeAdded");
 
                     b.HasKey("BuildId", "ChannelId");
 

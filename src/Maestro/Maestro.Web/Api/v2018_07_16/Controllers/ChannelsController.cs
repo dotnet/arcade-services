@@ -173,7 +173,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             {
                 Channel = channel,
                 Build = build,
-                DateAdded = DateTimeOffset.UtcNow
+                DateTimeAdded = DateTimeOffset.UtcNow
             };
             await _context.BuildChannels.AddAsync(buildChannel);
             await _context.SaveChangesAsync();

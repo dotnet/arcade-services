@@ -33,7 +33,7 @@ namespace Maestro.Data.Models
                     {
                         Channel = dc.Channel,
                         Build = build,
-                        DateAdded = DateTimeOffset.UtcNow
+                        DateTimeAdded = DateTimeOffset.UtcNow
                     }).Distinct());
 
                 context.SaveChangesWithTriggers(b => context.SaveChanges(b));
@@ -107,7 +107,7 @@ namespace Maestro.Data.Models
         public Build Build { get; set; }
         public int ChannelId { get; set; }
         public Channel Channel { get; set; }
-        public DateTimeOffset DateAdded { get; set; }
+        public DateTimeOffset DateTimeAdded { get; set; }
 
         public override bool Equals(object obj)
         {
