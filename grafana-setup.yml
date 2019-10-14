@@ -63,7 +63,7 @@ stages:
             outputStorageUri: UploadedUri
             outputStorageContainerSasToken: UploadedSasToken
         
-        - script: echo Uri=$(UploadedUri); echo Sas=$(UploadedSasToken)
+        - powershell: echo 'Uri=$(UploadedUri)'; echo 'Sas=$(UploadedSasToken)'
 
         # - task: AzureCLI@2
         #   displayName: Execute grafana-init/setup.sh on VM
