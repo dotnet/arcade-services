@@ -6,16 +6,12 @@ variables:
     value: true
   - name: _DotNetArtifactsCategory
     value: .NETCore
-  - name: TargetSubscription
-    value: Dotnet Engineering services
-  - name: TargetResourceGroup
-    value: monitoring
-  - name: TargetVmName
-    value: grafana
   # This can be overridden if we are using a locally built fork
-  - name: GrafanaBinPath
-    value: ""
   - group: Dotnet Grafana
+  # Variables we want to be settable, so can't be defined here:
+  # GrafanaBinPath: ""
+  # TargetVmName: grafana
+  # TargetResourceGroup: monitoring
 
 stages:
 - stage: deploy
@@ -40,11 +36,18 @@ stages:
         - checkout: self
           clean: true
 
+        - powershell: |
+            if (-not (Test-Path env:GrafanaBinPath)) { Write-Host "Missing GrafanaBinPath, ensure required variables are defined"; exit 1}
+            if (-not (Test-Path env:TargetVmName)) { Write-Host "Missing TargetVmName, ensure required variables are defined"; exit 1}
+            if (-not (Test-Path env:TargetResourceGroup)) { Write-Host "Missing TargetResourceGroup, ensure required variables are defined"; exit 1}
+            Write-Host "All required variables defined"
+          displayName: Ensure variables defined
+
         - task: AzureFileCopy@3
           displayName: Copy grafana-init to VM
           inputs:
             sourcePath: $(Build.SourcesDirectory)\src\Monitoring\grafana-init
-            azureSubscription: $(TargetSubscription)
+            azureSubscription: DncEng-VSTS
             destination: azureVMs
             resourceGroup: $(TargetResourceGroup)
             resourceFilteringMethod: tags
@@ -56,7 +59,7 @@ stages:
         - task: AzureCLI@2
           displayName: Execute grafana-init/setup.sh on VM
           inputs:
-            azureSubscription: $(TargetSubscription)
+            azureSubscription: DncEng-VSTS
             scriptType: batch
             scriptLocation: inlineScript
             inlineScript: >-
