@@ -42,32 +42,38 @@ stages:
             if (-not (Test-Path env:TargetResourceGroup)) { Write-Host "Missing TargetResourceGroup, ensure required variables are defined"; exit 1}
             Write-Host "All required variables defined"
           displayName: Ensure variables defined
+        
+        - task: ArchiveFiles@2
+          inputs:
+            rootFolderOrFile: $(Build.SourcesDirectory)\src\Monitoring\grafana-init
+            includeRootFolder: false
+            archiveType: tar
+            tarCompression: gz
+            archiveFile: $(Build.ArtifactStagingDirectory)/grafana-init.tar.gz
 
         - task: AzureFileCopy@3
           displayName: Copy grafana-init to VM
           inputs:
-            sourcePath: $(Build.SourcesDirectory)\src\Monitoring\grafana-init
+            sourcePath: $(Build.ArtifactStagingDirectory)/grafana-init.tar.gz
             azureSubscription: DncEng-VSTS
             storage: dotnetgrafana
             containerName: build-transfer
-            blobPrefix: grafana-init-$(Build.BuildNumber)/
-            destination: azureVMs
-            resourceGroup: $(TargetResourceGroup)
-            resourceFilteringMethod: machineNames
-            machineNames: $(TargetVmName)
-            vmsAdminUserName: grafana-admin
-            vmsAdminPassword: $(grafana-admin-password)
-            targetPath: /tmp/grafana-init/
+            blobPrefix: grafana-init-$(Build.BuildNumber)
+            destination: azureBlob
+            outputStorageUri: UploadedUri
+            outputStorageContainerSasToken: UploadedSasToken
+        
+        - script: echo Uri=$(UploadedUri); echo Sas=$(UploadedSasToken)
 
-        - task: AzureCLI@2
-          displayName: Execute grafana-init/setup.sh on VM
-          inputs:
-            azureSubscription: DncEng-VSTS
-            scriptType: batch
-            scriptLocation: inlineScript
-            inlineScript: >-
-              az vm run-command invoke
-              -g $(TargetResourceGroup)
-              -n $(TargetVmName)
-              --command-id RunShellScript
-              --scripts "sudo bash /tmp/grafana-init/setup.sh $(GrafanaBinPath)"
+        # - task: AzureCLI@2
+        #   displayName: Execute grafana-init/setup.sh on VM
+        #   inputs:
+        #     azureSubscription: DncEng-VSTS
+        #     scriptType: batch
+        #     scriptLocation: inlineScript
+        #     inlineScript: >-
+        #       az vm run-command invoke
+        #       -g $(TargetResourceGroup)
+        #       -n $(TargetVmName)
+        #       --command-id RunShellScript
+        #       --scripts "sudo bash /tmp/grafana-init/setup.sh $(GrafanaBinPath)"
