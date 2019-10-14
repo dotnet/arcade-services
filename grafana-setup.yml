@@ -48,6 +48,9 @@ stages:
           inputs:
             sourcePath: $(Build.SourcesDirectory)\src\Monitoring\grafana-init
             azureSubscription: DncEng-VSTS
+            storage: dotnetgrafana
+            containerName: build-transfer
+            blobPrefix: grafana-init-$(Build.BuildNumber)
             destination: azureVMs
             resourceGroup: $(TargetResourceGroup)
             resourceFilteringMethod: tags
