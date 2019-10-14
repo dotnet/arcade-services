@@ -63,17 +63,15 @@ stages:
             outputStorageUri: UploadedUri
             outputStorageContainerSasToken: UploadedSasToken
         
-        - powershell: echo 'Uri=$(UploadedUri)'; echo 'Sas=$(UploadedSasToken)'
-
-        # - task: AzureCLI@2
-        #   displayName: Execute grafana-init/setup.sh on VM
-        #   inputs:
-        #     azureSubscription: DncEng-VSTS
-        #     scriptType: batch
-        #     scriptLocation: inlineScript
-        #     inlineScript: >-
-        #       az vm run-command invoke
-        #       -g $(TargetResourceGroup)
-        #       -n $(TargetVmName)
-        #       --command-id RunShellScript
-        #       --scripts "sudo bash /tmp/grafana-init/setup.sh $(GrafanaBinPath)"
+        - task: AzureCLI@2
+          displayName: Execute grafana-init/setup.sh on VM
+          inputs:
+            azureSubscription: DncEng-VSTS
+            scriptType: batch
+            scriptLocation: inlineScript
+            inlineScript: >-
+              az vm run-command invoke
+              -g $(TargetResourceGroup)
+              -n $(TargetVmName)
+              --command-id RunShellScript
+              --scripts "mkdir -p /tmp/grafana-init/; curl "$(UploadedUri)/grafana-init-$(Build.BuildNumber)/grafana-init.tar.gz$(UploadedSasToken)" | tar -xz /tmp/grafana-init; sudo bash /tmp/grafana-init/setup.sh $(GrafanaBinPath)"
