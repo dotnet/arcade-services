@@ -70,4 +70,4 @@ stages:
               -g $(TargetResourceGroup)
               -n $(TargetVmName)
               --command-id RunShellScript
-              --scripts "mkdir -p /tmp/grafana-init/; curl "$(UploadedUri)/grafana-init-$(Build.BuildNumber)/grafana-init.tar.gz$(UploadedSasToken)" | tar -xz /tmp/grafana-init; sudo bash /tmp/grafana-init/setup.sh $(GrafanaBinPath)"
+              --scripts "mkdir -p /tmp/grafana-init/; curl '$(UploadedUri)/grafana-init-$(Build.BuildNumber)/grafana-init.tar.gz$(UploadedSasToken)' | tar -xz /tmp/grafana-init; sudo bash /tmp/grafana-init/setup.sh $(GrafanaBinPath)"
