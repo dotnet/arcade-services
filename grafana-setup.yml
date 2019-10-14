@@ -10,6 +10,8 @@ variables:
   - group: Dotnet Grafana
   # Variables we want to be settable, so can't be defined here:
   # GrafanaBinPath: /usr/sbin/grafana-server
+  # TargetVmName: grafana
+  # TargetResourceGroup: monitoring
 
 stages:
 - stage: deploy
@@ -36,6 +38,8 @@ stages:
 
         - powershell: |
             if (-not (Test-Path env:GrafanaBinPath)) { Write-Host "Missing GrafanaBinPath, ensure required variables are defined"; exit 1}
+            if (-not (Test-Path env:TargetVmName)) { Write-Host "Missing TargetVmName, ensure required variables are defined"; exit 1}
+            if (-not (Test-Path env:TargetResourceGroup)) { Write-Host "Missing TargetResourceGroup, ensure required variables are defined"; exit 1}
             Write-Host "All required variables defined"
           displayName: Ensure variables defined
         
@@ -57,7 +61,6 @@ stages:
             blobPrefix: grafana-init-$(Build.BuildNumber)
             destination: azureBlob
             outputStorageUri: UploadedUri
-            outputStorageContainerSasToken: UploadedSasToken
         
         - task: AzureCLI@2
           displayName: Execute grafana-init/setup.sh on VM
@@ -70,4 +73,4 @@ stages:
               -g $(TargetResourceGroup)
               -n $(TargetVmName)
               --command-id RunShellScript
-              --scripts "mkdir -p /tmp/grafana-init/; curl '$(UploadedUri)/grafana-init-$(Build.BuildNumber)/grafana-init.tar.gz$(UploadedSasToken)' | tar -xz /tmp/grafana-init; sudo bash /tmp/grafana-init/setup.sh $(GrafanaBinPath)"
+              --scripts "mkdir -p /tmp/grafana-init/; curl --silent --show-error --fail '$(UploadedUri)grafana-init-$(Build.BuildNumber)/grafana-init.tar.gz$(UploadedSasToken)' | tar -xz /tmp/grafana-init; sudo bash /tmp/grafana-init/setup.sh $(GrafanaBinPath)"
