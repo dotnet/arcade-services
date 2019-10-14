@@ -53,7 +53,7 @@ stages:
             blobPrefix: grafana-init-$(Build.BuildNumber)/
             destination: azureVMs
             resourceGroup: $(TargetResourceGroup)
-            resourceFilteringMethod: tags
+            resourceFilteringMethod: machineNames
             machineNames: $(TargetVmName)
             vmsAdminUserName: grafana-admin
             vmsAdminPassword: $(grafana-admin-password)
