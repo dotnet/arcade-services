@@ -50,7 +50,7 @@ stages:
             azureSubscription: DncEng-VSTS
             storage: dotnetgrafana
             containerName: build-transfer
-            blobPrefix: grafana-init-$(Build.BuildNumber)
+            blobPrefix: grafana-init-$(Build.BuildNumber)/
             destination: azureVMs
             resourceGroup: $(TargetResourceGroup)
             resourceFilteringMethod: tags
