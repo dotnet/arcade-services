@@ -15,6 +15,7 @@ variables:
   # This can be overridden if we are using a locally built fork
   - name: GrafanaBinPath
     value: ""
+  - group: Dotnet Grafana
 
 stages:
 - stage: deploy
