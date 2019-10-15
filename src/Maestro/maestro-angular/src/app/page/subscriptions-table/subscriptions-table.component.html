@@ -18,24 +18,24 @@
           {{item.sourceRepository}}
         </td>
         <td>
-          {{item.enabled}}
+          {{item.enabled ? 'Enabled' : 'Disabled'}}
         </td>
       </tr>
     </ng-container>
     <ng-container *ngIf="open">
-    <ng-container *stateful="let details from versionDetailsList[currentTab]">
-    <ng-container *ngFor="let dep of details.unusedProductSubscriptions | keyvalue">
-      <tr>
-        <td>
-          {{dep.key}}
-        </td>
-        <td>
-          No Dependencies
-        </td>
-      </tr>
+      <ng-container *stateful="let details from versionDetailsList[currentTab]">
+        <ng-container *ngFor="let dep of details.unusedSubscriptions | keyvalue">
+          <tr>
+            <td>
+              {{dep.key}}
+            </td>
+            <td>
+              No Dependencies
+            </td>
+          </tr>
+        </ng-container>
+      </ng-container>
     </ng-container>
-  </ng-container>
-</ng-container>
   </tbody>
 </table>
 <button (click)="open=true">Load Additional Details</button>
@@ -46,7 +46,7 @@
   </thead>
   <tbody>
     <ng-container *stateful="let details from versionDetailsList[currentTab]">
-      <ng-container *ngFor="let dep of details.missingProductDependencies | keyvalue">
+      <ng-container *ngFor="let dep of details.missingDependencies | keyvalue">
         <tr>
           <td>
             {{dep.key}}

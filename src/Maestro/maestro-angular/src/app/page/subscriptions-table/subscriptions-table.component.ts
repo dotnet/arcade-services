@@ -8,14 +8,9 @@ import { StatefulResult, statefulPipe, statefulSwitchMap } from 'src/stateful';
 class VersionDetails {
 
   // Dependency Records are <Name, Uri>
-  public productDependencies: Record<string, string> = {};
-  public toolsetDependencies: Record<string, string> = {};
-
-  public missingProductDependencies: Record<string, number> = {};
-  public missingToolsetDependencies: Record<string, number> = {};
-
-  public unusedProductSubscriptions: Record<string, string> = {};
-  public unusedToolsetSubscriptions: Record<string, string> = {};
+  public allDependencies: Record<string, string> = {};
+  public missingDependencies: Record<string, number> = {};
+  public unusedSubscriptions: Record<string, string> = {};
 
   constructor(inputFile: XMLDocument) {
     const productElements = inputFile.getElementsByTagName("ProductDependencies");
@@ -25,11 +20,11 @@ class VersionDetails {
     let childToolsetElements = productElements[0].getElementsByTagName('Dependency');
 
     for (let el of Array.from(childProductElements)) {
-      this.parseDependencyElement(el, this.productDependencies);
+      this.parseDependencyElement(el, this.allDependencies);
     }
 
-    for (let el of Array.from(childToolsetElements)) {
-      this.parseDependencyElement(el, this.toolsetDependencies);
+    for (let el of Array.from(childToolsetElements)){
+      this.parseDependencyElement(el, this.allDependencies);
     }
   }
 
@@ -62,18 +57,18 @@ class VersionDetails {
     let missingSubs: Record<string, number> = {};
     const sourceRepos = subscriptions.map((sub) => sub.sourceRepository);
 
-    for (let uri of Object.values(this.productDependencies)) {
+    for (let uri of Object.values(this.allDependencies)) {
       if (!sourceRepos.includes(uri)) {
         missingSubs[uri] = (missingSubs[uri] || 0) + 1;
       }
     }
 
-    this.missingProductDependencies = missingSubs;
+    this.missingDependencies = missingSubs;
   }
 
   getUnnecessarySubs(subscriptions: Subscription[]) {
     let extraSubs: Record<string, string> = {};
-    const dependenciesUsed = Object.values(this.productDependencies);
+    const dependenciesUsed = Object.values(this.allDependencies);
 
     for (let sub of subscriptions) {
       if (sub.sourceRepository) {
@@ -83,7 +78,7 @@ class VersionDetails {
       }
     }
 
-    this.unusedProductSubscriptions = extraSubs;
+    this.unusedSubscriptions = extraSubs;
   }
 }
 
