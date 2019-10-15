@@ -61,7 +61,6 @@ try {
     }
     if (($defaultChannels[0].channel.name -ne $testChannel1Name) -and 
         ($defaultChannels[1].channel.name -ne $testChannel1Name)) {
-        Write-Host $defaultChannels
         throw "Expected to find default channel $testChannel1Name for $repoUri on $branchName"
     }
     if (($defaultChannels[0].channel.name -ne $testChannel2Name) -and 
