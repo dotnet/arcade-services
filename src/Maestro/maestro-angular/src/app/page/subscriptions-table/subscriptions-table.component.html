@@ -1,6 +1,6 @@
 <ul class="nav nav-tabs">
   <ng-container *ngFor="let item of subscriptionsList | keyvalue">
-    <li class='nav-item' >
+    <li class='nav-item'>
       <a [ngClass]="{ active: item.key===currentTab, 'nav-link': true}" style="cursor: pointer;"
         (click)="currentTab=item.key">{{item.key}}</a>
     </li>
@@ -9,7 +9,7 @@
 <table class="table table-sm table-hover mb-0" style="white-space: nowrap;">
   <thead>
     <th>Source Repository</th>
-    <th>Enabled</th>
+    <th>Status</th>
   </thead>
   <tbody>
     <ng-container *ngFor="let item of subscriptionsList[currentTab]">
@@ -21,6 +21,41 @@
           {{item.enabled}}
         </td>
       </tr>
+    </ng-container>
+    <ng-container *ngIf="open">
+    <ng-container *stateful="let details from versionDetailsList[currentTab]">
+    <ng-container *ngFor="let dep of details.unusedProductSubscriptions | keyvalue">
+      <tr>
+        <td>
+          {{dep.key}}
+        </td>
+        <td>
+          No Dependencies
+        </td>
+      </tr>
+    </ng-container>
+  </ng-container>
+</ng-container>
+  </tbody>
+</table>
+<button (click)="open=true">Load Additional Details</button>
+<table *ngIf="open" class="table table-sm table-hover mb-0" style="white-space: nowrap;">
+  <thead>
+    <th>Dependencies Without Subscriptions</th>
+    <th>Number of Dependencies Referenced</th>
+  </thead>
+  <tbody>
+    <ng-container *stateful="let details from versionDetailsList[currentTab]">
+      <ng-container *ngFor="let dep of details.missingProductDependencies | keyvalue">
+        <tr>
+          <td>
+            {{dep.key}}
+          </td>
+          <td>
+            {{dep.value}}
+          </td>
+        </tr>
+      </ng-container>
     </ng-container>
   </tbody>
 </table>

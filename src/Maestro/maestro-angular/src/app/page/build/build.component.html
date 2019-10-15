@@ -131,12 +131,12 @@
             <h5 class="card-title float-left">
               Subscriptions
             </h5>
-            <!-- <span class="form-check float-right">
+            <span class="form-check float-right">
               <mc-switch [style]="" [(value)]="includeSubToolsets"></mc-switch>
               <label class="form-check-label">
                 Include Toolsets
               </label>
-            </span> -->
+            </span>
           </div>
           <ng-container *stateful="let subscriptionsList from subscriptionsList$; loadingTemplate: loadingData">
             <mc-subscriptions-table [subscriptionsList]="subscriptionsList" [includeSubToolsets]="includeSubToolsets">
