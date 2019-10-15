@@ -75,6 +75,6 @@ stages:
               --command-id RunShellScript
               --scripts "mkdir -p /tmp/grafana-init/ &&
               cd /tmp/grafana-init &&
-              curl --silent --show-error --fail '$(UploadedUri)grafana-init-$(Build.BuildNumber)/grafana-init.tar.gz$(UploadedSasToken)' -o ./grafana-init.tar.gz &&
+              curl --silent --show-error --fail '$(UploadedUri)grafana-init-$(Build.BuildNumber)/grafana-init.tar.gz' -o ./grafana-init.tar.gz &&
               tar -xzf ./grafana-init.tar.gz &&
               sudo bash ./setup.sh $(GrafanaBinPath)"
