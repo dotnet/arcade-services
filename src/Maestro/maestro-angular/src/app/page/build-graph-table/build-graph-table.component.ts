@@ -23,6 +23,8 @@ interface BuildData {
   state?: BuildState;
   hasIncoherentDependencies?: boolean;
   hasIncoherentDependenciesIncludingToolsets?: boolean;
+  hasCycles?: boolean;
+  cyclePath?: string;
 }
 
 function getState(b: BuildData): BuildState | undefined {
@@ -102,6 +104,9 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
   for (const node of result) {
     node.hasIncoherentDependencies = hasIncoherentDependencies(node.build, result, false);
     node.hasIncoherentDependenciesIncludingToolsets = hasIncoherentDependencies(node.build, result, true);
+
+    // If node is incoherent with product check to make sure there aren't any cycles in the dependencies
+    [node.hasCycles, node.cyclePath] = hasCycles(node.build, result);
   }
 
   result = result.reverse();
@@ -182,6 +187,59 @@ function buildHasIncoherentDependencies(buildData: BuildData, includeToolsets: b
   }
 
   return false;
+}
+
+function hasCycles(build:Build, buildData: BuildData[]): [boolean,string?] {
+  const repository = getRepo(build)
+  let currentBuildData = buildData.find(r => r.build.id == build.id);
+  
+  // Check the current build to see if any of its product dependencies or subdependencies introduce
+  // a cycle with the current repository
+  if (currentBuildData && repository)
+  {
+    let [hasCycle, cyclePath] = dependencyHasCycle(currentBuildData,buildData, repository)
+    if (hasCycle)
+    {
+      let newCycle = [getRepo(currentBuildData.build), cyclePath];
+      cyclePath = newCycle.join('->\n');
+    }
+    return [hasCycle, cyclePath]
+  }
+  return [false, undefined];
+}
+
+function dependencyHasCycle(currentBuildData: BuildData, buildData:BuildData[], repository: string): [boolean,string?] {
+  if (currentBuildData.build.dependencies)
+  {
+    for (const dep of currentBuildData.build.dependencies)
+    {
+      // For each product dependency of the current build, check to see if it results in a cycle with the given repository
+      if (dep.isProduct)
+      {
+        let depBuildData = buildData.find(r => r.build.id == dep.buildId);
+        if (depBuildData)
+        {
+          // If the current dependency has the same repository as the original repository, we have found a cycle
+          if (getRepo(depBuildData.build) == repository)
+          {
+            return [true, getRepo(depBuildData.build)];
+          }
+          
+          // Check the dependencies of the current dependency to see if they result in a cycle.
+          // Break on the first cycle found
+          let [hasCycle, cyclePath] = dependencyHasCycle(depBuildData,buildData, repository)
+          if (hasCycle)
+          {
+            let newCycle = [getRepo(depBuildData.build), cyclePath];
+            return [true, newCycle.join('->\n')];
+          }
+        }
+      }
+    }
+  }
+
+  // No cycle was found
+  return [false, undefined];
 }
 
 const elementOutStyle = style({

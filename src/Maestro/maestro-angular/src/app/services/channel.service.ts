@@ -46,24 +46,23 @@ export class ChannelService {
   }
 
   private buildRepositoriesList(channelId: number): Observable<DefaultChannel[]> {
-    let defaultChannels = this.maestro.defaultChannels.listAsync({ channelId: channelId });
-    let subscriptions = this.maestro.subscriptions.listSubscriptionsAsync({ channelId: channelId });
-    
-    let targetRepos = subscriptions.pipe(map(x => x.map(y => {
+    let builds = this.maestro.builds.listBuildsAsync({ channelId: channelId });
+
+    let targetRepos = builds.pipe(map(x => x.map(y => {
       return new DefaultChannel({
-        repository: y.targetRepository!,
-        branch: y.targetBranch, 
+        repository: y.gitHubRepository === undefined ? y.azureDevOpsRepository! : y.gitHubRepository!,
+        branch: y.gitHubBranch === undefined ? y.azureDevOpsBranch : y.gitHubBranch,
         id: 0,
       });
     })));
 
-    const repos = combineLatest(targetRepos, defaultChannels).pipe(
-      map(([l,r]) => {
-        let dcArray = new Array<DefaultChannel>().concat(r).concat(l);
-        return dcArray.filter((dc,index) => dcArray.findIndex(t => t.repository === dc.repository) === index).sort(repoSorter);
+    const repos = targetRepos.pipe(
+      map(l => {
+        let dcArray = new Array<DefaultChannel>().concat(l);
+        dcArray = dcArray.filter((dc, index) => dc.repository != undefined);
+        return dcArray.filter((dc, index) => dcArray.findIndex(t => t.repository === dc.repository) === index).sort(repoSorter);
       }),
     );
-
     return repos; 
   }
 }

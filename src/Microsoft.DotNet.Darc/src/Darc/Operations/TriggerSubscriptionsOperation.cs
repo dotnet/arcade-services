@@ -63,10 +63,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         return Constants.ErrorCode;
                     }
 
-                    IEnumerable<Subscription> subscriptions = (await remote.GetSubscriptionsAsync()).Where(subscription =>
-                    {
-                        return _options.SubcriptionFilter(subscription);
-                    });
+                    IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(remote);
 
                     if (subscriptions.Count() == 0)
                     {

@@ -5,6 +5,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.DotNet.DarcLib;
 using Newtonsoft.Json;
 
 namespace Maestro.Data.Models
@@ -93,7 +94,17 @@ namespace Maestro.Data.Models
         public string RepositoryName { get; set; }
 
         [MaxLength(Repository.BranchNameLength)]
-        public string BranchName { get; set; }
+        public string BranchName
+        {
+            get
+            {
+                return IGitRepoExtension.NormalizeBranchName(_branch);
+            }
+            set
+            {
+                _branch = IGitRepoExtension.NormalizeBranchName(value);
+            }
+        }
 
         /// <summary>
         ///     **true** if the update succeeded; **false** otherwise.
@@ -120,5 +131,7 @@ namespace Maestro.Data.Models
         ///     The parameters to the called method.
         /// </summary>
         public string Arguments { get; set; }
+
+        private string _branch;
     }
 }

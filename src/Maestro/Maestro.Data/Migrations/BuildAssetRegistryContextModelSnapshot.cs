@@ -183,6 +183,8 @@ namespace Maestro.Data.Migrations
 
                     b.Property<int>("ChannelId");
 
+                    b.Property<DateTimeOffset>("DateTimeAdded");
+
                     b.HasKey("BuildId", "ChannelId");
 
                     b.HasIndex("ChannelId");
