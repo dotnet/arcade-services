@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using Maestro.AzureDevOps;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Maestro.Web.Controllers
@@ -39,6 +40,21 @@ namespace Maestro.Web.Controllers
             return await HttpContext.ProxyRequestAsync(
                 s_lazyClient.Value,
                 $"https://dev.azure.com/{account}/{project}/_apis/build/builds?api-version=5.0&definitions={definitionId}&branchName={branch}&statusFilter=completed&$top={count}",
+                req =>
+                {
+                    req.Headers.Authorization = new AuthenticationHeaderValue(
+                        "Basic",
+                        Convert.ToBase64String(Encoding.UTF8.GetBytes(":" + token)));
+                });
+        }
+
+        [HttpGet("getFile/{account}/{project}/{repo}/{*filePath}")]
+        public async Task<IActionResult> GetSourceFile(string account, string project, string repo, string filePath)
+        {
+            string token = await TokenProvider.GetTokenForAccount(account);
+            return await HttpContext.ProxyRequestAsync(
+                s_lazyClient.Value,
+                $"https://dev.azure.com/{account}/{project}/_apis/git/repositories/{repo}/items?path=/{filePath}&includeContent=true&resolveLfs=true&api-version=5.1",
                 req =>
                 {
                     req.Headers.Authorization = new AuthenticationHeaderValue(

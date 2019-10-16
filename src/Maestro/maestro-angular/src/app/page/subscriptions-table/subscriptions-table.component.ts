@@ -1,7 +1,7 @@
 import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { Subscription } from 'src/maestro-client/models';
 import { Observable, of } from 'rxjs';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { map, shareReplay } from 'rxjs/operators';
 import { StatefulResult, statefulPipe, statefulSwitchMap } from 'src/stateful';
 
@@ -23,7 +23,7 @@ class VersionDetails {
       this.parseDependencyElement(el, this.allDependencies);
     }
 
-    for (let el of Array.from(childToolsetElements)){
+    for (let el of Array.from(childToolsetElements)) {
       this.parseDependencyElement(el, this.allDependencies);
     }
   }
@@ -108,7 +108,7 @@ export class SubscriptionsTableComponent implements OnChanges {
         const fileRequest = of(fileUrl).pipe(
           statefulSwitchMap(
             (uri) => {
-              return this.http.get(uri, { responseType: 'text' });
+              return this.http.get(uri, { responseType: 'text', headers: new HttpHeaders({ 'Accept': "text/plain" }) });
             }
           ),
           statefulPipe(
@@ -146,11 +146,10 @@ export class SubscriptionsTableComponent implements OnChanges {
 
 function getDetailsFileUrl(sourceRepoStr: string, branchName: string) {
   if (sourceRepoStr.includes("github")) {
-    const temp = sourceRepoStr.replace("https://github.com", "https://raw.githubusercontent.com")
-    console.log(temp + "/" + branchName + "/eng/Version.Details.xml");
-    return temp + "/" + branchName + "/eng/Version.Details.xml";
+    return sourceRepoStr.replace("https://github.com", "https://raw.githubusercontent.com") + "/" + branchName + "/eng/Version.Details.xml";
   }
   else {
-    return sourceRepoStr + "?path=%2Feng%2FVersion.Details.xml&version=GBmaster";
+    const splitRepoUrl = sourceRepoStr.split('/');
+    return `/_/AzDev/getFile/${splitRepoUrl[3]}/${splitRepoUrl[4]}/${splitRepoUrl[6]}/eng/Version.Details.xml`;
   }
 }
