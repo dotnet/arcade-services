@@ -95,3 +95,33 @@
     </ng-container>
   </tbody>
 </table>
+<br> <br>
+<button (click)="openAssets=!openAssets">Show/Hide Assets</button>
+<table *ngIf="openAssets" class="table table-sm table-hover mb-0" style="white-space: nowrap;">
+  <thead>
+    <th>Assets with Multiple Sources</th>
+    <th>Output Branch</th>
+    <th>Contributing Subscriptions</th>
+  </thead>
+  <tbody>
+    <ng-container *ngFor="let branch of subscriptionsList | keyvalue">
+      <ng-container *stateful="let details from versionDetailsList[branch]">
+        <ng-container *ngFor="let asset of details.conflictingSubscriptions | keyvalue">
+          <tr>
+            <td>
+              {{asset.key}}
+            </td>
+            <td>
+              {{branch.key}}
+            </td>
+            <td>
+              <ng-container *ngFor="let sub of details.conflictingSubscriptions[asset.key]">
+                {{sub.sourceRepository + ', '}}
+              </ng-container>
+            </td>
+          </tr>
+        </ng-container>
+      </ng-container>
+    </ng-container>
+  </tbody>
+</table>

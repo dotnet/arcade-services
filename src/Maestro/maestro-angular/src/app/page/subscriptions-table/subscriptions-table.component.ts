@@ -1,5 +1,5 @@
 import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
-import { Subscription } from 'src/maestro-client/models';
+import { Subscription, Asset } from 'src/maestro-client/models';
 import { Observable, of } from 'rxjs';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { map, shareReplay } from 'rxjs/operators';
@@ -12,6 +12,7 @@ class VersionDetails {
   public missingDependencies: Record<string, string> = {};
   public missingDependenciesCount: Record<string, number> = {};
   public unusedSubscriptions: Record<string, string> = {};
+  public conflictingSubscriptions: Record<string, Subscription[]> = {};
 
   constructor(inputFile: XMLDocument) {
     const productElements = inputFile.getElementsByTagName("ProductDependencies");
@@ -84,6 +85,44 @@ class VersionDetails {
 
     this.unusedSubscriptions = extraSubs;
   }
+
+  // Logic taken from SubscriptionHealthMetric in darc and adapted for this data source
+  getConflictingSubs(subscriptions: Subscription[], assets: Asset[]) {
+
+    let assetsToSub: Record<string, Subscription> = {};
+
+    // Map asset to subscription the first time it's encountered, then add it to the conflicts list if it comes up again.
+    for (let sub of subscriptions) {
+      for (let asset of assets) {
+        if (asset && asset.name && sub.sourceRepository) {
+          const assetName = asset.name;
+          const assetsToSubKeys = Object.keys(assetsToSub);
+
+          if (assetsToSubKeys.includes(assetName)) {
+            const otherSub = assetsToSub[assetName];
+
+            if (otherSub.sourceRepository == sub.sourceRepository && (otherSub.channel && sub.channel && otherSub.channel.id == sub.channel.id)) {
+              continue;
+            }
+
+            const conflictsKeys = Object.keys(this.conflictingSubscriptions);
+
+            if (conflictsKeys.includes(assetName)) {
+              this.conflictingSubscriptions[assetName].push(sub);
+            }
+            else {
+              this.conflictingSubscriptions[assetName] = new Array();
+              this.conflictingSubscriptions[assetName].push(sub);
+              this.conflictingSubscriptions[assetName].push(otherSub);
+            }
+          }
+          else {
+            assetsToSub[assetName] = sub;
+          }
+        }
+      }
+    }
+  }
 }
 
 @Component({
@@ -96,8 +135,10 @@ export class SubscriptionsTableComponent implements OnChanges {
   @Input() public rootId?: number;
   @Input() public subscriptionsList?: Record<string, Subscription[]>;
   @Input() public includeSubToolsets?: boolean;
+  @Input() public assets!: Asset[];
   public currentBranch?: string;
   public openDetails = false;
+  public openAssets = false;
   public openDependencies = false;
   public versionDetailsList: Record<string, Observable<StatefulResult<VersionDetails>>> = {};
 
@@ -127,6 +168,7 @@ export class SubscriptionsTableComponent implements OnChanges {
                 if (this.subscriptionsList) {
                   versionDetails.getMissingSubscriptions(this.subscriptionsList[branch]);
                   versionDetails.getUnnecessarySubs(this.subscriptionsList[branch]);
+                  versionDetails.getConflictingSubs(this.subscriptionsList[branch], this.assets);
                 }
                 return versionDetails;
               }

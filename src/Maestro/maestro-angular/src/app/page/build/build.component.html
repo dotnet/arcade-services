@@ -133,7 +133,7 @@
             </h5>
           </div>
           <ng-container *stateful="let subscriptionsList from subscriptionsList$; loadingTemplate: loadingData">
-            <mc-subscriptions-table [subscriptionsList]="subscriptionsList">
+            <mc-subscriptions-table [subscriptionsList]="subscriptionsList" [assets]="build.assets">
             </mc-subscriptions-table>
           </ng-container>
           <ng-template #loadingData>
