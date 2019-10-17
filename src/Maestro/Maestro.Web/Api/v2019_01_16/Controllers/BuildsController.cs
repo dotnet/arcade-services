@@ -156,7 +156,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             }
 
             bool doUpdate = false;
-            if (buildUpdate.Released.HasValue)
+            if (buildUpdate.Released.HasValue && build.Released != buildUpdate.Released.Value)
             {
                 build.Released = buildUpdate.Released.Value;
                 doUpdate = true;
