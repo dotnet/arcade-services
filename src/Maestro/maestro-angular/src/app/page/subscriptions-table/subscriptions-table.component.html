@@ -67,6 +67,7 @@
     </ng-container>
   </tbody>
 </table>
+<br>
 <button (click)="openDependencies=!openDependencies">Show/Hide Dependencies</button>
 <br>
 <table *ngIf="openDependencies" class="table table-sm table-hover mb-0" style="white-space: nowrap;">
@@ -95,8 +96,9 @@
     </ng-container>
   </tbody>
 </table>
-<br> <br>
+<br>
 <button (click)="openAssets=!openAssets">Show/Hide Assets</button>
+<br>
 <table *ngIf="openAssets" class="table table-sm table-hover mb-0" style="white-space: nowrap;">
   <thead>
     <th>Assets with Multiple Sources</th>
@@ -105,7 +107,7 @@
   </thead>
   <tbody>
     <ng-container *ngFor="let branch of subscriptionsList | keyvalue">
-      <ng-container *stateful="let details from versionDetailsList[branch]">
+      <ng-container *stateful="let details from versionDetailsList[branch.key]">
         <ng-container *ngFor="let asset of details.conflictingSubscriptions | keyvalue">
           <tr>
             <td>
