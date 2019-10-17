@@ -74,6 +74,7 @@
     </th>
     <th>Repository</th>
     <th>Date Produced</th>
+    <th><span title="Time it took for this dependency to flow to the root node in minutes">Time To Inclusion</span></th>
     <th></th>
     <th>Build Number</th>
     <th>Build Staleness</th>
@@ -114,6 +115,11 @@
       </td>
       <td>
         <mc-time-ago [value]="node.build.dateProduced"></mc-time-ago>
+      </td>
+      <td>
+        <span>
+          {{timeToInclusion(node)}} minutes
+        </span>
       </td>
       <td>
         <fa-icon [icon]="node.hasCycles ? 'redo' : 'exclamation-triangle'" 

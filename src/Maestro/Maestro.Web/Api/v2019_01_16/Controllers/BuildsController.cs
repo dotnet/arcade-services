@@ -162,11 +162,44 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             buildModel.DateProduced = DateTimeOffset.UtcNow;
             if (build.Dependencies != null)
             {
+                // For each Dependency, update the time to Inclusion
+                foreach (var dep in build.Dependencies)
+                {
+                    // Find the dependency in BuildDependencies table where the build it is associated with
+                    // matches the repository and branch of the current build
+                    var buildDependency = _context.BuildDependencies.Where( d =>
+                            d.DependentBuildId == dep.BuildId &&
+                            d.Build.GitHubRepository == buildModel.GitHubRepository &&
+                            d.Build.GitHubBranch == buildModel.GitHubBranch &&
+                            d.Build.AzureDevOpsRepository == buildModel.AzureDevOpsRepository &&
+                            d.Build.AzureDevOpsBranch == buildModel.AzureDevOpsBranch
+                        ).FirstOrDefault();
+
+                    if (buildDependency != null && buildDependency.TimeToInclusionInMinutes != 0)
+                    {
+                        dep.TimeToInclusionInMinutes = buildDependency.TimeToInclusionInMinutes;
+                    }
+                    else if (buildDependency != null && buildDependency.TimeToInclusionInMinutes == 0)
+                    {
+                        // Calculate the buildDependency's time to inclusion, and use that
+                        Data.Models.Build originalBuild = await _context.Builds.FindAsync(buildDependency.BuildId);
+                        Data.Models.Build depBuild = await _context.Builds.FindAsync(dep.BuildId);
+                        dep.TimeToInclusionInMinutes = (originalBuild.DateProduced - depBuild.DateProduced).TotalMinutes;
+                    }
+                    else
+                    {
+                        // If the dependent build is not currently in the BuildDependency table for this repo/branch (ie is a new dependency),
+                        // find the dependency in the Builds table and calculate the time to inclusion
+                        Data.Models.Build depBuild = await _context.Builds.FindAsync(dep.BuildId);
+                        dep.TimeToInclusionInMinutes = (buildModel.DateProduced - depBuild.DateProduced).TotalMinutes;
+                    }
+                }
+
                 await _context.BuildDependencies.AddRangeAsync(
                     build.Dependencies.Select(
                         b => new Data.Models.BuildDependency
                         {
-                            Build = buildModel, DependentBuildId = b.BuildId, IsProduct = b.IsProduct,
+                            Build = buildModel, DependentBuildId = b.BuildId, IsProduct = b.IsProduct, TimeToInclusionInMinutes = b.TimeToInclusionInMinutes,
                         }));
             }
 

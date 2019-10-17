@@ -951,13 +951,16 @@ export class BuildRef {
         {
             buildId,
             isProduct,
+            timeToInclusionInMinutes,
         }: {
             buildId: number,
             isProduct: boolean,
+            timeToInclusionInMinutes: number,
         }
     ) {
         this._buildId = buildId;
         this._isProduct = isProduct;
+        this._timeToInclusionInMinutes = timeToInclusionInMinutes;
     }
 
     private _buildId: number;
@@ -971,11 +974,18 @@ export class BuildRef {
     public get isProduct(): boolean {
         return this._isProduct;
     }
+
+    private _timeToInclusionInMinutes: number;
+
+    public get timeToInclusionInMinutes(): number {
+        return this._timeToInclusionInMinutes;
+    }
     
     public isValid(): boolean {
         return (
             this._buildId !== undefined &&
-            this._isProduct !== undefined
+            this._isProduct !== undefined &&
+            this._timeToInclusionInMinutes !== undefined
         );
     }
 
@@ -983,6 +993,7 @@ export class BuildRef {
         let result = new BuildRef({
             buildId: value["buildId"] == null ? undefined : value["buildId"] as any,
             isProduct: value["isProduct"] == null ? undefined : value["isProduct"] as any,
+            timeToInclusionInMinutes: value["timeToInclusionInMinutes"] == null ? undefined : value["timeToInclusionInMinutes"] as any,
         });
         return result;
     }
@@ -991,6 +1002,7 @@ export class BuildRef {
         let result: any = {};
         result["buildId"] = value._buildId;
         result["isProduct"] = value._isProduct;
+        result["timeToInclusionInMinutes"] = value._timeToInclusionInMinutes;
         return result;
     }
 }

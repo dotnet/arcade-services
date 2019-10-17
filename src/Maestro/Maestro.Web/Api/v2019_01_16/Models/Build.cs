@@ -37,7 +37,7 @@ namespace Maestro.Web.Api.v2019_01_16.Models
                 .Select(c => new v2018_07_16.Models.Channel(c))
                 .ToList();
             Assets = other.Assets?.Select(a => new v2018_07_16.Models.Asset(a)).ToList();
-            Dependencies = other.DependentBuildIds?.Select(d => new BuildRef(d.DependentBuildId, d.IsProduct)).ToList();
+            Dependencies = other.DependentBuildIds?.Select(d => new BuildRef(d.DependentBuildId, d.IsProduct, d.TimeToInclusionInMinutes)).ToList();
             Staleness = other.Staleness;
         }
 
