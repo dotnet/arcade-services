@@ -117,6 +117,12 @@ namespace Maestro.Data.Models
 
         public List<BuildChannel> BuildChannels { get; set; }
 
+        /// <summary>
+        /// If true, the build has been released to the public. This can be used to make decisions on whether certain
+        /// builds should be included in future release drops.
+        /// </summary>
+        public bool Released { get; set; } = false;
+
         [NotMapped]
         public int Staleness { get; set; }
 

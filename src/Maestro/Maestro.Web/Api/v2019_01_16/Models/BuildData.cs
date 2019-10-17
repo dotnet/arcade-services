@@ -44,6 +44,8 @@ namespace Maestro.Web.Api.v2019_01_16.Models
 
         public bool PublishUsingPipelines { get; set; }
 
+        public bool Released { get; set; }
+
         public Data.Models.Build ToDb()
         {
             return new Data.Models.Build
@@ -59,7 +61,8 @@ namespace Maestro.Web.Api.v2019_01_16.Models
                 AzureDevOpsRepository = AzureDevOpsRepository,
                 AzureDevOpsBranch = AzureDevOpsBranch,
                 Commit = Commit,
-                Assets = Assets?.Select(a => a.ToDb()).ToList()
+                Assets = Assets?.Select(a => a.ToDb()).ToList(),
+                Released = Released
             };
         }
     }
