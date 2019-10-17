@@ -9,8 +9,6 @@ class VersionDetails {
 
   // Dependency Records are <Name, Uri>
   public allDependencies: Record<string, string> = {};
-  public missingDependencies: Record<string, string> = {};
-  public missingDependenciesCount: Record<string, number> = {};
   public unusedSubscriptions: Record<string, string> = {};
 
   constructor(inputFile: XMLDocument) {
@@ -52,22 +50,6 @@ class VersionDetails {
       dependencyUri = "UnknownUri";
     }
     dependencyList[dependencyName] = dependencyUri;
-  }
-
-  getMissingSubscriptions(subscriptions: Subscription[]) {
-    let missingSubs: Record<string, string> = {};
-    let missingSubsCount: Record<string, number> = {};
-    const sourceRepos = subscriptions.map((sub) => sub.sourceRepository);
-
-    for (let key of Object.keys(this.allDependencies)) {
-      if (!sourceRepos.includes(this.allDependencies[key])) {
-        missingSubs[key] = this.allDependencies[key];
-        missingSubsCount[this.allDependencies[key]] = (missingSubsCount[this.allDependencies[key]] || 0) + 1;
-      }
-    }
-
-    this.missingDependencies = missingSubs;
-    this.missingDependenciesCount = missingSubsCount;
   }
 
   getUnnecessarySubs(subscriptions: Subscription[]) {
@@ -125,7 +107,6 @@ export class SubscriptionsTableComponent implements OnChanges {
             map(
               (versionDetails) => {
                 if (this.subscriptionsList) {
-                  versionDetails.getMissingSubscriptions(this.subscriptionsList[branch]);
                   versionDetails.getUnnecessarySubs(this.subscriptionsList[branch]);
                 }
                 return versionDetails;
