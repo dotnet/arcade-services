@@ -9,7 +9,8 @@ class VersionDetails {
 
   // Dependency Records are <Name, Uri>
   public allDependencies: Record<string, string> = {};
-  public missingDependencies: Record<string, number> = {};
+  public missingDependencies: Record<string, string> = {};
+  public missingDependenciesCount: Record<string, number> = {};
   public unusedSubscriptions: Record<string, string> = {};
 
   constructor(inputFile: XMLDocument) {
@@ -54,16 +55,19 @@ class VersionDetails {
   }
 
   getMissingSubscriptions(subscriptions: Subscription[]) {
-    let missingSubs: Record<string, number> = {};
+    let missingSubs: Record<string, string> = {};
+    let missingSubsCount: Record<string, number> = {};
     const sourceRepos = subscriptions.map((sub) => sub.sourceRepository);
 
-    for (let uri of Object.values(this.allDependencies)) {
-      if (!sourceRepos.includes(uri)) {
-        missingSubs[uri] = (missingSubs[uri] || 0) + 1;
+    for (let key of Object.keys(this.allDependencies)) {
+      if (!sourceRepos.includes(this.allDependencies[key])) {
+        missingSubs[key] = this.allDependencies[key];
+        missingSubsCount[this.allDependencies[key]] = (missingSubsCount[this.allDependencies[key]] || 0) + 1;
       }
     }
 
     this.missingDependencies = missingSubs;
+    this.missingDependenciesCount = missingSubsCount;
   }
 
   getUnnecessarySubs(subscriptions: Subscription[]) {
@@ -92,8 +96,9 @@ export class SubscriptionsTableComponent implements OnChanges {
   @Input() public rootId?: number;
   @Input() public subscriptionsList?: Record<string, Subscription[]>;
   @Input() public includeSubToolsets?: boolean;
-  public currentTab?: string;
-  public open = false;
+  public currentBranch?: string;
+  public openDetails = false;
+  public openDependencies = false;
   public versionDetailsList: Record<string, Observable<StatefulResult<VersionDetails>>> = {};
 
   get branches() {
@@ -137,7 +142,7 @@ export class SubscriptionsTableComponent implements OnChanges {
   constructor(private http: HttpClient) { }
 
   ngOnChanges(changes: SimpleChanges) {
-    this.currentTab = this.branches[0];
+    this.currentBranch = this.branches[0];
     if ("subscriptionsList" in changes) {
       this.loadVersionData();
     }

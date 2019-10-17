@@ -1,36 +1,65 @@
-<ul class="nav nav-tabs">
-  <ng-container *ngFor="let item of subscriptionsList | keyvalue">
-    <li class='nav-item'>
-      <a [ngClass]="{ active: item.key===currentTab, 'nav-link': true}" style="cursor: pointer;"
-        (click)="currentTab=item.key">{{item.key}}</a>
-    </li>
-  </ng-container>
-</ul>
 <table class="table table-sm table-hover mb-0" style="white-space: nowrap;">
   <thead>
     <th>Source Repository</th>
+    <th>OutputBranch</th>
     <th>Status</th>
   </thead>
+  <button (click)="openDetails=!openDetails">Show/Hide Additional Details</button>
   <tbody>
-    <ng-container *ngFor="let item of subscriptionsList[currentTab]">
-      <tr>
-        <td>
-          {{item.sourceRepository}}
-        </td>
-        <td>
-          {{item.enabled ? 'Enabled' : 'Disabled'}}
-        </td>
-      </tr>
+    <ng-container *ngFor="let branch of subscriptionsList | keyvalue">
+      <ng-container *ngFor="let sub of subscriptionsList[branch.key]">
+        <tr>
+          <td>
+            {{sub.sourceRepository}}
+          </td>
+          <td>
+            {{branch.key}}
+          </td>
+          <td>
+            {{sub.enabled ? 'Enabled' : 'Disabled'}}
+          </td>
+        </tr>
+      </ng-container>
+      <ng-container *ngIf="openDetails">
+        <ng-container *stateful="let details from versionDetailsList[branch.key]">
+          <ng-container *ngFor="let dep of details.unusedSubscriptions | keyvalue">
+            <tr>
+              <td>
+                {{dep.key}}
+              </td>
+              <td>
+                {{branch.key}}
+              </td>
+              <td>
+                No Dependencies
+              </td>
+            </tr>
+          </ng-container>
+        </ng-container>
+      </ng-container>
     </ng-container>
-    <ng-container *ngIf="open">
-      <ng-container *stateful="let details from versionDetailsList[currentTab]">
-        <ng-container *ngFor="let dep of details.unusedSubscriptions | keyvalue">
+  </tbody>
+</table>
+<br>
+<table *ngIf="openDetails" class="table table-sm table-hover mb-0" style="white-space: nowrap;">
+  <thead>
+    <th>Dependencies Without Subscriptions</th>
+    <th>Branch</th>
+    <th>Number of Dependencies Referenced</th>
+  </thead>
+  <tbody>
+    <ng-container *ngFor="let branch of subscriptionsList | keyvalue">
+      <ng-container *stateful="let details from versionDetailsList[branch.key]">
+        <ng-container *ngFor="let dep of details.missingDependenciesCount | keyvalue">
           <tr>
             <td>
               {{dep.key}}
             </td>
             <td>
-              No Dependencies
+              {{branch.key}}
+            </td>
+            <td>
+              {{dep.value}}
             </td>
           </tr>
         </ng-container>
@@ -38,23 +67,30 @@
     </ng-container>
   </tbody>
 </table>
-<button (click)="open=true">Load Additional Details</button>
-<table *ngIf="open" class="table table-sm table-hover mb-0" style="white-space: nowrap;">
+<button (click)="openDependencies=!openDependencies">Show/Hide Dependencies</button>
+<br>
+<table *ngIf="openDependencies" class="table table-sm table-hover mb-0" style="white-space: nowrap;">
   <thead>
-    <th>Dependencies Without Subscriptions</th>
-    <th>Number of Dependencies Referenced</th>
+    <th>Dependency</th>
+    <th>Branch</th>
+    <th>Source Repository</th>
   </thead>
   <tbody>
-    <ng-container *stateful="let details from versionDetailsList[currentTab]">
-      <ng-container *ngFor="let dep of details.missingDependencies | keyvalue">
-        <tr>
-          <td>
-            {{dep.key}}
-          </td>
-          <td>
-            {{dep.value}}
-          </td>
-        </tr>
+    <ng-container *ngFor="let branch of subscriptionsList | keyvalue">
+      <ng-container *stateful="let details from versionDetailsList[branch.key]">
+        <ng-container *ngFor="let dep of details.missingDependencies | keyvalue">
+          <tr>
+            <td>
+              {{dep.key}}
+            </td>
+            <td>
+              {{branch.key}}
+            </td>
+            <td>
+              {{dep.value}}
+            </td>
+          </tr>
+        </ng-container>
       </ng-container>
     </ng-container>
   </tbody>
