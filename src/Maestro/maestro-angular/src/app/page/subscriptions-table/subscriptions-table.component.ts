@@ -7,9 +7,9 @@ import { StatefulResult, statefulPipe, statefulSwitchMap } from 'src/stateful';
 
 class VersionDetails {
 
-  // Dependency Records are <Name, Uri>
+  // Dependency Records are <DependencyName, Uri>
   public allDependencies: Record<string, string> = {};
-  public unusedSubscriptions: Record<string, string> = {};
+  public unusedSubscriptions: Record<string, Subscription> = {};
 
   constructor(inputFile: XMLDocument) {
     const productElements = inputFile.getElementsByTagName("ProductDependencies");
@@ -53,13 +53,13 @@ class VersionDetails {
   }
 
   getUnnecessarySubs(subscriptions: Subscription[]) {
-    let extraSubs: Record<string, string> = {};
+    let extraSubs: Record<string, Subscription> = {};
     const dependenciesUsed = Object.values(this.allDependencies);
 
     for (let sub of subscriptions) {
       if (sub.sourceRepository) {
         if (!dependenciesUsed.includes(sub.sourceRepository)) {
-          extraSubs[sub.sourceRepository] = sub.sourceRepository;
+          extraSubs[sub.sourceRepository] = sub;
         }
       }
     }
