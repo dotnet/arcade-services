@@ -5,7 +5,6 @@
     <th>Target Branch</th>
     <th>Status</th>
   </thead>
-  <button (click)="openDetails=!openDetails">Show/Hide Additional Details</button>
   <tbody>
     <ng-container *ngFor="let branch of subscriptionsList | keyvalue">
       <ng-container *ngFor="let sub of subscriptionsList[branch.key]">
@@ -23,26 +22,6 @@
             {{sub.enabled ? 'Enabled' : 'Disabled'}}
           </td>
         </tr>
-      </ng-container>
-      <ng-container *ngIf="openDetails">
-        <ng-container *stateful="let details from versionDetailsList[branch.key]">
-          <ng-container *ngFor="let unusedSub of details.unusedSubscriptions | keyvalue">
-            <tr>
-              <td>
-                {{unusedSub.key}}
-              </td>
-              <td>
-                {{unusedSub.value.channel.name}}
-              </td>
-              <td>
-                {{branch.key}}
-              </td>
-              <td>
-                No Dependencies
-              </td>
-            </tr>
-          </ng-container>
-        </ng-container>
       </ng-container>
     </ng-container>
   </tbody>
