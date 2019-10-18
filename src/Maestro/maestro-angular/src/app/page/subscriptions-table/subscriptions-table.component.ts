@@ -1,18 +1,23 @@
 import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
-import { Subscription, Asset } from 'src/maestro-client/models';
-import { Observable, of } from 'rxjs';
+import { Subscription, Asset, Build } from 'src/maestro-client/models';
+import { Observable, of, combineLatest, ObjectUnsubscribedError } from 'rxjs';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { map, shareReplay } from 'rxjs/operators';
+import { map, shareReplay, switchMap, filter } from 'rxjs/operators';
 import { StatefulResult, statefulPipe, statefulSwitchMap } from 'src/stateful';
+import { BuildService } from 'src/app/services/build.service';
+import { WrappedError, Loading } from 'src/stateful/helpers';
 
 class VersionDetails {
 
-  // Dependency Records are <Name, Uri>
+  // <DependencyName, Uri>
   public allDependencies: Record<string, string> = {};
-  public missingDependencies: Record<string, string> = {};
-  public missingDependenciesCount: Record<string, number> = {};
-  public unusedSubscriptions: Record<string, string> = {};
+
+  // <SubId, Subscription>
+  public unusedSubscriptions: Record<string, Subscription> = {};
   public conflictingSubscriptions: Record<string, Subscription[]> = {};
+
+  // Dependency Name
+  public dependenciesWithNoSubscription: string[] = new Array();
 
   constructor(inputFile: XMLDocument) {
     const productElements = inputFile.getElementsByTagName("ProductDependencies");
@@ -55,45 +60,61 @@ class VersionDetails {
     dependencyList[dependencyName] = dependencyUri;
   }
 
-  getMissingSubscriptions(subscriptions: Subscription[]) {
-    let missingSubs: Record<string, string> = {};
-    let missingSubsCount: Record<string, number> = {};
-    const sourceRepos = subscriptions.map((sub) => sub.sourceRepository);
+  // Logic taken from SubscriptionHealthMetric in darc and adapted for this data source
+  getUnnecessaryAndMissingSubs(subsAndAssets: Record<string, Asset[]>, subscriptions: Subscription[]) {
+    // Id, Subscription
+    let extraSubs: Record<string, Subscription> = {};
+    let missingSubs: string[] = new Array();
 
-    for (let key of Object.keys(this.allDependencies)) {
-      if (!sourceRepos.includes(this.allDependencies[key])) {
-        missingSubs[key] = this.allDependencies[key];
-        missingSubsCount[this.allDependencies[key]] = (missingSubsCount[this.allDependencies[key]] || 0) + 1;
+    const dependenciesUsed = Object.keys(this.allDependencies);
+    const subKeys = Object.keys(subsAndAssets) || {};
+
+    //AssetName, SubId
+    let flattenedData: Record<string, string> = {};
+
+    // Populate the extraSubs collection, then subscriptions will be deleted from it as their use is confirmed
+    for (let sub of subscriptions) {
+      if (subKeys.includes(sub.id)) {
+        extraSubs[sub.id] = sub;
       }
     }
 
-    this.missingDependencies = missingSubs;
-    this.missingDependenciesCount = missingSubsCount;
-  }
+    // Flatten the subsAndAssets collection so that "includes" can cover all of the objects in it
+    for (let subId in subsAndAssets) {
+      for (let asset of subsAndAssets[subId]) {
+        if (asset.name) {
+          flattenedData[asset.name] = subId;
+        }
+      }
+    }
 
-  getUnnecessarySubs(subscriptions: Subscription[]) {
-    let extraSubs: Record<string, string> = {};
-    const dependenciesUsed = Object.values(this.allDependencies);
+    // Compare the list of assets used against the assets produced by each sub
+    for (let dep of dependenciesUsed) {
+      if (flattenedData) {
 
-    for (let sub of subscriptions) {
-      if (sub.sourceRepository) {
-        if (!dependenciesUsed.includes(sub.sourceRepository)) {
-          extraSubs[sub.sourceRepository] = sub.sourceRepository;
+        // If the dependency can be found in a subscription then that subscription is used
+        if (Object.keys(flattenedData).includes(dep)) {
+          delete extraSubs[flattenedData[dep]];
+        }
+        else {
+          // If the dependency name isn't in the list of assets created by any subscription then the subscription for that dependency is missing
+          missingSubs.push(dep);
         }
       }
     }
 
     this.unusedSubscriptions = extraSubs;
+    this.dependenciesWithNoSubscription = missingSubs;
   }
 
   // Logic taken from SubscriptionHealthMetric in darc and adapted for this data source
-  getConflictingSubs(subscriptions: Subscription[], assets: Asset[]) {
+  getConflictingSubs(subsAndAssets: Record<string, Asset[]>, subscriptions: Subscription[]) {
 
     let assetsToSub: Record<string, Subscription> = {};
 
     // Map asset to subscription the first time it's encountered, then add it to the conflicts list if it comes up again.
     for (let sub of subscriptions) {
-      for (let asset of assets) {
+      for (let asset of subsAndAssets[sub.id]) {
         if (asset && asset.name && sub.sourceRepository) {
           const assetName = asset.name;
           const assetsToSubKeys = Object.keys(assetsToSub);
@@ -123,6 +144,43 @@ class VersionDetails {
       }
     }
   }
+
+  getAndProcessLatestAssetsForSubs(subscriptions: Subscription[], buildService: BuildService) {
+    // Can't make a Record with <Subscription, string[]> so use the subscriptionId as a proxy
+    const subWithBuilds: Observable<StatefulResult<[Subscription | null, Build | null]>[]> = <any>combineLatest.apply(undefined, subscriptions.filter(s => s.channel && s.sourceRepository).map(sub => {
+      const buildId = buildService.getLatestBuildId(sub.channel!.id, sub.sourceRepository!);
+      return buildId.pipe(
+        statefulPipe(
+          switchMap(id => buildService.getBuild(id)),
+        ),
+        statefulPipe(
+          map(build => [sub, build]),
+        ));
+    }));
+    const result = subWithBuilds.pipe(
+      map(subs => {
+        const errors = subs.filter(s => s instanceof WrappedError);
+        if (errors.length) {
+          return errors[0];
+        }
+
+        const loadings = subs.filter(s => s instanceof Loading);
+        if (loadings.length) {
+          return loadings[0];
+        }
+
+        let subsWithAssets: Record<string, Asset[]> = {};
+        for (const [sub, build] of subs as [Subscription, Build][]) {
+          subsWithAssets[sub.id] = build.assets || [];
+        }
+
+        this.getUnnecessaryAndMissingSubs(subsWithAssets, subscriptions);
+        this.getConflictingSubs(subsWithAssets, subscriptions);
+
+        return subsWithAssets;
+      }),
+    ) as Observable<StatefulResult<Record<string, Asset[]>>>;
+  }
 }
 
 @Component({
@@ -136,6 +194,7 @@ export class SubscriptionsTableComponent implements OnChanges {
   @Input() public subscriptionsList?: Record<string, Subscription[]>;
   @Input() public includeSubToolsets?: boolean;
   @Input() public assets!: Asset[];
+
   public currentBranch?: string;
   public openDetails = false;
   public openAssets = false;
@@ -166,9 +225,7 @@ export class SubscriptionsTableComponent implements OnChanges {
             map(
               (versionDetails) => {
                 if (this.subscriptionsList) {
-                  versionDetails.getMissingSubscriptions(this.subscriptionsList[branch]);
-                  versionDetails.getUnnecessarySubs(this.subscriptionsList[branch]);
-                  versionDetails.getConflictingSubs(this.subscriptionsList[branch], this.assets);
+                  versionDetails.getAndProcessLatestAssetsForSubs(this.subscriptionsList[branch], this.buildService);
                 }
                 return versionDetails;
               }
@@ -181,7 +238,7 @@ export class SubscriptionsTableComponent implements OnChanges {
     }
   }
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private buildService: BuildService) { }
 
   ngOnChanges(changes: SimpleChanges) {
     this.currentBranch = this.branches[0];
