@@ -141,7 +141,6 @@
       <mc-asset-table [assets]="build.assets"></mc-asset-table>
     </div>
   </ng-container>
-
   <div @toast class="toast show" *ngIf="toastVisible" role="alert" aria-live="assertive" aria-atomic="true"
     style="position: fixed; bottom: 0; right: 0; margin-bottom: 1rem; margin-right: 1.5rem;">
     <div class="toast-header">
@@ -158,7 +157,7 @@
       A new build is avaliable.
       <small style="margin-left: 0.5rem;" class="float-right">
         <a class="btn btn-sm btn-secondary" style="margin-top: -0.5rem;" aria-label="Accept"
-         (click)="acceptToast()">
+          (click)="acceptToast()">
           Load?
         </a>
       </small>
