@@ -101,22 +101,18 @@
         <ng-container *stateful="let graph from graph$; loadingTemplate: loadingData">
           <ul class="nav nav-tabs">
             <li class="nav-item">
-              <a [routerLink]="['..', 'graph']" routerLinkActive="active" style="cursor: pointer;"
-                class="nav-link">Graph</a>
+              <a [routerLink]="['..', 'graph']" routerLinkActive="active" style="cursor: pointer;" class="nav-link">Graph</a>
             </li>
             <li class="nav-item">
-              <a [routerLink]="['..', 'tree']" routerLinkActive="active" style="cursor: pointer;"
-                class="nav-link">Tree</a>
+              <a [routerLink]="['..', 'tree']" routerLinkActive="active" style="cursor: pointer;" class="nav-link">Tree</a>
             </li>
           </ul>
           <ng-container *ngIf="view$ | async as view">
             <ng-container *ngIf="view == 'graph'">
-              <mc-build-graph-table [graph]="graph" [includeToolsets]="includeToolsets"
-                [showAllDependencies]="showAllDependencies"></mc-build-graph-table>
+              <mc-build-graph-table [graph]="graph" [includeToolsets]="includeToolsets" [showAllDependencies]="showAllDependencies"></mc-build-graph-table>
             </ng-container>
             <ng-container *ngIf="view == 'tree'">
-              <mc-build-graph-tree [graph]="graph" [includeToolsets]="includeToolsets" [rootId]="build.id">
-              </mc-build-graph-tree>
+              <mc-build-graph-tree [graph]="graph" [includeToolsets]="includeToolsets" [rootId]="build.id"></mc-build-graph-tree>
             </ng-container>
           </ng-container>
         </ng-container>
@@ -131,12 +127,6 @@
             <h5 class="card-title float-left">
               Subscriptions
             </h5>
-            <!-- <span class="form-check float-right">
-              <mc-switch [style]="" [(value)]="includeSubToolsets"></mc-switch>
-              <label class="form-check-label">
-                Include Toolsets
-              </label>
-            </span> -->
           </div>
           <ng-container *stateful="let subscriptionsList from subscriptionsList$; loadingTemplate: loadingData">
             <mc-subscriptions-table [subscriptionsList]="subscriptionsList" [includeSubToolsets]="includeSubToolsets">
@@ -168,7 +158,7 @@
       A new build is avaliable.
       <small style="margin-left: 0.5rem;" class="float-right">
         <a class="btn btn-sm btn-secondary" style="margin-top: -0.5rem;" aria-label="Accept"
-        (click)="acceptToast()">
+         (click)="acceptToast()">
           Load?
         </a>
       </small>

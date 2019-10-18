@@ -60,15 +60,14 @@ export class BuildComponent implements OnInit, OnChanges {
   public toastDate?: Date;
   public acceptToast?: () => void;
 
-  public includeSubToolsets: boolean = false;
   public subscriptionsList$!: Observable<StatefulResult<Subscription[]>>;
 
   public view$?: Observable<string>;
 
-  private toastNewBuild(): OperatorFunction<number, number> {
+  private toastNewBuild(): OperatorFunction<number,number> {
     const self = this;
     let haveBuild = false;
-    return function (source: Observable<number>) {
+    return function(source: Observable<number>) {
       return new Observable<number>(observer => {
         const sourceSub = source.subscribe({
           next(buildId) {
@@ -118,7 +117,7 @@ export class BuildComponent implements OnInit, OnChanges {
         if (tabName == null) {
           throw new Error("tabName was null");
         }
-        return { buildId, channelId, repository, tabName };
+        return {buildId, channelId, repository, tabName};
       }),
       tap(v => {
         console.log("Params: ", v);
@@ -142,10 +141,10 @@ export class BuildComponent implements OnInit, OnChanges {
     } | undefined = undefined;
     const buildId$ = params$.pipe(
       filter(params => {
-        if (prevParams) {
+        if(prevParams) {
           if (prevParams.buildId === params.buildId &&
-            prevParams.channelId === params.channelId &&
-            prevParams.repository === params.repository) {
+              prevParams.channelId === params.channelId &&
+              prevParams.repository === params.repository) {
             // If the important parameters haven't changed don't reload the build
             return false;
           }
@@ -214,7 +213,7 @@ export class BuildComponent implements OnInit, OnChanges {
             return true;
           }
           // emit only the first "Loading" instance so refreshes don't cause the loading spinner to show up
-          if (!emittedLoading) {
+          if (!emittedLoading)  {
             emittedLoading = true;
             return true;
           }
@@ -254,9 +253,9 @@ export class BuildComponent implements OnInit, OnChanges {
 
   public haveAzDevInfo(build: Build): boolean {
     return !!build.azureDevOpsAccount &&
-      !!build.azureDevOpsProject &&
-      !!build.azureDevOpsBuildDefinitionId &&
-      !!build.azureDevOpsBranch;
+           !!build.azureDevOpsProject &&
+           !!build.azureDevOpsBuildDefinitionId &&
+           !!build.azureDevOpsBranch;
   }
 
 
