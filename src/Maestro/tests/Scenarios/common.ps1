@@ -544,7 +544,7 @@ function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $tar
 
     # Depending on how quickly each dependency update comes through,
     # we might have to wait for the title to be updated correctly for batched Subscriptions
-    $tries = 3
+    $tries = 5
     $validTitle = $false;
     while ($tries-- -gt 0 -and (-not $validTitle)) {
         Write-Host "Validating PR title. $tries tries remaining..."
@@ -805,7 +805,7 @@ function Validate-Github-PullRequest-Contents($pullRequest, $expectedPRTitle, $t
 
     # Depending on how quickly each dependency update comes through,
     # we might have to wait for the title to be updated correctly for batched Subscriptions
-    $tries = 3
+    $tries = 5
     $validTitle = $false
     while ($tries-- -gt 0) {
         Write-Host "Validating PR title. $tries tries remaining..."
