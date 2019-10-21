@@ -1,9 +1,9 @@
 import { Component, OnInit, OnChanges } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
-import { map, shareReplay, switchMap, filter, distinctUntilChanged, tap } from 'rxjs/operators';
+import { map, shareReplay, switchMap, filter, distinctUntilChanged, tap, combineLatest } from 'rxjs/operators';
 import { isAfter, compareAsc, parseISO } from "date-fns";
 
-import { BuildGraph, Build } from 'src/maestro-client/models';
+import { BuildGraph, Build, Subscription } from 'src/maestro-client/models';
 import { Observable, of, timer, OperatorFunction } from 'rxjs';
 import { BuildStatusService } from 'src/app/services/build-status.service';
 import { BuildStatus } from 'src/app/model/build-status';
@@ -12,6 +12,7 @@ import { tapLog } from 'src/helpers';
 import { BuildService } from 'src/app/services/build.service';
 import { trigger, transition, style, animate } from '@angular/animations';
 import { Loading, WrappedError } from 'src/stateful/helpers';
+import { MaestroService } from 'src/maestro-client/maestro';
 
 interface AzDevBuildInfo {
   isMostRecent: boolean;
@@ -44,7 +45,7 @@ const elementInStyle = style({
   ],
 })
 export class BuildComponent implements OnInit, OnChanges {
-  public constructor(private route: ActivatedRoute, private buildService: BuildService, private buildStatusService: BuildStatusService) { }
+  public constructor(private route: ActivatedRoute, private buildService: BuildService, private buildStatusService: BuildStatusService, private maestroService: MaestroService) { }
 
   public graph$!: Observable<StatefulResult<BuildGraph>>;
   public build$!: Observable<StatefulResult<Build>>;
@@ -58,6 +59,8 @@ export class BuildComponent implements OnInit, OnChanges {
   public toastVisible: boolean = false;
   public toastDate?: Date;
   public acceptToast?: () => void;
+
+  public subscriptionsList$!: Observable<StatefulResult<Subscription[]>>;
 
   public view$?: Observable<string>;
 
@@ -218,6 +221,31 @@ export class BuildComponent implements OnInit, OnChanges {
         }),
       ),
     );
+
+    this.subscriptionsList$ = this.build$.pipe(
+      statefulPipe(
+        combineLatest(params$),
+        statefulSwitchMap(([build, params]) => {
+          const currentChannelId = +params.channelId;
+          return this.maestroService.subscriptions.listSubscriptionsAsync({
+            channelId: currentChannelId,
+            targetRepository: this.getRepo(build),
+          }).pipe(
+            map(subs => {
+              const result: Record<string, Subscription[]> = {};
+              for (let sub of subs) {
+                const key = sub.targetBranch || "Unknown Branch";
+                if (!result[key]) {
+                  result[key] = [];
+                }
+                result[key].push(sub);
+              }
+              return result;
+            }),
+          )
+        }),
+      )),
+      tap(() => console.log("getting subscriptions"));
   }
 
   public ngOnChanges() {

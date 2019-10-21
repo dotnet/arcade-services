@@ -121,6 +121,23 @@
         </ng-template>
       </div>
 
+      <div class="container-fluid">
+        <div class="card mt-3">
+          <div class="card-body">
+            <h5 class="card-title float-left">
+              Subscriptions
+            </h5>
+          </div>
+          <ng-container *stateful="let subscriptionsList from subscriptionsList$; loadingTemplate: loadingData">
+            <mc-subscriptions-table [subscriptionsList]="subscriptionsList">
+            </mc-subscriptions-table>
+          </ng-container>
+          <ng-template #loadingData>
+            <progress-ring [style]="{ 'width.px': 150, 'height.px': 150 }"></progress-ring>
+          </ng-template>
+        </div>
+      </div>
+
       <mc-asset-table [assets]="build.assets"></mc-asset-table>
     </div>
   </ng-container>
