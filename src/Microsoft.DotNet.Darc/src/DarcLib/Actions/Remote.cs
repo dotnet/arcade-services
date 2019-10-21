@@ -845,6 +845,18 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        /// Checks that a repository exists
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <returns>True if the repository exists, false otherwise.</returns>
+        public async Task<bool> RepositoryExistsAsync(string repoUri)
+        {
+            CheckForValidGitClient();
+
+            return await _gitClient.RepoExistsAsync(repoUri);
+        }
+
+        /// <summary>
         ///     Get the latest commit in a branch
         /// </summary>
         /// <param name="repoUri">Remote repository</param>

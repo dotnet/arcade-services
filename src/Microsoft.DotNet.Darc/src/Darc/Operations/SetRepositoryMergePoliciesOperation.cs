@@ -124,6 +124,13 @@ namespace Microsoft.DotNet.Darc.Operations
                 mergePolicies = initEditorPopUp.MergePolicies;
             }
 
+            IRemote verifyRemote = RemoteFactory.GetRemote(_options, repository, Logger);
+            if (!(await UxHelpers.VerifyMaestroManagedBranchExists(verifyRemote, repository, branch, !_options.Quiet)))
+            {
+                Console.WriteLine("Aborting merge policy creation.");
+                return Constants.ErrorCode;
+            }
+
             try
             {   
                 await remote.SetRepositoryMergePoliciesAsync(

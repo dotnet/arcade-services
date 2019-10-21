@@ -490,5 +490,10 @@ namespace Microsoft.DotNet.DarcLib
                 LibGit2Sharp.Commands.Fetch(repo, remoteName, new[] { $"+refs/heads/*:refs/remotes/{remoteName}/*" }, new LibGit2Sharp.FetchOptions(), $"Fetching {repoUrl} into {repoDir}");
             }
         }
+
+        public Task<bool> RepoExistsAsync(string repoUri)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
