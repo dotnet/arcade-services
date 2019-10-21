@@ -247,13 +247,10 @@ function dependencyHasCycle(currentBuildData: BuildData, buildData:BuildData[], 
 }
 
 function calculateNodeTimeToInclusion(build:Build, buildData:BuildData[], inclusionTimeOfParent:number): void {
-  if (build.dependencies)
-  {
-    for (const dep of build.dependencies)
-    {
+  if (build.dependencies) {
+    for (const dep of build.dependencies) {
       let depBuildData = buildData.find(r => r.build.id == dep.buildId);
-      if (depBuildData)
-      {
+      if (depBuildData) {
         depBuildData.timeToInclusionInMinutes = inclusionTimeOfParent + dep.timeToInclusionInMinutes;
         calculateNodeTimeToInclusion(depBuildData.build, buildData, depBuildData.timeToInclusionInMinutes);
       }
