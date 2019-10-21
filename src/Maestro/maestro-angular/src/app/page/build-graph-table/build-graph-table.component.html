@@ -74,7 +74,15 @@
     </th>
     <th>Repository</th>
     <th>Date Produced</th>
-    <th><span title="Time it took for this dependency to flow to the root node in minutes">Time To Inclusion</span></th>
+    <th>
+      <span title="Cummulative time it took for the dependency to flow through each repository in the 
+build graph to the root node. For each edge in the dependency graph, when a dependency is added to BAR
+the first time for a given dependent build id and parent repository and branch, we calculate the difference
+between when the dependent build was added to BAR and when the parent build was added to BAR. The total time to
+inclusion is then calculated by walking the dependency graph and summing the individual edges' time to inclusion.">
+        Time To Inclusion
+      </span>
+    </th>
     <th></th>
     <th>Build Number</th>
     <th>Build Staleness</th>

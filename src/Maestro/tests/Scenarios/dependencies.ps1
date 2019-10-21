@@ -90,12 +90,31 @@ try {
     )
 
     # Add the target build once, should populate the BuildDependencies table and calculate TimeToInclusion
-    $targetBuild = New-Build -repository $targetRepoUri -branch $targetBranch -commit $targetCommit -buildNumber $target1BuildNumber -assets $targetAssets -dependencies $dependencies
-    Add-Build-To-Channel $targetBuild $testChannelName
+    $targetBuild1 = New-Build -repository $targetRepoUri -branch $targetBranch -commit $targetCommit -buildNumber $target1BuildNumber -assets $targetAssets -dependencies $dependencies
+    Add-Build-To-Channel $targetBuild1 $testChannelName
 
     # Add the target build a second time, should populate the BuildDependencies table and use the previous TimeToInclusion
-    $targetBuild = New-Build -repository $targetRepoUri -branch $targetBranch -commit $targetCommit -buildNumber $target2BuildNumber -assets $targetAssets -dependencies $dependencies
-    Add-Build-To-Channel $targetBuild $testChannelName
+    $targetBuild2 = New-Build -repository $targetRepoUri -branch $targetBranch -commit $targetCommit -buildNumber $target2BuildNumber -assets $targetAssets -dependencies $dependencies
+    Add-Build-To-Channel $targetBuild2 $testChannelName
+
+    $build1 = Get-Build -id $targetBuild1
+    $build2 = Get-Build -id $targetBuild2
+
+    if ($build1.dependencies.Count -ne 2)
+    {
+        throw "Unexpected number of dependencies for $targetBuild1"
+    }
+    if ($build2.dependencies.Count -ne 2)
+    {
+        throw "Unexpected number of dependencies for $targetBuild1"
+    }
+
+    if (( Compare-Object $build1.dependencies[0] $build2.dependencies[0]) -or (Compare-Object $build1.dependencies[1] $build2.dependencies[1]))
+    {
+        throw "Dependencies for $targetBuild1 and $targetBuild2 do not match"
+    }
+
+    Write-Host "Test Passed"
     
 } finally {
     Teardown

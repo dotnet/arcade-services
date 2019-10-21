@@ -84,6 +84,9 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                 return NotFound();
             }
 
+            List<Data.Models.BuildDependency> dependentBuilds = _context.BuildDependencies.Where(b => b.BuildId == id).ToList();
+            build.DependentBuildIds = dependentBuilds;
+
             return Ok(new Build(build));
         }
 
