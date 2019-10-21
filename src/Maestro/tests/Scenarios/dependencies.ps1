@@ -50,7 +50,7 @@ $targetAssets = @(
 )
 try {
     Write-Host
-    Write-Host "Github Dependency Flow, batched"
+    Write-Host "BuildDependencies Update Check"
     Write-Host
 
     # Import common tooling and prep for tests
