@@ -195,8 +195,39 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                     {
                         // If the dependent build is not currently in the BuildDependency table for this repo/branch (ie is a new dependency),
                         // find the dependency in the Builds table and calculate the time to inclusion
+
+                        // We want to use the BuildChannel insert time if it exists. So we need to heuristically:
+                        // 1. Find the subscription between these two repositories on the current branch
+                        // 2. Find the entry in BuildChannels and get the insert time
+                        // In certain corner cases, we may pick the wrong subscription or BuildChannel
+                        
                         Data.Models.Build depBuild = await _context.Builds.FindAsync(dep.BuildId);
-                        dep.TimeToInclusionInMinutes = (buildModel.DateProduced - depBuild.DateProduced).TotalMinutes;
+
+                        // If we don't find a subscription or a BuildChannel entry, use the dependency's
+                        // date produced.
+                        DateTimeOffset startTime = depBuild.DateProduced;
+
+                        Data.Models.Subscription subscription = _context.Subscriptions.Where( s =>
+                            s.SourceRepository == depBuild.GitHubRepository &&
+                            s.TargetRepository == buildModel.GitHubRepository &&
+                            s.TargetBranch == buildModel.GitHubBranch
+                        ).LastOrDefault();
+
+                        
+                        if (subscription != null)
+                        {
+                            Data.Models.BuildChannel buildChannel = _context.BuildChannels.Where( bc =>
+                                bc.BuildId == depBuild.Id &&
+                                bc.ChannelId == subscription.ChannelId
+                            ).LastOrDefault();
+
+                            if (buildChannel != null)
+                            {
+                                startTime = buildChannel.DateTimeAdded;
+                            }
+                        }
+
+                        dep.TimeToInclusionInMinutes = (buildModel.DateProduced - startTime).TotalMinutes;
                     }
                 }
 
