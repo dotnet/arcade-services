@@ -108,6 +108,14 @@ try {
     {
         throw "Unexpected number of dependencies for $targetBuild1"
     }
+    if ($build1.dependencies[0].buildId -ne $build1Id -or $build1.dependencies[1].buildId -ne $build2Id)
+    {
+        throw "Incorrect dependencies for $targetBuild1"
+    }
+    if ($build2.dependencies[0].buildId -ne $build1Id -or $build2.dependencies[1].buildId -ne $build2Id)
+    {
+        throw "Incorrect dependencies for $targetBuild2"
+    }
 
     if (( Compare-Object $build1.dependencies[0] $build2.dependencies[0]) -or (Compare-Object $build1.dependencies[1] $build2.dependencies[1]))
     {

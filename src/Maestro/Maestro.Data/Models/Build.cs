@@ -152,6 +152,9 @@ namespace Maestro.Data.Models
         public int DependentBuildId { get; set; }
         public Build DependentBuild { get; set; }
         public bool IsProduct { get; set; }
+
+        // Time between when the dependent build was produced and when it was first added as a dependency
+        // To this build's repository and branch
         public double TimeToInclusionInMinutes { get; set; }
     }
 }
