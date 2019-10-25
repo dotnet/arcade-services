@@ -52,6 +52,12 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("read-stdin", HelpText = "Interactive mode style (YAML), but read input from stdin. Implies -q")]
         public bool ReadStandardIn { get; set; }
 
+        [Option("trigger", SetName = "triggering", HelpText = "Automatically trigger the subscription on creation.")]
+        public bool TriggerOnCreate { get; set; }
+
+        [Option("no-trigger", SetName = "triggering", HelpText = "Do not trigger the subscription on creation.")]
+        public bool NoTriggerOnCreate { get; set; }
+
         public override Operation GetOperation()
         {
             return new AddSubscriptionOperation(this);

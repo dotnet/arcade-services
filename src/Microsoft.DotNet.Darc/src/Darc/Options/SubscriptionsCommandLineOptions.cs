@@ -27,8 +27,8 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("target-branch", HelpText = "Filter by target branch (matches substring unless --exact or --regex is passed).")]
         public string TargetBranch { get; set; }
 
-        [Option("frequencies", Separator = ',', Default = new string[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", },
-            HelpText = @"Filter by subscription update frequency.")]
+        [Option("frequencies", Separator = ',',
+            HelpText = @"Filter by subscription update frequency. Valid values: ""everyWeek"", ""twiceDaily"", ""everyDay"", ""everyBuild"", ""none""")]
         public IEnumerable<string> Frequencies { get; set; }
 
         [Option("default-channel", HelpText = "Filter to subscriptions that target repo+branches that apply by default to the specified channel.")]
@@ -134,6 +134,25 @@ namespace Microsoft.DotNet.Darc.Options
             {
                 return subscriptionProperty.Contains(inputParameter, StringComparison.OrdinalIgnoreCase);
             }
+        }
+
+        /// <summary>
+        /// Determine whether the set of input options has any valid filters.
+        /// </summary>
+        /// <returns>True if there are valid filters, false otherwise.</returns>
+        public bool HasAnyFilters()
+        {
+            return !string.IsNullOrEmpty(TargetRepository) ||
+                   !string.IsNullOrEmpty(TargetBranch) ||
+                   !string.IsNullOrEmpty(SourceRepository) ||
+                   !string.IsNullOrEmpty(Channel) ||
+                   Frequencies.Any() ||
+                   !string.IsNullOrEmpty(DefaultChannelTarget) ||
+                   Disabled ||
+                   Enabled ||
+                   Batchable ||
+                   NotBatchable ||
+                   SubscriptionIds.Any();
         }
     }
 }
