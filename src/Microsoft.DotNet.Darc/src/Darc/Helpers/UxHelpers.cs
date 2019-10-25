@@ -248,5 +248,72 @@ namespace Microsoft.DotNet.Darc
             }
             return outputStream;
         }
+
+        /// <summary>
+        ///     Verify that a branch exists in the specified repo and contains a version details file.
+        ///     If it does not, optionally prompt the user to confirm that they wish to continue.
+        /// </summary>
+        /// <param name="remote">Remote</param>
+        /// <param name="repo">Repository that the branch should be in</param>
+        /// <param name="branch">Branch to check the existence of</param>
+        /// <param name="prompt">Prompt the user to verify that they want to continue</param>
+        /// <returns>True if the branch exists, prompting is not desired, or if the user confirms that they want to continue. False otherwise.</returns>
+        public static async Task<bool> VerifyMaestroManagedBranchExists(IRemote remote, string repo, string branch, bool prompt)
+        {
+            try
+            {
+                var dependencies = await remote.GetDependenciesAsync(repo, branch);
+            }
+            catch (DependencyFileNotFoundException)
+            {
+                Console.WriteLine($"Warning: Could not find an eng/Version.Details.xml at '{repo}@{branch}'. Dependency updates may not happen as expected.");
+                if (prompt)
+                {
+                    return PromptToContinue();
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        ///     Verify that a repository exists, and optionally prompt the user if it does not.
+        /// </summary>
+        /// <param name="remote">Remote</param>
+        /// <param name="repo">Repository to check for</param>
+        /// <param name="prompt">Prompt the user to verify that they want to continue</param>
+        /// <returns>True if the repository exists, prompting is not desired, or if the user confirms that they want to continue. False otherwise.</returns>
+        public static async Task<bool> VerifyRepositoryExists(IRemote remote, string repo, bool prompt)
+        {
+            if (!(await remote.RepositoryExistsAsync(repo)))
+            {
+                Console.WriteLine($"Warning: Could not locate repository '{repo}'. Dependency updates may not happen as expected.");
+                if (prompt)
+                {
+                    return PromptToContinue();
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Prompt the user to continue or not
+        /// </summary>
+        /// <returns>True if we should continue, false otherwise.</returns>
+        public static bool PromptToContinue()
+        {
+            char keyChar;
+            do
+            {
+                Console.Write("Continue? (y/n) ");
+                ConsoleKeyInfo keyInfo = Console.ReadKey();
+                keyChar = char.ToUpperInvariant(keyInfo.KeyChar);
+                Console.WriteLine();
+            }
+            while (keyChar != 'Y' && keyChar != 'N');
+
+            return keyChar == 'Y';
+        }
     }
 }
