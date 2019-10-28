@@ -52,6 +52,22 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return Ok(results);
         }
 
+        [HttpGet("{id}/repositories")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<string>), Description = "List of repositories in Channel")]
+        [ValidateModelState]
+        public async Task<IActionResult> ListRepositories(int id)
+        {
+            List<string> list = await _context.BuildChannels
+                    .Include(b => b.Build.GitHubRepository)
+                    .Include(b => b.Build.AzureDevOpsRepository)
+                    .Where(bc => bc.ChannelId == id)
+                    .Select(bc => bc.Build.GitHubRepository ?? bc.Build.AzureDevOpsRepository)
+                    .Where(b => !String.IsNullOrEmpty(b))
+                    .Distinct()
+                    .ToListAsync();
+            return Ok(list);
+        }
+
         /// <summary>
         ///   Gets a single <see cref="Channel"/>, including all <see cref="ReleasePipeline"/> data.
         /// </summary>
