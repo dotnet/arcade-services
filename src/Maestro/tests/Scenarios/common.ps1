@@ -217,7 +217,7 @@ function Darc-Delete-Channel($channelName) {
 
 # Run darc add-channel and record the channel for later deletion
 function Darc-Add-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = @( "add-default-channel", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch" )
+    $darcParams = @( "add-default-channel", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch", "--quiet")
     Darc-Command -darcParams $darcParams
     # We sometimes call add-default-channel with a refs/heads/ prefix, which
     # will get stripped away by the DB.
