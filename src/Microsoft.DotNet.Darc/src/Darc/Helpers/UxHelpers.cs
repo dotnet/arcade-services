@@ -304,8 +304,17 @@ namespace Microsoft.DotNet.Darc
         public static bool PromptToContinue()
         {
             char keyChar;
+            int triesRemaining = 3;
             do
             {
+                if (triesRemaining == 0)
+                {
+                    // Don't continue if the user can't press y or n.
+                    Console.Write("Invalid input, aborting.");
+                    return false;
+                }
+                triesRemaining--;
+
                 Console.Write("Continue? (y/n) ");
                 ConsoleKeyInfo keyInfo = Console.ReadKey();
                 keyChar = char.ToUpperInvariant(keyInfo.KeyChar);
