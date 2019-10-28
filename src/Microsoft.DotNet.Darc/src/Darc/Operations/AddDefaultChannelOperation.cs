@@ -26,7 +26,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 IRemote remote = RemoteFactory.GetRemote(_options, _options.Repository, Logger);
                 
-                if (!(await UxHelpers.VerifyMaestroManagedBranchExists(remote, _options.Repository, _options.Branch, !_options.NoConfirmation)))
+                if (!(await UxHelpers.VerifyAndConfirmBranchExistsAsync(remote, _options.Repository, _options.Branch, !_options.NoConfirmation)))
                 {
                     Console.WriteLine("Aborting default channel creation.");
                     return Constants.ErrorCode;
