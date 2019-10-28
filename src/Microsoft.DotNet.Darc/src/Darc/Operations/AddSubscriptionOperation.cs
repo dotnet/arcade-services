@@ -173,7 +173,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // Verify the target
                 IRemote targetVerifyRemote = RemoteFactory.GetRemote(_options, targetRepository, Logger);
-                if (!(await UxHelpers.VerifyMaestroManagedBranchExists(targetVerifyRemote, targetRepository, targetBranch, !_options.Quiet)))
+                if (!(await UxHelpers.VerifyAndConfirmBranchExistsAsync(targetVerifyRemote, targetRepository, targetBranch, !_options.Quiet)))
                 {
                     Console.WriteLine("Aborting subscription creation.");
                     return Constants.ErrorCode;
@@ -181,7 +181,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // Verify the source.
                 IRemote sourceVerifyRemote = RemoteFactory.GetRemote(_options, sourceRepository, Logger);
-                if (!(await UxHelpers.VerifyRepositoryExists(targetVerifyRemote, sourceRepository, !_options.Quiet)))
+                if (!(await UxHelpers.VerifyAndConfirmRepositoryExistsAsync(sourceVerifyRemote, sourceRepository, !_options.Quiet)))
                 {
                     Console.WriteLine("Aborting subscription creation.");
                     return Constants.ErrorCode;

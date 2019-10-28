@@ -258,7 +258,7 @@ namespace Microsoft.DotNet.Darc
         /// <param name="branch">Branch to check the existence of</param>
         /// <param name="prompt">Prompt the user to verify that they want to continue</param>
         /// <returns>True if the branch exists, prompting is not desired, or if the user confirms that they want to continue. False otherwise.</returns>
-        public static async Task<bool> VerifyMaestroManagedBranchExists(IRemote remote, string repo, string branch, bool prompt)
+        public static async Task<bool> VerifyAndConfirmBranchExistsAsync(IRemote remote, string repo, string branch, bool prompt)
         {
             try
             {
@@ -283,7 +283,7 @@ namespace Microsoft.DotNet.Darc
         /// <param name="repo">Repository to check for</param>
         /// <param name="prompt">Prompt the user to verify that they want to continue</param>
         /// <returns>True if the repository exists, prompting is not desired, or if the user confirms that they want to continue. False otherwise.</returns>
-        public static async Task<bool> VerifyRepositoryExists(IRemote remote, string repo, bool prompt)
+        public static async Task<bool> VerifyAndConfirmRepositoryExistsAsync(IRemote remote, string repo, bool prompt)
         {
             if (!(await remote.RepositoryExistsAsync(repo)))
             {
@@ -298,14 +298,24 @@ namespace Microsoft.DotNet.Darc
         }
 
         /// <summary>
-        /// Prompt the user for a yes/no
+        /// Prompt the user to continue or not
         /// </summary>
+        /// <param name="message">Message to print before asking for input.</param>
         /// <returns>True if we should continue, false otherwise.</returns>
         public static bool PromptForYesNo(string message)
         {
             char keyChar;
+            int triesRemaining = 3;
             do
             {
+                if (triesRemaining == 0)
+                {
+                    // Don't continue if the user can't press y or n.
+                    Console.Write("Invalid input, aborting.");
+                    return false;
+                }
+                triesRemaining--;
+
                 Console.Write($"{message} (y/n) ");
                 ConsoleKeyInfo keyInfo = Console.ReadKey();
                 keyChar = char.ToUpperInvariant(keyInfo.KeyChar);
