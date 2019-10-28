@@ -4,14 +4,16 @@ using Maestro.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Maestro.Data.Migrations
 {
     [DbContext(typeof(BuildAssetRegistryContext))]
-    partial class BuildAssetRegistryContextModelSnapshot : ModelSnapshot
+    [Migration("20191018204719_AddTimeToInclusionInMinutes")]
+    partial class AddTimeToInclusionInMinutes
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -171,8 +173,6 @@ namespace Maestro.Data.Migrations
                     b.Property<string>("GitHubRepository");
 
                     b.Property<bool>("PublishUsingPipelines");
-
-                    b.Property<bool>("Released");
 
                     b.HasKey("Id");
 

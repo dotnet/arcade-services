@@ -322,7 +322,7 @@ function Add-Build-To-Channel ($buildId, $channelName) {
     Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
 }
 
-function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publishUsingPipelines) {
+function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publishUsingPipelines, $dependencies) {
     if (!$publishUsingPipelines) {
         $publishUsingPipelines = "false"
     }
@@ -340,6 +340,7 @@ function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publis
         azureDevOpsBuildDefinitionId = 6;
         commit = $commit;
         assets = $assets;
+        dependencies = $dependencies;
         publishUsingPipelines = $publishUsingPipelines;
     }
     $bodyJson = ConvertTo-Json $body -Depth 4

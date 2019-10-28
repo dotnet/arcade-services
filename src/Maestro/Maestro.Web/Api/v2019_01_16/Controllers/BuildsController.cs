@@ -84,6 +84,9 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                 return NotFound();
             }
 
+            List<Data.Models.BuildDependency> dependentBuilds = _context.BuildDependencies.Where(b => b.BuildId == id).ToList();
+            build.DependentBuildIds = dependentBuilds;
+
             return Ok(new Build(build));
         }
 
@@ -190,11 +193,77 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             buildModel.DateProduced = DateTimeOffset.UtcNow;
             if (build.Dependencies != null)
             {
+                // For each Dependency, update the time to Inclusion.
+                // This measure is to be used for telemetry purposes, and has several known corner cases
+                // where the measurement will not be correct:
+                // 1. For any dependencies that were added before this column was added, the TimeToInclusionInMinutes
+                //    will be 0.
+                // 2. For new release branches, until new builds of dependencies are added, this will recalculate
+                //    the TimeToInclusion, so it will seem inordinately large until new builds are added. This will
+                //    be particularly true for dependencies that are infrequently updated.
+                foreach (var dep in build.Dependencies)
+                {
+                    // Heuristic to discover if this dependency has been added to the same repository and branch 
+                    // of the current build. If we find a match in the BuildDependencies table, it means
+                    // that this is not a new dependency, and we should use the TimeToInclusionInMinutes
+                    // of the previous time this dependency was added.
+                    var buildDependency = _context.BuildDependencies.Where( d =>
+                            d.DependentBuildId == dep.BuildId &&
+                            d.Build.GitHubRepository == buildModel.GitHubRepository &&
+                            d.Build.GitHubBranch == buildModel.GitHubBranch &&
+                            d.Build.AzureDevOpsRepository == buildModel.AzureDevOpsRepository &&
+                            d.Build.AzureDevOpsBranch == buildModel.AzureDevOpsBranch
+                        ).FirstOrDefault();
+
+                    if (buildDependency != null)
+                    {
+                        dep.TimeToInclusionInMinutes = buildDependency.TimeToInclusionInMinutes;
+                    }
+                    else
+                    {
+                        // If the dependent build is not currently in the BuildDependency table for this repo/branch (ie is a new dependency),
+                        // find the dependency in the Builds table and calculate the time to inclusion
+
+                        // We want to use the BuildChannel insert time if it exists. So we need to heuristically:
+                        // 1. Find the subscription between these two repositories on the current branch
+                        // 2. Find the entry in BuildChannels and get the insert time
+                        // In certain corner cases, we may pick the wrong subscription or BuildChannel
+                        
+                        Data.Models.Build depBuild = await _context.Builds.FindAsync(dep.BuildId);
+
+                        // If we don't find a subscription or a BuildChannel entry, use the dependency's
+                        // date produced.
+                        DateTimeOffset startTime = depBuild.DateProduced;
+
+                        Data.Models.Subscription subscription = _context.Subscriptions.Where( s =>
+                            (s.SourceRepository == depBuild.GitHubRepository || s.SourceRepository == depBuild.AzureDevOpsRepository ) &&
+                            (s.TargetRepository == buildModel.GitHubRepository || s.TargetRepository == buildModel.AzureDevOpsRepository) &&
+                            (s.TargetBranch == buildModel.GitHubBranch || s.TargetBranch == buildModel.AzureDevOpsBranch)
+                        ).LastOrDefault();
+
+                        
+                        if (subscription != null)
+                        {
+                            Data.Models.BuildChannel buildChannel = _context.BuildChannels.Where( bc =>
+                                bc.BuildId == depBuild.Id &&
+                                bc.ChannelId == subscription.ChannelId
+                            ).LastOrDefault();
+
+                            if (buildChannel != null)
+                            {
+                                startTime = buildChannel.DateTimeAdded;
+                            }
+                        }
+
+                        dep.TimeToInclusionInMinutes = (buildModel.DateProduced - startTime).TotalMinutes;
+                    }
+                }
+
                 await _context.BuildDependencies.AddRangeAsync(
                     build.Dependencies.Select(
                         b => new Data.Models.BuildDependency
                         {
-                            Build = buildModel, DependentBuildId = b.BuildId, IsProduct = b.IsProduct,
+                            Build = buildModel, DependentBuildId = b.BuildId, IsProduct = b.IsProduct, TimeToInclusionInMinutes = b.TimeToInclusionInMinutes,
                         }));
             }
 
