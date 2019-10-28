@@ -83,17 +83,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
                     }
 
-                    char keyChar;
-                    do
-                    {
-                        Console.Write("Continue? (y/n) ");
-                        ConsoleKeyInfo keyInfo = Console.ReadKey();
-                        keyChar = char.ToUpperInvariant(keyInfo.KeyChar);
-                        Console.WriteLine();
-                    }
-                    while (keyChar != 'Y' && keyChar != 'N');
-
-                    if (keyChar == 'N')
+                    if (!UxHelpers.PromptToContinue())
                     {
                         Console.WriteLine($"No subscriptions triggered, exiting.");
                         return Constants.ErrorCode;
