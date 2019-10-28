@@ -726,6 +726,12 @@ export interface IChannelsApi {
         }
     ): Observable<models.Channel[]>;
 
+    listRepositoriesAsync(
+        parameters: {
+            id: number,
+        }
+    ): Observable<string[]>;
+
     createChannelAsync(
         parameters: {
             classification: string,
@@ -811,6 +817,41 @@ export class ChannelsApiService implements IChannelsApi {
             map(raw => raw.map((e: any) => models.Channel.fromRawObject(e)))
         );
 
+    }
+
+    public listRepositoriesAsync(
+        {
+            id
+        }: {
+            id: number
+        }
+    ): Observable<string[]> {
+        if (id === undefined) {
+            throw new Error("Required parameter id is undefined.");
+        }
+
+        const apiVersion = "2019-01-16";
+        let _path = this.options.baseUrl;
+        if (_path.endsWith("/")) {
+            _path = _path.slice(0, -1);
+        }
+        _path = _path + "/api/channels/{id}/repositories";
+        _path = _path.replace("{id}", id + "");
+
+        let queryParameters = new HttpParams();
+        let headerParameters = new HttpHeaders(this.options.defaultHeaders);
+
+        queryParameters = queryParameters.set("api-version", apiVersion);
+
+        return this.client.request(
+            "get",
+            _path,
+            {
+                headers: headerParameters,
+                params: queryParameters,
+                responseType: "json",
+            }
+        );
     }
 
     public createChannelAsync(
