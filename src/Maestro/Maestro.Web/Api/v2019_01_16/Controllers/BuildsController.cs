@@ -208,9 +208,9 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                         DateTimeOffset startTime = depBuild.DateProduced;
 
                         Data.Models.Subscription subscription = _context.Subscriptions.Where( s =>
-                            s.SourceRepository == depBuild.GitHubRepository &&
-                            s.TargetRepository == buildModel.GitHubRepository &&
-                            s.TargetBranch == buildModel.GitHubBranch
+                            (s.SourceRepository == depBuild.GitHubRepository || s.SourceRepository == depBuild.AzureDevOpsRepository ) &&
+                            (s.TargetRepository == buildModel.GitHubRepository || s.TargetRepository == buildModel.AzureDevOpsRepository) &&
+                            (s.TargetBranch == buildModel.GitHubBranch || s.TargetBranch == buildModel.AzureDevOpsBranch)
                         ).LastOrDefault();
 
                         
