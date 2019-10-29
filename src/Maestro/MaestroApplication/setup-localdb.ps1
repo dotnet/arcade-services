@@ -3,4 +3,4 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
   exit 1
 }
 
-& "C:\Program Files\Microsoft SQL Server\110\Tools\Binn\sqlcmd.exe" -S "localhost\SQLEXPRESS" -d "master" -Q "CREATE LOGIN [NT AUTHORITY\NETWORK SERVICE] FROM WINDOWS; ALTER SERVER ROLE sysadmin ADD MEMBER [NT AUTHORITY\NETWORK SERVICE];"
+& "C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\sqlcmd.exe" -S "localhost\SQLEXPRESS" -d "master" -Q "CREATE LOGIN [NT AUTHORITY\NETWORK SERVICE] FROM WINDOWS; ALTER SERVER ROLE sysadmin ADD MEMBER [NT AUTHORITY\NETWORK SERVICE];"
