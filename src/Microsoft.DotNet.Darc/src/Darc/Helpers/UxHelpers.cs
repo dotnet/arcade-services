@@ -269,7 +269,7 @@ namespace Microsoft.DotNet.Darc
                 Console.WriteLine($"Warning: Could not find an eng/Version.Details.xml at '{repo}@{branch}'. Dependency updates may not happen as expected.");
                 if (prompt)
                 {
-                    return PromptToContinue();
+                    return PromptForYesNo("Continue?");
                 }
             }
 
@@ -290,7 +290,7 @@ namespace Microsoft.DotNet.Darc
                 Console.WriteLine($"Warning: Could not locate repository '{repo}'. Dependency updates may not happen as expected.");
                 if (prompt)
                 {
-                    return PromptToContinue();
+                    return PromptForYesNo("Continue?");
                 }
             }
 
@@ -300,8 +300,9 @@ namespace Microsoft.DotNet.Darc
         /// <summary>
         /// Prompt the user to continue or not
         /// </summary>
+        /// <param name="message">Message to print before asking for input.</param>
         /// <returns>True if we should continue, false otherwise.</returns>
-        public static bool PromptToContinue()
+        public static bool PromptForYesNo(string message)
         {
             char keyChar;
             int triesRemaining = 3;
@@ -315,7 +316,7 @@ namespace Microsoft.DotNet.Darc
                 }
                 triesRemaining--;
 
-                Console.Write("Continue? (y/n) ");
+                Console.Write($"{message} (y/n) ");
                 ConsoleKeyInfo keyInfo = Console.ReadKey();
                 keyChar = char.ToUpperInvariant(keyInfo.KeyChar);
                 Console.WriteLine();
