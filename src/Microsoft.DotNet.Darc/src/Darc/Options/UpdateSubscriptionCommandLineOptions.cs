@@ -13,10 +13,10 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("id", Required = true, HelpText = "Subscription's id.")]
         public string Id { get; set; }
 
-        [Option("trigger", SetName = "triggering", HelpText = "Automatically trigger the subscription on update.")]
+        [Option("trigger", SetName = "trigger", HelpText = "Automatically trigger the subscription on update.")]
         public bool TriggerOnUpdate { get; set; }
 
-        [Option("no-trigger", SetName = "triggering", HelpText = "Do not trigger the subscription on update.")]
+        [Option("no-trigger", SetName = "notrigger", HelpText = "Do not trigger the subscription on update.")]
         public bool NoTriggerOnUpdate { get; set; }
 
         public override Operation GetOperation()

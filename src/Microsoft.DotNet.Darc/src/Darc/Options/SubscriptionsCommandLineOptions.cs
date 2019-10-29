@@ -28,7 +28,7 @@ namespace Microsoft.DotNet.Darc.Options
         public string TargetBranch { get; set; }
 
         [Option("frequencies", Separator = ',',
-            HelpText = @"Filter by subscription update frequency. Valid values: ""everyWeek"", ""twiceDaily"", ""everyDay"", ""everyBuild"", ""none""")]
+            HelpText = @"Filter by subscription update frequency. Typical values: ""everyWeek"", ""twiceDaily"", ""everyDay"", ""everyBuild"", ""none""")]
         public IEnumerable<string> Frequencies { get; set; }
 
         [Option("default-channel", HelpText = "Filter to subscriptions that target repo+branches that apply by default to the specified channel.")]
@@ -98,7 +98,7 @@ namespace Microsoft.DotNet.Darc.Options
 
         public bool SubscriptionFrequenciesParameterMatches(Subscription subscription)
         {
-            return !Frequencies.Any() || Frequencies.Any(frequency => frequency.Equals(subscription.Policy.UpdateFrequency.ToString(), StringComparison.OrdinalIgnoreCase));
+            return !Frequencies.Any() || Frequencies.Any(frequency => subscription.Policy.UpdateFrequency.ToString().Contains(frequency, StringComparison.OrdinalIgnoreCase));
         }
 
         public bool SubscriptionDefaultChannelTargetParameterMatches(Subscription subscription, IEnumerable<DefaultChannel> defaultChannels)

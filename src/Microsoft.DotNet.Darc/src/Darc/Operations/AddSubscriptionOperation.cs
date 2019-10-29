@@ -199,8 +199,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Prompt the user to trigger the subscription unless they have explicitly disallowed it
                 if (!_options.NoTriggerOnCreate)
                 {
-                    bool triggerAutomatically = _options.TriggerOnCreate;
-                    triggerAutomatically = triggerAutomatically || UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
+                    bool triggerAutomatically = _options.TriggerOnCreate || UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
                     if (triggerAutomatically)
                     {
                         await remote.TriggerSubscriptionAsync(newSubscription.Id.ToString());

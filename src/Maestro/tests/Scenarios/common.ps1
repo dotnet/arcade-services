@@ -217,7 +217,7 @@ function Darc-Delete-Channel($channelName) {
 
 # Run darc add-channel and record the channel for later deletion
 function Darc-Add-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = @( "add-default-channel", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch" )
+    $darcParams = @( "add-default-channel", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch", "--quiet" )
     Darc-Command -darcParams $darcParams
     # We sometimes call add-default-channel with a refs/heads/ prefix, which
     # will get stripped away by the DB.
@@ -278,15 +278,21 @@ function Darc-Add-Subscription-Process-Output($output) {
 }
 
 # Run darc add-subscription with the specified parameters, extract out the subscription id,
-# and record it for teardown later. Implicitly passes -q
+# and record it for teardown later. Implicitly passes -q and --no-trigger
 function Darc-Add-Subscription([Parameter(ValueFromRemainingArguments=$true)]$darcParams) {
-    $darcParams = @( "add-subscription" ) + $darcParams + @( "-q" )
+    $darcParams = @( "add-subscription" ) + $darcParams + @( "-q", "--no-trigger" )
+    $output = Darc-Command -darcParams $darcParams
+    Darc-Add-Subscription-Process-Output $output
+}
+
+function Darc-Add-Subscription-And-Trigger([Parameter(ValueFromRemainingArguments=$true)]$darcParams) {
+    $darcParams = @( "add-subscription" ) + $darcParams + @( "-q", "--trigger" )
     $output = Darc-Command -darcParams $darcParams
     Darc-Add-Subscription-Process-Output $output
 }
 
 function Darc-Add-Subscription-From-Yaml($yamlText) {
-    $darcParams = @( "add-subscription", "--read-stdin" )
+    $darcParams = @( "add-subscription", "--read-stdin", "--no-trigger" )
     $output = $yamlText | Darc-Command-WithPipeline -darcParams $darcParams
     Darc-Add-Subscription-Process-Output $output
 }
