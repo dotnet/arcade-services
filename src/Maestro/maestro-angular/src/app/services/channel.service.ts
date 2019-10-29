@@ -46,24 +46,17 @@ export class ChannelService {
   }
 
   private buildRepositoriesList(channelId: number): Observable<DefaultChannel[]> {
-    let defaultChannels = this.maestro.defaultChannels.listAsync({ channelId: channelId });
-    let subscriptions = this.maestro.subscriptions.listSubscriptionsAsync({ channelId: channelId });
-    
-    let targetRepos = subscriptions.pipe(map(x => x.map(y => {
-      return new DefaultChannel({
-        repository: y.targetRepository!,
-        branch: y.targetBranch, 
-        id: 0,
-      });
-    })));
+// new
+      let builds = this.maestro.channels.listRepositoriesAsync({ id: channelId });
 
-    const repos = combineLatest(targetRepos, defaultChannels).pipe(
-      map(([l,r]) => {
-        let dcArray = new Array<DefaultChannel>().concat(r).concat(l);
-        return dcArray.filter((dc,index) => dcArray.findIndex(t => t.repository === dc.repository) === index).sort(repoSorter);
-      }),
-    );
-
-    return repos; 
+      let repos = builds.pipe(
+          map(x => x.map(y => {
+            return new DefaultChannel({
+            repository: y ,
+            branch: undefined,
+            id: 0,
+          });
+        })));
+      return repos;
   }
 }

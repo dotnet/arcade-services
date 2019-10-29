@@ -63,10 +63,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         return Constants.ErrorCode;
                     }
 
-                    IEnumerable<Subscription> subscriptions = (await remote.GetSubscriptionsAsync()).Where(subscription =>
-                    {
-                        return _options.SubcriptionFilter(subscription);
-                    });
+                    IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(remote);
 
                     if (subscriptions.Count() == 0)
                     {
@@ -86,17 +83,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
                     }
 
-                    char keyChar;
-                    do
-                    {
-                        Console.Write("Continue? (y/n) ");
-                        ConsoleKeyInfo keyInfo = Console.ReadKey();
-                        keyChar = char.ToUpperInvariant(keyInfo.KeyChar);
-                        Console.WriteLine();
-                    }
-                    while (keyChar != 'Y' && keyChar != 'N');
-
-                    if (keyChar == 'N')
+                    if (!UxHelpers.PromptToContinue())
                     {
                         Console.WriteLine($"No subscriptions triggered, exiting.");
                         return Constants.ErrorCode;

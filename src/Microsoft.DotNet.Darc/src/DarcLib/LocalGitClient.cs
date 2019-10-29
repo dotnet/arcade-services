@@ -156,7 +156,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoDir))
                 {
-                    foreach (GitFile file in filesToCommit.Where(f => f.Operation != GitFileOperation.Delete))
+                    foreach (GitFile file in filesToCommit)
                     {
                         switch (file.Operation)
                         {
@@ -198,7 +198,6 @@ namespace Microsoft.DotNet.DarcLib
                                 break;
                         }
                     }
-                    LibGit2Sharp.Commands.Stage(localRepo, filesToCommit.Select(f => f.FilePath));
                 }
             }
             catch (Exception exc)
@@ -489,6 +488,11 @@ namespace Microsoft.DotNet.DarcLib
                 _logger.LogDebug($"Fetching new commits from {repoUrl} into {repoDir}");
                 LibGit2Sharp.Commands.Fetch(repo, remoteName, new[] { $"+refs/heads/*:refs/remotes/{remoteName}/*" }, new LibGit2Sharp.FetchOptions(), $"Fetching {repoUrl} into {repoDir}");
             }
+        }
+
+        public Task<bool> RepoExistsAsync(string repoUri)
+        {
+            throw new NotImplementedException();
         }
     }
 }

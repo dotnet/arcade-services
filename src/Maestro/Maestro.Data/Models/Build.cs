@@ -16,6 +16,8 @@ namespace Maestro.Data.Models
     {
         private string _azureDevOpsRepository;
         private string _gitHubRepository;
+        private string _azureDevOpsBranch;
+        private string _githubBranch;
 
         static Build()
         {
@@ -32,7 +34,8 @@ namespace Maestro.Data.Models
                     select new BuildChannel
                     {
                         Channel = dc.Channel,
-                        Build = build
+                        Build = build,
+                        DateTimeAdded = DateTimeOffset.UtcNow
                     }).Distinct());
 
                 context.SaveChangesWithTriggers(b => context.SaveChanges(b));
@@ -68,8 +71,19 @@ namespace Maestro.Data.Models
             }
         }
 
-        public string AzureDevOpsBranch { get; set; }
-      
+        public string AzureDevOpsBranch
+        {
+            get
+            {
+                return AzureDevOpsClient.NormalizeUrl(_azureDevOpsBranch);
+            }
+
+            set
+            {
+                _azureDevOpsBranch = AzureDevOpsClient.NormalizeUrl(value);
+            }
+        }
+
         public string GitHubRepository
         {
             get
@@ -83,7 +97,17 @@ namespace Maestro.Data.Models
             }
         }
 
-        public string GitHubBranch { get; set; }
+        public string GitHubBranch
+        {
+            get
+            {
+                return IGitRepoExtension.NormalizeBranchName(_githubBranch);
+            }
+            set
+            {
+                _githubBranch = IGitRepoExtension.NormalizeBranchName(value);
+            }
+        }
 
         public bool PublishUsingPipelines { get; set; }
 
@@ -92,6 +116,15 @@ namespace Maestro.Data.Models
         public List<Asset> Assets { get; set; }
 
         public List<BuildChannel> BuildChannels { get; set; }
+
+        /// <summary>
+        /// If true, the build has been released to the public. This can be used to make decisions on whether certain
+        /// builds should be included in future release drops.
+        /// </summary>
+        public bool Released { get; set; } = false;
+
+        [NotMapped]
+        public int Staleness { get; set; }
 
         [NotMapped]
         public List<BuildDependency> DependentBuildIds { get; set; }
@@ -103,6 +136,7 @@ namespace Maestro.Data.Models
         public Build Build { get; set; }
         public int ChannelId { get; set; }
         public Channel Channel { get; set; }
+        public DateTimeOffset DateTimeAdded { get; set; }
 
         public override bool Equals(object obj)
         {
@@ -124,5 +158,9 @@ namespace Maestro.Data.Models
         public int DependentBuildId { get; set; }
         public Build DependentBuild { get; set; }
         public bool IsProduct { get; set; }
+
+        // Time between when the dependent build was produced and when it was first added as a dependency
+        // To this build's repository and branch
+        public double TimeToInclusionInMinutes { get; set; }
     }
 }

@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option('v', "version", HelpText = "Dependency version.")]
         public string Version { get; set; }
 
-        [Option('r', "repo", HelpText = "Repository where the dependency was built.")]
+        [Option('r', "repo", Required = true, HelpText = "Repository where the dependency was built.")]
         public string RepoUri { get; set; }
 
         [Option('c', "commit", HelpText = "SHA at which the dependency was produced.")]

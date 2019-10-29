@@ -406,6 +406,7 @@ export class Build {
             channels,
             assets,
             dependencies,
+            staleness,
         }: {
             id: number,
             commit?: string,
@@ -423,6 +424,7 @@ export class Build {
             channels?: Channel[],
             assets?: Asset[],
             dependencies?: BuildRef[],
+            staleness?: number,
         }
     ) {
         this._id = id;
@@ -441,6 +443,7 @@ export class Build {
         this._channels = channels;
         this._assets = assets;
         this._dependencies = dependencies;
+        this._staleness = staleness;
     }
 
     private _id: number;
@@ -578,6 +581,12 @@ export class Build {
     public get dependencies(): BuildRef[] | undefined {
         return this._dependencies;
     }
+
+    private _staleness?: number;
+
+    public get staleness(): number | undefined {
+        return this._staleness;
+    }
     
     public isValid(): boolean {
         return (
@@ -605,6 +614,7 @@ export class Build {
             channels: value["channels"] == null ? undefined : value["channels"].map((e: any) => Channel.fromRawObject(e)) as any,
             assets: value["assets"] == null ? undefined : value["assets"].map((e: any) => Asset.fromRawObject(e)) as any,
             dependencies: value["dependencies"] == null ? undefined : value["dependencies"].map((e: any) => BuildRef.fromRawObject(e)) as any,
+            staleness: value["staleness"] == null ? undefined : value["staleness"] as any,
         });
         return result;
     }
@@ -652,6 +662,9 @@ export class Build {
         }
         if (value._dependencies) {
             result["dependencies"] = value._dependencies.map((e: any) => BuildRef.toRawObject(e));
+        }
+        if (value._staleness) {
+            result["staleness"] = value._staleness;
         }
         return result;
     }
@@ -938,13 +951,16 @@ export class BuildRef {
         {
             buildId,
             isProduct,
+            timeToInclusionInMinutes,
         }: {
             buildId: number,
             isProduct: boolean,
+            timeToInclusionInMinutes: number,
         }
     ) {
         this._buildId = buildId;
         this._isProduct = isProduct;
+        this._timeToInclusionInMinutes = timeToInclusionInMinutes;
     }
 
     private _buildId: number;
@@ -958,11 +974,18 @@ export class BuildRef {
     public get isProduct(): boolean {
         return this._isProduct;
     }
+
+    private _timeToInclusionInMinutes: number;
+
+    public get timeToInclusionInMinutes(): number {
+        return this._timeToInclusionInMinutes;
+    }
     
     public isValid(): boolean {
         return (
             this._buildId !== undefined &&
-            this._isProduct !== undefined
+            this._isProduct !== undefined &&
+            this._timeToInclusionInMinutes !== undefined
         );
     }
 
@@ -970,6 +993,7 @@ export class BuildRef {
         let result = new BuildRef({
             buildId: value["buildId"] == null ? undefined : value["buildId"] as any,
             isProduct: value["isProduct"] == null ? undefined : value["isProduct"] as any,
+            timeToInclusionInMinutes: value["timeToInclusionInMinutes"] == null ? undefined : value["timeToInclusionInMinutes"] as any,
         });
         return result;
     }
@@ -978,6 +1002,7 @@ export class BuildRef {
         let result: any = {};
         result["buildId"] = value._buildId;
         result["isProduct"] = value._isProduct;
+        result["timeToInclusionInMinutes"] = value._timeToInclusionInMinutes;
         return result;
     }
 }

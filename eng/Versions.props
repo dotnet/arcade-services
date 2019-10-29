@@ -12,9 +12,10 @@
     <CommandLineParserVersion>2.2.1</CommandLineParserVersion>
     <CredentialManagementVersion>1.0.2</CredentialManagementVersion>
     <HandlebarsNetVersion>1.9.5</HandlebarsNetVersion>
-    <LibGit2SharpVersion>0.26.0</LibGit2SharpVersion>
+    <LibGit2SharpVersion>0.27.0-preview-0024</LibGit2SharpVersion>
     <log4netVersion>2.0.8</log4netVersion>
     <SystemNetHttpVersion>4.3.3</SystemNetHttpVersion>
+    <MicrosoftApplicationInsightsVersion>2.10.0</MicrosoftApplicationInsightsVersion>
     <MicrosoftAzureKeyVaultVersion>3.0.3</MicrosoftAzureKeyVaultVersion>
     <MicrosoftBuildVersion>15.7.179</MicrosoftBuildVersion>
     <MicrosoftBuildFrameworkVersion>15.7.179</MicrosoftBuildFrameworkVersion>
@@ -44,10 +45,10 @@
     <WindowsAzureStorageVersion>8.5.0</WindowsAzureStorageVersion>
     <XUnitVersion>2.4.1-pre.build.4059</XUnitVersion>
     <XUnitVSRunnerVersion>2.4.1-pre.build.4059</XUnitVSRunnerVersion>
-    <MicrosoftDotNetSignToolVersion>5.0.0-beta.19473.5</MicrosoftDotNetSignToolVersion>
-    <MicrosoftDotNetBuildTasksFeedVersion>5.0.0-beta.19473.5</MicrosoftDotNetBuildTasksFeedVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>5.0.0-beta.19473.5</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
-    <MicrosoftDotNetGitIssueManagerVersion>5.0.0-beta.19473.5</MicrosoftDotNetGitIssueManagerVersion>
+    <MicrosoftDotNetSignToolVersion>5.0.0-beta.19527.3</MicrosoftDotNetSignToolVersion>
+    <MicrosoftDotNetBuildTasksFeedVersion>5.0.0-beta.19527.3</MicrosoftDotNetBuildTasksFeedVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>5.0.0-beta.19527.3</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
+    <MicrosoftDotNetGitIssueManagerVersion>5.0.0-beta.19527.3</MicrosoftDotNetGitIssueManagerVersion>
   </PropertyGroup>
   <!--Package names-->
   <PropertyGroup>

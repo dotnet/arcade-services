@@ -1,7 +1,8 @@
 <table class="table table-sm table-hover mb-0" style="white-space: nowrap;">
   <thead>
     <th>Source Repository</th>
-    <th>OutputBranch</th>
+    <th>Source Channel</th>
+    <th>Target Branch</th>
     <th>Status</th>
   </thead>
   <button (click)="openDetails=!openDetails">Show/Hide Additional Details</button>
@@ -9,16 +10,19 @@
     <ng-container *ngFor="let branch of subscriptionsList | keyvalue">
       <ng-container *ngFor="let sub of subscriptionsList[branch.key]">
         <tr>
-          <td>
+            <td>
             {{sub.sourceRepository}}
           </td>
           <td>
-            {{branch.key}}
+            {{sub.channel.name}}
           </td>
           <td>
+            {{branch.key}}
+        </td>
+                      <td>
             {{sub.enabled ? 'Enabled' : 'Disabled'}}
           </td>
-        </tr>
+              </tr>
       </ng-container>
       <ng-container *ngIf="openDetails">
         <ng-container *stateful="let details from versionDetailsList[branch.key]">
@@ -44,7 +48,7 @@
 <table *ngIf="openDetails" class="table table-sm table-hover mb-0" style="white-space: nowrap;">
   <thead>
     <th>Dependencies Without Subscriptions</th>
-    <th>Branch</th>
+    <th>Target Branch</th>
     <th>Number of Dependencies Referenced</th>
   </thead>
   <tbody>
@@ -73,7 +77,7 @@
 <table *ngIf="openDependencies" class="table table-sm table-hover mb-0" style="white-space: nowrap;">
   <thead>
     <th>Dependency</th>
-    <th>Branch</th>
+    <th>Target Branch</th>
     <th>Source Repository</th>
   </thead>
   <tbody>
@@ -102,7 +106,7 @@
 <table *ngIf="openAssets" class="table table-sm table-hover mb-0" style="white-space: nowrap;">
   <thead>
     <th>Assets with Multiple Sources</th>
-    <th>Output Branch</th>
+    <th>Target Branch</th>
     <th>Contributing Subscriptions</th>
   </thead>
   <tbody>

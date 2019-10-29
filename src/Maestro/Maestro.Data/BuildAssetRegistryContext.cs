@@ -279,6 +279,7 @@ FOR SYSTEM_TIME ALL
             var buildIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.BuildId)).Relational().ColumnName;
             var dependencyIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.DependentBuildId)).Relational().ColumnName;
             var isProductColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.IsProduct)).Relational().ColumnName;
+            var timeToInclusionInMinutesColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.TimeToInclusionInMinutes)).Relational().ColumnName;
             var edgeTable = dependencyEntity.Relational().TableName;
 
             var edges = BuildDependencies.FromSql($@"
@@ -287,6 +288,7 @@ WITH traverse AS (
             {buildIdColumnName},
             {dependencyIdColumnName},
             {isProductColumnName},
+            {timeToInclusionInMinutesColumnName},
             0 as Depth
         from {edgeTable}
         WHERE {buildIdColumnName} = @id
@@ -295,6 +297,7 @@ WITH traverse AS (
             {edgeTable}.{buildIdColumnName},
             {edgeTable}.{dependencyIdColumnName},
             {edgeTable}.{isProductColumnName},
+            {edgeTable}.{timeToInclusionInMinutesColumnName},
             traverse.Depth + 1
         FROM {edgeTable}
         INNER JOIN traverse
@@ -302,7 +305,7 @@ WITH traverse AS (
         WHERE traverse.{isProductColumnName} = 1 -- The thing we previously traversed was a product dependency
             AND traverse.Depth < 10 -- Don't load all the way back because of incorrect isProduct columns
 )
-SELECT DISTINCT {buildIdColumnName}, {dependencyIdColumnName}, {isProductColumnName}
+SELECT DISTINCT {buildIdColumnName}, {dependencyIdColumnName}, {isProductColumnName}, {timeToInclusionInMinutesColumnName}
 FROM traverse;",
                new SqlParameter("id", buildId));
 
@@ -327,6 +330,29 @@ FROM traverse;",
                 dict[edge.BuildId].DependentBuildIds.Add(edge);
             }
 
+            // Gather subscriptions used by this build.
+            Build primaryBuild = Builds.First(b => b.Id == buildId);
+            var validSubscriptions = await Subscriptions.Where(s => (s.TargetRepository == primaryBuild.AzureDevOpsRepository || s.TargetRepository == primaryBuild.GitHubRepository) &&
+                                                                    (s.TargetBranch == primaryBuild.AzureDevOpsBranch || s.TargetBranch == primaryBuild.GitHubBranch ||
+                                                                     $"refs/heads/{s.TargetBranch}" == primaryBuild.AzureDevOpsBranch || $"refs/heads/{s.TargetBranch}" == primaryBuild.GitHubBranch)).ToListAsync();
+
+            // Use the subscriptions to determine what channels are relevant for this build, so just grab the unique channel ID's from valid suscriptions
+            var channelIds = validSubscriptions.GroupBy(x => x.ChannelId).Select(y => y.First()).Select(s => s.ChannelId);
+
+            // Acquire list of builds in valid channels
+            var channelBuildIds = await BuildChannels.Where(b => channelIds.Any(c => c == b.ChannelId)).Select(s => s.BuildId).ToListAsync();
+            var possibleBuilds = await Builds.Where(b => channelBuildIds.Any(c => c == b.Id)).ToListAsync();
+
+            // Calculate total number of builds that are newer.
+            foreach (var id in dict.Keys)
+            {
+                var build = dict[id];
+                // Get newer builds data for this channel.
+                var newer = possibleBuilds.Where(b => b.GitHubRepository == build.GitHubRepository && 
+                                                    b.AzureDevOpsRepository == build.AzureDevOpsRepository &&
+                                                    b.DateProduced > build.DateProduced);
+                dict[id].Staleness = newer.Count();
+            }
             return dict.Values.ToList();
         }
     }

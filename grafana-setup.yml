@@ -1,0 +1,80 @@
+variables:
+  # Cannot use key:value syntax in root defined variables
+  - name: _TeamName
+    value: DotNetCore
+  - name: _PublishUsingPipelines
+    value: true
+  - name: _DotNetArtifactsCategory
+    value: .NETCore
+  # This can be overridden if we are using a locally built fork
+  - group: Dotnet Grafana
+  # Variables we want to be settable, so can't be defined here:
+  # GrafanaBinPath: /usr/sbin/grafana-server
+  # TargetVmName: grafana
+  # TargetResourceGroup: monitoring
+
+stages:
+- stage: deploy
+  displayName: Deploy grafana server
+  jobs:
+  - template: /eng/common/templates/jobs/jobs.yml
+    parameters:
+      enableMicrobuild: false
+      enablePublishBuildArtifacts: false
+      enablePublishTestResults: false
+      enablePublishBuildAssets: false
+      enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
+      enableTelemetry: false
+      helixRepo: dotnet/arcade-services
+      jobs:
+      - job: Windows_NT
+        timeoutInMinutes: 90
+        pool:
+          vmImage: windows-2019
+
+        steps:
+        - checkout: self
+          clean: true
+
+        - powershell: |
+            if (-not (Test-Path env:GrafanaBinPath)) { Write-Host "Missing GrafanaBinPath, ensure required variables are defined"; exit 1}
+            if (-not (Test-Path env:TargetVmName)) { Write-Host "Missing TargetVmName, ensure required variables are defined"; exit 1}
+            if (-not (Test-Path env:TargetResourceGroup)) { Write-Host "Missing TargetResourceGroup, ensure required variables are defined"; exit 1}
+            Write-Host "All required variables defined"
+          displayName: Ensure variables defined
+        
+        - task: ArchiveFiles@2
+          inputs:
+            rootFolderOrFile: $(Build.SourcesDirectory)\src\Monitoring\grafana-init
+            includeRootFolder: false
+            archiveType: tar
+            tarCompression: gz
+            archiveFile: $(Build.ArtifactStagingDirectory)/grafana-init.tar.gz
+
+        - task: AzureFileCopy@3
+          displayName: Copy grafana-init to VM
+          inputs:
+            sourcePath: $(Build.ArtifactStagingDirectory)/grafana-init.tar.gz
+            azureSubscription: DncEng-VSTS
+            storage: dotnetgrafana
+            containerName: build-transfer
+            blobPrefix: grafana-init-$(Build.BuildNumber)
+            destination: azureBlob
+            outputStorageUri: UploadedUri
+        
+        - task: AzureCLI@2
+          displayName: Execute grafana-init/setup.sh on VM
+          inputs:
+            azureSubscription: DncEng-VSTS
+            scriptType: batch
+            scriptLocation: inlineScript
+            inlineScript: >-
+              az vm run-command invoke
+              -g $(TargetResourceGroup)
+              -n $(TargetVmName)
+              --command-id RunShellScript
+              --scripts "mkdir -p /tmp/grafana-init/ &&
+              cd /tmp/grafana-init &&
+              curl --silent --show-error --fail '$(UploadedUri)grafana-init-$(Build.BuildNumber)/grafana-init.tar.gz' -o ./grafana-init.tar.gz &&
+              tar -xzf ./grafana-init.tar.gz &&
+              sudo bash ./setup.sh $(GrafanaBinPath)"

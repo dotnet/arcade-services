@@ -184,7 +184,7 @@ namespace Microsoft.DotNet.DarcLib
             IEnumerable<DependencyDetail> itemsToUpdate,
             string repoUri,
             string branch,
-            IEnumerable<DependencyDetail> oldDependencies = null)
+            IEnumerable<DependencyDetail> oldDependencies)
         {
             XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
             XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch);

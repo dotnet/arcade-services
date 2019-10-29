@@ -172,6 +172,8 @@ namespace Maestro.Data.Migrations
 
                     b.Property<bool>("PublishUsingPipelines");
 
+                    b.Property<bool>("Released");
+
                     b.HasKey("Id");
 
                     b.ToTable("Builds");
@@ -182,6 +184,8 @@ namespace Maestro.Data.Migrations
                     b.Property<int>("BuildId");
 
                     b.Property<int>("ChannelId");
+
+                    b.Property<DateTimeOffset>("DateTimeAdded");
 
                     b.HasKey("BuildId", "ChannelId");
 
@@ -197,6 +201,8 @@ namespace Maestro.Data.Migrations
                     b.Property<int>("DependentBuildId");
 
                     b.Property<bool>("IsProduct");
+
+                    b.Property<double>("TimeToInclusionInMinutes");
 
                     b.HasKey("BuildId", "DependentBuildId");
 

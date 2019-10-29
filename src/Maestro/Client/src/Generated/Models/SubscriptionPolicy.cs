@@ -26,7 +26,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         {
             get
             {
-                if (UpdateFrequency == default)
+                if (UpdateFrequency == default(UpdateFrequency))
                 {
                     return false;
                 }

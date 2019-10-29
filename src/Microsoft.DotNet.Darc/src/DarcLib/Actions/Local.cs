@@ -55,22 +55,15 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, IRemoteFactory remoteFactory)
         {
-            // TODO: This should use known updaters, but today the updaters for global.json can only
-            // add, not actually update.  This needs a fix. https://github.com/dotnet/arcade/issues/1095
-            /*List<DependencyDetail> defaultUpdates = new List<DependencyDetail>(, IRemote remote);
-            foreach (DependencyDetail dependency in dependencies)
-            {
-                if (DependencyOperations.TryGetKnownUpdater(dependency.Name, out Delegate function))
-                {
-                    await (Task)function.DynamicInvoke(_fileManager, _repo, dependency);
-                }
-                else
-                {
-                    defaultUpdates.Add(dependency);
-                }
-            }*/
+            // Read the current dependency files and grab their locations so that nuget.config can be updated appropriately.
+            // Update the incoming dependencies with locations.
+            IEnumerable<DependencyDetail> oldDependencies = await GetDependenciesAsync();
 
-            var fileContainer = await _fileManager.UpdateDependencyFiles(dependencies, _repo, null);
+            IRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(_logger);
+            await barOnlyRemote.AddAssetLocationToDependenciesAsync(oldDependencies);
+            await barOnlyRemote.AddAssetLocationToDependenciesAsync(dependencies);
+
+            var fileContainer = await _fileManager.UpdateDependencyFiles(dependencies, _repo, null, oldDependencies);
             List<GitFile> filesToUpdate = fileContainer.GetFilesToCommit();
 
             // TODO: This needs to be moved into some consistent handling between local/remote and add/update:

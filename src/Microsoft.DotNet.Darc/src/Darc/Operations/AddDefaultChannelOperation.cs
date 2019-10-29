@@ -24,7 +24,13 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             try
             {
-                IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+                IRemote remote = RemoteFactory.GetRemote(_options, _options.Repository, Logger);
+                
+                if (!(await UxHelpers.VerifyAndConfirmBranchExistsAsync(remote, _options.Repository, _options.Branch, !_options.NoConfirmation)))
+                {
+                    Console.WriteLine("Aborting default channel creation.");
+                    return Constants.ErrorCode;
+                }
 
                 await remote.AddDefaultChannelAsync(_options.Repository, _options.Branch, _options.Channel);
 

@@ -7,6 +7,7 @@ using Maestro.Data.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -49,6 +50,22 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             List<Channel> results = query.AsEnumerable().Select(c => new Channel(c)).ToList();
             return Ok(results);
+        }
+
+        [HttpGet("{id}/repositories")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<string>), Description = "List of repositories in Channel")]
+        [ValidateModelState]
+        public async Task<IActionResult> ListRepositories(int id)
+        {
+            List<string> list = await _context.BuildChannels
+                    .Include(b => b.Build.GitHubRepository)
+                    .Include(b => b.Build.AzureDevOpsRepository)
+                    .Where(bc => bc.ChannelId == id)
+                    .Select(bc => bc.Build.GitHubRepository ?? bc.Build.AzureDevOpsRepository)
+                    .Where(b => !String.IsNullOrEmpty(b))
+                    .Distinct()
+                    .ToListAsync();
+            return Ok(list);
         }
 
         /// <summary>
@@ -171,7 +188,8 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             var buildChannel = new BuildChannel
             {
                 Channel = channel,
-                Build = build
+                Build = build,
+                DateTimeAdded = DateTimeOffset.UtcNow
             };
             await _context.BuildChannels.AddAsync(buildChannel);
             await _context.SaveChangesAsync();
