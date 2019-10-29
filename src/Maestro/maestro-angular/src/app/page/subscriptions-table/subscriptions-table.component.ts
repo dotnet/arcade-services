@@ -61,6 +61,7 @@ class VersionDetails {
   }
 
   // Logic taken from SubscriptionHealthMetric in darc and adapted for this data source
+  // Goes through each subscription given and determines if any are unnecessary or if there are any dependencies that don't come from a subscription
   getUnnecessaryAndMissingSubs(subsAndAssets: Record<string, Asset[]>, subscriptions: Subscription[]) {
     // Id, Subscription
     let extraSubs: Record<string, Subscription> = {};
@@ -103,14 +104,14 @@ class VersionDetails {
       }
     }
 
-    this.unusedSubscriptions = extraSubs;
-    this.dependenciesWithNoSubscription = missingSubs;
+    return { extraSubs, missingSubs };
   }
 
   // Logic taken from SubscriptionHealthMetric in darc and adapted for this data source
+  // Goes through each dependency and checks if there's more than one subscription that provides it
   getConflictingSubs(subsAndAssets: Record<string, Asset[]>, subscriptions: Subscription[]) {
-
     let assetsToSub: Record<string, Subscription> = {};
+    let conflictingSubs: Record<string, Subscription[]> = {};
 
     // Map asset to subscription the first time it's encountered, then add it to the conflicts list if it comes up again.
     for (let sub of subscriptions) {
@@ -126,15 +127,15 @@ class VersionDetails {
               continue;
             }
 
-            const conflictsKeys = Object.keys(this.conflictingSubscriptions);
+            const conflictsKeys = Object.keys(conflictingSubs);
 
             if (conflictsKeys.includes(assetName)) {
-              this.conflictingSubscriptions[assetName].push(sub);
+              conflictingSubs[assetName].push(sub);
             }
             else {
-              this.conflictingSubscriptions[assetName] = new Array();
-              this.conflictingSubscriptions[assetName].push(sub);
-              this.conflictingSubscriptions[assetName].push(otherSub);
+              conflictingSubs[assetName] = new Array();
+              conflictingSubs[assetName].push(sub);
+              conflictingSubs[assetName].push(otherSub);
             }
           }
           else {
@@ -143,9 +144,12 @@ class VersionDetails {
         }
       }
     }
+
+    return conflictingSubs;
   }
 
-  getAndProcessLatestAssetsForSubs(subscriptions: Subscription[], buildService: BuildService) {
+  // Queries the Maestro build service to get the most recent assets for all dependent subscriptions
+  getLatestAssetsForSubs(subscriptions: Subscription[], buildService: BuildService) {
     // Can't make a Record with <Subscription, string[]> so use the subscriptionId as a proxy
     const subWithBuilds: Observable<StatefulResult<[Subscription | null, Build | null]>[]> = <any>combineLatest.apply(undefined, subscriptions.filter(s => s.channel && s.sourceRepository).map(sub => {
       const buildId = buildService.getLatestBuildId(sub.channel!.id, sub.sourceRepository!);
@@ -174,12 +178,11 @@ class VersionDetails {
           subsWithAssets[sub.id] = build.assets || [];
         }
 
-        this.getUnnecessaryAndMissingSubs(subsWithAssets, subscriptions);
-        this.getConflictingSubs(subsWithAssets, subscriptions);
-
         return subsWithAssets;
       }),
     ) as Observable<StatefulResult<Record<string, Asset[]>>>;
+
+    return result;
   }
 }
 
@@ -222,12 +225,30 @@ export class SubscriptionsTableComponent implements OnChanges {
                 const xmlData = new DOMParser().parseFromString(file, "text/xml");
                 return new VersionDetails(xmlData);
               }),
-            map(
+            switchMap(
               (versionDetails) => {
+                let newDetails: VersionDetails = versionDetails;
                 if (this.subscriptionsList) {
-                  versionDetails.getAndProcessLatestAssetsForSubs(this.subscriptionsList[branch], this.buildService);
+                  let assetsList = versionDetails.getLatestAssetsForSubs(this.subscriptionsList[branch], this.buildService);
+                  const updated = assetsList.pipe(
+                    statefulPipe(
+                      map((assets) => {
+
+                        let updatedDetails = versionDetails;
+
+                        if (this.subscriptionsList) {
+                          const processedSubs = updatedDetails.getUnnecessaryAndMissingSubs(assets, this.subscriptionsList[branch]);
+                          updatedDetails.unusedSubscriptions = processedSubs.extraSubs;
+                          updatedDetails.dependenciesWithNoSubscription = processedSubs.missingSubs;
+                          const conflictingSubs = updatedDetails.getConflictingSubs(assets, this.subscriptionsList[branch]);
+                          updatedDetails.conflictingSubscriptions = conflictingSubs;
+                        }
+                        return updatedDetails;
+                      }))
+                  );
+                  return updated;
                 }
-                return versionDetails;
+                return of(newDetails);
               }
             ),
             shareReplay(1)
