@@ -15,6 +15,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client;
 using ApiError = Microsoft.DotNet.Maestro.Client.Models.ApiError;
+using Microsoft.Azure.KeyVault.Models;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -86,6 +87,30 @@ namespace Microsoft.DotNet.Darc.Operations
                     subscriptionToUpdate);
 
                 Console.WriteLine($"Successfully updated subscription with id '{updatedSubscription.Id}'.");
+
+                // Determine whether the subscription should be triggered.
+                if (!_options.NoTriggerOnUpdate)
+                {
+                    bool triggerAutomatically = _options.TriggerOnUpdate;
+                    // Determine whether we should prompt if the user hasn't explicitly
+                    // said one way or another. We shouldn't prompt if nothing changes or
+                    // if non-interesting options have changed
+                    if (!triggerAutomatically &&
+                        ((subscriptionToUpdate.ChannelName != subscription.Channel.Name) ||
+                        (subscriptionToUpdate.SourceRepository != subscription.SourceRepository) ||
+                        (subscriptionToUpdate.Enabled.Value && !subscription.Enabled) ||
+                        (subscriptionToUpdate.Policy.UpdateFrequency != UpdateFrequency.None && subscriptionToUpdate.Policy.UpdateFrequency !=
+                            subscription.Policy.UpdateFrequency)))
+                    {
+                        triggerAutomatically = UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
+                    }
+
+                    if (triggerAutomatically)
+                    {
+                        await remote.TriggerSubscriptionAsync(updatedSubscription.Id.ToString());
+                        Console.WriteLine($"Subscription '{updatedSubscription.Id}' triggered.");
+                    }
+                }
 
                 return Constants.SuccessCode;
             }

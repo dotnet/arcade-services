@@ -22,7 +22,8 @@ $testScripts = (
     'githubflow-nonbatched-with-coherency.ps1',
     'githubflow-release-pipeline-nonbatched.ps1',
     'repo-policies.ps1',
-    'subscriptions.ps1'
+    'subscriptions.ps1',
+    'dependencies.ps1'
 )
 
 $failed = 0

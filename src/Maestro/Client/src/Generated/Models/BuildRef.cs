@@ -10,6 +10,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         {
             BuildId = buildId;
             IsProduct = isProduct;
+            TimeToInclusionInMinutes = 0;
         }
 
         [JsonProperty("buildId")]
@@ -17,5 +18,8 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 
         [JsonProperty("isProduct")]
         public bool IsProduct { get; }
+
+        [JsonProperty("timeToInclusionInMinutes")]
+        public double TimeToInclusionInMinutes { get; }
     }
 }

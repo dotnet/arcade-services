@@ -7,6 +7,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using Maestro.Web.Api.v2019_01_16.Models;
 using Microsoft.AspNetCore.ApiVersioning;
+using Newtonsoft.Json;
 
 namespace Maestro.Web.Api.v2019_01_16.Models
 {
@@ -44,6 +45,8 @@ namespace Maestro.Web.Api.v2019_01_16.Models
 
         public bool PublishUsingPipelines { get; set; }
 
+        public bool Released { get; set; }
+
         public Data.Models.Build ToDb()
         {
             return new Data.Models.Build
@@ -59,20 +62,30 @@ namespace Maestro.Web.Api.v2019_01_16.Models
                 AzureDevOpsRepository = AzureDevOpsRepository,
                 AzureDevOpsBranch = AzureDevOpsBranch,
                 Commit = Commit,
-                Assets = Assets?.Select(a => a.ToDb()).ToList()
+                Assets = Assets?.Select(a => a.ToDb()).ToList(),
+                Released = Released
             };
         }
     }
 
     public class BuildRef
     {
+        [JsonConstructor]
         public BuildRef(int buildId, bool isProduct)
         {
             BuildId = buildId;
             IsProduct = isProduct;
         }
 
+        public BuildRef(int buildId, bool isProduct, double timeToInclusionInMinutes)
+        {
+            BuildId = buildId;
+            IsProduct = isProduct;
+            TimeToInclusionInMinutes = timeToInclusionInMinutes;
+        }
+
         public int BuildId { get; }
         public bool IsProduct { get; }
+        public double TimeToInclusionInMinutes { get; set; }
     }
 }

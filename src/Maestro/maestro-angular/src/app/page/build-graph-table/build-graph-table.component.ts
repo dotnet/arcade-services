@@ -25,6 +25,7 @@ interface BuildData {
   hasIncoherentDependenciesIncludingToolsets?: boolean;
   hasCycles?: boolean;
   cyclePath?: string;
+  timeToInclusionInMinutes?: number;
 }
 
 function getState(b: BuildData): BuildState | undefined {
@@ -128,6 +129,9 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
         }
       }
     }
+
+    result[0].timeToInclusionInMinutes = 0;
+    calculateNodeTimeToInclusion(result[0].build, result, result[0].timeToInclusionInMinutes);
   }
 
   for (const node of result) {
@@ -240,6 +244,18 @@ function dependencyHasCycle(currentBuildData: BuildData, buildData:BuildData[], 
 
   // No cycle was found
   return [false, undefined];
+}
+
+function calculateNodeTimeToInclusion(build:Build, buildData:BuildData[], inclusionTimeOfParent:number): void {
+  if (build.dependencies) {
+    for (const dep of build.dependencies) {
+      let depBuildData = buildData.find(r => r.build.id == dep.buildId);
+      if (depBuildData) {
+        depBuildData.timeToInclusionInMinutes = inclusionTimeOfParent + dep.timeToInclusionInMinutes;
+        calculateNodeTimeToInclusion(depBuildData.build, buildData, depBuildData.timeToInclusionInMinutes);
+      }
+    }
+  }
 }
 
 const elementOutStyle = style({
@@ -385,6 +401,13 @@ export class BuildGraphTableComponent implements OnChanges {
       return node.coherent.withAll;
     }
     return node.coherent.withProduct;
+  }
+
+  public timeToInclusion(node:BuildData) {
+    if (node.timeToInclusionInMinutes) {
+      return node.timeToInclusionInMinutes.toLocaleString();
+    }
+    return 0;
   }
 
   public hasIncoherentDependencies(node: BuildData) {

@@ -54,10 +54,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
                 else
                 {
-                    if (string.IsNullOrEmpty(_options.TargetRepository) &&
-                        string.IsNullOrEmpty(_options.TargetBranch) &&
-                        string.IsNullOrEmpty(_options.SourceRepository) &&
-                        string.IsNullOrEmpty(_options.Channel))
+                    if (!_options.HasAnyFilters())
                     {
                         Console.WriteLine($"Please specify one or more filters to select which subscriptions should be triggered (see help).");
                         return Constants.ErrorCode;
@@ -83,17 +80,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
                     }
 
-                    char keyChar;
-                    do
-                    {
-                        Console.Write("Continue? (y/n) ");
-                        ConsoleKeyInfo keyInfo = Console.ReadKey();
-                        keyChar = char.ToUpperInvariant(keyInfo.KeyChar);
-                        Console.WriteLine();
-                    }
-                    while (keyChar != 'Y' && keyChar != 'N');
-
-                    if (keyChar == 'N')
+                    if (!UxHelpers.PromptForYesNo("Continue?"))
                     {
                         Console.WriteLine($"No subscriptions triggered, exiting.");
                         return Constants.ErrorCode;

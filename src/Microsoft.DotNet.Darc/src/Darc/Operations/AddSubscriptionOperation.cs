@@ -15,6 +15,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client;
 using Newtonsoft.Json.Linq;
+using Microsoft.VisualStudio.Services.FileContainer;
+using Microsoft.Azure.KeyVault.Models;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -169,6 +171,22 @@ namespace Microsoft.DotNet.Darc.Operations
                     }
                 }
 
+                // Verify the target
+                IRemote targetVerifyRemote = RemoteFactory.GetRemote(_options, targetRepository, Logger);
+                if (!(await UxHelpers.VerifyAndConfirmBranchExistsAsync(targetVerifyRemote, targetRepository, targetBranch, !_options.Quiet)))
+                {
+                    Console.WriteLine("Aborting subscription creation.");
+                    return Constants.ErrorCode;
+                }
+
+                // Verify the source.
+                IRemote sourceVerifyRemote = RemoteFactory.GetRemote(_options, sourceRepository, Logger);
+                if (!(await UxHelpers.VerifyAndConfirmRepositoryExistsAsync(sourceVerifyRemote, sourceRepository, !_options.Quiet)))
+                {
+                    Console.WriteLine("Aborting subscription creation.");
+                    return Constants.ErrorCode;
+                }
+
                 var newSubscription = await remote.CreateSubscriptionAsync(channel,
                                                                            sourceRepository,
                                                                            targetRepository,
@@ -177,6 +195,18 @@ namespace Microsoft.DotNet.Darc.Operations
                                                                            batchable,
                                                                            mergePolicies);
                 Console.WriteLine($"Successfully created new subscription with id '{newSubscription.Id}'.");
+
+                // Prompt the user to trigger the subscription unless they have explicitly disallowed it
+                if (!_options.NoTriggerOnCreate)
+                {
+                    bool triggerAutomatically = _options.TriggerOnCreate || UxHelpers.PromptForYesNo("Trigger this subscription immediately?");
+                    if (triggerAutomatically)
+                    {
+                        await remote.TriggerSubscriptionAsync(newSubscription.Id.ToString());
+                        Console.WriteLine($"Subscription '{newSubscription.Id}' triggered.");
+                    }
+                }
+
                 return Constants.SuccessCode;
             }
             catch (RestApiException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.BadRequest)

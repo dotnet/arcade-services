@@ -117,6 +117,12 @@ namespace Maestro.Data.Models
 
         public List<BuildChannel> BuildChannels { get; set; }
 
+        /// <summary>
+        /// If true, the build has been released to the public. This can be used to make decisions on whether certain
+        /// builds should be included in future release drops.
+        /// </summary>
+        public bool Released { get; set; } = false;
+
         [NotMapped]
         public int Staleness { get; set; }
 
@@ -152,5 +158,9 @@ namespace Maestro.Data.Models
         public int DependentBuildId { get; set; }
         public Build DependentBuild { get; set; }
         public bool IsProduct { get; set; }
+
+        // Time between when the dependent build was produced and when it was first added as a dependency
+        // To this build's repository and branch
+        public double TimeToInclusionInMinutes { get; set; }
     }
 }
