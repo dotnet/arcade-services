@@ -115,31 +115,33 @@ class VersionDetails {
 
     // Map asset to subscription the first time it's encountered, then add it to the conflicts list if it comes up again.
     for (let sub of subscriptions) {
-      for (let asset of subsAndAssets[sub.id]) {
-        if (asset && asset.name && sub.sourceRepository) {
-          const assetName = asset.name;
-          const assetsToSubKeys = Object.keys(assetsToSub);
+      if (subsAndAssets[sub.id]) {
+        for (let asset of subsAndAssets[sub.id]) {
+          if (asset && asset.name && sub.sourceRepository) {
+            const assetName = asset.name;
+            const assetsToSubKeys = Object.keys(assetsToSub);
 
-          if (assetsToSubKeys.includes(assetName)) {
-            const otherSub = assetsToSub[assetName];
+            if (assetsToSubKeys.includes(assetName)) {
+              const otherSub = assetsToSub[assetName];
 
-            if (otherSub.sourceRepository == sub.sourceRepository && (otherSub.channel && sub.channel && otherSub.channel.id == sub.channel.id)) {
-              continue;
-            }
+              if (otherSub.sourceRepository == sub.sourceRepository && (otherSub.channel && sub.channel && otherSub.channel.id == sub.channel.id)) {
+                continue;
+              }
 
-            const conflictsKeys = Object.keys(conflictingSubs);
+              const conflictsKeys = Object.keys(conflictingSubs);
 
-            if (conflictsKeys.includes(assetName)) {
-              conflictingSubs[assetName].push(sub);
+              if (conflictsKeys.includes(assetName)) {
+                conflictingSubs[assetName].push(sub);
+              }
+              else {
+                conflictingSubs[assetName] = new Array();
+                conflictingSubs[assetName].push(sub);
+                conflictingSubs[assetName].push(otherSub);
+              }
             }
             else {
-              conflictingSubs[assetName] = new Array();
-              conflictingSubs[assetName].push(sub);
-              conflictingSubs[assetName].push(otherSub);
+              assetsToSub[assetName] = sub;
             }
-          }
-          else {
-            assetsToSub[assetName] = sub;
           }
         }
       }
@@ -163,18 +165,30 @@ class VersionDetails {
     }));
     const result = subWithBuilds.pipe(
       map(subs => {
-        const errors = subs.filter(s => s instanceof WrappedError);
+
+        // Fail out if there were no successes
+        let errors = subs.filter(s => s instanceof WrappedError) as WrappedError[];
         if (errors.length) {
-          return errors[0];
+          if (errors.length == subs.length) {
+            return errors[0];
+          }
         }
 
+        // Return early to wait if things are still loading
         const loadings = subs.filter(s => s instanceof Loading);
         if (loadings.length) {
           return loadings[0];
         }
 
+        // Log any error found while trying to get assets, don't fail the entire process because a subset of repos aren't returning assets
+        for (let err of errors) {
+          console.log(errors[0].error.message);
+        }
+
+        // Parse & store any good data that was returned
         let subsWithAssets: Record<string, Asset[]> = {};
-        for (const [sub, build] of subs as [Subscription, Build][]) {
+        let successes = subs.filter(s => !(s instanceof WrappedError)) as [Subscription, Build][];
+        for (const [sub, build] of successes as [Subscription, Build][]) {
           subsWithAssets[sub.id] = build.assets || [];
         }
 
