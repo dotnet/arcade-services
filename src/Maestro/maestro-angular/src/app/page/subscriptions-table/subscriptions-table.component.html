@@ -4,13 +4,14 @@
     <th>Source Channel</th>
     <th>Target Branch</th>
     <th>Status</th>
+    <th>Update Frequency</th>
   </thead>
   <button (click)="openDetails=!openDetails">Show/Hide Additional Details</button>
   <tbody>
     <ng-container *ngFor="let branch of subscriptionsList | keyvalue">
       <ng-container *ngFor="let sub of subscriptionsList[branch.key]">
         <tr>
-            <td>
+          <td>
             {{sub.sourceRepository}}
           </td>
           <td>
@@ -18,11 +19,14 @@
           </td>
           <td>
             {{branch.key}}
-        </td>
-                      <td>
+          </td>
+          <td>
             {{sub.enabled ? 'Enabled' : 'Disabled'}}
           </td>
-              </tr>
+          <td>
+            {{sub.policy.updateFrequency}}
+          </td>
+        </tr>
       </ng-container>
       <ng-container *ngIf="openDetails">
         <ng-container *stateful="let details from versionDetailsList[branch.key]">
@@ -32,10 +36,16 @@
                 {{sub.value.sourceRepository}}
               </td>
               <td>
+                {{sub.value.channel.name}}
+              </td>
+              <td>
                 {{branch.key}}
               </td>
               <td>
                 No Dependencies
+              </td>
+              <td>
+                {{sub.value.policy.updateFrequency}}
               </td>
             </tr>
           </ng-container>
