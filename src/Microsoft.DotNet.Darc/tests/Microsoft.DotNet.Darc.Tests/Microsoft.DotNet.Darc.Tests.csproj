@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" />
     <ProjectReference Include="..\..\src\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
+    <ProjectReference Include="..\..\src\Darc\Microsoft.DotNet.Darc.csproj" />
   </ItemGroup>
 
   <ItemGroup>
