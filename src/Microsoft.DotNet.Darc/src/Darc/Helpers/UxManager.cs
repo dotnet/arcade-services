@@ -143,6 +143,11 @@ namespace Microsoft.DotNet.Darc.Helpers
                     }
                 }
             }
+            catch (FileNotFoundException fnfe)
+            {
+                _logger.LogError(fnfe, $"Cannot start editor '{fnfe.FileName}'. Please verify that your git settings (`git config core.editor`) specify the path correctly.");
+                result = Constants.ErrorCode;
+            }
             catch (Exception exc)
             {
                 _logger.LogError(exc, $"There was an exception while trying to pop up an editor window.");
