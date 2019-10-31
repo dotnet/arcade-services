@@ -18,11 +18,8 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.Shared;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Net;
 using System.Net.Http;
-using Microsoft.AspNetCore.Http;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
@@ -41,7 +38,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             _logger = logger;
             _options = options;
         }
-      
         public async Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
         {
             TraceSourceManager.SetTraceVerbosityForAll(TraceVerbosity.Fatal);
@@ -82,7 +78,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         {
             // Fetch them again, we just waited an hour
             AzureDevOpsTimelineOptions options = _options.Value;
-
             if (!int.TryParse(options.ParallelRequests, out int parallelRequests) || parallelRequests < 1)
             {
                 parallelRequests = 5;
@@ -106,7 +101,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 options.AzureDevOpsAccessToken
             );
 
-
             foreach (string project in options.AzureDevOpsProjects.Split(';'))
             {
                 await RunProject(azureServer, project, buildBatchSize, options, cancellationToken);
@@ -121,7 +115,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             AzureDevOpsTimelineOptions options,
             CancellationToken cancellationToken)
         {
-            
             DateTimeOffset latest;
             try
             {
@@ -146,7 +139,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     }
                 }
             }
-            catch (SemanticException e) when (e.SemanticErrors == "'where' operator: Failed to resolve column or scalar expression named 'Project'")
+            catch(SemanticException e) when (e.SemanticErrors == "'where' operator: Failed to resolve column or scalar expression named 'Project'")
             {
                 // The Project column isn't there, we probably reinitalized the tables
                 latest = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(30));
@@ -237,7 +230,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 _logger.LogError("No KustoIngestConnectionString set");
                 return;
             }
-          
             IKustoIngestClient ingest =
                 KustoIngestFactory.CreateQueuedIngestClient(options.KustoIngestConnectionString);
 
@@ -336,7 +328,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("Message", b.Raw.Message, KustoDataTypes.String),
                     new KustoValue("Bucket", b.Bucket, KustoDataTypes.String),
                 });
-
         }
 
         private async Task RunGoal( AzureDevOpsTimelineOptions options)
@@ -433,7 +424,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             public AugmentedTimelineIssue(int buildId, string recordId, int index, Issue raw)
             {
                 BuildId = buildId;
-                RecordId = recordId; 
+                RecordId = recordId;
                 Index = index;
                 Raw = raw;
             }
@@ -445,18 +436,5 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             public string AugmentedIndex { get; set; }
             public string Bucket { get; set; }
         }
-
-
-       /* private class AugmentedGoalTime
-        {
-            public AugmentedGoalTime(string definitionId, int goalTimeInMinutes)
-            {
-                DefinitionId = definitionId;
-                GoalTimeInMinutes = goalTimeInMinutes;
-            }
-
-            public string DefinitionId { get; }
-            public int GoalTimeInMinutes { get; }
-        }*/
     }
 }
