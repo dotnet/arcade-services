@@ -157,8 +157,6 @@ class VersionDetails {
   getLatestAssetsForSubs(subscriptions: Subscription[], buildService: BuildService) {
     // Can't make a Record with <Subscription, string[]> so use the subscriptionId as a proxy
     const subWithBuilds: Observable<StatefulResult<[Subscription | null, Build | null]>[]> = <any>combineLatest.apply(undefined, subscriptions.filter(s => s.channel && s.sourceRepository).map(sub => {
-
-      // This filters on the tagged ("target"-ish) channel, the one that the page filters on, not the source channel
       const buildId = buildService.getLatestBuildId(sub.channel!.id, sub.sourceRepository!);
       return buildId.pipe(
         statefulPipe(
