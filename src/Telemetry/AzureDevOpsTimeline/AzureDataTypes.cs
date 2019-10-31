@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline
@@ -304,5 +305,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         ///     The full http link to the resource
         /// </summary>
         public string Url { get; set; }
+    }
+
+    public class Goals
+    {
+        public int Definition_Id { get; set; }
+        public int Total_minutes { get; set; }
     }
 }

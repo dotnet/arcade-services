@@ -18,6 +18,11 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.Shared;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System.Net;
+using System.Net.Http;
+using Microsoft.AspNetCore.Http;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
@@ -36,11 +41,10 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             _logger = logger;
             _options = options;
         }
-
+      
         public async Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
         {
             TraceSourceManager.SetTraceVerbosityForAll(TraceVerbosity.Fatal);
-
             await Wait(_options.Value.InitialDelay, cancellationToken, TimeSpan.FromHours(1));
 
             while (!cancellationToken.IsCancellationRequested)
@@ -78,7 +82,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         {
             // Fetch them again, we just waited an hour
             AzureDevOpsTimelineOptions options = _options.Value;
-            
+
             if (!int.TryParse(options.ParallelRequests, out int parallelRequests) || parallelRequests < 1)
             {
                 parallelRequests = 5;
@@ -103,11 +107,11 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             );
 
 
-
             foreach (string project in options.AzureDevOpsProjects.Split(';'))
             {
                 await RunProject(azureServer, project, buildBatchSize, options, cancellationToken);
             }
+            await RunGoal(options);
         }
 
         private async Task RunProject(
@@ -117,7 +121,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             AzureDevOpsTimelineOptions options,
             CancellationToken cancellationToken)
         {
-
+            
             DateTimeOffset latest;
             try
             {
@@ -142,7 +146,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     }
                 }
             }
-            catch(SemanticException e) when (e.SemanticErrors == "'where' operator: Failed to resolve column or scalar expression named 'Project'")
+            catch (SemanticException e) when (e.SemanticErrors == "'where' operator: Failed to resolve column or scalar expression named 'Project'")
             {
                 // The Project column isn't there, we probably reinitalized the tables
                 latest = DateTimeOffset.UtcNow.Subtract(TimeSpan.FromDays(30));
@@ -233,7 +237,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 _logger.LogError("No KustoIngestConnectionString set");
                 return;
             }
-
+          
             IKustoIngestClient ingest =
                 KustoIngestFactory.CreateQueuedIngestClient(options.KustoIngestConnectionString);
 
@@ -332,6 +336,35 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("Message", b.Raw.Message, KustoDataTypes.String),
                     new KustoValue("Bucket", b.Bucket, KustoDataTypes.String),
                 });
+
+        }
+
+        private async Task RunGoal( AzureDevOpsTimelineOptions options)
+        { 
+            HttpClient client = new HttpClient();
+            string url = "https://raw.githubusercontent.com/dotnet/arcade/master/eng/GoalTimePerDefinition.json";
+            HttpResponseMessage response = await client.GetAsync(url);
+            string content = await response.Content.ReadAsStringAsync();
+
+            JObject root = JObject.Parse(content);
+            var array = (JArray)root["goal_times"];
+            var goalData = array.ToObject<Goals[]>();
+            IKustoIngestClient ingest =
+                KustoIngestFactory.CreateQueuedIngestClient(options.KustoIngestConnectionString);
+
+           _logger.LogInformation("Saving GoalTime...");
+           await KustoHelpers.WriteDataToKustoInMemoryAsync(
+                        ingest,
+                        options.KustoDatabase,
+                        "GoalTime",
+                        _logger,
+                        goalData,
+                        b => new[]
+                        {
+                           new KustoValue("DefinitionId", b.Definition_Id.ToString(), KustoDataTypes.Int),
+                           new KustoValue("TotalMinutes",b.Total_minutes.ToString(), KustoDataTypes.Int),
+                           new KustoValue("FinishTime", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") , KustoDataTypes.DateTime),
+                        });
         }
 
         private static string GetBucket(AugmentedTimelineIssue augIssue)
@@ -400,7 +433,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             public AugmentedTimelineIssue(int buildId, string recordId, int index, Issue raw)
             {
                 BuildId = buildId;
-                RecordId = recordId;
+                RecordId = recordId; 
                 Index = index;
                 Raw = raw;
             }
@@ -412,5 +445,18 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             public string AugmentedIndex { get; set; }
             public string Bucket { get; set; }
         }
+
+
+       /* private class AugmentedGoalTime
+        {
+            public AugmentedGoalTime(string definitionId, int goalTimeInMinutes)
+            {
+                DefinitionId = definitionId;
+                GoalTimeInMinutes = goalTimeInMinutes;
+            }
+
+            public string DefinitionId { get; }
+            public int GoalTimeInMinutes { get; }
+        }*/
     }
 }
