@@ -19,12 +19,15 @@ class VersionDetails {
   // Dependency Name
   public dependenciesWithNoSubscription: string[] = new Array();
 
+  //Subscription Source Repo
+  public unableToRetrieveAssetsFor: Subscription[] = new Array();
+
   constructor(inputFile: XMLDocument) {
     const productElements = inputFile.getElementsByTagName("ProductDependencies");
     let childProductElements = productElements[0].getElementsByTagName('Dependency');
 
     const toolsetElements = inputFile.getElementsByTagName("ToolsetDependencies");
-    let childToolsetElements = productElements[0].getElementsByTagName('Dependency');
+    let childToolsetElements = toolsetElements[0].getElementsByTagName('Dependency');
 
     for (let el of Array.from(childProductElements)) {
       this.parseDependencyElement(el, this.allDependencies);
@@ -154,6 +157,8 @@ class VersionDetails {
   getLatestAssetsForSubs(subscriptions: Subscription[], buildService: BuildService) {
     // Can't make a Record with <Subscription, string[]> so use the subscriptionId as a proxy
     const subWithBuilds: Observable<StatefulResult<[Subscription | null, Build | null]>[]> = <any>combineLatest.apply(undefined, subscriptions.filter(s => s.channel && s.sourceRepository).map(sub => {
+
+      // This filters on the tagged ("target"-ish) channel, the one that the page filters on, not the source channel
       const buildId = buildService.getLatestBuildId(sub.channel!.id, sub.sourceRepository!);
       return buildId.pipe(
         statefulPipe(
@@ -256,6 +261,16 @@ export class SubscriptionsTableComponent implements OnChanges {
                           updatedDetails.dependenciesWithNoSubscription = processedSubs.missingSubs;
                           const conflictingSubs = updatedDetails.getConflictingSubs(assets, this.subscriptionsList[branch]);
                           updatedDetails.conflictingSubscriptions = conflictingSubs;
+
+                          // Add errors for anything that didn't retrieve assets
+                          const getAssetFailed: Subscription[] = new Array();
+                          const assetKeys = Object.keys(assets);
+                          for(let sub of this.subscriptionsList[branch]){
+                            if(!assetKeys.includes(sub.id)){
+                              getAssetFailed.push(sub);
+                            }
+                          }
+                          updatedDetails.unableToRetrieveAssetsFor = getAssetFailed;
                         }
                         return updatedDetails;
                       }))

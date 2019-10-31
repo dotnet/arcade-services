@@ -49,6 +49,25 @@
               </td>
             </tr>
           </ng-container>
+          <ng-container *ngFor="let sub of details.unableToRetrieveAssetsFor">
+            <tr>
+              <td>
+                {{sub.sourceRepository}}
+              </td>
+              <td>
+                {{sub.channel.name}}
+              </td>
+              <td>
+                {{branch.key}}
+              </td>
+              <td>
+                No builds published to this channel
+              </td>
+              <td>
+                {{sub.policy.updateFrequency}}
+              </td>
+            </tr>
+          </ng-container>
         </ng-container>
       </ng-container>
     </ng-container>
