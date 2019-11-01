@@ -24,6 +24,11 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
+        Task<IImmutableList<string>> ListRepositoriesAsync(
+            int id,
+            CancellationToken cancellationToken = default
+        );
+
         Task<Channel> GetChannelAsync(
             int id,
             CancellationToken cancellationToken = default
@@ -238,6 +243,91 @@ namespace Microsoft.DotNet.Maestro.Client
                     Request = _req,
                     Response = _res,
                     Body = Client.Deserialize<Channel>(_responseContent),
+                };
+            }
+            catch (Exception)
+            {
+                _req?.Dispose();
+                _res?.Dispose();
+                throw;
+            }
+        }
+
+        partial void HandleFailedListRepositoriesRequest(RestApiException ex);
+
+        public async Task<IImmutableList<string>> ListRepositoriesAsync(
+            int id,
+            CancellationToken cancellationToken = default
+        )
+        {
+            using (var _res = await ListRepositoriesInternalAsync(
+                id,
+                cancellationToken
+            ).ConfigureAwait(false))
+            {
+                return _res.Body;
+            }
+        }
+
+        internal async Task OnListRepositoriesFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, null),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedListRepositoriesRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
+        }
+
+        internal async Task<HttpOperationResponse<IImmutableList<string>>> ListRepositoriesInternalAsync(
+            int id,
+            CancellationToken cancellationToken = default
+        )
+        {
+            if (id == default(int))
+            {
+                throw new ArgumentNullException(nameof(id));
+            }
+
+            const string apiVersion = "2019-01-16";
+
+            var _path = "/api/channels/{id}/repositories";
+            _path = _path.Replace("{id}", Client.Serialize(id));
+
+            var _query = new QueryBuilder();
+            _query.Add("api-version", Client.Serialize(apiVersion));
+
+            var _uriBuilder = new UriBuilder(Client.BaseUri);
+            _uriBuilder.Path = _uriBuilder.Path.TrimEnd('/') + _path;
+            _uriBuilder.Query = _query.ToString();
+            var _url = _uriBuilder.Uri;
+
+            HttpRequestMessage _req = null;
+            HttpResponseMessage _res = null;
+            try
+            {
+                _req = new HttpRequestMessage(HttpMethod.Get, _url);
+
+                if (Client.Credentials != null)
+                {
+                    await Client.Credentials.ProcessHttpRequestAsync(_req, cancellationToken).ConfigureAwait(false);
+                }
+
+                _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
+                if (!_res.IsSuccessStatusCode)
+                {
+                    await OnListRepositoriesFailed(_req, _res);
+                }
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return new HttpOperationResponse<IImmutableList<string>>
+                {
+                    Request = _req,
+                    Response = _res,
+                    Body = Client.Deserialize<IImmutableList<string>>(_responseContent),
                 };
             }
             catch (Exception)

@@ -375,6 +375,15 @@ function Get-Build($id) {
     $response
 }
 
+function Darc-Get-Build($id) {
+    $darcParams = @( "get-build", "--id", "$id" )
+    Darc-Command -darcParams $darcParams
+}
+function Darc-Update-Build($id, $updateParams) {
+    $darcParams = @( "update-build", "--id", "$id" ) + $updateParams
+    Darc-Command -darcParams $darcParams
+}
+
 function Get-Bar-Headers([string]$accept) {
     $headers = New-Object 'System.Collections.Generic.Dictionary[[String],[String]]'
     $headers.Add('Accept', $accept)

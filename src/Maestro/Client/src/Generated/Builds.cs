@@ -52,6 +52,12 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
+        Task<Build> UpdateAsync(
+            BuildUpdate body,
+            int buildId,
+            CancellationToken cancellationToken = default
+        );
+
     }
 
     internal partial class Builds : IServiceOperations<MaestroApi>, IBuilds
@@ -584,6 +590,112 @@ namespace Microsoft.DotNet.Maestro.Client
                 if (!_res.IsSuccessStatusCode)
                 {
                     await OnGetLatestFailed(_req, _res);
+                }
+                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
+                return new HttpOperationResponse<Build>
+                {
+                    Request = _req,
+                    Response = _res,
+                    Body = Client.Deserialize<Build>(_responseContent),
+                };
+            }
+            catch (Exception)
+            {
+                _req?.Dispose();
+                _res?.Dispose();
+                throw;
+            }
+        }
+
+        partial void HandleFailedUpdateRequest(RestApiException ex);
+
+        public async Task<Build> UpdateAsync(
+            BuildUpdate body,
+            int buildId,
+            CancellationToken cancellationToken = default
+        )
+        {
+            using (var _res = await UpdateInternalAsync(
+                body,
+                buildId,
+                cancellationToken
+            ).ConfigureAwait(false))
+            {
+                return _res.Body;
+            }
+        }
+
+        internal async Task OnUpdateFailed(HttpRequestMessage req, HttpResponseMessage res)
+        {
+            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            var ex = new RestApiException<ApiError>(
+                new HttpRequestMessageWrapper(req, content),
+                new HttpResponseMessageWrapper(res, content),
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedUpdateRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
+        }
+
+        internal async Task<HttpOperationResponse<Build>> UpdateInternalAsync(
+            BuildUpdate body,
+            int buildId,
+            CancellationToken cancellationToken = default
+        )
+        {
+            if (body == default(BuildUpdate))
+            {
+                throw new ArgumentNullException(nameof(body));
+            }
+
+            if (buildId == default(int))
+            {
+                throw new ArgumentNullException(nameof(buildId));
+            }
+
+            const string apiVersion = "2019-01-16";
+
+            var _path = "/api/builds/{buildId}";
+            _path = _path.Replace("{buildId}", Client.Serialize(buildId));
+
+            var _query = new QueryBuilder();
+            _query.Add("api-version", Client.Serialize(apiVersion));
+
+            var _uriBuilder = new UriBuilder(Client.BaseUri);
+            _uriBuilder.Path = _uriBuilder.Path.TrimEnd('/') + _path;
+            _uriBuilder.Query = _query.ToString();
+            var _url = _uriBuilder.Uri;
+
+            HttpRequestMessage _req = null;
+            HttpResponseMessage _res = null;
+            try
+            {
+                _req = new HttpRequestMessage(new HttpMethod("PATCH"), _url);
+
+                string _requestContent = null;
+                if (body != default(BuildUpdate))
+                {
+                    _requestContent = Client.Serialize(body);
+                    _req.Content = new StringContent(_requestContent, Encoding.UTF8)
+                    {
+                        Headers =
+                        {
+                            ContentType = MediaTypeHeaderValue.Parse("application/json; charset=utf-8"),
+                        },
+                    };
+                }
+
+                if (Client.Credentials != null)
+                {
+                    await Client.Credentials.ProcessHttpRequestAsync(_req, cancellationToken).ConfigureAwait(false);
+                }
+
+                _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
+                if (!_res.IsSuccessStatusCode)
+                {
+                    await OnUpdateFailed(_req, _res);
                 }
                 string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
                 return new HttpOperationResponse<Build>

@@ -98,10 +98,14 @@ namespace Microsoft.DotNet.Darc
                 builder.AppendLine($"Build Link:    {azdoLink}");
             }
             builder.AppendLine($"BAR Build Id:  {build.Id}");
-            builder.AppendLine($"Channels:");
-            foreach (Channel buildChannel in build.Channels)
+            builder.AppendLine($"Released:      {build.Released}");
+            if (build.Channels != null)
             {
-                builder.AppendLine($"- {buildChannel.Name}");
+                builder.AppendLine($"Channels:");
+                foreach (Channel buildChannel in build.Channels)
+                {
+                    builder.AppendLine($"- {buildChannel.Name}");
+                }
             }
 
             return builder.ToString();

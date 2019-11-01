@@ -157,7 +157,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
             }
 
-            return builds.Select(t => new BuildRef(t.Key, t.Value)).ToImmutableList();
+            return builds.Select(t => new BuildRef(t.Key, t.Value, 0)).ToImmutableList();
         }
 
         private static async Task<int?> GetBuildId(DependencyDetail dep, IMaestroApi client, Dictionary<int, Client.Models.Build> buildCache,
@@ -268,7 +268,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         azureDevOpsBuildNumber: manifest.AzureDevOpsBuildNumber ?? GetAzDevBuildNumber(),
                         azureDevOpsRepository: manifest.AzureDevOpsRepository ?? GetAzDevRepository(),
                         azureDevOpsBranch: manifest.AzureDevOpsBranch ?? GetAzDevBranch(),
-                        publishUsingPipelines: PublishUsingPipelines)
+                        publishUsingPipelines: PublishUsingPipelines,
+                        released: false)
                     {
                         Assets = assets.ToImmutableList(),
                         AzureDevOpsBuildId = manifest.AzureDevOpsBuildId ?? GetAzDevBuildId(),

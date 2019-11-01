@@ -1152,5 +1152,17 @@ namespace Microsoft.DotNet.DarcLib
                 }
             }
         }
+
+        /// <summary>
+        ///     Update an existing build.
+        /// </summary>
+        /// <param name="buildId">Build to update</param>
+        /// <param name="buildUpdate">Updated build info</param>
+        /// <returns>Updated build</returns>
+        public Task<Build> UpdateBuildAsync(int buildId, BuildUpdate buildUpdate)
+        {
+            CheckForValidBarClient();
+            return _barClient.UpdateBuildAsync(buildId, buildUpdate);
+        }
     }
 }
