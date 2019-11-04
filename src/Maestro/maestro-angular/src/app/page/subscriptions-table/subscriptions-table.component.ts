@@ -29,6 +29,8 @@ export class SubscriptionsTableComponent implements OnChanges {
     return Object.keys(this.subscriptionsList || {});
   }
 
+  // Retrieves dependencies from the Version.Details.xml file for the current repo
+  // Then gets assets for its subscriptions and cross references them with the dependencies to get the current subscription usage state
   loadVersionData() {
     if (this.subscriptionsList) {
       for (const branch of this.branches) {
