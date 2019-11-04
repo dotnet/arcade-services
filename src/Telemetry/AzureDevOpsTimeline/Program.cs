@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using Maestro.Data;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
@@ -41,6 +43,12 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                                 o.Interval = c["Interval"];
                                 o.BuildBatchSize = c["BuildBatchSize"];
                             });
+                            services.AddDbContext<BuildAssetRegistryContext>(
+                                (provider, options) =>
+                                {
+                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
+                                });
                         });
                 });
         }

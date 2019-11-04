@@ -31,6 +31,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
     <ProjectReference Include="..\..\Shared\Shared.csproj" />
+    <ProjectReference Include="..\..\Maestro\Maestro.Data\Maestro.Data.csproj" />
   </ItemGroup>
 
 </Project>

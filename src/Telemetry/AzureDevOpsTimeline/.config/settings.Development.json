@@ -1,8 +1,12 @@
 {
-    "KeyVaultUri": "https://maestrolocal.vault.azure.net/",
+  "KeyVaultUri": "https://maestrolocal.vault.azure.net/",
 
-    "KustoIngestConnectionString": "",
-    "InitialDelay": "0:00:00",
-    "Interval": "0:30:00",
-    "BuildBatchSize":  1000 
+  "BuildAssetRegistry": {
+    "ConnectionString": "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true"
+  },
+
+  "KustoIngestConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-ingest)]",
+  "InitialDelay": "0:00:00",
+  "Interval": "0:30:00",
+  "BuildBatchSize": 1000
 }

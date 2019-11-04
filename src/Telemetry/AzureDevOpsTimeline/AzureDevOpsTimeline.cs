@@ -18,6 +18,8 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.Shared;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Maestro.Data;
+using MaestroBuild = Maestro.Data.Models.Build;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
@@ -28,13 +30,16 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
     {
         private readonly Extensions.Logging.ILogger<AzureDevOpsTimeline> _logger;
         private readonly IOptionsSnapshot<AzureDevOpsTimelineOptions> _options;
+        private readonly BuildAssetRegistryContext _context;
 
         public AzureDevOpsTimeline(
             Extensions.Logging.ILogger<AzureDevOpsTimeline> logger,
-            IOptionsSnapshot<AzureDevOpsTimelineOptions> options)
+            IOptionsSnapshot<AzureDevOpsTimelineOptions> options,
+            BuildAssetRegistryContext context)
         {
             _logger = logger;
             _options = options;
+            _context = context;
         }
 
         public async Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
@@ -332,6 +337,131 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("Message", b.Raw.Message, KustoDataTypes.String),
                     new KustoValue("Bucket", b.Bucket, KustoDataTypes.String),
                 });
+
+            List<BuildPath> longestBuildPaths = new List<BuildPath>();
+
+            foreach (var build in builds)
+            {
+                MaestroBuild root = _context.Builds.Where(b => b.AzureDevOpsBuildId == build.Id).FirstOrDefault();
+                if (root != null)
+                {
+                    longestBuildPaths.Add(await GetLongestBuildPath(root, new List<string>(), builds, options));
+                }
+            }
+
+            BuildPath[] buildPaths = longestBuildPaths.ToArray();
+            //Add this thing to Kusto
+            _logger.LogInformation("Saving LongestBuildPath...");
+            await KustoHelpers.WriteDataToKustoInMemoryAsync(
+                ingest,
+                options.KustoDatabase,
+                "LongestBuildPath",
+                _logger,
+                buildPaths,
+                b => new[]
+                {
+                    new KustoValue("BuildId", b.BuildId.ToString(), KustoDataTypes.Int),
+                    new KustoValue("LongestBuildPath", b.Path, KustoDataTypes.String),
+                    new KustoValue("LongestBuildPathTime", b.Time.ToString(), KustoDataTypes.Decimal),
+                });
+        }
+
+        private async Task<BuildPath> GetLongestBuildPath(MaestroBuild build, List<string> visitedRepositories, Build[] builds, AzureDevOpsTimelineOptions options)
+        {
+            int buildId = 0;
+            double buildTime = 0;
+            string repository = "";
+
+            if (build == null)
+            {
+                return new BuildPath(buildId, repository, buildTime);
+            }
+
+            // Lookup Kusto build. First check builds, then check the Kusto database.
+            Build kustoBuild = builds.FirstOrDefault(b => b.Id == build.AzureDevOpsBuildId);
+
+            if (kustoBuild == null)
+            {
+                // Build is not in the builds list, so we need to look this build up in Kusto
+                try
+                {
+                    using (ICslQueryProvider query =
+                        KustoClientFactory.CreateCslQueryProvider(options.KustoQueryConnectionString))
+                    using (IDataReader result = await query.ExecuteQueryAsync(
+                        options.KustoDatabase,
+                        // This isn't use controlled, so I'm not worried about the Kusto injection
+                        $"TimelineBuilds | where BuildId == '{build.AzureDevOpsBuildId}' | project BuildId, Repository, StartTime, FinishTime",
+                        new ClientRequestProperties()
+                    ))
+                    {
+                        if (!result.Read())
+                        {
+                            if (build.AzureDevOpsBuildId != null)
+                            {
+                                buildId = (int) build.AzureDevOpsBuildId;
+                            }
+                            repository = build.GitHubRepository;
+                            _logger.LogWarning($"No build found, assuming build time of {buildTime}, repository {repository} for build id of {buildId}");
+                        }
+                        else
+                        {
+                            buildId = result.GetInt32(0);
+                            repository = result.GetString(1);
+                            buildTime = (result.GetDateTime(3) - result.GetDateTime(2)).TotalMinutes;
+                            _logger.LogInformation($"... fetched build time of {buildTime} and repository {repository} for build id {buildId}");
+                        }
+                    }
+                }
+                catch(SemanticException)
+                {
+                    // One of the column aren't there, we probably reinitalized the tables
+                    if (build.AzureDevOpsBuildId != null)
+                    {
+                        buildId = (int) build.AzureDevOpsBuildId;
+                    }
+                    repository = build.GitHubRepository;
+
+                    _logger.LogWarning($"One or more table columns not found, assumed reinialization: using build time of {buildTime}," +
+                                        $" repository {repository} for build id of {buildId}");
+                }
+            }
+            else
+            {
+                buildId = kustoBuild.Id;
+                buildTime = (Convert.ToDateTime(kustoBuild.FinishTime) - Convert.ToDateTime(kustoBuild.StartTime)).TotalMinutes;
+                repository = $"{kustoBuild.Repository.Name}";
+            }
+
+            // Look up the build in BAR
+            var dependencies = _context.BuildDependencies.Where(b => b.BuildId == build.Id && b.IsProduct == true);
+
+            // If we have already visited this repository (ie we have hit a cycle) or this node does not have
+            // any dependencies, stop searching.
+            if (visitedRepositories.Contains(repository) || dependencies.Count() == 0)
+            {
+                return new BuildPath(buildId, repository, buildTime);
+            }
+
+            // We haven't seen this repository yet, so add it to the list of visited repositories
+            List<string> currentVisitedRepositories = visitedRepositories;
+            currentVisitedRepositories.Add(repository);
+
+            // Recursively find the longest build path of each of this node's dependencies.
+            BuildPath currentLongest = new BuildPath(buildId, repository, 0);
+
+            foreach (var dep in dependencies)
+            {
+                MaestroBuild dependency = _context.Builds.Where(b => b.Id == dep.DependentBuildId).FirstOrDefault();
+                BuildPath depLongest = await GetLongestBuildPath(dependency, currentVisitedRepositories, builds, options);
+
+                if (depLongest.Time + dep.TimeToInclusionInMinutes > currentLongest.Time)
+                {
+                    currentLongest.Time = depLongest.Time + dep.TimeToInclusionInMinutes;
+                    currentLongest.Path = $"{repository} {depLongest.Path}";
+                }
+            }
+
+            return currentLongest;
         }
 
         private static string GetBucket(AugmentedTimelineIssue augIssue)
@@ -411,6 +541,27 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             public Issue Raw { get; }
             public string AugmentedIndex { get; set; }
             public string Bucket { get; set; }
+        }
+
+        private class BuildPath
+        {
+            public BuildPath()
+            {
+                BuildId = 0;
+                Path = "";
+                Time = 0;
+            }
+
+            public BuildPath(int buildId, string buildPath, double buildPathTime)
+            {
+                BuildId = buildId;
+                Path = buildPath;
+                Time = buildPathTime;
+            }
+
+            public int BuildId { get; set; }
+            public string Path { get; set; }
+            public double Time { get; set; }
         }
     }
 }
