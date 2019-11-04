@@ -223,6 +223,13 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Async task</returns>
         Task AssignBuildToChannel(int buildId, int channelId);
 
+        /// <summary>
+        ///     Update an existing build.
+        /// </summary>
+        /// <param name="buildId">Build to update</param>
+        /// <param name="buildUpdate">Updated build info</param>
+        Task<Build> UpdateBuildAsync(int buildId, BuildUpdate buildUpdate);
+
         #endregion
     }
 }

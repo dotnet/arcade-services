@@ -416,6 +416,30 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
+        /// Filter any released builds if the user specified --skip-released
+        /// </summary>
+        /// <param name="inputBuilds">Input builds</param>
+        /// <returns>Builds to download</returns>
+        private IEnumerable<Build> FilterReleasedBuilds(IEnumerable<Build> builds)
+        {
+            if (_options.SkipReleased)
+            {
+                var releasedBuilds = builds.Where(build => build.Released);
+                var nonReleasedBuilds = builds.Where(build => !build.Released);
+                foreach (var build in releasedBuilds)
+                {
+                    if (build.Released)
+                    {
+                        Console.WriteLine($"  Skipping download of released build {build.AzureDevOpsBuildNumber} of {build.GitHubRepository ?? build.AzureDevOpsRepository} @ {build.Commit}");
+                    }
+                }
+                return nonReleasedBuilds;
+            }
+
+            return builds;
+        }
+
+        /// <summary>
         ///     Build the list of builds that will need their assets downloaded.
         /// </summary>
         /// <returns>List of builds to download</returns>
@@ -442,7 +466,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 return new InputBuilds()
                 {
                     Successful = true,
-                    Builds = new List<Build>() { rootBuild }
+                    Builds = FilterReleasedBuilds(new List<Build>() { rootBuild })
                 };
             }
 
@@ -499,6 +523,8 @@ namespace Microsoft.DotNet.Darc.Operations
                 builds.Add(build);
             }
 
+            var filteredBuilds = FilterReleasedBuilds(builds);
+
             if (graph.DependenciesMissingBuilds.Any())
             {
                 Console.WriteLine("Dependencies missing builds:");
@@ -511,7 +537,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     return new InputBuilds()
                     {
                         Successful = false,
-                        Builds = builds
+                        Builds = filteredBuilds
                     };
                 }
             }
@@ -519,7 +545,7 @@ namespace Microsoft.DotNet.Darc.Operations
             return new InputBuilds()
             {
                 Successful = true,
-                Builds = builds.ToList()
+                Builds = filteredBuilds
             };
         }
 

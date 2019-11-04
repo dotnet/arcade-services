@@ -6,11 +6,12 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class Build
     {
-        public Build(int id, DateTimeOffset dateProduced, int staleness, bool publishUsingPipelines, string commit, IImmutableList<Channel> channels, IImmutableList<Asset> assets, IImmutableList<BuildRef> dependencies)
+        public Build(int id, DateTimeOffset dateProduced, int staleness, bool released, bool publishUsingPipelines, string commit, IImmutableList<Channel> channels, IImmutableList<Asset> assets, IImmutableList<BuildRef> dependencies)
         {
             Id = id;
             DateProduced = dateProduced;
             Staleness = staleness;
+            Released = released;
             PublishUsingPipelines = publishUsingPipelines;
             Commit = commit;
             Channels = channels;
@@ -68,5 +69,8 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 
         [JsonProperty("staleness")]
         public int Staleness { get; }
+
+        [JsonProperty("released")]
+        public bool Released { get; }
     }
 }
