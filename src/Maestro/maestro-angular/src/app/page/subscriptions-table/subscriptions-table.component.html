@@ -5,6 +5,9 @@
     <th>Target Branch</th>
     <th>Status</th>
     <th>Update Frequency</th>
+    <ng-container *ngIf="openDetails">
+      <th>Type</th>
+    </ng-container>
   </thead>
   <button (click)="openDetails=!openDetails">Show/Hide Additional Details</button>
   <tbody>
@@ -26,6 +29,13 @@
           <td>
             {{sub.policy.updateFrequency}}
           </td>
+          <ng-container *ngIf="openDetails">
+            <td>
+              <ng-container *stateful="let details from versionDetailsList[branch.key]">
+                {{details.isToolsetSubscription[sub.id]? 'Toolset' : 'Product'}}
+              </ng-container>
+            </td>
+          </ng-container>
         </tr>
       </ng-container>
       <ng-container *ngIf="openDetails">
@@ -47,6 +57,11 @@
               <td>
                 {{sub.value.policy.updateFrequency}}
               </td>
+              <td>
+                <ng-container *stateful="let details from versionDetailsList[branch.key]">
+                  {{details.isToolsetSubscription[sub.id]? 'Toolset' : 'Product'}}
+                </ng-container>
+              </td>
             </tr>
           </ng-container>
           <ng-container *ngFor="let sub of details.unableToRetrieveAssetsFor">
@@ -65,6 +80,11 @@
               </td>
               <td>
                 {{sub.policy.updateFrequency}}
+              </td>
+              <td>
+                <ng-container *stateful="let details from versionDetailsList[branch.key]">
+                  {{details.isToolsetSubscription[sub.id]? 'Toolset' : 'Product'}}
+                </ng-container>
               </td>
             </tr>
           </ng-container>
