@@ -366,6 +366,54 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 });
         }
 
+        private static string GetBucket(AugmentedTimelineIssue augIssue)
+        {
+            string message = augIssue?.Raw?.Message;
+            if (string.IsNullOrEmpty(message))
+                return null;
+
+            Match match = Regex.Match(message, @"\(NETCORE_ENGINEERING_TELEMETRY=([^)]*)\)");
+            if (!match.Success)
+                return null;
+
+            return match.Groups[1].Value;
+        }
+
+        private static void FillAugmentedOrder(
+            AugmentedTimelineRecord record,
+            IReadOnlyDictionary<string, AugmentedTimelineRecord> recordCache)
+        {
+            if (!string.IsNullOrEmpty(record.AugmentedOrder))
+            {
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(record.Raw.ParentId))
+            {
+                if (recordCache.TryGetValue(record.Raw.ParentId, out AugmentedTimelineRecord parent))
+                {
+                    FillAugmentedOrder(parent, recordCache);
+                    record.AugmentedOrder = parent.AugmentedOrder + "." + record.Raw.Order.ToString("D3");
+                    return;
+                }
+
+                record.AugmentedOrder = "999." + record.Raw.Order.ToString("D3");
+                return;
+            }
+
+            record.AugmentedOrder = record.Raw.Order.ToString("D3");
+        }
+
+        private static async Task<Build[]> GetBuildsAsync(
+            AzureDevOpsClient azureServer,
+            string project,
+            DateTimeOffset minDateTime,
+            int limit,
+            CancellationToken cancellationToken)
+        {
+            return await azureServer.ListBuilds(project, cancellationToken, minDateTime, limit);
+        }
+
         private async Task<BuildPath> GetLongestBuildPath(MaestroBuild build, List<string> visitedRepositories, Build[] builds, AzureDevOpsTimelineOptions options)
         {
             int buildId = 0;
@@ -462,54 +510,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             }
 
             return currentLongest;
-        }
-
-        private static string GetBucket(AugmentedTimelineIssue augIssue)
-        {
-            string message = augIssue?.Raw?.Message;
-            if (string.IsNullOrEmpty(message))
-                return null;
-
-            Match match = Regex.Match(message, @"\(NETCORE_ENGINEERING_TELEMETRY=([^)]*)\)");
-            if (!match.Success)
-                return null;
-
-            return match.Groups[1].Value;
-        }
-
-        private static void FillAugmentedOrder(
-            AugmentedTimelineRecord record,
-            IReadOnlyDictionary<string, AugmentedTimelineRecord> recordCache)
-        {
-            if (!string.IsNullOrEmpty(record.AugmentedOrder))
-            {
-                return;
-            }
-
-            if (!string.IsNullOrEmpty(record.Raw.ParentId))
-            {
-                if (recordCache.TryGetValue(record.Raw.ParentId, out AugmentedTimelineRecord parent))
-                {
-                    FillAugmentedOrder(parent, recordCache);
-                    record.AugmentedOrder = parent.AugmentedOrder + "." + record.Raw.Order.ToString("D3");
-                    return;
-                }
-
-                record.AugmentedOrder = "999." + record.Raw.Order.ToString("D3");
-                return;
-            }
-
-            record.AugmentedOrder = record.Raw.Order.ToString("D3");
-        }
-
-        private static async Task<Build[]> GetBuildsAsync(
-            AzureDevOpsClient azureServer,
-            string project,
-            DateTimeOffset minDateTime,
-            int limit,
-            CancellationToken cancellationToken)
-        {
-            return await azureServer.ListBuilds(project, cancellationToken, minDateTime, limit);
         }
 
         private class AugmentedTimelineRecord
