@@ -83,7 +83,7 @@ try {
     }
     if (($gatherDropOutput -match "Downloading asset Bar@2.1.0") -or
         ($gatherDropOutput -match "Downloading asset Foo@1.1.0")) {
-        throw "Build should not download either Foo and Bar"
+        throw "Build should not download either Foo or Bar"
     }
     Write-Host $gatherDropOutput
 
