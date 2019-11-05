@@ -23,5 +23,9 @@
       <Uri>https://github.com/dotnet/arcade</Uri>
       <Sha>ec6a0344dd2b1237cd63b38281295ce1e4b71458</Sha>
     </Dependency>
+    <Dependency Name="Microsoft.DotNet.VersionTools" Version="5.0.0-beta.19554.3">
+      <Uri>https://github.com/dotnet/arcade</Uri>
+      <Sha>ec6a0344dd2b1237cd63b38281295ce1e4b71458</Sha>
+    </Dependency>
   </ToolsetDependencies>
 </Dependencies>
