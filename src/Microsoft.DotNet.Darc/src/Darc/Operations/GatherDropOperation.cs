@@ -1238,7 +1238,10 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 // Ensure we delete the file in this case, otherwise an attempt to download
                 // from a separate location will fail.
-                File.Delete(targetFile);
+                if (File.Exists(targetFile))
+                {
+                    File.Delete(targetFile);
+                }
                 errors.Add($"Failed to download {sourceUri}: {e.Message}");
             }
             finally
