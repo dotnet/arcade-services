@@ -15,7 +15,7 @@
   <CodePackage Name="Code" Version="1.0.42">
     <SetupEntryPoint>
       <ExeHost>
-        <Program>tlsconfiguration.bat</Program>
+        <Program>Scripts\tlsconfiguration.bat</Program>
         <WorkingFolder>CodePackage</WorkingFolder>
       </ExeHost>
     </SetupEntryPoint>
