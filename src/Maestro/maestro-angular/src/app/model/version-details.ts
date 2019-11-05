@@ -27,17 +27,23 @@ export class VersionDetails {
 
   constructor(inputFile: XMLDocument) {
     const productElements = inputFile.getElementsByTagName("ProductDependencies");
-    let childProductElements = productElements[0].getElementsByTagName('Dependency');
 
-    const toolsetElements = inputFile.getElementsByTagName("ToolsetDependencies");
-    let childToolsetElements = toolsetElements[0].getElementsByTagName('Dependency');
+    if (productElements.length != 0) {
+      let childProductElements = productElements[0].getElementsByTagName('Dependency');
 
-    for (let el of Array.from(childProductElements)) {
-      this.parseDependencyElement(el, this.allDependencies, false);
+      for (let el of Array.from(childProductElements)) {
+        this.parseDependencyElement(el, this.allDependencies, false);
+      }
     }
 
-    for (let el of Array.from(childToolsetElements)) {
-      this.parseDependencyElement(el, this.allDependencies, true);
+    const toolsetElements = inputFile.getElementsByTagName("ToolsetDependencies");
+
+    if (toolsetElements.length != 0) {
+      let childToolsetElements = toolsetElements[0].getElementsByTagName('Dependency');
+
+      for (let el of Array.from(childToolsetElements)) {
+        this.parseDependencyElement(el, this.allDependencies, true);
+      }
     }
 
     const depNames = Object.keys(this.allDependencies);
