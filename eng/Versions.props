@@ -22,7 +22,6 @@
     <MicrosoftBuildTasksCoreVersion>15.7.179</MicrosoftBuildTasksCoreVersion>
     <MicrosoftBuildUtilitiesCoreVersion>15.7.179</MicrosoftBuildUtilitiesCoreVersion>
     <MicrosoftCodeAnalysisCSharpVersion>2.9.0</MicrosoftCodeAnalysisCSharpVersion>
-    <MicrosoftDotNetVersionToolsVersion>2.2.0-preview1-02815-01</MicrosoftDotNetVersionToolsVersion>
     <MicrosoftIdentityModelClientsActiveDirectoryVersion>3.19.8</MicrosoftIdentityModelClientsActiveDirectoryVersion>
     <MicrosoftRestClientRuntimeVersion>2.3.13</MicrosoftRestClientRuntimeVersion>
     <MicrosoftExtensionsFileSystemGlobbingVersion>2.0.0</MicrosoftExtensionsFileSystemGlobbingVersion>
@@ -49,6 +48,7 @@
     <MicrosoftDotNetBuildTasksFeedVersion>5.0.0-beta.19554.3</MicrosoftDotNetBuildTasksFeedVersion>
     <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>5.0.0-beta.19554.3</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
     <MicrosoftDotNetGitIssueManagerVersion>5.0.0-beta.19554.3</MicrosoftDotNetGitIssueManagerVersion>
+    <MicrosoftDotNetVersionToolsVersion>5.0.0-beta.19554.3</MicrosoftDotNetVersionToolsVersion>
   </PropertyGroup>
   <!--Package names-->
   <PropertyGroup>

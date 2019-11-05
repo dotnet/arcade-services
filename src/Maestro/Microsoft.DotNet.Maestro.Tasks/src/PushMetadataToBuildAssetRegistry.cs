@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 using MSBuild = Microsoft.Build.Utilities;
+using Microsoft.DotNet.VersionTools.BuildManifest;
 
 namespace Microsoft.DotNet.Maestro.Tasks
 {
@@ -207,7 +208,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private string GetVersion(string assetId)
         {
-            return VersionManager.GetVersion(assetId);
+            return VersionIdentifier.GetVersion(assetId);
         }
 
         private List<BuildData> GetBuildManifestsMetadata(
