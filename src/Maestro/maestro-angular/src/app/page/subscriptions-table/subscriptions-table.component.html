@@ -58,9 +58,7 @@
                 {{sub.value.policy.updateFrequency}}
               </td>
               <td>
-                <ng-container *stateful="let details from versionDetailsList[branch.key]">
-                  {{details.isToolsetSubscription[sub.id]? 'Toolset' : 'Product'}}
-                </ng-container>
+                Unknown
               </td>
             </tr>
           </ng-container>
@@ -82,9 +80,7 @@
                 {{sub.policy.updateFrequency}}
               </td>
               <td>
-                <ng-container *stateful="let details from versionDetailsList[branch.key]">
-                  {{details.isToolsetSubscription[sub.id]? 'Toolset' : 'Product'}}
-                </ng-container>
+                Unknown
               </td>
             </tr>
           </ng-container>
