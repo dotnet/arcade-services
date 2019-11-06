@@ -801,7 +801,7 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     _logger.LogInformation($"There's a difference between the number of files in the eng/common folder" +
                         $" flowing from Arcade SHA {arcadeItem.Commit} and {repoUri} at SHA {latestCommit}." +
-                        $" Source files: {filesToCommit.Count}, Files in target branch: {targetEngCommonFiles.Count}.");
+                        $" Source files: {engCommonFiles.Count}, Files in target branch: {targetEngCommonFiles.Count}.");
                 }
 
                 foreach (GitFile file in targetEngCommonFiles)
