@@ -812,7 +812,7 @@ namespace Microsoft.DotNet.DarcLib
                 if (deletedFiles.Count > 0)
                 {
                     _logger.LogInformation($"Dependency update from Arcade commit {arcadeItem.Commit} to {repoUri} " +
-                        $"on branch {branch}@{latestCommit}.will delete files in eng/common." +
+                        $"on branch {branch}@{latestCommit} will delete files in eng/common." +
                         $" Source file count: {engCommonFiles.Count}, Target file count: {targetEngCommonFiles.Count}." +
                         $" Deleted files: {String.Join(Environment.NewLine, deletedFiles)}");
                 }
