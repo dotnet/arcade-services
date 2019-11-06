@@ -15,12 +15,10 @@ export class VersionDetails {
   // <SubId, Subscription>
   public unusedSubscriptions: Record<string, Subscription> = {};
   public conflictingSubscriptions: Record<string, Subscription[]> = {};
+  public unableToRetrieveAssetsFor: Record<string, Subscription> = {};
 
   // Dependency Name
   public dependenciesWithNoSubscription: string[] = new Array();
-
-  //Subscription Source Repo
-  public unableToRetrieveAssetsFor: Subscription[] = new Array();
 
   // Subscription ID
   public isToolsetSubscription: Record<string, boolean> = {};
@@ -98,7 +96,7 @@ export class VersionDetails {
     // and all dependencies pointing to it are toolset dependencies
     // Applying the same rules to subscriptions
     const subKeys = Object.keys(subsAndAssets);
-    const depNames = Object.keys(this.allDependencies);
+    const depNames = Object.keys(this.dependenciesForEvaluation);
 
     //AssetName, SubId
     let flattenedData: Record<string, string> = {};
@@ -118,11 +116,22 @@ export class VersionDetails {
     for (let sub of subKeys) {
 
       isToolsetSub[sub] = true;
+      let foundDependency = false;
 
       for (let dep of depNames) {
-        if (!this.allDependencies[dep].fromToolset && Object.keys(flattenedData).includes(dep)) {
-          isToolsetSub[sub] = false;
+        if (Object.keys(flattenedData).includes(dep) && flattenedData[dep] == sub) {
+
+          foundDependency = true;
+
+          if (!this.dependenciesForEvaluation[dep].fromToolset) {
+            isToolsetSub[sub] = false;
+          }
         }
+      }
+
+      // It's not a "toolset" if there are no dependencies that are pulled from it
+      if (!foundDependency) {
+        isToolsetSub[sub] = false;
       }
     }
 

@@ -76,11 +76,11 @@ export class SubscriptionsTableComponent implements OnChanges {
                           updatedDetails.isToolsetSubscription = updatedDetails.checkIfToolsetSubscriptions(assets);
 
                           // Add errors for anything that didn't retrieve assets
-                          const getAssetFailed: Subscription[] = new Array();
+                          const getAssetFailed: Record<string, Subscription> = {};
                           const assetKeys = Object.keys(assets);
                           for (let sub of this.subscriptionsList[branch]) {
                             if (!assetKeys.includes(sub.id)) {
-                              getAssetFailed.push(sub);
+                              getAssetFailed[sub.id] = sub;
                             }
                           }
                           updatedDetails.unableToRetrieveAssetsFor = getAssetFailed;

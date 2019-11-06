@@ -24,7 +24,23 @@
             {{branch.key}}
           </td>
           <td>
-            {{sub.enabled ? 'Enabled' : 'Disabled'}}
+            <ng-container *ngIf="openDetails; else noDetails">
+              <ng-container *stateful="let details from versionDetailsList[branch.key]">
+                <ng-container *ngIf="details.unusedSubscriptions[sub.id]">
+                  {{(sub.enabled ? 'Enabled' : 'Disabled') + ', No Dependencies'}}
+                </ng-container>
+                <ng-container *ngIf="details.unableToRetrieveAssetsFor[sub.id]">
+                  {{(sub.enabled ? 'Enabled' : 'Disabled') + ', No builds published to this channel'}}
+                </ng-container>
+                <ng-container
+                  *ngIf="!details.unableToRetrieveAssetsFor[sub.id] && !details.unusedSubscriptions[sub.id]">
+                  {{sub.enabled ? 'Enabled' : 'Disabled'}}
+                </ng-container>
+              </ng-container>
+            </ng-container>
+            <ng-template #noDetails>
+              {{sub.enabled ? 'Enabled' : 'Disabled'}}
+            </ng-template>
           </td>
           <td>
             {{sub.policy.updateFrequency}}
@@ -32,59 +48,17 @@
           <ng-container *ngIf="openDetails">
             <td>
               <ng-container *stateful="let details from versionDetailsList[branch.key]">
-                {{details.isToolsetSubscription[sub.id]? 'Toolset' : 'Product'}}
+                <ng-container
+                  *ngIf="details.unableToRetrieveAssetsFor[sub.id] || details.unusedSubscriptions[sub.id]; else knownType">
+                  Unknown
+                </ng-container>
+                <ng-template #knownType>
+                  {{details.isToolsetSubscription[sub.id]? 'Toolset' : 'Product'}}
+                </ng-template>
               </ng-container>
             </td>
           </ng-container>
         </tr>
-      </ng-container>
-      <ng-container *ngIf="openDetails">
-        <ng-container *stateful="let details from versionDetailsList[branch.key]">
-          <ng-container *ngFor="let sub of details.unusedSubscriptions | keyvalue">
-            <tr>
-              <td>
-                {{sub.value.sourceRepository}}
-              </td>
-              <td>
-                {{sub.value.channel.name}}
-              </td>
-              <td>
-                {{branch.key}}
-              </td>
-              <td>
-                No Dependencies
-              </td>
-              <td>
-                {{sub.value.policy.updateFrequency}}
-              </td>
-              <td>
-                Unknown
-              </td>
-            </tr>
-          </ng-container>
-          <ng-container *ngFor="let sub of details.unableToRetrieveAssetsFor">
-            <tr>
-              <td>
-                {{sub.sourceRepository}}
-              </td>
-              <td>
-                {{sub.channel.name}}
-              </td>
-              <td>
-                {{branch.key}}
-              </td>
-              <td>
-                No builds published to this channel
-              </td>
-              <td>
-                {{sub.policy.updateFrequency}}
-              </td>
-              <td>
-                Unknown
-              </td>
-            </tr>
-          </ng-container>
-        </ng-container>
       </ng-container>
     </ng-container>
   </tbody>
