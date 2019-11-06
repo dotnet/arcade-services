@@ -353,6 +353,13 @@ namespace Microsoft.DotNet.DarcLib
         Task<string> GetLatestCommitAsync(string repoUri, string branch);
 
         /// <summary>
+        /// Checks that a repository exists
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <returns>True if the repository exists, false otherwise.</returns>
+        Task<bool> RepositoryExistsAsync(string repoUri);
+
+        /// <summary>
         ///     Clone a remote repo.
         /// </summary>
         /// <param name="repoUri">Repository uri</param>
@@ -416,6 +423,13 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="dependencies">Dependencies to load locations for</param>
         /// <returns>Async task</returns>
         Task AddAssetLocationToDependenciesAsync(IEnumerable<DependencyDetail> dependencies);
+
+        /// <summary>
+        ///     Update an existing build.
+        /// </summary>
+        /// <param name="buildId">Build to update</param>
+        /// <param name="buildUpdate">Updated build info</param>
+        Task<Build> UpdateBuildAsync(int buildId, BuildUpdate buildUpdate);
 
         #endregion
     }

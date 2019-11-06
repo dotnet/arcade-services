@@ -217,7 +217,7 @@ function Darc-Delete-Channel($channelName) {
 
 # Run darc add-channel and record the channel for later deletion
 function Darc-Add-Default-Channel($channelName, $repoUri, $branch) {
-    $darcParams = @( "add-default-channel", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch" )
+    $darcParams = @( "add-default-channel", "--channel", "$channelName", "--repo", "$repoUri", "--branch", "$branch", "--quiet" )
     Darc-Command -darcParams $darcParams
     # We sometimes call add-default-channel with a refs/heads/ prefix, which
     # will get stripped away by the DB.
@@ -278,15 +278,21 @@ function Darc-Add-Subscription-Process-Output($output) {
 }
 
 # Run darc add-subscription with the specified parameters, extract out the subscription id,
-# and record it for teardown later. Implicitly passes -q
+# and record it for teardown later. Implicitly passes -q and --no-trigger
 function Darc-Add-Subscription([Parameter(ValueFromRemainingArguments=$true)]$darcParams) {
-    $darcParams = @( "add-subscription" ) + $darcParams + @( "-q" )
+    $darcParams = @( "add-subscription" ) + $darcParams + @( "-q", "--no-trigger" )
+    $output = Darc-Command -darcParams $darcParams
+    Darc-Add-Subscription-Process-Output $output
+}
+
+function Darc-Add-Subscription-And-Trigger([Parameter(ValueFromRemainingArguments=$true)]$darcParams) {
+    $darcParams = @( "add-subscription" ) + $darcParams + @( "-q", "--trigger" )
     $output = Darc-Command -darcParams $darcParams
     Darc-Add-Subscription-Process-Output $output
 }
 
 function Darc-Add-Subscription-From-Yaml($yamlText) {
-    $darcParams = @( "add-subscription", "--read-stdin" )
+    $darcParams = @( "add-subscription", "--read-stdin", "--no-trigger" )
     $output = $yamlText | Darc-Command-WithPipeline -darcParams $darcParams
     Darc-Add-Subscription-Process-Output $output
 }
@@ -322,7 +328,7 @@ function Add-Build-To-Channel ($buildId, $channelName) {
     Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
 }
 
-function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publishUsingPipelines) {
+function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publishUsingPipelines, $dependencies) {
     if (!$publishUsingPipelines) {
         $publishUsingPipelines = "false"
     }
@@ -340,6 +346,7 @@ function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publis
         azureDevOpsBuildDefinitionId = 6;
         commit = $commit;
         assets = $assets;
+        dependencies = $dependencies;
         publishUsingPipelines = $publishUsingPipelines;
     }
     $bodyJson = ConvertTo-Json $body -Depth 4
@@ -366,6 +373,15 @@ function Get-Build($id) {
 
     $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Get | ConvertFrom-Json
     $response
+}
+
+function Darc-Get-Build($id) {
+    $darcParams = @( "get-build", "--id", "$id" )
+    Darc-Command -darcParams $darcParams
+}
+function Darc-Update-Build($id, $updateParams) {
+    $darcParams = @( "update-build", "--id", "$id" ) + $updateParams
+    Darc-Command -darcParams $darcParams
 }
 
 function Get-Bar-Headers([string]$accept) {
@@ -544,7 +560,7 @@ function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $tar
 
     # Depending on how quickly each dependency update comes through,
     # we might have to wait for the title to be updated correctly for batched Subscriptions
-    $tries = 3
+    $tries = 5
     $validTitle = $false;
     while ($tries-- -gt 0 -and (-not $validTitle)) {
         Write-Host "Validating PR title. $tries tries remaining..."
@@ -805,7 +821,7 @@ function Validate-Github-PullRequest-Contents($pullRequest, $expectedPRTitle, $t
 
     # Depending on how quickly each dependency update comes through,
     # we might have to wait for the title to be updated correctly for batched Subscriptions
-    $tries = 3
+    $tries = 5
     $validTitle = $false
     while ($tries-- -gt 0) {
         Write-Host "Validating PR title. $tries tries remaining..."

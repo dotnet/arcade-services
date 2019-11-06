@@ -956,5 +956,28 @@ namespace Microsoft.DotNet.DarcLib
         {
             throw new NotImplementedException($"Cannot add a remote to a remote repo.");
         }
+
+        /// <summary>
+        /// Checks that a repository exists
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <returns>True if the repository exists, false otherwise.</returns>
+        public async Task<bool> RepoExistsAsync(string repoUri)
+        {
+            (string owner, string repo) = ParseRepoUri(repoUri);
+
+            try
+            {
+                using (await this.ExecuteRemoteGitCommandAsync(
+                      HttpMethod.Get,
+                      $"repos/{owner}/{repo}",
+                      _logger,
+                      logFailure: false)) { }
+                return true;
+            }
+            catch (Exception) { }
+
+            return false;
+        }
     }
 }

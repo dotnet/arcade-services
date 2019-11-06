@@ -46,23 +46,17 @@ export class ChannelService {
   }
 
   private buildRepositoriesList(channelId: number): Observable<DefaultChannel[]> {
-    let builds = this.maestro.builds.listBuildsAsync({ channelId: channelId });
+// new
+      let builds = this.maestro.channels.listRepositoriesAsync({ id: channelId });
 
-    let targetRepos = builds.pipe(map(x => x.map(y => {
-      return new DefaultChannel({
-        repository: y.gitHubRepository === undefined ? y.azureDevOpsRepository! : y.gitHubRepository!,
-        branch: y.gitHubBranch === undefined ? y.azureDevOpsBranch : y.gitHubBranch,
-        id: 0,
-      });
-    })));
-
-    const repos = targetRepos.pipe(
-      map(l => {
-        let dcArray = new Array<DefaultChannel>().concat(l);
-        dcArray = dcArray.filter((dc, index) => dc.repository != undefined);
-        return dcArray.filter((dc, index) => dcArray.findIndex(t => t.repository === dc.repository) === index).sort(repoSorter);
-      }),
-    );
-    return repos; 
+      let repos = builds.pipe(
+          map(x => x.map(y => {
+            return new DefaultChannel({
+            repository: y ,
+            branch: undefined,
+            id: 0,
+          });
+        })));
+      return repos;
   }
 }

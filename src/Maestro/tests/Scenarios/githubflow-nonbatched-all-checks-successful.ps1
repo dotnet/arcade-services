@@ -44,9 +44,6 @@ try {
     try { Darc-Command delete-channel --name "$testChannelName"  } catch {}
     Darc-Add-Channel $testChannelName "test"
 
-    Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
-    $subscriptionId = Darc-Add-Subscription --channel "$testChannelName" --source-repo "$sourceRepoUri" --target-repo "$targetRepoUri" --update-frequency none --target-branch "$targetBranch" --all-checks-passed --ignore-checks license/cla
-
     Write-Host "Set up build for intake into target repository"
     # Create a build for the source repo
     $buildId = New-Build -repository $sourceRepoUri -branch $sourceBranch -commit $sourceCommit -buildNumber $sourceBuildNumber -assets $sourceAssets
@@ -75,9 +72,9 @@ try {
     Git-Command $targetRepoName push origin HEAD
     $global:githubBranchesToDelete += @{ branch = $targetBranch; repo = $targetRepoName}
 
-    Write-Host "Trigger the dependency update"
-    # Trigger the subscription
-    Trigger-Subscription $subscriptionId
+    # Add the subscription, but tell darc to immediately trigger it (add-subscription with --trigger option)
+    Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
+    $subscriptionId = Darc-Add-Subscription-And-Trigger --channel "$testChannelName" --source-repo "$sourceRepoUri" --target-repo "$targetRepoUri" --update-frequency none --target-branch "$targetBranch" --all-checks-passed --ignore-checks license/cla
 
     Write-Host "Waiting on PR to be opened in $targetRepoUri"
 

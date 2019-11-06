@@ -845,6 +845,18 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        /// Checks that a repository exists
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <returns>True if the repository exists, false otherwise.</returns>
+        public async Task<bool> RepositoryExistsAsync(string repoUri)
+        {
+            CheckForValidGitClient();
+
+            return await _gitClient.RepoExistsAsync(repoUri);
+        }
+
+        /// <summary>
         ///     Get the latest commit in a branch
         /// </summary>
         /// <param name="repoUri">Remote repository</param>
@@ -1139,6 +1151,18 @@ namespace Microsoft.DotNet.DarcLib
                     dependency.Locations = currentAssetLocations;
                 }
             }
+        }
+
+        /// <summary>
+        ///     Update an existing build.
+        /// </summary>
+        /// <param name="buildId">Build to update</param>
+        /// <param name="buildUpdate">Updated build info</param>
+        /// <returns>Updated build</returns>
+        public Task<Build> UpdateBuildAsync(int buildId, BuildUpdate buildUpdate)
+        {
+            CheckForValidBarClient();
+            return _barClient.UpdateBuildAsync(buildId, buildUpdate);
         }
     }
 }

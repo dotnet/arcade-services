@@ -19,6 +19,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("repo", Required = true, HelpText = "Build of this repo repo on 'branch' will be automatically applied to 'channel'")]
         public string Repository { get; set; }
 
+        [Option('q', "quiet", HelpText = "Do not prompt if the target repository/branch does not exist.")]
+        public bool NoConfirmation { get; set; }
+
         public override Operation GetOperation()
         {
             return new AddDefaultChannelOperation(this);

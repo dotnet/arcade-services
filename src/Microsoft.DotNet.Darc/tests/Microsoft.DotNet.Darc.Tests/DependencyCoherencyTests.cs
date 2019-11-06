@@ -574,7 +574,7 @@ namespace Microsoft.DotNet.Darc.Tests
             var buildAssets = assets.Select<(string, string), Asset>(a =>
             new Asset(GetRandomId(), buildId, true, a.Item1, a.Item2, null));
 
-            var build = new Build(buildId, DateTimeOffset.Now, 0, false, commit, null, buildAssets.ToImmutableList(), null)
+            var build = new Build(buildId, DateTimeOffset.Now, 0, false, false, commit, null, buildAssets.ToImmutableList(), null)
             {
                 AzureDevOpsRepository = repo,
                 GitHubRepository = repo

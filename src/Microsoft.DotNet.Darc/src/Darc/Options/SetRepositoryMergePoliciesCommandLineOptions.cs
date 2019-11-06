@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("branch", HelpText = "Name of repository to get repository merge policies for.")]
         public string Branch { get; set; }
 
-        [Option("standard-automerge", HelpText = "Use standard auto-merge policies. GitHub ignores WIP and license/cla checks," +
+        [Option("standard-automerge", HelpText = "Use standard auto-merge policies. GitHub ignores WIP, license/cla and auto-merge.config.enforce checks," +
             "Azure DevOps ignores comment, reviewer and work item linking. Neither will auto-merge if changes are requested.")]
         public bool StandardAutoMergePolicies { get; set; }
 

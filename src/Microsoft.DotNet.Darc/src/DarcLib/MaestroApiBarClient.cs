@@ -373,5 +373,16 @@ namespace Microsoft.DotNet.DarcLib
                                                     channelId: channelId,
                                                     loadCollections: true);
         }
+
+        /// <summary>
+        ///     Update an existing build.
+        /// </summary>
+        /// <param name="buildId">Build to update</param>
+        /// <param name="buildUpdate">Updated build info</param>
+        /// <returns>Updated build</returns>
+        public Task<Build> UpdateBuildAsync(int buildId, BuildUpdate buildUpdate)
+        {
+            return _barClient.Builds.UpdateAsync(buildUpdate, buildId);
+        }
     }
 }

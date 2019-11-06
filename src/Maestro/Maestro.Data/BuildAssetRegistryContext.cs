@@ -279,6 +279,7 @@ FOR SYSTEM_TIME ALL
             var buildIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.BuildId)).Relational().ColumnName;
             var dependencyIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.DependentBuildId)).Relational().ColumnName;
             var isProductColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.IsProduct)).Relational().ColumnName;
+            var timeToInclusionInMinutesColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.TimeToInclusionInMinutes)).Relational().ColumnName;
             var edgeTable = dependencyEntity.Relational().TableName;
 
             var edges = BuildDependencies.FromSql($@"
@@ -287,6 +288,7 @@ WITH traverse AS (
             {buildIdColumnName},
             {dependencyIdColumnName},
             {isProductColumnName},
+            {timeToInclusionInMinutesColumnName},
             0 as Depth
         from {edgeTable}
         WHERE {buildIdColumnName} = @id
@@ -295,6 +297,7 @@ WITH traverse AS (
             {edgeTable}.{buildIdColumnName},
             {edgeTable}.{dependencyIdColumnName},
             {edgeTable}.{isProductColumnName},
+            {edgeTable}.{timeToInclusionInMinutesColumnName},
             traverse.Depth + 1
         FROM {edgeTable}
         INNER JOIN traverse
@@ -302,7 +305,7 @@ WITH traverse AS (
         WHERE traverse.{isProductColumnName} = 1 -- The thing we previously traversed was a product dependency
             AND traverse.Depth < 10 -- Don't load all the way back because of incorrect isProduct columns
 )
-SELECT DISTINCT {buildIdColumnName}, {dependencyIdColumnName}, {isProductColumnName}
+SELECT DISTINCT {buildIdColumnName}, {dependencyIdColumnName}, {isProductColumnName}, {timeToInclusionInMinutesColumnName}
 FROM traverse;",
                new SqlParameter("id", buildId));
 

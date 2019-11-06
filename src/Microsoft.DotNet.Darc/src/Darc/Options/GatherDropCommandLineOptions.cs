@@ -67,6 +67,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("skip-existing", HelpText = "Skip files that already exist at the destination.")]
         public bool SkipExisting { get; set; }
 
+        [Option("skip-released", HelpText = "Skip builds that are marked as released")]
+        public bool SkipReleased { get; set; }
+
         [Option("latest-location", HelpText = "Download assets from their latest known location.")]
         public bool LatestLocation { get; set; }
 

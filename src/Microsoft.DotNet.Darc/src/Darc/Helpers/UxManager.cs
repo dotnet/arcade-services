@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.Work.WebApi;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -142,6 +143,11 @@ namespace Microsoft.DotNet.Darc.Helpers
                         }
                     }
                 }
+            }
+            catch (Win32Exception exc)
+            {
+                _logger.LogError(exc, $"Cannot start editor '{parsedCommand.FileName}'. Please verify that your git settings (`git config core.editor`) specify the path correctly.");
+                result = Constants.ErrorCode;
             }
             catch (Exception exc)
             {

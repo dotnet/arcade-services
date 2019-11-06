@@ -6,10 +6,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class BuildRef
     {
-        public BuildRef(int buildId, bool isProduct)
+        public BuildRef(int buildId, bool isProduct, double timeToInclusionInMinutes)
         {
             BuildId = buildId;
             IsProduct = isProduct;
+            TimeToInclusionInMinutes = timeToInclusionInMinutes;
         }
 
         [JsonProperty("buildId")]
@@ -17,5 +18,8 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 
         [JsonProperty("isProduct")]
         public bool IsProduct { get; }
+
+        [JsonProperty("timeToInclusionInMinutes")]
+        public double TimeToInclusionInMinutes { get; set; }
     }
 }
