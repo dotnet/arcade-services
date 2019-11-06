@@ -809,11 +809,12 @@ namespace Microsoft.DotNet.DarcLib
                     }
                 }
 
-                if (filesToCommit.Count != targetEngCommonFiles.Count && deletedFiles.Count > 0)
+                if (deletedFiles.Count > 0)
                 {
-                    _logger.LogInformation("There's a difference between the number of files in the eng/common folder" +
-                        $" flowing from Arcade SHA {arcadeItem.Commit} and {repoUri} at SHA {latestCommit}." +
-                        $" Source files: {engCommonFiles.Count}, Files in target branch: {targetEngCommonFiles.Count}. Set of files: {String.Join(Environment.NewLine, deletedFiles)}");
+                    _logger.LogInformation($"Dependency update from Arcade commit {arcadeItem.Commit} to {repoUri} " +
+                        $"on branch {branch}@{latestCommit}.will delete filed in eng/common." +
+                        $" Source file count: {engCommonFiles.Count}, Target file count: {targetEngCommonFiles.Count}." +
+                        $" Deleted files: {String.Join(Environment.NewLine, deletedFiles)}");
                 }
             }
 
