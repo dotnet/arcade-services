@@ -797,21 +797,23 @@ namespace Microsoft.DotNet.DarcLib
                 string latestCommit = await _gitClient.GetLastCommitShaAsync(repoUri, branch);
                 List<GitFile> targetEngCommonFiles = await GetCommonScriptFilesAsync(repoUri, latestCommit);
 
-                if (filesToCommit.Count != targetEngCommonFiles.Count)
-                {
-                    _logger.LogInformation($"There's a difference between the number of files in the eng/common folder" +
-                        $" flowing from Arcade SHA {arcadeItem.Commit} and {repoUri} at SHA {latestCommit}." +
-                        $" Source files: {engCommonFiles.Count}, Files in target branch: {targetEngCommonFiles.Count}.");
-                }
+                var deletedFiles = new List<string>();
 
                 foreach (GitFile file in targetEngCommonFiles)
                 {
                     if (!engCommonFiles.Where(f => f.FilePath == file.FilePath).Any())
                     {
-                        _logger.LogInformation($"Deleting file: {file.FilePath} from target repo {repoUri}");
+                        deletedFiles.Add(file.FilePath);
                         file.Operation = GitFileOperation.Delete;
                         filesToCommit.Add(file);
                     }
+                }
+
+                if (filesToCommit.Count != targetEngCommonFiles.Count && deletedFiles.Count > 0)
+                {
+                    _logger.LogInformation("There's a difference between the number of files in the eng/common folder" +
+                        $" flowing from Arcade SHA {arcadeItem.Commit} and {repoUri} at SHA {latestCommit}." +
+                        $" Source files: {engCommonFiles.Count}, Files in target branch: {targetEngCommonFiles.Count}. Set of files: {String.Join(Environment.NewLine, deletedFiles)}");
                 }
             }
 
