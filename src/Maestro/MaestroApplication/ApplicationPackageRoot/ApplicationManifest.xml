@@ -88,12 +88,12 @@
       </StatefulService>
     </Service>
   </DefaultServices>
-  <Certificates>
-    <EndpointCertificate X509FindValue="[WebCertThumbprint]" Name="WebSslCert" />
-  </Certificates>
   <Principals>
     <Users>
         <User Name="SetupLocalSystem" AccountType="LocalSystem" />
     </Users>
   </Principals>
+  <Certificates>
+    <EndpointCertificate X509FindValue="[WebCertThumbprint]" Name="WebSslCert" />
+  </Certificates>
 </ApplicationManifest>
