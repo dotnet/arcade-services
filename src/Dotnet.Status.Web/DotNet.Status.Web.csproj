@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <ApplicationInsightsResourceId>/subscriptions/a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1/resourcegroups/monitoring/providers/microsoft.insights/components/grafana</ApplicationInsightsResourceId>
     <UserSecretsId>65a272ca-730a-4afd-b68b-d256719c2db2</UserSecretsId>
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>

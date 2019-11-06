@@ -3,8 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System.IO;
+using System.Reflection;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -17,11 +17,11 @@ namespace DotNet.Status.Web
             new WebHostBuilder()
                 .UseKestrel()
                 .UseContentRoot(Directory.GetCurrentDirectory())
-                .ConfigureServices(services => { services.AddKeyVaultMappedConfiguration(); })
                 .ConfigureAppConfiguration((host, config) =>
                 {
                     config
                         .AddCommandLine(args)
+                        .AddUserSecrets(Assembly.GetEntryAssembly())
                         .AddEnvironmentVariables();
                 })
                 .ConfigureLogging(

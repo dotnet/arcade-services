@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Reflection;
 using System.Security.Claims;
@@ -31,7 +30,7 @@ namespace DotNet.Status.Web
     {
         public Startup(IConfiguration configuration, IHostingEnvironment env)
         {
-            Configuration = KeyVaultMappedJsonConfigurationExtensions.CreateConfiguration(env, new AppTokenVaultProvider(), "appsettings{0}.json");
+            Configuration = KeyVaultMappedJsonConfigurationExtensions.CreateConfiguration(configuration, env, new AppTokenVaultProvider(), "appsettings{0}.json");
             Env = env;
         }
         
@@ -66,13 +65,39 @@ namespace DotNet.Status.Web
                     .SetApplicationName(typeof(Startup).FullName);
             }
 
+            AddServices(services);
+            ConfigureConfiguration(services);
+        }
+
+        private void ConfigureConfiguration(IServiceCollection services)
+        {
+            services.Configure<GitHubConnectionOptions>(Configuration.GetSection("GitHub").Bind);
+            services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth").Bind);
+
+            services.Configure<SimpleSigninOptions>(o => { o.ChallengeScheme = GitHubScheme; });
+            services.ConfigureExternalCookie(options =>
+            {
+                options.LoginPath = "/signin";
+                options.LogoutPath = "/signout";
+            });
+            services.Configure<GitHubAuthenticationOptions>(GitHubScheme, o => o.SignInScheme = IdentityConstants.ApplicationScheme);
+            services.Configure<MvcOptions>(
+                options =>
+                {
+                    options.Conventions.Add(new DefaultAuthorizeActionModelConvention(MsftAuthorizationPolicyName));
+                });
+            services.Configure<GitHubClientOptions>(o =>
+                o.ProductHeader = new ProductHeaderValue("DotNetEngineeringStatus",
+                    Assembly.GetEntryAssembly().GetName().Version.ToString()));
+        }
+
+        private void AddServices(IServiceCollection services)
+        {
             services.AddMvc().WithRazorPagesRoot("/Pages");
             services.AddApplicationInsightsTelemetry();
-            services.Configure<GitHubConnectionOptions>(o => { });
-            services.Configure<SimpleSigninOptions>(o => { o.ChallengeScheme = GitHubScheme; });
             services.AddAuthentication(IdentityConstants.ApplicationScheme)
                 .AddGitHubOAuth(Configuration.GetSection("GitHubAuthentication"), GitHubScheme)
-                .AddScheme<UserTokenOptions, GitHubUserTokenHandler>("github-token", o => {})
+                .AddScheme<UserTokenOptions, GitHubUserTokenHandler>("github-token", o => { })
                 .AddCookie(IdentityConstants.ApplicationScheme,
                     o =>
                     {
@@ -86,7 +111,8 @@ namespace DotNet.Status.Web
                         {
                             OnValidatePrincipal = async ctx =>
                             {
-                                GitHubClaimResolver resolver = ctx.HttpContext.RequestServices.GetRequiredService<GitHubClaimResolver>();
+                                GitHubClaimResolver resolver =
+                                    ctx.HttpContext.RequestServices.GetRequiredService<GitHubClaimResolver>();
                                 ClaimsIdentity identity = ctx.Principal.Identities.FirstOrDefault();
                                 identity?.AddClaims(await resolver.GetMembershipClaims(resolver.GetAccessToken(ctx.Principal)));
                             }
@@ -97,17 +123,7 @@ namespace DotNet.Status.Web
             {
                 o.SelectScheme = p => p.StartsWithSegments("/api") ? "github-token" : IdentityConstants.ApplicationScheme;
             });
-
-            services.Configure<GitHubAuthenticationOptions>(GitHubScheme, o => o.SignInScheme = IdentityConstants.ApplicationScheme);
-
             services.AddAzureTableTokenStore(o => Configuration.GetSection("AzureTableTokenStore").Bind(o));
-            
-            services.ConfigureExternalCookie(options =>
-            {
-                options.LoginPath = "/signin";
-                options.LogoutPath = "/signout";
-            });
-
             services.AddAuthorization(
                 options =>
                 {
@@ -123,15 +139,8 @@ namespace DotNet.Status.Web
                         });
                 });
 
-            services.Configure<MvcOptions>(
-                options =>
-                {
-                    options.Conventions.Add(new DefaultAuthorizeActionModelConvention(MsftAuthorizationPolicyName));
-                });
-
             services.AddScoped<SimpleSigningMiddleware>();
             services.AddGitHubTokenProvider();
-            services.Configure<GitHubClientOptions>(o => o.ProductHeader = new ProductHeaderValue(""));
             services.AddSingleton<IInstallationLookup, InMemoryCacheInstallationLookup>();
         }
 
@@ -151,21 +160,5 @@ namespace DotNet.Status.Web
             app.UseMvc();
             app.UseMiddleware<SimpleSigningMiddleware>();
         }
-    }
-
-    public class EmptyUserFactory : IUserFactory<EmptyUser>
-    {
-        public Task<EmptyUser> CreateAsync(ExternalLoginInfo info)
-        {
-            return Task.FromResult(new EmptyUser());
-        }
-    }
-
-    public class GitHubConnectionOptions
-    {
-        public string Organization { get; set; }
-        public string Repository { get; set; }
-        public string NotificationTarget { get; set; }
-        public ImmutableArray<string> AlertLabels { get; set; }
     }
 }

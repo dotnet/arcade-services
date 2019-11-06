@@ -8,10 +8,12 @@ using Maestro.Contracts;
 using Maestro.Data;
 using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.Configuration.Extensions;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Octokit;
 
 namespace ReleasePipelineRunner
 {
@@ -49,16 +51,18 @@ namespace ReleasePipelineRunner
                                     }
                                 });
                             services.AddGitHubTokenProvider();
+                            services.Configure<GitHubClientOptions>(o =>
+                            {
+                                o.ProductHeader = new ProductHeaderValue("Maestro", Assembly.GetEntryAssembly()
+                                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                                    ?.InformationalVersion);
+                            });
                             services.Configure<GitHubTokenProviderOptions>(
                                 (options, provider) =>
                                 {
                                     var config = provider.GetRequiredService<IConfigurationRoot>();
                                     IConfigurationSection section = config.GetSection("GitHub");
                                     section.Bind(options);
-                                    options.ApplicationName = "Maestro";
-                                    options.ApplicationVersion = Assembly.GetEntryAssembly()
-                                        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                                        ?.InformationalVersion;
                                 });
                         });
                 });

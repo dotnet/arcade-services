@@ -61,11 +61,23 @@ namespace Microsoft.DotNet.Configuration.Extensions
             return builder;
         }
 
-        public static IConfigurationRoot CreateConfiguration(IHostingEnvironment env, IKeyVaultProvider keyVaultClient, string configPathFormat = ".config/settings{0}json")
+        public static IConfigurationRoot CreateConfiguration(
+            IConfiguration baseConfig,
+            IHostingEnvironment env,
+            IKeyVaultProvider keyVaultClient,
+            string configPathFormat = ".config/settings{0}json")
         {
             string rootConfigFile = string.Format(configPathFormat, "");
             string envConfigFile = string.Format(configPathFormat, "." + env.EnvironmentName);
-            IConfigurationRoot bootstrapConfig = new ConfigurationBuilder().SetBasePath(env.ContentRootPath)
+            var baseBuilder = new ConfigurationBuilder()
+                .SetBasePath(env.ContentRootPath);
+
+            if (baseConfig != null)
+            {
+                baseBuilder = baseBuilder.AddConfiguration(baseConfig);
+            }
+
+            IConfigurationRoot bootstrapConfig = baseBuilder
                 .AddJsonFile(rootConfigFile)
                 .AddJsonFile(envConfigFile)
                 .Build();
@@ -78,16 +90,17 @@ namespace Microsoft.DotNet.Configuration.Extensions
                 reloadTime = TimeSpan.FromMinutes(5);
             }
 
-            return new ConfigurationBuilder().SetBasePath(env.ContentRootPath)
+            return baseBuilder
                 .AddKeyVaultMappedJsonFile(rootConfigFile, keyVaultUri, reloadTime, clientFactory)
                 .AddKeyVaultMappedJsonFile(envConfigFile, keyVaultUri, reloadTime, clientFactory)
                 .Build();
         }
 
-        public static void AddKeyVaultMappedConfiguration(this IServiceCollection services)
+        public static void AddKeyVaultMappedConfiguration(this IServiceCollection services, IConfigurationRoot baseConfiguration = null)
         {
             services.AddSingleton(
                 provider => CreateConfiguration(
+                    baseConfiguration,
                     provider.GetRequiredService<IHostingEnvironment>(),
                     provider.GetRequiredService<IKeyVaultProvider>()
                 )

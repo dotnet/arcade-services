@@ -41,6 +41,7 @@ using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.Dotnet.GitHub.Authentication;
+using Microsoft.DotNet.GitHub.Authentication;
 
 namespace Maestro.Web
 {
@@ -116,10 +117,10 @@ namespace Maestro.Web
                 .FirstOrDefault(c => c.ChannelReleasePipelines.Count > 0) != null;
         }
 
-        public Startup(IHostingEnvironment env)
+        public Startup(IConfiguration configuration, IHostingEnvironment env)
         {
             HostingEnvironment = env;
-            Configuration = KeyVaultMappedJsonConfigurationExtensions.CreateConfiguration(env, new ServiceHostKeyVaultProvider(env));
+            Configuration = KeyVaultMappedJsonConfigurationExtensions.CreateConfiguration(configuration, env, new ServiceHostKeyVaultProvider(env));
         }
 
         public static readonly TimeSpan LoginCookieLifetime = new TimeSpan(days: 120, hours: 0, minutes: 0, seconds: 0);
@@ -200,15 +201,18 @@ namespace Maestro.Web
             services.AddServiceFabricService<IReleasePipelineRunner>("fabric:/MaestroApplication/ReleasePipelineRunner");
 
             services.AddGitHubTokenProvider();
+            services.Configure<GitHubClientOptions>(o =>
+            {
+                o.ProductHeader = new Octokit.ProductHeaderValue("Maestro",
+                    Assembly.GetEntryAssembly()
+                        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                        ?.InformationalVersion);
+            });
             services.Configure<GitHubTokenProviderOptions>(
                 (options, provider) =>
                 {
                     IConfigurationSection section = Configuration.GetSection("GitHub");
                     section.Bind(options);
-                    options.ApplicationName = "Maestro";
-                    options.ApplicationVersion = Assembly.GetEntryAssembly()
-                        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                        ?.InformationalVersion;
                 });
             services.AddAzureDevOpsTokenProvider();
             services.Configure<AzureDevOpsTokenProviderOptions>(

@@ -10,10 +10,12 @@ using Maestro.MergePolicies;
 using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Octokit;
 
 namespace SubscriptionActorService
 {
@@ -54,16 +56,18 @@ namespace SubscriptionActorService
                                     var config = provider.GetRequiredService<IConfigurationRoot>();
                                     options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
                                 });
+                            services.Configure<GitHubClientOptions>(o =>
+                            {
+                                o.ProductHeader = new ProductHeaderValue("Maestro", Assembly.GetEntryAssembly()
+                                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                                    ?.InformationalVersion);
+                            });
                             services.Configure<GitHubTokenProviderOptions>(
                                 (options, provider) =>
                                 {
                                     var config = provider.GetRequiredService<IConfigurationRoot>();
                                     IConfigurationSection section = config.GetSection("GitHub");
                                     section.Bind(options);
-                                    options.ApplicationName = "Maestro";
-                                    options.ApplicationVersion = Assembly.GetEntryAssembly()
-                                        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                                        ?.InformationalVersion;
                                 });
                             services.Configure<AzureDevOpsTokenProviderOptions>(
                                 (options, provider) =>

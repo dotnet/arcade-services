@@ -3,14 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Claims;
-using System.Security.Policy;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Identity;
@@ -18,19 +13,10 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.DotNet.Web.Authentication
 {
-    public interface IUserFactory<TUser> where TUser : class
-    {
-        Task<TUser> CreateAsync(ExternalLoginInfo info);
-    }
-
     public class SimpleSigninOptions
     {
         public string ChallengeScheme { get; set; }
         public string AuthCallbackUrl { get; set; } = "/account/signin";
-    }
-
-    public class EmptyUser
-    {
     }
 
     public class SimpleSigningMiddleware : IMiddleware
