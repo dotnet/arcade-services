@@ -797,10 +797,18 @@ namespace Microsoft.DotNet.DarcLib
                 string latestCommit = await _gitClient.GetLastCommitShaAsync(repoUri, branch);
                 List<GitFile> targetEngCommonFiles = await GetCommonScriptFilesAsync(repoUri, latestCommit);
 
+                if (filesToCommit.Count != targetEngCommonFiles.Count)
+                {
+                    _logger.LogInformation($"There's a difference between the number of files in the eng/common folder" +
+                        $" flowing from Arcade SHA {arcadeItem.Commit} and {repoUri} at SHA {latestCommit}." +
+                        $" Source files: {filesToCommit.Count}, Files in target branch: {targetEngCommonFiles.Count}.");
+                }
+
                 foreach (GitFile file in targetEngCommonFiles)
                 {
                     if (!engCommonFiles.Where(f => f.FilePath == file.FilePath).Any())
                     {
+                        _logger.LogInformation($"Deleting file: {file.FilePath} from target repo {repoUri}");
                         file.Operation = GitFileOperation.Delete;
                         filesToCommit.Add(file);
                     }
