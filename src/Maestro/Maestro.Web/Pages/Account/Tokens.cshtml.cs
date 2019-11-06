@@ -11,6 +11,7 @@ using Maestro.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.DotNet.Web.Authentication.AccessToken;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 

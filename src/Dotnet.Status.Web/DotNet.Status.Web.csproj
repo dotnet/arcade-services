@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <ApplicationInsightsResourceId>/subscriptions/a4fc5514-21a9-4296-bfaf-5c7ee7fa35d1/resourcegroups/monitoring/providers/microsoft.insights/components/grafana</ApplicationInsightsResourceId>
+    <UserSecretsId>65a272ca-730a-4afd-b68b-d256719c2db2</UserSecretsId>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="GitHubJwt" Version="0.0.2" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.0.0" />
+    <PackageReference Include="Azure.Storage.Files" Version="12.0.0-preview.3" />
+    <PackageReference Include="Azure.Storage.Queues" Version="12.0.0" />
+    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.8.2" />
+    <PackageReference Include="Microsoft.AspNetCore.All" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.AzureKeyVault" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.2.0" />
+    <PackageReference Include="Octokit" Version="$(OctokitVersion)" />
+    <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.DotNet.Configuration.Extensions\Microsoft.DotNet.Configuration.Extensions.csproj" />
+    <ProjectReference Include="..\Shared\Microsoft.Dotnet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
+    <ProjectReference Include="..\shared\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj" />
+  </ItemGroup>
+</Project>

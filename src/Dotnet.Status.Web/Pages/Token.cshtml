@@ -1,0 +1,71 @@
+﻿@page
+@inject ITokenStore tokens
+@using System.Security.Claims
+@using DotNet.Status.Web
+@model DotNet.Status.Web.Pages.TokenModel
+@{
+    string userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    long userId = long.TryParse(userIdString, out var temp) ? temp : 0;
+
+    string GetStyle(StoredTokenData tok)
+    {
+        if (tok.RevocationStatus != RevocationStatus.Active)
+        {
+            return "color:pink;font-style:italic";
+        }
+
+        if (tok.Expiration < DateTimeOffset.UtcNow)
+        {
+            return "color:grey;font-style:italic";
+        }
+
+        return "";
+    }
+
+}
+
+@if (!string.IsNullOrEmpty(Model.TokenValue))
+{
+    <div style="background-color: pink">
+        <div>New token value, this will not be redisplayed, save this!</div>
+        <div>@Model.TokenValue</div>
+    </div>
+}
+
+<table>
+    <tr style="font-style: ">
+        <th>Description</th>
+        <th>Issued</th>
+        <th>Expiration</th>
+        <th>Revoke</th>
+    </tr>
+    @foreach (StoredTokenData token in await tokens.GetTokensForUserAsync(userId, HttpContext.RequestAborted))
+    {
+        <tr style="@GetStyle(token)">
+            <td style="vertical-align: middle">@token.Description</td>
+            <td style="vertical-align: middle">@token.Issued.ToString("d")</td>
+            <td style="vertical-align: middle">@token.Expiration.ToString("d")</td>
+            @if (token.RevocationStatus != RevocationStatus.Active)
+            {
+                <td style="vertical-align: middle">revoked</td>
+            } else if (token.Expiration < DateTimeOffset.UtcNow)
+            {
+                <td style="vertical-align: middle">expired</td>
+            }
+            else
+            {
+                <td style="vertical-align: middle">
+                    <form asp-page-handler="Revoke" style="margin: 0">
+                        <input type="hidden" asp-for="RevokeTokenId" value="@token.TokenId"/>
+                        <button type="submit">Revoke</button>
+                    </form>
+                </td>
+            }
+        </tr>
+    }
+</table>
+
+<form asp-page-handler="NewToken" method="post">
+    <input asp-for="Description" /> <button type="submit">New Token</button>
+</form>
+

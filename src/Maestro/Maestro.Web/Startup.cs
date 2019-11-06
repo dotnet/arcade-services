@@ -2,6 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Reflection;
+using System.Text;
+using System.Threading.Tasks;
 using Autofac;
 using EntityFrameworkCore.Triggers;
 using FluentValidation.AspNetCore;
@@ -9,14 +18,12 @@ using Maestro.AzureDevOps;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
-using Maestro.GitHub;
 using Maestro.MergePolicies;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
@@ -32,16 +39,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using IHostingEnvironment = Microsoft.AspNetCore.Hosting.IHostingEnvironment;
+using Microsoft.DotNet.Configuration.Extensions;
+using Microsoft.Dotnet.GitHub.Authentication;
 
 namespace Maestro.Web
 {
@@ -120,7 +119,7 @@ namespace Maestro.Web
         public Startup(IHostingEnvironment env)
         {
             HostingEnvironment = env;
-            Configuration = ServiceHostConfiguration.Get(env);
+            Configuration = KeyVaultMappedJsonConfigurationExtensions.CreateConfiguration(env, new ServiceHostKeyVaultProvider(env));
         }
 
         public static readonly TimeSpan LoginCookieLifetime = new TimeSpan(days: 120, hours: 0, minutes: 0, seconds: 0);
@@ -142,8 +141,11 @@ namespace Maestro.Web
 
                 string vaultUri = Configuration["KeyVaultUri"];
                 string keyVaultKeyIdentifierName = dpConfig["KeyIdentifier"];
-                KeyVaultClient kvClient = ServiceHostConfiguration.GetKeyVaultClient(HostingEnvironment);
+                KeyVaultClient kvClient = ServiceHostKeyVaultProvider.CreateKeyVaultClient(HostingEnvironment);
                 KeyBundle key = kvClient.GetKeyAsync(vaultUri, keyVaultKeyIdentifierName).GetAwaiter().GetResult();
+
+
+
                 services.AddDataProtection()
                     .PersistKeysToAzureBlobStorage(new Uri(dpConfig["KeyFileUri"]))
                     .ProtectKeysWithAzureKeyVault(kvClient, key.KeyIdentifier.ToString())
@@ -160,7 +162,7 @@ namespace Maestro.Web
                     options.MinimumSameSitePolicy = SameSiteMode.None;
                 });
 
-            services.AddDbContext<BuildAssetRegistryContext>(
+            services.AddBuildAssetRegistry(
                 options =>
                 {
                     options.UseSqlServer(Configuration.GetSection("BuildAssetRegistry")["ConnectionString"]);

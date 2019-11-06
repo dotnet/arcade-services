@@ -3,18 +3,17 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Threading.Tasks;
-using Maestro.GitHub;
-using Maestro.AzureDevOps;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Maestro.Data;
 using System.IO;
-using Microsoft.Extensions.Caching.Memory;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
+using Maestro.AzureDevOps;
+using Maestro.Data;
+using Microsoft.Dotnet.GitHub.Authentication;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace SubscriptionActorService
 {
@@ -80,7 +79,7 @@ namespace SubscriptionActorService
                             throw new SubscriptionException($"No installation is avaliable for repository '{normalizedUrl}'");
                         }
 
-                        gitClient = new GitHubClient(_gitExecutable, await GitHubTokenProvider.GetTokenForInstallation(installationId),
+                        gitClient = new GitHubClient(_gitExecutable, await GitHubTokenProvider.GetTokenForInstallationAsync(installationId),
                             logger, temporaryRepositoryRoot, Cache.Cache);
                         break;
                     case "dev.azure.com":

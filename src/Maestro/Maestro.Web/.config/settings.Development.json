@@ -1,4 +1,7 @@
 {
+  "GitHubAuthentication": {
+    "ClientSecret": "fc2ab90fe075084d51147dc6da7f6c4019a3601e"
+  },
   "KeyVaultUri": "https://maestrolocal.vault.azure.net/",
   "BuildAssetRegistry": {
     "ConnectionString": "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true"

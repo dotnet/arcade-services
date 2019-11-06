@@ -11,9 +11,9 @@ using Maestro.AzureDevOps;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
-using Maestro.GitHub;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Git.IssueManager;
+using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -502,7 +502,7 @@ namespace ReleasePipelineRunner
                     {
                         IGitHubTokenProvider gitHubTokenProvider = Context.GetService<IGitHubTokenProvider>();
                         long installationId = await Context.GetInstallationId(build.GitHubRepository);
-                        gitHubToken = await gitHubTokenProvider.GetTokenForInstallation(installationId);
+                        gitHubToken = await gitHubTokenProvider.GetTokenForInstallationAsync(installationId);
 
                         Logger.LogInformation($"GitHub token acquired for '{build.GitHubRepository}'!");
                     }
@@ -532,7 +532,7 @@ namespace ReleasePipelineRunner
                         // different repo.
                         IGitHubTokenProvider gitHubTokenProvider = Context.GetService<IGitHubTokenProvider>();
                         long installationId = await Context.GetInstallationId(whereToCreateIssue);
-                        gitHubToken = await gitHubTokenProvider.GetTokenForInstallation(installationId);
+                        gitHubToken = await gitHubTokenProvider.GetTokenForInstallationAsync(installationId);
 
                         Logger.LogInformation($"GitHub token acquired for '{whereToCreateIssue}'!");
 

@@ -18,7 +18,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="2.1.1" />
     <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     <PackageReference Include="NuGet.Packaging" Version="4.8.0" />
-    <PackageReference Include="Octokit" Version="0.32.0" />
+    <PackageReference Include="Octokit" Version="$(OctokitVersion)" />
     <PackageReference Include="System.Net.Http" Version="4.3.3" />
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="2.2.0" />
   </ItemGroup>

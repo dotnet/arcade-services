@@ -3,7 +3,8 @@
     "ClientId": "[vault(github-oauth-id)]",
     "ClientSecret": "[vault(github-oauth-secret)]",
     "SaveTokens": true,
-    "CallbackPath": "/signin/github"
+    "CallbackPath": "/signin/github",
+    "UserAgentProduct": "" 
   },
   "GitHub": {
     "GitHubAppId": "[vault(github-application-id)]",

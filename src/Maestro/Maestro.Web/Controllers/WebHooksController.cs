@@ -8,9 +8,9 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Maestro.Data;
-using Maestro.GitHub;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebHooks;
+using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
@@ -87,7 +87,7 @@ namespace Maestro.Web.Controllers
 
         private async Task SynchronizeInstallationRepositoriesAsync(long installationId)
         {
-            string token = await GitHubTokenProvider.GetTokenForInstallation(installationId);
+            string token = await GitHubTokenProvider.GetTokenForInstallationAsync(installationId);
             IReadOnlyList<Repository> gitHubRepos = await GetAllInstallationRepositories(token);
 
             List<Data.Models.Repository> toRemove =
