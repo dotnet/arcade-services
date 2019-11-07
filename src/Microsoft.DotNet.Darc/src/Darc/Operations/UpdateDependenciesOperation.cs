@@ -104,7 +104,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         if (string.IsNullOrEmpty(_options.Channel))
                         {
-                            Console.WriteLine($"Please suppy either a channel name (--channel), a packages folder (--packages-folder) " +
+                            Console.WriteLine($"Please supply either a channel name (--channel), a packages folder (--packages-folder) " +
                                 $"or a specific dependency name and version (--name and --version).");
                             return Constants.ErrorCode;
                         }
