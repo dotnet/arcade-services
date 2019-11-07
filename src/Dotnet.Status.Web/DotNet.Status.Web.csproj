@@ -25,8 +25,4 @@
     <ProjectReference Include="..\Shared\Microsoft.Dotnet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
     <ProjectReference Include="..\shared\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj" />
   </ItemGroup>
-
-  <Target Name="MakePublish" DependsOnTargets="Publish" AfterTargets="Pack">
-    <Error Text="GOT HERE $(PublishDirectory)"/>
-  </Target>
 </Project>
