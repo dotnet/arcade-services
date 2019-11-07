@@ -53,6 +53,7 @@
     </EnvironmentOverrides>
     <Policies>
       <EndpointBindingPolicy EndpointRef="ServiceEndpoint" CertificateRef="WebSslCert" />
+      <RunAsPolicy CodePackageRef="Code" UserRef="SetupLocalSystem" EntryPointType="Setup" />
     </Policies>
   </ServiceManifestImport>
   <DefaultServices>
@@ -87,6 +88,11 @@
       </StatefulService>
     </Service>
   </DefaultServices>
+  <Principals>
+    <Users>
+        <User Name="SetupLocalSystem" AccountType="LocalSystem" />
+    </Users>
+  </Principals>
   <Certificates>
     <EndpointCertificate X509FindValue="[WebCertThumbprint]" Name="WebSslCert" />
   </Certificates>
