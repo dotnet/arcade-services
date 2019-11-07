@@ -100,76 +100,79 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
                 else
                 {
-                    if (string.IsNullOrEmpty(_options.Channel))
+                    if (!_options.CoherencyOnly)
                     {
-                        Console.WriteLine($"Please suppy either a channel name (--channel), a packages folder (--packages-folder) " +
-                            $"or a specific dependency name and version (--name and --version).");
-                        return Constants.ErrorCode;
-                    }
-
-                    // Start channel query.
-                    Task<Channel> channel = barOnlyRemote.GetChannelAsync(_options.Channel);
-
-                    // Limit the number of BAR queries by grabbing the repo URIs and making a hash set.
-                    // We gather the latest build for any dependencies that aren't marked with coherent parent
-                    // dependencies, as those will be updated based on additional queries.
-                    HashSet<string> repositoryUrisForQuery = currentDependencies
-                        .Where(dependency => string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
-                        .Select(dependency => dependency.RepoUri)
-                        .ToHashSet();
-
-                    ConcurrentDictionary<string, Task<Build>> getLatestBuildTaskDictionary = new ConcurrentDictionary<string, Task<Build>>();
-
-                    Channel channelInfo = await channel;
-                    if (channelInfo == null)
-                    {
-                        Console.WriteLine($"Could not find a channel named '{_options.Channel}'.");
-                        return Constants.ErrorCode;
-                    }
-
-                    foreach (string repoToQuery in repositoryUrisForQuery)
-                    {
-                        Console.WriteLine($"Looking up latest build of {repoToQuery} on {_options.Channel}");
-                        var latestBuild = barOnlyRemote.GetLatestBuildAsync(repoToQuery, channelInfo.Id);
-                        getLatestBuildTaskDictionary.TryAdd(repoToQuery, latestBuild);
-                    }
-
-                    // For each build, first go through and determine the required updates,
-                    // updating the "live" dependency information as we go.
-                    // Then run a second pass where we update any assets based on coherency information.
-                    foreach (KeyValuePair<string, Task<Build>> buildKvPair in getLatestBuildTaskDictionary)
-                    {
-                        string repoUri = buildKvPair.Key;
-                        Build build = await buildKvPair.Value;
-                        if (build == null)
+                        if (string.IsNullOrEmpty(_options.Channel))
                         {
-                            Logger.LogTrace($"No build of '{repoUri}' found on channel '{_options.Channel}'.");
-                            continue;
+                            Console.WriteLine($"Please suppy either a channel name (--channel), a packages folder (--packages-folder) " +
+                                $"or a specific dependency name and version (--name and --version).");
+                            return Constants.ErrorCode;
                         }
-                        IEnumerable<AssetData> assetData = build.Assets.Select(
-                            a => new AssetData(a.NonShipping)
-                            {
-                                Name = a.Name,
-                                Version = a.Version
-                            });
-                        
-                        // Now determine what needs to be updated.
-                        List<DependencyUpdate> updates = await barOnlyRemote.GetRequiredNonCoherencyUpdatesAsync(
-                            repoUri, build.Commit, assetData, currentDependencies);
 
-                        foreach (DependencyUpdate update in updates)
+                        // Start channel query.
+                        Task<Channel> channel = barOnlyRemote.GetChannelAsync(_options.Channel);
+
+                        // Limit the number of BAR queries by grabbing the repo URIs and making a hash set.
+                        // We gather the latest build for any dependencies that aren't marked with coherent parent
+                        // dependencies, as those will be updated based on additional queries.
+                        HashSet<string> repositoryUrisForQuery = currentDependencies
+                            .Where(dependency => string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
+                            .Select(dependency => dependency.RepoUri)
+                            .ToHashSet();
+
+                        ConcurrentDictionary<string, Task<Build>> getLatestBuildTaskDictionary = new ConcurrentDictionary<string, Task<Build>>();
+
+                        Channel channelInfo = await channel;
+                        if (channelInfo == null)
                         {
-                            DependencyDetail from = update.From;
-                            DependencyDetail to = update.To;
-                            // Print out what we are going to do.	
-                            Console.WriteLine($"Updating '{from.Name}': '{from.Version}' => '{to.Version}'" +
-                                $" (from build '{build.AzureDevOpsBuildNumber}' of '{repoUri}')");
+                            Console.WriteLine($"Could not find a channel named '{_options.Channel}'.");
+                            return Constants.ErrorCode;
+                        }
 
-                            // Final list of dependencies to update
-                            dependenciesToUpdate.Add(to);
-                            // Replace in the current dependencies list so the correct data is fed into the coherency pass.
-                            currentDependencies.Remove(from);
-                            currentDependencies.Add(to);
+                        foreach (string repoToQuery in repositoryUrisForQuery)
+                        {
+                            Console.WriteLine($"Looking up latest build of {repoToQuery} on {_options.Channel}");
+                            var latestBuild = barOnlyRemote.GetLatestBuildAsync(repoToQuery, channelInfo.Id);
+                            getLatestBuildTaskDictionary.TryAdd(repoToQuery, latestBuild);
+                        }
+
+                        // For each build, first go through and determine the required updates,
+                        // updating the "live" dependency information as we go.
+                        // Then run a second pass where we update any assets based on coherency information.
+                        foreach (KeyValuePair<string, Task<Build>> buildKvPair in getLatestBuildTaskDictionary)
+                        {
+                            string repoUri = buildKvPair.Key;
+                            Build build = await buildKvPair.Value;
+                            if (build == null)
+                            {
+                                Logger.LogTrace($"No build of '{repoUri}' found on channel '{_options.Channel}'.");
+                                continue;
+                            }
+                            IEnumerable<AssetData> assetData = build.Assets.Select(
+                                a => new AssetData(a.NonShipping)
+                                {
+                                    Name = a.Name,
+                                    Version = a.Version
+                                });
+
+                            // Now determine what needs to be updated.
+                            List<DependencyUpdate> updates = await barOnlyRemote.GetRequiredNonCoherencyUpdatesAsync(
+                                repoUri, build.Commit, assetData, currentDependencies);
+
+                            foreach (DependencyUpdate update in updates)
+                            {
+                                DependencyDetail from = update.From;
+                                DependencyDetail to = update.To;
+                                // Print out what we are going to do.	
+                                Console.WriteLine($"Updating '{from.Name}': '{from.Version}' => '{to.Version}'" +
+                                    $" (from build '{build.AzureDevOpsBuildNumber}' of '{repoUri}')");
+
+                                // Final list of dependencies to update
+                                dependenciesToUpdate.Add(to);
+                                // Replace in the current dependencies list so the correct data is fed into the coherency pass.
+                                currentDependencies.Remove(from);
+                                currentDependencies.Add(to);
+                            }
                         }
                     }
 

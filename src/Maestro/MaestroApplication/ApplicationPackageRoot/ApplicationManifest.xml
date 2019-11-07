@@ -90,7 +90,7 @@
   </DefaultServices>
   <Principals>
     <Users>
-        <User Name="SetupLocalSystem" AccountType="LocalSystem" />
+      <User Name="SetupLocalSystem" AccountType="LocalSystem" />
     </Users>
   </Principals>
   <Certificates>
