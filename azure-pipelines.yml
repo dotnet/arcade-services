@@ -152,8 +152,20 @@ stages:
             artifact: TelemetryApplication
             displayName: Publish TelemetryApplication
 
-          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\DotNet.Status.Web -f netcoreapp2.1
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\DotNet.Status.Web\publish -f netcoreapp2.1
             workingDirectory: src/DotNet.Status.Web
+            displayName: dotnet publish DotNet.Status.Web
+
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: $(Build.ArtifactStagingDirectory)/DotNet.Status.Web/publish
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: $(Build.ArtifactStagingDirectory)/DotNet.Status.Web/package/DotNetStatus.zip
+              replaceExistingArchive: true
+
+          - publish: $(Build.ArtifactStagingDirectory)/DotNet.Status.Web/package
+            artifact: DotNetStatus
             displayName: Publish DotNet.Status.Web
           
           ## Prepare database update artifact
