@@ -1,9 +1,10 @@
 import { Subscription, Asset, Build } from 'src/maestro-client/models';
-import { Observable, combineLatest } from 'rxjs';
-import { map, switchMap } from 'rxjs/operators';
+import { Observable, combineLatest, of } from 'rxjs';
+import { map, switchMap, shareReplay } from 'rxjs/operators';
 import { StatefulResult, statefulPipe } from 'src/stateful';
 import { BuildService } from 'src/app/services/build.service';
-import { WrappedError, Loading } from 'src/stateful/helpers';
+import { WrappedError, Loading, statefulSwitchMap } from 'src/stateful/helpers';
+import { HttpHeaders, HttpClient } from '@angular/common/http';
 import { DependencyDetail } from './dependency-detail';
 
 export class VersionDetails {
@@ -276,4 +277,86 @@ export class VersionDetails {
 
     return result;
   }
+
+  static getDetailsFileUrl(sourceRepoStr: string, branchName: string) {
+    if (sourceRepoStr.includes("github")) {
+      return sourceRepoStr.replace("https://github.com", "https://raw.githubusercontent.com") + "/" + branchName + "/eng/Version.Details.xml";
+    }
+    else {
+      const splitRepoUrl = sourceRepoStr.split('/');
+      return `/_/AzDev/getFile/${splitRepoUrl[3]}/${splitRepoUrl[4]}/${splitRepoUrl[6]}/eng/Version.Details.xml`;
+    }
+  }
+
+  // Retrieves the Version.Details.xml file and uses it return a new VersionDetails with allDependencies and dependenciesForEvaluation filled out
+  static retrieveAndParseFile(http: HttpClient, repository: string, branchName: string) {
+
+    const fileUrl = VersionDetails.getDetailsFileUrl(repository || "", branchName);
+
+    return of(fileUrl).pipe(
+      statefulSwitchMap(
+        (uri) => {
+          return http.get(uri, { responseType: 'text', headers: new HttpHeaders({ 'Accept': "text/plain" }) });
+        }
+      ),
+      map<StatefulResult<string>, StatefulResult<string>>(
+        (result) => {
+          if (result instanceof WrappedError) {
+            return "<?xml version=\"1.0\" encoding=\"utf-8\"?><Dependencies><ProductDependencies></ProductDependencies><ToolsetDependencies><ToolsetDependencies></Dependencies>";
+          }
+          return result;
+        }
+      ),
+      statefulPipe(
+        map(
+          (file) => {
+            const xmlData = new DOMParser().parseFromString(file, "text/xml");
+            return new VersionDetails(xmlData);
+          })));
+  }
+
+  // Retrieves the Version.Details.xml file and uses it return a new VersionDetails with all dependency and subscription lists filled out
+  static retrieveAndParseSubscriptionData(subscriptionsList: Record<string, Subscription[]>, branch: string, buildService: BuildService, http: HttpClient) {
+    return this.retrieveAndParseFile(http, subscriptionsList[branch][0].targetRepository || "", branch).pipe(
+      statefulPipe(
+        switchMap(
+          (versionDetails) => {
+            let newDetails: VersionDetails = versionDetails;
+            if (subscriptionsList) {
+              let assetsList = versionDetails.getLatestAssetsForSubs(subscriptionsList[branch], buildService);
+              const updated = assetsList.pipe(
+                statefulPipe(
+                  map((assets) => {
+
+                    let updatedDetails = versionDetails;
+
+                    if (subscriptionsList) {
+                      const processedSubs = updatedDetails.getUnnecessaryAndMissingSubs(assets, subscriptionsList[branch]);
+                      updatedDetails.unusedSubscriptions = processedSubs.extraSubs;
+                      updatedDetails.dependenciesWithNoSubscription = processedSubs.missingSubs;
+                      const conflictingSubs = updatedDetails.getConflictingSubs(assets, subscriptionsList[branch]);
+                      updatedDetails.conflictingSubscriptions = conflictingSubs;
+                      updatedDetails.isToolsetSubscription = updatedDetails.checkIfToolsetSubscriptions(assets);
+
+                      // Add errors for anything that didn't retrieve assets
+                      const getAssetFailed: Record<string, Subscription> = {};
+                      const assetKeys = Object.keys(assets);
+                      for (let sub of subscriptionsList[branch]) {
+                        if (!assetKeys.includes(sub.id)) {
+                          getAssetFailed[sub.id] = sub;
+                        }
+                      }
+                      updatedDetails.unableToRetrieveAssetsFor = getAssetFailed;
+                    }
+                    return updatedDetails;
+                  }))
+              );
+              return updated;
+            }
+            return of(newDetails);
+          }
+        ),
+        shareReplay(1)
+      ));
+  };
 }
