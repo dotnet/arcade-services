@@ -133,6 +133,10 @@ stages:
               robocopy src/Maestro/MaestroApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationParameters /S *.xml
               exit 0
             displayName: Copy Maestro Project Artifacts
+
+          - publish: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication
+            artifact: MaestroApplication
+            displayName: Publish MaestroApplication
             
           - task: ServiceFabricUpdateManifests@2
             inputs:
@@ -144,12 +148,9 @@ stages:
               exit 0
             displayName: Copy Telemetry Project Artifacts
 
-          - task: PublishBuildArtifacts@1
-            displayName: Publish Service Fabric Artifact
-            inputs:
-              PathtoPublish: $(Build.ArtifactStagingDirectory)\ServiceFabric\
-              ArtifactName: ServiceFabric
-              ArtifactType: Container
+          - publish: $(Build.ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication
+            artifact: TelemetryApplication
+            displayName: Publish TelemetryApplication
           
           ## Prepare database update artifact
           - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp2.1
@@ -178,12 +179,10 @@ stages:
               contents: '*'
               targetFolder: $(Build.ArtifactStagingDirectory)\eng
               
-          - task: PublishBuildArtifacts@1
+          - publish: $(Build.ArtifactStagingDirectory)\eng
+            artifact: ReleaseUtilities
             displayName: Publish Release Utilities Artifact
-            inputs:
-              PathtoPublish: $(Build.ArtifactStagingDirectory)\eng
-              ArtifactName: ReleaseUtilities
-              ArtifactType: Container
+
           ## Prepare scenario tests artifact
           - task: CopyFiles@2
             displayName: Prepare Scenario test scripts
@@ -223,3 +222,25 @@ stages:
         -TsaRepositoryName "Arcade-Services"
         -TsaCodebaseName "Arcade-Services"
         -TsaPublish $True'
+
+- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+    - template: eng\deploy.yml
+      parameters:
+        Subscription: NetHelixStaging
+        ServiceFabricConnection: Maestro-Int
+        PublishProfile: Int
+        DotNetStatusAppName: dotneteng-status-staging
+        MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
+        MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+        TargetChannel: .NET Engineering Services - Int
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+    - template: eng\deploy.yml
+      parameters:
+        Subscription: NetHelix
+        ServiceFabricConnection: Maestro-Prod
+        PublishProfile: Prod
+        DotNetStatusAppName: dotneteng-status
+        MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+        MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+        TargetChannel: .NET Engineering Services - Prod

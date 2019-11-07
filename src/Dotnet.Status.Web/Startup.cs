@@ -94,7 +94,7 @@ namespace DotNet.Status.Web
         private void AddServices(IServiceCollection services)
         {
             services.AddMvc().WithRazorPagesRoot("/Pages");
-            services.AddApplicationInsightsTelemetry();
+            services.AddApplicationInsightsTelemetry(Configuration.GetSection("ApplicationInsights").Bind);
             services.AddAuthentication(IdentityConstants.ApplicationScheme)
                 .AddGitHubOAuth(Configuration.GetSection("GitHubAuthentication"), GitHubScheme)
                 .AddScheme<UserTokenOptions, GitHubUserTokenHandler>("github-token", o => { })
