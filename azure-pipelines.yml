@@ -151,6 +151,10 @@ stages:
           - publish: $(Build.ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication
             artifact: TelemetryApplication
             displayName: Publish TelemetryApplication
+
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\DotNet.Status.Web -f netcoreapp2.1
+            workingDirectory: src/DotNet.Status.Web
+            displayName: Publish DotNet.Status.Web
           
           ## Prepare database update artifact
           - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp2.1
