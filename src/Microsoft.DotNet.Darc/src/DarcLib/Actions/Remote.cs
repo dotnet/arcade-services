@@ -797,13 +797,24 @@ namespace Microsoft.DotNet.DarcLib
                 string latestCommit = await _gitClient.GetLastCommitShaAsync(repoUri, branch);
                 List<GitFile> targetEngCommonFiles = await GetCommonScriptFilesAsync(repoUri, latestCommit);
 
+                var deletedFiles = new List<string>();
+
                 foreach (GitFile file in targetEngCommonFiles)
                 {
                     if (!engCommonFiles.Where(f => f.FilePath == file.FilePath).Any())
                     {
+                        deletedFiles.Add(file.FilePath);
                         file.Operation = GitFileOperation.Delete;
                         filesToCommit.Add(file);
                     }
+                }
+
+                if (deletedFiles.Count > 0)
+                {
+                    _logger.LogInformation($"Dependency update from Arcade commit {arcadeItem.Commit} to {repoUri} " +
+                        $"on branch {branch}@{latestCommit} will delete files in eng/common." +
+                        $" Source file count: {engCommonFiles.Count}, Target file count: {targetEngCommonFiles.Count}." +
+                        $" Deleted files: {String.Join(Environment.NewLine, deletedFiles)}");
                 }
             }
 
