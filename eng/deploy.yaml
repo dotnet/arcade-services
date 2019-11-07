@@ -11,16 +11,11 @@ variables:
   DotNetStatusAppName: ${{ parameters.DotNetStatusAppName }}
   MaestroUrl: ${{ parameters.MaestroUrl }}
 
-  # Subscription: NetHelixStaging
-  # ServiceFabricConnection: Maestro-Int
-  # PublishProfile: Int
-  # DotNetStatusAppName: dotneteng-status-staging
-  # MaestroUrl: https://maestro-int.westus2.cloudapp.azure.com
-  # --- Variable groups ---
-  # maestro-admin-sql-connection-string: ""
-  # maestro-token: ""
-  # GitHubPAT: ""
-  # dn-bot-dnceng-build-rw-code-rw-release-rw: ""
+  # --- Secret Variable group requirements ---
+  # maestro-admin-sql-connection-string
+  # maestro-token
+  # dn-bot-dnceng-build-rw-code-rw-release-rw
+  # maestro-scenario-test-github-token
 
 stages:
 - stage: deploy
@@ -133,7 +128,7 @@ stages:
       inputs:
         targetType: filePath
         filePath: $(Pipeline.Workspace)/ScenarioTests/all.ps1
-        arguments: -maestroInstallation "$(MaestroTestEndpoint)" -darcVersion "$(darcVersion)" -maestroBearerToken "$(maestro-token)" -githubPAT "$(GitHubPAT)" -azdoPAT "$(dn-bot-dnceng-build-rw-code-rw-release-rw)" -darcPackageSource "$(Pipeline.Workspace)\PackageArtifacts"
+        arguments: -maestroInstallation "$(MaestroTestEndpoint)" -darcVersion "$(darcVersion)" -maestroBearerToken "$(maestro-token)" -githubPAT "$(maestro-scenario-test-github-token)" -azdoPAT "$(dn-bot-dnceng-build-rw-code-rw-release-rw)" -darcPackageSource "$(Pipeline.Workspace)\PackageArtifacts"
         workingDirectory: $(Pipeline.Workspace)/ScenarioTests
       timeoutInMinutes: 90
 

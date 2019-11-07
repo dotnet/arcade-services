@@ -4,6 +4,7 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <UserSecretsId>65a272ca-730a-4afd-b68b-d256719c2db2</UserSecretsId>
     <SignAssembly>false</SignAssembly>
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,7 +26,7 @@
     <ProjectReference Include="..\shared\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj" />
   </ItemGroup>
 
-  <Target Name="Publish">
-    <Error Text="Pizza" />
+  <Target Name="MakePublish" DependsOnTargets="Publish" AfterTargets="Pack">
+    <Error Text="GOT HERE $(PublishDirectory)"/>
   </Target>
 </Project>
