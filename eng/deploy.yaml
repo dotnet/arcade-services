@@ -4,6 +4,7 @@ parameters:
   PublishProfile: ''
   DotNetStatusAppName: ''
   MaestroUrl: ''
+  DeploymentEnvironment: ''
 variables:
   Subscription: ${{ parameters.Subscription }}
   ServiceFabricConnection: ${{ parameters.ServiceFabricConnection }}
@@ -20,9 +21,20 @@ variables:
 stages:
 - stage: deploy
   displayName: Deploy
-  dependsOn: build
+  dependsOn:
+  - build
   jobs:
+  - deployment: approval
+    displayName: deployment approval (conditional)
+    environment: ${{ parameters.DeploymentEnvironment }}
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: none
   - job: updateDatabase
+    dependsOn: 
+    - approval
     displayName: 
     steps:
     - download: current
@@ -56,7 +68,9 @@ stages:
 
   - job: deployMaestro
     displayName: Deploy maestro service fabric application
-    dependsOn: updateDatabase
+    dependsOn: 
+    - updateDatabase
+    - approval
     steps:
     - download: current
       artifact: MaestroApplication
@@ -70,6 +84,8 @@ stages:
 
   - job: deployTelemetry
     displayName: Deploy telemetry service fabric application
+    dependsOn: 
+    - approval
     steps:
     - download: current
       artifact: TelemetryApplication
@@ -83,6 +99,8 @@ stages:
 
   - job: deployStatus
     displayName: Deploy dotnet-status web app
+    dependsOn: 
+    - approval
     steps:
     - download: current
       artifact: DotNetStatus
@@ -102,7 +120,8 @@ stages:
 
 - stage: validateDeployment
   displayName: Validate deployment
-  dependsOn: deploy
+  dependsOn: 
+  - deploy
   jobs:
   - job: scenario
     displayName: Scenario tests
@@ -135,7 +154,8 @@ stages:
 
 - stage: deployDarc
   displayName: Deploy DARC
-  dependsOn: validateDeployment
+  dependsOn:
+  - validateDeployment
   jobs:
   - job: darc
     steps:

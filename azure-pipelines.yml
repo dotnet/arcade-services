@@ -243,20 +243,22 @@ stages:
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
     - template: eng\deploy.yml
       parameters:
-        Subscription: NetHelixStaging
-        ServiceFabricConnection: Maestro-Int
-        PublishProfile: Int
+        DeploymentEnvironment: Staging
         DotNetStatusAppName: dotneteng-status-staging
-        MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
         MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+        MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
+        PublishProfile: Int
+        ServiceFabricConnection: Maestro-Int
+        Subscription: NetHelixStaging
         TargetChannel: .NET Engineering Services - Int
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
     - template: eng\deploy.yml
       parameters:
-        Subscription: NetHelix
-        ServiceFabricConnection: Maestro-Prod
-        PublishProfile: Prod
+        DeploymentEnvironment: Production
         DotNetStatusAppName: dotneteng-status
-        MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+        MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+        PublishProfile: Prod
+        ServiceFabricConnection: Maestro-Prod
+        Subscription: NetHelix
         TargetChannel: .NET Engineering Services - Prod
