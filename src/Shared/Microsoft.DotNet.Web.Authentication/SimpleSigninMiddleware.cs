@@ -19,12 +19,12 @@ namespace Microsoft.DotNet.Web.Authentication
         public string AuthCallbackUrl { get; set; } = "/account/signin";
     }
 
-    public class SimpleSigningMiddleware : IMiddleware
+    public class SimpleSigninMiddleware : IMiddleware
     {
         private readonly IOptions<SimpleSigninOptions> _options;
         private readonly CookieAuthenticationOptions _cookieOptions;
 
-        public SimpleSigningMiddleware(
+        public SimpleSigninMiddleware(
             IOptions<SimpleSigninOptions> options,
             IOptionsSnapshot<CookieAuthenticationOptions> cookieOptions)
         {

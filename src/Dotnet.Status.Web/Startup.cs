@@ -139,7 +139,7 @@ namespace DotNet.Status.Web
                         });
                 });
 
-            services.AddScoped<SimpleSigningMiddleware>();
+            services.AddScoped<SimpleSigninMiddleware>();
             services.AddGitHubTokenProvider();
             services.AddSingleton<IInstallationLookup, InMemoryCacheInstallationLookup>();
         }
@@ -158,7 +158,7 @@ namespace DotNet.Status.Web
 
             app.UseAuthentication();
             app.UseMvc();
-            app.UseMiddleware<SimpleSigningMiddleware>();
+            app.UseMiddleware<SimpleSigninMiddleware>();
         }
     }
 }

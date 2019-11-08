@@ -55,7 +55,7 @@ namespace DotNet.Status.Web
 
             if (string.IsNullOrEmpty(protectedToken))
             {
-                return AuthenticateResult.Fail("Authentication required");
+                return AuthenticateResult.NoResult();
             }
 
             if (!TryDecodeToken(protectedToken, out GitHubTokenData token))

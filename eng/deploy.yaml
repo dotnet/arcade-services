@@ -61,7 +61,7 @@ stages:
     - download: current
       artifact: MaestroApplication
     - task: ServiceFabricDeploy@1
-      displayName: Deploy Service Fabric Application (Darc)
+      displayName: Deploy Service Fabric Application (Maestro)
       inputs:
         applicationPackagePath: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
         serviceConnectionName: ${{ parameters.ServiceFabricConnection }}
@@ -113,6 +113,7 @@ stages:
       artifact: PackageArtifacts
     - task: NuGetToolInstaller@1
       displayName: Use NuGet
+      versionSpec: 5.3.x
     - powershell: |
         nuget sources add -Name "arcade" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-tools-internal/index.json"
         nuget sources add -Name "dotnet-core" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
