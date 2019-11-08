@@ -47,13 +47,13 @@ namespace Maestro.Web.Controllers
                 });
         }
 
-        [HttpGet("getFile/{account}/{project}/{repo}/{*filePath}")]
-        public async Task<IActionResult> GetSourceFile(string account, string project, string repo, string filePath)
+        [HttpGet("getFile/{account}/{project}/{repo}")]
+        public async Task<IActionResult> GetVersionDetailsFile(string account, string project, string repo)
         {
             string token = await TokenProvider.GetTokenForAccount(account);
             return await HttpContext.ProxyRequestAsync(
                 s_lazyClient.Value,
-                $"https://dev.azure.com/{account}/{project}/_apis/git/repositories/{repo}/items?path=/{filePath}&includeContent=true&resolveLfs=true&api-version=5.1",
+                $"https://dev.azure.com/{account}/{project}/_apis/git/repositories/{repo}/items?path=/eng/Version.Details.xml&includeContent=true&resolveLfs=true&api-version=5.1",
                 req =>
                 {
                     req.Headers.Authorization = new AuthenticationHeaderValue(

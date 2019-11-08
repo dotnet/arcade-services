@@ -27,7 +27,7 @@ export class VersionDetails {
   constructor(inputFile: XMLDocument) {
     const productElements = inputFile.getElementsByTagName("ProductDependencies");
 
-    if (productElements.length != 0) {
+    if (productElements == null || productElements.length != 0) {
       let childProductElements = productElements[0].getElementsByTagName('Dependency');
 
       for (let el of Array.from(childProductElements)) {
@@ -37,7 +37,7 @@ export class VersionDetails {
 
     const toolsetElements = inputFile.getElementsByTagName("ToolsetDependencies");
 
-    if (toolsetElements.length != 0) {
+    if (toolsetElements == null || toolsetElements.length != 0) {
       let childToolsetElements = toolsetElements[0].getElementsByTagName('Dependency');
 
       for (let el of Array.from(childToolsetElements)) {
@@ -99,7 +99,7 @@ export class VersionDetails {
     const subKeys = Object.keys(subsAndAssets);
     const depNames = Object.keys(this.dependenciesForEvaluation);
 
-    //AssetName, SubId
+    // AssetName, SubId
     let flattenedData: Record<string, string> = {};
 
     // SubId, bool
@@ -149,7 +149,7 @@ export class VersionDetails {
     const dependenciesUsed = Object.keys(this.dependenciesForEvaluation);
     const subKeys = Object.keys(subsAndAssets) || {};
 
-    //AssetName, SubId
+    // AssetName, SubId
     let flattenedData: Record<string, string> = {};
 
     // Populate the extraSubs collection, then subscriptions will be deleted from it as their use is confirmed
@@ -284,7 +284,7 @@ export class VersionDetails {
     }
     else {
       const splitRepoUrl = sourceRepoStr.split('/');
-      return `/_/AzDev/getFile/${splitRepoUrl[3]}/${splitRepoUrl[4]}/${splitRepoUrl[6]}/eng/Version.Details.xml`;
+      return `/_/AzDev/getFile/${splitRepoUrl[3]}/${splitRepoUrl[4]}/${splitRepoUrl[6]}`;
     }
   }
 
