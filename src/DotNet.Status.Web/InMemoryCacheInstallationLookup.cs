@@ -12,7 +12,6 @@ using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Options;
 using Octokit;
-using StackExchange.Redis;
 
 namespace DotNet.Status.Web
 {
@@ -22,7 +21,7 @@ namespace DotNet.Status.Web
         private readonly IOptions<GitHubClientOptions> _options;
         private readonly SemaphoreSlim _sem = new SemaphoreSlim(1, 1);
 
-        private ImmutableDictionary<string, long> _cache = new ImmutableDictionary<string, long>();
+        private ImmutableDictionary<string, long> _cache = ImmutableDictionary<string, long>.Empty;
         private DateTimeOffset _lastCached = DateTimeOffset.MinValue;
 
         public InMemoryCacheInstallationLookup(
