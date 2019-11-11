@@ -9,14 +9,13 @@ using Maestro.AzureDevOps;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Maestro.Data;
 using System.IO;
 using Microsoft.Extensions.Caching.Memory;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Threading;
 
-namespace SubscriptionActorService
+namespace Maestro.Data
 {
     public class DarcRemoteFactory : IRemoteFactory
     {

@@ -5,7 +5,7 @@
 using System;
 using System.Runtime.Serialization;
 
-namespace SubscriptionActorService
+namespace Maestro.Data
 {
     /// <summary>
     ///     Exception thrown when there is a failure updating a subscription that should be surfaced to users.
