@@ -133,6 +133,10 @@ stages:
               robocopy src/Maestro/MaestroApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationParameters /S *.xml
               exit 0
             displayName: Copy Maestro Project Artifacts
+
+          - publish: $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication
+            artifact: MaestroApplication
+            displayName: Publish MaestroApplication
             
           - task: ServiceFabricUpdateManifests@2
             inputs:
@@ -144,12 +148,25 @@ stages:
               exit 0
             displayName: Copy Telemetry Project Artifacts
 
-          - task: PublishBuildArtifacts@1
-            displayName: Publish Service Fabric Artifact
+          - publish: $(Build.ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication
+            artifact: TelemetryApplication
+            displayName: Publish TelemetryApplication
+
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\DotNet.Status.Web\publish -f netcoreapp2.1
+            workingDirectory: src/DotNet.Status.Web
+            displayName: dotnet publish DotNet.Status.Web
+
+          - task: ArchiveFiles@2
             inputs:
-              PathtoPublish: $(Build.ArtifactStagingDirectory)\ServiceFabric\
-              ArtifactName: ServiceFabric
-              ArtifactType: Container
+              rootFolderOrFile: $(Build.ArtifactStagingDirectory)/DotNet.Status.Web/publish
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: $(Build.ArtifactStagingDirectory)/DotNet.Status.Web/package/DotNetStatus.zip
+              replaceExistingArchive: true
+
+          - publish: $(Build.ArtifactStagingDirectory)/DotNet.Status.Web/package
+            artifact: DotNetStatus
+            displayName: Publish DotNet.Status.Web
           
           ## Prepare database update artifact
           - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp2.1
@@ -178,12 +195,10 @@ stages:
               contents: '*'
               targetFolder: $(Build.ArtifactStagingDirectory)\eng
               
-          - task: PublishBuildArtifacts@1
+          - publish: $(Build.ArtifactStagingDirectory)\eng
+            artifact: ReleaseUtilities
             displayName: Publish Release Utilities Artifact
-            inputs:
-              PathtoPublish: $(Build.ArtifactStagingDirectory)\eng
-              ArtifactName: ReleaseUtilities
-              ArtifactType: Container
+
           ## Prepare scenario tests artifact
           - task: CopyFiles@2
             displayName: Prepare Scenario test scripts
@@ -223,3 +238,27 @@ stages:
         -TsaRepositoryName "Arcade-Services"
         -TsaCodebaseName "Arcade-Services"
         -TsaPublish $True'
+
+- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+    - template: eng\deploy.yml
+      parameters:
+        DeploymentEnvironment: Staging
+        DotNetStatusAppName: dotneteng-status-staging
+        MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+        MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
+        PublishProfile: Int
+        ServiceFabricConnection: Maestro-Int
+        Subscription: NetHelixStaging
+        TargetChannel: .NET Engineering Services - Int
+  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+    - template: eng\deploy.yml
+      parameters:
+        DeploymentEnvironment: Production
+        DotNetStatusAppName: dotneteng-status
+        MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+        MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+        PublishProfile: Prod
+        ServiceFabricConnection: Maestro-Prod
+        Subscription: NetHelix
+        TargetChannel: .NET Engineering Services - Prod

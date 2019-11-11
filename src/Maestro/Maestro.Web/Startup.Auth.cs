@@ -5,23 +5,21 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Reflection;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Maestro.Data;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.OAuth;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.Web.Authentication;
+using Microsoft.DotNet.Web.Authentication.AccessToken;
+using Microsoft.DotNet.Web.Authentication.GitHub;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Octokit;
 
@@ -43,38 +41,13 @@ namespace Maestro.Web
                     options => { options.Lockout.AllowedForNewUsers = false; })
                 .AddEntityFrameworkStores<BuildAssetRegistryContext>();
 
-            services.AddSingleton<IAuthenticationSchemeProvider, ContextAwareAuthenticationSchemeProvider>();
+            services.AddContextAwareAuthenticationScheme(o =>
+            {
+                o.SelectScheme = p => p.StartsWithSegments("/api") ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme;
+            });
+            
             services.AddAuthentication()
-                .AddOAuth<GitHubAuthenticationOptions, GitHubAuthenticationHandler>(
-                    GitHubScheme,
-                    options =>
-                    {
-                        IConfigurationSection ghAuthConfig = Configuration.GetSection("GitHubAuthentication");
-                        ghAuthConfig.Bind(options);
-                        options.Events = new OAuthEvents
-                        {
-                            OnCreatingTicket = async context =>
-                            {
-                                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Startup>>();
-                                logger.LogInformation("Reading user roles from GitHub.");
-                                foreach (string role in await GetGithubRolesAsync(context.AccessToken))
-                                {
-                                    context.Identity.AddClaim(
-                                        new Claim(ClaimTypes.Role, role, ClaimValueTypes.String, GitHubScheme));
-                                }
-                            },
-                            OnRemoteFailure = context =>
-                            {
-                                var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<GitHubAuthenticationHandler>>();
-                                logger.LogError(context.Failure, "Github authentication failed.");
-                                var res = context.HttpContext.Response;
-                                res.StatusCode = (int)HttpStatusCode.Forbidden;
-                                context.HandleResponse();
-                                context.HttpContext.Items["ErrorMessage"] = "Authentication failed.";
-                                return Task.CompletedTask;
-                            },
-                        };
-                    })
+                .AddGitHubOAuth(Configuration.GetSection("GitHubAuthentication"), GitHubScheme)
                 .AddPersonalAccessToken<ApplicationUser>(
                     options =>
                     {

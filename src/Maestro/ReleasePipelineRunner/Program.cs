@@ -2,16 +2,18 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Reflection;
 using Maestro.AzureDevOps;
 using Maestro.Contracts;
 using Maestro.Data;
-using Maestro.GitHub;
-using Microsoft.AspNetCore.Hosting;
+using Microsoft.Dotnet.GitHub.Authentication;
+using Microsoft.DotNet.Configuration.Extensions;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System.Reflection;
+using Octokit;
 
 namespace ReleasePipelineRunner
 {
@@ -30,10 +32,8 @@ namespace ReleasePipelineRunner
                     host.ConfigureServices(
                         services =>
                         {
-                            services.AddSingleton(
-                                provider => ServiceHostConfiguration.Get(
-                                    provider.GetRequiredService<IHostingEnvironment>()));
-                            services.AddDbContext<BuildAssetRegistryContext>(
+                            services.AddKeyVaultMappedConfiguration();
+                            services.AddBuildAssetRegistry(
                                 (provider, options) =>
                                 {
                                     var config = provider.GetRequiredService<IConfigurationRoot>();
@@ -51,16 +51,18 @@ namespace ReleasePipelineRunner
                                     }
                                 });
                             services.AddGitHubTokenProvider();
+                            services.Configure<GitHubClientOptions>(o =>
+                            {
+                                o.ProductHeader = new ProductHeaderValue("Maestro", Assembly.GetEntryAssembly()
+                                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                                    ?.InformationalVersion);
+                            });
                             services.Configure<GitHubTokenProviderOptions>(
                                 (options, provider) =>
                                 {
                                     var config = provider.GetRequiredService<IConfigurationRoot>();
                                     IConfigurationSection section = config.GetSection("GitHub");
                                     section.Bind(options);
-                                    options.ApplicationName = "Maestro";
-                                    options.ApplicationVersion = Assembly.GetEntryAssembly()
-                                        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                                        ?.InformationalVersion;
                                 });
                         });
                 });

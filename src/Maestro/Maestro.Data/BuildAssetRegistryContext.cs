@@ -15,10 +15,10 @@ using Microsoft.AspNetCore.Hosting.Internal;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.DotNet.EntityFrameworkCore.Extensions;
+using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Microsoft.EntityFrameworkCore.Query;
-using Newtonsoft.Json.Linq;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Maestro.Data
 {
@@ -48,7 +48,7 @@ namespace Maestro.Data
         }
     }
 
-    public class BuildAssetRegistryContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
+    public class BuildAssetRegistryContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>, IInstallationLookup
     {
         public BuildAssetRegistryContext(IHostingEnvironment hostingEnvironment, DbContextOptions options) : base(
             options)
@@ -354,27 +354,6 @@ FROM traverse;",
                 dict[id].Staleness = newer.Count();
             }
             return dict.Values.ToList();
-        }
-    }
-
-    public static class JsonExtensions
-    {
-        public static string JsonValue(string column, [NotParameterized] string path)
-        {
-            // The Entity Framework in memory provider will call this so it needs to be implemented
-            var lax = true;
-            if (path.StartsWith("lax "))
-            {
-                path = path.Substring("lax ".Length);
-            }
-            else if (path.StartsWith("strict "))
-            {
-                lax = false;
-                path = path.Substring("strict ".Length);
-            }
-
-            JToken token = JObject.Parse(column).SelectToken(path, !lax);
-            return token.ToObject<string>();
         }
     }
 

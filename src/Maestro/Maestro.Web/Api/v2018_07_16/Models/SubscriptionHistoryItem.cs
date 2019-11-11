@@ -28,6 +28,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
                     Host = context.Request.GetUri().Host,
                     Path = url.Action(
                         nameof(SubscriptionsController.RetrySubscriptionActionAsync),
+                        "Subscriptions",
                         new
                         {
                             id = other.SubscriptionId,

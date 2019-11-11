@@ -25,6 +25,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
             {
                 string pathAndQuery = url.Action(
                     nameof(RepositoryController.RetryActionAsync),
+                    "Repository",
                     new
                     {
                         repository = other.Repository,

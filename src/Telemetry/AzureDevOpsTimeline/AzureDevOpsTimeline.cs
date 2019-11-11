@@ -14,8 +14,8 @@ using Kusto.Data.Common;
 using Kusto.Data.Exceptions;
 using Kusto.Data.Net.Client;
 using Kusto.Ingest;
+using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.DotNet.Shared;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
