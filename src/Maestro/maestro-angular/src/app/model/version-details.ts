@@ -31,7 +31,10 @@ export class VersionDetails {
       let childProductElements = productElements[0].getElementsByTagName('Dependency');
 
       for (let el of Array.from(childProductElements)) {
-        this.parseDependencyElement(el, this.allDependencies, false);
+        const details: DependencyDetail = this.parseDependencyElement(el, false);
+        if (details.name) {
+          this.allDependencies[details.name] = details;
+        }
       }
     }
 
@@ -41,7 +44,10 @@ export class VersionDetails {
       let childToolsetElements = toolsetElements[0].getElementsByTagName('Dependency');
 
       for (let el of Array.from(childToolsetElements)) {
-        this.parseDependencyElement(el, this.allDependencies, true);
+        const details: DependencyDetail = this.parseDependencyElement(el, true);
+        if(details.name){
+          this.allDependencies[details.name] = details;
+        }
       }
     }
 
@@ -53,7 +59,8 @@ export class VersionDetails {
     }
   }
 
-  parseDependencyElement(element: Element, dependencyList: Record<string, DependencyDetail>, toolset: boolean) {
+  // Takes an element from Version.Details.xml and turns it into a DependencyDetail
+  parseDependencyElement(element: Element, toolset: boolean): DependencyDetail {
     let details = new DependencyDetail();
 
     details.fromToolset = toolset;
@@ -89,10 +96,13 @@ export class VersionDetails {
       details.pinned = pinned.textContent === 'true';
     }
 
-    dependencyList[details.name] = details;
+    return details;
   }
 
-  checkIfToolsetSubscriptions(subsAndAssets: Record<string, Asset[]>) {
+  // Determines if the given subscriptions have dependencies that are exclusively from the toolset category
+  // Takes a collection of subscription + build asset objects and compares them against dependenciesForEvaluation
+  // Returns a mapping of subscription id to boolean
+  checkIfToolsetSubscriptions(subsAndAssets: Record<string, Asset[]>): Record<string, boolean> {
     // A build is a "toolset" if it has at least one dependency pointing to it,
     // and all dependencies pointing to it are toolset dependencies
     // Applying the same rules to subscriptions
@@ -141,6 +151,7 @@ export class VersionDetails {
 
   // Logic taken from SubscriptionHealthMetric in darc and adapted for this data source
   // Goes through each subscription given and determines if any are unnecessary or if there are any dependencies that don't come from a subscription
+  // Returns collections for unusedSubscriptions(Record<string, Subscription>) and dependenciesWithNoSubscription (string[])
   getUnnecessaryAndMissingSubs(subsAndAssets: Record<string, Asset[]>, subscriptions: Subscription[]) {
     // Id, Subscription
     let extraSubs: Record<string, Subscription> = {};
@@ -188,7 +199,7 @@ export class VersionDetails {
 
   // Logic taken from SubscriptionHealthMetric in darc and adapted for this data source
   // Goes through each dependency and checks if there's more than one subscription that provides it
-  getConflictingSubs(subsAndAssets: Record<string, Asset[]>, subscriptions: Subscription[]) {
+  getConflictingSubs(subsAndAssets: Record<string, Asset[]>, subscriptions: Subscription[]): Record<string, Subscription[]> {
     let assetsToSub: Record<string, Subscription> = {};
     let conflictingSubs: Record<string, Subscription[]> = {};
 
@@ -230,7 +241,7 @@ export class VersionDetails {
   }
 
   // Queries the Maestro build service to get the most recent assets for all dependent subscriptions
-  getLatestAssetsForSubs(subscriptions: Subscription[], buildService: BuildService) {
+  getLatestAssetsForSubs(subscriptions: Subscription[], buildService: BuildService): Observable<StatefulResult<Record<string, Asset[]>>> {
     // Can't make a Record with <Subscription, string[]> so use the subscriptionId as a proxy
     const subWithBuilds: Observable<StatefulResult<[Subscription | null, Build | null]>[]> = <any>combineLatest.apply(undefined, subscriptions.filter(s => s.channel && s.sourceRepository).map(sub => {
       const buildId = buildService.getLatestBuildId(sub.channel!.id, sub.sourceRepository!);
@@ -278,7 +289,7 @@ export class VersionDetails {
     return result;
   }
 
-  static getDetailsFileUrl(sourceRepoStr: string, branchName: string) {
+  static getDetailsFileUrl(sourceRepoStr: string, branchName: string): string {
     if (sourceRepoStr.includes("github")) {
       return sourceRepoStr.replace("https://github.com", "https://raw.githubusercontent.com") + "/" + branchName + "/eng/Version.Details.xml";
     }
@@ -289,7 +300,7 @@ export class VersionDetails {
   }
 
   // Retrieves the Version.Details.xml file and uses it return a new VersionDetails with allDependencies and dependenciesForEvaluation filled out
-  static retrieveAndParseFile(http: HttpClient, repository: string, branchName: string) {
+  static retrieveAndParseFile(http: HttpClient, repository: string, branchName: string): Observable<StatefulResult<VersionDetails>> {
 
     const fileUrl = VersionDetails.getDetailsFileUrl(repository || "", branchName);
 
@@ -316,6 +327,7 @@ export class VersionDetails {
   }
 
   // Retrieves the Version.Details.xml file and uses it return a new VersionDetails with all dependency and subscription lists filled out
+  // Returns an Observable<StatefulResult<VersionDetails>>
   static retrieveAndParseSubscriptionData(subscriptionsList: Record<string, Subscription[]>, branch: string, buildService: BuildService, http: HttpClient) {
     return this.retrieveAndParseFile(http, subscriptionsList[branch][0].targetRepository || "", branch).pipe(
       statefulPipe(
