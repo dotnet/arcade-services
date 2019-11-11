@@ -48,7 +48,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     (await remote.GetAssetsAsync(name: _options.Name, version: _options.Version)).ToList();
 
                 string queryDescriptionString =
-                    $"name '{_options.Name}'{(!string.IsNullOrEmpty(_options.Version) ? $"and version '{_options.Version}'" : "")}" +
+                    $"name '{_options.Name}'{(!string.IsNullOrEmpty(_options.Version) ? $" and version '{_options.Version}'" : "")}" +
                     $"{(targetChannel != null ? $" on channel '{targetChannel.Name}'" : "")} in the last {_options.MaxAgeInDays} days";
 
                 Console.WriteLine($"Looking up assets with {queryDescriptionString}");
