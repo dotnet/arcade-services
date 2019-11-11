@@ -93,7 +93,7 @@ namespace DotNet.Status.Web
 
         private void AddServices(IServiceCollection services)
         {
-            services.AddMvc().WithRazorPagesRoot("/Pages");
+            services.AddMvc().WithRazorPagesRoot("/Pages").AddRazorPagesOptions(o => o.Conventions.AuthorizeFolder("/", MsftAuthorizationPolicyName).AllowAnonymousToPage("/Index"));
             services.AddApplicationInsightsTelemetry(Configuration.GetSection("ApplicationInsights").Bind);
             services.AddAuthentication(IdentityConstants.ApplicationScheme)
                 .AddGitHubOAuth(Configuration.GetSection("GitHubAuthentication"), GitHubScheme)
