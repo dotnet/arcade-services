@@ -241,7 +241,7 @@ stages:
 
 - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
-    - template: eng\deploy.yml
+    - template: eng\deploy.yaml
       parameters:
         DeploymentEnvironment: Staging
         DotNetStatusAppName: dotneteng-status-staging
@@ -252,7 +252,7 @@ stages:
         Subscription: NetHelixStaging
         TargetChannel: .NET Engineering Services - Int
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-    - template: eng\deploy.yml
+    - template: eng\deploy.yaml
       parameters:
         DeploymentEnvironment: Production
         DotNetStatusAppName: dotneteng-status
