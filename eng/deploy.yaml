@@ -5,12 +5,6 @@ parameters:
   DotNetStatusAppName: ''
   MaestroUrl: ''
   DeploymentEnvironment: ''
-variables:
-  Subscription: ${{ parameters.Subscription }}
-  ServiceFabricConnection: ${{ parameters.ServiceFabricConnection }}
-  PublishProfile: ${{ parameters.PublishProfile }}
-  DotNetStatusAppName: ${{ parameters.DotNetStatusAppName }}
-  MaestroUrl: ${{ parameters.MaestroUrl }}
 
   # --- Secret Variable group requirements ---
   # maestro-admin-sql-connection-string
@@ -23,6 +17,9 @@ stages:
   displayName: Deploy
   dependsOn:
   - build
+  variables:
+    PublishProfile: ${{ parameters.PublishProfile }}
+    MaestroUrl: ${{ parameters.MaestroUrl }}
   jobs:
   - deployment: approval
     displayName: deployment approval (conditional)
@@ -109,7 +106,7 @@ stages:
         ConnectionType: AzureRM
         azureSubscription: ${{ parameters.Subscription }}
         appType: webApp
-        WebAppName: $(DotNetStatusAppName)
+        WebAppName: ${{ parameters.DotNetStatusAppName }}
         deployToSlotOrASE: true
         ResourceGroupName: monitoring
         SlotName: staging
