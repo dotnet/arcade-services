@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using GitHubJwt;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
@@ -93,9 +94,9 @@ namespace DotNet.Status.Web
 
         private void AddServices(IServiceCollection services)
         {
-            services.AddMvc().WithRazorPagesRoot("/Pages");
+            services.AddMvc().WithRazorPagesRoot("/Pages").AddRazorPagesOptions(o => o.Conventions.AuthorizeFolder("/", MsftAuthorizationPolicyName).AllowAnonymousToPage("/Index"));
             services.AddApplicationInsightsTelemetry(Configuration.GetSection("ApplicationInsights").Bind);
-            services.AddAuthentication(IdentityConstants.ApplicationScheme)
+            services.AddAuthentication()
                 .AddGitHubOAuth(Configuration.GetSection("GitHubAuthentication"), GitHubScheme)
                 .AddScheme<UserTokenOptions, GitHubUserTokenHandler>("github-token", o => { })
                 .AddCookie(IdentityConstants.ApplicationScheme,
@@ -119,10 +120,6 @@ namespace DotNet.Status.Web
                         };
                     })
                 ;
-            services.AddContextAwareAuthenticationScheme(o =>
-            {
-                o.SelectScheme = p => p.StartsWithSegments("/api") ? "github-token" : IdentityConstants.ApplicationScheme;
-            });
             services.AddAzureTableTokenStore(o => Configuration.GetSection("AzureTableTokenStore").Bind(o));
             services.AddAuthorization(
                 options =>
@@ -142,6 +139,11 @@ namespace DotNet.Status.Web
             services.AddScoped<SimpleSigninMiddleware>();
             services.AddGitHubTokenProvider();
             services.AddSingleton<IInstallationLookup, InMemoryCacheInstallationLookup>();
+            services.AddContextAwareAuthenticationScheme(o =>
+            {
+                o.SelectScheme = p => p.StartsWithSegments("/api") ? "github-token" : IdentityConstants.ApplicationScheme;
+            });
+            services.AddSingleton<GitHubJwtFactory>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

@@ -17,7 +17,7 @@ namespace DotNet.Status.Web
 {
     public class InMemoryCacheInstallationLookup : IInstallationLookup
     {
-        private readonly GitHubJwtFactory _jwtFactory;
+        private readonly GitHubAppTokenProvider _tokens;
         private readonly IOptions<GitHubClientOptions> _options;
         private readonly SemaphoreSlim _sem = new SemaphoreSlim(1, 1);
 
@@ -25,10 +25,10 @@ namespace DotNet.Status.Web
         private DateTimeOffset _lastCached = DateTimeOffset.MinValue;
 
         public InMemoryCacheInstallationLookup(
-            GitHubJwtFactory jwtFactory,
+            GitHubAppTokenProvider tokens,
             IOptions<GitHubClientOptions> options)
         {
-            _jwtFactory = jwtFactory;
+            _tokens = tokens;
             _options = options;
         }
 
@@ -51,7 +51,7 @@ namespace DotNet.Status.Web
                 }
 
                 ImmutableDictionary<string, long>.Builder newCache = ImmutableDictionary.CreateBuilder<string, long>();
-                string appToken = _jwtFactory.CreateEncodedJwtToken();
+                string appToken = _tokens.GetAppToken();
                 var client = new GitHubAppsClient(
                     new ApiConnection(
                         new Connection(_options.Value.ProductHeader)

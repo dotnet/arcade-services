@@ -6,7 +6,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Threading.Tasks;
-using GitHubJwt;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
@@ -18,19 +17,19 @@ namespace Microsoft.Dotnet.GitHub.Authentication
     public class GitHubTokenProvider : IGitHubTokenProvider
     {
         private readonly IInstallationLookup _installationLookup;
-        private readonly IOptions<GitHubTokenProviderOptions> _options;
+        private readonly GitHubAppTokenProvider _tokens;
         private readonly IOptions<GitHubClientOptions> _gitHubClientOptions;
         private readonly ConcurrentDictionary<long, AccessToken> _tokenCache;
         public readonly ILogger<GitHubTokenProvider> _logger;
 
         public GitHubTokenProvider(
             IInstallationLookup installationLookup,
-            IOptions<GitHubTokenProviderOptions> options,
+            GitHubAppTokenProvider tokens,
             IOptions<GitHubClientOptions> gitHubClientOptions,
             ILogger<GitHubTokenProvider> logger)
         {
             _installationLookup = installationLookup;
-            _options = options;
+            _tokens = tokens;
             _gitHubClientOptions = gitHubClientOptions;
             _logger = logger;
             _tokenCache = new ConcurrentDictionary<long, AccessToken>();
@@ -47,7 +46,7 @@ namespace Microsoft.Dotnet.GitHub.Authentication
             return await ExponentialRetry.RetryAsync(
                 async () =>
                 {
-                    string jwt = GetAppToken();
+                    string jwt = _tokens.GetAppToken();
                     var appClient = new Octokit.GitHubClient(_gitHubClientOptions.Value.ProductHeader) { Credentials = new Credentials(jwt, AuthenticationType.Bearer) };
                     AccessToken token = await appClient.GitHubApps.CreateInstallationToken(installationId);
                     _logger.LogInformation($"New token obtained for GitHub installation {installationId}. Expires at {token.ExpiresAt}.");
@@ -61,18 +60,6 @@ namespace Microsoft.Dotnet.GitHub.Authentication
         public async Task<string> GetTokenForRepository(string repositoryUrl)
         {
             return await GetTokenForInstallationAsync(await _installationLookup.GetInstallationId(repositoryUrl));
-        }
-
-        private string GetAppToken()
-        {
-            var generator = new GitHubJwtFactory(
-                new StringPrivateKeySource(_options.Value.PrivateKey),
-                new GitHubJwtFactoryOptions
-                {
-                    AppIntegrationId = _options.Value.GitHubAppId,
-                    ExpirationSeconds = 600
-                });
-            return generator.CreateEncodedJwtToken();
         }
 
         private bool TryGetCachedToken(long installationId, out AccessToken cachedToken)

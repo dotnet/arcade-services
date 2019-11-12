@@ -5,10 +5,11 @@ parameters:
   DotNetStatusAppName: ''
   MaestroUrl: ''
   DeploymentEnvironment: ''
+  VariableGroup: ''
 
   # --- Secret Variable group requirements ---
   # maestro-admin-sql-connection-string
-  # maestro-token
+  # scenario-test-maestro-token
   # dn-bot-dnceng-build-rw-code-rw-release-rw
   # maestro-scenario-test-github-token
 
@@ -18,8 +19,11 @@ stages:
   dependsOn:
   - build
   variables:
-    PublishProfile: ${{ parameters.PublishProfile }}
-    MaestroUrl: ${{ parameters.MaestroUrl }}
+  - group: ${{ parameters.VariableGroup }}
+  - name: PublishProfile
+    value: ${{ parameters.PublishProfile }}
+  - name: MaestroUrl
+    value: ${{ parameters.MaestroUrl }}
   jobs:
   - deployment: approval
     displayName: deployment approval (conditional)
@@ -119,6 +123,8 @@ stages:
   displayName: Validate deployment
   dependsOn: 
   - deploy
+  variables:
+  - group: ${{ parameters.VariableGroup }}
   jobs:
   - job: scenario
     displayName: Scenario tests
@@ -146,7 +152,7 @@ stages:
       inputs:
         targetType: filePath
         filePath: $(Pipeline.Workspace)/ScenarioTests/all.ps1
-        arguments: -maestroInstallation "$(MaestroTestEndpoint)" -darcVersion "$(darcVersion)" -maestroBearerToken "$(maestro-token)" -githubPAT "$(maestro-scenario-test-github-token)" -azdoPAT "$(dn-bot-dnceng-build-rw-code-rw-release-rw)" -darcPackageSource "$(Pipeline.Workspace)\PackageArtifacts"
+        arguments: -maestroInstallation "$(MaestroTestEndpoint)" -darcVersion "$(darcVersion)" -maestroBearerToken "$(scenario-test-maestro-token)" -githubPAT "$(maestro-scenario-test-github-token)" -azdoPAT "$(dn-bot-dnceng-build-rw-code-rw-release-rw)" -darcPackageSource "$(Pipeline.Workspace)\PackageArtifacts"
         workingDirectory: $(Pipeline.Workspace)/ScenarioTests
       timeoutInMinutes: 90
 

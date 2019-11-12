@@ -5,8 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,7 +27,7 @@ namespace DotNet.Status.Web.Controllers
         public const string BodyLabelTextFormat = "Grafana-Automated-Alert-Id-{0}";
         public const string NotificationTagName = "NotificationId";
 
-        private static bool s_labelsCreated = true;
+        private static bool s_labelsCreated;
         private static readonly SemaphoreSlim s_labelLock = new SemaphoreSlim(1);
 
         private readonly IOptions<GitHubConnectionOptions> _githubOptions;
@@ -163,8 +161,12 @@ namespace DotNet.Status.Web.Controllers
 
 @{_githubOptions.Value.NotificationTarget}, please investigate
 
-== Automation information below, do not change ==
-alert-id: {GetUniqueIdentifier(notification)}
+<details>
+<summary>Automation information below, do not change</summary>
+
+{string.Format(BodyLabelTextFormat, GetUniqueIdentifier(notification))}
+
+</details>
 ".Replace("\r\n","\n")
             };
 
@@ -222,19 +224,21 @@ alert-id: {GetUniqueIdentifier(notification)}
 
                 IReadOnlyList<Label> labels = await client.Issue.Labels.GetAllForRepository(org, repo);
 
-                if (labels.All(l => l.Name != ActiveAlertLabel))
+                async Task MakeLabel(string name, string color)
                 {
-                    _logger.LogInformation("Missing tag {tag}, creating...", ActiveAlertLabel);
-                    await TryCreate(() =>
-                        client.Issue.Labels.Create(org, repo, new NewLabel(ActiveAlertLabel, "d73a4a")));
+                    if (labels.All(l => l.Name != name))
+                    {
+                        _logger.LogInformation("Missing tag {tag}, creating...", name);
+                        await TryCreate(() =>
+                            client.Issue.Labels.Create(org, repo, new NewLabel(name, color)));
+                    }
                 }
 
-                if (labels.All(l => l.Name != InactiveAlertLabel))
-                {
-                    _logger.LogInformation("Missing tag {tag}, creating...", InactiveAlertLabel);
-                    await TryCreate(() =>
-                        client.Issue.Labels.Create(org, repo, new NewLabel(InactiveAlertLabel, "e4e669")));
-                }
+                await Task.WhenAll(
+                    MakeLabel(NotificationIdLabel, "f957b6"),
+                    MakeLabel(ActiveAlertLabel, "d73a4a"),
+                    MakeLabel(InactiveAlertLabel, "e4e669")
+                );
 
                 _logger.LogInformation("Tags ensured");
 
@@ -279,29 +283,62 @@ alert-id: {GetUniqueIdentifier(notification)}
             if (issue == null)
             {
                 _logger.LogInformation("No active issue found for alert '{ruleName}', ignoring", notification.RuleName);
+                return;
             }
+
+            _logger.LogInformation(
+                "Found existing issue {org}/{repo}#{issueNumber}, replacing {activeTag} with {inactiveTag}",
+                org,
+                repo,
+                issue.Number,
+                ActiveAlertLabel,
+                InactiveAlertLabel);
+
+            await TryRemove(() => client.Issue.Labels.RemoveFromIssue(org, repo, issue.Number, ActiveAlertLabel));
+            await TryCreate(() =>
+                client.Issue.Labels.AddToIssue(org, repo, issue.Number, new[] {InactiveAlertLabel}));
+
+            _logger.LogInformation("Adding recurrence comment to  {org}/{repo}#{issueNumber}",
+                org,
+                repo,
+                issue.Number);
+            IssueComment comment = await client.Issue.Comment.Create(org,
+                repo,
+                issue.Number,
+                GenerateNewNotificationComment(notification));
+            _logger.LogInformation("Created comment {org}/{repo}#{issue}-issuecomment-{comment}",
+                org,
+                repo,
+                issue.Id,
+                comment.Id);
         }
 
         private async Task<Issue> GetExistingIssueAsync(IGitHubClient client, GrafanaNotification notification)
         {
             string id = GetUniqueIdentifier(notification);
 
-            SearchIssuesResult issues = await client.Search.SearchIssues(
-                new SearchIssuesRequest(string.Format(BodyLabelTextFormat, id))
-                {
-                    Labels = new[] {NotificationIdLabel},
-                    Order = SortDirection.Descending,
-                    SortField = IssueSearchSort.Created,
-                    Type = IssueTypeQualifier.Issue,
-                    In = new[] {IssueInQualifier.Body},
-                });
+            string automationId = string.Format(BodyLabelTextFormat, id);
+            var request = new SearchIssuesRequest(automationId)
+            {
+                // We need to manaually quote the label here, because of
+                // https://github.com/octokit/octokit.net/issues/2044
+                Labels = new[] {'"' + NotificationIdLabel + '"'},
+                Order = SortDirection.Descending,
+                SortField = IssueSearchSort.Created,
+                Type = IssueTypeQualifier.Issue,
+                In = new[] {IssueInQualifier.Body},
+                State = ItemState.Open,
+            };
+
+            SearchIssuesResult issues = await client.Search.SearchIssues(request);
 
             return issues.Items.FirstOrDefault();
         }
 
         private static string GetUniqueIdentifier(GrafanaNotification notification)
         {
-            if (notification.Tags.TryGetValue(NotificationTagName, out string id))
+            string id = null;
+            if (notification.Tags?.TryGetValue(NotificationTagName, out id) ?? false)
             {
                 return id;
             }
