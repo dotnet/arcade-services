@@ -10,7 +10,9 @@ namespace Microsoft.Dotnet.GitHub.Authentication
     {
         public static IServiceCollection AddGitHubTokenProvider(this IServiceCollection services)
         {
-            return services.AddSingleton<IGitHubTokenProvider, GitHubTokenProvider>();
+            return services
+                .AddSingleton<GitHubAppTokenProvider, GitHubAppTokenProvider>()
+                .AddSingleton<IGitHubTokenProvider, GitHubTokenProvider>();
         }
     }
 }

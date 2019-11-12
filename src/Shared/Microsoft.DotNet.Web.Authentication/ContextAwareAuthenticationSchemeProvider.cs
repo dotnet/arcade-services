@@ -78,6 +78,7 @@ namespace Microsoft.DotNet.Web.Authentication
         public static IServiceCollection AddContextAwareAuthenticationScheme(this IServiceCollection services, Action<ContextAwareAuthenticationSchemeOptions> configure)
         {
             services.Configure(configure);
+            services.AddSingleton<IAuthenticationSchemeProvider, ContextAwareAuthenticationSchemeProvider>();
             services.AddSingleton<AuthenticationSchemeProvider, ContextAwareAuthenticationSchemeProvider>();
             return services;
         }

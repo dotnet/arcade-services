@@ -82,7 +82,7 @@ namespace DotNet.Status.Web
 
         private bool TryDecodeToken(string protectedToken, out GitHubTokenData token)
         {
-            Span<byte> tokenBytes = stackalloc byte[protectedToken.Length / 4 * 3 + 1];
+            Span<byte> tokenBytes = stackalloc byte[1024];
             if (!Convert.TryFromBase64String(protectedToken, tokenBytes, out int bytesWritten))
             {
                 token = default;
@@ -91,7 +91,7 @@ namespace DotNet.Status.Web
 
             // DataProtector can't handle spans, so we have to copy out the value
             var toUnprotect = new byte[bytesWritten];
-            tokenBytes.CopyTo(toUnprotect.AsSpan());
+            tokenBytes.Slice(0, bytesWritten).CopyTo(toUnprotect.AsSpan());
 
             byte[] unprotected;
             try
