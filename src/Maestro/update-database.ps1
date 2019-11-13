@@ -18,14 +18,9 @@ function removeDllExtension {
 }
 
 function Get-EfDllPath {
-  $dotnetLocation = Split-Path -Parent (Get-Command dotnet).Path
-  $sdkVersion = dotnet --version
-  $sdkToolsPath = "$dotnetLocation\sdk\$sdkVersion\DotnetTools"
-  $dotnetEfToolPath = Join-Path $sdkToolsPath dotnet-ef
-  $dotnetEfVersion = ls $dotnetEfToolPath | select -ExpandProperty Name | sort -Descending | select -First 1
-  $dotnetEfDllSubpath = ls -R -Name ef.dll -Path $dotnetEfToolPath\$dotnetEfVersion\tools\
-
-  return "$dotnetEfToolPath\$dotnetEfVersion\tools\$dotnetEfDllSubpath"
+  Invoke-WebRequest "https://api.nuget.org/v3-flatcontainer/dotnet-ef/3.0.0/dotnet-ef.3.0.0.nupkg" -OutFile "$env:TEMP\dotnet-ef.3.0.0.nupkg"
+  Expand-Archive -Path "$env:TEMP\dotnet-ef.3.0.0.nupkg" -DestinationPath "$env:TEMP\dotnet-ef"
+  return ((Get-ChildItem -Recurse ef.dll)[0].FullName)
 }
 
 $migrationsNamespace = removeDllExtension $migrationsDll
