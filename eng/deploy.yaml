@@ -36,12 +36,17 @@ stages:
   - job: updateDatabase
     dependsOn: 
     - approval
-    displayName: 
+    displayName: Update BuildAssetRegistry database
     steps:
     - download: current
       artifact: ReleaseUtilities
     - download: current
       artifact: Maestro.Data
+    - task: UseDotNet@2
+      inputs:
+        packageType: sdk
+        version: 3.0.100
+    - script: dotnet tool install --global dotnet-ef
     - task: AzurePowerShell@3
       displayName: eng\firewall.ps1 -Add
       inputs:
