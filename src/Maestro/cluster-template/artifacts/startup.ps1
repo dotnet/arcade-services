@@ -5,3 +5,5 @@ param(
 )
 
 setx APPLICATION_INSIGHTS_KEY "$AppInsightsKey"  /M
+
+.\Set-TlsConfiguration.ps1 -RebootIfRequired $false
