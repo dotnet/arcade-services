@@ -20,7 +20,10 @@ function removeDllExtension {
 function Get-EfDllPath {
   Invoke-WebRequest "https://api.nuget.org/v3-flatcontainer/dotnet-ef/3.0.0/dotnet-ef.3.0.0.nupkg" -OutFile "$env:TEMP\dotnet-ef.3.0.0.zip"
   Expand-Archive -Path "$env:TEMP\dotnet-ef.3.0.0.zip" -DestinationPath "$env:TEMP\dotnet-ef"
-  return ((Get-ChildItem -Recurse ef.dll)[0].FullName)
+  pushd "$env:TEMP\dotnet-ef"
+  $EfPath = ((Get-ChildItem -Recurse ef.dll)[0].FullName)
+  popd
+  return $EfPath
 }
 
 $migrationsNamespace = removeDllExtension $migrationsDll
