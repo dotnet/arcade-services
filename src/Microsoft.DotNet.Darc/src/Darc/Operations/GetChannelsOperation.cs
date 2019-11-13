@@ -8,6 +8,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -34,9 +35,12 @@ namespace Microsoft.DotNet.Darc.Operations
                 var allChannels = await remote.GetChannelsAsync();
 
                 // Write out a simple list of each channel's name
-                foreach (var channel in allChannels)
+                foreach (var channel in allChannels.OrderBy(c => c.Name))
                 {
-                    Console.WriteLine(channel.Name);
+                    // Pad so that id's up to 9999 will result in consistent
+                    // listing
+                    string idPrefix = $"({channel.Id})".PadRight(7);
+                    Console.WriteLine($"{idPrefix}{channel.Name}");
                 }
 
                 return Constants.SuccessCode;
