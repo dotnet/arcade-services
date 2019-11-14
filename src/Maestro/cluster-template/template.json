@@ -337,7 +337,8 @@
                   "autoUpgradeMinorVersion": true,
                   "settings": {
                     "fileUris": [
-                      "[concat(parameters('_artifactsLocation'), '/startup.ps1')]"
+                      "[concat(parameters('_artifactsLocation'), '/startup.ps1')]",
+                      "[concat(parameters('_artifactsLocation'), '/Set-TlsConfiguration.ps1')]"
                     ],
                     "commandToExecute": "[concat('powershell.exe -ExecutionPolicy Bypass -NoProfile -Command ./startup.ps1 \"\"\"', reference(variables('appInsightsResourceId'), '2014-04-01').InstrumentationKey, '\"\"\"')]"
                   },
