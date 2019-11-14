@@ -32,7 +32,7 @@ try {
     Darc-Add-Channel -channelName $channel2Name -classification 'test'
 
     Write-Host "Testing various command line parameters of add-subscription"
-    $subscriptionId = Darc-Add-Subscription --channel "$channel1Name" --source-repo "$repo1Uri" --target-repo "$repo3Uri" --update-frequency everyWeek --standard-automerge --target-branch "master"
+    $subscription1Id = Darc-Add-Subscription --channel "$channel1Name" --source-repo "$repo1Uri" --target-repo "$repo3Uri" --update-frequency everyWeek --standard-automerge --target-branch "master"
     $expectedSubscriptionInfo = @(
         "$repo1Uri \($channel1Name\) ==> '$repo3Uri' \('master'\)",
         "Id: .*",
@@ -42,10 +42,9 @@ try {
         "  - Merge Policies:",
         "    Standard"
     )
-    Validate-Subscription-Info $subscriptionId $expectedSubscriptionInfo
-    Darc-Delete-Subscription $subscriptionId
+    Validate-Subscription-Info $subscription1Id $expectedSubscriptionInfo
 
-    $subscriptionId = Darc-Add-Subscription --channel "$channel1Name" --source-repo "$repo1Uri" --target-repo "$repo2Uri" --update-frequency none --all-checks-passed --no-extra-commits --no-requested-changes --ignore-checks "WIP,license/cla" --target-branch "master"
+    $subscription2Id = Darc-Add-Subscription --channel "$channel1Name" --source-repo "$repo1Uri" --target-repo "$repo2Uri" --update-frequency none --all-checks-passed --no-extra-commits --no-requested-changes --ignore-checks "WIP,license/cla" --target-branch "master"
     $expectedSubscriptionInfo = @(
         "$repo1Uri \($channel1Name\) ==> '$repo2Uri' \('master'\)",
         "Id: .*",
@@ -62,8 +61,43 @@ try {
         "                       \]",
         "    NoRequestedChanges"
     )
-    Validate-Subscription-Info $subscriptionId $expectedSubscriptionInfo
-    Darc-Delete-Subscription $subscriptionId
+    Validate-Subscription-Info $subscription2Id $expectedSubscriptionInfo
+
+    $subscription3Id = Darc-Add-Subscription --channel "$channel2Name" --source-repo "$repo1Uri" --target-repo "$repo2Uri" --update-frequency none --all-checks-passed --no-extra-commits --no-requested-changes --ignore-checks "WIP,license/cla" --target-branch "master"
+    $expectedSubscriptionInfo = @(
+        "$repo1Uri \($channel2Name\) ==> '$repo2Uri' \('master'\)",
+        "Id: .*",
+        "  - Update Frequency: None",
+        "  - Enabled: True",
+        "  - Batchable: False",
+        "  - Merge Policies:",
+        "    NoExtraCommits",
+        "    AllChecksSuccessful",
+        "      ignoreChecks = ",
+        "                       \[",
+        "                         `"WIP`",",
+        "                         `"license/cla`"",
+        "                       \]",
+        "    NoRequestedChanges"
+    )
+
+    # Mass delete the subscriptions. Delete the first two but not the third.
+    Darc-Command delete-subscriptions --quiet --channel "$channel1Name"
+
+    # Check that there are no subscriptions against channel1 now
+    try {
+        Darc-Command get-subscriptions --channel "$channel1Name"
+        throw "Expected that all subscriptions in channel1 would have been deleted."
+    }
+    catch {
+        if (-not $_.Message -match "No subscriptions found matching the specified criteria") {
+            throw "Expected that all subscriptions in channel1 would have been deleted."
+        }
+    }
+
+    # Validate the third subscription, which should still exist
+    Validate-Subscription-Info $subscription3Id $expectedSubscriptionInfo
+    Darc-Delete-Subscription $subscription3Id
 
     # Attempt to create a batchable subscription with merge policies.
     # Should fail, merge policies are set separately for batched subs

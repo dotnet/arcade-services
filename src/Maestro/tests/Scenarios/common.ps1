@@ -166,7 +166,7 @@ function Darc-Command-WithPipeline([Parameter(ValueFromPipeline=$true)]$pipeline
     if ($darcCommandPrefix) {
         $finalParams = ,"$darcCommandPrefix" + $finalParams
     }
-    Write-Host "Running 'pipelineParams | $darcTool $finalParams $darcAuthParams'"
+    Write-Host "Running 'pipelineParams | $darcTool $finalParams ***'"
     $commandOutput = $pipelineParams| & $darcTool @finalParams @darcAuthParams
     if ($LASTEXITCODE -ne 0) {
       Write-Host ${commandOutput}
@@ -181,7 +181,7 @@ function Darc-Command([Parameter(ValueFromRemainingArguments=$true)]$darcParams)
     if ($darcCommandPrefix) {
         $finalParams = ,"$darcCommandPrefix" + $finalParams
     }
-    Write-Host "Running '$darcTool $finalParams $darcAuthParams'"
+    Write-Host "Running '$darcTool $finalParams ***'"
     $commandOutput = & $darcTool @finalParams @darcAuthParams
     if ($LASTEXITCODE -ne 0) {
       Write-Host ${commandOutput}
@@ -248,7 +248,7 @@ function Darc-Get-Default-Channel-From-Api($repoUri, $branch) {
 }
 
 function Darc-Delete-Subscription($subscriptionId) {
-    Darc-Command delete-subscription --id $subscriptionId
+    Darc-Command delete-subscriptions --id $subscriptionId --quiet
 }
 
 function Darc-Get-Subscription($subscriptionId) {
