@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Build = Maestro.Data.Models.Build;
 using Channel = Maestro.Web.Api.v2018_07_16.Models.Channel;
+using Castle.Core.Resource;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
 {
@@ -194,6 +195,29 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             await _context.BuildChannels.AddAsync(buildChannel);
             await _context.SaveChangesAsync();
             return StatusCode((int)HttpStatusCode.Created);
+        }
+
+        /// <summary>
+        ///   Remove a build from a channel.
+        /// </summary>
+        /// <param name="channelId">The id of the <see cref="Channel"/>.</param>
+        /// <param name="buildId">The id of the <see cref="Build"/></param>
+        [HttpDelete("{channelId}/builds/{buildId}")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Description = "Build successfully removed from the Channel")]
+        public async Task<IActionResult> RemoveBuildFromChannel(int channelId, int buildId)
+        {
+            BuildChannel buildChannel = await _context.BuildChannels
+                                            .Where(bc => bc.BuildId == buildId && bc.ChannelId == channelId)
+                                            .FirstOrDefaultAsync();
+
+            if (buildChannel == null)
+            {
+                return StatusCode((int)HttpStatusCode.NotModified);
+            }
+
+            _context.BuildChannels.Remove(buildChannel);
+            await _context.SaveChangesAsync();
+            return StatusCode((int)HttpStatusCode.OK);
         }
 
         /// <summary>

@@ -328,6 +328,17 @@ function Add-Build-To-Channel ($buildId, $channelName) {
     Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
 }
 
+
+function Remove-Build-From-Channel ($buildId, $channelName) {
+    # Look up the channel id
+    $channelId = Get-ChannelId $channelName
+
+    Write-Host "Removing build ${buildId} from channel ${channelId}"
+    $headers = Get-Bar-Headers 'text/plain'
+    $uri = "$maestroInstallation/api/channels/${channelId}/builds/${buildId}?api-version=${barApiVersion}"
+    Invoke-WebRequest -Uri $uri -Headers $headers -Method Delete
+}
+
 function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publishUsingPipelines, $dependencies) {
     if (!$publishUsingPipelines) {
         $publishUsingPipelines = "false"
@@ -402,8 +413,9 @@ function Git-Command($repoName) {
         if ($gitParams.GetType().Name -ne "Object[]") {
             $gitParams = $gitParams.ToString().Split(" ")
         }
-        Write-Host "Running $baseGitCommand from $(Get-Location)"
+        Write-Host "Running 'git $gitParams' from $(Get-Location)"
         $commandOutput = & git @gitParams; if ($LASTEXITCODE -ne 0) { throw "Git exited with exit code: $LASTEXITCODE" } else { $commandOutput }
+        $commandOutput
     }
     finally {
         Pop-Location
@@ -559,8 +571,8 @@ function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $tar
     $pullRequestBaseBranch = $pullRequest.sourceRefName.Replace('refs/heads/','')
 
     # Depending on how quickly each dependency update comes through,
-    # we might have to wait for the title to be updated correctly for batched Subscriptions
-    $tries = 5
+    # we might have to wait for the title to be updated correctly for batched Subscriptions.
+    $tries = 10
     $validTitle = $false;
     while ($tries-- -gt 0 -and (-not $validTitle)) {
         Write-Host "Validating PR title. $tries tries remaining..."
@@ -575,23 +587,7 @@ function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $tar
         throw "Expected PR title to be $expectedPRTitle, was $($pullrequest.title)"
     }
 
-    # Check out the merge commit sha, then use darc to get and verify the
-    # dependencies
-    Git-Command $targetRepoName fetch
-    Git-Command $targetRepoName checkout $pullRequestBaseBranch
-
-    try {
-        Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        $dependencies = Darc-Command get-dependencies
-        $equal = Compare-Array-Output $expectedDependencies $dependencies
-        if (-not $equal) {
-            throw "PR did not have expected dependency updates."
-        }
-        Write-Host "Finished validating PR contents"
-        return $true
-    } finally {
-        Pop-Location
-    }
+    Validate-PullRequest-Dependencies $targetRepoName $pullRequestBaseBranch $expectedDependencies 1
 }
 
 function Validate-Feeds-NugetConfig($targetRepoName, $expectedFeeds, $notExpectedFeeds) {
@@ -817,12 +813,10 @@ function Check-Github-PullRequest-Created($targetRepoName, $targetBranch) {
 }
 
 function Validate-Github-PullRequest-Contents($pullRequest, $expectedPRTitle, $targetRepoName, $targetBranch, $expectedDependencies) {
-    $pullRequestBaseBranch = $pullRequest.head.ref
-
     # Depending on how quickly each dependency update comes through,
     # we might have to wait for the title to be updated correctly for batched Subscriptions
-    $tries = 5
-    $validTitle = $false
+    $tries = 10
+    $validTitle = $false;
     while ($tries-- -gt 0) {
         Write-Host "Validating PR title. $tries tries remaining..."
         if ($pullRequest.title -eq $expectedPRTitle) {
@@ -836,23 +830,33 @@ function Validate-Github-PullRequest-Contents($pullRequest, $expectedPRTitle, $t
         throw "Expected PR title to be $expectedPRTitle, was $($pullrequest.title)"
     }
 
-    # Check out the merge commit sha, then use darc to get and verify the
-    # dependencies
-    Git-Command $targetRepoName fetch
-    Git-Command $targetRepoName checkout $pullRequestBaseBranch
+    Validate-PullRequest-Dependencies $targetRepoName $pullRequest.head.ref $expectedDependencies 1
+}
 
-    try {
-        Push-Location -Path $(Get-Repo-Location $targetRepoName)
-        $dependencies = Darc-Command get-dependencies
-        $equal = Compare-Array-Output $expectedDependencies $dependencies
-        if (-not $equal) {
-            throw "PR did not have expected dependency updates."
+function Validate-PullRequest-Dependencies($targetRepoName, $pullRequestBaseBranch, $expectedDependencies, $tries) {
+    $triesRemaining = $tries
+    while ($triesRemaining-- -gt 0) {
+        # Check out the merge commit sha, then use darc to get and verify the
+        # dependencies
+        Git-Command $targetRepoName fetch
+        Git-Command $targetRepoName checkout $pullRequestBaseBranch
+        Git-Command $targetRepoName pull
+
+        try {
+            Push-Location -Path $(Get-Repo-Location $targetRepoName)
+            $dependencies = Darc-Command get-dependencies
+            if ($(Compare-Array-Output $expectedDependencies $dependencies)) {
+                Write-Host "Finished validating PR contents"
+                return $true
+            }
+        } finally {
+            Pop-Location
         }
-        Write-Host "Finished validating PR contents"
-        return $true
-    } finally {
-        Pop-Location
+
+        Start-Sleep 30
     }
+
+    throw "PR did not have expected dependency updates."
 }
 
 function Check-NonBatched-Github-PullRequest($sourceRepoName, $targetRepoName, $targetBranch, $expectedDependencies, $complete = $false) {
