@@ -75,6 +75,7 @@ namespace Maestro.Data
         public DbQuery<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory { get; set; }
         public DbQuery<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory { get; set; }
         public DbSet<DependencyFlowEvent> DependencyFlowEvents { get; set; }
+        public DbSet<GoalTime> GoalTime { get; set; }
 
         public override Task<int> SaveChangesAsync(
             bool acceptAllChangesOnSuccess,
@@ -211,6 +212,13 @@ namespace Maestro.Data
                     })
                 .OnDelete(DeleteBehavior.Restrict);
 
+            builder.Entity<GoalTime>()
+              .HasKey(
+              gt => new
+              {
+                  gt.DefinitionId,
+                  gt.ChannelId
+              });
             builder.ForSqlServerIsSystemVersioned<RepositoryBranchUpdate, RepositoryBranchUpdateHistory>("6 MONTH");
 
             builder.Entity<RepositoryBranchUpdateHistory>()

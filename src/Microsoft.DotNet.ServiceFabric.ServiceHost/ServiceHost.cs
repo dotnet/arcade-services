@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Autofac;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Hosting.Internal;
+using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -230,6 +231,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             services.AddOptions();
             services.SetupConfiguration();
             services.TryAddSingleton(InitializeEnvironment());
+            services.TryAddSingleton(b => (Microsoft.Extensions.Hosting.IHostingEnvironment)b.GetService<HostingEnvironment>());
+            services.TryAddSingleton(b => (Microsoft.AspNetCore.Hosting.IHostingEnvironment)b.GetService<HostingEnvironment>());
             ConfigureApplicationInsights(services);
             services.AddLogging(
                 builder =>
@@ -237,9 +240,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     builder.AddDebug();
                     builder.AddFixedApplicationInsights(LogLevel.Information);
                 });
+            services.AddSingleton<IKeyVaultProvider, ServiceHostKeyVaultProvider>();
         }
 
-        private static IHostingEnvironment InitializeEnvironment()
+        private static HostingEnvironment InitializeEnvironment()
         {
             IConfigurationRoot config = new ConfigurationBuilder().AddEnvironmentVariables("ASPNETCORE_").Build();
             var options = new WebHostOptions(config, GetApplicationName());

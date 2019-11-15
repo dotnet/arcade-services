@@ -163,4 +163,11 @@ namespace Maestro.Data.Models
         // To this build's repository and branch
         public double TimeToInclusionInMinutes { get; set; }
     }
+
+    public class GoalTime
+    {
+        public int ChannelId { get; set; }
+        public int DefinitionId { get; set; }
+        public int Minutes { get; set; }
+    }
 }
