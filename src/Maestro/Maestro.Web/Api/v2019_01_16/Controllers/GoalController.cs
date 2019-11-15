@@ -20,26 +20,23 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
     [ApiVersion("2019-01-16")]
     public class GoalController : ControllerBase
     {
-
         protected readonly BuildAssetRegistryContext _context;
-
         public GoalController(BuildAssetRegistryContext context)
         {
             _context = context;
         }
 
         /// <summary>
-        ///   Exposes methods to Read/Query <see cref="Goal"/>
+        ///   Exposes methods to set goal time <see cref="Goal"/>
         /// </summary>
         /// <param name="ChannelName"></param>
         /// <param name="DefinitionId"></param>
         /// <param name="Minutes"></param>
         [HttpPost]
-        [SwaggerApiResponse(System.Net.HttpStatusCode.Created, Type = typeof(Models.Goal), Description = "The created goaltime is :")]
+        [SwaggerApiResponse(System.Net.HttpStatusCode.Created, Type = typeof(Models.Goal), Description = "Goal for given Channel and Definition-Id is created/updated")]
         [ValidateModelState]
         public virtual async Task<IActionResult> Create([Required] int DefinitionId, [Required] string ChannelName, [Required] int Minutes)
         {
-
             Data.Models.Channel channel = await _context.Channels
                     .Where(c => c.Name.Equals(ChannelName)).FirstOrDefaultAsync();
             Data.Models.GoalTime goal = await _context.GoalTime
@@ -81,12 +78,12 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         }
 
         /// <summary>
-        ///   Gets a list of all <see cref="Goal"/>s that match the given classification.
+        /// Get goal time in minutes <see cref="Goal"/>s that match the given classification.
         /// </summary>
         /// <param name="ChannelName"></param>
         /// <param name="DefinitionId"></param>
         [HttpGet]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Goal), Description = "Get the Goal fo")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Goal), Description = "Get the Goal for given Channel and Definition-Id")]
         [ValidateModelState]
         public virtual async Task<IActionResult> GetGoalTimes([Required]int DefinitionId, [Required]string ChannelName)
         {
@@ -96,7 +93,5 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             .Where(g => g.DefinitionId == DefinitionId && g.ChannelId == channel.Id).FirstOrDefaultAsync();
             return Ok(goal); ;
         }
-
-
     }
 }

@@ -65,7 +65,7 @@ namespace Microsoft.DotNet.Configuration.Extensions
             IConfiguration baseConfig,
             IHostingEnvironment env,
             IKeyVaultProvider keyVaultClient,
-            string configPathFormat = ".config/settings{0}json")
+            string configPathFormat = ".config/settings{0}.json")
         {
             string rootConfigFile = string.Format(configPathFormat, "");
             string envConfigFile = string.Format(configPathFormat, "." + env.EnvironmentName);

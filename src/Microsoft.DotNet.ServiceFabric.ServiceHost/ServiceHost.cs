@@ -231,8 +231,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             services.AddOptions();
             services.SetupConfiguration();
             services.TryAddSingleton(InitializeEnvironment());
+
             services.TryAddSingleton(b => (Microsoft.Extensions.Hosting.IHostingEnvironment)b.GetService<HostingEnvironment>());
             services.TryAddSingleton(b => (Microsoft.AspNetCore.Hosting.IHostingEnvironment)b.GetService<HostingEnvironment>());
+
             ConfigureApplicationInsights(services);
             services.AddLogging(
                 builder =>

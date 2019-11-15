@@ -13,12 +13,6 @@
 
   <!-- Code package is your service executable. -->
   <CodePackage Name="Code" Version="1.0.42">
-    <SetupEntryPoint>
-      <ExeHost>
-        <Program>Scripts\tlsconfiguration.bat</Program>
-        <WorkingFolder>CodePackage</WorkingFolder>
-      </ExeHost>
-    </SetupEntryPoint>
     <EntryPoint>
       <ExeHost>
         <Program>Maestro.Web.exe</Program>
