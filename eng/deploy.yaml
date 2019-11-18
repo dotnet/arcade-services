@@ -3,9 +3,10 @@ parameters:
   ServiceFabricConnection: ''
   PublishProfile: ''
   DotNetStatusAppName: ''
-  MaestroUrl: ''
   DeploymentEnvironment: ''
   VariableGroup: ''
+  MaestroPublishEndpoint: ''
+  MaestroTestEndpoint: ''
 
   # --- Secret Variable group requirements ---
   # maestro-admin-sql-connection-string
@@ -22,8 +23,8 @@ stages:
   - group: ${{ parameters.VariableGroup }}
   - name: PublishProfile
     value: ${{ parameters.PublishProfile }}
-  - name: MaestroUrl
-    value: ${{ parameters.MaestroUrl }}
+  - name: MaestroTestEndpoint
+    value: ${{ parameters.MaestroTestEndpoint }}
   jobs:
   - deployment: approval
     displayName: deployment approval (conditional)
@@ -170,6 +171,9 @@ stages:
   displayName: Deploy DARC
   dependsOn:
   - validateDeployment
+  variables:
+  - name: MaestroPublishEndpoint
+    value: ${{ parameters.MaestroPublishEndpoint }}
   jobs:
   - job: darc
     steps:
