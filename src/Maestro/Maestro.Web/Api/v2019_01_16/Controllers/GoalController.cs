@@ -31,58 +31,57 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         /// </summary>
         /// <param name="ChannelName"></param>
         /// <param name="DefinitionId"></param>
-        /// <param name="Minutes"></param>
-        [HttpPost]
+        /// <param name="GoalInMinutes"></param>
+        [HttpPost("{DefinitionId}/{ChannelName}")]
         [SwaggerApiResponse(System.Net.HttpStatusCode.Created, Type = typeof(Models.Goal), Description = "Goal for given Channel and Definition-Id is created/updated")]
         [ValidateModelState]
-        public virtual async Task<IActionResult> Create([Required] int DefinitionId, [Required] string ChannelName, [Required] int Minutes)
+        public virtual async Task<IActionResult> Create([Required] int DefinitionId, [Required] string ChannelName, [Required] int GoalInMinutes)
         {
             Data.Models.Channel channel = await _context.Channels
                     .Where(c => c.Name.Equals(ChannelName)).FirstOrDefaultAsync();
-            Data.Models.GoalTime goal = await _context.GoalTime
-                .Where(g => g.DefinitionId == DefinitionId && g.ChannelId == channel.Id).FirstOrDefaultAsync();
-
             if (channel == null)
             {
                 return NotFound();
             }
+
+            Data.Models.GoalTime goal = await _context.GoalTime
+                .Where(g => g.DefinitionId == DefinitionId && g.ChannelId == channel.Id).FirstOrDefaultAsync();
+           
             if (goal == null)
             {
-                var goalModel = new Data.Models.GoalTime
+                goal = new Data.Models.GoalTime
                 {
                     DefinitionId = DefinitionId,
-                    Minutes = Minutes,
+                    Minutes = GoalInMinutes,
                     ChannelId = channel.Id
                 };
-                await _context.GoalTime.AddAsync(goalModel);
-                await _context.SaveChangesAsync();
+                await _context.GoalTime.AddAsync(goal);
                 var goalTest = CreatedAtRoute(
                     new
                     {
                         action = "CreateGoal",
                         DefinitionId = DefinitionId,
-                        Minutes = Minutes,
+                        Minutes = GoalInMinutes,
                         ChannelId = channel.Id
                     },
-                    new Goal(goalModel));
-                return StatusCode((int)HttpStatusCode.Created);
+                    new Goal(goal));
             }
             else
+            // If the combination of Channel and DefinitionId already exists
             {
-                goal.Minutes = Minutes;
-                _context.GoalTime.Update(goal);
-                await _context.SaveChangesAsync();
-
-                return Ok(new Goal(goal));
+                goal.Minutes = GoalInMinutes;
+                _context.GoalTime.Update(goal);  
             }
+            await _context.SaveChangesAsync();
+            return Ok(new Goal(goal));
         }
 
         /// <summary>
-        /// Get goal time in minutes <see cref="Goal"/>s that match the given classification.
+        /// Get goal time in minutes <see cref="Goal"/>s that matches ChannelName and DefinitionId
         /// </summary>
         /// <param name="ChannelName"></param>
         /// <param name="DefinitionId"></param>
-        [HttpGet]
+        [HttpGet("{DefinitionId}/{ChannelName}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Goal), Description = "Get the Goal for given Channel and Definition-Id")]
         [ValidateModelState]
         public virtual async Task<IActionResult> GetGoalTimes([Required]int DefinitionId, [Required]string ChannelName)

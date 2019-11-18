@@ -219,6 +219,12 @@ namespace Maestro.Data
                   gt.DefinitionId,
                   gt.ChannelId
               });
+
+            builder.Entity<GoalTime>()
+                .HasOne(gt => gt.Channel)
+                .WithMany()
+                .HasForeignKey(gt => gt.ChannelId);
+               
             builder.ForSqlServerIsSystemVersioned<RepositoryBranchUpdate, RepositoryBranchUpdateHistory>("6 MONTH");
 
             builder.Entity<RepositoryBranchUpdateHistory>()

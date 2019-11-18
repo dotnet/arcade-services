@@ -169,5 +169,6 @@ namespace Maestro.Data.Models
         public int ChannelId { get; set; }
         public int DefinitionId { get; set; }
         public int Minutes { get; set; }
+        public Channel Channel { get; set; }
     }
 }
