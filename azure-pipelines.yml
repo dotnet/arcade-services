@@ -239,8 +239,8 @@ stages:
         -TsaCodebaseName "Arcade-Services"
         -TsaPublish $True'
 
-- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-  - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+- ${{ if eq('a', 'a') }}:
+  - ${{ if eq('a', 'a') }}:
     - template: eng\deploy.yaml
       parameters:
         DeploymentEnvironment: Staging
