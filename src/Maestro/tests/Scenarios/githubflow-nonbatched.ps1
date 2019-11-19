@@ -27,7 +27,7 @@ $source1Assets = @(
     }
 )
 
-$sourceBuild2Number = Get-Random
+$source2BuildNumber = Get-Random
 $source2Commit = Get-Random
 $source2Assets = @(
     @{
@@ -42,14 +42,14 @@ $source2Assets = @(
 
 $expectedDependencies1 =@(
         "Name:             Foo"
-        "Version:          1.1.0",
+        "Version:          1\.1\.0",
         "Repo:             $sourceRepoUri",
         "Commit:           $sourceCommit",
         "Type:             Product",
         "Pinned:           False",
         "",
         "Name:             Bar",
-        "Version:          2.1.0",
+        "Version:          2\.1\.0",
         "Repo:             $sourceRepoUri",
         "Commit:           $sourceCommit",
         "Type:             Product",
@@ -138,7 +138,7 @@ try {
 
     Write-Host "Set up another build for intake into target repository"
     # Create a build for the source repo
-    $buildId = New-Build -repository $sourceRepoUri -branch $sourceBranch -commit $source2Commit -buildNumber $sourceBuild2Number -assets $source2Assets
+    $buildId = New-Build -repository $sourceRepoUri -branch $sourceBranch -commit $source2Commit -buildNumber $source2BuildNumber -assets $source2Assets
     # Add the build to the target channel
     Add-Build-To-Channel $buildId $testChannelName
 

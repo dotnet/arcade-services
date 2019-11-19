@@ -16,7 +16,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Build = Maestro.Data.Models.Build;
 using Channel = Maestro.Web.Api.v2018_07_16.Models.Channel;
-using Castle.Core.Resource;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
 {
