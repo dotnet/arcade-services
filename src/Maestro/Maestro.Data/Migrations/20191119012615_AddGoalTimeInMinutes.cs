@@ -2,7 +2,7 @@
 
 namespace Maestro.Data.Migrations
 {
-    public partial class goaltime : Migration
+    public partial class AddGoalTimeInMinutes : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -17,7 +17,18 @@ namespace Maestro.Data.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_GoalTime", x => new { x.DefinitionId, x.ChannelId });
+                    table.ForeignKey(
+                        name: "FK_GoalTime_Channels_ChannelId",
+                        column: x => x.ChannelId,
+                        principalTable: "Channels",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GoalTime_ChannelId",
+                table: "GoalTime",
+                column: "ChannelId");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

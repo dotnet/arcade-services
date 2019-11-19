@@ -10,8 +10,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Maestro.Data.Migrations
 {
     [DbContext(typeof(BuildAssetRegistryContext))]
-    [Migration("20191118205747_AddGoalUpdate")]
-    partial class AddGoalUpdate
+    [Migration("20191119012615_AddGoalTimeInMinutes")]
+    partial class AddGoalTimeInMinutes
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

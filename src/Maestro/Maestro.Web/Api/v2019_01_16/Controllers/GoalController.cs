@@ -56,18 +56,9 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                     ChannelId = channel.Id
                 };
                 await _context.GoalTime.AddAsync(goal);
-                var goalTest = CreatedAtRoute(
-                    new
-                    {
-                        action = "CreateGoal",
-                        DefinitionId = DefinitionId,
-                        Minutes = GoalInMinutes,
-                        ChannelId = channel.Id
-                    },
-                    new Goal(goal));
             }
             else
-            // If the combination of Channel and DefinitionId already exists
+            // If the combination of Channel and DefinitionId already exists then update the exisiting record
             {
                 goal.Minutes = GoalInMinutes;
                 _context.GoalTime.Update(goal);  
@@ -82,14 +73,24 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         /// <param name="ChannelName"></param>
         /// <param name="DefinitionId"></param>
         [HttpGet("{DefinitionId}/{ChannelName}")]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Goal), Description = "Get the Goal for given Channel and Definition-Id")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Goal), Description = "Get the Goal for a given Channel and Definition-Id")]
         [ValidateModelState]
         public virtual async Task<IActionResult> GetGoalTimes([Required]int DefinitionId, [Required]string ChannelName)
         {
             Data.Models.Channel channel = await _context.Channels
                     .Where(c => c.Name.Equals(ChannelName)).FirstOrDefaultAsync();
+            if (channel == null)
+            {
+                return NotFound();
+            }
+
             Data.Models.GoalTime goal = await _context.GoalTime
             .Where(g => g.DefinitionId == DefinitionId && g.ChannelId == channel.Id).FirstOrDefaultAsync();
+            
+            if (goal == null)
+            {
+                return NotFound();
+            }
             return Ok(goal); ;
         }
     }
