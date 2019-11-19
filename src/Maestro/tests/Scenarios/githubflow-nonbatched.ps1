@@ -8,15 +8,15 @@ param(
 )
 
 $subscriptionId = $null
-$pullRequestBaseBranch = $null
 $testChannelName = Get-Random
 $sourceRepoName = "maestro-test1"
+$sourceBranch = "master"
 $targetRepoName = "maestro-test2"
 $targetBranch = Get-Random
-$sourceBuildNumber = Get-Random
-$sourceCommit = Get-Random
-$sourceBranch = "master"
-$sourceAssets = @(
+
+$source1BuildNumber = Get-Random
+$source1Commit = Get-Random
+$source1Assets = @(
     @{
         name = "Foo"
         version = "1.1.0"
@@ -26,6 +26,53 @@ $sourceAssets = @(
         version = "2.1.0"
     }
 )
+
+$source2BuildNumber = Get-Random
+$source2Commit = Get-Random
+$source2Assets = @(
+    @{
+        name = "Foo"
+        version = "1.17.0"
+    },
+    @{
+        name = "Bar"
+        version = "2.17.0"
+    }
+)
+
+$expectedDependencies1 =@(
+        "Name:             Foo"
+        "Version:          1\.1\.0",
+        "Repo:             $sourceRepoUri",
+        "Commit:           $sourceCommit",
+        "Type:             Product",
+        "Pinned:           False",
+        "",
+        "Name:             Bar",
+        "Version:          2\.1\.0",
+        "Repo:             $sourceRepoUri",
+        "Commit:           $sourceCommit",
+        "Type:             Product",
+        "Pinned:           False",
+        ""
+    )
+
+$expectedDependencies2 = @(
+        "Name:             Foo"
+        "Version:          1\.17\.0",
+        "Repo:             $sourceRepoUri",
+        "Commit:           $source2Commit",
+        "Type:             Product",
+        "Pinned:           False",
+        "",
+        "Name:             Bar",
+        "Version:          2\.17\.0",
+        "Repo:             $sourceRepoUri",
+        "Commit:           $source2Commit",
+        "Type:             Product",
+        "Pinned:           False",
+        ""
+    )
 
 try {
     Write-Host
@@ -50,7 +97,7 @@ try {
 
     Write-Host "Set up build for intake into target repository"
     # Create a build for the source repo
-    $buildId = New-Build -repository $sourceRepoUri -branch $sourceBranch -commit $sourceCommit -buildNumber $sourceBuildNumber -assets $sourceAssets
+    $buildId = New-Build -repository $sourceRepoUri -branch $sourceBranch -commit $source1Commit -buildNumber $source1BuildNumber -assets $source1Assets
     # Add the build to the target channel
     Add-Build-To-Channel $buildId $testChannelName
 
@@ -82,30 +129,41 @@ try {
 
     Write-Host "Waiting on PR to be opened in $targetRepoUri"
 
-    $expectedDependencies = @(
-        "Name:             Foo"
-        "Version:          1\.1\.0",
-        "Repo:             $sourceRepoUri",
-        "Commit:           $sourceCommit",
-        "Type:             Product",
-        "Pinned:           False",
-        "",
-        "Name:             Bar",
-        "Version:          2\.1\.0",
-        "Repo:             $sourceRepoUri",
-        "Commit:           $sourceCommit",
-        "Type:             Product",
-        "Pinned:           False",
-        ""
-    )
+    Write-Host "Checking Opened PR in $targetBranch $targetRepoName ..."
+    $expectedPRTitle = "[$targetBranch] Update dependencies from $githubTestOrg/$sourceRepoName"
+    $pullRequest = Check-Github-PullRequest-Created $targetRepoName $targetBranch
+    Validate-Github-PullRequest-Contents $pullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies1
 
-    $success = Check-NonBatched-Github-PullRequest $sourceRepoName $targetRepoName $targetBranch $expectedDependencies
+    # Now, add a new build and check that the dependencies were updated in the same pull request.
 
-    if (!$success) {
-        throw "Pull request failed to open."
-    } else {
-        Write-Host "Test passed"
-    }
+    Write-Host "Set up another build for intake into target repository"
+    # Create a build for the source repo
+    $buildId = New-Build -repository $sourceRepoUri -branch $sourceBranch -commit $source2Commit -buildNumber $source2BuildNumber -assets $source2Assets
+    # Add the build to the target channel
+    Add-Build-To-Channel $buildId $testChannelName
+
+    Write-Host "Trigger the dependency update"
+    # Trigger the subscription
+    Trigger-Subscription $subscriptionId
+
+    $pullRequestBaseBranch = $pullRequest.head.ref
+
+    Write-Host "Waiting for PR to be updated in $targetRepoUri"
+    Validate-PullRequest-Dependencies $targetRepoName $pullRequestBaseBranch $expectedDependencies2 10
+
+    Write-Host "Remove the build from the channel and verify that the original dependencies are restored"
+    # Then remove the second build from the channel, trigger the sub again, and it should revert back to the original
+    # dependency set
+    Remove-Build-From-Channel $buildId $testChannelName
+
+    Write-Host "Trigger the dependency update"
+    # Trigger the subscription
+    Trigger-Subscription $subscriptionId
+
+    Write-Host "Waiting for PR to be updated in $targetRepoUri"
+    Validate-PullRequest-Dependencies $targetRepoName $pullRequestBaseBranch $expectedDependencies1 5
+
+    Write-Host "Test passed"
 } finally {
     Teardown
 }
