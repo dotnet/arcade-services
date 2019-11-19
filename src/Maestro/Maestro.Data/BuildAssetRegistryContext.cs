@@ -181,12 +181,12 @@ namespace Maestro.Data
             builder.Entity<Repository>().HasKey(r => new {r.RepositoryName});
 
             builder.Entity<RepositoryBranch>()
-            .HasKey(
-                rb => new
-                {
-                    rb.RepositoryName,
-                    rb.BranchName
-                });
+                .HasKey(
+                    rb => new
+                    {
+                        rb.RepositoryName,
+                        rb.BranchName
+                    });
 
             builder.Entity<RepositoryBranch>()
                 .HasOne(rb => rb.Repository)
@@ -194,12 +194,12 @@ namespace Maestro.Data
                 .HasForeignKey(rb => new {rb.RepositoryName});
 
             builder.Entity<RepositoryBranchUpdate>()
-            .HasKey(
-                ru => new
-                {
-                    ru.RepositoryName,
-                    ru.BranchName
-                });
+                .HasKey(
+                    ru => new
+                    {
+                        ru.RepositoryName,
+                        ru.BranchName
+                    });
 
             builder.Entity<RepositoryBranchUpdate>()
                 .HasOne(ru => ru.RepositoryBranch)
@@ -213,17 +213,18 @@ namespace Maestro.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<GoalTime>()
-              .HasKey(
-              gt => new
-              {
-                  gt.DefinitionId,
-                  gt.ChannelId
-              });
+                .HasKey(
+                    gt => new
+                    {
+                        gt.DefinitionId,
+                        gt.ChannelId
+                    });
 
             builder.Entity<GoalTime>()
                 .HasOne(gt => gt.Channel)
                 .WithMany()
                 .HasForeignKey(gt => gt.ChannelId);
+
             builder.ForSqlServerIsSystemVersioned<RepositoryBranchUpdate, RepositoryBranchUpdateHistory>("6 MONTH");
 
             builder.Entity<RepositoryBranchUpdateHistory>()
