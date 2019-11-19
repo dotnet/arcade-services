@@ -45,7 +45,7 @@ namespace Maestro.Data.Models
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
-        
+
         public string Commit { get; set; }
 
         public int? AzureDevOpsBuildId { get; set; }
@@ -162,13 +162,5 @@ namespace Maestro.Data.Models
         // Time between when the dependent build was produced and when it was first added as a dependency
         // To this build's repository and branch
         public double TimeToInclusionInMinutes { get; set; }
-    }
-
-    public class GoalTime
-    {
-        public int ChannelId { get; set; }
-        public int DefinitionId { get; set; }
-        public int Minutes { get; set; }
-        public Channel Channel { get; set; }
     }
 }

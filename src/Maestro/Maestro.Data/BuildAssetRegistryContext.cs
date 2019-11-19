@@ -136,19 +136,19 @@ namespace Maestro.Data
 
             builder.Entity<ChannelReleasePipeline>()
                 .HasKey(crp => new {crp.ChannelId, crp.ReleasePipelineId});
-            
+
             builder.Entity<ChannelReleasePipeline>()
                 .HasOne(crp => crp.Channel)
                 .WithMany(c => c.ChannelReleasePipelines)
                 .HasForeignKey(rcp => rcp.ChannelId)
                 .OnDelete(DeleteBehavior.Restrict);
-            
+
             builder.Entity<ChannelReleasePipeline>()
                 .HasOne(crp => crp.ReleasePipeline)
                 .WithMany(rp => rp.ChannelReleasePipelines)
                 .HasForeignKey(crp => crp.ReleasePipelineId)
                 .OnDelete(DeleteBehavior.Restrict);
-            
+
             builder.Entity<ApplicationUserPersonalAccessToken>()
                 .HasIndex(
                     t => new
@@ -224,7 +224,6 @@ namespace Maestro.Data
                 .HasOne(gt => gt.Channel)
                 .WithMany()
                 .HasForeignKey(gt => gt.ChannelId);
-               
             builder.ForSqlServerIsSystemVersioned<RepositoryBranchUpdate, RepositoryBranchUpdateHistory>("6 MONTH");
 
             builder.Entity<RepositoryBranchUpdateHistory>()
@@ -362,7 +361,7 @@ FROM traverse;",
             {
                 var build = dict[id];
                 // Get newer builds data for this channel.
-                var newer = possibleBuilds.Where(b => b.GitHubRepository == build.GitHubRepository && 
+                var newer = possibleBuilds.Where(b => b.GitHubRepository == build.GitHubRepository &&
                                                     b.AzureDevOpsRepository == build.AzureDevOpsRepository &&
                                                     b.DateProduced > build.DateProduced);
                 dict[id].Staleness = newer.Count();

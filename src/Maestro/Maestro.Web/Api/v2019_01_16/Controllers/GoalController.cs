@@ -27,32 +27,30 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         }
 
         /// <summary>
-        ///   Exposes methods to set goal time <see cref="Goal"/>
+        /// Sets a build time <see cref="Goal"/> for a given Definition in a Channel. This is captured for the Power BI Dashboard -Internal Report under .Net Core Engineering Services workspace.
         /// </summary>
-        /// <param name="ChannelName"></param>
-        /// <param name="DefinitionId"></param>
-        /// <param name="GoalInMinutes"></param>
+        /// <param name="channelName">Target Channel Name for the build time Eg. .Net Core 5</param>
+        /// <param name="definitionId">Azure DevOps pipeline Definition Id</param>
+        /// <param name="goalInMinutes">Build time goal in minutes</param>
         [HttpPost("{DefinitionId}/{ChannelName}")]
-        [SwaggerApiResponse(System.Net.HttpStatusCode.Created, Type = typeof(Models.Goal), Description = "Goal for given Channel and Definition-Id is created/updated")]
+        [SwaggerApiResponse(System.Net.HttpStatusCode.Created, Type = typeof(Models.Goal), Description = "Sets a build time goal for a given Definition in a Channel.")]
         [ValidateModelState]
-        public virtual async Task<IActionResult> Create([Required] int DefinitionId, [Required] string ChannelName, [Required] int GoalInMinutes)
+        public virtual async Task<IActionResult> Create([Required] int definitionId, [Required] string channelName, [Required] int goalInMinutes)
         {
             Data.Models.Channel channel = await _context.Channels
-                    .Where(c => c.Name.Equals(ChannelName)).FirstOrDefaultAsync();
+                    .Where(c => c.Name.Equals(channelName)).FirstOrDefaultAsync();
             if (channel == null)
             {
                 return NotFound();
             }
-
             Data.Models.GoalTime goal = await _context.GoalTime
-                .Where(g => g.DefinitionId == DefinitionId && g.ChannelId == channel.Id).FirstOrDefaultAsync();
-           
+                .Where(g => g.DefinitionId == definitionId && g.ChannelId == channel.Id).FirstOrDefaultAsync();
             if (goal == null)
             {
                 goal = new Data.Models.GoalTime
                 {
-                    DefinitionId = DefinitionId,
-                    Minutes = GoalInMinutes,
+                    DefinitionId = definitionId,
+                    Minutes = goalInMinutes,
                     ChannelId = channel.Id
                 };
                 await _context.GoalTime.AddAsync(goal);
@@ -60,38 +58,36 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             else
             // If the combination of Channel and DefinitionId already exists then update the exisiting record
             {
-                goal.Minutes = GoalInMinutes;
-                _context.GoalTime.Update(goal);  
+                goal.Minutes = goalInMinutes;
+                _context.GoalTime.Update(goal);
             }
             await _context.SaveChangesAsync();
             return Ok(new Goal(goal));
         }
 
         /// <summary>
-        /// Get goal time in minutes <see cref="Goal"/>s that matches ChannelName and DefinitionId
+        /// Gets the build time <see cref="Goal"/> for a given Definition in a Channel. This is captured for the Power BI Dashboard -Internal Report under .Net Core Engineering Services workspace.
         /// </summary>
-        /// <param name="ChannelName"></param>
-        /// <param name="DefinitionId"></param>
+        /// <param name="channelName">Channel Name for the build time Eg. .Net Core 5</param>
+        /// <param name="definitionId">Azure DevOps pipeline Definition Id</param>
         [HttpGet("{DefinitionId}/{ChannelName}")]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Goal), Description = "Get the Goal for a given Channel and Definition-Id")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Goal), Description = "Gets the build time goal for a given Definition in a Channel.")]
         [ValidateModelState]
-        public virtual async Task<IActionResult> GetGoalTimes([Required]int DefinitionId, [Required]string ChannelName)
+        public virtual async Task<IActionResult> GetGoalTimes([Required]int definitionId, [Required]string channelName)
         {
             Data.Models.Channel channel = await _context.Channels
-                    .Where(c => c.Name.Equals(ChannelName)).FirstOrDefaultAsync();
+                    .Where(c => c.Name.Equals(channelName)).FirstOrDefaultAsync();
             if (channel == null)
             {
                 return NotFound();
             }
-
             Data.Models.GoalTime goal = await _context.GoalTime
-            .Where(g => g.DefinitionId == DefinitionId && g.ChannelId == channel.Id).FirstOrDefaultAsync();
-            
+            .Where(g => g.DefinitionId == definitionId && g.ChannelId == channel.Id).FirstOrDefaultAsync();
             if (goal == null)
             {
                 return NotFound();
             }
-            return Ok(goal); ;
+            return Ok(goal);
         }
     }
 }
