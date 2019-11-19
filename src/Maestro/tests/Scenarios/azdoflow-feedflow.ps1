@@ -122,7 +122,7 @@ try {
 
     if ($success) {
         Write-Host "Test passed"
-        
+
     } else {
         throw "Pull request failed to open."
     }
