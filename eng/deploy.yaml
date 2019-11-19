@@ -136,6 +136,8 @@ stages:
   - deploy
   variables:
   - group: ${{ parameters.VariableGroup }}
+  - name: MaestroTestEndpoint
+    value: ${{ parameters.MaestroTestEndpoint }}
   jobs:
   - job: scenario
     displayName: Scenario tests
