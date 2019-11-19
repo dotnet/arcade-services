@@ -32,13 +32,13 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         /// <param name="channelName">Target Channel Name for the build time Eg. .Net Core 5</param>
         /// <param name="definitionId">Azure DevOps pipeline Definition Id</param>
         /// <param name="goalInMinutes">Build time goal in minutes</param>
-        [HttpPost("{DefinitionId}/{ChannelName}")]
+        [HttpPost("channelName/{channelName}/definitionId/{definitionId}")]
         [SwaggerApiResponse(System.Net.HttpStatusCode.Created, Type = typeof(Models.Goal), Description = "Sets a build time goal for a given Definition in a Channel.")]
         [ValidateModelState]
         public virtual async Task<IActionResult> Create([Required] int definitionId, [Required] string channelName, [Required] int goalInMinutes)
         {
             Data.Models.Channel channel = await _context.Channels
-                    .Where(c => c.Name.Equals(channelName)).FirstOrDefaultAsync();
+                .Where(c => c.Name.Equals(channelName)).FirstOrDefaultAsync();
             if (channel == null)
             {
                 return NotFound();
@@ -70,19 +70,19 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         /// </summary>
         /// <param name="channelName">Channel Name for the build time Eg. .Net Core 5</param>
         /// <param name="definitionId">Azure DevOps pipeline Definition Id</param>
-        [HttpGet("{DefinitionId}/{ChannelName}")]
+        [HttpGet("channelName/{channelName}/definitionId/{definitionId}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Goal), Description = "Gets the build time goal for a given Definition in a Channel.")]
         [ValidateModelState]
         public virtual async Task<IActionResult> GetGoalTimes([Required]int definitionId, [Required]string channelName)
         {
             Data.Models.Channel channel = await _context.Channels
-                    .Where(c => c.Name.Equals(channelName)).FirstOrDefaultAsync();
+                .Where(c => c.Name.Equals(channelName)).FirstOrDefaultAsync();
             if (channel == null)
             {
                 return NotFound();
             }
             Data.Models.GoalTime goal = await _context.GoalTime
-            .Where(g => g.DefinitionId == definitionId && g.ChannelId == channel.Id).FirstOrDefaultAsync();
+                .Where(g => g.DefinitionId == definitionId && g.ChannelId == channel.Id).FirstOrDefaultAsync();
             if (goal == null)
             {
                 return NotFound();
