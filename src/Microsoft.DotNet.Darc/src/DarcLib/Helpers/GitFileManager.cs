@@ -287,6 +287,10 @@ namespace Microsoft.DotNet.DarcLib
             XmlNode currentNode = packageSourcesNode.FirstChild;
 
             var managedSources = GetManagedPackageSources(maestroManagedFeeds).OrderByDescending(t => t.feed).ToList();
+            // This will be used to denote whether we should delete a managed source. Managed sources should only
+            // be deleted within the maestro comment block. This allows for repository owners to use specific feeds from
+            // other channels or releases in special cases.
+            bool withinMaestroComments = false;
 
             // Remove all managed feeds and Maestro's comments
             while (currentNode != null)
@@ -304,7 +308,7 @@ namespace Microsoft.DotNet.DarcLib
                             return nugetConfig;
                         }
 
-                        if (IsMaestroManagedFeed(feedValue.Value))
+                        if (withinMaestroComments && IsMaestroManagedFeed(feedValue.Value))
                         {
                             currentNode = RemoveCurrentNode(currentNode);
                             continue;
@@ -320,9 +324,10 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 else if (currentNode.NodeType == XmlNodeType.Comment)
                 {
-                    if (currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase) 
-                        || currentNode.Value.Equals(MaestroEndComment, StringComparison.OrdinalIgnoreCase))
+                    if (currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase) ||
+                        currentNode.Value.Equals(MaestroEndComment, StringComparison.OrdinalIgnoreCase))
                     {
+                        withinMaestroComments = currentNode.Value.Equals(MaestroBeginComment, StringComparison.OrdinalIgnoreCase);
                         currentNode = RemoveCurrentNode(currentNode);
                         continue;
                     }
