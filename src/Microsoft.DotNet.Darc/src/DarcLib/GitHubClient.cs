@@ -480,8 +480,8 @@ namespace Microsoft.DotNet.DarcLib
             GitFile newFile = new GitFile(
                 path + "/" + treeItem.Path,
                 blob.Content,
-                encoding)
-            { Mode = treeItem.Mode };
+                encoding,
+                treeItem.Mode);
 
             return newFile;
         }

@@ -25,7 +25,12 @@ namespace Microsoft.DotNet.DarcLib
         {
         }
 
-        public GitFile(string filePath, string content, ContentEncoding contentEncoding)
+        public GitFile(
+            string filePath,
+            string content,
+            ContentEncoding contentEncoding,
+            string mode = "100644",
+            GitFileOperation operation = GitFileOperation.Add)
         {
             FilePath = filePath;
             // TODO: Newline normalization should happen on the writer side,
@@ -37,17 +42,19 @@ namespace Microsoft.DotNet.DarcLib
                 Content = $"{Content}\n";
             }
             ContentEncoding = contentEncoding;
+            Mode = mode;
+            Operation = operation;
         }
 
         public string FilePath { get; }
 
-        public string Content { get; set; }
+        public string Content { get; }
 
-        public ContentEncoding ContentEncoding { get; set; }
+        public ContentEncoding ContentEncoding { get; }
 
-        public string Mode { get; set; } = "100644";
+        public string Mode { get; } = "100644";
 
-        public GitFileOperation Operation { get; set; } = GitFileOperation.Add;
+        public GitFileOperation Operation { get; } = GitFileOperation.Add;
 
         private static string GetIndentedXmlBody(XmlDocument xmlDocument)
         {
