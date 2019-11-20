@@ -430,7 +430,7 @@ namespace Microsoft.DotNet.DarcLib
 
             if (Cache != null)
             {
-                var cachedFile = await Cache.GetOrCreateAsync(treeItem.Sha, async (entry) =>
+                GitFile cachedFile = await Cache.GetOrCreateAsync(treeItem.Sha, async (entry) =>
                 {
                     GitFile file = await GetGitItemImpl(path, treeItem, owner, repo);
 
