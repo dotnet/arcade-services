@@ -443,9 +443,6 @@ namespace Microsoft.DotNet.DarcLib
                     return file;
                 });
 
-                // Change the cached file back to its default state (Add operation).
-                // If the file was found in the cache, it means the file exists in the repo we are checking.
-                cachedFile.Operation = GitFileOperation.Add;
                 return cachedFile;
             }
             else
@@ -485,8 +482,8 @@ namespace Microsoft.DotNet.DarcLib
             GitFile newFile = new GitFile(
                 path + "/" + treeItem.Path,
                 blob.Content,
-                encoding)
-            { Mode = treeItem.Mode };
+                encoding,
+                treeItem.Mode);
 
             return newFile;
         }

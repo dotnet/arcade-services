@@ -804,8 +804,12 @@ namespace Microsoft.DotNet.DarcLib
                     if (!engCommonFiles.Where(f => f.FilePath == file.FilePath).Any())
                     {
                         deletedFiles.Add(file.FilePath);
-                        file.Operation = GitFileOperation.Delete;
-                        filesToCommit.Add(file);
+                        filesToCommit.Add(new GitFile(
+                                file.FilePath,
+                                file.Content,
+                                file.ContentEncoding,
+                                file.Mode,
+                                GitFileOperation.Delete));
                     }
                 }
 

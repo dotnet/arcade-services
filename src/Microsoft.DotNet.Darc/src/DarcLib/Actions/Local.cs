@@ -86,8 +86,12 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         if (!engCommonFiles.Where(f => f.FilePath == file.FilePath).Any())
                         {
-                            file.Operation = GitFileOperation.Delete;
-                            filesToUpdate.Add(file);
+                            filesToUpdate.Add(new GitFile(
+                                file.FilePath,
+                                file.Content,
+                                file.ContentEncoding,
+                                file.Mode,
+                                GitFileOperation.Delete));
                         }
                     }
                 }
