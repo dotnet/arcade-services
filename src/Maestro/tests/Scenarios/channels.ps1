@@ -26,8 +26,8 @@ try {
 
     # Get the channel and make sure it's there
     Write-Host "Checking that '$newChannelName' exists"
-    $channels = Darc-Command get-channels 
-    if (-not $channels.Contains($newChannelName)) {
+    $channels = Darc-Command get-channels
+    if (-not $channels -match $newChannelName) {
         throw "Cannot find `'$newChannelName`' after creating it."
     } else {
         Write-Host "Checking that '$newChannelName' exists"
