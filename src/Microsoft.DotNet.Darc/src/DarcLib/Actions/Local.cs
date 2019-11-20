@@ -86,6 +86,11 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         if (!engCommonFiles.Where(f => f.FilePath == file.FilePath).Any())
                         {
+                            // This is a file in the repo's eng/common folder that isn't present in Arcade at the
+                            // requested SHA so delete it during the update.
+                            // GitFile instances do not have public setters since we insert/retrieve them from an
+                            // In-memory cache during remote updates and we don't want anything to modify the cached,
+                            // references, so add a copy with a Delete FileOperation.
                             filesToUpdate.Add(new GitFile(
                                 file.FilePath,
                                 file.Content,
