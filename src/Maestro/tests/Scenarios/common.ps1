@@ -555,12 +555,12 @@ function Check-AzDO-PullRequest-Created($targetRepoName, $targetBranch) {
 
 function Compare-Array-Output($expected, $actual) {
     if ($expected.Count -ne $actual.Count) {
-        Write-Error "Expected $($expected.Count) lines, got $($actual.Count) lines."
+        Write-Host "Expected $($expected.Count) lines, got $($actual.Count) lines."
         return $false
     }
     for ($i = 0; $i -lt $expected.Count; $i++) {
         if ($actual[$i] -notmatch $expected[$i]) {
-            Write-Error "Line $i not matched`nExpected '$($expected[$i])'`nActual   '$($actual[$i])'"
+            Write-Host "Line $i not matched`nExpected '$($expected[$i])'`nActual   '$($actual[$i])'"
             return $false
         }
     }
