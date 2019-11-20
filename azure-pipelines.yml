@@ -11,8 +11,11 @@ variables:
 
 # CI and PR triggers
 trigger:
-- master
-- production
+  batch: true
+  branches:
+    include:
+    - master
+    - production
 pr:
 - master
 - production
