@@ -430,7 +430,7 @@ namespace Microsoft.DotNet.DarcLib
 
             if (Cache != null)
             {
-                return await Cache.GetOrCreateAsync(treeItem.Sha, async (entry) =>
+                var cachedFile = await Cache.GetOrCreateAsync(treeItem.Sha, async (entry) =>
                 {
                     GitFile file = await GetGitItemImpl(path, treeItem, owner, repo);
 
@@ -442,6 +442,11 @@ namespace Microsoft.DotNet.DarcLib
 
                     return file;
                 });
+
+                // Change the cached file back to its default state (Add operation).
+                // If the file was found in the cache, it means the file exists in the repo we are checking.
+                cachedFile.Operation = GitFileOperation.Add;
+                return cachedFile;
             }
             else
             {
