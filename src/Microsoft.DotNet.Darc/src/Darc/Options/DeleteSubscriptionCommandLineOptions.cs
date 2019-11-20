@@ -7,7 +7,7 @@ using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options
 {
-    [Verb("delete-subscription", HelpText = "Remove a subscription.")]
+    [Verb("delete-subscription", Hidden = true, HelpText = "Please use delete-subscriptions.")]
     class DeleteSubscriptionCommandLineOptions : CommandLineOptions
     {
         [Option('i', "id", Required = true, HelpText = "ID of subscription to delete.")]
