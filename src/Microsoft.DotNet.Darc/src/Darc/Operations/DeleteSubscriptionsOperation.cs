@@ -99,7 +99,7 @@ namespace Microsoft.DotNet.Darc.Operations
             }
             catch (Exception e)
             {
-                Logger.LogError(e, "Unexpected error while delete subscriptions.");
+                Logger.LogError(e, "Unexpected error while deleting subscriptions.");
                 return Constants.ErrorCode;
             }
         }
