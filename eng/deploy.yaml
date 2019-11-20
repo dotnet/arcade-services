@@ -23,8 +23,6 @@ stages:
   - group: ${{ parameters.VariableGroup }}
   - name: PublishProfile
     value: ${{ parameters.PublishProfile }}
-  - name: MaestroTestEndpoint
-    value: ${{ parameters.MaestroTestEndpoint }}
   jobs:
   - deployment: approval
     displayName: deployment approval (conditional)

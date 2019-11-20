@@ -11,8 +11,11 @@ variables:
 
 # CI and PR triggers
 trigger:
-- master
-- production
+  batch: true
+  branches:
+    include:
+    - master
+    - production
 pr:
 - master
 - production
@@ -263,4 +266,4 @@ stages:
         ServiceFabricConnection: Maestro-Prod
         Subscription: NetHelix
         TargetChannel: .NET Engineering Services - Prod
-        VariableGroup:
+        VariableGroup: MaestroProd KeyVault
