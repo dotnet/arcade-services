@@ -166,22 +166,3 @@ stages:
         arguments: -maestroInstallation "$(MaestroTestEndpoint)" -darcVersion "$(darcVersion)" -maestroBearerToken "$(scenario-test-maestro-token)" -githubPAT "$(maestro-scenario-test-github-token)" -azdoPAT "$(dn-bot-dnceng-build-rw-code-rw-release-rw)" -darcPackageSource "$(Pipeline.Workspace)\PackageArtifacts"
         workingDirectory: $(Pipeline.Workspace)/ScenarioTests
       timeoutInMinutes: 90
-
-- stage: deployDarc
-  displayName: Deploy DARC
-  dependsOn:
-  - validateDeployment
-  variables:
-  - name: MaestroPublishEndpoint
-    value: ${{ parameters.MaestroPublishEndpoint }}
-  jobs:
-  - job: darc
-    steps:
-    - download: current
-      artifact: AssetManifests
-    - task: PowerShell@2
-      displayName: Move build to channel
-      inputs:
-        targetType: filePath
-        filePath: $(Pipeline.Workspace)/_cibuild/ReleaseUtilities/update-channel.ps1
-        arguments: -maestroEndpoint "$(MaestroPublishEndpoint)" -barToken "$(MaestroAccessToken)" -targetChannel "$(TargetChannel)" -assetManifestPath "$(Pipeline.Workspace)/AssetManifests/Windows_NT-AnyCPU.xml"

@@ -253,7 +253,6 @@ stages:
         PublishProfile: Int
         ServiceFabricConnection: Maestro-Int
         Subscription: NetHelixStaging
-        TargetChannel: .NET Engineering Services - Int
         VariableGroup: MaestroInt KeyVault
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
     - template: eng\deploy.yaml
@@ -265,5 +264,4 @@ stages:
         PublishProfile: Prod
         ServiceFabricConnection: Maestro-Prod
         Subscription: NetHelix
-        TargetChannel: .NET Engineering Services - Prod
         VariableGroup: MaestroProd KeyVault
