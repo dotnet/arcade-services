@@ -4,6 +4,45 @@ set -e -x
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
+# This can be overridden in case we need to use a fork
+GRAFANA_BIN=/usr/sbin/grafana-server
+GRAFANA_URL=https://dotnet-eng-grafana.westus2.cloudapp.azure.com/
+
+
+OPTIONS=b:u:
+LONGOPTS=grafana-bin:,url:
+
+! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
+if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
+    # e.g. return value is 1
+    #  then getopt has complained about wrong arguments to stdout
+    exit 2
+fi
+
+eval set -- "$PARSED"
+
+# now enjoy the options in order and nicely split until we see --
+while true; do
+    case "$1" in
+        -b|--grafana-bin)
+            GRAFANA_BIN="$2"
+            shift 2
+            ;;
+        -u|--url)
+            GRAFANA_URL="$2"
+            shift 2
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            echo "BAD ARGUMENT PARSING"
+            exit 3
+            ;;
+    esac
+done
+
 export DEBIAN_FRONTEND=noninteractive
 
 # This is the grafana package repo that allos us to apt-get grafana
@@ -26,8 +65,6 @@ cp $DIR/grafana.ini /etc/grafana/local.ini
 chown root:grafana /etc/grafana/local.ini
 chmod g+r /etc/grafana/local.ini
 
-# This can be overridden in case we need to use a fork
-GRAFANA_BIN=/usr/sbin/grafana-server
 if [ ! -z "$1"]
 then
   GRAFANA_BIN=$1
@@ -46,6 +83,7 @@ cp $DIR/grafana-override.conf /etc/systemd/system/grafana-server.service.d/overr
 cat <<EOT > /etc/systemd/system/grafana-server.service.d/bin.conf
 [Service]
 Environment=GRAFANA_BIN=${GRAFANA_BIN}
+Environment=GF_SERVER_ROOT_URL=${GRAFANA_URL}
 EOT
 
 # Reset grafana-server and start it up again (or the first time)

@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Microsoft.DotNet.Configuration.Extensions\Microsoft.DotNet.Configuration.Extensions.csproj" />
     <ProjectReference Include="..\Shared\Microsoft.Dotnet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
+    <ProjectReference Include="..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
     <ProjectReference Include="..\shared\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj" />
   </ItemGroup>
 </Project>

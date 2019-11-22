@@ -7,18 +7,42 @@ parameters:
   VariableGroup: ''
   MaestroPublishEndpoint: ''
   MaestroTestEndpoint: ''
+  DotNetStatusEndpoint: ''
 
   # --- Secret Variable group requirements ---
   # maestro-admin-sql-connection-string
   # scenario-test-maestro-token
   # dn-bot-dnceng-build-rw-code-rw-release-rw
   # maestro-scenario-test-github-token
+  # dotnet-build-bot
+  # dotnet-build-bot-dotnet-eng-status-token
 
 stages:
+- stage: predeploy
+  displayName: Pre-Deployment
+  dependsOn:
+  - build
+  jobs:
+  - job: notifyStartDeployment
+    displayName: Notify deployment start
+    pool: server
+    steps:
+    - task: InvokeRESTAPI@1
+      displayName: Notify dotnet-eng-staus/start
+      inputs:
+        serviceConnection: ${{ parameters.DotNetStatusEndpoint }}
+        method: POST
+        headers: |
+          {
+            "Authorization": "Bearer $[dotnet-build-bot-dotnet-eng-status-token]",
+          }
+        urlSuffix: /arcade-services/$(Build.BuildNumber)/start
+
 - stage: deploy
   displayName: Deploy
   dependsOn:
   - build
+  - predeploy
   variables:
   - group: ${{ parameters.VariableGroup }}
   - name: PublishProfile
@@ -128,6 +152,26 @@ stages:
         DeploymentType: webDeploy
         RemoveAdditionalFilesFlag: true
 
+- stage: postdeploy
+  displayName: Post-Deployment
+  dependsOn:
+  - build
+  condition: always()
+  jobs:
+  - job: notifyEndDeployment
+    displayName: Notify deployment end
+    pool: server
+    steps:
+    - task: InvokeRESTAPI@1
+      displayName: Notify dotnet-eng-staus/end
+      inputs:
+        serviceConnection: .NET Engineering Deployment Notification - Staging
+        method: POST
+        headers: |
+          {
+            "Authorization": "Bearer $[dotnet-build-bot-dotnet-eng-status-token]",
+          }
+        urlSuffix: /arcade-services/$(Build.BuildNumber)/end
 - stage: validateDeployment
   displayName: Validate deployment
   dependsOn: 

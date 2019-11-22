@@ -73,6 +73,7 @@ namespace DotNet.Status.Web
         private void ConfigureConfiguration(IServiceCollection services)
         {
             services.Configure<GitHubConnectionOptions>(Configuration.GetSection("GitHub").Bind);
+            services.Configure<GrafanaOptions>(Configuration.GetSection("Grafana").Bind);
             services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth").Bind);
 
             services.Configure<SimpleSigninOptions>(o => { o.ChallengeScheme = GitHubScheme; });
@@ -131,7 +132,7 @@ namespace DotNet.Status.Web
                             policy.RequireAuthenticatedUser();
                             if (!Env.IsDevelopment())
                             {
-                                policy.RequireRole("github:team:dotnet/dnceng");
+                                policy.RequireRole("github:team:dotnet/dnceng", "github:team:dotnet/bots-high");
                             }
                         });
                 });

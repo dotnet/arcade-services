@@ -248,6 +248,7 @@ stages:
       parameters:
         DeploymentEnvironment: Staging
         DotNetStatusAppName: dotneteng-status-staging
+        DotNetStatusEndpoint: .NET Engineering Deployment Notification - Staging
         MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
         PublishProfile: Int
@@ -259,6 +260,7 @@ stages:
       parameters:
         DeploymentEnvironment: Production
         DotNetStatusAppName: dotneteng-status
+        DotNetStatusEndpoint: .NET Engineering Deployment Notification - Production
         MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         PublishProfile: Prod
