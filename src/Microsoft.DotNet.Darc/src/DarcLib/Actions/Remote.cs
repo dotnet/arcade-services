@@ -911,6 +911,17 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Retrieve a specific channel by id.
+        /// </summary>
+        /// <param name="channel">Channel id.</param>
+        /// <returns>Channel or null if not found.</returns>
+        public Task<Channel> GetChannelAsync(int channel)
+        {
+            CheckForValidBarClient();
+            return _barClient.GetChannelAsync(channel);
+        }
+
+        /// <summary>
         ///     Retrieve the latest build of a repository on a specific channel.
         /// </summary>
         /// <param name="repoUri">URI of repository to obtain a build for.</param>

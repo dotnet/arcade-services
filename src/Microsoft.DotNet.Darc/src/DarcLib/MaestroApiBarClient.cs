@@ -350,6 +350,23 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Retrieve a specific channel by id.
+        /// </summary>
+        /// <param name="channel">Channel id.</param>
+        /// <returns>Channel or null if not found.</returns>
+        public async Task<Channel> GetChannelAsync(int channel)
+        {
+            try
+            {
+                return await _barClient.Channels.GetChannelAsync(channel);
+            }
+            catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         ///     Retrieve the list of channels from the build asset registry.
         /// </summary>
         /// <param name="classification">Optional classification to get</param>

@@ -27,6 +27,9 @@ namespace Microsoft.DotNet.Darc.Operations
             _options = options;
         }
 
+        const int engLatestChannelId = 2;
+        const int eng3ChannelId = 344;
+
         public override async Task<int> ExecuteAsync()
         {
             try
@@ -34,21 +37,30 @@ namespace Microsoft.DotNet.Darc.Operations
                 RemoteFactory remoteFactory = new RemoteFactory(_options);
                 var barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(Logger);
 
+                Channel engLatestChannel = await barOnlyRemote.GetChannelAsync(engLatestChannelId);
+                Channel eng3Channel = await barOnlyRemote.GetChannelAsync(eng3ChannelId);
+
                 List<DefaultChannel> defaultChannels = (await barOnlyRemote.GetDefaultChannelsAsync()).ToList();
-                defaultChannels.Add(
-                    new DefaultChannel(0, "https://github.com/dotnet/arcade", true)
-                    {
-                        Branch = "master",
-                        Channel = await barOnlyRemote.GetChannelAsync(".NET Tools - Latest")
-                    }
-                );
-                defaultChannels.Add(
-                    new DefaultChannel(0, "https://github.com/dotnet/arcade", true)
-                    {
-                        Branch = "release/3.x",
-                        Channel = await barOnlyRemote.GetChannelAsync(".NET 3 Tools")
-                    }
-                );
+                if (engLatestChannel != null)
+                {
+                    defaultChannels.Add(
+                        new DefaultChannel(0, "https://github.com/dotnet/arcade", true)
+                        {
+                            Branch = "master",
+                            Channel = engLatestChannel
+                        }
+                    );
+                }
+                if (eng3Channel != null)
+                {
+                    defaultChannels.Add(
+                        new DefaultChannel(0, "https://github.com/dotnet/arcade", true)
+                        {
+                            Branch = "release/3.x",
+                            Channel = eng3Channel
+                        }
+                    );
+                }
                 List<Subscription> subscriptions = (await barOnlyRemote.GetSubscriptionsAsync()).ToList();
 
                 // Build, then prune out what we don't want to see if the user specified
