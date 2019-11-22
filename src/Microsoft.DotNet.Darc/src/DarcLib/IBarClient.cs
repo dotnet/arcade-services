@@ -115,6 +115,13 @@ namespace Microsoft.DotNet.DarcLib
         Task<Channel> GetChannelAsync(string channel);
 
         /// <summary>
+        ///     Retrieve a specific channel by id.
+        /// </summary>
+        /// <param name="channel">Channel id.</param>
+        /// <returns>Channel or null if not found.</returns>
+        Task<Channel> GetChannelAsync(int channelId);
+
+        /// <summary>
         ///     Retrieve a set of default channel associations based on the provided filters.
         /// </summary>
         /// <param name="repository">Repository name</param>

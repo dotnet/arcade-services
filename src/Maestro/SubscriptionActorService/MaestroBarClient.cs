@@ -232,5 +232,10 @@ namespace SubscriptionActorService
                 AzureDevOpsRepository = other.AzureDevOpsRepository,
             };
         }
+
+        public Task<Channel> GetChannelAsync(int channelId)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
