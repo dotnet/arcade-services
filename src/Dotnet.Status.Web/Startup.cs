@@ -131,7 +131,7 @@ namespace DotNet.Status.Web
                             policy.RequireAuthenticatedUser();
                             if (!Env.IsDevelopment())
                             {
-                                policy.RequireRole("github:team:dotnet/dnceng");
+                                policy.RequireRole("github:team:dotnet/dnceng", "github:team:dotnet/bots-high");
                             }
                         });
                 });
