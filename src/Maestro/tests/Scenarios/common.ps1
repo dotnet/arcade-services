@@ -255,6 +255,10 @@ function Darc-Get-Subscription($subscriptionId) {
     Darc-Command get-subscriptions --ids $subscriptionId
 }
 
+function Darc-Get-Subscription-Enabled($subscriptionId) {
+    return $(Darc-Command get-subscriptions --ids $subscriptionId) -match "- Enabled: True"
+}
+
 function Darc-Add-Subscription-Process-Output($output) {
     $match = $output -match "Successfully created new subscription with id '([a-f0-9-]+)'"
 
