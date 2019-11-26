@@ -255,6 +255,7 @@ stages:
         ServiceFabricConnection: Maestro-Int
         Subscription: NetHelixStaging
         VariableGroup: MaestroInt KeyVault
+        StatusVariableGroup: DotNetStatus Staging
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
     - template: eng\deploy.yaml
       parameters:
@@ -267,3 +268,4 @@ stages:
         ServiceFabricConnection: Maestro-Prod
         Subscription: NetHelix
         VariableGroup: MaestroProd KeyVault
+        StatusVariableGroup: DotNetStatus Production
