@@ -43,6 +43,15 @@ while true; do
     esac
 done
 
+if [ -z "${GRAFANA_BIN}"]; then
+  echo "Empty --grafana-bin"
+  exit 3
+fi
+if [ -z "${GRAFANA_URL}"]; then
+  echo "Empty --url"
+  exit 3
+fi
+
 export DEBIAN_FRONTEND=noninteractive
 
 # This is the grafana package repo that allos us to apt-get grafana
