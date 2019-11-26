@@ -44,8 +44,8 @@ while true; do
 done
 
 if [ -z "${GRAFANA_BIN}"]; then
-  echo "Empty --grafana-bin"
-  exit 3
+  echo "Empty --grafana-bin, using /usr/sbin/grafana-server"
+  GRAFANA_BIN=/usr/sbin/grafana-server
 fi
 if [ -z "${GRAFANA_URL}"]; then
   echo "Empty --url"

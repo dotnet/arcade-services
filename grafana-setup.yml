@@ -42,7 +42,7 @@ stages:
           clean: true
 
         - powershell: |
-            if (-not (Test-Path env:GrafanaBinPath)) { Write-Host "Missing GrafanaBinPath, ensure required variables are defined"; exit 1}
+            if (-not (Test-Path env:GrafanaUrl)) { Write-Host "Missing GrafanaUrl, ensure required variables are defined"; exit 1}
             if (-not (Test-Path env:TargetVmName)) { Write-Host "Missing TargetVmName, ensure required variables are defined"; exit 1}
             if (-not (Test-Path env:TargetResourceGroup)) { Write-Host "Missing TargetResourceGroup, ensure required variables are defined"; exit 1}
             Write-Host "All required variables defined"
@@ -82,4 +82,4 @@ stages:
               cd /tmp/grafana-init &&
               curl --silent --show-error --fail '$(UploadedUri)grafana-init-$(Build.BuildNumber)/grafana-init.tar.gz' -o ./grafana-init.tar.gz &&
               tar -xzf ./grafana-init.tar.gz &&
-              sudo bash ./setup.sh $(GrafanaBinPath)"
+              sudo bash ./setup.sh -b '$[GrafanaBinPath]' -u '$[GrafanaUrl]''"
