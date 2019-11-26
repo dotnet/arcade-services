@@ -56,8 +56,8 @@ export DEBIAN_FRONTEND=noninteractive
 
 # This is the grafana package repo that allos us to apt-get grafana
 # If we don't trust grafana.com, we're in hot water already, so this is fine
-add-apt-repository "deb https://packages.grafana.com/oss/deb stable main"
 wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
+add-apt-repository "deb https://packages.grafana.com/oss/deb stable main"
 
 apt-get update
 apt-get -y install python3-pip grafana
