@@ -69,8 +69,10 @@ case "${ENVIRONMENT}" in
     GRAFANA_GITHUB_APP_ID="283f62c4810d6fcb0dc4"
     ;;
   *)
-    echo "Invalid "
+    echo "Invalid environment"
+    exit 4
     ;;
+esac
 
 export DEBIAN_FRONTEND=noninteractive
 
