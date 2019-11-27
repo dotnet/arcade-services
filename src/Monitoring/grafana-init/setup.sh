@@ -6,11 +6,11 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 # This can be overridden in case we need to use a fork
 GRAFANA_BIN=/usr/sbin/grafana-server
-GRAFANA_URL=https://dotnet-eng-grafana.westus2.cloudapp.azure.com/
+GRAFANA_DOMAIN=https://dotnet-eng-grafana.westus2.cloudapp.azure.com/
 
 
-OPTIONS=b:u:
-LONGOPTS=grafana-bin:,url:
+OPTIONS=b:d:
+LONGOPTS=grafana-bin:,domain:
 
 ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
 if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
@@ -28,8 +28,8 @@ while true; do
             GRAFANA_BIN="$2"
             shift 2
             ;;
-        -u|--url)
-            GRAFANA_URL="$2"
+        -d|--domain)
+            GRAFANA_DOMAIN="$2"
             shift 2
             ;;
         --)
@@ -47,8 +47,8 @@ if [ -z "${GRAFANA_BIN}"]; then
   echo "Empty --grafana-bin, using /usr/sbin/grafana-server"
   GRAFANA_BIN=/usr/sbin/grafana-server
 fi
-if [ -z "${GRAFANA_URL}"]; then
-  echo "Empty --url"
+if [ -z "${GRAFANA_DOMAIN}"]; then
+  echo "Empty --domain"
   exit 3
 fi
 
@@ -92,7 +92,7 @@ cp $DIR/grafana-override.conf /etc/systemd/system/grafana-server.service.d/overr
 cat <<EOT > /etc/systemd/system/grafana-server.service.d/bin.conf
 [Service]
 Environment=GRAFANA_BIN=${GRAFANA_BIN}
-Environment=GF_SERVER_ROOT_URL=${GRAFANA_URL}
+Environment=GF_SERVER_DOMAIN=${GRAFANA_DOMAIN}
 EOT
 
 # Reset grafana-server and start it up again (or the first time)
