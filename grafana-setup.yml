@@ -42,7 +42,7 @@ stages:
           clean: true
 
         - powershell: |
-            if (-not (Test-Path env:GrafanaUrl)) { Write-Host "Missing GrafanaUrl, ensure required variables are defined"; exit 1}
+            if (-not (Test-Path env:GrafanaDomain)) { Write-Host "Missing GrafanaDomain, ensure required variables are defined"; exit 1}
             if (-not (Test-Path env:TargetVmName)) { Write-Host "Missing TargetVmName, ensure required variables are defined"; exit 1}
             if (-not (Test-Path env:TargetResourceGroup)) { Write-Host "Missing TargetResourceGroup, ensure required variables are defined"; exit 1}
             Write-Host "All required variables defined"
