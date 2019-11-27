@@ -7,10 +7,11 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 # This can be overridden in case we need to use a fork
 GRAFANA_BIN=/usr/sbin/grafana-server
 GRAFANA_DOMAIN=https://dotnet-eng-grafana.westus2.cloudapp.azure.com/
+ENVIRONMENT=staging
 
 
-OPTIONS=b:d:
-LONGOPTS=grafana-bin:,domain:
+OPTIONS=b:d:ps
+LONGOPTS=grafana-bin:,domain:,production,staging
 
 ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
 if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
@@ -32,6 +33,14 @@ while true; do
             GRAFANA_DOMAIN="$2"
             shift 2
             ;;
+        -p|--production)
+            ENVIRONMENT="production";
+            shift
+            ;;
+        -s|--staging)
+            ENVIRONMENT="production";
+            shift
+            ;;
         --)
             shift
             break
@@ -51,6 +60,17 @@ if [ -z "${GRAFANA_DOMAIN}"]; then
   echo "Empty --domain"
   exit 3
 fi
+
+case "${ENVIRONMENT}" in
+  staging)
+    GRAFANA_GITHUB_APP_ID="528abab479c866d69a70"
+    ;;
+  production)
+    GRAFANA_GITHUB_APP_ID="283f62c4810d6fcb0dc4"
+    ;;
+  *)
+    echo "Invalid "
+    ;;
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -74,11 +94,6 @@ cp $DIR/grafana.ini /etc/grafana/local.ini
 chown root:grafana /etc/grafana/local.ini
 chmod g+r /etc/grafana/local.ini
 
-if [ ! -z "$1"]
-then
-  GRAFANA_BIN=$1
-fi
-
 # This is used in grafana-override.conf to set environment variables
 # Ideally we'd just be able to use Environment= values,
 # But grafana uses EnvironmentFile= values, which override all
@@ -93,6 +108,10 @@ cat <<EOT > /etc/systemd/system/grafana-server.service.d/bin.conf
 [Service]
 Environment=GRAFANA_BIN=${GRAFANA_BIN}
 Environment=GF_SERVER_DOMAIN=${GRAFANA_DOMAIN}
+Environment=GF_SECURITY_SECRET_KEY=[vault(dotnet-grafana/grafana-aes-256-secret-key)]
+Environment=GF_AUTH_AUTH_GITHUB_CLIENT_ID=${GRAFANA_GITHUB_APP_ID}
+Environment=GF_AUTH_AUTH_GITHUB_CLIENT_SECRET=[vault(dotnet-grafana/dotnet-grafana-${Environment}-github-oauth-app-secret)]
+Environment=GF_EXTERNAL_IMAGE_STORAGE_AZURE_BLOB_ACCOUNT_KEY=[vault(dotnet-grafana/dotnetgrafana-storage-account-key)]
 EOT
 
 # Reset grafana-server and start it up again (or the first time)
