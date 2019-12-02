@@ -3,7 +3,6 @@
 # echo the command line with quotes, there are empty string arguments that are important, in particular, -b
 echo -n $0; for i in "$@"; do echo -n " "; echo -n \"$i\"; done; echo ""
 
-
 set -e -x
 
 EXIT_CODE=0
@@ -15,10 +14,10 @@ GRAFANA_BIN=/usr/sbin/grafana-server
 GRAFANA_DOMAIN=https://dotnet-eng-grafana.westus2.cloudapp.azure.com/
 ENVIRONMENT=staging
 
-
 OPTIONS=b:d:ps
 LONGOPTS=grafana-bin:,domain:,production,staging
 
+# check arguments and get normalized list
 ! PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
 if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     # e.g. return value is 1
@@ -26,6 +25,7 @@ if [[ ${PIPESTATUS[0]} -ne 0 ]]; then
     exit 2
 fi
 
+# set normalized argument list
 eval set -- "$PARSED"
 
 # now enjoy the options in order and nicely split until we see --
