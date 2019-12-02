@@ -90,5 +90,5 @@ stages:
               | Tee-Object -variable cmdoutput
               | findstr /c:"SETUP_EXIT_CODE=0"
               | Out-Null;
-              $cmdoutput |% {$_ -replace "\n","`n->"} | Write-Host;
+              $cmdoutput |% {$_ -replace "\n","`n->  "} | Write-Host;
               $LASTEXITCODE
