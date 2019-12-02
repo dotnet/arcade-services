@@ -117,8 +117,8 @@ cat <<EOT > /etc/systemd/system/grafana-server.service.d/bin.conf
 Environment=GRAFANA_BIN=${GRAFANA_BIN}
 Environment=GF_SERVER_DOMAIN=${GRAFANA_DOMAIN}
 Environment=GF_SECURITY_SECRET_KEY=[vault(dotnet-grafana/grafana-aes-256-secret-key)]
-Environment=GF_AUTH_AUTH_GITHUB_CLIENT_ID=${GRAFANA_GITHUB_APP_ID}
-Environment=GF_AUTH_AUTH_GITHUB_CLIENT_SECRET=[vault(dotnet-grafana/dotnet-grafana-${ENVIRONMENT}-github-oauth-app-secret)]
+Environment=GF_AUTH_GITHUB_CLIENT_ID=${GRAFANA_GITHUB_APP_ID}
+Environment=GF_AUTH_GITHUB_CLIENT_SECRET=[vault(dotnet-grafana/dotnet-grafana-${ENVIRONMENT}-github-oauth-app-secret)]
 Environment=GF_EXTERNAL_IMAGE_STORAGE_AZURE_BLOB_ACCOUNT_KEY=[vault(dotnet-grafana/dotnetgrafana-storage-account-key)]
 EOT
 
