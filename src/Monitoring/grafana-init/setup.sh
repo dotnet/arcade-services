@@ -40,7 +40,7 @@ while true; do
             shift
             ;;
         -s|--staging)
-            ENVIRONMENT="production";
+            ENVIRONMENT="staging";
             shift
             ;;
         --)
