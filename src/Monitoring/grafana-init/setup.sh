@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-echo $0 "$@"
+# echo the command line, there are empty string arguments that are important, in particular, -b
+echo -n $0; for i in "$@"; do echo -n " "; echo -n \"$i\"; done; echo ""
+
 
 set -e -x
 
