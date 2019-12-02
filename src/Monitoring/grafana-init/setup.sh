@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+echo $0 "$@"
+
 set -e -x
 
 EXIT_CODE=0
