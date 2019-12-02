@@ -2,6 +2,8 @@
 
 set -e -x
 
+EXIT_CODE=0
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 # This can be overridden in case we need to use a fork
@@ -125,4 +127,5 @@ grafana-cli plugins update-all
 systemctl daemon-reload
 systemctl enable grafana-server
 systemctl restart grafana-server
+echo "SETUP_EXIT_CODE=${EXIT_CODE}"
 

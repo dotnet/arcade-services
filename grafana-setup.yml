@@ -72,7 +72,7 @@ stages:
           displayName: Execute grafana-init/setup.sh on VM
           inputs:
             azureSubscription: DncEng-VSTS
-            scriptType: batch
+            scriptType: ps
             scriptLocation: inlineScript
             inlineScript: >-
               az vm run-command invoke
@@ -83,4 +83,4 @@ stages:
               cd /tmp/grafana-init &&
               curl --silent --show-error --fail '$(UploadedUri)grafana-init-$(Build.BuildNumber)/grafana-init.tar.gz' -o ./grafana-init.tar.gz &&
               tar -xzf ./grafana-init.tar.gz &&
-              sudo bash ./setup.sh -b '$(GrafanaBinPath)' -d '$(GrafanaDomain)' --$(GrafanaEnvironment)"
+              sudo bash ./setup.sh -b '$(GrafanaBinPath)' -d '$(GrafanaDomain)' --$(GrafanaEnvironment)" | tee -variable cmdoutput | findstr /c:"SETUP_EXIT_CODE=0"; Write-Host $cmdoutput; $LASTEXITCODE
