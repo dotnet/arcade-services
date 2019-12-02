@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# echo the command line, there are empty string arguments that are important, in particular, -b
+# echo the command line with quotes, there are empty string arguments that are important, in particular, -b
 echo -n $0; for i in "$@"; do echo -n " "; echo -n \"$i\"; done; echo ""
 
 
