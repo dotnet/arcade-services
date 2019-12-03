@@ -19,11 +19,11 @@ namespace Maestro.Web.Api.v2019_01_16.Models
             }
             DefinitionId = other.DefinitionId;
             Minutes = other.Minutes;
-            ChannelId = other.ChannelId;
+            Channel = other.Channel == null ? null : new v2018_07_16.Models.Channel(other.Channel);
         }
 
         public int DefinitionId { get; set; }
-        public int ChannelId { get; set; }
+        public v2018_07_16.Models.Channel Channel { get; set; }
         public int Minutes { get; set; }
         public class GoalRequestJson
         {
