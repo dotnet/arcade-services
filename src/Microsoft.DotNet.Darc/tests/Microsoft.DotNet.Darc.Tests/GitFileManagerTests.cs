@@ -35,7 +35,7 @@ namespace Microsoft.DotNet.Darc.Tests
         [InlineData("PreserveCommentsInRightLocationsWithNoExistingBlock", new string[] {
             "https://pkgs.dev.azure.com/dnceng/_packaging/darc-int-dotnet-arcade-b0437974/nuget/v3/index.json",
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
-        [InlineData("RemoveManagedFromFromOutside", new string[] {
+        [InlineData("PreserveManagedFromFromOutside", new string[] {
             "https://pkgs.dev.azure.com/dnceng/_packaging/darc-int-dotnet-arcade-b0437974/nuget/v3/index.json",
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
         [InlineData("WhiteSpaceCorrectlyFormatted", new string[] {

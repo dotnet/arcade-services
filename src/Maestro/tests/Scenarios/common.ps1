@@ -166,7 +166,7 @@ function Darc-Command-WithPipeline([Parameter(ValueFromPipeline=$true)]$pipeline
     if ($darcCommandPrefix) {
         $finalParams = ,"$darcCommandPrefix" + $finalParams
     }
-    Write-Host "Running 'pipelineParams | $darcTool $finalParams $darcAuthParams'"
+    Write-Host "Running 'pipelineParams | $darcTool $finalParams ***'"
     $commandOutput = $pipelineParams| & $darcTool @finalParams @darcAuthParams
     if ($LASTEXITCODE -ne 0) {
       Write-Host ${commandOutput}
@@ -181,7 +181,7 @@ function Darc-Command([Parameter(ValueFromRemainingArguments=$true)]$darcParams)
     if ($darcCommandPrefix) {
         $finalParams = ,"$darcCommandPrefix" + $finalParams
     }
-    Write-Host "Running '$darcTool $finalParams $darcAuthParams'"
+    Write-Host "Running '$darcTool $finalParams ***'"
     $commandOutput = & $darcTool @finalParams @darcAuthParams
     if ($LASTEXITCODE -ne 0) {
       Write-Host ${commandOutput}
@@ -248,7 +248,7 @@ function Darc-Get-Default-Channel-From-Api($repoUri, $branch) {
 }
 
 function Darc-Delete-Subscription($subscriptionId) {
-    Darc-Command delete-subscription --id $subscriptionId
+    Darc-Command delete-subscriptions --id $subscriptionId --quiet
 }
 
 function Darc-Get-Subscription($subscriptionId) {
@@ -517,6 +517,11 @@ function Get-AzDO-PullRequests($targetRepoName, $targetBranch) {
     Invoke-WebRequest -Uri $uri -Headers $(Get-AzDO-Headers) -Method Get | ConvertFrom-Json
 }
 
+function Get-AzDO-PullRequest($targetRepoName, $prId) {
+    $uri = "$(Get-AzDO-RepoApiUri($targetRepoName))/pullrequests/${prId}?api-version=${azdoApiVersion}"
+    Invoke-WebRequest -Uri $uri -Headers $(Get-AzDO-Headers) -Method Get | ConvertFrom-Json
+}
+
 function Check-AzDO-PullRequest-Completed($targetRepoName, $pullRequestNumber) {
     $uri = "$(Get-AzDO-RepoApiUri($targetRepoName))/pullrequests/$pullRequestNumber"
     $tries = 7
@@ -555,12 +560,12 @@ function Check-AzDO-PullRequest-Created($targetRepoName, $targetBranch) {
 
 function Compare-Array-Output($expected, $actual) {
     if ($expected.Count -ne $actual.Count) {
-        Write-Error "Expected $($expected.Count) lines, got $($actual.Count) lines."
+        Write-Host "Expected $($expected.Count) lines, got $($actual.Count) lines."
         return $false
     }
     for ($i = 0; $i -lt $expected.Count; $i++) {
         if ($actual[$i] -notmatch $expected[$i]) {
-            Write-Error "Line $i not matched`nExpected '$($expected[$i])'`nActual   '$($actual[$i])'"
+            Write-Host "Line $i not matched`nExpected '$($expected[$i])'`nActual   '$($actual[$i])'"
             return $false
         }
     }
@@ -572,10 +577,11 @@ function Validate-AzDO-PullRequest-Contents($pullRequest, $expectedPRTitle, $tar
 
     # Depending on how quickly each dependency update comes through,
     # we might have to wait for the title to be updated correctly for batched Subscriptions.
-    $tries = 10
+    $tries = 5
     $validTitle = $false;
     while ($tries-- -gt 0 -and (-not $validTitle)) {
         Write-Host "Validating PR title. $tries tries remaining..."
+        $pullRequest = Get-AzDO-PullRequest $targetRepoName $pullRequest.pullRequestId
         if ($pullRequest.title -eq $expectedPRTitle) {
             $validTitle = $true
             break
@@ -765,6 +771,11 @@ function Get-GitHub-PullRequests($targetRepoName, $targetBranch) {
     Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Get | ConvertFrom-Json
 }
 
+function Get-GitHub-PullRequest($targetRepoName, $prId) {
+    $uri = "$(Get-Github-RepoApiUri($targetRepoName))/pulls/$prId"
+    Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Get | ConvertFrom-Json
+}
+
 function Get-Github-File-Contents($targetRepoName, $path, $ref) {
     $uri = "$(Get-Github-RepoApiUri($targetRepoName))/contents/${path}?ref=$ref"
     Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Get | ConvertFrom-Json
@@ -815,10 +826,11 @@ function Check-Github-PullRequest-Created($targetRepoName, $targetBranch) {
 function Validate-Github-PullRequest-Contents($pullRequest, $expectedPRTitle, $targetRepoName, $targetBranch, $expectedDependencies) {
     # Depending on how quickly each dependency update comes through,
     # we might have to wait for the title to be updated correctly for batched Subscriptions
-    $tries = 10
+    $tries = 5
     $validTitle = $false;
     while ($tries-- -gt 0) {
         Write-Host "Validating PR title. $tries tries remaining..."
+        $pullRequest = Get-GitHub-PullRequest $targetRepoName $pullRequest.number
         if ($pullRequest.title -eq $expectedPRTitle) {
             $validTitle = $true
             break

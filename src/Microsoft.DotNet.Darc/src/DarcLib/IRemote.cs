@@ -80,6 +80,13 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Channel or null if not found.</returns>
         Task<Channel> GetChannelAsync(string channel);
 
+        /// <summary>
+        ///     Retrieve a specific channel by id.
+        /// </summary>
+        /// <param name="channel">Channel id.</param>
+        /// <returns>Channel or null if not found.</returns>
+        Task<Channel> GetChannelAsync(int channelId);
+
         #endregion
 
         #region Subscription Operations
