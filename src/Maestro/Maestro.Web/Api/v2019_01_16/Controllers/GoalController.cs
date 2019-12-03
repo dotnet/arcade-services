@@ -39,13 +39,13 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         public virtual async Task<IActionResult> Create([FromBody, Required] Goal.GoalData goalData,[Required] String channelName , [Required] int definitionId)
         {
             Data.Models.Channel channel = await _context.Channels
-                .Where(c => c.Name.Equals(channelName)).FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(c => c.Name.Equals(channelName));
             if (channel == null)
             {
                 return NotFound();
             }
             Data.Models.GoalTime goal = await _context.GoalTime
-                .Where(g => g.DefinitionId == definitionId && g.ChannelId == channel.Id).FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(g => g.DefinitionId == definitionId && g.ChannelId == channel.Id);
             if (goal == null)
             {
                 goal = new Data.Models.GoalTime
@@ -77,13 +77,13 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         public virtual async Task<IActionResult> GetGoalTimes([Required]int definitionId, [Required]string channelName)
         {
             Data.Models.Channel channel = await _context.Channels
-                .Where(c => c.Name.Equals(channelName)).FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(c => c.Name.Equals(channelName));
             if (channel == null)
             {
                 return NotFound();
             }
             Data.Models.GoalTime goal = await _context.GoalTime
-                .Where(g => g.DefinitionId == definitionId && g.ChannelId == channel.Id).FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(g => g.DefinitionId == definitionId && g.ChannelId == channel.Id);
             if (goal == null)
             {
                 return NotFound();
