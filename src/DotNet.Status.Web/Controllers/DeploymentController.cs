@@ -8,6 +8,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Services.Utility;
@@ -66,11 +67,12 @@ namespace DotNet.Status.Web.Controllers
                                 new AuthenticationHeaderValue("Bearer", grafanaOptions.ApiToken);
                             request.Content =
                                 new ObjectContent<NewGrafanaAnnotationRequest>(content, s_grafanaFormatter);
-                            using (HttpResponseMessage response = await client.SendAsync(request))
+
+                            using (HttpResponseMessage response = await client.SendAsync(request, CancellationToken.None))
                             {
                                 _logger.LogTrace("Response from grafana {responseCode} {reason}", response.StatusCode, response.ReasonPhrase);
                                 response.EnsureSuccessStatusCode();
-                                return await response.Content.ReadAsAsync<NewGrafanaAnnotationResponse>(s_grafanaFormatters);
+                                return await response.Content.ReadAsAsync<NewGrafanaAnnotationResponse>(s_grafanaFormatters, CancellationToken.None);
                             }
                         }
                     },
@@ -89,7 +91,7 @@ namespace DotNet.Status.Web.Controllers
                     }
                 )
             );
-            return Ok();
+            return NoContent();
         }
 
         [HttpPost("{service}/{id}/end")]
@@ -129,7 +131,7 @@ namespace DotNet.Status.Web.Controllers
                                 new AuthenticationHeaderValue("Bearer", grafanaOptions.ApiToken);
                             request.Content =
                                 new ObjectContent<NewGrafanaAnnotationRequest>(content, s_grafanaFormatter);
-                            using (HttpResponseMessage response = await client.SendAsync(request))
+                            using (HttpResponseMessage response = await client.SendAsync(request, CancellationToken.None))
                             {
                                 _logger.LogTrace("Response from grafana {responseCode} {reason}", response.StatusCode, response.ReasonPhrase);
                                 response.EnsureSuccessStatusCode();
@@ -141,7 +143,7 @@ namespace DotNet.Status.Web.Controllers
                 );
             }
 
-            return Ok();
+            return NoContent();
         }
 
         private async Task<CloudTable> GetCloudTable()
@@ -149,7 +151,7 @@ namespace DotNet.Status.Web.Controllers
             CloudTable table;
             if (_env.IsDevelopment())
             {
-                table = CloudStorageAccount.DevelopmentStorageAccount.CreateCloudTableClient().GetTableReference("githubtokens");
+                table = CloudStorageAccount.DevelopmentStorageAccount.CreateCloudTableClient().GetTableReference("deployments");
             }
             else
             {
@@ -190,8 +192,8 @@ namespace DotNet.Status.Web.Controllers
             }
 
             public int GrafanaAnnotationId { get; set; }
-            public DateTimeOffset Started { get; set; }
-            public DateTimeOffset Ended { get; set; }
+            public DateTimeOffset? Started { get; set; }
+            public DateTimeOffset? Ended { get; set; }
 
             public AnnotationEntity() : base()
             {
