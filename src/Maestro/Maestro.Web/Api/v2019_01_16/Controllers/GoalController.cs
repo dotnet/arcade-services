@@ -29,25 +29,27 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         /// <summary>
         /// Sets a build time in minutes <see cref="Goal"/> for a given Definition in a Channel. This is captured for the Power BI Dashboard -Internal Report under .Net Core Engineering Services workspace.
         /// </summary>
-        /// <param name="goalData">An object containing Target Channel Name, Azure DevOps pipeline Definition and build time goal in minutes <see cref="Goal"/></param>
-        [HttpPost]
+        /// <param name="goalData">An object containing build time goal in minutes <see cref="Goal"/></param>
+        /// <param name="channelName">Channel Name for the build time Eg. .Net Core 5</param>
+        /// <param name="definitionId">Azure DevOps pipeline Definition Id</param>
+        [HttpPut]
         [SwaggerApiResponse(System.Net.HttpStatusCode.OK, Type = typeof(Models.Goal), Description = "Sets a build time goal (in minutes) for a given Definition in a Channel.")]
         [ValidateModelState]
-        public virtual async Task<IActionResult> Create([FromBody, Required] Goal.GoalData goalData)
+        public virtual async Task<IActionResult> Create([FromBody, Required] Goal.GoalData goalData, String channelName , int definitionId)
         {
             Data.Models.Channel channel = await _context.Channels
-                .Where(c => c.Name.Equals(goalData.ChannelName)).FirstOrDefaultAsync();
+                .Where(c => c.Name.Equals(channelName)).FirstOrDefaultAsync();
             if (channel == null)
             {
                 return NotFound();
             }
             Data.Models.GoalTime goal = await _context.GoalTime
-                .Where(g => g.DefinitionId == goalData.DefinitionId && g.ChannelId == channel.Id).FirstOrDefaultAsync();
+                .Where(g => g.DefinitionId == definitionId && g.ChannelId == channel.Id).FirstOrDefaultAsync();
             if (goal == null)
             {
                 goal = new Data.Models.GoalTime
                 {
-                    DefinitionId = goalData.DefinitionId,
+                    DefinitionId = definitionId,
                     Minutes = goalData.Minutes,
                     ChannelId = channel.Id
                 };
