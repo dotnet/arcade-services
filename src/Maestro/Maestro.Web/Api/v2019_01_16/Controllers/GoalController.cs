@@ -27,7 +27,8 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         }
 
         /// <summary>
-        /// Sets a build time in minutes <see cref="Goal"/> for a given Definition in a Channel. This is captured for the Power BI Dashboard -Internal Report under .Net Core Engineering Services workspace.
+        /// Sets a build time in minutes <see cref="Goal"/> for a given Definition in a Channel.
+        /// This is captured for the Power BI Dashboard -Internal Report under .Net Core Engineering Services workspace.
         /// </summary>
         /// <param name="goalData">An object containing build time goal in minutes <see cref="Goal"/></param>
         /// <param name="channelName">Channel Name for the build time Eg. .Net Core 5</param>
@@ -56,7 +57,6 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                 await _context.GoalTime.AddAsync(goal);
             }
             else
-            // If the combination of Channel and DefinitionId already exists then update the exisiting record
             {
                 goal.Minutes = goalData.Minutes;
                 _context.GoalTime.Update(goal);
@@ -66,7 +66,8 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         }
 
         /// <summary>
-        /// Gets the build time in minutes <see cref="Goal"/> for a given Definition in a Channel. This is captured for the Power BI Dashboard -Internal Report under .Net Core Engineering Services workspace.
+        /// Gets the build time in minutes <see cref="Goal"/> for a given Definition in a Channel.
+        /// This is captured for the Power BI Dashboard -Internal Report under .Net Core Engineering Services workspace.
         /// </summary>
         /// <param name="channelName">Channel Name for the build time Eg. .Net Core 5</param>
         /// <param name="definitionId">Azure DevOps pipeline Definition Id</param>
