@@ -25,7 +25,7 @@ namespace Maestro.Web.Api.v2019_01_16.Models
         public int DefinitionId { get; set; }
         public int ChannelId { get; set; }
         public int Minutes { get; set; }
-        public class GoalData
+        public class GoalRequestJson
         {
             [Required]
             public int Minutes { get; set; }
