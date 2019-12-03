@@ -31,7 +31,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         /// </summary>
         /// <param name="goalData">An object containing Target Channel Name, Azure DevOps pipeline Definition and build time goal in minutes <see cref="Goal"/></param>
         [HttpPost]
-        [SwaggerApiResponse(System.Net.HttpStatusCode.Created, Type = typeof(Models.Goal), Description = "Sets a build time goal (in minutes) for a given Definition in a Channel.")]
+        [SwaggerApiResponse(System.Net.HttpStatusCode.OK, Type = typeof(Models.Goal), Description = "Sets a build time goal (in minutes) for a given Definition in a Channel.")]
         [ValidateModelState]
         public virtual async Task<IActionResult> Create([FromBody, Required] Goal.GoalData goalData)
         {
