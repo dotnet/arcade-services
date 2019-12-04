@@ -45,7 +45,7 @@ namespace Maestro.Data.Models
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
-        
+
         public string Commit { get; set; }
 
         public int? AzureDevOpsBuildId { get; set; }

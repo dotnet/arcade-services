@@ -75,6 +75,7 @@ namespace Maestro.Data
         public DbQuery<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory { get; set; }
         public DbQuery<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory { get; set; }
         public DbSet<DependencyFlowEvent> DependencyFlowEvents { get; set; }
+        public DbSet<GoalTime> GoalTime { get; set; }
 
         public override Task<int> SaveChangesAsync(
             bool acceptAllChangesOnSuccess,
@@ -135,19 +136,19 @@ namespace Maestro.Data
 
             builder.Entity<ChannelReleasePipeline>()
                 .HasKey(crp => new {crp.ChannelId, crp.ReleasePipelineId});
-            
+
             builder.Entity<ChannelReleasePipeline>()
                 .HasOne(crp => crp.Channel)
                 .WithMany(c => c.ChannelReleasePipelines)
                 .HasForeignKey(rcp => rcp.ChannelId)
                 .OnDelete(DeleteBehavior.Restrict);
-            
+
             builder.Entity<ChannelReleasePipeline>()
                 .HasOne(crp => crp.ReleasePipeline)
                 .WithMany(rp => rp.ChannelReleasePipelines)
                 .HasForeignKey(crp => crp.ReleasePipelineId)
                 .OnDelete(DeleteBehavior.Restrict);
-            
+
             builder.Entity<ApplicationUserPersonalAccessToken>()
                 .HasIndex(
                     t => new
@@ -180,12 +181,12 @@ namespace Maestro.Data
             builder.Entity<Repository>().HasKey(r => new {r.RepositoryName});
 
             builder.Entity<RepositoryBranch>()
-            .HasKey(
-                rb => new
-                {
-                    rb.RepositoryName,
-                    rb.BranchName
-                });
+                .HasKey(
+                    rb => new
+                    {
+                        rb.RepositoryName,
+                        rb.BranchName
+                    });
 
             builder.Entity<RepositoryBranch>()
                 .HasOne(rb => rb.Repository)
@@ -193,12 +194,12 @@ namespace Maestro.Data
                 .HasForeignKey(rb => new {rb.RepositoryName});
 
             builder.Entity<RepositoryBranchUpdate>()
-            .HasKey(
-                ru => new
-                {
-                    ru.RepositoryName,
-                    ru.BranchName
-                });
+                .HasKey(
+                    ru => new
+                    {
+                        ru.RepositoryName,
+                        ru.BranchName
+                    });
 
             builder.Entity<RepositoryBranchUpdate>()
                 .HasOne(ru => ru.RepositoryBranch)
@@ -210,6 +211,19 @@ namespace Maestro.Data
                         ru.BranchName
                     })
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<GoalTime>()
+                .HasKey(
+                    gt => new
+                    {
+                        gt.DefinitionId,
+                        gt.ChannelId
+                    });
+
+            builder.Entity<GoalTime>()
+                .HasOne(gt => gt.Channel)
+                .WithMany()
+                .HasForeignKey(gt => gt.ChannelId);
 
             builder.ForSqlServerIsSystemVersioned<RepositoryBranchUpdate, RepositoryBranchUpdateHistory>("6 MONTH");
 
@@ -348,7 +362,7 @@ FROM traverse;",
             {
                 var build = dict[id];
                 // Get newer builds data for this channel.
-                var newer = possibleBuilds.Where(b => b.GitHubRepository == build.GitHubRepository && 
+                var newer = possibleBuilds.Where(b => b.GitHubRepository == build.GitHubRepository &&
                                                     b.AzureDevOpsRepository == build.AzureDevOpsRepository &&
                                                     b.DateProduced > build.DateProduced);
                 dict[id].Staleness = newer.Count();
