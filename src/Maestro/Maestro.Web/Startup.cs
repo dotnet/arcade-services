@@ -11,6 +11,7 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.GitHub;
 using Maestro.MergePolicies;
+using Maestro.Web.Controllers;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Authorization;
@@ -23,6 +24,7 @@ using Microsoft.AspNetCore.Rewrite;
 using Microsoft.AspNetCore.Rewrite.Internal;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -193,11 +195,16 @@ namespace Maestro.Web
                     });
 
             services.AddSingleton<IConfiguration>(Configuration);
+            services.AddSingleton<IConfigurationRoot>(Configuration);
 
             ConfigureAuthServices(services);
 
             services.AddSingleton<BackgroundQueue>();
             services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BackgroundQueue>());
+
+            services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
+            services.AddSingleton<DarcRemoteMemoryCache>();
+            services.AddLogging();
 
             services.AddServiceFabricService<IDependencyUpdater>("fabric:/MaestroApplication/DependencyUpdater");
             services.AddServiceFabricService<IReleasePipelineRunner>("fabric:/MaestroApplication/ReleasePipelineRunner");

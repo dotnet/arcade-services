@@ -4,7 +4,12 @@
     <th>Source Channel</th>
     <th>Target Branch</th>
     <th>Status</th>
+    <th>Update Frequency</th>
+    <ng-container *ngIf="openDetails">
+      <th>Type</th>
+    </ng-container>
   </thead>
+  <button (click)="openDetails=!openDetails">Show/Hide Additional Details</button>
   <tbody>
     <ng-container *ngFor="let branch of subscriptionsList | keyvalue">
       <ng-container *ngFor="let sub of subscriptionsList[branch.key]">
@@ -19,9 +24,93 @@
             {{branch.key}}
           </td>
           <td>
-            {{sub.enabled ? 'Enabled' : 'Disabled'}}
+            <ng-container *ngIf="openDetails; else noDetails">
+              <ng-container *stateful="let details from subscriptionDependencyDetailsList[branch.key]">
+                <ng-container *ngIf="details.unusedSubsMap[sub.id]">
+                  {{(sub.enabled ? 'Enabled' : 'Disabled') + ', No Dependencies'}}
+                </ng-container>
+                <ng-container *ngIf="!details.unusedSubsMap[sub.id]">
+                  {{sub.enabled ? 'Enabled' : 'Disabled'}}
+                </ng-container>
+              </ng-container>
+            </ng-container>
+            <ng-template #noDetails>
+              {{sub.enabled ? 'Enabled' : 'Disabled'}}
+            </ng-template>
           </td>
+          <td>
+            {{sub.policy.updateFrequency}}
+          </td>
+          <!-- <ng-container *ngIf="openDetails">
+            <td>
+              <ng-container *stateful="let details from subscriptionDependencyDetailsList[branch.key]">
+                <ng-container
+                  *ngIf="details.unusedSubsMap[sub.id]; else knownType">
+                  Unknown
+                </ng-container>
+                <ng-template #knownType>
+                  {{details.isToolsetSubscription[sub.id]? 'Toolset' : 'Product'}}
+                </ng-template>
+              </ng-container>
+            </td>
+          </ng-container> -->
         </tr>
+      </ng-container>
+    </ng-container>
+  </tbody>
+</table>
+<br>
+<button (click)="openDependencies=!openDependencies">Show/Hide Dependencies Without Subscriptions</button>
+<br>
+<table *ngIf="openDependencies" class="table table-sm table-hover mb-0" style="white-space: nowrap;">
+  <thead>
+    <th>Dependency</th>
+    <th>Target Branch</th>
+  </thead>
+  <tbody>
+    <ng-container *ngFor="let branch of subscriptionsList | keyvalue">
+      <ng-container *stateful="let details from subscriptionDependencyDetailsList[branch.key]">
+        <ng-container *ngFor="let dependency of details.dependenciesMissingSubscriptions">
+          <tr>
+            <td>
+              {{dependency.name}}
+            </td>
+            <td>
+              {{branch.key}}
+            </td>
+          </tr>
+        </ng-container>
+      </ng-container>
+    </ng-container>
+  </tbody>
+</table>
+<br>
+<button (click)="openAssets=!openAssets">Show/Hide Assets From Multiple Sources</button>
+<br>
+<table *ngIf="openAssets" class="table table-sm table-hover mb-0" style="white-space: nowrap;">
+  <thead>
+    <th>Assets with Multiple Sources</th>
+    <th>Target Branch</th>
+    <th>Contributing Subscriptions</th>
+  </thead>
+  <tbody>
+    <ng-container *ngFor="let branch of subscriptionsList | keyvalue">
+      <ng-container *stateful="let details from subscriptionDependencyDetailsList[branch.key]">
+        <ng-container *ngFor="let asset of details.conflictingSubsMap | keyvalue">
+          <tr>
+            <td>
+              {{asset.key}}
+            </td>
+            <td>
+              {{branch.key}}
+            </td>
+            <td>
+              <ng-container *ngFor="let sub of details.conflictingSubsMap[asset.key]">
+                {{sub.sourceRepository + ', '}}
+              </ng-container>
+            </td>
+          </tr>
+        </ng-container>
       </ng-container>
     </ng-container>
   </tbody>

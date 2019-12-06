@@ -89,11 +89,6 @@ namespace Maestro.Data
             throw new NotImplementedException();
         }
 
-        public Task<IEnumerable<Subscription>> GetSubscriptionsAsync(string sourceRepo = null, string targetRepo = null, int? channelId = null)
-        {
-            throw new NotImplementedException();
-        }
-
         public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId)
         {
             throw new NotImplementedException();
@@ -127,6 +122,33 @@ namespace Maestro.Data
         #endregion
 
         /// <summary>
+        ///     Get a set of subscriptions based on input filters.
+        /// </summary>
+        /// <param name="sourceRepo">Filter by the source repository of the subscription.</param>
+        /// <param name="targetRepo">Filter by the target repository of the subscription.</param>
+        /// <param name="channelId">Filter by the source channel id of the subscription.</param>
+        /// <returns>Set of subscription.</returns>
+        public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(string sourceRepo = null, string targetRepo = null, int? channelId = null)
+        {
+            IQueryable<Maestro.Data.Models.Subscription> subscriptions = _context.Subscriptions;
+            if (sourceRepo != null)
+            {
+                subscriptions = subscriptions.Where(s => s.SourceRepository == sourceRepo);
+            }
+            if (targetRepo != null)
+            {
+                subscriptions = subscriptions.Where(s => s.TargetRepository == targetRepo);
+            }
+            if (channelId != null)
+            {
+                subscriptions = subscriptions.Where(s => s.ChannelId == channelId);
+            }
+
+            var subsList = await subscriptions.ToListAsync();
+            return subsList.Select(sub => ModelTranslators.DataToClientModel_Subscription(sub));
+        }
+
+        /// <summary>
         ///     Get a list of builds for the given repo uri and commit.
         /// </summary>
         /// <param name="repoUri">Repository uri</param>
@@ -145,7 +167,7 @@ namespace Maestro.Data
                 throw new DarcException($"Could not find a build with id '{buildId}'");
             }
 
-            return ToClientModelBuild(build);
+            return ModelTranslators.DataToClientModel_Build(build);
         }
 
         public Task<Build> UpdateBuildAsync(int buildId, BuildUpdate buildUpdate)
@@ -167,7 +189,7 @@ namespace Maestro.Data
                 .OrderByDescending(b => b.DateProduced)
                 .ToListAsync();
 
-            return builds.Select(b => ToClientModelBuild(b));
+            return builds.Select(b => ModelTranslators.DataToClientModel_Build(b));
         }
 
         public async Task<IEnumerable<Asset>> GetAssetsAsync(
@@ -198,36 +220,7 @@ namespace Maestro.Data
                 .OrderByDescending(a => a.BuildId)
                 .ToListAsync();
 
-            return assetList.Select(a => ToClientModelAsset(a));
-        }
-
-        private AssetLocation ToClientAssetLocation(Maestro.Data.Models.AssetLocation other)
-        {
-            return new AssetLocation(other.Id, (LocationType)other.Type, other.Location);
-        }
-
-        private Asset ToClientModelAsset(Maestro.Data.Models.Asset other)
-        {
-            return new Asset(
-                other.Id,
-                other.BuildId,
-                other.NonShipping,
-                other.Name,
-                other.Version,
-                other.Locations?.Select(l => ToClientAssetLocation(l)).ToImmutableList());
-        }
-
-        private Build ToClientModelBuild(Maestro.Data.Models.Build other)
-        {
-            return new Build(other.Id, other.DateProduced, other.Staleness, false, other.PublishUsingPipelines, other.Commit,
-                null, other.Assets?.Select(a => ToClientModelAsset(a)).ToImmutableList(), 
-                other.DependentBuildIds?.Select(b => new BuildRef(b.BuildId, b.IsProduct, b.TimeToInclusionInMinutes)).ToImmutableList())
-            {
-                AzureDevOpsBranch = other.AzureDevOpsBranch,
-                GitHubBranch = other.GitHubBranch,
-                GitHubRepository = other.GitHubRepository,
-                AzureDevOpsRepository = other.AzureDevOpsRepository,
-            };
+            return assetList.Select(a => ModelTranslators.DataToClientModel_Asset(a));
         }
     }
 }

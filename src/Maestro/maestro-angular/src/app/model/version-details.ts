@@ -6,6 +6,7 @@ import { BuildService } from 'src/app/services/build.service';
 import { WrappedError, Loading, statefulSwitchMap } from 'src/stateful/helpers';
 import { HttpHeaders, HttpClient } from '@angular/common/http';
 import { DependencyDetail } from './dependency-detail';
+import { SubscriptionDependencyDetails } from './subscription-dependency-details';
 
 export class VersionDetails {
 
@@ -45,7 +46,7 @@ export class VersionDetails {
 
       for (let el of Array.from(childToolsetElements)) {
         const details: DependencyDetail = this.parseDependencyElement(el, true);
-        if(details.name){
+        if (details.name) {
           this.allDependencies[details.name] = details;
         }
       }
@@ -290,6 +291,9 @@ export class VersionDetails {
   }
 
   static getDetailsFileUrl(sourceRepoStr: string, branchName: string): string {
+
+    const splitRepoUrl = sourceRepoStr.split('/');
+
     if (sourceRepoStr.includes("github")) {
       return sourceRepoStr.replace("https://github.com", "https://raw.githubusercontent.com") + "/" + branchName + "/eng/Version.Details.xml";
     }
@@ -299,15 +303,29 @@ export class VersionDetails {
     }
   }
 
+  static getDependencyDetailsUrl(sourceRepoStr: string, branchName: string): string {
+    const splitRepoUrl = sourceRepoStr.split('/'); // 4 & 6, respectively to get the repo name
+
+    if (sourceRepoStr.includes("github")) {
+      return `/_/Dependencies/getSubscriptionDependencyDetails/github/maestro-auth-test/AspNetCore/master`;
+     // return `/_/Dependencies/getSubscriptionDependencyDetails/github/${splitRepoUrl[3]}/${splitRepoUrl[4]}/${branchName}`;
+    }
+    else {
+      return `/_/Dependencies/getSubscriptionDependencyDetails/azdev/${splitRepoUrl[3]}/${splitRepoUrl[6]}/${branchName}`;
+    }
+  }
+
   // Retrieves the Version.Details.xml file and uses it return a new VersionDetails with allDependencies and dependenciesForEvaluation filled out
   static retrieveAndParseFile(http: HttpClient, repository: string, branchName: string): Observable<StatefulResult<VersionDetails>> {
 
     const fileUrl = VersionDetails.getDetailsFileUrl(repository || "", branchName);
+    const depUrl = VersionDetails.getDependencyDetailsUrl(repository || "", branchName);
 
-    return of(fileUrl).pipe(
+    return of(depUrl).pipe(
       statefulSwitchMap(
         (uri) => {
-          return http.get(uri, { responseType: 'text', headers: new HttpHeaders({ 'Accept': "text/plain" }) });
+        //  return http.get(uri, { responseType: 'text', headers: new HttpHeaders({ 'Accept': "text/plain" }) });
+        return http.get(uri, {responseType: 'json', headers: new HttpHeaders({Accept: "text/json"})});
         }
       ),
       map<StatefulResult<string>, StatefulResult<string>>(
@@ -321,6 +339,7 @@ export class VersionDetails {
       statefulPipe(
         map(
           (file) => {
+            const data = new SubscriptionDependencyDetails();
             const xmlData = new DOMParser().parseFromString(file, "text/xml");
             return new VersionDetails(xmlData);
           })));
