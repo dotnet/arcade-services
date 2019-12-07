@@ -31,6 +31,7 @@ stages:
     steps:
     - task: InvokeRESTAPI@1
       displayName: Notify dotnet-eng-staus/start
+      continueOnError: true
       inputs:
         serviceConnection: ${{ parameters.DotNetStatusEndpoint }}
         method: POST
@@ -168,6 +169,7 @@ stages:
     steps:
     - task: InvokeRESTAPI@1
       displayName: Notify dotnet-eng-staus/end
+      continueOnError: true
       inputs:
         serviceConnection: .NET Engineering Deployment Notification - Staging
         method: POST
