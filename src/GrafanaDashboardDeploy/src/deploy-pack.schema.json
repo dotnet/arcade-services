@@ -1,0 +1,39 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "folders": {
+            "type": "array",
+            "items": {
+                "type": "object"
+            }
+        },
+        "dashboards": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "meta": {
+                        "type": "object",
+                        "properties": {
+                            "folderUid": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "dashboard": {
+                        "type": "object",
+                        "description": "The Grafana API-compatible JSON definition of a dashboard"
+                    }
+                }
+            }
+        },
+        "datasources": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "description": "The Grafana API-compatible JSON definition of a data source"
+            }
+        }
+    }
+}
