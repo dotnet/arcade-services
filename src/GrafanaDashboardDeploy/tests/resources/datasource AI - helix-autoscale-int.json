@@ -1,0 +1,32 @@
+﻿{
+  "id": 9,
+  "orgId": 1,
+  "name": "AI - helix-autoscale-int",
+  "type": "grafana-azure-monitor-datasource",
+  "typeLogoUrl": "",
+  "access": "proxy",
+  "url": "",
+  "password": "",
+  "user": "",
+  "database": "",
+  "basicAuth": false,
+  "basicAuthUser": "",
+  "basicAuthPassword": "",
+  "withCredentials": false,
+  "isDefault": false,
+  "jsonData": {
+    "appInsightsAppId": "010a8fd5-a343-4873-bec3-ed3a5515d7e4",
+    "azureLogAnalyticsSameAs": true,
+    "clientId": "a2541735-8225-40af-9c8a-2ae233203739",
+    "cloudName": "azuremonitor",
+    "logAnalyticsDefaultWorkspace": "b165f541-bd03-4f8d-a509-8358194e2831",
+    "subscriptionId": "cab65fc3-d077-467d-931f-3932eabf36d3",
+    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+  },
+  "secureJsonFields": {
+    "appInsightsApiKey": true,
+    "clientSecret": true
+  },
+  "version": 1,
+  "readOnly": false
+}
