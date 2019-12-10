@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option('c', "channel", Required = true, HelpText = "Name of channel Eg : .Net Core 5 Dev ")]
         public string Channel { get; set; }
 
-        [Option('d', "definitionId", Required = true, HelpText = "Azure DevOps Definition Id.")]
+        [Option('d', "definition-id", Required = true, HelpText = "Azure DevOps Definition Id.")]
         public int DefinitionId { get; set; }
 
         public override Operation GetOperation()
