@@ -12,13 +12,13 @@ namespace Microsoft.DotNet.Maestro.Client
 {
     public partial interface IGoal
     {
-        Task<Goal> GetGoalTimesAsync(
+        Task<Models.Goal> GetGoalTimesAsync(
             string channelName,
             int definitionId,
             CancellationToken cancellationToken = default
         );
 
-        Task<Goal> CreateAsync(
+        Task<Models.Goal> CreateAsync(
             GoalRequestJson body,
             string channelName,
             int definitionId,
@@ -40,7 +40,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedGetGoalTimesRequest(RestApiException ex);
 
-        public async Task<Goal> GetGoalTimesAsync(
+        public async Task<Models.Goal> GetGoalTimesAsync(
             string channelName,
             int definitionId,
             CancellationToken cancellationToken = default
@@ -88,7 +88,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Goal>(_content);
+                        var _body = Client.Deserialize<Models.Goal>(_content);
                         return _body;
                     }
                 }
@@ -120,7 +120,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedCreateRequest(RestApiException ex);
 
-        public async Task<Goal> CreateAsync(
+        public async Task<Models.Goal> CreateAsync(
             GoalRequestJson body,
             string channelName,
             int definitionId,
@@ -180,7 +180,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Goal>(_content);
+                        var _body = Client.Deserialize<Models.Goal>(_content);
                         return _body;
                     }
                 }

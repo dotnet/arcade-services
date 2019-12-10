@@ -123,7 +123,7 @@ namespace Microsoft.DotNet.Maestro.Client
         public string PrevPageLink { get; }
         public string NextPageLink { get; }
         public string LastPageLink { get; }
-        public HelixApi Client { get; }
+        public MaestroApi Client { get; }
 
         public IImmutableList<T> Values { get; }
 
