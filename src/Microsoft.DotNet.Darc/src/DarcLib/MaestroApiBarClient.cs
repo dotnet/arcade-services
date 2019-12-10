@@ -254,7 +254,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 return await _barClient.Repository.GetMergePoliciesAsync(repository: repoUri, branch: branch);
             }
-            catch (RestApiException e) when (e.Response.Status.Equals(HttpStatusCode.NotFound))
+            catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
             {
                 // Return an empty list
                 return new List<MergePolicy>();

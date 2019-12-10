@@ -23,7 +23,8 @@ $testScripts = (
     'githubflow-release-pipeline-nonbatched.ps1',
     'repo-policies.ps1',
     'subscriptions.ps1',
-    'dependencies.ps1'
+    'dependencies.ps1',
+    'goal.ps1'
 )
 
 $failed = 0

@@ -10,10 +10,10 @@ namespace Microsoft.DotNet.Maestro.Client
     {
         /// <summary>
         /// Obtains API client for authenticated access to internal queues.
-        /// The client will access production Helix instance.
+        /// The client will access production Maestro instance.
         /// </summary>
         /// <param name="accessToken">
-        /// You can get the access token by logging in to your Helix instance
+        /// You can get the access token by logging in to your Maestro instance
         /// and proceeding to Profile page.
         /// </param>
         public static IMaestroApi GetAuthenticated(string accessToken)
@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         /// <summary>
         /// Obtains API client for unauthenticated access to external queues.
-        /// The client will access production Helix instance.
+        /// The client will access production Maestro instance.
         /// </summary>
         /// <remarks>
         /// Attempt to access internal queues by such client will cause
@@ -36,10 +36,10 @@ namespace Microsoft.DotNet.Maestro.Client
 
         /// <summary>
         /// Obtains API client for authenticated access to internal queues.
-        /// The client will access Helix instance at the provided URI.
+        /// The client will access Maestro instance at the provided URI.
         /// </summary>
         /// <param name="accessToken">
-        /// You can get the access token by logging in to your Helix instance
+        /// You can get the access token by logging in to your Maestro instance
         /// and proceeding to Profile page.
         /// </param>
         public static IMaestroApi GetAuthenticated(string baseUri, string accessToken)
@@ -49,7 +49,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         /// <summary>
         /// Obtains API client for unauthenticated access to external queues.
-        /// The client will access Helix instance at the provided URI.
+        /// The client will access Maestro instance at the provided URI.
         /// </summary>
         /// <remarks>
         /// Attempt to access internal queues by such client will cause
