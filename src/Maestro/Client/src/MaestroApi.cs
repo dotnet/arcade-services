@@ -12,14 +12,7 @@ namespace Microsoft.DotNet.Maestro.Client
     {
         public override bool IsRetriableException(Exception exception)
         {
-            return base.IsRetriableException(exception) ||
-                   exception is TaskCanceledException ||
-                   exception is OperationCanceledException ||
-                   exception is HttpRequestException ||
-                   exception is RestApiException raex && raex.Response.Status >= 500 && raex.Response.Status <= 599 ||
-                   exception is IOException ||
-                   exception is SocketException ||
-                   exception is RestApiException jobListEx && jobListEx.Response.Status == 400 && jobListEx.Message.Contains("Provided Job List Uri is not accessible");
+            return base.IsRetriableException(exception);
         }
     }
 
