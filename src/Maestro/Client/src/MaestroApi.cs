@@ -1,10 +1,15 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
 using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
-using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using System.Threading.Tasks;
+
 
 namespace Microsoft.DotNet.Maestro.Client
 {
@@ -12,7 +17,13 @@ namespace Microsoft.DotNet.Maestro.Client
     {
         public override bool IsRetriableException(Exception exception)
         {
-            return base.IsRetriableException(exception);
+            return base.IsRetriableException(exception) ||
+                exception is TaskCanceledException ||
+                exception is OperationCanceledException ||
+                exception is HttpRequestException ||
+                exception is RestApiException raex && raex.Response.Status >= 500 && raex.Response.Status <= 599 ||
+                exception is IOException ||
+                exception is SocketException;
         }
     }
 
@@ -31,11 +42,9 @@ namespace Microsoft.DotNet.Maestro.Client
                 {
                     return;
                 }
-
                 if (content["Message"] is JValue value && value.Type == JTokenType.String)
                 {
                     string message = (string)value.Value;
-
                     throw new ArgumentException(message, ex);
                 }
             }
