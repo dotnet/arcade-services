@@ -5,23 +5,33 @@
 using System;
 using System.Fabric;
 using System.IO;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
     public class TemporaryFiles : IDisposable
     {
-        private string _isolatedTempPath;
+        private readonly ILogger<TemporaryFiles> _logger;
+        private readonly string _isolatedTempPath;
 
-        public TemporaryFiles(ServiceContext context)
+        public TemporaryFiles(
+            ServiceContext context,
+            ILogger<TemporaryFiles> logger)
         {
+            _logger = logger;
             ServiceContext context1 = context;
-            _isolatedTempPath = Environment.ExpandEnvironmentVariables($"%TEMP%\\{context1.ServiceTypeName}\\{context1.ReplicaOrInstanceId}");
+            _isolatedTempPath = Path.Combine(
+                Path.GetTempPath(),
+                context1.ServiceTypeName,
+                context1.ReplicaOrInstanceId.ToString()
+            );
         }
 
         public void Initialize()
         {
             // Do cleanup in the case of unhealthy exit last time.
             Cleanup();
+            _logger.LogTrace("Creating isolated temp directory at {path}", _isolatedTempPath);
             Directory.CreateDirectory(_isolatedTempPath);
         }
 
@@ -41,12 +51,16 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             {
                 // Try and delete/clean it
                 if (Directory.Exists(_isolatedTempPath))
+                {
+                    _logger.LogTrace("Temporary files found, cleaning up {path}", _isolatedTempPath);
                     Directory.Delete(_isolatedTempPath, true);
+                }
             }
-            catch (IOException)
+            catch (IOException e)
             {
                 // It might not be here, it might be locked... there isn't really anything interesting to do, move on
                 // this is just best effort to keep the machine clean
+                _logger.LogError(e, "Failed to clean up temporary directory {path}", _isolatedTempPath);
             }
         }
     }

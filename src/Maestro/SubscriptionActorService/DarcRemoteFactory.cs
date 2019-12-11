@@ -101,7 +101,7 @@ namespace SubscriptionActorService
         }
 
         /// <summary>
-        ///     Download and install git to the a temporarily location.
+        ///     Download and install git to the a temporary location.
         ///     Git is used by DarcLib, and the Service Fabric nodes do not have it installed natively.
         ///     
         ///     The file is assumed to be on a public endpoint.

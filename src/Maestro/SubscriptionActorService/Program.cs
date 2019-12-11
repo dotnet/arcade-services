@@ -44,7 +44,6 @@ namespace SubscriptionActorService
                             services.AddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
                             services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
                             services.AddSingleton<TemporaryFiles>();
-                            services.AddSingleton<TemporaryFiles>();
                             services.AddGitHubTokenProvider();
                             services.AddAzureDevOpsTokenProvider();
                             // We do not use AddMemoryCache here. We use our own cache because we wish to
