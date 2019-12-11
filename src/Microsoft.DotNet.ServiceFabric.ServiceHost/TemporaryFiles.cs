@@ -19,11 +19,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             ILogger<TemporaryFiles> logger)
         {
             _logger = logger;
-            ServiceContext context1 = context;
             _isolatedTempPath = Path.Combine(
                 Path.GetTempPath(),
-                context1.ServiceTypeName,
-                context1.ReplicaOrInstanceId.ToString()
+                context.ServiceTypeName,
+                context.ReplicaOrInstanceId.ToString()
             );
         }
 
@@ -49,12 +48,13 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         {
             try
             {
-                // Try and delete/clean it
-                if (Directory.Exists(_isolatedTempPath))
+                if (!Directory.Exists(_isolatedTempPath))
                 {
-                    _logger.LogTrace("Temporary files found, cleaning up {path}", _isolatedTempPath);
-                    Directory.Delete(_isolatedTempPath, true);
+                    return;
                 }
+
+                _logger.LogTrace("Temporary files found, cleaning up {path}", _isolatedTempPath);
+                Directory.Delete(_isolatedTempPath, true);
             }
             catch (IOException e)
             {
