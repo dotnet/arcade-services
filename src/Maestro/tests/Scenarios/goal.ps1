@@ -28,10 +28,10 @@ try {
     Darc-Set-Goal -channel $newChannelName -definitionId $newDefinitionId -minutes $newMinutes
 
     # Get the goal and make sure it's there
-    Write-Host "Checking that the goal is added"
+    Write-Host "Checking that goal $newMinutes minutes for '$newDefinitionId' on channel '$newChannelName' exists"
     $goal = Darc-Get-Goal -channel $newChannelName -definitionId $newDefinitionId
     if (-not $goal -match $newMinutes) {
-        throw "Adding goal failed"
+        throw "Cannot find goal $newMinutes for definition '$newDefinitionId' on channel '$newChannelName'"
     } else {
         Write-Host "Add and Get goal was successful"
     }
@@ -41,15 +41,14 @@ try {
     Darc-Set-Goal -channel $newChannelName -definitionId $newDefinitionId -minutes $newMinutes
 
     # Update goal verification
-    Write-Host "Checking that the goal is getting updated"
+    Write-Host "Checking if the goal is updated to $newMinutes minutes for '$newDefinitionId' on channel '$newChannelName'"
     $goal = Darc-Get-Goal -channel $newChannelName -definitionId $newDefinitionId
     if (-not $goal -match $newMinutes) {
-        throw "Updating goal failed"
+        throw "Cannot update goal $newMinutes for definition '$newDefinitionId' on channel '$newChannelName'"
     } else {
         Write-Host "Update goal was successful"
     }
     Write-Host "Tests passed."
-}finally{
-    #Teardown only deletes the Channel that was created.
+} finally {
     Teardown
 }
