@@ -31,7 +31,7 @@ try {
     Write-Host "Checking that the goal is added"
     $goal = Darc-Get-Goal -channel $newChannelName -definitionId $newDefinitionId
     if (-not $goal -match $newMinutes) {
-        Write-Host "Adding goal failed"
+        throw "Adding goal failed"
     } else {
         Write-Host "Add and Get goal was successful"
     }
@@ -40,11 +40,11 @@ try {
     Write-Host "Updating goal" 
     Darc-Set-Goal -channel $newChannelName -definitionId $newDefinitionId -minutes $newMinutes
 
-    # check if the update goal 
+    # Update goal verification
     Write-Host "Checking that the goal is getting updated"
     $goal = Darc-Get-Goal -channel $newChannelName -definitionId $newDefinitionId
     if (-not $goal -match $newMinutes) {
-        Write-Host "Updating goal failed"
+        throw "Updating goal failed"
     } else {
         Write-Host "Update goal was successful"
     }
