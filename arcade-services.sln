@@ -104,6 +104,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scenarios", "Scenarios", "{
 		src\Maestro\tests\Scenarios\githubflow-nonbatched-with-coherency.ps1 = src\Maestro\tests\Scenarios\githubflow-nonbatched-with-coherency.ps1
 		src\Maestro\tests\Scenarios\githubflow-nonbatched.ps1 = src\Maestro\tests\Scenarios\githubflow-nonbatched.ps1
 		src\Maestro\tests\Scenarios\githubflow-release-pipeline-nonbatched.ps1 = src\Maestro\tests\Scenarios\githubflow-release-pipeline-nonbatched.ps1
+		src\Maestro\tests\Scenarios\README.md = src\Maestro\tests\Scenarios\README.md
 		src\Maestro\tests\Scenarios\repo-policies.ps1 = src\Maestro\tests\Scenarios\repo-policies.ps1
 		src\Maestro\tests\Scenarios\subscriptions.ps1 = src\Maestro\tests\Scenarios\subscriptions.ps1
 	EndProjectSection
