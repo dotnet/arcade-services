@@ -162,6 +162,7 @@ namespace DotNet.Status.Web
             app.UseAuthentication();
             app.UseMvc();
             app.UseMiddleware<SimpleSigninMiddleware>();
+            app.UseStaticFiles();
         }
     }
 }

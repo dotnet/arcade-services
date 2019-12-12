@@ -85,6 +85,30 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Web.Authen
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DotNet.Services.Utility", "src\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj", "{4CDCFCAA-4B1E-47B7-B6F0-81FFA69BD131}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scenarios", "Scenarios", "{0E820A31-1372-4303-A4E2-B11F3A8B4152}"
+	ProjectSection(SolutionItems) = preProject
+		src\Maestro\tests\Scenarios\all.ps1 = src\Maestro\tests\Scenarios\all.ps1
+		src\Maestro\tests\Scenarios\arcade-update.ps1 = src\Maestro\tests\Scenarios\arcade-update.ps1
+		src\Maestro\tests\Scenarios\azdoflow-batched.ps1 = src\Maestro\tests\Scenarios\azdoflow-batched.ps1
+		src\Maestro\tests\Scenarios\azdoflow-feedflow.ps1 = src\Maestro\tests\Scenarios\azdoflow-feedflow.ps1
+		src\Maestro\tests\Scenarios\azdoflow-nonbatched-all-checks-successful.ps1 = src\Maestro\tests\Scenarios\azdoflow-nonbatched-all-checks-successful.ps1
+		src\Maestro\tests\Scenarios\azdoflow-nonbatched.ps1 = src\Maestro\tests\Scenarios\azdoflow-nonbatched.ps1
+		src\Maestro\tests\Scenarios\builds.ps1 = src\Maestro\tests\Scenarios\builds.ps1
+		src\Maestro\tests\Scenarios\channels.ps1 = src\Maestro\tests\Scenarios\channels.ps1
+		src\Maestro\tests\Scenarios\clone.ps1 = src\Maestro\tests\Scenarios\clone.ps1
+		src\Maestro\tests\Scenarios\common.ps1 = src\Maestro\tests\Scenarios\common.ps1
+		src\Maestro\tests\Scenarios\default-channels.ps1 = src\Maestro\tests\Scenarios\default-channels.ps1
+		src\Maestro\tests\Scenarios\dependencies.ps1 = src\Maestro\tests\Scenarios\dependencies.ps1
+		src\Maestro\tests\Scenarios\githubflow-batched.ps1 = src\Maestro\tests\Scenarios\githubflow-batched.ps1
+		src\Maestro\tests\Scenarios\githubflow-nonbatched-all-checks-successful.ps1 = src\Maestro\tests\Scenarios\githubflow-nonbatched-all-checks-successful.ps1
+		src\Maestro\tests\Scenarios\githubflow-nonbatched-with-coherency.ps1 = src\Maestro\tests\Scenarios\githubflow-nonbatched-with-coherency.ps1
+		src\Maestro\tests\Scenarios\githubflow-nonbatched.ps1 = src\Maestro\tests\Scenarios\githubflow-nonbatched.ps1
+		src\Maestro\tests\Scenarios\githubflow-release-pipeline-nonbatched.ps1 = src\Maestro\tests\Scenarios\githubflow-release-pipeline-nonbatched.ps1
+		src\Maestro\tests\Scenarios\README.md = src\Maestro\tests\Scenarios\README.md
+		src\Maestro\tests\Scenarios\repo-policies.ps1 = src\Maestro\tests\Scenarios\repo-policies.ps1
+		src\Maestro\tests\Scenarios\subscriptions.ps1 = src\Maestro\tests\Scenarios\subscriptions.ps1
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -507,7 +531,7 @@ Global
 		{224E1B78-812F-4E1A-965D-2CB46AD83711} = {FB572E03-6F42-4262-ABB6-9D481E3647D6}
 		{F017F709-6F02-4FFE-A4A4-5FE3EA720B4A} = {FB572E03-6F42-4262-ABB6-9D481E3647D6}
 		{FE6E749D-9C95-4E7D-A0DB-EE288C5CA7BB} = {FB572E03-6F42-4262-ABB6-9D481E3647D6}
-		{4CDCFCAA-4B1E-47B7-B6F0-81FFA69BD131} = {FB572E03-6F42-4262-ABB6-9D481E3647D6}
+		{0E820A31-1372-4303-A4E2-B11F3A8B4152} = {B6FA6294-F939-46DB-B8D7-A8C5CDB5425F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {32B9C883-432E-4FC8-A1BF-090EB033DD5B}

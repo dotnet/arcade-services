@@ -51,6 +51,15 @@ namespace Microsoft.DotNet.DarcLib.HealthMetrics
             var remote = await RemoteFactory.GetRemoteAsync(Repository, Logger);
             var commit = await remote.GetLatestCommitAsync(Repository, Branch);
 
+            if (commit == null)
+            {
+                // If there were no commits, then there can be no cycles. This would be typical of newly
+                // created branches.
+                Result = HealthResult.Passed;
+                Cycles = new List<List<string>>();
+                return;
+            }
+
             DependencyGraph graph =
                 await DependencyGraph.BuildRemoteDependencyGraphAsync(RemoteFactory, Repository, commit, options, Logger);
 
