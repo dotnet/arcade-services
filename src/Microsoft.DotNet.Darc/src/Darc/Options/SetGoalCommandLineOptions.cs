@@ -10,7 +10,7 @@ using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options
 {
-    [Verb("set-goal", HelpText = "Creates /Updates Goal in minutes for Definition in a Channel")]
+    [Verb("set-goal", HelpText = "Creates/Updates Goal in minutes for a Definition in a Channel")]
     internal class SetGoalCommandLineOptions : CommandLineOptions
     {
         [Option('c', "channel", Required = true, HelpText = "Name of channel Eg : .Net Core 5 Dev ")]

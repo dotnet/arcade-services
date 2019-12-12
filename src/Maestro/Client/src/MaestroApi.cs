@@ -18,7 +18,6 @@ namespace Microsoft.DotNet.Maestro.Client
         public override bool IsRetriableException(Exception exception)
         {
             return base.IsRetriableException(exception) ||
-                exception is TaskCanceledException ||
                 exception is OperationCanceledException ||
                 exception is HttpRequestException ||
                 exception is RestApiException raex && raex.Response.Status >= 500 && raex.Response.Status <= 599 ||
@@ -39,15 +38,15 @@ namespace Microsoft.DotNet.Maestro.Client
                 try
                 {
                     content = JObject.Parse(ex.Response.Content);
+                    if (content["Message"] is JValue value && value.Type == JTokenType.String)
+                    {
+                        string message = content.Value<string>("Message");
+                        throw new ArgumentException(message, ex);
+                    }
                 }
                 catch (Exception)
                 {
                     return;
-                }
-                if (content["Message"] is JValue value && value.Type == JTokenType.String)
-                {
-                    string message = (string)value.Value;
-                    throw new ArgumentException(message, ex);
                 }
             }
         }

@@ -17,12 +17,17 @@ namespace Microsoft.DotNet.Darc.Operations
 {
     internal class SetGoalOperation : Operation
     {
-        SetGoalCommandLineOptions _options;
+        private SetGoalCommandLineOptions _options;
         public SetGoalOperation(SetGoalCommandLineOptions options)
             : base(options)
         {
             _options = options;
         }
+
+        /// <summary>
+        ///  Sets Goal in minutes for a definition in a Channel.
+        /// </summary>
+        /// <returns>Process exit code.</returns>
         public override async Task<int> ExecuteAsync()
         {
             try
