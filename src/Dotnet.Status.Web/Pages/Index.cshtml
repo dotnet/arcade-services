@@ -1,6 +1,27 @@
 ﻿@page
+@using System.Security.Claims
 @model DotNet.Status.Web.Pages.IndexModel
 @{
 }
 
-The page
+.NET Engineering Status Reporting endpoint
+
+To get/set tokens, go to <a href="@Url.Page("Token")">Tokens</a>
+
+
+<div>
+    @if (User.Identity.IsAuthenticated)
+    {
+        <div>Roles for @User.Identity.Name</div>
+        <ul>
+        @foreach (Claim role in User.FindAll(ClaimTypes.Role))
+        {
+            <li>@role.Value</li>
+        }
+        </ul>
+    }
+    else
+    {
+        <a href="/signin">Sign in</a>
+    }
+</div>
