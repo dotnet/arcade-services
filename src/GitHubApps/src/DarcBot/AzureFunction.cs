@@ -17,12 +17,16 @@ using System.Threading.Tasks;
 
 namespace DarcBot
 {
+    // TODO: Add bot to core-eng
+    // TODO: Update powerbi links to refer to core-eng
+    // TODO: add deployment - https://dnceng.visualstudio.com/internal/_git/dotnet-helix-machines?path=%2Fazure-pipelines.yml&version=GBmaster
+
     public static class GitHubWebHook
     {
         private static ILogger _log;
         private static Regex _darcBotIssueIdentifierRegex = new Regex(@"\[BuildId=(?<buildid>[^,]+),RecordId=(?<recordid>[^,]+),Index=(?<index>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
         private static Regex _darcBotPropertyRegex = new Regex(@"\[(?<key>.+)=(?<value>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
-        private static readonly string docLink = "[ToDo]";
+        private static readonly string docLink = "[DarcBot documentation](https://github.com/dotnet/arcade-services/tree/master/src/GitHubApps/src/DarcBot/Readme.md)";
 
         [FunctionName("GitHubWebHook")]
         public static async Task<IActionResult> Run(
@@ -94,7 +98,6 @@ namespace DarcBot
                 _log.LogInformation($"There are {issues.Count} open issues");
                 foreach (var issue in issues)
                 {
-                    _log.LogInformation($"Comparing {prNumber} to {issue.Number}");
                     if (issue.Number != prNumber)
                     {
                         TriageItem issueItem = GetTriageItemProperties(issue.Body);
@@ -184,10 +187,6 @@ namespace DarcBot
         private static TriageItem GetTriageItemProperties(string body)
         {
             TriageItem triageItem = new TriageItem();
-            string buildId = string.Empty;
-            string recordId = string.Empty;
-            string index = string.Empty;
-            string category = string.Empty;
 
             if (!string.IsNullOrEmpty(body))
             {

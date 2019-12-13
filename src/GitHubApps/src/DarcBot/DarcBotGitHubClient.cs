@@ -58,7 +58,7 @@ namespace DarcBot
 
         private ILogger _log;
 
-        public DarcBotGitHubClient(int installationId, ILogger log = null)
+        public DarcBotGitHubClient(int installationId, ILogger log)
         {
             _log = log;
 
@@ -73,7 +73,7 @@ namespace DarcBot
 
         private string GetTokenForApplication()
         {
-            LogInformation("Entering GetTokenForApplication");
+            _log.LogInformation("Entering GetTokenForApplication");
             string pemKey = System.Environment.GetEnvironmentVariable("PemKey");
             RSAParameters rsaParameters = CryptoHelper.GetRsaParameters(pemKey);
             var key = new RsaSecurityKey(rsaParameters);
@@ -89,12 +89,12 @@ namespace DarcBot
                 },
                 signingCredentials: creds);
             var jwt = new JwtSecurityTokenHandler().WriteToken(token);
-            LogInformation("Exiting GetTokenForApplication");
+            _log.LogInformation("Exiting GetTokenForApplication");
             return jwt;
         }
         private async Task<string> GetTokenForInstallationAsync(int installationId)
         {
-            LogInformation("Entering GetTokenForInstallationAsync");
+            _log.LogInformation("Entering GetTokenForInstallationAsync");
             var appToken = GetTokenForApplication();
             using (var client = new HttpClient())
             {
@@ -118,8 +118,8 @@ namespace DarcBot
                 {
                     var json = await response.Content.ReadAsStringAsync();
                     var obj = JObject.Parse(json);
-                    LogInformation($"GetTokenForInstallation json response: {json}");
-                    LogInformation("Exiting GetTokenForInstallationAsync");
+                    _log.LogInformation($"GetTokenForInstallation json response: {json}");
+                    _log.LogInformation("Exiting GetTokenForInstallationAsync");
                     return obj["token"]?.Value<string>();
                 }
             }
@@ -140,14 +140,6 @@ namespace DarcBot
         public ApiInfo GetLastApiInfo()
         {
             return _gitHubClient.GetLastApiInfo();
-        }
-
-        private void LogInformation(string text)
-        {
-            if(_log != null)
-            {
-                _log.LogInformation(text);
-            }
         }
     }
 }
