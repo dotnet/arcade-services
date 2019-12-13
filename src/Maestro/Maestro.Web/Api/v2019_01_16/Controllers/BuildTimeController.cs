@@ -2,22 +2,20 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Kusto.Data.Common;
+using Maestro.Data;
+using Maestro.Web.Api.v2019_01_16.Models;
+using Microsoft.AspNetCore.ApiVersioning;
+using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.Kusto;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.ApiVersioning;
-using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
-using Maestro.Web.Api.v2019_01_16.Models;
-using Maestro.Data;
-using Maestro.Data.Models;
-using Microsoft.DotNet.Kusto;
-using Kusto.Data.Common;
+
 
 namespace Maestro.Web.Api.v2019_01_16.Controllers
 {
