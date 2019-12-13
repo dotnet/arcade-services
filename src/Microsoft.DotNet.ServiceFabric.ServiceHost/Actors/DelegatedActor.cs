@@ -345,6 +345,9 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
             builder.Populate(services);
             _configureContainer(builder);
             Container = builder.Build();
+
+            // This requires the ServiceContext up a few lines, so we can't inject it in the constructor
+            Container.ResolveOptional<TemporaryFiles>()?.Initialize();
         }
 
         protected override async Task OnCloseAsync(CancellationToken cancellationToken)

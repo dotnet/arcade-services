@@ -99,13 +99,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     // Only 'create' the AzDO (VSO) variables if running in an AzDO build
                     if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BUILD_BUILDID")))
                     {
-                        var defaultChannels = await client.DefaultChannels.ListAsync(
-                            recordedBuild.GitHubBranch ?? recordedBuild.AzureDevOpsBranch,
-                            channelId: null,
-                            enabled: true,
-                            recordedBuild.GitHubRepository ?? recordedBuild.AzureDevOpsRepository);
+                        IEnumerable<DefaultChannel> defaultChannels = await GetBuildDefaultChannelsAsync(client, recordedBuild);
 
-                        var defaultChannelsStr = "[" + string.Join("][", defaultChannels.Select(x => x.Channel.Id)) + "]";
+                        HashSet<int> targetChannelIds = new HashSet<int>(defaultChannels.Select(dc => dc.Channel.Id));
+
+                        var defaultChannelsStr = "[" + string.Join("][", targetChannelIds) + "]";
+                        Log.LogMessage(MessageImportance.High, $"Determined build will be added to the following channels: { defaultChannelsStr}");
 
                         Console.WriteLine($"##vso[task.setvariable variable=BARBuildId]{recordedBuild.Id}");
                         Console.WriteLine($"##vso[task.setvariable variable=DefaultChannels]{defaultChannelsStr}");
@@ -119,6 +118,42 @@ namespace Microsoft.DotNet.Maestro.Tasks
             }
 
             return !Log.HasLoggedErrors;
+        }
+
+        private async Task<IEnumerable<DefaultChannel>> GetBuildDefaultChannelsAsync(IMaestroApi client, Client.Models.Build recordedBuild)
+        {
+            var defaultChannels = new List<DefaultChannel>();
+            if (recordedBuild.GitHubBranch != null && recordedBuild.GitHubRepository != null)
+            {
+                defaultChannels.AddRange(
+                    await client.DefaultChannels.ListAsync(
+                        branch: recordedBuild.GitHubBranch,
+                        channelId: null,
+                        enabled: true,
+                        repository: recordedBuild.GitHubRepository
+                    ));
+            }
+
+            if (recordedBuild.AzureDevOpsBranch != null && recordedBuild.AzureDevOpsRepository != null)
+            {
+                defaultChannels.AddRange(
+                    await client.DefaultChannels.ListAsync(
+                        branch: recordedBuild.AzureDevOpsBranch,
+                        channelId: null,
+                        enabled: true,
+                        repository: recordedBuild.AzureDevOpsRepository
+                    ));
+            }
+
+            Log.LogMessage(MessageImportance.High, "Found the following default channels:");
+            foreach (var defaultChannel in defaultChannels)
+            {
+                Log.LogMessage(
+                    MessageImportance.High,
+                    $"    {defaultChannel.Repository}@{defaultChannel.Branch} " +
+                    $"=> ({defaultChannel.Channel.Id}) {defaultChannel.Channel.Name}");
+            }
+            return defaultChannels;
         }
 
         private async Task<IImmutableList<BuildRef>> GetBuildDependenciesAsync(
