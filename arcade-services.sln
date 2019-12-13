@@ -83,6 +83,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotNet.Status.Web", "src\Do
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Web.Authentication", "src\shared\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj", "{FE6E749D-9C95-4E7D-A0DB-EE288C5CA7BB}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Validation", "Validation", "{B6FA6294-F939-46DB-B8D7-A8C5CDB5425F}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DotNet.Services.Utility", "src\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj", "{4CDCFCAA-4B1E-47B7-B6F0-81FFA69BD131}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scenarios", "Scenarios", "{0E820A31-1372-4303-A4E2-B11F3A8B4152}"
