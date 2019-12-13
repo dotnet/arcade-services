@@ -412,7 +412,7 @@ namespace Microsoft.DotNet.DarcLib
         public Task<Goal> SetGoalAsync(string channel, int definitionId, int minutes)
         {
             var jsonData = new GoalRequestJson(minutes: minutes);
-            return _barClient.Goal.CreateAsync(body : jsonData, channelName : channel, definitionId : definitionId);
+            return _barClient.Goal.CreateAsync(body: jsonData, channelName : channel, definitionId : definitionId);
         }
 
         /// <summary>

@@ -238,24 +238,13 @@ namespace SubscriptionActorService
             throw new NotImplementedException();
         }
 
-        /// <summary>
-        ///  Creates a new goal or updates the existing goal (in minutes) for a Defintion in a Channel.
-        /// </summary>
-        /// <param name="channel">Name of channel. For eg: .Net Core 5 Dev</param>
-        /// <param name="definitionId">Azure DevOps DefinitionId.</param>
-        /// <param name="minutes">Goal in minutes for a Definition in a Channel.</param>
-        /// <returns>Async task.</returns>
+        ///  Unsupported method
         public Task<Goal> SetGoalAsync(string channel, int definitionId, int minutes)
         {
             throw new NotImplementedException();
         }
 
-        /// <summary>
-        ///     Gets goal (in minutes) for a Defintion in a Channel.
-        /// </summary>
-        /// <param name="channel">Name of channel. For eg: .Net Core 5 Dev</param>
-        /// <param name="definitionId">Azure DevOps DefinitionId.</param>
-        /// <returns>Returns Goal in minutes.</returns>
+        ///  Unsupported method
         public Task<Goal> GetGoalAsync(string channel, int definitionId)
         {
             throw new NotImplementedException();

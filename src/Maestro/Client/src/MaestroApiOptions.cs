@@ -11,17 +11,21 @@ namespace Microsoft.DotNet.Maestro.Client
 {
     partial class MaestroApiOptions
     {
-        private MaestroApiTokenCredential maestroApiTokenCredential;
+        private MaestroApiTokenCredential _maestroApiTokenCredential;
+
         public MaestroApiOptions(MaestroApiTokenCredential maestroApiTokenCredential)
         {
-            this.maestroApiTokenCredential = maestroApiTokenCredential;
+            _maestroApiTokenCredential = maestroApiTokenCredential;
         }
+
         partial void InitializeOptions()
         {
             if (Credentials != null)
             {
-                AddPolicy(new BearerTokenAuthenticationPolicy
-                    (Credentials, Array.Empty<string>()), HttpPipelinePosition.PerCall);
+                AddPolicy(
+                    new BearerTokenAuthenticationPolicy(Credentials, Array.Empty<string>()),
+                    HttpPipelinePosition.PerCall
+                    );
             }
         }
     }

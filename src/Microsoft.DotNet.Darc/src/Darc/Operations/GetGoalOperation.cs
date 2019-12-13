@@ -18,6 +18,7 @@ namespace Microsoft.DotNet.Darc.Operations
     internal class GetGoalOperation : Operation
     {
         private GetGoalCommandLineOptions _options;
+
         public GetGoalOperation(GetGoalCommandLineOptions options)
             : base(options)
         {
@@ -34,10 +35,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
                 Goal goalInfo = await remote.GetGoalAsync(_options.Channel, _options.DefinitionId);
-                if(goalInfo != null)
-                {
-                    Console.Write(goalInfo.Minutes);
-                }
+                Console.Write(goalInfo.Minutes);
                 return Constants.SuccessCode;
             }
             catch (RestApiException e) when (e.Response.Status == (int)HttpStatusCode.NotFound)
