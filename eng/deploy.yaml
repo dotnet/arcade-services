@@ -158,7 +158,7 @@ stages:
 - stage: postdeploy
   displayName: Post-Deployment
   dependsOn:
-  - build
+  - deploy
   condition: always()
   variables:
   - group: ${{ parameters.StatusVariableGroup }}
