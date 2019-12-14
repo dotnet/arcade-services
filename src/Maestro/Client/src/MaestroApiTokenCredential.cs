@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.Maestro.Client
         {
             return new AccessToken(Token, DateTimeOffset.MaxValue);
         }
-
+    
         public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
         {
             return new ValueTask<AccessToken>(new AccessToken(Token, DateTimeOffset.MaxValue));
