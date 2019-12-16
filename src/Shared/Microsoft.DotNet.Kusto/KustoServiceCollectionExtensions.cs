@@ -3,14 +3,17 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.DependencyInjection;
+using System;
 
 namespace Microsoft.DotNet.Kusto
 {
     public static class KustoServiceCollectionExtensions
     {
-        public static IServiceCollection AddKustoClientProvider(this IServiceCollection services)
+        public static IServiceCollection AddKustoClientProvider(this IServiceCollection services, Action<KustoClientProviderOptions> configure)
         {
-            return services.AddSingleton<IKustoClientProvider, KustoClientProvider>();
+            services.AddSingleton<IKustoClientProvider, KustoClientProvider>();
+            services.Configure<KustoClientProviderOptions>(configure);
+            return services;
         }
     }
 }

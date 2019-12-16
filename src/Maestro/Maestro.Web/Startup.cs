@@ -231,9 +231,8 @@ namespace Maestro.Web
                         options.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
                     }
                 });
-            services.AddKustoClientProvider();
-            services.Configure<KustoClientProviderOptions>(
-                (options, provider) =>
+            services.AddKustoClientProvider(
+                options =>
                 {
                     IConfigurationSection section = Configuration.GetSection("Kusto");
                     section.Bind(options);

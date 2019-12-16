@@ -2,13 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Kusto.Data.Common;
+using System.Threading.Tasks;
+using System.Data;
 
 namespace Microsoft.DotNet.Kusto
 {
     public interface IKustoClientProvider
     {
-        ICslQueryProvider GetKustoQueryConnectionProvider();
-        string GetKustoDatabase();
+        Task<IDataReader> ExecuteKustoQueryAsync(KustoQuery query);
     }
 }
