@@ -14,10 +14,19 @@ To get/set tokens, go to <a href="@Url.Page("Token")">Tokens</a>
     {
         <div>Roles for @User.Identity.Name</div>
         <ul>
-        @foreach (Claim role in User.FindAll(ClaimTypes.Role))
-        {
-            <li>@role.Value</li>
-        }
+            @foreach (Claim role in User.FindAll(ClaimTypes.Role))
+            {
+                <li>@role.Value</li>
+            }
+        </ul>
+
+        <div>Other claims...</div>
+        <ul>
+            @foreach (Claim c in User.Claims.Where(c => c.Type != ClaimTypes.Role))
+            {
+                <li>
+                    <b>@c.Type</b> @c.Value</li>
+            }
         </ul>
     }
     else
