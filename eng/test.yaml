@@ -22,7 +22,7 @@ steps:
   inputs: 
     targetType: 'filePath'
     filePath: eng\convert-codecoveragetoxml.ps1
-    arguments: -Path "$(system.defaultworkingdirectory)"
+    arguments: -Path "$(system.defaultworkingdirectory)" -NugetPackagesPath "$(Build.SourcesDirectory)\.packages"
   displayName: Convert Code Coverage to XML (powershell)
 
 - task: Palmmedia.reportgenerator.reportgenerator-build-release-task.reportgenerator@4

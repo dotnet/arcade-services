@@ -1,7 +1,9 @@
 [cmdletbinding()]
 param(
     [Parameter(Mandatory=$True)]
-    [string]$Path
+    [string]$Path,
+    [Parameter(Mandatory=$True)]
+    [string]$NugetPackagesPath
 )
 
 Set-StrictMode -Version 2.0
@@ -11,7 +13,7 @@ $coverageFile = Get-ChildItem -Path $Path -Filter *.coverage -Recurse -ErrorActi
 Write-Host "Code coverage files found: "
 Write-Host $coverageFile.FullName
 
-$codeCoverageExe = "C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Team Tools\Dynamic Code Coverage Tools\CodeCoverage.exe"
+$codeCoverageExe = (Get-ChildItem -Path $NugetPackagesPath -Filter "CodeCoverage.exe" -Recurse -ErrorAction SilentlyContinue -Force | Select-Object FullName -First 1).FullName
 
 & $codeCoverageExe analyze /output:$Path\codecoverage.coveragexml $coverageFile.FullName
 
