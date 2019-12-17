@@ -57,8 +57,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
 
             var parameters = new List<KustoParameter> {
                 new KustoParameter("_Repository", KustoDataTypes.String,  defaultChannel.Repository.Split("/").Last()),
-                new KustoParameter("_SourceBranch", KustoDataTypes.String, $"refs/heads/{defaultChannel.Branch}"),
-                new KustoParameter("_TargetBranch", KustoDataTypes.String, $"{defaultChannel.Branch}"),
+                new KustoParameter("_SourceBranch", KustoDataTypes.String, defaultChannel.Branch),
                 new KustoParameter("_Days", KustoDataTypes.TimeSpan, $"{days}d")
             };
 
@@ -80,7 +79,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                 | project Repository, SourceBranch, DefinitionId, StartTime, FinishTime, Result, Project, Reason
                 | where Project == 'public'
                 | where Reason == 'pullRequest' 
-                | where TargetBranch == _TargetBranch
+                | where TargetBranch == _SourceBranch
                 {commonQueryText}";
 
             // For the official build times, we want the builds that were generated as a CI run 
