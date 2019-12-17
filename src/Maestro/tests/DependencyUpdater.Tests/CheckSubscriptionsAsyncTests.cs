@@ -25,18 +25,18 @@ namespace DependencyUpdater.Tests
             };
             var oldBuild = new Build
             {
-                Branch = "source.branch",
-                Repository = "source.repo",
-                BuildNumber = "old.build.number",
+                AzureDevOpsBranch = "source.branch",
+                AzureDevOpsRepository = "source.repo",
+                AzureDevOpsBuildNumber = "old.build.number",
                 Commit = "oldSha",
                 DateProduced = DateTimeOffset.UtcNow.AddDays(-2)
             };
             var location = "https://source.feed/index.json";
             var build = new Build
             {
-                Branch = "source.branch",
-                Repository = "source.repo",
-                BuildNumber = "build.number",
+                AzureDevOpsBranch = "source.branch",
+                AzureDevOpsRepository = "source.repo",
+                AzureDevOpsBuildNumber = "build.number",
                 Commit = "sha",
                 DateProduced = DateTimeOffset.UtcNow,
                 Assets = new List<Asset>
@@ -89,7 +89,7 @@ namespace DependencyUpdater.Tests
             SubscriptionActor.Setup(a => a.UpdateAsync(build.Id)).Returns(Task.CompletedTask);
 
             var updater = ActivatorUtilities.CreateInstance<DependencyUpdater>(Scope.ServiceProvider);
-            await updater.CheckSubscriptionsAsync(CancellationToken.None);
+            await updater.CheckDailySubscriptionsAsync(CancellationToken.None);
         }
 
         [Fact]
@@ -102,18 +102,18 @@ namespace DependencyUpdater.Tests
             };
             var oldBuild = new Build
             {
-                Branch = "source.branch",
-                Repository = "source.repo",
-                BuildNumber = "old.build.number",
+                AzureDevOpsBranch = "source.branch",
+                AzureDevOpsRepository = "source.repo",
+                AzureDevOpsBuildNumber = "old.build.number",
                 Commit = "oldSha",
                 DateProduced = DateTimeOffset.UtcNow.AddDays(-2)
             };
             var location = "https://source.feed/index.json";
             var build = new Build
             {
-                Branch = "source.branch",
-                Repository = "source.repo",
-                BuildNumber = "build.number",
+                AzureDevOpsBranch = "source.branch",
+                AzureDevOpsRepository = "source.repo",
+                AzureDevOpsBuildNumber = "build.number",
                 Commit = "sha",
                 DateProduced = DateTimeOffset.UtcNow,
                 Assets = new List<Asset>
@@ -166,7 +166,7 @@ namespace DependencyUpdater.Tests
             SubscriptionActor.Verify(a => a.UpdateAsync(build.Id), Times.Never());
 
             var updater = ActivatorUtilities.CreateInstance<DependencyUpdater>(Scope.ServiceProvider);
-            await updater.CheckSubscriptionsAsync(CancellationToken.None);
+            await updater.CheckDailySubscriptionsAsync(CancellationToken.None);
         }
 
         [Fact]
@@ -194,7 +194,7 @@ namespace DependencyUpdater.Tests
             await Context.SaveChangesAsync();
 
             var updater = ActivatorUtilities.CreateInstance<DependencyUpdater>(Scope.ServiceProvider);
-            await updater.CheckSubscriptionsAsync(CancellationToken.None);
+            await updater.CheckDailySubscriptionsAsync(CancellationToken.None);
         }
 
         [Fact]
@@ -207,9 +207,9 @@ namespace DependencyUpdater.Tests
             };
             var build = new Build
             {
-                Branch = "source.branch",
-                Repository = "source.repo",
-                BuildNumber = "build.number",
+                AzureDevOpsBranch = "source.branch",
+                AzureDevOpsRepository = "source.repo",
+                AzureDevOpsBuildNumber = "build.number",
                 Commit = "sha",
                 DateProduced = DateTimeOffset.UtcNow
             };
@@ -236,7 +236,7 @@ namespace DependencyUpdater.Tests
             await Context.SaveChangesAsync();
 
             var updater = ActivatorUtilities.CreateInstance<DependencyUpdater>(Scope.ServiceProvider);
-            await updater.CheckSubscriptionsAsync(CancellationToken.None);
+            await updater.CheckDailySubscriptionsAsync(CancellationToken.None);
         }
     }
 }

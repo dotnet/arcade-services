@@ -12,6 +12,7 @@
     <FabActUtilWorkingDir>$(BaseIntermediateOutputPath)\FabActUtilTemp</FabActUtilWorkingDir>
     <SignAssembly>false</SignAssembly>
     <LangVersion>7.1</LangVersion>
+    <DebugType>Full</DebugType>
   </PropertyGroup>
 
   <!-- Disable the service fabric actors build time logic on non windows because it has dependencies on windows -->
