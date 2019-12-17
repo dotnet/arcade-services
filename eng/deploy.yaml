@@ -178,41 +178,41 @@ stages:
             "Authorization": "Bearer $[dotnet-build-bot-dotnet-eng-status-token]",
           }
         urlSuffix: /arcade-services/$(Build.BuildNumber)/end
-- stage: validateDeployment
-  displayName: Validate deployment
-  dependsOn: 
-  - deploy
-  variables:
-  - group: ${{ parameters.VariableGroup }}
-  - name: MaestroTestEndpoint
-    value: ${{ parameters.MaestroTestEndpoint }}
-  jobs:
-  - job: scenario
-    displayName: Scenario tests
-    steps:
-    - download: current
-      artifact: ScenarioTests
-    - download: current
-      artifact: PackageArtifacts
-    - task: NuGetToolInstaller@1
-      displayName: Use NuGet
-      inputs:
-        versionSpec: 5.3.x
-    - powershell: |
-        nuget sources add -Name "arcade" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-tools-internal/index.json"
-        nuget sources add -Name "dotnet-core" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
-      displayName: Add nuget Sources
-    - powershell: |
-        $versionEndpoint = "$(MaestroTestEndpoint)/api/assets/darc-version?api-version=2019-01-16"
-        $latestDarcVersion = $darcVersion = $(Invoke-WebRequest -Uri $versionEndpoint -UseBasicParsing).Content
-        Write-Host "##vso[task.setvariable variable=darcVersion]$latestDarcVersion"
-        Write-Host "Using Darc version $latestDarcVersion to run the tests"
-      displayName: Get DARC version
-    - task: PowerShell@2
-      displayName: Run Scenario Tests
-      inputs:
-        targetType: filePath
-        filePath: $(Pipeline.Workspace)/ScenarioTests/all.ps1
-        arguments: -maestroInstallation "$(MaestroTestEndpoint)" -darcVersion "$(darcVersion)" -maestroBearerToken "$(scenario-test-maestro-token)" -githubPAT "$(maestro-scenario-test-github-token)" -azdoPAT "$(dn-bot-dnceng-build-rw-code-rw-release-rw)" -darcPackageSource "$(Pipeline.Workspace)\PackageArtifacts"
-        workingDirectory: $(Pipeline.Workspace)/ScenarioTests
-      timeoutInMinutes: 90
+# - stage: validateDeployment
+#   displayName: Validate deployment
+#   dependsOn: 
+#   - deploy
+#   variables:
+#   - group: ${{ parameters.VariableGroup }}
+#   - name: MaestroTestEndpoint
+#     value: ${{ parameters.MaestroTestEndpoint }}
+#   jobs:
+#   - job: scenario
+#     displayName: Scenario tests
+#     steps:
+#     - download: current
+#       artifact: ScenarioTests
+#     - download: current
+#       artifact: PackageArtifacts
+#     - task: NuGetToolInstaller@1
+#       displayName: Use NuGet
+#       inputs:
+#         versionSpec: 5.3.x
+#     - powershell: |
+#         nuget sources add -Name "arcade" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-tools-internal/index.json"
+#         nuget sources add -Name "dotnet-core" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
+#       displayName: Add nuget Sources
+#     - powershell: |
+#         $versionEndpoint = "$(MaestroTestEndpoint)/api/assets/darc-version?api-version=2019-01-16"
+#         $latestDarcVersion = $darcVersion = $(Invoke-WebRequest -Uri $versionEndpoint -UseBasicParsing).Content
+#         Write-Host "##vso[task.setvariable variable=darcVersion]$latestDarcVersion"
+#         Write-Host "Using Darc version $latestDarcVersion to run the tests"
+#       displayName: Get DARC version
+#     - task: PowerShell@2
+#       displayName: Run Scenario Tests
+#       inputs:
+#         targetType: filePath
+#         filePath: $(Pipeline.Workspace)/ScenarioTests/all.ps1
+#         arguments: -maestroInstallation "$(MaestroTestEndpoint)" -darcVersion "$(darcVersion)" -maestroBearerToken "$(scenario-test-maestro-token)" -githubPAT "$(maestro-scenario-test-github-token)" -azdoPAT "$(dn-bot-dnceng-build-rw-code-rw-release-rw)" -darcPackageSource "$(Pipeline.Workspace)\PackageArtifacts"
+#         workingDirectory: $(Pipeline.Workspace)/ScenarioTests
+#       timeoutInMinutes: 90
