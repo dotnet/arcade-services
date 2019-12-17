@@ -58,6 +58,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             var parameters = new List<KustoParameter> {
                 new KustoParameter("_Repository", KustoDataTypes.String,  defaultChannel.Repository.Split("/").Last()),
                 new KustoParameter("_SourceBranch", KustoDataTypes.String, $"refs/heads/{defaultChannel.Branch}"),
+                new KustoParameter("_TargetBranch", KustoDataTypes.String, $"{defaultChannel.Branch}"),
                 new KustoParameter("_Days", KustoDataTypes.TimeSpan, $"{days}d")
             };
 
@@ -72,13 +73,14 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                 | summarize average_duration = avg(duration) by DefinitionId
                 | summarize max(average_duration)";
 
-            // We only want the pull request time from the public ci. We don't exclude on branch,
+            // We only want the pull request time from the public ci. We exclude on target branch,
             // as all PRs come in as refs/heads/#/merge rather than what branch they are trying to
             // apply to.
             string publicQueryText = $@"TimelineBuilds 
                 | project Repository, SourceBranch, DefinitionId, StartTime, FinishTime, Result, Project, Reason
                 | where Project == 'public'
                 | where Reason == 'pullRequest' 
+                | where TargetBranch == _TargetBranch
                 {commonQueryText}";
 
             // For the official build times, we want the builds that were generated as a CI run 
