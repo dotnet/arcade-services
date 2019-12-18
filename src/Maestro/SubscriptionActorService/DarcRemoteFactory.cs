@@ -13,6 +13,7 @@ using Maestro.Data;
 using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 

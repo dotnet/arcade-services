@@ -95,6 +95,7 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
             string accessToken,
             CancellationToken cancellationToken = default)
         {
+            _logger.LogInformation("Getting user information");
             return await _cache.GetOrCreateAsync(new UserInfoKey(accessToken),
                 cacheEntry =>
                 {
@@ -104,6 +105,7 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
 
             async Task<UserInformation> Execute()
             {
+                _logger.LogInformation("Fetching fresh user info...");
                 GitHubAuthenticationOptions options = _options.CurrentValue;
 
                 JObject payload = await GetResponseJsonPayloadAsync(options.UserInformationEndpoint,
@@ -111,6 +113,8 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
                     options,
                     async r => JObject.Parse(await r.Content.ReadAsStringAsync()),
                     cancellationToken);
+
+                _logger.LogInformation("Successfully fetched user data");
 
                 ImmutableArray<Claim>.Builder claims = ImmutableArray.CreateBuilder<Claim>();
 
@@ -138,6 +142,7 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
             string accessToken,
             CancellationToken cancellationToken = default)
         {
+            _logger.LogInformation("Getting user membership information...");
             return await _cache.GetOrCreateAsync(new GroupInfoKey(accessToken), 
                 cacheEntry =>
                 {
@@ -147,6 +152,7 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
 
             async Task<ImmutableArray<Claim>> Execute()
             {
+                _logger.LogInformation("Fetching fresh membership info...");
                 GitHubAuthenticationOptions options = _options.CurrentValue;
 
                 ImmutableArray<Claim>.Builder claims = ImmutableArray.CreateBuilder<Claim>();
@@ -159,33 +165,40 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
                     }
                 }
 
-                JArray orgPayload = await GetResponseJsonPayloadAsync("https://api.github.com/user/orgs",
-                    accessToken,
-                    options,
-                    async r =>
-                        JArray.Parse(await r.Content.ReadAsStringAsync()),
-                    cancellationToken);
-
-                foreach (JToken org in orgPayload)
                 {
-                    string orgLogin = org.Value<string>("login")?.ToLowerInvariant();
-                    AddClaim(ClaimTypes.Role, "github:org:" + orgLogin);
-                    AddClaim("urn:github:org", orgLogin);
+                    JArray orgPayload = await GetResponseJsonPayloadAsync("https://api.github.com/user/orgs",
+                        accessToken,
+                        options,
+                        async r => JArray.Parse(await r.Content.ReadAsStringAsync()),
+                        cancellationToken);
+
+                    _logger.LogInformation("Fetched {orgCount} orgs", orgPayload.Count);
+
+                    foreach (JToken org in orgPayload)
+                    {
+                        string orgLogin = org.Value<string>("login")?.ToLowerInvariant();
+                        AddClaim(ClaimTypes.Role, "github:org:" + orgLogin);
+                        AddClaim("urn:github:org", orgLogin);
+                    }
                 }
 
-                JArray teamPayload = await GetResponseJsonPayloadAsync("https://api.github.com/user/orgs",
-                    accessToken,
-                    options,
-                    async r =>
-                        JArray.Parse(await r.Content.ReadAsStringAsync()),
-                    cancellationToken);
-
-                foreach (JToken team in teamPayload)
                 {
-                    string teamName = team.Value<string>("name")?.ToLowerInvariant();
-                    string orgName = team["organization"]?.Value<string>("login")?.ToLowerInvariant();
-                    AddClaim(ClaimTypes.Role, "github:team:" + teamName);
-                    AddClaim("urn:github:team", teamName);
+                    JArray teamPayload = await GetResponseJsonPayloadAsync("https://api.github.com/user/teams",
+                        accessToken,
+                        options,
+                        async r => JArray.Parse(await r.Content.ReadAsStringAsync()),
+                        cancellationToken);
+
+                    _logger.LogInformation("Fetched {teamCount} teams", teamPayload.Count);
+
+                    foreach (JToken team in teamPayload)
+                    {
+                        string teamName = team.Value<string>("name")?.ToLowerInvariant();
+                        string orgName = team["organization"]?.Value<string>("login")?.ToLowerInvariant();
+                        string fullName = orgName + "/" + teamName;
+                        AddClaim(ClaimTypes.Role, "github:team:" + fullName);
+                        AddClaim("urn:github:team", fullName);
+                    }
                 }
 
                 return claims.ToImmutable();
