@@ -75,7 +75,7 @@ namespace Microsoft.DotNet.Darc
                     typeof(GetRepositoryMergePoliciesCommandLineOptions),
                     typeof(GetSubscriptionsCommandLineOptions),
                     typeof(SetRepositoryMergePoliciesCommandLineOptions),
-                    typeof(SubscriptionStatusesCommandLineOptions),
+                    typeof(SubscriptionsStatusCommandLineOptions),
                     typeof(TriggerSubscriptionsCommandLineOptions),
                     typeof(UpdateBuildCommandLineOptions),
                     typeof(UpdateDependenciesCommandLineOptions),

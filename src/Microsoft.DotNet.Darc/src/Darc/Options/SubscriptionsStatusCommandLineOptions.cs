@@ -7,8 +7,8 @@ using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options
 {
-    [Verb("subscription-status", HelpText = "Enables or disables a subscriptions matching a specified criteria.")]
-    internal class SubscriptionStatusesCommandLineOptions : SubscriptionsCommandLineOptions
+    [Verb("subscription-status", HelpText = "Enables or disables subscriptions matching a specified criteria.")]
+    internal class SubscriptionsStatusCommandLineOptions : SubscriptionsCommandLineOptions
     {
         [Option("id", HelpText = "Specific subscription's id.")]
         public string Id { get; set; }
@@ -24,7 +24,7 @@ namespace Microsoft.DotNet.Darc.Options
 
         public override Operation GetOperation()
         {
-            return new SubscriptionStatusesOperation(this);
+            return new SubscriptionsStatusOperation(this);
         }
     }
 }

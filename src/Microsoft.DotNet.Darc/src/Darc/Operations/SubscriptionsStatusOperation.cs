@@ -16,11 +16,11 @@ using Microsoft.DotNet.Maestro.Client;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
-    class SubscriptionStatusesOperation : Operation
+    class SubscriptionsStatusOperation : Operation
     {
-        SubscriptionStatusesCommandLineOptions _options;
+        SubscriptionsStatusCommandLineOptions _options;
 
-        public SubscriptionStatusesOperation(SubscriptionStatusesCommandLineOptions options)
+        public SubscriptionsStatusOperation(SubscriptionsStatusCommandLineOptions options)
             : base(options)
         {
             _options = options;
@@ -39,7 +39,8 @@ namespace Microsoft.DotNet.Darc.Operations
                 return Constants.ErrorCode;
             }
 
-            string pastTestStatusMessage = _options.Enable ? "enabled" : "disabled";
+            string presentTenseStatusMessage = _options.Enable ? "enable" : "disable";
+            string pastTenseStatusMessage = _options.Enable ? "enabled" : "disabled";
             string actionStatusMessage = _options.Enable ? "Enabling" : "Disabling";
 
             try
@@ -67,13 +68,13 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     if (!_options.HasAnyFilters())
                     {
-                        Console.WriteLine($"Please specify one or more filters to select which subscriptions should be {pastTestStatusMessage} (see help).");
+                        Console.WriteLine($"Please specify one or more filters to select which subscriptions should be {pastTenseStatusMessage} (see help).");
                         return Constants.ErrorCode;
                     }
 
                     IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(remote);
 
-                    if (subscriptions.Count() == 0)
+                    if (!subscriptions.Any())
                     {
                         Console.WriteLine("No subscriptions found matching the specified criteria.");
                         return Constants.ErrorCode;
@@ -82,10 +83,19 @@ namespace Microsoft.DotNet.Darc.Operations
                     subscriptionsToEnableDisable.AddRange(subscriptions);
                 }
 
+                // Filter away subscriptions that already have the desired state:
+                subscriptionsToEnableDisable = subscriptionsToEnableDisable.Where(s => s.Enabled != _options.Enable).ToList();
+
+                if (!subscriptionsToEnableDisable.Any())
+                {
+                    Console.WriteLine($"All subscriptions are already {pastTenseStatusMessage}.");
+                    return Constants.SuccessCode;
+                }
+
                 if (!noConfirm)
                 {
                     // Print out the list of subscriptions about to be enabled/disabled.
-                    Console.WriteLine($"Will {pastTestStatusMessage} the following {subscriptionsToEnableDisable.Count} subscriptions...");
+                    Console.WriteLine($"Will {presentTenseStatusMessage} the following {subscriptionsToEnableDisable.Count} subscriptions...");
                     foreach (var subscription in subscriptionsToEnableDisable)
                     {
                         Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
@@ -93,7 +103,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     if (!UxHelpers.PromptForYesNo("Continue?"))
                     {
-                        Console.WriteLine($"No subscriptions {pastTestStatusMessage}, exiting.");
+                        Console.WriteLine($"No subscriptions {pastTenseStatusMessage}, exiting.");
                         return Constants.ErrorCode;
                     }
                 }
@@ -122,7 +132,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         subscription.Id.ToString(),
                         subscriptionToUpdate);
                 }
-                Console.WriteLine($"done");
+                Console.WriteLine("done");
 
                 return Constants.SuccessCode;
             }
