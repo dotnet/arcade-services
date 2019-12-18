@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -10,6 +10,7 @@
     <PackageTags>Arcade Darc CLI Dependency Flow</PackageTags>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>darc</ToolCommandName>
+    <DebugType>Full</DebugType>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp2.1'">
