@@ -1,8 +1,5 @@
 ﻿@page
 @using System.Security.Claims
-@model DotNet.Status.Web.Pages.IndexModel
-@{
-}
 
 .NET Engineering Status Reporting endpoint
 
@@ -17,15 +14,6 @@ To get/set tokens, go to <a href="@Url.Page("Token")">Tokens</a>
             @foreach (Claim role in User.FindAll(ClaimTypes.Role))
             {
                 <li>@role.Value</li>
-            }
-        </ul>
-
-        <div>Other claims...</div>
-        <ul>
-            @foreach (Claim c in User.Claims.Where(c => c.Type != ClaimTypes.Role))
-            {
-                <li>
-                    <b>@c.Type</b> @c.Value</li>
             }
         </ul>
     }

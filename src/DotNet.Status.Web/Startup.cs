@@ -150,15 +150,18 @@ namespace DotNet.Status.Web
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app)
         {
+            app.UseStatusCodePagesWithReExecute("/Status", "?code={0}");
+
             if (Env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
             else
             {
+                app.UseExceptionHandler("/Error");
                 app.UseHttpsRedirection();
             }
-
+            
             app.UseAuthentication();
             app.UseMvc();
             app.UseMiddleware<SimpleSigninMiddleware>();
