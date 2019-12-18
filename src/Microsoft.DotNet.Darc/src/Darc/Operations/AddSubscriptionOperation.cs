@@ -152,7 +152,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 targetBranch = addSubscriptionPopup.TargetBranch;
                 updateFrequency = addSubscriptionPopup.UpdateFrequency;
                 mergePolicies = addSubscriptionPopup.MergePolicies;
-                batchable = addSubscriptionPopup.Batchable; 
+                batchable = addSubscriptionPopup.Batchable;
             }
 
             try
@@ -209,7 +209,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 return Constants.SuccessCode;
             }
-            catch (RestApiException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            catch (RestApiException e) when (e.Response.Status == (int) System.Net.HttpStatusCode.BadRequest)
             {
                 // Could have been some kind of validation error (e.g. channel doesn't exist)
                 Logger.LogError($"Failed to create subscription: {e.Response.Content}");

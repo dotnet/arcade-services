@@ -9,7 +9,7 @@ using System.Linq;
 
 namespace Microsoft.DotNet.DarcLib.Helpers
 {
-    public class PackagesHelper
+    public static class PackagesHelper
     {
         public static ManifestMetadata GetManifestMetadata(string packagePath)
         {

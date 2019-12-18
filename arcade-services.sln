@@ -65,6 +65,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		azure-pipelines.yml = azure-pipelines.yml
 		Build.cmd = Build.cmd
 		build.sh = build.sh
+		CodeCoverage.runsettings = CodeCoverage.runsettings
 		Directory.Build.props = Directory.Build.props
 		Directory.Build.targets = Directory.Build.targets
 		global.json = global.json
@@ -83,11 +84,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotNet.Status.Web", "src\Do
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Web.Authentication", "src\shared\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj", "{FE6E749D-9C95-4E7D-A0DB-EE288C5CA7BB}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Validation", "Validation", "{B6FA6294-F939-46DB-B8D7-A8C5CDB5425F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyUpdater.Tests", "src\Maestro\tests\DependencyUpdater.Tests\DependencyUpdater.Tests.csproj", "{574719D7-D038-4184-848D-02DEEAD60017}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Validation", "Validation", "{F92E1B5C-26D4-4244-A4F9-41E22BA8E1CE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DotNet.Services.Utility", "src\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj", "{4CDCFCAA-4B1E-47B7-B6F0-81FFA69BD131}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scenarios", "Scenarios", "{0E820A31-1372-4303-A4E2-B11F3A8B4152}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scenarios", "Scenarios", "{939DD755-B5FC-46EF-AE8B-5073DA6D4490}"
 	ProjectSection(SolutionItems) = preProject
 		src\Maestro\tests\Scenarios\all.ps1 = src\Maestro\tests\Scenarios\all.ps1
 		src\Maestro\tests\Scenarios\arcade-update.ps1 = src\Maestro\tests\Scenarios\arcade-update.ps1
@@ -493,6 +496,18 @@ Global
 		{FE6E749D-9C95-4E7D-A0DB-EE288C5CA7BB}.Release|x64.Build.0 = Release|Any CPU
 		{FE6E749D-9C95-4E7D-A0DB-EE288C5CA7BB}.Release|x86.ActiveCfg = Release|Any CPU
 		{FE6E749D-9C95-4E7D-A0DB-EE288C5CA7BB}.Release|x86.Build.0 = Release|Any CPU
+		{574719D7-D038-4184-848D-02DEEAD60017}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{574719D7-D038-4184-848D-02DEEAD60017}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{574719D7-D038-4184-848D-02DEEAD60017}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{574719D7-D038-4184-848D-02DEEAD60017}.Debug|x64.Build.0 = Debug|Any CPU
+		{574719D7-D038-4184-848D-02DEEAD60017}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{574719D7-D038-4184-848D-02DEEAD60017}.Debug|x86.Build.0 = Debug|Any CPU
+		{574719D7-D038-4184-848D-02DEEAD60017}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{574719D7-D038-4184-848D-02DEEAD60017}.Release|Any CPU.Build.0 = Release|Any CPU
+		{574719D7-D038-4184-848D-02DEEAD60017}.Release|x64.ActiveCfg = Release|Any CPU
+		{574719D7-D038-4184-848D-02DEEAD60017}.Release|x64.Build.0 = Release|Any CPU
+		{574719D7-D038-4184-848D-02DEEAD60017}.Release|x86.ActiveCfg = Release|Any CPU
+		{574719D7-D038-4184-848D-02DEEAD60017}.Release|x86.Build.0 = Release|Any CPU
 		{4CDCFCAA-4B1E-47B7-B6F0-81FFA69BD131}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4CDCFCAA-4B1E-47B7-B6F0-81FFA69BD131}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4CDCFCAA-4B1E-47B7-B6F0-81FFA69BD131}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -533,7 +548,8 @@ Global
 		{224E1B78-812F-4E1A-965D-2CB46AD83711} = {FB572E03-6F42-4262-ABB6-9D481E3647D6}
 		{F017F709-6F02-4FFE-A4A4-5FE3EA720B4A} = {FB572E03-6F42-4262-ABB6-9D481E3647D6}
 		{FE6E749D-9C95-4E7D-A0DB-EE288C5CA7BB} = {FB572E03-6F42-4262-ABB6-9D481E3647D6}
-		{0E820A31-1372-4303-A4E2-B11F3A8B4152} = {B6FA6294-F939-46DB-B8D7-A8C5CDB5425F}
+		{574719D7-D038-4184-848D-02DEEAD60017} = {AE791E26-78E1-4936-BCF4-1BF5152CBBD6}
+		{939DD755-B5FC-46EF-AE8B-5073DA6D4490} = {F92E1B5C-26D4-4244-A4F9-41E22BA8E1CE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {32B9C883-432E-4FC8-A1BF-090EB033DD5B}

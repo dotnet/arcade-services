@@ -124,6 +124,8 @@ stages:
           displayName: Build / Publish
           condition: succeeded()
 
+        - template: /eng/test.yaml
+
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
         
           ## Prepare service fabric artifact

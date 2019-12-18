@@ -353,11 +353,11 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="dependencies">Dependencies to find leaves for.</param>
         /// <remarks>
-        ///     Leaves of the coherent dependency trees.  Basically 
+        ///     Leaves of the coherent dependency trees.  Basically
         ///     this means that the coherent dependency is not
         ///     pointed to by another dependency, or is pointed to by only
         ///     pinned dependencies.
-        ///     
+        ///
         ///     Examples:
         ///         - A->B(pinned)->C->D(pinned)
         ///         - C
@@ -406,8 +406,8 @@ namespace Microsoft.DotNet.DarcLib
             IRemoteFactory remoteFactory)
         {
             List<DependencyUpdate> toUpdate = new List<DependencyUpdate>();
-            
-            IEnumerable<DependencyDetail> leavesOfCoherencyTrees = 
+
+            IEnumerable<DependencyDetail> leavesOfCoherencyTrees =
                 CalculateLeavesOfCoherencyTrees(dependencies);
 
             if (!leavesOfCoherencyTrees.Any())
@@ -854,7 +854,7 @@ namespace Microsoft.DotNet.DarcLib
         public async Task<GitDiff> GitDiffAsync(string repoUri, string baseVersion, string targetVersion)
         {
             CheckForValidGitClient();
-            
+
             // If base and target are the same, return no diff
             if (baseVersion.Equals(targetVersion, StringComparison.OrdinalIgnoreCase))
             {
@@ -936,7 +936,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 return await _barClient.GetLatestBuildAsync(repoUri: repoUri, channelId: channelId);
             }
-            catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+            catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
             {
                 return null;
             }
@@ -1194,6 +1194,31 @@ namespace Microsoft.DotNet.DarcLib
         {
             CheckForValidBarClient();
             return _barClient.UpdateBuildAsync(buildId, buildUpdate);
+        }
+
+        /// <summary>
+        ///  Creates a new goal or updates the existing goal (in minutes) for a Defintion in a Channel.
+        /// </summary>
+        /// <param name="channel">Name of channel. For eg: .Net Core 5 Dev</param>
+        /// <param name="definitionId">Azure DevOps DefinitionId.</param>
+        /// <param name="minutes">Goal in minutes for a Definition in a Channel.</param>
+        /// <returns>Async task.</returns>
+        public Task<Goal> SetGoalAsync(string channel, int definitionId, int minutes)
+        {
+            CheckForValidBarClient();
+            return _barClient.SetGoalAsync(channel, definitionId, minutes);
+        }
+
+        /// <summary>
+        ///     Gets goal (in minutes) for a Defintion in a Channel.
+        /// </summary>
+        /// <param name="channel">Name of channel. For eg: .Net Core 5 Dev</param>
+        /// <param name="definitionId">Azure DevOps DefinitionId.</param>
+        /// <returns>Returns Goal in minutes.</returns>
+        public Task<Goal> GetGoalAsync(string channel, int definitionId)
+        {
+            CheckForValidBarClient();
+            return _barClient.GetGoalAsync(channel, definitionId);
         }
     }
 }

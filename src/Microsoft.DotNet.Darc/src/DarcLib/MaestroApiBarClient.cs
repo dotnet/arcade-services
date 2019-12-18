@@ -254,7 +254,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 return await _barClient.Repository.GetMergePoliciesAsync(repository: repoUri, branch: branch);
             }
-            catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+            catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
             {
                 // Return an empty list
                 return new List<MergePolicy>();
@@ -360,7 +360,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 return await _barClient.Channels.GetChannelAsync(channel);
             }
-            catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+            catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
             {
                 return null;
             }
@@ -400,6 +400,31 @@ namespace Microsoft.DotNet.DarcLib
         public Task<Build> UpdateBuildAsync(int buildId, BuildUpdate buildUpdate)
         {
             return _barClient.Builds.UpdateAsync(buildUpdate, buildId);
+        }
+
+        /// <summary>
+        ///     Creates a new goal or updates the existing goal (in minutes) for a Defintion in a Channel.
+        /// </summary>
+        /// <param name="channel">Name of channel. For eg: .Net Core 5 Dev</param>
+        /// <param name="definitionId">Azure DevOps DefinitionId.</param>
+        /// <param name="minutes">Goal in minutes for a Definition in a Channel.</param>
+        /// <returns>Async task.</returns>
+        public Task<Goal> SetGoalAsync(string channel, int definitionId, int minutes)
+        {
+            var jsonData = new GoalRequestJson(minutes: minutes);
+            return _barClient.Goal.CreateAsync(body: jsonData, channelName : channel, definitionId : definitionId);
+        }
+
+        /// <summary>
+        ///     Gets goal (in minutes) for a Defintion in a Channel.
+        /// </summary>
+        /// <param name="channel">Name of channel. For eg: .Net Core 5 Dev</param>
+        /// <param name="definitionId">Azure DevOps DefinitionId.</param>
+        /// <returns>Goal in minutes</returns>
+
+        public Task<Goal> GetGoalAsync(string channel, int definitionId)
+        {
+            return _barClient.Goal.GetGoalTimesAsync(channelName: channel, definitionId: definitionId);
         }
     }
 }
