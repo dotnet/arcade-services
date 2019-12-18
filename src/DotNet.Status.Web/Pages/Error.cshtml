@@ -1,0 +1,31 @@
+﻿@page
+@model DotNet.Status.Web.Pages.ErrorModel
+@{
+    ViewData["Title"] = "Error";
+}
+
+<h1 class="text-danger">Error.</h1>
+<h2 class="text-danger">An error occurred while processing your request.</h2>
+
+@if (Model.ShowRequestId)
+{
+    <p>
+        <strong>Request ID:</strong> <code>@Model.RequestId</code>
+    </p>
+}
+
+@if (Model.ShowReferrer)
+{
+    <h3>Referrer</h3>
+    <p>
+        <a href="@Model.Referrer">@Model.Referrer</a>
+    </p>
+}
+
+@if (@Model.ShowExceptionMessage)
+{
+    <h3>Exception Message</h3>
+    <p>
+        @Model.ExceptionMessage
+    </p>
+}

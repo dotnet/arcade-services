@@ -42,14 +42,13 @@ namespace DotNet.Status.Web
             if (_env.IsDevelopment())
             {
                 table = CloudStorageAccount.DevelopmentStorageAccount.CreateCloudTableClient().GetTableReference("githubtokens");
+                await table.CreateIfNotExistsAsync();
             }
             else
             {
                 AzureTableTokenStoreOptions options = _options.CurrentValue;
                 table = new CloudTable(new Uri(options.TableUri, UriKind.Absolute), new StorageCredentials(options.TableSasToken));
             }
-
-            await table.CreateIfNotExistsAsync();
             return table;
         }
 

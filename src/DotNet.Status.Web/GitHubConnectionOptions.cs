@@ -12,5 +12,7 @@ namespace DotNet.Status.Web
         public string Repository { get; set; }
         public string NotificationTarget { get; set; }
         public ImmutableArray<string> AlertLabels { get; set; }
+        public string TitlePrefix { get; set; }
+        public string SupplementalBodyText { get; set; }
     }
 }
