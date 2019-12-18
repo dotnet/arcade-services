@@ -152,14 +152,13 @@ namespace DotNet.Status.Web.Controllers
             if (_env.IsDevelopment())
             {
                 table = CloudStorageAccount.DevelopmentStorageAccount.CreateCloudTableClient().GetTableReference("deployments");
+                await table.CreateIfNotExistsAsync();
             }
             else
             {
                 GrafanaOptions options = _grafanaOptions.CurrentValue;
                 table = new CloudTable(new Uri(options.TableUri, UriKind.Absolute), new StorageCredentials(options.TableSasToken));
             }
-
-            await table.CreateIfNotExistsAsync();
             return table;
         }
         
