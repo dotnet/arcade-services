@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Services.Utilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.ServiceFabric.Actors;
 using System;
@@ -64,7 +64,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             if (!string.IsNullOrEmpty(branch))
             {
-                string normalizedBranchName = IGitRepoExtension.NormalizeBranchName(branch);
+                string normalizedBranchName = Utilities.NormalizeBranchName(branch);
                 query = query.Where(r => r.BranchName == normalizedBranchName);
             }
 

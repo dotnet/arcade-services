@@ -16,6 +16,7 @@ using Kusto.Data.Net.Client;
 using Kusto.Ingest;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
+using Microsoft.DotNet.Services.Utilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -277,8 +278,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("Project", b.Build.Project?.Name, KustoDataTypes.String),
                     new KustoValue("DefinitionId", b.Build.Definition?.Id.ToString(), KustoDataTypes.String),
                     new KustoValue("Definition", $"{b.Build.Definition?.Path}\\{b.Build.Definition?.Name}", KustoDataTypes.String),
-                    new KustoValue("SourceBranch", NormalizeBranchName(b.Build.SourceBranch), KustoDataTypes.String),
-                    new KustoValue("TargetBranch", NormalizeBranchName(b.TargetBranch), KustoDataTypes.String),
+                    new KustoValue("SourceBranch", Utilities.NormalizeBranchName(b.Build.SourceBranch), KustoDataTypes.String),
+                    new KustoValue("TargetBranch", Utilities.NormalizeBranchName(b.TargetBranch), KustoDataTypes.String),
                 });
 
             _logger.LogInformation("Saving TimelineValidationMessages...");
@@ -400,16 +401,6 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             CancellationToken cancellationToken)
         {
             return await azureServer.ListBuilds(project, cancellationToken, minDateTime, limit);
-        }
-
-        const string refsHeadsPrefix = "refs/heads/";
-        public static string NormalizeBranchName(string branch)
-        {
-            if (branch != null && branch.StartsWith(refsHeadsPrefix))
-            {
-                return branch.Substring(refsHeadsPrefix.Length);
-            }
-            return branch;
         }
 
         private class AugmentedBuild

@@ -31,6 +31,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
     <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Kusto\Microsoft.DotNet.Kusto.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Services.Utilities\Microsoft.DotNet.Services.Utilities.csproj" />
   </ItemGroup>
 
 </Project>

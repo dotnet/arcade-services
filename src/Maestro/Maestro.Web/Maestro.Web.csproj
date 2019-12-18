@@ -65,6 +65,7 @@
     <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
     <ProjectReference Include="..\..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
     <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Kusto\Microsoft.DotNet.Kusto.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Services.Utilities\Microsoft.DotNet.Services.Utilities.csproj" />
     <ProjectReference Include="..\..\shared\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj" />
     <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
     <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />
