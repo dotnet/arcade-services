@@ -8,12 +8,12 @@ namespace Microsoft.DotNet.Services.Utility
 {
     public static class GitHelpers
     {
-        const string refsHeadsPrefix = "refs/heads/";
+        private const string RefsHeadsPrefix = "refs/heads/";
         public static string NormalizeBranchName(string branch)
         {
-            if (branch != null && branch.StartsWith(refsHeadsPrefix))
+            if (branch != null && branch.StartsWith(RefsHeadsPrefix))
             {
-                return branch.Substring(refsHeadsPrefix.Length);
+                return branch.Substring(RefsHeadsPrefix.Length);
             }
             return branch;
         }
