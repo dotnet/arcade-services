@@ -12,7 +12,7 @@ using Maestro.Web.Api.v2018_07_16.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.DotNet.Services.Utilities;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
 using Channel = Maestro.Data.Models.Channel;
 

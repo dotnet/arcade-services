@@ -4,7 +4,7 @@
 
 using System;
 
-namespace Microsoft.DotNet.Services.Utilities
+namespace Microsoft.DotNet.Services.Utility
 {
     public static class GitHelpers
     {

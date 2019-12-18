@@ -6,7 +6,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Services.Utilities;
+using Microsoft.DotNet.Services.Utility;
 using Newtonsoft.Json;
 
 namespace Maestro.Data.Models

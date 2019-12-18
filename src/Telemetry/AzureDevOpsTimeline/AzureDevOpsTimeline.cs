@@ -16,7 +16,7 @@ using Kusto.Data.Net.Client;
 using Kusto.Ingest;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.DotNet.Services.Utilities;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
