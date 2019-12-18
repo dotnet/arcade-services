@@ -58,7 +58,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         Subscription subscription = await remote.GetSubscriptionAsync(_options.Id);
                         subscriptionsToEnableDisable.Add(subscription);
                     }
-                    catch (Microsoft.DotNet.Maestro.Client.RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+                    catch (Microsoft.DotNet.Maestro.Client.RestApiException e) when (((Microsoft.Rest.HttpResponseMessageWrapper)e.Response).StatusCode == HttpStatusCode.NotFound)
                     {
                         Console.WriteLine($"Subscription with id '{_options.Id}' was not found.");
                         return Constants.ErrorCode;
