@@ -102,11 +102,11 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return Utilities.NormalizeBranchName(_githubBranch);
+                return GitHelpers.NormalizeBranchName(_githubBranch);
             }
             set
             {
-                _githubBranch = Utilities.NormalizeBranchName(value);
+                _githubBranch = GitHelpers.NormalizeBranchName(value);
             }
         }
 

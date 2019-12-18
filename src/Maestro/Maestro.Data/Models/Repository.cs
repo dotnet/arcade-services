@@ -99,11 +99,11 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return Utilities.NormalizeBranchName(_branch);
+                return GitHelpers.NormalizeBranchName(_branch);
             }
             set
             {
-                _branch = Utilities.NormalizeBranchName(value);
+                _branch = GitHelpers.NormalizeBranchName(value);
             }
         }
 

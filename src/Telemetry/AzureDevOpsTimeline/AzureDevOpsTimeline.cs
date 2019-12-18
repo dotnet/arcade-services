@@ -278,8 +278,8 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     new KustoValue("Project", b.Build.Project?.Name, KustoDataTypes.String),
                     new KustoValue("DefinitionId", b.Build.Definition?.Id.ToString(), KustoDataTypes.String),
                     new KustoValue("Definition", $"{b.Build.Definition?.Path}\\{b.Build.Definition?.Name}", KustoDataTypes.String),
-                    new KustoValue("SourceBranch", Utilities.NormalizeBranchName(b.Build.SourceBranch), KustoDataTypes.String),
-                    new KustoValue("TargetBranch", Utilities.NormalizeBranchName(b.TargetBranch), KustoDataTypes.String),
+                    new KustoValue("SourceBranch", GitHelpers.NormalizeBranchName(b.Build.SourceBranch), KustoDataTypes.String),
+                    new KustoValue("TargetBranch", GitHelpers.NormalizeBranchName(b.TargetBranch), KustoDataTypes.String),
                 });
 
             _logger.LogInformation("Saving TimelineValidationMessages...");

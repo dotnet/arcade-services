@@ -6,7 +6,7 @@ using System;
 
 namespace Microsoft.DotNet.Services.Utilities
 {
-    public static class Utilities
+    public static class GitHelpers
     {
         const string refsHeadsPrefix = "refs/heads/";
         public static string NormalizeBranchName(string branch)

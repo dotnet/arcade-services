@@ -64,7 +64,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             if (!string.IsNullOrEmpty(branch))
             {
-                string normalizedBranchName = Utilities.NormalizeBranchName(branch);
+                string normalizedBranchName = GitHelpers.NormalizeBranchName(branch);
                 query = query.Where(r => r.BranchName == normalizedBranchName);
             }
 
