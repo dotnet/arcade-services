@@ -17,9 +17,4 @@
     <DashboardDirectory>dashboard</DashboardDirectory>
     <DataSourceDirectory>datasource</DataSourceDirectory>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Dashboard Include="$(DashboardDirectory)\*.dashboard.json" />
-    <DataSource Include="$(DataSourceDirectory)\*.datasource.json" />
-  </ItemGroup>
 </Project>

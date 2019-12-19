@@ -39,6 +39,10 @@
   <Target Name="PublishGrafana">
     <Error Text="GrafanaHost is required" Condition=" '$(GrafanaHost)' == '' "/>
     <Error Text="GrafanaAccessToken is required" Condition=" '$(GrafanaAccessToken)' == '' "/>
+    <ItemGroup>
+      <Dashboard Include="$(DashboardDirectory)\*.dashboard.json" />
+      <DataSource Include="$(DataSourceDirectory)\*.datasource.json" />
+    </ItemGroup>
     <MonitoringPublish
       DataSource="@(DataSource)"
       Dashboard="@(Dashboard)"
