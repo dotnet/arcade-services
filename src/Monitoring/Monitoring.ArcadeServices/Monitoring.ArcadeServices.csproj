@@ -1,0 +1,24 @@
+﻿<Project ToolsVersion="Current">
+  <!-- <Import Sdk="Microsoft.DotNet.Helix.Sdk" Project="Sdk.props"/> -->
+  <!-- Using locally built version of the helix sdk, normal projects replace the below Import and PropertyGroup with the SDK import above-->
+  <Import Project="$(MSBuildThisFileDirectory)\..\sdk\sdk\Sdk.props" />
+  <PropertyGroup>
+    <MicrosoftDotNetMonitoringSdkTasksAssembly>$(MSBuildThisFileDirectory)../../../artifacts/bin/Microsoft.DotNet.Monitoring.Sdk/$(Configuration)/netcoreapp2.1/Microsoft.DotNet.Monitoring.Sdk.dll</MicrosoftDotNetMonitoringSdkTasksAssembly>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>Current</OldToolsVersion>
+    <ProjectGuid>{95A4D032-4512-4F9F-ADAB-C8D072532449}</ProjectGuid>
+  </PropertyGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <None Include="dashboard\example2.dashboard.json" />
+    <None Include="dashboard\example.dashboard.json" />
+    <None Include="datasource\example-ds2.datasource.json" />
+    <None Include="datasource\example-ds.datasource.json" />
+  </ItemGroup>
+  <!-- <Import Sdk="Microsoft.DotNet.Helix.Sdk" Project="Sdk.targets"/> -->
+  <!-- Using locally built version of the helix sdk, normal projects replace the below Import with the SDK import above-->
+  <Import Project="$(MSBuildThisFileDirectory)\..\sdk\sdk\Sdk.targets" />
+</Project>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" />
+
+  <PropertyGroup>
+    <MicrosoftDotNetMonitoringSdkTasksAssembly>$(MSBuildThisFileDirectory)netcoreapp2.1/Microsoft.DotNet.Monitoring.Sdk.dll</MicrosoftDotNetMonitoringSdkTasksAssembly>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <NETCORE_ENGINEERING_TELEMETRY>Grafana</NETCORE_ENGINEERING_TELEMETRY>
+  </PropertyGroup>
+
+  <UsingTask TaskName="MonitoringPublish" AssemblyFile="$(MicrosoftDotNetMonitoringSdkTasksAssembly)"/>
+  <UsingTask TaskName="MonitoringImport" AssemblyFile="$(MicrosoftDotNetMonitoringSdkTasksAssembly)"/>
+
+  <PropertyGroup>
+    <DashboardDirectory>dashboard</DashboardDirectory>
+    <DataSourceDirectory>datasource</DataSourceDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Dashboard Include="$(DashboardDirectory)\*.dashboard.json" />
+    <DataSource Include="$(DataSourceDirectory)\*.datasource.json" />
+  </ItemGroup>
+</Project>

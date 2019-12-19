@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" />
+  
+  <PropertyGroup>
+    <!--
+      Set by Microsoft.Common.targets, some targets must be removed while others are left as standard extension mechanisms.
+
+      We don't need to compile anything, but we want to still resolve project references to allow MSBuild extensions through PackageReferences.
+    -->
+    <CoreBuildDependsOn>
+      BuildOnlySettings;
+      PrepareForBuild;
+      PreBuildEvent;
+      ResolveReferences;
+      PostBuildEvent
+    </CoreBuildDependsOn>
+
+    <PrepareForBuildDependsOn></PrepareForBuildDependsOn>
+
+    <ResolveReferencesDependsOn>
+      BeforeResolveReferences;
+      AssignProjectConfiguration;
+      ResolveProjectReferences;
+      FindInvalidProjectReferences;
+      AfterResolveReferences
+    </ResolveReferencesDependsOn>
+
+    <CleanDependsOn>
+      BeforeClean;
+      UnmanagedUnregistration;
+      CoreClean;
+      PrepareProjectReferences;
+      CleanPublishFolder;
+      AfterClean
+    </CleanDependsOn>
+  </PropertyGroup>
+
+  <Target Name="PublishGrafana">
+    <Error Text="GrafanaHost is required" Condition=" '$(GrafanaHost)' == '' "/>
+    <Error Text="GrafanaAccessToken is required" Condition=" '$(GrafanaAccessToken)' == '' "/>
+    <MonitoringPublish
+      DataSource="@(DataSource)"
+      Dashboard="@(Dashboard)"
+      Host="$(GrafanaHost)"
+      AccessToken="$(GrafanaAccessToken)"
+    />
+  </Target>
+  <Target Name="ImportGrafana">
+    <Error Text="GrafanaHost is required" Condition=" '$(GrafanaHost)' == '' "/>
+    <Error Text="GrafanaAccessToken is required" Condition=" '$(GrafanaAccessToken)' == '' "/>
+    <Error Text="DashboardId is required" Condition=" '$(DashboardId)' == '' "/>
+    <MonitoringImport
+      DashboardDirectory="$(DashboardDirectory)"
+      DataSourceDirectory="$(DataSourceDirectory)"
+      DashboardId="$(DashboardId)"
+      Host="$(GrafanaHost)"
+      AccessToken="$(GrafanaAccessToken)"
+    />
+  </Target>
+</Project>
