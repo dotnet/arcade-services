@@ -46,7 +46,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         Subscription subscription = await remote.GetSubscriptionAsync(_options.Id);
                         subscriptionsToTrigger.Add(subscription);
                     }
-                    catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+                    catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
                     {
                         Console.WriteLine($"Subscription with id '{_options.Id}' was not found.");
                         return Constants.ErrorCode;

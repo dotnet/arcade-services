@@ -307,6 +307,21 @@ namespace Maestro.Data.Migrations
                     b.ToTable("DependencyFlowEvents");
                 });
 
+            modelBuilder.Entity("Maestro.Data.Models.GoalTime", b =>
+                {
+                    b.Property<int>("DefinitionId");
+
+                    b.Property<int>("ChannelId");
+
+                    b.Property<int>("Minutes");
+
+                    b.HasKey("DefinitionId", "ChannelId");
+
+                    b.HasIndex("ChannelId");
+
+                    b.ToTable("GoalTime");
+                });
+
             modelBuilder.Entity("Maestro.Data.Models.ReleasePipeline", b =>
                 {
                     b.Property<int>("Id")
@@ -704,6 +719,14 @@ namespace Maestro.Data.Migrations
                     b.HasOne("Maestro.Data.Models.Build", "Build")
                         .WithMany()
                         .HasForeignKey("BuildId")
+                        .OnDelete(DeleteBehavior.Cascade);
+                });
+
+            modelBuilder.Entity("Maestro.Data.Models.GoalTime", b =>
+                {
+                    b.HasOne("Maestro.Data.Models.Channel", "Channel")
+                        .WithMany()
+                        .HasForeignKey("ChannelId")
                         .OnDelete(DeleteBehavior.Cascade);
                 });
 

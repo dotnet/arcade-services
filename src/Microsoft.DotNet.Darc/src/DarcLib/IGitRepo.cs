@@ -127,7 +127,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="repoUri">Repository uri</param>
         /// <param name="branch">Branch to retrieve the latest sha for</param>
-        /// <returns>Latest sha.  Throws if no commits were found.</returns>
+        /// <returns>Latest sha.  Null if no commits were found.</returns>
         Task<string> GetLastCommitShaAsync(string repoUri, string branch);
 
         /// <summary>

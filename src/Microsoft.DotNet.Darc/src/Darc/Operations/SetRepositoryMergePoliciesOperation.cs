@@ -132,13 +132,13 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             try
-            {   
+            {
                 await remote.SetRepositoryMergePoliciesAsync(
                     repository, branch, mergePolicies);
                 Console.WriteLine($"Successfully updated merge policies for {repository}@{branch}.");
                 return Constants.SuccessCode;
             }
-            catch (RestApiException e) when (e.Response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            catch (RestApiException e) when (e.Response.Status == (int) System.Net.HttpStatusCode.BadRequest)
             {
                 Logger.LogError($"Failed to set repository auto merge policies: {e.Response.Content}");
                 return Constants.ErrorCode;

@@ -918,3 +918,14 @@ function Get-ArcadeRepoUri
 {
     "https://github.com/dotnet/arcade"
 }
+
+# Run darc add-goal and record the channel for later deletion
+function Darc-Set-Goal($channel, $definitionId, $minutes) {
+    $darcParams = @("set-goal", "--channel", "$channel", "--definition-id", "$definitionId", "--minutes" , "$minutes")
+    Darc-Command -darcParams $darcParams
+}
+
+function Darc-Get-Goal($channel, $definitionId) {
+    $darcParams = @("get-goal", "--channel", "$channel", "--definition-id", "$definitionId")
+    Darc-Command -darcParams $darcParams
+}

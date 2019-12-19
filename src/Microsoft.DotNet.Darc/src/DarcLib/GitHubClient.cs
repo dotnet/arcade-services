@@ -563,7 +563,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="repoUri">Repository uri</param>
         /// <param name="branch">Branch to retrieve the latest sha for</param>
-        /// <returns>Latest sha.  Throws if no commits were found.</returns>
+        /// <returns>Latest sha.  Nulls if no commits were found.</returns>
         public Task<string> GetLastCommitShaAsync(string repoUri, string branch)
         {
             (string owner, string repo) = ParseRepoUri(repoUri);
@@ -579,21 +579,23 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Latest sha.  Throws if no commits were found.</returns>
         private async Task<string> GetLastCommitShaAsync(string owner, string repo, string branch)
         {
-            JObject content;
-            using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(
-                HttpMethod.Get,
-                $"repos/{owner}/{repo}/commits/{branch}",
-                _logger))
+            try
             {
-                content = JObject.Parse(await response.Content.ReadAsStringAsync());
-            }
+                JObject content;
+                using (HttpResponseMessage response = await this.ExecuteRemoteGitCommandAsync(
+                    HttpMethod.Get,
+                    $"repos/{owner}/{repo}/commits/{branch}",
+                    _logger))
+                {
+                    content = JObject.Parse(await response.Content.ReadAsStringAsync());
+                }
 
-            if (content == null)
+                return content["sha"].ToString();
+            }
+            catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
             {
-                throw new DarcException($"No commits found in branch '{branch}' of repo '{owner}/{repo}'!");
+                return null;
             }
-
-            return content["sha"].ToString();
         }
 
         /// <summary>
