@@ -33,7 +33,7 @@ try {
 
     Write-Host "Testing various command line parameters of add-subscription"
     $subscription1Id = Darc-Add-Subscription --channel "$channel1Name" --source-repo "$repo1Uri" --target-repo "$repo3Uri" --update-frequency everyWeek --standard-automerge --target-branch "master"
-    $expectedSubscriptionInfo = @(
+    $expectedSubscription1Info = @(
         "$repo1Uri \($channel1Name\) ==> '$repo3Uri' \('master'\)",
         "Id: .*",
         "  - Update Frequency: EveryWeek",
@@ -42,10 +42,10 @@ try {
         "  - Merge Policies:",
         "    Standard"
     )
-    Validate-Subscription-Info $subscription1Id $expectedSubscriptionInfo
+    Validate-Subscription-Info $subscription1Id $expectedSubscription1Info
 
     $subscription2Id = Darc-Add-Subscription --channel "$channel1Name" --source-repo "$repo1Uri" --target-repo "$repo2Uri" --update-frequency none --all-checks-passed --no-extra-commits --no-requested-changes --ignore-checks "WIP,license/cla" --target-branch "master"
-    $expectedSubscriptionInfo = @(
+    $expectedSubscription2Info = @(
         "$repo1Uri \($channel1Name\) ==> '$repo2Uri' \('master'\)",
         "Id: .*",
         "  - Update Frequency: None",
@@ -61,10 +61,10 @@ try {
         "                       \]",
         "    NoRequestedChanges"
     )
-    Validate-Subscription-Info $subscription2Id $expectedSubscriptionInfo
+    Validate-Subscription-Info $subscription2Id $expectedSubscription2Info
 
     $subscription3Id = Darc-Add-Subscription --channel "$channel2Name" --source-repo "$repo1Uri" --target-repo "$repo2Uri" --update-frequency none --all-checks-passed --no-extra-commits --no-requested-changes --ignore-checks "WIP,license/cla" --target-branch "master"
-    $expectedSubscriptionInfo = @(
+    $expectedSubscription3Info = @(
         "$repo1Uri \($channel2Name\) ==> '$repo2Uri' \('master'\)",
         "Id: .*",
         "  - Update Frequency: None",
@@ -81,6 +81,29 @@ try {
         "    NoRequestedChanges"
     )
 
+    # Disable the first two subscriptions, but not the third.
+    Darc-Command subscription-status --disable --quiet --channel "$channel1Name"
+    if ($(Darc-Get-Subscription-Enabled $subscription1Id) -or $(Darc-Get-Subscription-Enabled $subscription2Id)) {
+        throw "Expected subscriptions $subscription1Id and $subscription2Id to be disabled"
+    }
+
+    Darc-Command subscription-status --enable --quiet --channel "$channel1Name"
+    if (-not $(Darc-Get-Subscription-Enabled $subscription1Id) -or -not $(Darc-Get-Subscription-Enabled $subscription2Id)) {
+        throw "Expected subscriptions $subscription1Id and $subscription2Id to be enabled"
+    }
+
+    # Disable one by id (classic usage) to make sure that works
+    Darc-Command subscription-status --disable --quiet --id "$subscription3Id"
+    if (Darc-Get-Subscription-Enabled $subscription3Id) {
+        throw "Expected subscription $subscription3Id to be disabled"
+    }
+
+    # Reenable
+    Darc-Command subscription-status --enable --quiet --id "$subscription3Id"
+    if (-not $(Darc-Get-Subscription-Enabled $subscription3Id)) {
+        throw "Expected subscription $subscription3Id to be enabled"
+    }
+
     # Mass delete the subscriptions. Delete the first two but not the third.
     Darc-Command delete-subscriptions --quiet --channel "$channel1Name"
 
@@ -96,7 +119,7 @@ try {
     }
 
     # Validate the third subscription, which should still exist
-    Validate-Subscription-Info $subscription3Id $expectedSubscriptionInfo
+    Validate-Subscription-Info $subscription3Id $expectedSubscription3Info
     Darc-Delete-Subscription $subscription3Id
 
     # Attempt to create a batchable subscription with merge policies.

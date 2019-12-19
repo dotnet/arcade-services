@@ -62,7 +62,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     IEnumerable<Subscription> subscriptions = await _options.FilterSubscriptions(remote);
 
-                    if (subscriptions.Count() == 0)
+                    if (!subscriptions.Any())
                     {
                         Console.WriteLine("No subscriptions found matching the specified criteria.");
                         return Constants.ErrorCode;
@@ -97,7 +97,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     }
                     await remote.TriggerSubscriptionAsync(subscription.Id.ToString());
                 }
-                Console.WriteLine($"done");
+                Console.WriteLine("done");
 
                 return Constants.SuccessCode;
             }
