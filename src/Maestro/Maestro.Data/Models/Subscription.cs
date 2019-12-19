@@ -6,6 +6,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Services.Utility;
 using Newtonsoft.Json;
 
 namespace Maestro.Data.Models
@@ -54,11 +55,11 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return IGitRepoExtension.NormalizeBranchName(_branch);
+                return GitHelpers.NormalizeBranchName(_branch);
             }
             set
             {
-                _branch = IGitRepoExtension.NormalizeBranchName(value);
+                _branch = GitHelpers.NormalizeBranchName(value);
             }
         }
 

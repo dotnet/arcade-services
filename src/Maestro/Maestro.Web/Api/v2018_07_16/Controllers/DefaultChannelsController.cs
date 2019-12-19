@@ -12,7 +12,7 @@ using Maestro.Web.Api.v2018_07_16.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
 using Channel = Maestro.Data.Models.Channel;
 
@@ -54,7 +54,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             if (!string.IsNullOrEmpty(branch))
             {
                 // Normalize the branch name to not include refs/heads
-                string normalizedBranchName = IGitRepoExtension.NormalizeBranchName(branch);
+                string normalizedBranchName = GitHelpers.NormalizeBranchName(branch);
                 query = query.Where(dc => dc.Branch == normalizedBranchName);
             }
 

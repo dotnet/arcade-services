@@ -9,6 +9,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using EntityFrameworkCore.Triggers;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Services.Utility;
 
 namespace Maestro.Data.Models
 {
@@ -101,11 +102,11 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return IGitRepoExtension.NormalizeBranchName(_githubBranch);
+                return GitHelpers.NormalizeBranchName(_githubBranch);
             }
             set
             {
-                _githubBranch = IGitRepoExtension.NormalizeBranchName(value);
+                _githubBranch = GitHelpers.NormalizeBranchName(value);
             }
         }
 

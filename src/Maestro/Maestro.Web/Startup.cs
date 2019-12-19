@@ -42,6 +42,7 @@ using Newtonsoft.Json;
 using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Kusto;
 
 namespace Maestro.Web
 {
@@ -230,6 +231,13 @@ namespace Maestro.Web
                         options.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
                     }
                 });
+            services.AddKustoClientProvider(
+                options =>
+                {
+                    IConfigurationSection section = Configuration.GetSection("Kusto");
+                    section.Bind(options);
+                }
+            );
 
             services.AddMergePolicies();
         }
