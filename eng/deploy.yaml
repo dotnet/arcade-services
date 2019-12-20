@@ -37,7 +37,7 @@ stages:
         method: POST
         headers: |
           {
-            "Authorization": "Bearer $[dotnet-build-bot-dotnet-eng-status-token]",
+            "Authorization": "Bearer $(dotnet-build-bot-dotnet-eng-status-token)",
           }
         urlSuffix: /arcade-services/$(Build.BuildNumber)/start
 
@@ -175,7 +175,7 @@ stages:
         method: POST
         headers: |
           {
-            "Authorization": "Bearer $[dotnet-build-bot-dotnet-eng-status-token]",
+            "Authorization": "Bearer $(dotnet-build-bot-dotnet-eng-status-token)",
           }
         urlSuffix: /arcade-services/$(Build.BuildNumber)/end
 - stage: validateDeployment
