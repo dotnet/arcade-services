@@ -12,7 +12,7 @@ namespace DotNet.Grafana.Tests
         [InlineData("[Vault(secretName)]", "secretName")]
         [InlineData("[vault(secretName)]", "secretName")]
         [InlineData("[vault(secret name)]", "secret name")]
-        [InlineData("[vault(secret ☃)]", "secret ☃")]
+        [InlineData("[vault(secret \uFE0F)]", "secret \uFE0F")]
         public void SuccessfulTryGetSecretNameTest(string data, string secret)
         {
             string actual;
