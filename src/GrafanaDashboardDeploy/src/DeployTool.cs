@@ -23,7 +23,7 @@ namespace DotNet.Grafana
 
             using var sr = new StreamReader(inputFilePath);
             using var jr = new JsonTextReader(sr);
-            var data = await JObject.LoadAsync(jr).ConfigureAwait(false);
+            JObject data = await JObject.LoadAsync(jr).ConfigureAwait(false);
 
             foreach (var folder in data["folders"])
             {
@@ -82,18 +82,18 @@ namespace DotNet.Grafana
 
                 // Get the dashboard folder data and cache if not already present
                 int folderId = Util.ExtractFolderId(dashboard);
-                var folder = await grafanaClient.GetFolder(folderId).ConfigureAwait(false);                
+                JObject folder = await grafanaClient.GetFolder(folderId).ConfigureAwait(false);                
 
                 // Cache if not already present
                 if (!folders.Any(v => v.SelectToken("$.uid").Value<string>() == folder["uid"].Value<string>()))
                 {
-                    var slimmedFolder = Util.SanitizeFolder(folder);
+                    JObject slimmedFolder = Util.SanitizeFolder(folder);
                     folders.Add(slimmedFolder);
                 }
 
                 // Folder uid is needed for the dashboard export object                    
 
-                var dashboardObject = Util.ConstructDashboardExportObject(slimmedDashboard, folder["uid"].Value<string>());
+                JObject dashboardObject = Util.ConstructDashboardExportObject(slimmedDashboard, folder["uid"].Value<string>());
                 dashboards.Add(dashboardObject);
 
                 // Get datasources used in the dashboard
@@ -104,7 +104,7 @@ namespace DotNet.Grafana
                     // Cache if not already present
                     if (!dataSources.Any(v => v.SelectToken("$.name").Value<string>() == datasourceName))
                     {
-                        var dataSource = await grafanaClient.GetDataSource(datasourceName).ConfigureAwait(false);
+                        JObject dataSource = await grafanaClient.GetDataSource(datasourceName).ConfigureAwait(false);
                         dataSource = Util.SanitizeDataSource(dataSource);
                         dataSources.Add(dataSource);
                     }
