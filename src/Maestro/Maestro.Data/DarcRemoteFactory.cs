@@ -9,7 +9,6 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Maestro.AzureDevOps;
-using Maestro.Data;
 using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
@@ -17,7 +16,7 @@ using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace SubscriptionActorService
+namespace Maestro.Data
 {
     public class DarcRemoteFactory : IRemoteFactory
     {
@@ -142,8 +141,11 @@ namespace SubscriptionActorService
                             }
 
                             logger.LogInformation($"Extracting '{gitZipFile}' to '{targetPath}'");
-
+#if NETCOREAPP2_1
                             ZipFile.ExtractToDirectory(gitZipFile, targetPath, overwriteFiles: true);
+#else
+                            ZipFile.ExtractToDirectory(gitZipFile, targetPath);
+#endif
 
                             _gitExecutable = Path.Combine(targetPath, "bin", "git.exe");
                         }

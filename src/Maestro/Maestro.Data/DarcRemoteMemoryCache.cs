@@ -4,7 +4,7 @@
 
 using Microsoft.Extensions.Caching.Memory;
 
-namespace SubscriptionActorService
+namespace Maestro.Data
 {
     public class DarcRemoteMemoryCache
     {
