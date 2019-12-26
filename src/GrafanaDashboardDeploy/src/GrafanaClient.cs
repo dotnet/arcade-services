@@ -208,7 +208,7 @@ namespace DotNet.Grafana
 
             var folderResponse = new JObject();
 
-            var stream = new MemoryStream();
+            using (var stream = new MemoryStream())
             using (var textWriter = new StreamWriter(stream))
             using (var jsonStream = new JsonTextWriter(textWriter))
             {
@@ -232,7 +232,7 @@ namespace DotNet.Grafana
                             // TODO: How to handle error?
                         }
 
-                        var st = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                        using (var st = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                         using (var sr = new StreamReader(st))
                         using (var jr = new JsonTextReader(sr))
                         {
@@ -250,7 +250,7 @@ namespace DotNet.Grafana
             var uri = new Uri(new Uri(BaseUrl), "/api/datasources");
             JObject responseJson;
 
-            var stream = new MemoryStream();
+            using (var stream = new MemoryStream())
             using (var textWriter = new StreamWriter(stream))
             using (var jsonStream = new JsonTextWriter(textWriter))
             {
@@ -274,7 +274,7 @@ namespace DotNet.Grafana
                             // TODO: How to handle error?
                         }
 
-                        var st = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                        using (var st = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                         using (var sr = new StreamReader(st))
                         using (var jr = new JsonTextReader(sr))
                         {
@@ -298,7 +298,7 @@ namespace DotNet.Grafana
 
             JObject responseJson;
 
-            var stream = new MemoryStream();
+            using (var stream = new MemoryStream())
             using (var textWriter = new StreamWriter(stream))
             using (var jsonStream = new JsonTextWriter(textWriter))
             {
@@ -323,7 +323,7 @@ namespace DotNet.Grafana
                             // TODO: How to handle error?
                         }
 
-                        var st = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                        using (var st = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                         using (var sr = new StreamReader(st))
                         using (var jr = new JsonTextReader(sr))
                         {
