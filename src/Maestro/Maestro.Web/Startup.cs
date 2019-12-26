@@ -43,6 +43,7 @@ using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
+using Microsoft.DotNet.DarcLib;
 
 namespace Maestro.Web
 {
@@ -197,11 +198,16 @@ namespace Maestro.Web
                     });
 
             services.AddSingleton<IConfiguration>(Configuration);
+            services.AddSingleton<IConfigurationRoot>(Configuration);
 
             ConfigureAuthServices(services);
 
             services.AddSingleton<BackgroundQueue>();
             services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BackgroundQueue>());
+
+            services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
+            services.AddSingleton<DarcRemoteMemoryCache>();
+            services.AddLogging();
 
             services.AddServiceFabricService<IDependencyUpdater>("fabric:/MaestroApplication/DependencyUpdater");
             services.AddServiceFabricService<IReleasePipelineRunner>("fabric:/MaestroApplication/ReleasePipelineRunner");
