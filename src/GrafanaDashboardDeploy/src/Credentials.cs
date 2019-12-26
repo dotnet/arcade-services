@@ -7,7 +7,7 @@ namespace DotNet.Grafana
     public class Credentials
     {
         /// <summary>
-        /// Credentials!
+        /// Store credentials for Grafana API access
         /// </summary>
         /// <param name="token">Token for bearer auth</param>
         public Credentials(string token)
@@ -15,6 +15,6 @@ namespace DotNet.Grafana
             Token = token;
         }
 
-        public string Token { internal get; set; }
+        public string Token { get; }
     }
 }
