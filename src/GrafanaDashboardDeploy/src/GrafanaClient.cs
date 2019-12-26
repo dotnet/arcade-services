@@ -49,23 +49,23 @@ namespace DotNet.Grafana
         public async Task<Health> GetHealthAsync()
         {
             var uri = new Uri(new Uri(BaseUrl), "/api/health");
-            HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false);
-
             Health health = null;
 
-            if (response.IsSuccessStatusCode)
+            using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
             {
-
-                using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                using (var streamReader = new StreamReader(stream))
-                using (var jsonReader = new JsonTextReader(streamReader))
+                if (response.IsSuccessStatusCode)
                 {
-                    health = JsonSerializer.CreateDefault().Deserialize<Health>(jsonReader);
+                    using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                    using (var streamReader = new StreamReader(stream))
+                    using (var jsonReader = new JsonTextReader(streamReader))
+                    {
+                        health = JsonSerializer.CreateDefault().Deserialize<Health>(jsonReader);
+                    }
                 }
-            }
-            else
-            {
-                _logger.LogWarning("Response does not indicate success");
+                else
+                {
+                    _logger.LogWarning("Response does not indicate success");
+                }
             }
 
             return health;
@@ -76,23 +76,24 @@ namespace DotNet.Grafana
             var uri = new Uri(new Uri(BaseUrl), $"/api/dashboards/uid/{uid}");
             JObject dashboard = new JObject();
 
-            HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false);
-
-            if (response.IsSuccessStatusCode)
+            using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
             {
-
-                using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                using (var streamReader = new StreamReader(stream))
-                using (var jsonReader = new JsonTextReader(streamReader))
+                if (response.IsSuccessStatusCode)
                 {
-                    dashboard = await JObject.LoadAsync(jsonReader).ConfigureAwait(false);
+
+                    using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                    using (var streamReader = new StreamReader(stream))
+                    using (var jsonReader = new JsonTextReader(streamReader))
+                    {
+                        dashboard = await JObject.LoadAsync(jsonReader).ConfigureAwait(false);
+                    }
                 }
-            }
-            else
-            {
-                _logger.LogWarning("Response does not indicate success");
-                _logger.LogWarning("Status {}: {}", response.StatusCode, response.ReasonPhrase);
-                _logger.LogDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+                else
+                {
+                    _logger.LogWarning("Response does not indicate success");
+                    _logger.LogWarning("Status {}: {}", response.StatusCode, response.ReasonPhrase);
+                    _logger.LogDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+                }
             }
 
             return dashboard;
@@ -108,23 +109,24 @@ namespace DotNet.Grafana
             var uri = new Uri(new Uri(BaseUrl), $"/api/folders/{uid}");
             var folder = new JObject();
 
-            HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false);
-
-            if (response.IsSuccessStatusCode)
+            using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
             {
-
-                using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                using (var streamReader = new StreamReader(stream))
-                using (var jsonReader = new JsonTextReader(streamReader))
+                if (response.IsSuccessStatusCode)
                 {
-                    folder = await JObject.LoadAsync(jsonReader).ConfigureAwait(false);
+
+                    using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                    using (var streamReader = new StreamReader(stream))
+                    using (var jsonReader = new JsonTextReader(streamReader))
+                    {
+                        folder = await JObject.LoadAsync(jsonReader).ConfigureAwait(false);
+                    }
                 }
-            }
-            else
-            {
-                _logger.LogWarning("Response does not indicate success");
-                _logger.LogWarning("Status {}: {}", response.StatusCode, response.ReasonPhrase);
-                _logger.LogDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+                else
+                {
+                    _logger.LogWarning("Response does not indicate success");
+                    _logger.LogWarning("Status {}: {}", response.StatusCode, response.ReasonPhrase);
+                    _logger.LogDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+                }
             }
 
             return folder;
@@ -140,23 +142,24 @@ namespace DotNet.Grafana
             var uri = new Uri(new Uri(BaseUrl), $"/api/folders/id/{id}");
             var folder = new JObject();
 
-            HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false);
-
-            if (response.IsSuccessStatusCode)
+            using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
             {
-
-                using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                using (var streamReader = new StreamReader(stream))
-                using (var jsonReader = new JsonTextReader(streamReader))
+                if (response.IsSuccessStatusCode)
                 {
-                    folder = await JObject.LoadAsync(jsonReader).ConfigureAwait(false);
+
+                    using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                    using (var streamReader = new StreamReader(stream))
+                    using (var jsonReader = new JsonTextReader(streamReader))
+                    {
+                        folder = await JObject.LoadAsync(jsonReader).ConfigureAwait(false);
+                    }
                 }
-            }
-            else
-            {
-                _logger.LogWarning("Response does not indicate success");
-                _logger.LogWarning("Status {}: {}", response.StatusCode, response.ReasonPhrase);
-                _logger.LogDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+                else
+                {
+                    _logger.LogWarning("Response does not indicate success");
+                    _logger.LogWarning("Status {}: {}", response.StatusCode, response.ReasonPhrase);
+                    _logger.LogDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+                }
             }
 
             return folder;
@@ -172,23 +175,24 @@ namespace DotNet.Grafana
             var uri = new Uri(new Uri(BaseUrl), $"/api/datasources/name/{name}");
             var folder = new JObject();
 
-            HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false);
-
-            if (response.IsSuccessStatusCode)
+            using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
             {
-
-                using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                using (var streamReader = new StreamReader(stream))
-                using (var jsonReader = new JsonTextReader(streamReader))
+                if (response.IsSuccessStatusCode)
                 {
-                    folder = await JObject.LoadAsync(jsonReader).ConfigureAwait(false);
+
+                    using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                    using (var streamReader = new StreamReader(stream))
+                    using (var jsonReader = new JsonTextReader(streamReader))
+                    {
+                        folder = await JObject.LoadAsync(jsonReader).ConfigureAwait(false);
+                    }
                 }
-            }
-            else
-            {
-                _logger.LogWarning("Response does not indicate success");
-                _logger.LogWarning("Status {}: {}", response.StatusCode, response.ReasonPhrase);
-                _logger.LogDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+                else
+                {
+                    _logger.LogWarning("Response does not indicate success");
+                    _logger.LogWarning("Status {}: {}", response.StatusCode, response.ReasonPhrase);
+                    _logger.LogDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+                }
             }
 
             return folder;
@@ -217,22 +221,23 @@ namespace DotNet.Grafana
                 using (var content = new StreamContent(stream))
                 {
                     content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                    HttpResponseMessage response = await _client.PostAsync(uri, content).ConfigureAwait(false);
-
-                    if (!response.IsSuccessStatusCode)
+                    using (HttpResponseMessage response = await _client.PostAsync(uri, content).ConfigureAwait(false))
                     {
-                        _logger.LogWarning("Response does not indicate success");
-                        _logger.LogWarning("Status {}: {}", response.StatusCode, response.ReasonPhrase);
-                        _logger.LogDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            _logger.LogWarning("Response does not indicate success");
+                            _logger.LogWarning("Status {}: {}", response.StatusCode, response.ReasonPhrase);
+                            _logger.LogDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
 
-                        // TODO: How to handle error?
-                    }
+                            // TODO: How to handle error?
+                        }
 
-                    var st = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                    using (var sr = new StreamReader(st))
-                    using (var jr = new JsonTextReader(sr))
-                    {
-                        folderResponse = await JObject.LoadAsync(jr).ConfigureAwait(false);
+                        var st = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                        using (var sr = new StreamReader(st))
+                        using (var jr = new JsonTextReader(sr))
+                        {
+                            folderResponse = await JObject.LoadAsync(jr).ConfigureAwait(false);
+                        }
                     }
                 }
             }
@@ -258,22 +263,23 @@ namespace DotNet.Grafana
                 using (var content = new StreamContent(stream))
                 {
                     content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                    HttpResponseMessage response = await _client.PostAsync(uri, content).ConfigureAwait(false);
-
-                    if (!response.IsSuccessStatusCode)
+                    using (HttpResponseMessage response = await _client.PostAsync(uri, content).ConfigureAwait(false))
                     {
-                        _logger.LogWarning("Response does not indicate success");
-                        _logger.LogWarning("Status {}: {}", response.StatusCode, response.ReasonPhrase);
-                        _logger.LogDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            _logger.LogWarning("Response does not indicate success");
+                            _logger.LogWarning("Status {}: {}", response.StatusCode, response.ReasonPhrase);
+                            _logger.LogDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
 
-                        // TODO: How to handle error?
-                    }
+                            // TODO: How to handle error?
+                        }
 
-                    var st = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                    using (var sr = new StreamReader(st))
-                    using (var jr = new JsonTextReader(sr))
-                    {
-                        responseJson = await JObject.LoadAsync(jr).ConfigureAwait(false);
+                        var st = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                        using (var sr = new StreamReader(st))
+                        using (var jr = new JsonTextReader(sr))
+                        {
+                            responseJson = await JObject.LoadAsync(jr).ConfigureAwait(false);
+                        }
                     }
                 }
             }
@@ -305,22 +311,24 @@ namespace DotNet.Grafana
                 using (var content = new StreamContent(stream))
                 {
                     content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                    HttpResponseMessage response = await _client.PostAsync(uri, content).ConfigureAwait(false);
-
-                    if (!response.IsSuccessStatusCode)
+                    using (HttpResponseMessage response = await _client.PostAsync(uri, content).ConfigureAwait(false))
                     {
-                        _logger.LogWarning("Response does not indicate success");
-                        _logger.LogWarning("Status {}: {}", response.StatusCode, response.ReasonPhrase);
-                        _logger.LogDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
 
-                        // TODO: How to handle error?
-                    }
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            _logger.LogWarning("Response does not indicate success");
+                            _logger.LogWarning("Status {}: {}", response.StatusCode, response.ReasonPhrase);
+                            _logger.LogDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
 
-                    var st = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-                    using (var sr = new StreamReader(st))
-                    using (var jr = new JsonTextReader(sr))
-                    {
-                        responseJson = await JObject.LoadAsync(jr).ConfigureAwait(false);
+                            // TODO: How to handle error?
+                        }
+
+                        var st = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                        using (var sr = new StreamReader(st))
+                        using (var jr = new JsonTextReader(sr))
+                        {
+                            responseJson = await JObject.LoadAsync(jr).ConfigureAwait(false);
+                        }
                     }
                 }
             }
