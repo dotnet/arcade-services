@@ -46,7 +46,7 @@ namespace DotNet.Grafana
                 Run = _ =>
                 {
                     var health = grafanaClient.GetHealthAsync().Result;
-                    Console.WriteLine($"Health: {health.database}, version: {health.version} (commit: {health.commit})");
+                    Console.WriteLine($"Health: {health.Database}, version: {health.Version} (commit: {health.Commit})");
                 };
             }
         }
