@@ -1,0 +1,52 @@
+{
+  "RepoConfigs": [
+    {
+      "Repo": "dotnet-helix-service",
+      "DefinitionId": "620",
+      "AzdoInstance": "dnceng",
+      "GithubIssueLabel": "Rollout Helix",
+      "ExpectedTime": 30,
+      "ExcludeStages": [ "Post_Deployment_Tests" ]
+    },
+    {
+      "Repo": "dotnet-helix-machines",
+      "DefinitionId": "596",
+      "AzdoInstance": "dnceng",
+      "GithubIssueLabel": "Rollout OSOB",
+      "ExpectedTime": 60,
+      "ExcludeStages": [ "Validate", "Cleanup", "Validate_OnPrem" ]
+    },
+    {
+      "Repo": "dotnet-arcade-services",
+      "DefinitionId": "28",
+      "AzdoInstance": "dnceng",
+      "GithubIssueLabel": "Rollout Arcade Services",
+      "ExpectedTime": 30,
+      "ExcludeStages": []
+    }
+  ],
+
+  "AzdoInstanceConfigs": [
+    {
+      "Name": "dnceng",
+      "Project": "internal",
+      "PatSecretName": "dn-bot-dnceng-build-r-code-r-release-r-pat",
+      "KeyVaultUri": "https://engkeyvault.vault.azure.net"
+    }
+  ],
+
+  "RolloutWeightConfig": {
+    "RolloutMinutesPerPoint": 15,
+    "PointsPerIssue": 1,
+    "PointsPerHotfix": 5,
+    "PointsPerRollback": 10,
+    "DowntimeMinutesPerPoint": 1,
+    "FailurePoints": 50
+  },
+
+  "GithubConfig": {
+    "ScorecardsGithubOrg": "dotnet",
+    "ScorecardsGithubRepo": "core-eng",
+    "ScorecardsDirectoryPath": "Documentation/Rollout-Scorecards/"
+  }
+}
