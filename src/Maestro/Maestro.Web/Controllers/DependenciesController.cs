@@ -21,7 +21,6 @@ namespace Maestro.Web.Controllers
         }
 
         [HttpGet("getSubscriptionDependencyDetails/{host}/{account}/{project}/{*branch}")]
-        [AllowAnonymous]
         public async Task<IActionResult> GetSubscriptionDependencyDetails(string host, string account, string project, string branch)
         {
             string repo = "";
