@@ -41,16 +41,13 @@ namespace DotNet.Grafana
                 foreach (var secretData in datasource["secureJsonData"].Children<JProperty>())
                 {
                     string secretExpression = secretData.Value.ToString();
-                    string secretName;
-                    string secretValue;
 
-                    if (!TryGetSecretName(secretExpression, out secretName))
+                    if (!TryGetSecretName(secretExpression, out string secretName))
                     {
                         continue;
                     }
 
-                    secretValue = await GetSecretAsync(secretName).ConfigureAwait(false);
-                    secretData.Value = secretValue;
+                    secretData.Value = await GetSecretAsync(secretName).ConfigureAwait(false);
                 }
 
                 await grafanaClient.CreateDatasourceAsync(datasource.ToObject<JObject>()).ConfigureAwait(false);
