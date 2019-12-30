@@ -30,7 +30,7 @@ namespace DotNet.Grafana
         /// </summary>
         public static JObject SanitizeDashboard(JObject dashboard)
         {
-            var slimmedDashboard = new JObject(dashboard["dashboard"].ToObject<JObject>());
+            var slimmedDashboard = new JObject((JObject)dashboard["dashboard"]);
             slimmedDashboard.Remove("id");
             slimmedDashboard.Remove("version");
             return slimmedDashboard;

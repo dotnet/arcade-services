@@ -50,7 +50,7 @@ namespace DotNet.Grafana
                     secretData.Value = await GetSecretAsync(secretName).ConfigureAwait(false);
                 }
 
-                await grafanaClient.CreateDatasourceAsync(datasource.ToObject<JObject>()).ConfigureAwait(false);
+                await grafanaClient.CreateDatasourceAsync((JObject)datasource).ConfigureAwait(false);
             }
 
             foreach (var dashboard in data["dashboards"])
@@ -59,7 +59,7 @@ namespace DotNet.Grafana
 
                 int folderId = folderIdMap[dashboardFolderUid];
 
-                await grafanaClient.CreateDashboardAsync(dashboard["dashboard"].ToObject<JObject>(), folderId).ConfigureAwait(false);
+                await grafanaClient.CreateDashboardAsync((JObject)dashboard["dashboard"], folderId).ConfigureAwait(false);
             }
         }
 
