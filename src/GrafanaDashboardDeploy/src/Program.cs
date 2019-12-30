@@ -13,7 +13,7 @@ namespace DotNet.Grafana
 {
     class Program
     {
-        static async Task Main(string[] args)
+        static void Main(string[] args)
         {
             var loggerFactory = LoggerFactory.Create(builder =>
             {
