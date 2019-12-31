@@ -25,41 +25,50 @@ namespace DotNet.Grafana
             using var jr = new JsonTextReader(sr);
             JObject data = await JObject.LoadAsync(jr).ConfigureAwait(false);
 
-            foreach (var folder in data["folders"])
+            if (data.ContainsKey("folders"))
             {
-                string folderUid = folder["uid"].Value<string>();
-                string folderTitle = folder["title"].Value<string>();
+                foreach (var folder in data["folders"])
+                {
+                    string folderUid = folder["uid"].Value<string>();
+                    string folderTitle = folder["title"].Value<string>();
 
-                var result = await grafanaClient.CreateFolderAsync(folderUid, folderTitle).ConfigureAwait(false);
-                int folderId = result["id"].Value<int>();
+                    var result = await grafanaClient.CreateFolderAsync(folderUid, folderTitle).ConfigureAwait(false);
+                    int folderId = result["id"].Value<int>();
 
-                folderIdMap.Add(folderUid, folderId);
+                    folderIdMap.Add(folderUid, folderId);
+                }
             }
 
-            foreach (var datasource in data["datasources"])
+            if (data.ContainsKey("datasources"))
             {
-                foreach (var secretData in datasource["secureJsonData"].Children<JProperty>())
+                foreach (var datasource in data["datasources"])
                 {
-                    string secretExpression = secretData.Value.ToString();
-
-                    if (!TryGetSecretName(secretExpression, out string secretName))
+                    foreach (var secretData in datasource["secureJsonData"].Children<JProperty>())
                     {
-                        continue;
+                        string secretExpression = secretData.Value.ToString();
+
+                        if (!TryGetSecretName(secretExpression, out string secretName))
+                        {
+                            continue;
+                        }
+
+                        secretData.Value = await GetSecretAsync(secretName).ConfigureAwait(false);
                     }
 
-                    secretData.Value = await GetSecretAsync(secretName).ConfigureAwait(false);
+                    await grafanaClient.CreateDatasourceAsync((JObject)datasource).ConfigureAwait(false);
                 }
-
-                await grafanaClient.CreateDatasourceAsync((JObject)datasource).ConfigureAwait(false);
             }
 
-            foreach (var dashboard in data["dashboards"])
+            if (data.ContainsKey("dashboards"))
             {
-                string dashboardFolderUid = dashboard["meta"]["folderUid"].Value<string>();
+                foreach (var dashboard in data["dashboards"])
+                {
+                    string dashboardFolderUid = dashboard["meta"]["folderUid"].Value<string>();
 
-                int folderId = folderIdMap[dashboardFolderUid];
+                    int folderId = folderIdMap[dashboardFolderUid];
 
-                await grafanaClient.CreateDashboardAsync((JObject)dashboard["dashboard"], folderId).ConfigureAwait(false);
+                    await grafanaClient.CreateDashboardAsync((JObject)dashboard["dashboard"], folderId).ConfigureAwait(false);
+                }
             }
         }
 
