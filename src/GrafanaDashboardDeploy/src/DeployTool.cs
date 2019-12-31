@@ -108,10 +108,12 @@ namespace DotNet.Grafana
                 }
             }
 
-            JObject output = new JObject();
-            output.Add("folders", new JArray(folders));
-            output.Add("dashboards", new JArray(dashboards));
-            output.Add("datasources", new JArray(dataSources));
+            JObject output = new JObject
+            {
+                ["folders"] = new JArray(folders),
+                ["dashboards"] = new JArray(dashboards),
+                ["datasources"] = new JArray(dataSources)
+            };
 
             using var outFile = new StreamWriter(outputFilePath);
             using var writer = new JsonTextWriter(outFile);
