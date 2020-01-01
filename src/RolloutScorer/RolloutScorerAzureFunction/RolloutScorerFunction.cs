@@ -17,7 +17,7 @@ namespace RolloutScorerAzureFunction
     public static class RolloutScorerFunction
     {
         [FunctionName("RolloutScorerFunction")]
-        public static async Task Run([TimerTrigger("0 * * * * *")]TimerInfo myTimer, ILogger log)
+        public static async Task Run([TimerTrigger("0 0 0 * * *")]TimerInfo myTimer, ILogger log)
         {
             AzureServiceTokenProvider tokenProvider = new AzureServiceTokenProvider();
             SecretBundle scorecardsStorageAccountKey = await GetStorageAccountKeyAsync(tokenProvider, RolloutScorer.Utilities.KeyVaultUri, RolloutScorer.Utilities.StorageAccountKeySecretName);
