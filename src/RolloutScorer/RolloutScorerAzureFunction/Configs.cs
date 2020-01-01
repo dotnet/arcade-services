@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace RolloutScorerAzureFunction
 {
-    public static class Utilities
+    public static class Configs
     {
         public static readonly Config DefaultConfig = new Config
         {
