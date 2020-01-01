@@ -907,7 +907,10 @@ namespace Microsoft.DotNet.Darc.Operations
                 string finalUri = assetLocation.Location.Substring(0, assetLocation.Location.Length - "index.json".Length);
                 finalUri += $"flatcontainer/{name}/{version}/{name}.{version}.nupkg";
 
-                if (await DownloadFileAsync(client, finalUri, fullTargetPath, errors, downloadOutput))
+                using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
+                var cancellationToken = cancellationTokenSource.Token;
+
+                if (await DownloadFileAsync(client, finalUri, fullTargetPath, errors, downloadOutput, cancellationToken))
                 {
                     return new DownloadedAsset()
                     {
@@ -971,7 +974,10 @@ namespace Microsoft.DotNet.Darc.Operations
                     Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _options.AzureDevOpsPat))));
             }
 
-            if (await DownloadFileAsync(client, packageContentUrl, fullTargetPath, errors, downloadOutput))
+            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
+            var cancellationToken = cancellationTokenSource.Token;
+
+            if (await DownloadFileAsync(client, packageContentUrl, fullTargetPath, errors, downloadOutput, cancellationToken))
             {
                 return new DownloadedAsset()
                 {
@@ -1083,13 +1089,17 @@ namespace Microsoft.DotNet.Darc.Operations
                 string finalBaseUri = assetLocation.Location.Substring(0, assetLocation.Location.Length - "index.json".Length);
                 string finalUri1 = $"{finalBaseUri}{asset.Name}";
                 string finalUri2 = $"{finalBaseUri}assets/{asset.Name}";
-                if (await DownloadFileAsync(client, finalUri1, fullTargetPath, errors, downloadOutput))
+
+                using var cancellationTokenSource1 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
+                using var cancellationTokenSource2 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
+
+                if (await DownloadFileAsync(client, finalUri1, fullTargetPath, errors, downloadOutput, cancellationTokenSource1.Token))
                 {
                     downloadedAsset.Successful = true;
                     downloadedAsset.SourceLocation = finalUri1;
                     return downloadedAsset;
                 }
-                if (await DownloadFileAsync(client, finalUri2, fullTargetPath, errors, downloadOutput))
+                if (await DownloadFileAsync(client, finalUri2, fullTargetPath, errors, downloadOutput, cancellationTokenSource2.Token))
                 {
                     downloadedAsset.Successful = true;
                     downloadedAsset.SourceLocation = finalUri2;
@@ -1100,7 +1110,9 @@ namespace Microsoft.DotNet.Darc.Operations
                 if (!_options.NoWorkarounds)
                 {
                     string finalUri3 = $"{finalBaseUri}assets/assets/{asset.Name}";
-                    if (await DownloadFileAsync(client, finalUri3, fullTargetPath, errors, downloadOutput))
+                    using var cancellationTokenSource3 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
+
+                    if (await DownloadFileAsync(client, finalUri3, fullTargetPath, errors, downloadOutput, cancellationTokenSource3.Token))
                     {
                         downloadedAsset.Successful = true;
                         downloadedAsset.SourceLocation = finalUri3;
@@ -1109,7 +1121,9 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     // Could also not be under /assets, so strip that from the url
                     string finalUri4 = finalUri1.Replace("assets/", "", StringComparison.OrdinalIgnoreCase);
-                    if (await DownloadFileAsync(client, finalUri4, fullTargetPath, errors, downloadOutput))
+                    using var cancellationTokenSource4 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
+
+                    if (await DownloadFileAsync(client, finalUri4, fullTargetPath, errors, downloadOutput, cancellationTokenSource4.Token))
                     {
                         downloadedAsset.Successful = true;
                         downloadedAsset.SourceLocation = finalUri4;
@@ -1186,7 +1200,12 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="sourceUri">Source uri</param>
         /// <param name="targetFile">Target file path. Directories are created.</param>
         /// <returns>Error message if the </returns>
-        private async Task<bool> DownloadFileAsync(HttpClient client, string sourceUri, string targetFile, List<string> errors, StringBuilder downloadOutput)
+        private async Task<bool> DownloadFileAsync(HttpClient client, 
+            string sourceUri, 
+            string targetFile, 
+            List<string> errors, 
+            StringBuilder downloadOutput,
+            CancellationToken cancelationToken)
         {
             if (_options.DryRun)
             {
@@ -1220,7 +1239,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     using (var inStream = await client.GetStreamAsync(sourceUri))
                     {
                         downloadOutput.Append($"  {sourceUri} => {targetFile}...");
-                        await inStream.CopyToAsync(outStream);
+                        await inStream.CopyToAsync(outStream, cancelationToken);
                         downloadOutput.AppendLine("Done");
                     }
                 }
@@ -1243,6 +1262,10 @@ namespace Microsoft.DotNet.Darc.Operations
                     File.Delete(targetFile);
                 }
                 errors.Add($"Failed to download {sourceUri}: {e.Message}");
+            }
+            catch (OperationCanceledException e)
+            {
+                errors.Add($"The download operation was cancelled: {e.Message}");
             }
             finally
             {
