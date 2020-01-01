@@ -1,4 +1,6 @@
-﻿using Microsoft.Azure.KeyVault.Models;
+using Microsoft.Azure.KeyVault.Models;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
 using Octokit;
 using System;
@@ -56,6 +58,14 @@ namespace RolloutScorer
                 config = JsonSerializer.Create().Deserialize<Config>(reader);
             }
             return config;
+        }
+
+        public static CloudTable GetScorecardsCloudTable(SecretBundle storageAccountKey)
+        {
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(
+                connectionString: $"DefaultEndpointsProtocol=https;AccountName={StorageAccountName};AccountKey={storageAccountKey.Value};EndpointSuffix=core.windows.net");
+            CloudTableClient tableClient = storageAccount.CreateCloudTableClient();
+            return tableClient.GetTableReference(ScorecardsTableName);
         }
 
         public static GitHubClient GetGithubClient(SecretBundle githubPat)

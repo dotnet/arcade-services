@@ -1,4 +1,4 @@
-﻿using Microsoft.Azure.KeyVault.Models;
+using Microsoft.Azure.KeyVault.Models;
 using Newtonsoft.Json.Linq;
 using Octokit;
 using System;
@@ -181,7 +181,7 @@ namespace RolloutScorer
 
         public bool DetermineFailure()
         {
-            return BuildBreakdowns.Last().BuildSummary.Result != "succeeded";
+            return BuildBreakdowns.Count() == 0 || BuildBreakdowns.Last().BuildSummary.Result != "succeeded";
         }
 
         /// <summary>

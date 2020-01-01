@@ -1,4 +1,4 @@
-﻿using Microsoft.Azure.KeyVault;
+using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
 using Mono.Options;
@@ -91,7 +91,8 @@ namespace RolloutScorer
 
             // Get the AzDO & GitHub PATs from key vault
             AzureServiceTokenProvider tokenProvider = new AzureServiceTokenProvider();
-            SecretBundle githubPat, storageAccountConnectionString;
+            SecretBundle githubPat;
+            SecretBundle storageAccountConnectionString;
             using (KeyVaultClient kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
             {
                 Console.WriteLine("Fetching PATs from key vault.");
@@ -100,8 +101,6 @@ namespace RolloutScorer
                 _rolloutScorer.SetupGithubClient(githubPat);
                 storageAccountConnectionString = await kv.GetSecretAsync(Utilities.KeyVaultUri, Utilities.StorageAccountKeySecretName);
             }
-
-            
 
             try
             {

@@ -1,4 +1,4 @@
-﻿using Octokit;
+using Octokit;
 using Octokit.Helpers;
 using System;
 using System.Collections.Generic;
@@ -146,10 +146,7 @@ namespace RolloutScorer
             }
 
             // Upload the results to Azure Table Storage (will overwrite previous entries with new data if necessary)
-            var storageAccount = CloudStorageAccount.Parse(
-                connectionString: $"DefaultEndpointsProtocol=https;AccountName={Utilities.StorageAccountName};AccountKey={storageAccountKey.Value};EndpointSuffix=core.windows.net");
-            var tableClient = storageAccount.CreateCloudTableClient();
-            var table = tableClient.GetTableReference(Utilities.ScorecardsTableName);
+            CloudTable table = Utilities.GetScorecardsCloudTable(storageAccountKey);
             foreach (Scorecard scorecard in scorecards)
             {
                 ScorecardEntity scorecardEntity = new ScorecardEntity(scorecard.Date, scorecard.Repo.Repo)
@@ -171,9 +168,14 @@ namespace RolloutScorer
             }
         }
 
-        private class ScorecardEntity : TableEntity
+        public class ScorecardEntity : TableEntity
         {
-            public ScorecardEntity(DateTimeOffset date, string repo) : base(date.ToString(FORMAT_CONSTANT), repo) { }
+            public ScorecardEntity() : base()
+            {
+            }
+            public ScorecardEntity(DateTimeOffset date, string repo) : base(date.ToString(FORMAT_CONSTANT), repo)
+            {
+            }
 
             private const string FORMAT_CONSTANT = "yyyy-MM-dd";
 
