@@ -1,4 +1,4 @@
-﻿using Octokit;
+using Octokit;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -86,8 +86,11 @@ namespace RolloutScorer
         {
             using (StreamReader file = new StreamReader(filePath))
             {
-                Scorecard scorecard = new Scorecard();
-                scorecard.RolloutWeightConfig = config.RolloutWeightConfig;
+                Scorecard scorecard = new Scorecard
+                {
+
+                    RolloutWeightConfig = config.RolloutWeightConfig
+                };
 
                 string[] rolloutInfo = (await file.ReadLineAsync()).Split(',');
                 scorecard.Repo = config.RepoConfigs.Find(r => r.Repo == rolloutInfo[0]);
@@ -164,17 +167,17 @@ namespace RolloutScorer
                     await writer.WriteLineAsync($"{Repo.Repo},{Date.Date.ToShortDateString()}");
                     await writer.WriteLineAsync();
                     await writer.WriteLineAsync($"Time to Rollout,Critical Issues,Issue Links,Hotfixes,Hotfix Links,Rollbacks,Rollback Links,Downtime,Failure");
-                    await writer.WriteLineAsync($"{TimeToRollout.ToString("c")}," +
+                    await writer.WriteLineAsync($"{TimeToRollout:c}," +
                         $"{CriticalIssues},{string.Join(";", GithubIssues.Where(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.IssueLabel, Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}," +
                         $"{Hotfixes},{string.Join(";", GithubIssues.Where(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.HotfixLabel, Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}," +
                         $"{Rollbacks},{string.Join(";", GithubIssues.Where(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.RollbackLabel, Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}," +
-                        $"{Downtime.ToString("c")},{Failure}");
+                        $"{Downtime:c},{Failure}");
                     await writer.WriteLineAsync();
                     await writer.WriteLineAsync($"Build,Link,Time to Rollout,Critical Issues,Hotfixes,Rollbacks,Downtime");
                     foreach (ScorecardBuildBreakdown buildBreakdown in BuildBreakdowns)
                     {
-                        await writer.WriteLineAsync($"{buildBreakdown.BuildSummary.BuildNumber},{buildBreakdown.BuildSummary.WebLink},{buildBreakdown.Score.TimeToRollout.ToString("c")}," +
-                            $"{buildBreakdown.Score.CriticalIssues},{buildBreakdown.Score.Hotfixes},{buildBreakdown.Score.Rollbacks},{buildBreakdown.Score.Downtime.ToString("c")}");
+                        await writer.WriteLineAsync($"{buildBreakdown.BuildSummary.BuildNumber},{buildBreakdown.BuildSummary.WebLink},{buildBreakdown.Score.TimeToRollout:c}," +
+                            $"{buildBreakdown.Score.CriticalIssues},{buildBreakdown.Score.Hotfixes},{buildBreakdown.Score.Rollbacks},{buildBreakdown.Score.Downtime:c}");
                     }
                 }
             }

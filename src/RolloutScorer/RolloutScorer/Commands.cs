@@ -118,11 +118,11 @@ namespace RolloutScorer
             Console.WriteLine($"The {_rolloutScorer.Repo} {_rolloutScorer.RolloutStartDate.Date.ToShortDateString()} rollout score is {scorecard.TotalScore}.\n");
             Console.WriteLine($"|              Metric              |   Value  |  Target  |   Score   |");
             Console.WriteLine($"|:--------------------------------:|:--------:|:--------:|:---------:|");
-            Console.WriteLine($"| Time to Rollout                  | {scorecard.TimeToRollout.ToString()} | {expectedTimeToRollout} |     {scorecard.TimeToRolloutScore}     |");
+            Console.WriteLine($"| Time to Rollout                  | {scorecard.TimeToRollout} | {expectedTimeToRollout} |     {scorecard.TimeToRolloutScore}     |");
             Console.WriteLine($"| Critical/blocking issues created |     {scorecard.CriticalIssues}    |    0     |     {scorecard.CriticalIssueScore}     |");
             Console.WriteLine($"| Hotfixes                         |     {scorecard.Hotfixes}    |    0     |     {scorecard.HotfixScore}     |");
             Console.WriteLine($"| Rollbacks                        |     {scorecard.Rollbacks}    |    0     |     {scorecard.RollbackScore}     |");
-            Console.WriteLine($"| Service downtime                 | {scorecard.Downtime.ToString()} | 00:00:00 |     {scorecard.DowntimeScore}     |");
+            Console.WriteLine($"| Service downtime                 | {scorecard.Downtime} | 00:00:00 |     {scorecard.DowntimeScore}     |");
             Console.WriteLine($"| Failed to rollout                |   {scorecard.Failure.ToString().ToUpperInvariant()}  |   FALSE  |     {(scorecard.Failure ? config.RolloutWeightConfig.FailurePoints : 0)}     |");
             Console.WriteLine($"| Total                            |          |          |   **{scorecard.TotalScore}**   |");
 

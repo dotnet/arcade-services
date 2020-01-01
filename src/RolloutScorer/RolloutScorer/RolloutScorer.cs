@@ -201,8 +201,8 @@ namespace RolloutScorer
                 DateTimeOffset? downtimeFinish;
 
                 // First, check the issue body
-                downtimeStart = GetStartTimeFromIssueText(issue.Body, issue.CreatedAt, issue.HtmlUrl);
-                downtimeFinish = GetEndTimeFromIssueText(issue.Body, issue.CreatedAt, issue.HtmlUrl);
+                downtimeStart = GetStartTimeFromIssueText(issue.Body, issue.HtmlUrl);
+                downtimeFinish = GetEndTimeFromIssueText(issue.Body, issue.HtmlUrl);
                 if (downtimeStart != null && downtimeFinish != null)
                 {
                     downtime += (TimeSpan)(downtimeFinish - downtimeStart);
@@ -214,8 +214,8 @@ namespace RolloutScorer
                     .GetAllForIssue(GithubConfig.ScorecardsGithubOrg, GithubConfig.ScorecardsGithubRepo, issue.Number));
                 foreach (IssueComment comment in comments)
                 {
-                    downtimeStart ??= GetStartTimeFromIssueText(comment.Body, comment.CreatedAt, comment.HtmlUrl);
-                    downtimeFinish ??= GetEndTimeFromIssueText(comment.Body, comment.CreatedAt, comment.HtmlUrl);
+                    downtimeStart ??= GetStartTimeFromIssueText(comment.Body, comment.HtmlUrl);
+                    downtimeFinish ??= GetEndTimeFromIssueText(comment.Body, comment.HtmlUrl);
 
                     if (downtimeStart != null && downtimeFinish != null)
                     {
@@ -244,15 +244,15 @@ namespace RolloutScorer
             return downtime;
         }
 
-        private DateTimeOffset? GetStartTimeFromIssueText(string text, DateTimeOffset createdTime, string issueUri)
+        private DateTimeOffset? GetStartTimeFromIssueText(string text, string issueUri)
         {
-            return GetDateTimeOffsetFromIssueText(text, createdTime, issueUri, @"start(?:ed)?");
+            return GetDateTimeOffsetFromIssueText(text, issueUri, @"start(?:ed)?");
         }
-        private DateTimeOffset? GetEndTimeFromIssueText(string text, DateTimeOffset createdTime, string issueUri)
+        private DateTimeOffset? GetEndTimeFromIssueText(string text, string issueUri)
         {
-            return GetDateTimeOffsetFromIssueText(text, createdTime, issueUri, @"(?:end|finish)(?:ed)?");
+            return GetDateTimeOffsetFromIssueText(text, issueUri, @"(?:end|finish)(?:ed)?");
         }
-        private DateTimeOffset? GetDateTimeOffsetFromIssueText(string text, DateTimeOffset createdTime, string issueUri, string keyword)
+        private DateTimeOffset? GetDateTimeOffsetFromIssueText(string text, string issueUri, string keyword)
         {
             // Regex matches the keyword followed by any number of spaces/colons;
             //   also allows for the word "at" followed by spaces after the keyword

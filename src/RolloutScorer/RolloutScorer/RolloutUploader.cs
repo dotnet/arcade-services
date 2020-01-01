@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using Microsoft.Azure.KeyVault.Models;
 
@@ -209,11 +208,11 @@ namespace RolloutScorer
             string summary = $"## {scorecard.Repo.Repo}\n\n" +
                 $"|              Metric              |   Value  |  Target  |   Score   |\n" +
                 $"|:--------------------------------:|:--------:|:--------:|:---------:|\n" +
-                $"| Time to Rollout                  | {scorecard.TimeToRollout.ToString()} | {TimeSpan.FromMinutes(scorecard.Repo.ExpectedTime).ToString()} |     {scorecard.TimeToRolloutScore}     |\n" +
+                $"| Time to Rollout                  | {scorecard.TimeToRollout} | {TimeSpan.FromMinutes(scorecard.Repo.ExpectedTime)} |     {scorecard.TimeToRolloutScore}     |\n" +
                 $"| Critical/blocking issues created |     {scorecard.CriticalIssues}    |    0     |     {scorecard.CriticalIssueScore}     |\n" +
                 $"| Hotfixes                         |     {scorecard.Hotfixes}    |    0     |     {scorecard.HotfixScore}     |\n" +
                 $"| Rollbacks                        |     {scorecard.Rollbacks}    |    0     |     {scorecard.RollbackScore}     |\n" +
-                $"| Service downtime                 | {scorecard.Downtime.ToString()} | 00:00:00 |     {scorecard.DowntimeScore}     |\n" +
+                $"| Service downtime                 | {scorecard.Downtime} | 00:00:00 |     {scorecard.DowntimeScore}     |\n" +
                 $"| Failed to rollout                |   {scorecard.Failure.ToString().ToUpperInvariant()}  |   FALSE  |     {(scorecard.Failure ? scorecard.RolloutWeightConfig.FailurePoints : 0)}     |\n" +
                 $"| Total                            |          |          |   **{scorecard.TotalScore}**   |\n\n" +
                 $"{CreateGithubIssueUrisMarkdown(scorecard.GithubIssueUris)}";
@@ -234,11 +233,11 @@ namespace RolloutScorer
                 {
                     breakdownTableHeader += $" [{scorecardBreakdown.BuildSummary.BuildNumber}]({scorecardBreakdown.BuildSummary.WebLink}) |";
                     breakdownTableColumns += ":-----:|";
-                    breakdownTimeToRolloutRow += $" {scorecardBreakdown.Score.TimeToRollout.ToString()} |";
+                    breakdownTimeToRolloutRow += $" {scorecardBreakdown.Score.TimeToRollout} |";
                     breakdownCriticalIssuesRow += $" {scorecardBreakdown.Score.CriticalIssues} |";
                     breakdownHotfixesRow += $" {scorecardBreakdown.Score.Hotfixes} |";
                     breakdownRollbacksRow += $" {scorecardBreakdown.Score.Rollbacks} |";
-                    breakdownDowntime += $" {scorecardBreakdown.Score.Downtime.ToString()} |";
+                    breakdownDowntime += $" {scorecardBreakdown.Score.Downtime} |";
                 }
 
                 breakdown = $"## {scorecard.Repo.Repo}\n\n" +
