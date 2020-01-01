@@ -15,14 +15,18 @@ namespace RolloutScorerAzureFunction
 {
     public static class RolloutScorerFunction
     {
+        private const int ScoringBufferInDays = 2;
+
         [FunctionName("RolloutScorerFunction")]
         public static async Task Run([TimerTrigger("0 0 0 * * *")]TimerInfo myTimer, ILogger log)
         {
             AzureServiceTokenProvider tokenProvider = new AzureServiceTokenProvider();
+
             SecretBundle scorecardsStorageAccountKey = await GetStorageAccountKeyAsync(tokenProvider,
                 Utilities.KeyVaultUri, Utilities.StorageAccountKeySecretName);
             SecretBundle deploymentTableSasToken = await GetStorageAccountKeyAsync(tokenProvider,
                 "https://DotNetEng-Status-Prod.vault.azure.net", "deployment-table-sas-token");
+
             CloudTable scorecardsTable = Utilities.GetScorecardsCloudTable(scorecardsStorageAccountKey);
             CloudTable deploymentsTable = new CloudTable(
                 new Uri($"https://dotnetengstatusprod.table.core.windows.net/deployments{deploymentTableSasToken.Value}"));
@@ -34,12 +38,14 @@ namespace RolloutScorerAzureFunction
                 await GetAllTableEntriesAsync<DeploymentController.AnnotationEntity>(deploymentsTable);
             deploymentEntries.Sort((x, y) => (x.Ended ?? DateTimeOffset.MaxValue).CompareTo(y.Ended ?? DateTimeOffset.MaxValue));
 
+            // The deployments we care about are ones that occurred after the last scorecard
             IEnumerable<DeploymentController.AnnotationEntity> relevantDeployments =
                 deploymentEntries.Where(d => (d.Ended ?? DateTimeOffset.MaxValue) > scorecardEntries.Last().Date);
 
             if (relevantDeployments.Count() > 0)
             {
-                if ((relevantDeployments.Last().Ended ?? DateTimeOffset.MaxValue) < DateTimeOffset.UtcNow - TimeSpan.FromDays(2))
+                // We have only want to score if the buffer period has elapsed since the last deployment
+                if ((relevantDeployments.Last().Ended ?? DateTimeOffset.MaxValue) < DateTimeOffset.UtcNow - TimeSpan.FromDays(ScoringBufferInDays))
                 {
                     var scorecards = new List<Scorecard>();
 
@@ -49,6 +55,7 @@ namespace RolloutScorerAzureFunction
                         githubPat = await kv.GetSecretAsync(Utilities.KeyVaultUri, Utilities.GitHubPatSecretName);
                     }
 
+                    // We'll score the deployments by service
                     foreach (var deploymentGroup in relevantDeployments.GroupBy(d => d.Service))
                     {
                         RolloutScorer.RolloutScorer rolloutScorer = new RolloutScorer.RolloutScorer
