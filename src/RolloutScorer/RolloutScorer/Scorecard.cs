@@ -41,9 +41,12 @@ namespace RolloutScorer
                 Repo = rolloutScorer.RepoConfig,
                 Date = rolloutScorer.RolloutStartDate,
                 TimeToRollout = await rolloutScorer.CalculateTimeToRolloutAsync(),
-                CriticalIssues = githubIssues.Count(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.IssueLabel, repoLabel)),
-                Hotfixes = numHotfixes + githubIssues.Count(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.HotfixLabel, repoLabel)),
-                Rollbacks = numRollbacks + githubIssues.Count(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.RollbackLabel, repoLabel)),
+                CriticalIssues = githubIssues
+                    .Count(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.IssueLabel, repoLabel, rolloutScorer.Log)),
+                Hotfixes = numHotfixes + githubIssues
+                    .Count(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.HotfixLabel, repoLabel, rolloutScorer.Log)),
+                Rollbacks = numRollbacks + githubIssues
+                    .Count(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.RollbackLabel, repoLabel, rolloutScorer.Log)),
                 Downtime = await rolloutScorer.CalculateDowntimeAsync(githubIssues) + rolloutScorer.Downtime,
                 Failure = rolloutScorer.DetermineFailure() || rolloutScorer.Failed,
                 BuildBreakdowns = rolloutScorer.BuildBreakdowns,
@@ -60,7 +63,8 @@ namespace RolloutScorer
                 // Critical issues are assumed to have been caused by the first deployment
                 ScorecardBuildBreakdown firstDeployment = scorecard.BuildBreakdowns.First();
                 firstDeployment.Score.CriticalIssues += scorecard.CriticalIssues;
-                firstDeployment.Score.GithubIssues.AddRange(scorecard.GithubIssues.Where(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.IssueLabel, repoLabel)));
+                firstDeployment.Score.GithubIssues.AddRange(scorecard.GithubIssues
+                    .Where(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.IssueLabel, repoLabel, rolloutScorer.Log)));
 
                 // Hotfixes & rollbacks are assumed to have taken place in the last deployment
                 // This is likely incorrect given >2 deployments but can be manually adjusted if necessary
@@ -69,8 +73,8 @@ namespace RolloutScorer
                 lastDeployment.Score.Rollbacks += rolloutScorer.ManualRollbacks;
                 lastDeployment.Score.GithubIssues.AddRange(scorecard.GithubIssues
                     .Where(issue => 
-                    Utilities.IssueContainsRelevantLabels(issue, Utilities.HotfixLabel, repoLabel) ||
-                    Utilities.IssueContainsRelevantLabels(issue, Utilities.RollbackLabel, repoLabel)));
+                    Utilities.IssueContainsRelevantLabels(issue, Utilities.HotfixLabel, repoLabel, rolloutScorer.Log) ||
+                    Utilities.IssueContainsRelevantLabels(issue, Utilities.RollbackLabel, repoLabel, rolloutScorer.Log)));
             }
 
             return scorecard;

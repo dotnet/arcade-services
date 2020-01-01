@@ -1,4 +1,5 @@
 using Microsoft.Azure.KeyVault.Models;
+using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
@@ -29,11 +30,11 @@ namespace RolloutScorer
         public const string StorageAccountName = "rolloutscorecards";
         public const string ScorecardsTableName = "scorecards";
 
-        public static bool IssueContainsRelevantLabels(Issue issue, string issueLabel, string repoLabel)
+        public static bool IssueContainsRelevantLabels(Issue issue, string issueLabel, string repoLabel, ILogger log = null)
         {
             if (issue == null)
             {
-                WriteWarning("A null issue was passed.");
+                WriteWarning("A null issue was passed.", log);
                 return false;
             }
 
@@ -85,13 +86,27 @@ namespace RolloutScorer
                 typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion);
         }
 
-        public static void WriteError(string message)
+        public static void WriteError(string message, ILogger log = null)
         {
-            WriteColoredMessage(message, ConsoleColor.Red);
+            if (log == null)
+            {
+                WriteColoredMessage(message, ConsoleColor.Red);
+            }
+            else
+            {
+                log.LogError(message);
+            }
         }
-        public static void WriteWarning(string message)
+        public static void WriteWarning(string message, ILogger log)
         {
-            WriteColoredMessage(message, ConsoleColor.Yellow);
+            if (log == null)
+            {
+                WriteColoredMessage(message, ConsoleColor.Yellow);
+            }
+            else
+            {
+                log.LogWarning(message);
+            }
         }
         private static void WriteColoredMessage(string message, ConsoleColor textColor)
         {

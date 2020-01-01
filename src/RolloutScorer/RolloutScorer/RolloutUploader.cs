@@ -1,4 +1,4 @@
-﻿using Octokit;
+using Octokit;
 using Octokit.Helpers;
 using System;
 using System.Collections.Generic;
@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage.Table;
 using Microsoft.Azure.KeyVault.Models;
+using Microsoft.Extensions.Logging;
 
 namespace RolloutScorer
 {
@@ -32,7 +33,7 @@ namespace RolloutScorer
         /// <param name="githubClient">An authenticated Octokit.GitHubClient instance</param>
         /// <param name="storageAccountKeySecretBundle">A secret bundle containing the key to the rollout scorecards storage account</param>
         /// <returns>Exit code (0 = success, 1 = failure)</returns>
-        public async static Task<int> UploadResultsAsync(List<string> scorecardFiles, Config config, GitHubClient githubClient, SecretBundle storageAccountKeySecretBundle)
+        public async static Task<int> UploadResultsAsync(List<string> scorecardFiles, Config config, GitHubClient githubClient, SecretBundle storageAccountKeySecretBundle, ILogger log = null)
         {
             try
             {
@@ -43,12 +44,20 @@ namespace RolloutScorer
             }
             catch (IOException e)
             {
-                Utilities.WriteError($"File could not be opened for writing; do you have it open in Excel?");
-                Utilities.WriteError(e.Message);
+                Utilities.WriteError($"File could not be opened for writing; do you have it open in Excel?", log);
+                Utilities.WriteError(e.Message, log);
                 return 1;
             }
 
-            Console.WriteLine($"Successfully uploaded:\n\t{string.Join("\n\t", scorecardFiles)}");
+            string successMessage = $"Successfully uploaded:\n\t{string.Join("\n\t", scorecardFiles)}";
+            if (log == null)
+            {
+                Console.WriteLine(successMessage);
+            }
+            else
+            {
+                log.LogInformation(successMessage);
+            }
 
             return 0;
         }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Azure.KeyVault.Models;
+using Microsoft.Azure.KeyVault.Models;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Octokit;
 using System;
@@ -41,6 +42,8 @@ namespace RolloutScorer
         private readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false });
         private GitHubClient _githubClient;
 
+        public ILogger Log { get; set; }
+
         public async Task InitAsync()
         {
             // Convert the rollout start time and end time to the strings the AzDO API recognizes and fetch builds
@@ -55,7 +58,7 @@ namespace RolloutScorer
             if (responseContent.Value<int>("count") == 0)
             {
                 Utilities.WriteWarning($"No builds were found for repo '{RepoConfig.Repo}' " +
-                    $"(Build ID: '{RepoConfig.DefinitionId}') during the specified dates ({RolloutStartDate} to {RolloutEndDate})");
+                        $"(Build ID: '{RepoConfig.DefinitionId}') during the specified dates ({RolloutStartDate} to {RolloutEndDate})", Log);
             }
 
             JArray builds = responseContent.Value<JArray>("value");
@@ -169,8 +172,8 @@ namespace RolloutScorer
                 // if none of these caught this deployment, then there's an untagged deployment when tags should be present; we'll warn the user about this
                 else
                 {
-                    Utilities.WriteWarning($"Untagged deployment found: build number '{build.BuildSummary.BuildNumber}' with commit message '{source.Comment}'");
-                    Utilities.WriteWarning($"Web link: {build.BuildSummary.WebLink}");
+                    Utilities.WriteWarning($"Untagged deployment found: build number '{build.BuildSummary.BuildNumber}' with commit message '{source.Comment}'", Log);
+                    Utilities.WriteWarning($"Web link: {build.BuildSummary.WebLink}", Log);
                 }
             }
             numHotfixes += ManualHotfixes;
@@ -193,7 +196,7 @@ namespace RolloutScorer
         {
             TimeSpan downtime = TimeSpan.Zero;
             IEnumerable<Issue> downtimeIssues = githubIssues
-                .Where(i => Utilities.IssueContainsRelevantLabels(i, Utilities.DowntimeLabel, RepoConfig.GithubIssueLabel));
+                .Where(i => Utilities.IssueContainsRelevantLabels(i, Utilities.DowntimeLabel, RepoConfig.GithubIssueLabel, Log));
 
             foreach (Issue issue in downtimeIssues)
             {
@@ -234,7 +237,7 @@ namespace RolloutScorer
                 if (downtimeFinish == null)
                 {
                     Utilities.WriteWarning($"Downtime issue was found unclosed and with no specified end time; " +
-                        $"downtime calculation will be inaccurate (issue {issue.HtmlUrl})");
+                        $"downtime calculation will be inaccurate (issue {issue.HtmlUrl})", Log);
                     continue;
                 }
 
@@ -273,7 +276,7 @@ namespace RolloutScorer
                 }
                 else
                 {
-                    Utilities.WriteWarning($"Failed to parse specified downtime in issue or comment {issueUri})");
+                    Utilities.WriteWarning($"Failed to parse specified downtime in issue or comment {issueUri})", Log);
                 }
             }
 
@@ -296,10 +299,10 @@ namespace RolloutScorer
             List<Issue> issueSearchResults = await GetAllIssuesFromSearchAsync(searchIssuesRequest);
 
             return issueSearchResults.Where(issue =>
-                Utilities.IssueContainsRelevantLabels(issue, Utilities.IssueLabel, RepoConfig.GithubIssueLabel) ||
-                Utilities.IssueContainsRelevantLabels(issue, Utilities.HotfixLabel, RepoConfig.GithubIssueLabel) ||
-                Utilities.IssueContainsRelevantLabels(issue, Utilities.RollbackLabel, RepoConfig.GithubIssueLabel) ||
-                Utilities.IssueContainsRelevantLabels(issue, Utilities.DowntimeLabel, RepoConfig.GithubIssueLabel)
+                Utilities.IssueContainsRelevantLabels(issue, Utilities.IssueLabel, RepoConfig.GithubIssueLabel, Log) ||
+                Utilities.IssueContainsRelevantLabels(issue, Utilities.HotfixLabel, RepoConfig.GithubIssueLabel, Log) ||
+                Utilities.IssueContainsRelevantLabels(issue, Utilities.RollbackLabel, RepoConfig.GithubIssueLabel, Log) ||
+                Utilities.IssueContainsRelevantLabels(issue, Utilities.DowntimeLabel, RepoConfig.GithubIssueLabel, Log)
                 ).ToList();
         }
 
@@ -344,9 +347,9 @@ namespace RolloutScorer
                 }
                 catch (Exception e)
                 {
-                    Utilities.WriteWarning($"An exception occurred while attempting to paginate through the GitHub issues search API.");
-                    Utilities.WriteWarning($"Attempting to access page {page} of search; currently read {issues.Count} of {searchIssuesResult.TotalCount}'");
-                    Utilities.WriteWarning($"Exception: ${e.Message}");
+                    Utilities.WriteWarning($"An exception occurred while attempting to paginate through the GitHub issues search API.", Log);
+                    Utilities.WriteWarning($"Attempting to access page {page} of search; currently read {issues.Count} of {searchIssuesResult.TotalCount}'", Log);
+                    Utilities.WriteWarning($"Exception: ${e.Message}", Log);
                     break;
                 }
             }
@@ -393,14 +396,14 @@ namespace RolloutScorer
             Uri redirectUri = redirect.Headers.Location;
             if (redirectUri.Scheme.ToLower() != "https")
             {
-                Utilities.WriteError($"API attempted to redirect to using incorrect scheme (expected 'https', was '{redirectUri.Scheme}'");
-                Utilities.WriteError($"Request URI: '{apiRequest}'\nRedirect URI: '{redirectUri}'");
+                Utilities.WriteError($"API attempted to redirect to using incorrect scheme (expected 'https', was '{redirectUri.Scheme}'", Log);
+                Utilities.WriteError($"Request URI: '{apiRequest}'\nRedirect URI: '{redirectUri}'", Log);
                 throw new HttpRequestException("Bad redirect scheme");
             }
             else if (redirectUri.Host != apiRequest.Host)
             {
-                Utilities.WriteError($"API attempted to redirect to unknown host '{redirectUri.Host}' (expected '{apiRequest.Host}'); not passing auth parameters");
-                Utilities.WriteError($"Request URI: '{apiRequest}'\nRedirect URI: '{redirectUri}'");
+                Utilities.WriteError($"API attempted to redirect to unknown host '{redirectUri.Host}' (expected '{apiRequest.Host}'); not passing auth parameters", Log);
+                Utilities.WriteError($"Request URI: '{apiRequest}'\nRedirect URI: '{redirectUri}'", Log);
                 throw new HttpRequestException("Bad redirect host");
             }
             else

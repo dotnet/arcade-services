@@ -4,7 +4,6 @@ using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using RolloutScorer;
 using System;
@@ -35,7 +34,8 @@ namespace RolloutScorerAzureFunction
                 await GetAllTableEntriesAsync<DeploymentController.AnnotationEntity>(deploymentsTable);
             deploymentEntries.Sort((x, y) => (x.Ended ?? DateTimeOffset.MaxValue).CompareTo(y.Ended ?? DateTimeOffset.MaxValue));
 
-            var relevantDeployments = deploymentEntries.Where(d => (d.Ended ?? DateTimeOffset.MaxValue) > scorecardEntries.Last().Date);
+            IEnumerable<DeploymentController.AnnotationEntity> relevantDeployments =
+                deploymentEntries.Where(d => (d.Ended ?? DateTimeOffset.MaxValue) > scorecardEntries.Last().Date);
 
             if (relevantDeployments.Count() > 0)
             {
@@ -56,7 +56,8 @@ namespace RolloutScorerAzureFunction
                             Repo = deploymentGroup.Key,
                             RolloutStartDate = deploymentGroup.First().Started.GetValueOrDefault().Date,
                             RolloutWeightConfig = Configs.DefaultConfig.RolloutWeightConfig,
-                            GithubConfig = Configs.DefaultConfig.GithubConfig
+                            GithubConfig = Configs.DefaultConfig.GithubConfig,
+                            Log = log,
                         };
                         rolloutScorer.RepoConfig = Configs.DefaultConfig.RepoConfigs
                             .Find(r => r.Repo == rolloutScorer.Repo);
