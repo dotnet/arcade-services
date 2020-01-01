@@ -1,4 +1,4 @@
-using Octokit;
+﻿using Octokit;
 using Octokit.Helpers;
 using System;
 using System.Collections.Generic;
@@ -173,9 +173,7 @@ namespace RolloutScorer
             public ScorecardEntity() : base()
             {
             }
-            public ScorecardEntity(DateTimeOffset date, string repo) : base(date.ToString(FORMAT_CONSTANT), repo)
-            {
-            }
+            public ScorecardEntity(DateTimeOffset date, string repo) : base(date.ToString(FORMAT_CONSTANT), repo) { }
 
             private const string FORMAT_CONSTANT = "yyyy-MM-dd";
 

@@ -1,4 +1,4 @@
-using Microsoft.Azure.KeyVault.Models;
+﻿using Microsoft.Azure.KeyVault.Models;
 using Newtonsoft.Json.Linq;
 using Octokit;
 using System;
@@ -181,7 +181,7 @@ namespace RolloutScorer
 
         public bool DetermineFailure()
         {
-            return BuildBreakdowns.Count() == 0 || BuildBreakdowns.Last().BuildSummary.Result != "succeeded";
+            return BuildBreakdowns.Count == 0 || BuildBreakdowns.Last().BuildSummary.Result != "succeeded";
         }
 
         /// <summary>
@@ -266,19 +266,10 @@ namespace RolloutScorer
             if (match.Success)
             {
                 string dateTimeString = match.Groups[1].Value;
-                if (dateTimeString.ToLowerInvariant() == "now")
+                if (DateTimeOffset.TryParseExact(dateTimeString, "yyyy-MM-dd hh:mm zzz", CultureInfo.InvariantCulture.DateTimeFormat,
+                    DateTimeStyles.AdjustToUniversal, out DateTimeOffset parsedDateTime))
                 {
-                    return createdTime;
-                }
-                else if (DateTime.TryParse(dateTimeString, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.NoCurrentDateDefault, out DateTime parsedDateTime))
-                {
-                    // If only a time is provided, we assume that they're referring to
-                    // that time on the date of their comment
-                    if (parsedDateTime.Year == 1)
-                    {
-                        parsedDateTime = createdTime.Date + parsedDateTime.TimeOfDay;
-                    }
-                    return new DateTimeOffset(parsedDateTime);
+                    return parsedDateTime;
                 }
                 else
                 {
@@ -403,13 +394,13 @@ namespace RolloutScorer
             if (redirectUri.Scheme.ToLower() != "https")
             {
                 Utilities.WriteError($"API attempted to redirect to using incorrect scheme (expected 'https', was '{redirectUri.Scheme}'");
-                Utilities.WriteError($"Request URI: '{apiRequest.ToString()}'\nRedirect URI: '{redirectUri.ToString()}'");
+                Utilities.WriteError($"Request URI: '{apiRequest}'\nRedirect URI: '{redirectUri}'");
                 throw new HttpRequestException("Bad redirect scheme");
             }
             else if (redirectUri.Host != apiRequest.Host)
             {
                 Utilities.WriteError($"API attempted to redirect to unknown host '{redirectUri.Host}' (expected '{apiRequest.Host}'); not passing auth parameters");
-                Utilities.WriteError($"Request URI: '{apiRequest.ToString()}'\nRedirect URI: '{redirectUri.ToString()}'");
+                Utilities.WriteError($"Request URI: '{apiRequest}'\nRedirect URI: '{redirectUri}'");
                 throw new HttpRequestException("Bad redirect host");
             }
             else
