@@ -19,6 +19,9 @@ namespace RolloutScorer
         {
             Options = new OptionSet()
             {
+                "The score command calculates a particular rollout's score and generates the scorecard which it outputs as a CSV for review.",
+                "Optionally, it can skip this output step and upload the results directly.",
+                "",
                 "usage: RolloutScorer score [OPTIONS]",
                 "",
                 { "r|repo=", "The repository to score", r => _rolloutScorer.Repo = r },
@@ -151,7 +154,11 @@ namespace RolloutScorer
 
     public class UploadCommand : Command
     {
-        public UploadCommand() : base("upload", "Uploads specified csv to Kusto and makes PR in core-eng\nusage: RolloutScorer upload [CSV_FILE_1] [CSV_FILE_2] ...\n")
+        public UploadCommand() : base("upload", "The upload command takes a series of inline arguments which specify the" +
+            "locations of the scorecard CSV files to upload. Each of these files will be combined into a single scorecard document.\n\n" +
+            "\"Uploading\" the file here means making a PR to core-eng containing adding the scorecard to '/Documentation/Rollout-Scorecards/'" +
+            "and placing the data in Kusto which backs a PowerBI dashboard.\n\n" +
+            "usage: RolloutScorer upload [CSV_FILE_1] [CSV_FILE_2] ...\n")
         {
 
         }
