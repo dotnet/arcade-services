@@ -1,8 +1,8 @@
-using DotNet.Status.Web.Controllers;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Azure.WebJobs;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage.Table;
 using RolloutScorer;
@@ -23,23 +23,23 @@ namespace RolloutScorerAzureFunction
             AzureServiceTokenProvider tokenProvider = new AzureServiceTokenProvider();
 
             SecretBundle scorecardsStorageAccountKey = await GetStorageAccountKeyAsync(tokenProvider,
-                Utilities.KeyVaultUri, Utilities.StorageAccountKeySecretName);
+                Utilities.KeyVaultUri, ScorecardsStorageAccount.KeySecretName);
             SecretBundle deploymentTableSasToken = await GetStorageAccountKeyAsync(tokenProvider,
                 "https://DotNetEng-Status-Prod.vault.azure.net", "deployment-table-sas-token");
 
-            CloudTable scorecardsTable = Utilities.GetScorecardsCloudTable(scorecardsStorageAccountKey);
+            CloudTable scorecardsTable = Utilities.GetScorecardsCloudTable(scorecardsStorageAccountKey.Value);
             CloudTable deploymentsTable = new CloudTable(
                 new Uri($"https://dotnetengstatusprod.table.core.windows.net/deployments{deploymentTableSasToken.Value}"));
 
-            List<RolloutUploader.ScorecardEntity> scorecardEntries =
-                await GetAllTableEntriesAsync<RolloutUploader.ScorecardEntity>(scorecardsTable);
+            List<ScorecardEntity> scorecardEntries =
+                await GetAllTableEntriesAsync<ScorecardEntity>(scorecardsTable);
             scorecardEntries.Sort((x, y) => x.Date.CompareTo(y.Date));
-            List<DeploymentController.AnnotationEntity> deploymentEntries =
-                await GetAllTableEntriesAsync<DeploymentController.AnnotationEntity>(deploymentsTable);
+            List<AnnotationEntity> deploymentEntries =
+                await GetAllTableEntriesAsync<AnnotationEntity>(deploymentsTable);
             deploymentEntries.Sort((x, y) => (x.Ended ?? DateTimeOffset.MaxValue).CompareTo(y.Ended ?? DateTimeOffset.MaxValue));
 
             // The deployments we care about are ones that occurred after the last scorecard
-            IEnumerable<DeploymentController.AnnotationEntity> relevantDeployments =
+            IEnumerable<AnnotationEntity> relevantDeployments =
                 deploymentEntries.Where(d => (d.Ended ?? DateTimeOffset.MaxValue) > scorecardEntries.Last().Date);
 
             if (relevantDeployments.Count() > 0)
@@ -74,9 +74,9 @@ namespace RolloutScorerAzureFunction
                         using (KeyVaultClient kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
                         {
                             rolloutScorer.SetupHttpClient(
-                                await kv.GetSecretAsync(rolloutScorer.AzdoConfig.KeyVaultUri, rolloutScorer.AzdoConfig.PatSecretName));
+                                (await kv.GetSecretAsync(rolloutScorer.AzdoConfig.KeyVaultUri, rolloutScorer.AzdoConfig.PatSecretName)).Value);
                         }
-                        rolloutScorer.SetupGithubClient(githubPat);
+                        rolloutScorer.SetupGithubClient(githubPat.Value);
 
                         try
                         {
@@ -95,7 +95,7 @@ namespace RolloutScorerAzureFunction
 
                     log.LogInformation($"Uploading results for {string.Join(", ", scorecards.Select(s => s.Repo))}");
                     await RolloutUploader.UploadResultsAsync(scorecards,
-                        Utilities.GetGithubClient(githubPat), scorecardsStorageAccountKey, Configs.DefaultConfig.GithubConfig);
+                        Utilities.GetGithubClient(githubPat.Value), scorecardsStorageAccountKey.Value, Configs.DefaultConfig.GithubConfig);
                 }
                 else
                 {

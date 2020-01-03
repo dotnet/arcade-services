@@ -11,7 +11,7 @@
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.2" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\DotNet.Status.Web\DotNet.Status.Web.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
     <ProjectReference Include="..\RolloutScorer\RolloutScorer.csproj" />
   </ItemGroup>
   <ItemGroup>

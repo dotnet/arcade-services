@@ -42,11 +42,11 @@ namespace RolloutScorer
                 Date = rolloutScorer.RolloutStartDate,
                 TimeToRollout = await rolloutScorer.CalculateTimeToRolloutAsync(),
                 CriticalIssues = githubIssues
-                    .Count(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.IssueLabel, repoLabel, rolloutScorer.Log)),
+                    .Count(issue => Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.IssueLabel, repoLabel, rolloutScorer.Log)),
                 Hotfixes = numHotfixes + githubIssues
-                    .Count(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.HotfixLabel, repoLabel, rolloutScorer.Log)),
+                    .Count(issue => Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.HotfixLabel, repoLabel, rolloutScorer.Log)),
                 Rollbacks = numRollbacks + githubIssues
-                    .Count(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.RollbackLabel, repoLabel, rolloutScorer.Log)),
+                    .Count(issue => Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.RollbackLabel, repoLabel, rolloutScorer.Log)),
                 Downtime = await rolloutScorer.CalculateDowntimeAsync(githubIssues) + rolloutScorer.Downtime,
                 Failure = rolloutScorer.DetermineFailure() || rolloutScorer.Failed,
                 BuildBreakdowns = rolloutScorer.BuildBreakdowns,
@@ -64,7 +64,7 @@ namespace RolloutScorer
                 ScorecardBuildBreakdown firstDeployment = scorecard.BuildBreakdowns.First();
                 firstDeployment.Score.CriticalIssues += scorecard.CriticalIssues;
                 firstDeployment.Score.GithubIssues.AddRange(scorecard.GithubIssues
-                    .Where(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.IssueLabel, repoLabel, rolloutScorer.Log)));
+                    .Where(issue => Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.IssueLabel, repoLabel, rolloutScorer.Log)));
 
                 // Hotfixes & rollbacks are assumed to have taken place in the last deployment
                 // This is likely incorrect given >2 deployments but can be manually adjusted if necessary
@@ -73,8 +73,8 @@ namespace RolloutScorer
                 lastDeployment.Score.Rollbacks += rolloutScorer.ManualRollbacks;
                 lastDeployment.Score.GithubIssues.AddRange(scorecard.GithubIssues
                     .Where(issue => 
-                    Utilities.IssueContainsRelevantLabels(issue, Utilities.HotfixLabel, repoLabel, rolloutScorer.Log) ||
-                    Utilities.IssueContainsRelevantLabels(issue, Utilities.RollbackLabel, repoLabel, rolloutScorer.Log)));
+                    Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.HotfixLabel, repoLabel, rolloutScorer.Log) ||
+                    Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.RollbackLabel, repoLabel, rolloutScorer.Log)));
             }
 
             return scorecard;
@@ -172,9 +172,9 @@ namespace RolloutScorer
                     await writer.WriteLineAsync();
                     await writer.WriteLineAsync($"Time to Rollout,Critical Issues,Issue Links,Hotfixes,Hotfix Links,Rollbacks,Rollback Links,Downtime,Failure");
                     await writer.WriteLineAsync($"{TimeToRollout:c}," +
-                        $"{CriticalIssues},{string.Join(";", GithubIssues.Where(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.IssueLabel, Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}," +
-                        $"{Hotfixes},{string.Join(";", GithubIssues.Where(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.HotfixLabel, Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}," +
-                        $"{Rollbacks},{string.Join(";", GithubIssues.Where(issue => Utilities.IssueContainsRelevantLabels(issue, Utilities.RollbackLabel, Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}," +
+                        $"{CriticalIssues},{string.Join(";", GithubIssues.Where(issue => Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.IssueLabel, Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}," +
+                        $"{Hotfixes},{string.Join(";", GithubIssues.Where(issue => Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.HotfixLabel, Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}," +
+                        $"{Rollbacks},{string.Join(";", GithubIssues.Where(issue => Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.RollbackLabel, Repo.GithubIssueLabel)).Select(issue => issue.HtmlUrl))}," +
                         $"{Downtime:c},{Failure}");
                     await writer.WriteLineAsync();
                     await writer.WriteLineAsync($"Build,Link,Time to Rollout,Critical Issues,Hotfixes,Rollbacks,Downtime");
@@ -199,7 +199,7 @@ namespace RolloutScorer
     public class ScorecardBuildBreakdown
     {
         public BuildSummary BuildSummary { get; }
-        public Scorecard Score { get; set; }
+        public Scorecard Score { get; }
         public ScorecardBuildBreakdown(BuildSummary buildSummary)
         {
             BuildSummary = buildSummary;

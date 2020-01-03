@@ -158,13 +158,13 @@ namespace RolloutScorer
                 BuildSource source = (await GetAzdoApiResponseAsync(build.BuildSummary.SourceLink)).ToObject<BuildSource>();
 
                 // we can only automatically calculate rollbacks if they're tagged; so we specifically don't try when --assume-no-tags is passed
-                if (!AssumeNoTags && source.Comment.StartsWith(Utilities.RollbackAzureDevOpsTag, StringComparison.InvariantCultureIgnoreCase))
+                if (!AssumeNoTags && source.Comment.StartsWith(AzureDevOpsCommitTags.RollbackTag, StringComparison.InvariantCultureIgnoreCase))
                 {
                     numRollbacks++;
                     build.Score.Rollbacks = 1;
                 }
                 // if we're assuming no tags, every deployment after the first is assumed to be a hotfix; otherwise we need to look specifically for the hotfix tag
-                else if (AssumeNoTags || source.Comment.StartsWith(Utilities.HotfixAzureDevOpsTag, StringComparison.InvariantCultureIgnoreCase))
+                else if (AssumeNoTags || source.Comment.StartsWith(AzureDevOpsCommitTags.HotfixTag, StringComparison.InvariantCultureIgnoreCase))
                 {
                     numHotfixes++;
                     build.Score.Hotfixes = 1;
@@ -196,7 +196,7 @@ namespace RolloutScorer
         {
             TimeSpan downtime = TimeSpan.Zero;
             IEnumerable<Issue> downtimeIssues = githubIssues
-                .Where(i => Utilities.IssueContainsRelevantLabels(i, Utilities.DowntimeLabel, RepoConfig.GithubIssueLabel, Log));
+                .Where(i => Utilities.IssueContainsRelevantLabels(i, GithubLabelNames.DowntimeLabel, RepoConfig.GithubIssueLabel, Log));
 
             foreach (Issue issue in downtimeIssues)
             {
@@ -299,10 +299,10 @@ namespace RolloutScorer
             List<Issue> issueSearchResults = await GetAllIssuesFromSearchAsync(searchIssuesRequest);
 
             return issueSearchResults.Where(issue =>
-                Utilities.IssueContainsRelevantLabels(issue, Utilities.IssueLabel, RepoConfig.GithubIssueLabel, Log) ||
-                Utilities.IssueContainsRelevantLabels(issue, Utilities.HotfixLabel, RepoConfig.GithubIssueLabel, Log) ||
-                Utilities.IssueContainsRelevantLabels(issue, Utilities.RollbackLabel, RepoConfig.GithubIssueLabel, Log) ||
-                Utilities.IssueContainsRelevantLabels(issue, Utilities.DowntimeLabel, RepoConfig.GithubIssueLabel, Log)
+                Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.IssueLabel, RepoConfig.GithubIssueLabel, Log) ||
+                Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.HotfixLabel, RepoConfig.GithubIssueLabel, Log) ||
+                Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.RollbackLabel, RepoConfig.GithubIssueLabel, Log) ||
+                Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.DowntimeLabel, RepoConfig.GithubIssueLabel, Log)
                 ).ToList();
         }
 
@@ -357,16 +357,16 @@ namespace RolloutScorer
             return issues;
         }
 
-        public void SetupHttpClient(SecretBundle azdoPat)
+        public void SetupHttpClient(string azdoPat)
         {
             _httpClient.DefaultRequestHeaders.Accept.Clear();
             _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            _httpClient.DefaultRequestHeaders.UserAgent.Add(Utilities.GetProductInfoHeaderValue());
+            _httpClient.DefaultRequestHeaders.UserAgent.Add(Program.GetProductInfoHeaderValue());
             _httpClient.DefaultRequestHeaders.Add("X-TFS-FedAuthRedirect", "Suppress");
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($":{azdoPat.Value}")));
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.UTF8.GetBytes($":{azdoPat}")));
         }
 
-        public void SetupGithubClient(SecretBundle githubPat)
+        public void SetupGithubClient(string githubPat)
         {
             _githubClient = Utilities.GetGithubClient(githubPat);
         }
@@ -381,34 +381,10 @@ namespace RolloutScorer
                 }
                 if (response.StatusCode == HttpStatusCode.Redirect)
                 {
-                    return await HandleApiRedirect(response, new Uri(apiRequest));
+                    return await GetAzdoApiResponseAsync(Utilities.HandleApiRedirect(response, new Uri(apiRequest), Log));
                 }
                 response.EnsureSuccessStatusCode();
                 return JObject.Parse(await response.Content.ReadAsStringAsync());
-            }
-        }
-
-        public async Task<JObject> HandleApiRedirect(HttpResponseMessage redirect, Uri apiRequest)
-        {
-            // Since the API will sometimes 302 us, we're going to do a quick check to see
-            // that we're still being sent to AzDO and not some random location
-            // If so, we'll provide our auth so we don't get 401'd
-            Uri redirectUri = redirect.Headers.Location;
-            if (redirectUri.Scheme.ToLower() != "https")
-            {
-                Utilities.WriteError($"API attempted to redirect to using incorrect scheme (expected 'https', was '{redirectUri.Scheme}'", Log);
-                Utilities.WriteError($"Request URI: '{apiRequest}'\nRedirect URI: '{redirectUri}'", Log);
-                throw new HttpRequestException("Bad redirect scheme");
-            }
-            else if (redirectUri.Host != apiRequest.Host)
-            {
-                Utilities.WriteError($"API attempted to redirect to unknown host '{redirectUri.Host}' (expected '{apiRequest.Host}'); not passing auth parameters", Log);
-                Utilities.WriteError($"Request URI: '{apiRequest}'\nRedirect URI: '{redirectUri}'", Log);
-                throw new HttpRequestException("Bad redirect host");
-            }
-            else
-            {
-                return await GetAzdoApiResponseAsync(redirectUri.ToString());
             }
         }
     }

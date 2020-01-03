@@ -1,4 +1,3 @@
-using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
@@ -7,28 +6,15 @@ using Octokit;
 using System;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Reflection;
 
 namespace RolloutScorer
 {
     public class Utilities
     {
-        public const string HotfixAzureDevOpsTag = "[HOTFIX]";
-        public const string RollbackAzureDevOpsTag = "[ROLLBACK]";
-        public const string IssueLabel = "Rollout Issue";
-        public const string HotfixLabel = "Rollout Hotfix";
-        public const string RollbackLabel = "Rollout Rollback";
-        public const string DowntimeLabel = "Rollout Downtime";
-
-        // The git file mode of a "file blob"; more info here: https://developer.github.com/v3/git/trees/#parameters
-        public const string GitFileMode = "100644";
-
         public const string KeyVaultUri = "https://engkeyvault.vault.azure.net";
         public const string GitHubPatSecretName = "BotAccount-dotnet-bot-repo-PAT";
-        public const string StorageAccountKeySecretName = "rolloutscorecards-storage-key";
-        public const string StorageAccountName = "rolloutscorecards";
-        public const string ScorecardsTableName = "scorecards";
 
         public static bool IssueContainsRelevantLabels(Issue issue, string issueLabel, string repoLabel, ILogger log = null)
         {
@@ -41,10 +27,6 @@ namespace RolloutScorer
             return issue.Labels.Any(l => l.Name == issueLabel) && issue.Labels.Any(l => l.Name == repoLabel);
         }
 
-        /// <summary>
-        /// Parse and return config
-        /// </summary>
-        /// <returns>Config object representing config</returns>
         public static Config ParseConfig()
         {
             Config config;
@@ -60,30 +42,47 @@ namespace RolloutScorer
             }
             return config;
         }
-
-        public static CloudTable GetScorecardsCloudTable(SecretBundle storageAccountKey)
+        public static string HandleApiRedirect(HttpResponseMessage redirect, Uri apiRequest, ILogger log = null)
         {
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(
-                connectionString: $"DefaultEndpointsProtocol=https;AccountName={StorageAccountName};AccountKey={storageAccountKey.Value};EndpointSuffix=core.windows.net");
-            CloudTableClient tableClient = storageAccount.CreateCloudTableClient();
-            return tableClient.GetTableReference(ScorecardsTableName);
+            // Since the API will sometimes 302 us, we're going to do a quick check to see
+            // that we're still being sent to AzDO and not some random location
+            // If so, we'll provide our auth so we don't get 401'd
+            Uri redirectUri = redirect.Headers.Location;
+            if (redirectUri.Scheme.ToLower() != "https")
+            {
+                WriteError($"API attempted to redirect to using incorrect scheme (expected 'https', was '{redirectUri.Scheme}'", log);
+                WriteError($"Request URI: '{apiRequest}'\nRedirect URI: '{redirectUri}'", log);
+                throw new HttpRequestException("Bad redirect scheme");
+            }
+            else if (redirectUri.Host != apiRequest.Host)
+            {
+                WriteError($"API attempted to redirect to unknown host '{redirectUri.Host}' (expected '{apiRequest.Host}'); not passing auth parameters", log);
+                WriteError($"Request URI: '{apiRequest}'\nRedirect URI: '{redirectUri}'", log);
+                throw new HttpRequestException("Bad redirect host");
+            }
+            else
+            {
+                return redirectUri.ToString();
+            }
         }
 
-        public static GitHubClient GetGithubClient(SecretBundle githubPat)
+        public static CloudTable GetScorecardsCloudTable(string storageAccountKey)
         {
-            ProductInfoHeaderValue productHeader = GetProductInfoHeaderValue();
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(
+                connectionString: $"DefaultEndpointsProtocol=https;AccountName={ScorecardsStorageAccount.Name};AccountKey={storageAccountKey};EndpointSuffix=core.windows.net");
+            CloudTableClient tableClient = storageAccount.CreateCloudTableClient();
+            return tableClient.GetTableReference(ScorecardsStorageAccount.ScorecardsTableName);
+        }
+
+        public static GitHubClient GetGithubClient(string githubPat)
+        {
+            ProductInfoHeaderValue productHeader = Program.GetProductInfoHeaderValue();
             GitHubClient githubClient = new GitHubClient(new Octokit.ProductHeaderValue(productHeader.Product.Name, productHeader.Product.Version))
             {
-                Credentials = new Credentials("fake", githubPat.Value)
+                Credentials = new Credentials("fake", githubPat)
             };
 
             return githubClient;
-        }
-
-        public static ProductInfoHeaderValue GetProductInfoHeaderValue()
-        {
-            return new ProductInfoHeaderValue(typeof(Program).Assembly.GetName().Name,
-                typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion);
         }
 
         public static void WriteError(string message, ILogger log = null)
@@ -97,6 +96,7 @@ namespace RolloutScorer
                 log.LogError(message);
             }
         }
+
         public static void WriteWarning(string message, ILogger log)
         {
             if (log == null)
@@ -108,6 +108,7 @@ namespace RolloutScorer
                 log.LogWarning(message);
             }
         }
+
         private static void WriteColoredMessage(string message, ConsoleColor textColor)
         {
             ConsoleColor currentTextColor = Console.ForegroundColor;
@@ -115,5 +116,26 @@ namespace RolloutScorer
             Console.WriteLine(message);
             Console.ForegroundColor = currentTextColor;
         }
+    }
+
+    public static class AzureDevOpsCommitTags
+    {
+        public const string HotfixTag = "[HOTFIX]";
+        public const string RollbackTag = "[ROLLBACK]";
+    }
+
+    public static class GithubLabelNames
+    {
+        public const string IssueLabel = "Rollout Issue";
+        public const string HotfixLabel = "Rollout Hotfix";
+        public const string RollbackLabel = "Rollout Rollback";
+        public const string DowntimeLabel = "Rollout Downtime";
+    }
+
+    public static class ScorecardsStorageAccount
+    {
+        public const string KeySecretName = "rolloutscorecards-storage-key";
+        public const string Name = "rolloutscorecards";
+        public const string ScorecardsTableName = "scorecards";
     }
 }

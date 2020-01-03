@@ -43,7 +43,7 @@ namespace RolloutScorer.Tests
             _rolloutScorer.Repo = _rolloutScorer.RepoConfig.Repo;
             _rolloutScorer.RolloutStartDate = DateTimeOffset.Now.AddDays(-1);
 
-            _rolloutScorer.SetupHttpClient(new Microsoft.Azure.KeyVault.Models.SecretBundle(value: "fakePat"));
+            _rolloutScorer.SetupHttpClient("fakePat");
         }
 
         [Theory]
@@ -54,43 +54,10 @@ namespace RolloutScorer.Tests
             HttpResponseMessage sameHostRedirectResponse = new HttpResponseMessage();
             sameHostRedirectResponse.Headers.Location = new Uri(responseUri);
 
-            try
-            {
-                await _rolloutScorer.HandleApiRedirect(sameHostRedirectResponse, sameHostRedirectUri);
-            }
-            catch (HttpRequestException e)
-            {
-                Assert.Contains(expectedMessage, e.Message);
-            }
-        }
-
-        // We're only testing Octokit because if this behavior changes, we won't know in our code and our scorecard results will be silently incorrect
-        [Fact]
-        public async Task OctokitReturnsOpenAndClosedIssuesTest()
-        {
-            SearchIssuesRequest searchIssuesRequest = new SearchIssuesRequest
-            {
-                Created = new DateRange(new DateTimeOffset(DateTime.Now - TimeSpan.FromDays(14)), SearchQualifierOperator.GreaterThan),
-            };
-            searchIssuesRequest.Repos.Add(_rolloutScorer.GithubConfig.ScorecardsGithubOrg, _rolloutScorer.GithubConfig.ScorecardsGithubRepo);
-
-            GitHubClient githubClient = new GitHubClient(new ProductHeaderValue("rollout-scorer-tests"));
-
-            AzureServiceTokenProvider tokenProvider = new AzureServiceTokenProvider();
-            using (KeyVaultClient kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
-            {
-                githubClient.Credentials = new Credentials("fake", (await kv.GetSecretAsync(Utilities.KeyVaultUri, Utilities.GitHubPatSecretName)).Value);
-            }
-
-            SearchIssuesResult allIssues = await githubClient.Search.SearchIssues(searchIssuesRequest);
-            searchIssuesRequest.State = ItemState.Open;
-            SearchIssuesResult openIssues = await githubClient.Search.SearchIssues(searchIssuesRequest);
-            searchIssuesRequest.State = ItemState.Closed;
-            SearchIssuesResult closedIssues = await githubClient.Search.SearchIssues(searchIssuesRequest);
-
-            Assert.True(openIssues.TotalCount > 0, $"Expected at least one open issue in the last two weeks; actual count was {openIssues.TotalCount}");
-            Assert.True(closedIssues.TotalCount > 0, $"Expected at least one closed issue in the last two weeks; actual count was {closedIssues.TotalCount}");
-            Assert.Equal(allIssues.TotalCount, openIssues.TotalCount + closedIssues.TotalCount);
+            HttpRequestException exception = await Assert.ThrowsAsync<HttpRequestException>(
+                async () => await _rolloutScorer.GetAzdoApiResponseAsync(
+                    Utilities.HandleApiRedirect(sameHostRedirectResponse, sameHostRedirectUri)));
+            Assert.Contains(expectedMessage, exception.Message);
         }
     }
 }

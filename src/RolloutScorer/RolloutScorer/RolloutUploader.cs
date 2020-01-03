@@ -7,12 +7,15 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage.Table;
 using Microsoft.Azure.KeyVault.Models;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 
 namespace RolloutScorer
 {
     public class RolloutUploader
     {
+        private const string _gitFileBlobMode = "100644";
+
         private struct ScorecardBatch
         {
             public DateTimeOffset Date;
@@ -31,16 +34,16 @@ namespace RolloutScorer
         /// <param name="scorecardFiles">List of paths to scorecard CSV files</param>
         /// <param name="config">Parsed Config object representing config file</param>
         /// <param name="githubClient">An authenticated Octokit.GitHubClient instance</param>
-        /// <param name="storageAccountKeySecretBundle">A secret bundle containing the key to the rollout scorecards storage account</param>
+        /// <param name="storageAccountKey">A secret bundle containing the key to the rollout scorecards storage account</param>
         /// <returns>Exit code (0 = success, 1 = failure)</returns>
-        public async static Task<int> UploadResultsAsync(List<string> scorecardFiles, Config config, GitHubClient githubClient, SecretBundle storageAccountKeySecretBundle, ILogger log = null)
+        public async static Task<int> UploadResultsAsync(List<string> scorecardFiles, Config config, GitHubClient githubClient, string storageAccountKey, ILogger log = null)
         {
             try
             {
                 await UploadResultsAsync(new List<Scorecard>(
                     await Task.WhenAll(scorecardFiles.Select(
                     file => Scorecard.ParseScorecardFromCsvAsync(file, config)
-                    ))), githubClient, storageAccountKeySecretBundle, config.GithubConfig);
+                    ))), githubClient, storageAccountKey, config.GithubConfig);
             }
             catch (IOException e)
             {
@@ -65,11 +68,11 @@ namespace RolloutScorer
         /// <summary>
         /// Uploads results to GitHub/Azure Table Storage
         /// </summary>
-        /// <param name="scorecardFiles">List of Scorecard instances to be uploaded</param>
-        /// <param name="config">Parsed Config object representing config file</param>
+        /// <param name="scorecards">List of Scorecard instances to be uploaded</param>
         /// <param name="githubClient">An authenticated Octokit.GitHubClient instance</param>
         /// <param name="storageAccountKey">Key to the rollout scorecards storage account</param>
-        public async static Task UploadResultsAsync(List<Scorecard> scorecards, GitHubClient githubClient, SecretBundle storageAccountKey, GithubConfig githubConfig)
+        /// <param name="githubConfig">GitHubConfig object representing config</param>
+        public async static Task UploadResultsAsync(List<Scorecard> scorecards, GitHubClient githubClient, string storageAccountKey, GithubConfig githubConfig)
         {
             // We batch the scorecards by date so they can be sorted into markdown files properly
             IEnumerable<ScorecardBatch> scorecardBatches = scorecards
@@ -117,7 +120,7 @@ namespace RolloutScorer
                 NewTreeItem markdownBlob = new NewTreeItem
                 {
                     Path = scorecardBatchFilePath,
-                    Mode = Utilities.GitFileMode,
+                    Mode = _gitFileBlobMode,
                     Type = TreeType.Blob,
                     Content = scorecardBatchMarkdown,
                 };
@@ -174,42 +177,6 @@ namespace RolloutScorer
                 };
                 await table.ExecuteAsync(TableOperation.InsertOrReplace(scorecardEntity));
             }
-        }
-
-        public class ScorecardEntity : TableEntity
-        {
-            public ScorecardEntity() : base()
-            {
-            }
-            public ScorecardEntity(DateTimeOffset date, string repo) : base(date.ToString(FORMAT_CONSTANT), repo) { }
-
-            private const string FORMAT_CONSTANT = "yyyy-MM-dd";
-
-            [IgnoreProperty]
-            public DateTimeOffset Date
-            {
-                get => DateTimeOffset.ParseExact(PartitionKey, FORMAT_CONSTANT, null);
-                set => PartitionKey = value.ToString(FORMAT_CONSTANT);
-            }
-            [IgnoreProperty]
-            public string Repo
-            {
-                get => RowKey;
-                set => RowKey = value;
-            }
-
-            public int TotalScore { get; set; }
-            public double TimeToRolloutSeconds { get; set; }
-            public int CriticalIssues { get; set; }
-            public int Hotfixes { get; set; }
-            public int Rollbacks { get; set; }
-            public double DowntimeSeconds { get; set; }
-            public bool Failure { get; set; }
-            public int TimeToRolloutScore { get; set; }
-            public int CriticalIssuesScore { get; set; }
-            public int HotfixScore { get; set; }
-            public int RollbackScore { get; set; }
-            public int DowntimeScore { get; set; }
         }
 
         private static RepoMarkdown CreateRepoMarkdown(Scorecard scorecard)

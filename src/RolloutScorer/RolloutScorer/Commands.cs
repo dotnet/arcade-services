@@ -96,10 +96,10 @@ namespace RolloutScorer
             using (KeyVaultClient kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
             {
                 Console.WriteLine("Fetching PATs from key vault.");
-                _rolloutScorer.SetupHttpClient(await kv.GetSecretAsync(_rolloutScorer.AzdoConfig.KeyVaultUri, _rolloutScorer.AzdoConfig.PatSecretName));
+                _rolloutScorer.SetupHttpClient((await kv.GetSecretAsync(_rolloutScorer.AzdoConfig.KeyVaultUri, _rolloutScorer.AzdoConfig.PatSecretName)).Value);
                 githubPat = await kv.GetSecretAsync(Utilities.KeyVaultUri, Utilities.GitHubPatSecretName);
-                _rolloutScorer.SetupGithubClient(githubPat);
-                storageAccountConnectionString = await kv.GetSecretAsync(Utilities.KeyVaultUri, Utilities.StorageAccountKeySecretName);
+                _rolloutScorer.SetupGithubClient(githubPat.Value);
+                storageAccountConnectionString = await kv.GetSecretAsync(Utilities.KeyVaultUri, ScorecardsStorageAccount.KeySecretName);
             }
 
             try
@@ -129,7 +129,7 @@ namespace RolloutScorer
             if (_rolloutScorer.Upload)
             {
                 Console.WriteLine("Directly uploading results.");
-                await RolloutUploader.UploadResultsAsync(new List<Scorecard> { scorecard }, Utilities.GetGithubClient(githubPat), storageAccountConnectionString, _rolloutScorer.GithubConfig);
+                await RolloutUploader.UploadResultsAsync(new List<Scorecard> { scorecard }, Utilities.GetGithubClient(githubPat.Value), storageAccountConnectionString.Value, _rolloutScorer.GithubConfig);
             }
 
             if (_rolloutScorer.SkipOutput)
@@ -176,10 +176,10 @@ namespace RolloutScorer
             {
                 Console.WriteLine("Fetching PAT and connection string from key vault.");
                 githubPat = await kv.GetSecretAsync(Utilities.KeyVaultUri, Utilities.GitHubPatSecretName);
-                storageAccountConnectionString = await kv.GetSecretAsync(Utilities.KeyVaultUri, Utilities.StorageAccountKeySecretName);
+                storageAccountConnectionString = await kv.GetSecretAsync(Utilities.KeyVaultUri, ScorecardsStorageAccount.KeySecretName);
             }
 
-            return await RolloutUploader.UploadResultsAsync(arguments.ToList(), Utilities.ParseConfig(), Utilities.GetGithubClient(githubPat), storageAccountConnectionString);
+            return await RolloutUploader.UploadResultsAsync(arguments.ToList(), Utilities.ParseConfig(), Utilities.GetGithubClient(githubPat.Value), storageAccountConnectionString.Value);
         }
     }
 }
