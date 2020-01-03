@@ -3,32 +3,7 @@
 The Rollout Scorer is a tool for generating rollout scorecards.
 
 ## Tool Description
-The rollout scorer takes two commands: `score` and `upload`.
-
-### `score`
-
-The `score` command calculates a particular rollout's score and generates the scorecard which it outputs as a CSV for review. Optionally, it can skip this output step and upload the results directly.
-
-|            Argument            |  Required?   |              Description              |
-|:------------------------------:|:------------:|:--------------------------------------|
-|       `--repo` or `-r`         | **Required** | The repository to score               |
-|      `--branch` or `-b`        |  *Optional*  | The branch of the repo to score(e.g. servicing or prod); defaults to production |
-| `--rollout-start-date` or `-s` | **Required** | The date on which the rollout started |
-|  `--rollout-end-date` or `-e`  |  *Optional*  | The date on which the rollout ended; defaults to current date |
-|     `--manual-rollbacks`       |  *Optional*  | The number of rollbacks which weren't deployed by builds (e.g. clicking a button to return to a previous state); defaults to 0 |
-|     `--manual-hotfixes`        |  *Optional*  | Any extra hotfixes that won't be tracked by the tool (e.g. database changes) |
-|     `--assume-no-tags`         |  *Optional*  | Assumes no `[HOTFIX]` tags and just calculates hotfixes based on number of deployments after the first |
-|    `--downtime` or `-d`        |  *Optional*  | A TimeSpan specifying an amount of downtime which occurred; defaults to 0 |
-|     `--failed` or `-f`         |  *Optional*  | Indicates a failed rollout |
-|     `--output` or `-o`         |  *Optional*  | File which the generated csv will be outputted to; defaults to `./{repo}-scorecard.csv` |
-|       `--skip-output`          |  *Optional*  | Skips the output step and directly uploads results |
-|      `--help` or `-h`          |  *Optional*  | Display help message and exit |
-
-### Upload
-
-The `upload` command takes a series of inline arguments which specify the locations of the scorecard CSV files to upload. Each of these files will be combined into a single scorecard document.
-
-"Uploading" the file here means making a PR to core-eng containing adding the scorecard to `/Documentation/Rollout-Scorecards/` and placing the data in Kusto which backs a PowerBI dashboard.
+The rollout scorer takes two commands: `score` and `upload`. `RolloutScorer help [command]` will return the documentation for these commands.
 
 ### Usage
 
