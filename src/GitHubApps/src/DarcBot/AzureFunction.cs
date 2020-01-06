@@ -17,10 +17,6 @@ using System.Threading.Tasks;
 
 namespace DarcBot
 {
-    // TODO: Add bot to core-eng
-    // TODO: Update powerbi links to refer to core-eng
-    // TODO: add deployment - https://dnceng.visualstudio.com/internal/_git/dotnet-helix-machines?path=%2Fazure-pipelines.yml&version=GBmaster
-
     public static class GitHubWebHook
     {
         private static ILogger _log;
