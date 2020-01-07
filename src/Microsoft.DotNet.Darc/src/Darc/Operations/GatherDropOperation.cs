@@ -1205,7 +1205,7 @@ namespace Microsoft.DotNet.Darc.Operations
             string targetFile, 
             List<string> errors, 
             StringBuilder downloadOutput,
-            CancellationToken cancelationToken)
+            CancellationToken cancellationToken)
         {
             if (_options.DryRun)
             {
@@ -1239,7 +1239,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     using (var inStream = await client.GetStreamAsync(sourceUri))
                     {
                         downloadOutput.Append($"  {sourceUri} => {targetFile}...");
-                        await inStream.CopyToAsync(outStream, cancelationToken);
+                        await inStream.CopyToAsync(outStream, cancellationToken);
                         downloadOutput.AppendLine("Done");
                     }
                 }
