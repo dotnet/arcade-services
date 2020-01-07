@@ -65,7 +65,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // Build, then prune out what we don't want to see if the user specified
                 // channels.
-                DependencyFlowGraph flowGraph = DependencyFlowGraph.Build(defaultChannels, subscriptions);
+                DependencyFlowGraph flowGraph = await DependencyFlowGraph.Build(defaultChannels, subscriptions, barOnlyRemote, _options.Days);
 
                 Channel targetChannel = null;
                 if (!string.IsNullOrEmpty(_options.Channel))
@@ -83,7 +83,14 @@ namespace Microsoft.DotNet.Darc.Operations
                     flowGraph.PruneGraph(node => IsInterestingNode(targetChannel, node), edge => IsInterestingEdge(edge));
                 }
 
-                await LogGraphViz(targetChannel, flowGraph);
+                if (_options.IncludeBuildTimes)
+                {
+                    flowGraph.MarkBackEdges();
+                    flowGraph.CalculateLongestBuildPaths();
+                    flowGraph.MarkLongestBuildPath();
+                }
+
+                await LogGraphViz(targetChannel, flowGraph, _options.IncludeBuildTimes);
 
                 return Constants.SuccessCode;
             }
@@ -129,17 +136,18 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <returns></returns>
         private string GetEdgeStyle(DependencyFlowEdge edge)
         {
+            string color = edge.OnLongestBuildPath ? "color=red" : "";
             switch (edge.Subscription.Policy.UpdateFrequency)
             {
                 case UpdateFrequency.EveryBuild:
                     // Solid
-                    return "style=bold";
+                    return $"{color} style=bold";
                 case UpdateFrequency.EveryDay:
                 case UpdateFrequency.TwiceDaily:
                 case UpdateFrequency.EveryWeek:
-                    return "style=dashed";
+                    return $"{color} style=dashed";
                 case UpdateFrequency.None:
-                    return "style=dotted";
+                    return $"{color} style=dotted";
                 default:
                     throw new NotImplementedException("Unknown update frequency");
             }
@@ -160,7 +168,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// For more info see https://www.graphviz.org/
         /// </remarks>
         /// <returns>Async task</returns>
-        private async Task LogGraphViz(Channel targetChannel, DependencyFlowGraph graph)
+        private async Task LogGraphViz(Channel targetChannel, DependencyFlowGraph graph, bool includeBuildTimes)
         {
             StringBuilder subgraphClusterWriter = null;
             bool writeToSubgraphCluster = targetChannel != null;
@@ -179,11 +187,13 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     StringBuilder nodeBuilder = new StringBuilder();
 
+                    string color = node.OnLongestBuildPath ? "color=red style=bold" : "";
+
                     // First add the node name
                     nodeBuilder.Append($"    {UxHelpers.CalculateGraphVizNodeName(node)}");
 
                     // Then add the label.  label looks like [label="<info here>"]
-                    nodeBuilder.Append("[label=\"");
+                    nodeBuilder.Append($"[{color}\nlabel=\"");
 
                     // Append friendly repo name
                     nodeBuilder.Append(UxHelpers.GetSimpleRepoName(node.Repository));
@@ -191,6 +201,24 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     // Append branch name
                     nodeBuilder.Append(node.Branch);
+
+                    if (includeBuildTimes)
+                    {
+                        // Append best case
+                        nodeBuilder.Append(@"\n");
+                        nodeBuilder.Append($"Best Case: {node.BestCasePathTime}");
+                        nodeBuilder.Append(@"\n");
+
+                        // Append worst case
+                        nodeBuilder.Append($"Worst Case: {node.WorstCasePathTime}");
+                        nodeBuilder.Append(@"\n");
+
+                        // Append build times
+                        nodeBuilder.Append($"Official Build Time: {node.OfficialBuildTime}");
+                        nodeBuilder.Append(@"\n");
+
+                        nodeBuilder.Append($"PR Build Time: {node.PrBuildTime}");
+                    }
 
                     // Append end of label and end of node.
                     nodeBuilder.Append("\"];");

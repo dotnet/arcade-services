@@ -254,5 +254,10 @@ namespace SubscriptionActorService
         {
             throw new NotImplementedException();
         }
+
+        public Task<BuildTime> GetBuildTimeAsync(int defaultChannelId, int days)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

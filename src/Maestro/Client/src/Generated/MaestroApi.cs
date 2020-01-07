@@ -25,6 +25,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         IAssets Assets { get; }
         IBuilds Builds { get; }
+        IBuildTime BuildTime { get; }
         IChannels Channels { get; }
         IDefaultChannels DefaultChannels { get; }
         IGoal Goal { get; }
@@ -110,6 +111,8 @@ namespace Microsoft.DotNet.Maestro.Client
 
         public IBuilds Builds { get; }
 
+        public IBuildTime BuildTime { get; }
+
         public IChannels Channels { get; }
 
         public IDefaultChannels DefaultChannels { get; }
@@ -133,6 +136,7 @@ namespace Microsoft.DotNet.Maestro.Client
             Options = options;
             Assets = new Assets(this);
             Builds = new Builds(this);
+            BuildTime = new BuildTime(this);
             Channels = new Channels(this);
             DefaultChannels = new DefaultChannels(this);
             Goal = new Goal(this);
