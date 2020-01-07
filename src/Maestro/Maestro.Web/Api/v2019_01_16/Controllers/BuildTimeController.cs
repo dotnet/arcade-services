@@ -94,7 +94,6 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
 
             KustoQuery internalQuery = new KustoQuery(internalQueryText, parameters);
             KustoQuery publicQuery = new KustoQuery(publicQueryText, parameters);
-            System.Diagnostics.Debug.WriteLine($"Queries: {internalQueryText}\n {publicQueryText}");
 
             var results = await Task.WhenAll<TimeSpan>(_kustoClientProvider.GetSingleValueFromQueryAsync<TimeSpan>(internalQuery), 
                 _kustoClientProvider.GetSingleValueFromQueryAsync<TimeSpan>(publicQuery));
