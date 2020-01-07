@@ -4,6 +4,7 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Darc.Options
 {
@@ -73,6 +74,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("latest-location", HelpText = "Download assets from their latest known location.")]
         public bool LatestLocation { get; set; }
 
+        [Option("sas-suffixes", Separator = ',', HelpText = "List of potential uri suffixes that can be used if anonymous " +
+            "access to a blob uri fails. Appended directly to the end of the URI (use full SAS suffix starting with '?'.")]
+        public IEnumerable<string> SASSuffixes { get; set; }
 
         public override Operation GetOperation()
         {
