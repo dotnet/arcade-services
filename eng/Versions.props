@@ -32,7 +32,7 @@
     <NewtonsoftJsonVersion>10.0.3</NewtonsoftJsonVersion>
     <NuGetVersioningVersion>4.4.0</NuGetVersioningVersion>
     <NuGetVersion>4.4.0</NuGetVersion>
-    <OctokitVersion>0.32.0</OctokitVersion>
+    <OctokitVersion>0.36.0</OctokitVersion>
     <DotNetSleetLibVersion>2.2.73</DotNetSleetLibVersion>
     <SwashbuckleAspNetCoreSwaggerVersion>3.0.0</SwashbuckleAspNetCoreSwaggerVersion>
     <SystemCollectionsImmutableVersion>1.3.1</SystemCollectionsImmutableVersion>
@@ -45,11 +45,11 @@
     <WindowsAzureStorageVersion>8.5.0</WindowsAzureStorageVersion>
     <XUnitVersion>2.4.1-pre.build.4059</XUnitVersion>
     <XUnitVSRunnerVersion>2.4.1-pre.build.4059</XUnitVSRunnerVersion>
-    <MicrosoftDotNetSignToolVersion>5.0.0-beta.19625.1</MicrosoftDotNetSignToolVersion>
-    <MicrosoftDotNetBuildTasksFeedVersion>5.0.0-beta.19625.1</MicrosoftDotNetBuildTasksFeedVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>5.0.0-beta.19625.1</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
-    <MicrosoftDotNetGitIssueManagerVersion>5.0.0-beta.19625.1</MicrosoftDotNetGitIssueManagerVersion>
-    <MicrosoftDotNetVersionToolsVersion>5.0.0-beta.19625.1</MicrosoftDotNetVersionToolsVersion>
+    <MicrosoftDotNetSignToolVersion>5.0.0-beta.20056.6</MicrosoftDotNetSignToolVersion>
+    <MicrosoftDotNetBuildTasksFeedVersion>5.0.0-beta.20056.6</MicrosoftDotNetBuildTasksFeedVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>5.0.0-beta.20056.6</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
+    <MicrosoftDotNetGitIssueManagerVersion>5.0.0-beta.20056.6</MicrosoftDotNetGitIssueManagerVersion>
+    <MicrosoftDotNetVersionToolsVersion>5.0.0-beta.20056.6</MicrosoftDotNetVersionToolsVersion>
   </PropertyGroup>
   <!--Package names-->
   <PropertyGroup>
