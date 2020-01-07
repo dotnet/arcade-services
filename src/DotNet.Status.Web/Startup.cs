@@ -23,6 +23,7 @@ using Microsoft.DotNet.Web.Authentication.GitHub;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Octokit;
 
 namespace DotNet.Status.Web
@@ -81,6 +82,30 @@ namespace DotNet.Status.Web
             {
                 options.LoginPath = "/signin";
                 options.LogoutPath = "/signout";
+                options.Events = new CookieAuthenticationEvents
+                {
+                    OnRedirectToLogin = ctx =>
+                    {
+                        if (ctx.Request.Path.StartsWithSegments("/api"))
+                        {
+                            ctx.Response.StatusCode = 401;
+                            return Task.CompletedTask;
+                        }
+
+                        ctx.Response.Redirect(ctx.RedirectUri);
+                        return Task.CompletedTask;
+                    },
+                    OnRedirectToAccessDenied = ctx =>
+                    {
+                        if (ctx.Request.Path.StartsWithSegments("/api"))
+                        {
+                            ctx.Response.StatusCode = 403;
+                            return Task.CompletedTask;
+                        }
+                        ctx.Response.StatusCode = 403;
+                        return Task.CompletedTask;
+                    },
+                };
             });
             services.Configure<GitHubAuthenticationOptions>(GitHubScheme, o => o.SignInScheme = IdentityConstants.ApplicationScheme);
             services.Configure<MvcOptions>(
@@ -97,6 +122,16 @@ namespace DotNet.Status.Web
         {
             services.AddMvc().WithRazorPagesRoot("/Pages").AddRazorPagesOptions(o => o.Conventions.AuthorizeFolder("/", MsftAuthorizationPolicyName).AllowAnonymousToPage("/Index"));
             services.AddApplicationInsightsTelemetry(Configuration.GetSection("ApplicationInsights").Bind);
+            services.Configure<LoggerFilterOptions>(o =>
+            {
+                // This handler is added by 'AddApplicationInsightsTelemetry' above and hard limits
+                // and reporting below "warning", which basically kills all logging
+                // Remove it, we already configured the filters in Program.cs
+                o.Rules.Remove(o.Rules.FirstOrDefault(r =>
+                    r.ProviderName ==
+                    "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider"));
+            });
+
             services.AddAuthentication()
                 .AddGitHubOAuth(Configuration.GetSection("GitHubAuthentication"), GitHubScheme)
                 .AddScheme<UserTokenOptions, GitHubUserTokenHandler>("github-token", o => { })
@@ -120,6 +155,7 @@ namespace DotNet.Status.Web
                             }
                         };
                     })
+                .AddExternalCookie()
                 ;
             services.AddAzureTableTokenStore(o => Configuration.GetSection("AzureTableTokenStore").Bind(o));
             services.AddAuthorization(
