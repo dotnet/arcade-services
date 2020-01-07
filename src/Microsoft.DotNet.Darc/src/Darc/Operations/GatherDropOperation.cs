@@ -1205,7 +1205,12 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="downloadOutput">Console output for the download.</param>
         /// <param name="errors">List of errors. Append error messages to this list if there are failures.</param>
         /// <returns>True if the download succeeded, false otherwise.</returns>
-        private async Task<bool> DownloadFileAsync(HttpClient client, string sourceUri, AuthenticationHeaderValue authHeader, string targetFile, List<string> errors, StringBuilder downloadOutput,
+        private async Task<bool> DownloadFileAsync(HttpClient client, 
+            string sourceUri, 
+            AuthenticationHeaderValue authHeader, 
+            string targetFile, 
+            List<string> errors, 
+            StringBuilder downloadOutput,
             CancellationToken cancellationToken)
         {
             if (_options.DryRun)
@@ -1219,7 +1224,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 return true;
             }
 
-            if (await DownloadFileImplAsync(client, sourceUri, authHeader, targetFile, errors, downloadOutput))
+            if (await DownloadFileImplAsync(client, sourceUri, authHeader, targetFile, errors, downloadOutput, cancellationToken))
             {
                 return true;
             }
@@ -1228,7 +1233,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Append and attempt to use the suffixes that were passed in to download from the uri
                 foreach (string sasSuffix in _options.SASSuffixes)
                 {
-                    if (await DownloadFileImplAsync(client, $"{sourceUri}{sasSuffix}", authHeader, targetFile, errors, downloadOutput))
+                    if (await DownloadFileImplAsync(client, $"{sourceUri}{sasSuffix}", authHeader, targetFile, errors, downloadOutput, cancellationToken))
                     {
                         return true;
                     }
@@ -1243,12 +1248,17 @@ namespace Microsoft.DotNet.Darc.Operations
         /// </summary>
         /// <param name="client">Http client</param>
         /// <param name="sourceUri">Source uri</param>
-        /// <param name="targetFile">Target file path. Directories are created.</param>
         /// <param name="authHeader">Optional authentication header if necessary</param>
-        /// <param name="downloadOutput">Console output for the download.</param>
+        /// <param name="targetFile">Target file path. Directories are created.</param>
         /// <param name="errors">List of errors. Append error messages to this list if there are failures.</param>
+        /// <param name="downloadOutput">Console output for the download.</param>
         /// <returns>True if the download succeeded, false otherwise.</returns>
-        private async Task<bool> DownloadFileImplAsync(HttpClient client, string sourceUri, AuthenticationHeaderValue authHeader, string targetFile, List<string> errors, StringBuilder downloadOutput,
+        private async Task<bool> DownloadFileImplAsync(HttpClient client, 
+            string sourceUri, 
+            AuthenticationHeaderValue authHeader, 
+            string targetFile, 
+            List<string> errors, 
+            StringBuilder downloadOutput,
             CancellationToken cancellationToken)
         {
             // Use a temporary in progress file name so we don't end up with corrupted
