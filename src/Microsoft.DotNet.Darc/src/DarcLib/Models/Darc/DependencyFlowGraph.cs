@@ -245,7 +245,7 @@ namespace Microsoft.DotNet.DarcLib
                     DependencyFlowNode node = nodesToVisit.Dequeue();
                     node.VisitedNodes.Add(node);
 
-                    foreach(var edge in node.IncomingEdges)
+                    foreach (var edge in node.IncomingEdges)
                     {
                         DependencyFlowNode child = edge.From;
 
@@ -319,7 +319,6 @@ namespace Microsoft.DotNet.DarcLib
                     flowNode.OfficialBuildTime = buildTime.OfficialBuildTime;
                     flowNode.PrBuildTime = buildTime.PrBuildTime;
                 }
-
                 else
                 {
                     flowNode.OfficialBuildTime = 0;
