@@ -120,7 +120,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="sourceRepo">Filter by the source repository of the subscription.</param>
         /// <param name="targetRepo">Filter by the target repository of the subscription.</param>
-        /// <param name="channelId">Filter by the target channel id of the subscription.</param>
+        /// <param name="channelId">Filter by the source channel id of the subscription.</param>
         /// <returns>Set of subscription.</returns>
         public Task<IEnumerable<Subscription>> GetSubscriptionsAsync(
             string sourceRepo = null,

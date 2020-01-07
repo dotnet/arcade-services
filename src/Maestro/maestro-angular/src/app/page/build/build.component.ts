@@ -228,7 +228,6 @@ export class BuildComponent implements OnInit, OnChanges {
         statefulSwitchMap(([build, params]) => {
           const currentChannelId = +params.channelId;
           return this.maestroService.subscriptions.listSubscriptionsAsync({
-            channelId: currentChannelId,
             targetRepository: this.getRepo(build),
           }).pipe(
             map(subs => {
