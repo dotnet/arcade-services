@@ -107,6 +107,25 @@ namespace Maestro.Web
                     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
                     options.ReturnUrlParameter = "returnUrl";
                     options.LoginPath = "/Account/SignIn";
+                    options.Events = new CookieAuthenticationEvents
+                    {
+                        OnRedirectToLogin = ctx =>
+                        {
+                            if (ctx.Request.Path.StartsWithSegments("/api"))
+                            {
+                                ctx.Response.StatusCode = 401;
+                                return Task.CompletedTask;
+                            }
+
+                            ctx.Response.Redirect(ctx.RedirectUri);
+                            return Task.CompletedTask;
+                        },
+                        OnRedirectToAccessDenied = ctx =>
+                        {
+                            ctx.Response.StatusCode = 403;
+                            return Task.CompletedTask;
+                        },
+                    };
                 });
             services.ConfigureApplicationCookie(
                 options =>
