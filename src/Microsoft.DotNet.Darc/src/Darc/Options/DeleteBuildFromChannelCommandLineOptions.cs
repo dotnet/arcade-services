@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("id", Required = true, HelpText = "BAR id of build to assign to channel.")]
         public int Id { get; set; }
 
-        [Option("channel", Required = true, HelpText = "Channel to assign build to.")]
+        [Option("channel", Required = true, HelpText = "Channel to remove the build from.")]
         public string Channel { get; set; }
 
         public override Operation GetOperation()
