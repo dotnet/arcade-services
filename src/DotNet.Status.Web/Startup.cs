@@ -73,6 +73,7 @@ namespace DotNet.Status.Web
         private void ConfigureConfiguration(IServiceCollection services)
         {
             services.Configure<GitHubConnectionOptions>(Configuration.GetSection("GitHub").Bind);
+            services.Configure<GrafanaOptions>(Configuration.GetSection("Grafana").Bind);
             services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth").Bind);
 
             services.Configure<SimpleSigninOptions>(o => { o.ChallengeScheme = GitHubScheme; });
@@ -149,18 +150,22 @@ namespace DotNet.Status.Web
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app)
         {
+            app.UseStatusCodePagesWithReExecute("/Status", "?code={0}");
+
             if (Env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
             else
             {
+                app.UseExceptionHandler("/Error");
                 app.UseHttpsRedirection();
             }
-
+            
             app.UseAuthentication();
             app.UseMvc();
             app.UseMiddleware<SimpleSigninMiddleware>();
+            app.UseStaticFiles();
         }
     }
 }

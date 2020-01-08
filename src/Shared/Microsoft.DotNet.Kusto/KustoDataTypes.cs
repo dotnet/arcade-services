@@ -12,5 +12,6 @@ namespace Microsoft.DotNet.Kusto
         public const string Boolean = "bool";
         public const string DateTime = "datetime";
         public const string Guid = "guid";
+        public const string TimeSpan = "timespan";
     }
 }

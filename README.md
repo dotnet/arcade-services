@@ -16,6 +16,8 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 
 Information about Maestro [README.md](src/Maestro/Readme.md)
 
+Please follow our [Validation Process](https://github.com/dotnet/core-eng/blob/master/Documentation/Validation/ValidationProcess.md) for including tests to go with new or changed functionality. 
+
 ### License
 
 .NET Core (including the Arcade repo) is licensed under the [MIT license](LICENSE.TXT). 

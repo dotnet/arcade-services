@@ -25,9 +25,9 @@ namespace DependencyUpdater.Tests
             };
             var build = new Build
             {
-                Branch = "source.branch",
-                Repository = "source.repo",
-                BuildNumber = "build.number",
+                AzureDevOpsBranch = "source.branch",
+                AzureDevOpsRepository = "source.repo",
+                AzureDevOpsBuildNumber = "build.number",
                 Commit = "sha",
                 DateProduced = DateTimeOffset.UtcNow.AddDays(-1)
             };
@@ -48,9 +48,9 @@ namespace DependencyUpdater.Tests
             };
             var newBuild = new Build
             {
-                Branch = "source.branch",
-                Repository = "source.repo",
-                BuildNumber = "build.number.2",
+                AzureDevOpsBranch = "source.branch",
+                AzureDevOpsRepository = "source.repo",
+                AzureDevOpsBuildNumber = "build.number.2",
                 Commit = "sha2",
                 DateProduced = DateTimeOffset.UtcNow,
                 Assets = new List<Asset> {newAsset}
@@ -110,9 +110,9 @@ namespace DependencyUpdater.Tests
             };
             var build = new Build
             {
-                Branch = "source.branch",
-                Repository = "source.repo",
-                BuildNumber = "build.number",
+                AzureDevOpsBranch = "source.branch",
+                AzureDevOpsRepository = "source.repo",
+                AzureDevOpsBuildNumber = "build.number",
                 Commit = "sha",
                 DateProduced = DateTimeOffset.UtcNow.AddDays(-1)
             };
@@ -133,9 +133,9 @@ namespace DependencyUpdater.Tests
             };
             var newBuild = new Build
             {
-                Branch = "source.branch",
-                Repository = "source.repo",
-                BuildNumber = "build.number.2",
+                AzureDevOpsBranch = "source.branch",
+                AzureDevOpsRepository = "source.repo",
+                AzureDevOpsBuildNumber = "build.number.2",
                 Commit = "sha2",
                 DateProduced = DateTimeOffset.UtcNow,
                 Assets = new List<Asset> {newAsset}
@@ -193,17 +193,17 @@ namespace DependencyUpdater.Tests
             };
             var build = new Build
             {
-                Branch = "source.branch",
-                Repository = "source.repo",
-                BuildNumber = "build.number",
+                AzureDevOpsBranch = "source.branch",
+                AzureDevOpsRepository = "source.repo",
+                AzureDevOpsBuildNumber = "build.number",
                 Commit = "sha",
                 DateProduced = DateTimeOffset.UtcNow.AddDays(-1)
             };
             var newBuild = new Build
             {
-                Branch = "source.branch",
-                Repository = "source.repo",
-                BuildNumber = "build.number.2",
+                AzureDevOpsBranch = "source.branch",
+                AzureDevOpsRepository = "source.repo",
+                AzureDevOpsBuildNumber = "build.number.2",
                 Commit = "sha2",
                 DateProduced = DateTimeOffset.UtcNow
             };

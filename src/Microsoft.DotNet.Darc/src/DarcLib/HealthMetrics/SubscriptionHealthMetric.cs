@@ -87,7 +87,7 @@ namespace Microsoft.DotNet.DarcLib.HealthMetrics
 
             Logger.LogInformation("Evaluating subscription health metrics for {repo}@{branch}", Repository, Branch);
 
-            // Get suscriptions that target this repo/branch
+            // Get subscriptions that target this repo/branch
             Subscriptions = (await remote.GetSubscriptionsAsync(targetRepo: Repository))
                 .Where(s => s.TargetBranch.Equals(Branch, StringComparison.OrdinalIgnoreCase)).ToList();
 

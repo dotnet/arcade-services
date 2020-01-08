@@ -25,5 +25,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Maestro\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
+    <ProjectReference Include="..\..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
   </ItemGroup>
 </Project>

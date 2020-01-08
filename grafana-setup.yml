@@ -42,9 +42,10 @@ stages:
           clean: true
 
         - powershell: |
-            if (-not (Test-Path env:GrafanaBinPath)) { Write-Host "Missing GrafanaBinPath, ensure required variables are defined"; exit 1}
+            if (-not (Test-Path env:GrafanaDomain)) { Write-Host "Missing GrafanaDomain, ensure required variables are defined"; exit 1}
             if (-not (Test-Path env:TargetVmName)) { Write-Host "Missing TargetVmName, ensure required variables are defined"; exit 1}
             if (-not (Test-Path env:TargetResourceGroup)) { Write-Host "Missing TargetResourceGroup, ensure required variables are defined"; exit 1}
+            if ($env:GrafanaEnvironment -ne "staging" -and $env:GrafanaEnvironment -ne "production") { Write-Host "GrafanaEnvironment must be 'staging' or 'production'"; exit 1}
             Write-Host "All required variables defined"
           displayName: Ensure variables defined
         
@@ -71,15 +72,23 @@ stages:
           displayName: Execute grafana-init/setup.sh on VM
           inputs:
             azureSubscription: DncEng-VSTS
-            scriptType: batch
+            scriptType: ps
             scriptLocation: inlineScript
             inlineScript: >-
               az vm run-command invoke
               -g $(TargetResourceGroup)
               -n $(TargetVmName)
               --command-id RunShellScript
-              --scripts "mkdir -p /tmp/grafana-init/ &&
+              --scripts
+              "
+              mkdir -p /tmp/grafana-init/ &&
               cd /tmp/grafana-init &&
               curl --silent --show-error --fail '$(UploadedUri)grafana-init-$(Build.BuildNumber)/grafana-init.tar.gz' -o ./grafana-init.tar.gz &&
               tar -xzf ./grafana-init.tar.gz &&
-              sudo bash ./setup.sh $(GrafanaBinPath)"
+              sudo bash ./setup.sh -b '$(GrafanaBinPath)' -d '$(GrafanaDomain)' --$(GrafanaEnvironment)
+              "
+              | Tee-Object -variable cmdoutput
+              | findstr /c:"SETUP_EXIT_CODE=0"
+              | Out-Null;
+              $cmdoutput |% {$_ -replace "\\n","`n->  "} |% {$_ -replace "\\",""} | Write-Host;
+              $LASTEXITCODE

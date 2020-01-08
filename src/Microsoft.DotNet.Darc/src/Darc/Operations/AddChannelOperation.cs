@@ -46,12 +46,12 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 return Constants.SuccessCode;
             }
-            catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.Conflict)
+            catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.Conflict)
             {
                 Logger.LogError($"An existing channel with name '{_options.Name}' already exists");
                 return Constants.ErrorCode;
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
                 Logger.LogError(e, "Error: Failed to create new channel.");
                 return Constants.ErrorCode;

@@ -147,7 +147,16 @@ namespace DotNet.Status.Web.Controllers
 
             string icon = GetIcon(notification);
 
-            var issue = new NewIssue(notification.Title)
+            string issueTitle = notification.Title;
+
+            GitHubConnectionOptions options = _githubOptions.Value;
+            string prefix = options.TitlePrefix;
+            if (prefix != null)
+            {
+                issueTitle = prefix + issueTitle;
+            }
+
+            var issue = new NewIssue(issueTitle)
             {
                 Body = $@":{icon}: Metric state changed to *{notification.State}*
 
@@ -159,7 +168,9 @@ namespace DotNet.Status.Web.Controllers
 
 [Go to rule]({notification.RuleUrl})
 
-@{_githubOptions.Value.NotificationTarget}, please investigate
+@{options.NotificationTarget}, please investigate
+
+{options.SupplementalBodyText}
 
 <details>
 <summary>Automation information below, do not change</summary>
@@ -171,7 +182,7 @@ namespace DotNet.Status.Web.Controllers
             };
 
             issue.Labels.Add(ActiveAlertLabel);
-            foreach (string label in _githubOptions.Value.AlertLabels.OrEmpty())
+            foreach (string label in options.AlertLabels.OrEmpty())
             {
                 issue.Labels.Add(label);
             }

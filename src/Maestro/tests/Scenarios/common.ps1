@@ -255,6 +255,10 @@ function Darc-Get-Subscription($subscriptionId) {
     Darc-Command get-subscriptions --ids $subscriptionId
 }
 
+function Darc-Get-Subscription-Enabled($subscriptionId) {
+    return $(Darc-Command get-subscriptions --ids $subscriptionId) -match "- Enabled: True"
+}
+
 function Darc-Add-Subscription-Process-Output($output) {
     $match = $output -match "Successfully created new subscription with id '([a-f0-9-]+)'"
 
@@ -913,4 +917,15 @@ function Validate-Arcade-PullRequest-Contents($pullRequest, $expectedPRTitle, $t
 function Get-ArcadeRepoUri
 {
     "https://github.com/dotnet/arcade"
+}
+
+# Run darc add-goal and record the channel for later deletion
+function Darc-Set-Goal($channel, $definitionId, $minutes) {
+    $darcParams = @("set-goal", "--channel", "$channel", "--definition-id", "$definitionId", "--minutes" , "$minutes")
+    Darc-Command -darcParams $darcParams
+}
+
+function Darc-Get-Goal($channel, $definitionId) {
+    $darcParams = @("get-goal", "--channel", "$channel", "--definition-id", "$definitionId")
+    Darc-Command -darcParams $darcParams
 }

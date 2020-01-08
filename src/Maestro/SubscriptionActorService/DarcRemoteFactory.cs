@@ -12,6 +12,8 @@ using Maestro.AzureDevOps;
 using Maestro.Data;
 using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.ServiceFabric.ServiceHost;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -24,8 +26,10 @@ namespace SubscriptionActorService
             IGitHubTokenProvider gitHubTokenProvider,
             IAzureDevOpsTokenProvider azureDevOpsTokenProvider,
             DarcRemoteMemoryCache memoryCache,
-            BuildAssetRegistryContext context)
+            BuildAssetRegistryContext context,
+            TemporaryFiles tempFiles)
         {
+            _tempFiles = tempFiles;
             Configuration = configuration;
             GitHubTokenProvider = gitHubTokenProvider;
             AzureDevOpsTokenProvider = azureDevOpsTokenProvider;
@@ -37,9 +41,12 @@ namespace SubscriptionActorService
         public IGitHubTokenProvider GitHubTokenProvider { get; }
         public IAzureDevOpsTokenProvider AzureDevOpsTokenProvider { get; }
         public BuildAssetRegistryContext Context { get; }
-        public DarcRemoteMemoryCache Cache { get; set; }
-        private string _gitExecutable { get; set; }
-        private SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
+        public DarcRemoteMemoryCache Cache { get; }
+
+        private readonly TemporaryFiles _tempFiles;
+        private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
+        
+        private string _gitExecutable;
 
         public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
         {
@@ -60,7 +67,7 @@ namespace SubscriptionActorService
                 string temporaryRepositoryRoot = Configuration.GetValue<string>("DarcTemporaryRepoRoot", null);
                 if (string.IsNullOrEmpty(temporaryRepositoryRoot))
                 {
-                    temporaryRepositoryRoot = Path.GetTempPath();
+                    temporaryRepositoryRoot = _tempFiles.GetFilePath("repos");
                 }
                 IGitRepo gitClient;
 
@@ -95,7 +102,7 @@ namespace SubscriptionActorService
         }
 
         /// <summary>
-        ///     Download and install git to the TEMP directory, if it does not already exist in that location.
+        ///     Download and install git to the a temporary location.
         ///     Git is used by DarcLib, and the Service Fabric nodes do not have it installed natively.
         ///     
         ///     The file is assumed to be on a public endpoint.
@@ -115,29 +122,30 @@ namespace SubscriptionActorService
                     {
                         using (logger.BeginScope($"Installing a local copy of git"))
                         {
-                            string gitTempDirectory = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-                            string gitZipFile = Path.Combine(gitTempDirectory, Path.GetRandomFileName());
                             string gitLocation = Configuration.GetValue<string>("GitDownloadLocation", null);
+                            string[] pathSegments = new Uri(gitLocation, UriKind.Absolute).Segments;
+                            string remoteFileName = pathSegments[pathSegments.Length - 1];
+
+                            string gitRoot = _tempFiles.GetFilePath("git-portable");
+                            string targetPath = Path.Combine(gitRoot, Path.GetFileNameWithoutExtension(remoteFileName));
+                            string gitZipFile = Path.Combine(gitRoot, remoteFileName);
 
                             logger.LogInformation($"Downloading git from '{gitLocation}' to '{gitZipFile}'");
 
-                            Directory.CreateDirectory(gitTempDirectory);
+                            Directory.CreateDirectory(targetPath);
 
-                            // Download file.
-                            HttpClient client = new HttpClient();
-                            using (FileStream outStream = new FileStream(gitZipFile, FileMode.CreateNew, FileAccess.Write))
+                            using (HttpClient client = new HttpClient())
+                            using (FileStream outStream = new FileStream(gitZipFile, FileMode.Create, FileAccess.Write))
+                            using (var inStream = await client.GetStreamAsync(gitLocation))
                             {
-                                using (var inStream = await client.GetStreamAsync(gitLocation))
-                                {
-                                    await inStream.CopyToAsync(outStream);
-                                }
+                                await inStream.CopyToAsync(outStream);
                             }
 
-                            logger.LogInformation($"Extracting '{gitZipFile}' to '{gitTempDirectory}'");
+                            logger.LogInformation($"Extracting '{gitZipFile}' to '{targetPath}'");
 
-                            ZipFile.ExtractToDirectory(gitZipFile, gitTempDirectory);
+                            ZipFile.ExtractToDirectory(gitZipFile, targetPath, overwriteFiles: true);
 
-                            _gitExecutable = Path.Combine(gitTempDirectory, "bin", "git.exe");
+                            _gitExecutable = Path.Combine(targetPath, "bin", "git.exe");
                         }
                     }
                 }

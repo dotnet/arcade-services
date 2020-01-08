@@ -40,10 +40,10 @@ stages:
         pool:
           ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
             name: NetCorePublic-Pool
-            queue: BuildPool.Windows.10.Amd64.VS2017.Open
+            queue: BuildPool.Windows.10.Amd64.VS2019.Open
           ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
             name: NetCoreInternal-Pool
-            queue: BuildPool.Windows.10.Amd64.VS2017
+            queue: BuildPool.Windows.10.Amd64.VS2019
 
         variables:
         - _InternalBuildArgs: ''
@@ -123,6 +123,8 @@ stages:
           name: Build
           displayName: Build / Publish
           condition: succeeded()
+
+        - template: /eng/test.yaml
 
         - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
         
@@ -248,20 +250,24 @@ stages:
       parameters:
         DeploymentEnvironment: Staging
         DotNetStatusAppName: dotneteng-status-staging
+        DotNetStatusEndpoint: .NET Engineering Deployment Notification - Staging
         MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
         PublishProfile: Int
         ServiceFabricConnection: Maestro-Int
         Subscription: NetHelixStaging
         VariableGroup: MaestroInt KeyVault
+        StatusVariableGroup: DotNetStatus Staging
   - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
     - template: eng\deploy.yaml
       parameters:
         DeploymentEnvironment: Production
         DotNetStatusAppName: dotneteng-status
+        DotNetStatusEndpoint: .NET Engineering Deployment Notification - Production
         MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
         PublishProfile: Prod
         ServiceFabricConnection: Maestro-Prod
         Subscription: NetHelix
         VariableGroup: MaestroProd KeyVault
+        StatusVariableGroup: DotNetStatus Production
