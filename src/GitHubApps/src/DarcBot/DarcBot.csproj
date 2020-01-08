@@ -11,13 +11,14 @@
     <Compile Include="..\..\..\Shared\Microsoft.DotNet.Kusto\KustoDataTypes.cs" Link="KustoDataTypes.cs" />
     <Compile Include="..\..\..\Shared\Microsoft.DotNet.Kusto\KustoHelpers.cs" Link="KustoHelpers.cs" />
     <Compile Include="..\..\..\Shared\Microsoft.DotNet.Kusto\KustoValue.cs" Link="KustoValue.cs" />
-  </ItemGroup>
+  </ItemGroup>  
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights" Version="2.12.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.PerfCounterCollector" Version="2.12.0" />
     <PackageReference Include="Microsoft.Azure.Kusto.Ingest" Version="8.0.3" />
     <PackageReference Include="Microsoft.Azure.WebJobs.Core" Version="3.0.2" />
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Http" Version="3.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.1.1" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="5.2.1" />
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.1" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
@@ -25,6 +26,11 @@
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.7.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="5.2.1" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
+  </ItemGroup>
+
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Configuration" />
