@@ -81,6 +81,9 @@ namespace Microsoft.DotNet.Darc.Options
             "access to a blob uri fails. Appended directly to the end of the URI (use full SAS suffix starting with '?'.")]
         public IEnumerable<string> SASSuffixes { get; set; }
 
+        [Option("asset-filter", HelpText = "Only download assets matching the given regex filter")]
+        public string AssetFilter { get; set; }
+
         public override Operation GetOperation()
         {
             return new GatherDropOperation(this);
