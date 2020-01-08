@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -173,41 +173,6 @@ namespace DotNet.Status.Web.Controllers
 
         private static readonly ImmutableArray<MediaTypeFormatter> s_grafanaFormatters =
             ImmutableArray.Create(s_grafanaFormatter);
-
-        private class AnnotationEntity : TableEntity
-        {
-            [IgnoreProperty]
-            public string Service
-            {
-                get => PartitionKey;
-                set => PartitionKey = value;
-            }
-
-            [IgnoreProperty]
-            public string Id
-            {
-                get => RowKey;
-                set => RowKey = value;
-            }
-
-            public int GrafanaAnnotationId { get; set; }
-            public DateTimeOffset? Started { get; set; }
-            public DateTimeOffset? Ended { get; set; }
-
-            public AnnotationEntity() : base()
-            {
-            }
-            
-            public AnnotationEntity(string service, string id) : base(service, id)
-            {
-            }
-
-            public AnnotationEntity(string service, string id, int grafanaId) : base(service, id)
-            {
-                GrafanaAnnotationId = grafanaId;
-                Started = DateTimeOffset.UtcNow;
-            }
-        }
     }
 
     public class DeploymentStartRequest

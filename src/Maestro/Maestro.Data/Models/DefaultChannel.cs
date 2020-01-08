@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Services.Utility;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -39,11 +40,11 @@ namespace Maestro.Data.Models
         {
             get
             {
-                return IGitRepoExtension.NormalizeBranchName(_branch);
+                return GitHelpers.NormalizeBranchName(_branch);
             }
             set
             {
-                _branch = IGitRepoExtension.NormalizeBranchName(value);
+                _branch = GitHelpers.NormalizeBranchName(value);
             }
         }
 

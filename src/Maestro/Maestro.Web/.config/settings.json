@@ -29,6 +29,10 @@
   "BuildAssetRegistry": {
     "ConnectionString": "[vault(build-asset-registry-sql-connection-string)]"
   },
+  "Kusto": {
+    "Database": "engineeringdata",
+    "QueryConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-query)]"
+  },
   "WebHooks": {
     "github": {
       "SecretKey": {
