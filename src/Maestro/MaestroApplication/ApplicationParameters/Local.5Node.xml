@@ -12,5 +12,6 @@
     <Parameter Name="Environment" Value="Development" />
     <Parameter Name="SubscriptionActorService_PartitionCount" Value="1" />
     <Parameter Name="PullRequestActorService_PartitionCount" Value="1" />
+    <Parameter Name="FeedCleaner_InstanceCount" Value="1" />
   </Parameters>
 </Application>
