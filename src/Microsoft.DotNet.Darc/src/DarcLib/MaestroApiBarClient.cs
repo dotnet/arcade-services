@@ -331,9 +331,14 @@ namespace Microsoft.DotNet.DarcLib
             return await pagedResponse.EnumerateAll().ToListAsync(CancellationToken.None);
         }
 
-        public async Task AssignBuildToChannel(int buildId, int channelId)
+        public async Task AssignBuildToChannelAsync(int buildId, int channelId)
         {
             await _barClient.Channels.AddBuildToChannelAsync(buildId, channelId);
+        }
+
+        public async Task DeleteBuildFromChannelAsync(int buildId, int channelId)
+        {
+            await _barClient.Channels.RemoveBuildFromChannelAsync(buildId, channelId);
         }
 
         #endregion
