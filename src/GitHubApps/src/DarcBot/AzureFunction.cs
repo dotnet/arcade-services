@@ -105,7 +105,6 @@ namespace DarcBot
                 };
                 log.LogInformation("Getting open issues");
                 var issues = await gitHubClient.Issue.GetAllForRepository(repositoryId, openIssues);
-                log.LogInformation("Acquired open issues");
                 log.LogInformation($"There are {issues.Count} open issues");
                 foreach (var issue in issues)
                 {
