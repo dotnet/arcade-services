@@ -55,11 +55,19 @@ namespace DotNet.Status.Web
 
             if (string.IsNullOrEmpty(protectedToken))
             {
+                Logger.LogInformation("No token found in 'Authorization: Bearer <token>' or '?token=<token>'");
                 return AuthenticateResult.NoResult();
             }
 
             if (!TryDecodeToken(protectedToken, out GitHubTokenData token))
             {
+                string reportToken = protectedToken;
+                if (reportToken.Length > 10)
+                {
+                    reportToken = reportToken.Substring(0, 5) + "..." + reportToken.Substring(reportToken.Length - 5);
+                }
+
+                Logger.LogWarning("Token failed to decode correctly, token signature... {token}", reportToken);
                 return AuthenticateResult.Fail("Invalid token");
             }
 
