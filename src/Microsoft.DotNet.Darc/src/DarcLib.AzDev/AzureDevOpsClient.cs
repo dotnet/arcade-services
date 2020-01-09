@@ -543,7 +543,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="repoUri">Repository uri</param>
         /// <param name="branch">Branch to retrieve the latest sha for</param>
-        /// <returns>Latest sha.  Throws if no commits were found.</returns>
+        /// <returns>Latest sha. Null if no commits were found.</returns>
         public Task<string> GetLastCommitShaAsync(string repoUri, string branch)
         {
             (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
@@ -560,20 +560,22 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Latest sha. Throws if there were not commits on <paramref name="branch"/></returns>
         private async Task<string> GetLastCommitShaAsync(string accountName, string projectName, string repoName, string branch)
         {
-            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
-                HttpMethod.Get,
-                accountName,
-                projectName,
-                $"_apis/git/repositories/{repoName}/commits?branch={branch}",
-                _logger);
-            JArray values = JArray.Parse(content["value"].ToString());
-
-            if (!values.Any())
+            try
             {
-                throw new DarcException($"No commits found in branch '{branch}' of '{accountName}/{projectName}/{repoName}'");
-            }
+                JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                    HttpMethod.Get,
+                    accountName,
+                    projectName,
+                    $"_apis/git/repositories/{repoName}/commits?branch={branch}",
+                    _logger);
+                JArray values = JArray.Parse(content["value"].ToString());
 
-            return values[0]["commitId"].ToString();
+                return values[0]["commitId"].ToString();
+            }
+            catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
+            {
+                return null;
+            }
         }
 
         /// <summary>

@@ -885,6 +885,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 var subscriptionSection = new StringBuilder();
                 subscriptionSection.AppendLine(sectionStartMarker);
                 subscriptionSection.AppendLine($"## From {sourceRepository}");
+                subscriptionSection.AppendLine($"- **Subscription**: {updateSubscriptionId}");
                 subscriptionSection.AppendLine($"- **Build**: {build.AzureDevOpsBuildNumber}");
                 subscriptionSection.AppendLine($"- **Date Produced**: {build.DateProduced.ToString("g")}");
                 // This is duplicated from the files changed, but is easier to read here.

@@ -1,8 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TargetFrameworks>netcoreapp2.1;netcoreapp3.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <SignAssembly>false</SignAssembly>
     <IsPackable>true</IsPackable>
@@ -10,10 +10,18 @@
     <PackageTags>Arcade Darc CLI Dependency Flow</PackageTags>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>darc</ToolCommandName>
+    <DebugType>Full</DebugType>
   </PropertyGroup>
 
+  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp2.1'">
+    <ProjectReference Include="..\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" AdditionalProperties="TargetFramework=netstandard2.0" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp3.0'">
+    <ProjectReference Include="..\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" AdditionalProperties="TargetFramework=netstandard2.1" />
+  </ItemGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" />
     <ProjectReference Include="..\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
   </ItemGroup>
   

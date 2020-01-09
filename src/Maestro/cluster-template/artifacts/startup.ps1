@@ -6,4 +6,4 @@ param(
 
 setx APPLICATION_INSIGHTS_KEY "$AppInsightsKey"  /M
 
-reg import (Join-Path $PSScriptRoot "update-ciphers.reg")
+.\Set-TlsConfiguration.ps1

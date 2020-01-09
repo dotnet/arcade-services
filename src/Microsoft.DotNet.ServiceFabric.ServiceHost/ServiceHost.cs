@@ -12,14 +12,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
 using JetBrains.Annotations;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Internal;
-using Microsoft.Azure.KeyVault;
-using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
@@ -232,6 +231,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             services.AddOptions();
             services.SetupConfiguration();
             services.TryAddSingleton(InitializeEnvironment());
+            services.TryAddSingleton(b => (Microsoft.Extensions.Hosting.IHostingEnvironment) b.GetService<HostingEnvironment>());
+            services.TryAddSingleton(b => (Microsoft.AspNetCore.Hosting.IHostingEnvironment) b.GetService<HostingEnvironment>());
             ConfigureApplicationInsights(services);
             services.AddLogging(
                 builder =>
@@ -239,9 +240,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     builder.AddDebug();
                     builder.AddFixedApplicationInsights(LogLevel.Information);
                 });
+            
+            services.AddSingleton<IKeyVaultProvider, ServiceHostKeyVaultProvider>();
         }
 
-        private static IHostingEnvironment InitializeEnvironment()
+        private static HostingEnvironment InitializeEnvironment()
         {
             IConfigurationRoot config = new ConfigurationBuilder().AddEnvironmentVariables("ASPNETCORE_").Build();
             var options = new WebHostOptions(config, GetApplicationName());
@@ -258,7 +261,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
     public static class ServiceHostConfiguration
     {
-        private static string GetAzureServiceTokenProviderConnectionString(IHostingEnvironment env)
+        public static string GetAzureServiceTokenProviderConnectionString(IHostingEnvironment env)
         {
             if (env.IsDevelopment() && RunningInServiceFabric())
             {
@@ -274,38 +277,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             return null;
         }
 
-        public static KeyVaultClient GetKeyVaultClient(IHostingEnvironment env)
-        {
-            string connectionString = GetAzureServiceTokenProviderConnectionString(env);
-            var provider = new AzureServiceTokenProvider(connectionString);
-            return new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(provider.KeyVaultTokenCallback));
-        }
-
         public static bool RunningInServiceFabric()
         {
             string fabricApplication = Environment.GetEnvironmentVariable("Fabric_ApplicationName");
             return !string.IsNullOrEmpty(fabricApplication);
-        }
-
-        public static IConfigurationRoot Get(IHostingEnvironment env)
-        {
-            IConfigurationRoot bootstrapConfig = new ConfigurationBuilder().SetBasePath(env.ContentRootPath)
-                .AddJsonFile(".config/settings.json")
-                .AddJsonFile($".config/settings.{env.EnvironmentName}.json")
-                .Build();
-
-            Func<KeyVaultClient> clientFactory = () => GetKeyVaultClient(env);
-            string keyVaultUri = bootstrapConfig["KeyVaultUri"];
-            string reloadTimeString = bootstrapConfig["KeyVaultReloadTime"];
-            if (!TimeSpan.TryParse(reloadTimeString, out var reloadTime))
-            {
-                reloadTime = TimeSpan.FromMinutes(5);
-            }
-
-            return new ConfigurationBuilder().SetBasePath(env.ContentRootPath)
-                .AddKeyVaultMappedJsonFile(".config/settings.json", keyVaultUri, reloadTime, clientFactory)
-                .AddKeyVaultMappedJsonFile($".config/settings.{env.EnvironmentName}.json", keyVaultUri, reloadTime, clientFactory)
-                .Build();
         }
     }
 }

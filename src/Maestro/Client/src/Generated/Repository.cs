@@ -1,12 +1,11 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Net.Http;
-using System.Net.Http.Headers;
+using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Rest;
+using Azure;
+using Azure.Core;
 using Microsoft.DotNet.Maestro.Client.Models;
 
 namespace Microsoft.DotNet.Maestro.Client
@@ -68,22 +67,68 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-            using (var _res = await ListRepositoriesInternalAsync(
-                branch,
-                repository,
-                cancellationToken
-            ).ConfigureAwait(false))
+            const string apiVersion = "2019-01-16";
+
+            var _baseUri = Client.Options.BaseUri;
+            var _url = new RequestUriBuilder();
+            _url.Reset(_baseUri);
+            _url.AppendPath(
+                "/api/repo-config/repositories",
+                false);
+
+            if (!string.IsNullOrEmpty(repository))
             {
-                return _res.Body;
+                _url.AppendQuery("repository", Client.Serialize(repository));
+            }
+            if (!string.IsNullOrEmpty(branch))
+            {
+                _url.AppendQuery("branch", Client.Serialize(branch));
+            }
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+
+
+            using (var _req = Client.Pipeline.CreateRequest())
+            {
+                _req.Uri = _url;
+                _req.Method = RequestMethod.Get;
+
+                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
+                {
+                    if (_res.Status < 200 || _res.Status >= 300)
+                    {
+                        await OnListRepositoriesFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    if (_res.ContentStream == null)
+                    {
+                        await OnListRepositoriesFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<IImmutableList<RepositoryBranch>>(_content);
+                        return _body;
+                    }
+                }
             }
         }
 
-        internal async Task OnListRepositoriesFailed(HttpRequestMessage req, HttpResponseMessage res)
+        internal async Task OnListRepositoriesFailed(Request req, Response res)
         {
-            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            string content = null;
+            if (res.ContentStream != null)
+            {
+                using (var reader = new StreamReader(res.ContentStream))
+                {
+                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
+            }
+
             var ex = new RestApiException<ApiError>(
-                new HttpRequestMessageWrapper(req, null),
-                new HttpResponseMessageWrapper(res, content),
+                req,
+                res,
+                content,
                 Client.Deserialize<ApiError>(content)
                 );
             HandleFailedListRepositoriesRequest(ex);
@@ -92,97 +137,9 @@ namespace Microsoft.DotNet.Maestro.Client
             throw ex;
         }
 
-        internal async Task<HttpOperationResponse<IImmutableList<RepositoryBranch>>> ListRepositoriesInternalAsync(
-            string branch = default,
-            string repository = default,
-            CancellationToken cancellationToken = default
-        )
-        {
-            const string apiVersion = "2019-01-16";
-
-            var _path = "/api/repo-config/repositories";
-
-            var _query = new QueryBuilder();
-            if (!string.IsNullOrEmpty(repository))
-            {
-                _query.Add("repository", Client.Serialize(repository));
-            }
-            if (!string.IsNullOrEmpty(branch))
-            {
-                _query.Add("branch", Client.Serialize(branch));
-            }
-            _query.Add("api-version", Client.Serialize(apiVersion));
-
-            var _uriBuilder = new UriBuilder(Client.BaseUri);
-            _uriBuilder.Path = _uriBuilder.Path.TrimEnd('/') + _path;
-            _uriBuilder.Query = _query.ToString();
-            var _url = _uriBuilder.Uri;
-
-            HttpRequestMessage _req = null;
-            HttpResponseMessage _res = null;
-            try
-            {
-                _req = new HttpRequestMessage(HttpMethod.Get, _url);
-
-                if (Client.Credentials != null)
-                {
-                    await Client.Credentials.ProcessHttpRequestAsync(_req, cancellationToken).ConfigureAwait(false);
-                }
-
-                _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                if (!_res.IsSuccessStatusCode)
-                {
-                    await OnListRepositoriesFailed(_req, _res);
-                }
-                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                return new HttpOperationResponse<IImmutableList<RepositoryBranch>>
-                {
-                    Request = _req,
-                    Response = _res,
-                    Body = Client.Deserialize<IImmutableList<RepositoryBranch>>(_responseContent),
-                };
-            }
-            catch (Exception)
-            {
-                _req?.Dispose();
-                _res?.Dispose();
-                throw;
-            }
-        }
-
         partial void HandleFailedGetMergePoliciesRequest(RestApiException ex);
 
         public async Task<IImmutableList<MergePolicy>> GetMergePoliciesAsync(
-            string branch,
-            string repository,
-            CancellationToken cancellationToken = default
-        )
-        {
-            using (var _res = await GetMergePoliciesInternalAsync(
-                branch,
-                repository,
-                cancellationToken
-            ).ConfigureAwait(false))
-            {
-                return _res.Body;
-            }
-        }
-
-        internal async Task OnGetMergePoliciesFailed(HttpRequestMessage req, HttpResponseMessage res)
-        {
-            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var ex = new RestApiException<ApiError>(
-                new HttpRequestMessageWrapper(req, null),
-                new HttpResponseMessageWrapper(res, content),
-                Client.Deserialize<ApiError>(content)
-                );
-            HandleFailedGetMergePoliciesRequest(ex);
-            HandleFailedRequest(ex);
-            Client.OnFailedRequest(ex);
-            throw ex;
-        }
-
-        internal async Task<HttpOperationResponse<IImmutableList<MergePolicy>>> GetMergePoliciesInternalAsync(
             string branch,
             string repository,
             CancellationToken cancellationToken = default
@@ -200,54 +157,72 @@ namespace Microsoft.DotNet.Maestro.Client
 
             const string apiVersion = "2019-01-16";
 
-            var _path = "/api/repo-config/merge-policy";
+            var _baseUri = Client.Options.BaseUri;
+            var _url = new RequestUriBuilder();
+            _url.Reset(_baseUri);
+            _url.AppendPath(
+                "/api/repo-config/merge-policy",
+                false);
 
-            var _query = new QueryBuilder();
             if (!string.IsNullOrEmpty(repository))
             {
-                _query.Add("repository", Client.Serialize(repository));
+                _url.AppendQuery("repository", Client.Serialize(repository));
             }
             if (!string.IsNullOrEmpty(branch))
             {
-                _query.Add("branch", Client.Serialize(branch));
+                _url.AppendQuery("branch", Client.Serialize(branch));
             }
-            _query.Add("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
-            var _uriBuilder = new UriBuilder(Client.BaseUri);
-            _uriBuilder.Path = _uriBuilder.Path.TrimEnd('/') + _path;
-            _uriBuilder.Query = _query.ToString();
-            var _url = _uriBuilder.Uri;
 
-            HttpRequestMessage _req = null;
-            HttpResponseMessage _res = null;
-            try
+            using (var _req = Client.Pipeline.CreateRequest())
             {
-                _req = new HttpRequestMessage(HttpMethod.Get, _url);
+                _req.Uri = _url;
+                _req.Method = RequestMethod.Get;
 
-                if (Client.Credentials != null)
+                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
                 {
-                    await Client.Credentials.ProcessHttpRequestAsync(_req, cancellationToken).ConfigureAwait(false);
-                }
+                    if (_res.Status < 200 || _res.Status >= 300)
+                    {
+                        await OnGetMergePoliciesFailed(_req, _res).ConfigureAwait(false);
+                    }
 
-                _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                if (!_res.IsSuccessStatusCode)
-                {
-                    await OnGetMergePoliciesFailed(_req, _res);
+                    if (_res.ContentStream == null)
+                    {
+                        await OnGetMergePoliciesFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<IImmutableList<MergePolicy>>(_content);
+                        return _body;
+                    }
                 }
-                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                return new HttpOperationResponse<IImmutableList<MergePolicy>>
-                {
-                    Request = _req,
-                    Response = _res,
-                    Body = Client.Deserialize<IImmutableList<MergePolicy>>(_responseContent),
-                };
             }
-            catch (Exception)
+        }
+
+        internal async Task OnGetMergePoliciesFailed(Request req, Response res)
+        {
+            string content = null;
+            if (res.ContentStream != null)
             {
-                _req?.Dispose();
-                _res?.Dispose();
-                throw;
+                using (var reader = new StreamReader(res.ContentStream))
+                {
+                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
             }
+
+            var ex = new RestApiException<ApiError>(
+                req,
+                res,
+                content,
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedGetMergePoliciesRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         partial void HandleFailedSetMergePoliciesRequest(RestApiException ex);
@@ -259,38 +234,6 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-            using (await SetMergePoliciesInternalAsync(
-                branch,
-                repository,
-                body,
-                cancellationToken
-            ).ConfigureAwait(false))
-            {
-                return;
-            }
-        }
-
-        internal async Task OnSetMergePoliciesFailed(HttpRequestMessage req, HttpResponseMessage res)
-        {
-            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var ex = new RestApiException<ApiError>(
-                new HttpRequestMessageWrapper(req, content),
-                new HttpResponseMessageWrapper(res, content),
-                Client.Deserialize<ApiError>(content)
-                );
-            HandleFailedSetMergePoliciesRequest(ex);
-            HandleFailedRequest(ex);
-            Client.OnFailedRequest(ex);
-            throw ex;
-        }
-
-        internal async Task<HttpOperationResponse> SetMergePoliciesInternalAsync(
-            string branch,
-            string repository,
-            IImmutableList<MergePolicy> body = default,
-            CancellationToken cancellationToken = default
-        )
-        {
             if (string.IsNullOrEmpty(branch))
             {
                 throw new ArgumentNullException(nameof(branch));
@@ -303,66 +246,69 @@ namespace Microsoft.DotNet.Maestro.Client
 
             const string apiVersion = "2019-01-16";
 
-            var _path = "/api/repo-config/merge-policy";
+            var _baseUri = Client.Options.BaseUri;
+            var _url = new RequestUriBuilder();
+            _url.Reset(_baseUri);
+            _url.AppendPath(
+                "/api/repo-config/merge-policy",
+                false);
 
-            var _query = new QueryBuilder();
             if (!string.IsNullOrEmpty(repository))
             {
-                _query.Add("repository", Client.Serialize(repository));
+                _url.AppendQuery("repository", Client.Serialize(repository));
             }
             if (!string.IsNullOrEmpty(branch))
             {
-                _query.Add("branch", Client.Serialize(branch));
+                _url.AppendQuery("branch", Client.Serialize(branch));
             }
-            _query.Add("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
-            var _uriBuilder = new UriBuilder(Client.BaseUri);
-            _uriBuilder.Path = _uriBuilder.Path.TrimEnd('/') + _path;
-            _uriBuilder.Query = _query.ToString();
-            var _url = _uriBuilder.Uri;
 
-            HttpRequestMessage _req = null;
-            HttpResponseMessage _res = null;
-            try
+            using (var _req = Client.Pipeline.CreateRequest())
             {
-                _req = new HttpRequestMessage(HttpMethod.Post, _url);
+                _req.Uri = _url;
+                _req.Method = RequestMethod.Post;
 
-                string _requestContent = null;
                 if (body != default(IImmutableList<MergePolicy>))
                 {
-                    _requestContent = Client.Serialize(body);
-                    _req.Content = new StringContent(_requestContent, Encoding.UTF8)
+                    _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
+                    _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
+                }
+
+                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
+                {
+                    if (_res.Status < 200 || _res.Status >= 300)
                     {
-                        Headers =
-                        {
-                            ContentType = MediaTypeHeaderValue.Parse("application/json; charset=utf-8"),
-                        },
-                    };
-                }
+                        await OnSetMergePoliciesFailed(_req, _res).ConfigureAwait(false);
+                    }
 
-                if (Client.Credentials != null)
-                {
-                    await Client.Credentials.ProcessHttpRequestAsync(_req, cancellationToken).ConfigureAwait(false);
-                }
 
-                _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                if (!_res.IsSuccessStatusCode)
-                {
-                    await OnSetMergePoliciesFailed(_req, _res);
+                    return;
                 }
-                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                return new HttpOperationResponse
-                {
-                    Request = _req,
-                    Response = _res,
-                };
             }
-            catch (Exception)
+        }
+
+        internal async Task OnSetMergePoliciesFailed(Request req, Response res)
+        {
+            string content = null;
+            if (res.ContentStream != null)
             {
-                _req?.Dispose();
-                _res?.Dispose();
-                throw;
+                using (var reader = new StreamReader(res.ContentStream))
+                {
+                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
             }
+
+            var ex = new RestApiException<ApiError>(
+                req,
+                res,
+                content,
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedSetMergePoliciesRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
 
         partial void HandleFailedGetHistoryRequest(RestApiException ex);
@@ -375,24 +321,76 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-            using (var _res = await GetHistoryInternalAsync(
-                branch,
-                page,
-                perPage,
-                repository,
-                cancellationToken
-            ).ConfigureAwait(false))
+            const string apiVersion = "2019-01-16";
+
+            var _baseUri = Client.Options.BaseUri;
+            var _url = new RequestUriBuilder();
+            _url.Reset(_baseUri);
+            _url.AppendPath(
+                "/api/repo-config/history",
+                false);
+
+            if (!string.IsNullOrEmpty(repository))
             {
-                return new PagedResponse<RepositoryHistoryItem>(Client, OnGetHistoryFailed, _res);
+                _url.AppendQuery("repository", Client.Serialize(repository));
+            }
+            if (!string.IsNullOrEmpty(branch))
+            {
+                _url.AppendQuery("branch", Client.Serialize(branch));
+            }
+            if (page != default(int?))
+            {
+                _url.AppendQuery("page", Client.Serialize(page));
+            }
+            if (perPage != default(int?))
+            {
+                _url.AppendQuery("perPage", Client.Serialize(perPage));
+            }
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+
+
+            using (var _req = Client.Pipeline.CreateRequest())
+            {
+                _req.Uri = _url;
+                _req.Method = RequestMethod.Get;
+
+                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
+                {
+                    if (_res.Status < 200 || _res.Status >= 300)
+                    {
+                        await OnGetHistoryFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    if (_res.ContentStream == null)
+                    {
+                        await OnGetHistoryFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<IImmutableList<RepositoryHistoryItem>>(_content);
+                        return new PagedResponse<RepositoryHistoryItem>(Client, OnGetHistoryFailed, _res, _body);
+                    }
+                }
             }
         }
 
-        internal async Task OnGetHistoryFailed(HttpRequestMessage req, HttpResponseMessage res)
+        internal async Task OnGetHistoryFailed(Request req, Response res)
         {
-            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
+            string content = null;
+            if (res.ContentStream != null)
+            {
+                using (var reader = new StreamReader(res.ContentStream))
+                {
+                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
+            }
+
             var ex = new RestApiException<ApiError>(
-                new HttpRequestMessageWrapper(req, null),
-                new HttpResponseMessageWrapper(res, content),
+                req,
+                res,
+                content,
                 Client.Deserialize<ApiError>(content)
                 );
             HandleFailedGetHistoryRequest(ex);
@@ -401,109 +399,9 @@ namespace Microsoft.DotNet.Maestro.Client
             throw ex;
         }
 
-        internal async Task<HttpOperationResponse<IImmutableList<RepositoryHistoryItem>>> GetHistoryInternalAsync(
-            string branch = default,
-            int? page = default,
-            int? perPage = default,
-            string repository = default,
-            CancellationToken cancellationToken = default
-        )
-        {
-            const string apiVersion = "2019-01-16";
-
-            var _path = "/api/repo-config/history";
-
-            var _query = new QueryBuilder();
-            if (!string.IsNullOrEmpty(repository))
-            {
-                _query.Add("repository", Client.Serialize(repository));
-            }
-            if (!string.IsNullOrEmpty(branch))
-            {
-                _query.Add("branch", Client.Serialize(branch));
-            }
-            if (page != default(int?))
-            {
-                _query.Add("page", Client.Serialize(page));
-            }
-            if (perPage != default(int?))
-            {
-                _query.Add("perPage", Client.Serialize(perPage));
-            }
-            _query.Add("api-version", Client.Serialize(apiVersion));
-
-            var _uriBuilder = new UriBuilder(Client.BaseUri);
-            _uriBuilder.Path = _uriBuilder.Path.TrimEnd('/') + _path;
-            _uriBuilder.Query = _query.ToString();
-            var _url = _uriBuilder.Uri;
-
-            HttpRequestMessage _req = null;
-            HttpResponseMessage _res = null;
-            try
-            {
-                _req = new HttpRequestMessage(HttpMethod.Get, _url);
-
-                if (Client.Credentials != null)
-                {
-                    await Client.Credentials.ProcessHttpRequestAsync(_req, cancellationToken).ConfigureAwait(false);
-                }
-
-                _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                if (!_res.IsSuccessStatusCode)
-                {
-                    await OnGetHistoryFailed(_req, _res);
-                }
-                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                return new HttpOperationResponse<IImmutableList<RepositoryHistoryItem>>
-                {
-                    Request = _req,
-                    Response = _res,
-                    Body = Client.Deserialize<IImmutableList<RepositoryHistoryItem>>(_responseContent),
-                };
-            }
-            catch (Exception)
-            {
-                _req?.Dispose();
-                _res?.Dispose();
-                throw;
-            }
-        }
-
         partial void HandleFailedRetryActionAsyncRequest(RestApiException ex);
 
         public async Task RetryActionAsyncAsync(
-            string branch,
-            string repository,
-            long timestamp,
-            CancellationToken cancellationToken = default
-        )
-        {
-            using (await RetryActionAsyncInternalAsync(
-                branch,
-                repository,
-                timestamp,
-                cancellationToken
-            ).ConfigureAwait(false))
-            {
-                return;
-            }
-        }
-
-        internal async Task OnRetryActionAsyncFailed(HttpRequestMessage req, HttpResponseMessage res)
-        {
-            var content = await res.Content.ReadAsStringAsync().ConfigureAwait(false);
-            var ex = new RestApiException<ApiError>(
-                new HttpRequestMessageWrapper(req, null),
-                new HttpResponseMessageWrapper(res, content),
-                Client.Deserialize<ApiError>(content)
-                );
-            HandleFailedRetryActionAsyncRequest(ex);
-            HandleFailedRequest(ex);
-            Client.OnFailedRequest(ex);
-            throw ex;
-        }
-
-        internal async Task<HttpOperationResponse> RetryActionAsyncInternalAsync(
             string branch,
             string repository,
             long timestamp,
@@ -527,54 +425,63 @@ namespace Microsoft.DotNet.Maestro.Client
 
             const string apiVersion = "2019-01-16";
 
-            var _path = "/api/repo-config/retry/{timestamp}";
-            _path = _path.Replace("{timestamp}", Client.Serialize(timestamp));
+            var _baseUri = Client.Options.BaseUri;
+            var _url = new RequestUriBuilder();
+            _url.Reset(_baseUri);
+            _url.AppendPath(
+                "/api/repo-config/retry/{timestamp}".Replace("{timestamp}", Uri.EscapeDataString(Client.Serialize(timestamp))),
+                false);
 
-            var _query = new QueryBuilder();
             if (!string.IsNullOrEmpty(repository))
             {
-                _query.Add("repository", Client.Serialize(repository));
+                _url.AppendQuery("repository", Client.Serialize(repository));
             }
             if (!string.IsNullOrEmpty(branch))
             {
-                _query.Add("branch", Client.Serialize(branch));
+                _url.AppendQuery("branch", Client.Serialize(branch));
             }
-            _query.Add("api-version", Client.Serialize(apiVersion));
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
-            var _uriBuilder = new UriBuilder(Client.BaseUri);
-            _uriBuilder.Path = _uriBuilder.Path.TrimEnd('/') + _path;
-            _uriBuilder.Query = _query.ToString();
-            var _url = _uriBuilder.Uri;
 
-            HttpRequestMessage _req = null;
-            HttpResponseMessage _res = null;
-            try
+            using (var _req = Client.Pipeline.CreateRequest())
             {
-                _req = new HttpRequestMessage(HttpMethod.Post, _url);
+                _req.Uri = _url;
+                _req.Method = RequestMethod.Post;
 
-                if (Client.Credentials != null)
+                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
                 {
-                    await Client.Credentials.ProcessHttpRequestAsync(_req, cancellationToken).ConfigureAwait(false);
-                }
+                    if (_res.Status < 200 || _res.Status >= 300)
+                    {
+                        await OnRetryActionAsyncFailed(_req, _res).ConfigureAwait(false);
+                    }
 
-                _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false);
-                if (!_res.IsSuccessStatusCode)
-                {
-                    await OnRetryActionAsyncFailed(_req, _res);
+
+                    return;
                 }
-                string _responseContent = await _res.Content.ReadAsStringAsync().ConfigureAwait(false);
-                return new HttpOperationResponse
-                {
-                    Request = _req,
-                    Response = _res,
-                };
             }
-            catch (Exception)
+        }
+
+        internal async Task OnRetryActionAsyncFailed(Request req, Response res)
+        {
+            string content = null;
+            if (res.ContentStream != null)
             {
-                _req?.Dispose();
-                _res?.Dispose();
-                throw;
+                using (var reader = new StreamReader(res.ContentStream))
+                {
+                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
             }
+
+            var ex = new RestApiException<ApiError>(
+                req,
+                res,
+                content,
+                Client.Deserialize<ApiError>(content)
+                );
+            HandleFailedRetryActionAsyncRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
         }
     }
 }

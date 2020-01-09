@@ -61,6 +61,7 @@ namespace Microsoft.DotNet.Darc
                     typeof(DeleteChannelCommandLineOptions),
                     typeof(DeleteDefaultChannelCommandLineOptions),
                     typeof(DeleteSubscriptionCommandLineOptions),
+                    typeof(DeleteSubscriptionsCommandLineOptions),
                     typeof(GatherDropCommandLineOptions),
                     typeof(GetAssetCommandLineOptions),
                     typeof(GetBuildCommandLineOptions),
@@ -74,11 +75,14 @@ namespace Microsoft.DotNet.Darc
                     typeof(GetRepositoryMergePoliciesCommandLineOptions),
                     typeof(GetSubscriptionsCommandLineOptions),
                     typeof(SetRepositoryMergePoliciesCommandLineOptions),
-                    typeof(SubscriptionStatusCommandLineOptions),
+                    typeof(SubscriptionsStatusCommandLineOptions),
                     typeof(TriggerSubscriptionsCommandLineOptions),
+                    typeof(UpdateBuildCommandLineOptions),
                     typeof(UpdateDependenciesCommandLineOptions),
                     typeof(UpdateSubscriptionCommandLineOptions),
                     typeof(VerifyCommandLineOptions),
+                    typeof(SetGoalCommandLineOptions),
+                    typeof(GetGoalCommandLineOptions)
                 };
         }
     }

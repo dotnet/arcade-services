@@ -53,7 +53,7 @@
     <PackageReference Include="Microsoft.ServiceFabric.Services" Version="3.3.664" />
     <PackageReference Include="Microsoft.VisualStudio.Web.BrowserLink" Version="2.1.0" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.2.3" />
-    <PackageReference Include="Octokit" Version="0.32.0" />
+    <PackageReference Include="Octokit" Version="$(OctokitVersion)" />
   </ItemGroup>
 
   <ItemGroup>
@@ -63,10 +63,13 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\src\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Kusto\Microsoft.DotNet.Kusto.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
+    <ProjectReference Include="..\..\shared\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj" />
     <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
     <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
-    <ProjectReference Include="..\Maestro.GitHub\Maestro.GitHub.csproj" />
     <ProjectReference Include="..\Maestro.MergePolicies\Maestro.MergePolicies.csproj" />
     <ProjectReference Include="..\Microsoft.AspNetCore.ApiPagination\Microsoft.AspNetCore.ApiPagination.csproj" />
     <ProjectReference Include="..\Microsoft.AspNetCore.ApiVersioning.Swashbuckle\Microsoft.AspNetCore.ApiVersioning.Swashbuckle.csproj" />

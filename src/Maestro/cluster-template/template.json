@@ -260,7 +260,7 @@
                     "nicPrefixOverride": "10.0.0.0/24",
                     "certificate": {
                       "commonNames": [
-                        "[reference('network').outputs.fqdn.value]"
+                        "maestro-prod.westus2.cloudapp.azure.com"
                       ],
                       "x509StoreName": "My"
                     }
@@ -338,7 +338,7 @@
                   "settings": {
                     "fileUris": [
                       "[concat(parameters('_artifactsLocation'), '/startup.ps1')]",
-                      "[concat(parameters('_artifactsLocation'), '/update-ciphers.reg')]"
+                      "[concat(parameters('_artifactsLocation'), '/Set-TlsConfiguration.ps1')]"
                     ],
                     "commandToExecute": "[concat('powershell.exe -ExecutionPolicy Bypass -NoProfile -Command ./startup.ps1 \"\"\"', reference(variables('appInsightsResourceId'), '2014-04-01').InstrumentationKey, '\"\"\"')]"
                   },
@@ -436,7 +436,8 @@
       },
       "tags": {
         "resourceType": "Service Fabric",
-        "clusterName": "[parameters('clusterName')]"
+        "clusterName": "[parameters('clusterName')]",
+        "SkipASMAzSecPack": "true"
       }
     },
     {
@@ -452,7 +453,7 @@
         "certificateCommonNames": {
           "commonNames": [
             {
-              "certificateCommonName": "[reference('network').outputs.fqdn.value]",
+              "certificateCommonName": "maestro-prod.westus2.cloudapp.azure.com",
               "certificateIssuerThumbprint": ""
             }
           ],

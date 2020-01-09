@@ -197,6 +197,29 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         /// <summary>
+        ///   Remove a build from a channel.
+        /// </summary>
+        /// <param name="channelId">The id of the <see cref="Channel"/>.</param>
+        /// <param name="buildId">The id of the <see cref="Build"/></param>
+        [HttpDelete("{channelId}/builds/{buildId}")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Description = "Build successfully removed from the Channel")]
+        public async Task<IActionResult> RemoveBuildFromChannel(int channelId, int buildId)
+        {
+            BuildChannel buildChannel = await _context.BuildChannels
+                                            .Where(bc => bc.BuildId == buildId && bc.ChannelId == channelId)
+                                            .FirstOrDefaultAsync();
+
+            if (buildChannel == null)
+            {
+                return StatusCode((int)HttpStatusCode.NotModified);
+            }
+
+            _context.BuildChannels.Remove(buildChannel);
+            await _context.SaveChangesAsync();
+            return StatusCode((int)HttpStatusCode.OK);
+        }
+
+        /// <summary>
         ///   Add an existing <see cref="ReleasePipeline"/> to the specified <see cref="Channel"/>
         /// </summary>
         /// <param name="channelId">The id of the <see cref="Channel"/></param>

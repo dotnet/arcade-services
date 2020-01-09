@@ -1,0 +1,40 @@
+﻿@page
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    @switch (@Request.Query["code"].ToString())
+    {
+        case "404":
+            <title>Not Found</title>
+            break;
+        case "403":
+            <title>Unauthorized</title>
+            break;
+        default:
+            <title>Error</title>
+            break;
+
+    }
+</head>
+<body>
+    @switch (@Request.Query["code"].ToString())
+    {
+        case "404":
+            <h1>404 Not found</h1>
+            break;
+        case "403":
+            <h1>403 Unauthorized</h1>
+            break;
+        default:
+            <h1>Error</h1>
+            break;
+
+    }
+</body>
+</html>

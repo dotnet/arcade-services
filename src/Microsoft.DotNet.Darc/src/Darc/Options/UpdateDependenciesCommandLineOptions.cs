@@ -30,6 +30,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("dry-run", HelpText = "Show what will be updated, but make no changes.")]
         public bool DryRun { get; set; }
 
+        [Option("coherency-only", HelpText = "Only do coherency updates.")]
+        public bool CoherencyOnly { get; set; }
+
         public override Operation GetOperation()
         {
             return new UpdateDependenciesOperation(this);

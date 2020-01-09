@@ -5,6 +5,7 @@
 using Maestro.Contracts;
 using Maestro.Data;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -27,10 +28,8 @@ namespace DependencyUpdater
                     host.ConfigureServices(
                         services =>
                         {
-                            services.AddSingleton(
-                                provider => ServiceHostConfiguration.Get(
-                                    provider.GetRequiredService<IHostingEnvironment>()));
-                            services.AddDbContext<BuildAssetRegistryContext>(
+                            services.AddKeyVaultMappedConfiguration();
+                            services.AddBuildAssetRegistry(
                                 (provider, options) =>
                                 {
                                     var config = provider.GetRequiredService<IConfigurationRoot>();

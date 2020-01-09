@@ -202,7 +202,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="sourceRepo">Filter by the source repository of the subscription.</param>
         /// <param name="targetRepo">Filter by the target repository of the subscription.</param>
-        /// <param name="channelId">Filter by the target channel id of the subscription.</param>
+        /// <param name="channelId">Filter by the source channel id of the subscription.</param>
         /// <returns>Set of subscription.</returns>
         public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(string sourceRepo = null, string targetRepo = null, int? channelId = null)
         {
@@ -254,7 +254,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 return await _barClient.Repository.GetMergePoliciesAsync(repository: repoUri, branch: branch);
             }
-            catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+            catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
             {
                 // Return an empty list
                 return new List<MergePolicy>();
@@ -350,6 +350,23 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Retrieve a specific channel by id.
+        /// </summary>
+        /// <param name="channel">Channel id.</param>
+        /// <returns>Channel or null if not found.</returns>
+        public async Task<Channel> GetChannelAsync(int channel)
+        {
+            try
+            {
+                return await _barClient.Channels.GetChannelAsync(channel);
+            }
+            catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         ///     Retrieve the list of channels from the build asset registry.
         /// </summary>
         /// <param name="classification">Optional classification to get</param>
@@ -372,6 +389,42 @@ namespace Microsoft.DotNet.DarcLib
             return _barClient.Builds.GetLatestAsync(repository: repoUri,
                                                     channelId: channelId,
                                                     loadCollections: true);
+        }
+
+        /// <summary>
+        ///     Update an existing build.
+        /// </summary>
+        /// <param name="buildId">Build to update</param>
+        /// <param name="buildUpdate">Updated build info</param>
+        /// <returns>Updated build</returns>
+        public Task<Build> UpdateBuildAsync(int buildId, BuildUpdate buildUpdate)
+        {
+            return _barClient.Builds.UpdateAsync(buildUpdate, buildId);
+        }
+
+        /// <summary>
+        ///     Creates a new goal or updates the existing goal (in minutes) for a Defintion in a Channel.
+        /// </summary>
+        /// <param name="channel">Name of channel. For eg: .Net Core 5 Dev</param>
+        /// <param name="definitionId">Azure DevOps DefinitionId.</param>
+        /// <param name="minutes">Goal in minutes for a Definition in a Channel.</param>
+        /// <returns>Async task.</returns>
+        public Task<Goal> SetGoalAsync(string channel, int definitionId, int minutes)
+        {
+            var jsonData = new GoalRequestJson(minutes: minutes);
+            return _barClient.Goal.CreateAsync(body: jsonData, channelName : channel, definitionId : definitionId);
+        }
+
+        /// <summary>
+        ///     Gets goal (in minutes) for a Defintion in a Channel.
+        /// </summary>
+        /// <param name="channel">Name of channel. For eg: .Net Core 5 Dev</param>
+        /// <param name="definitionId">Azure DevOps DefinitionId.</param>
+        /// <returns>Goal in minutes</returns>
+
+        public Task<Goal> GetGoalAsync(string channel, int definitionId)
+        {
+            return _barClient.Goal.GetGoalTimesAsync(channelName: channel, definitionId: definitionId);
         }
     }
 }

@@ -3,7 +3,8 @@
     "ClientId": "[vault(github-oauth-id)]",
     "ClientSecret": "[vault(github-oauth-secret)]",
     "SaveTokens": true,
-    "CallbackPath": "/signin/github"
+    "CallbackPath": "/signin/github",
+    "UserAgentProduct": "" 
   },
   "GitHub": {
     "GitHubAppId": "[vault(github-application-id)]",
@@ -27,6 +28,10 @@
   },
   "BuildAssetRegistry": {
     "ConnectionString": "[vault(build-asset-registry-sql-connection-string)]"
+  },
+  "Kusto": {
+    "Database": "engineeringdata",
+    "QueryConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-query)]"
   },
   "WebHooks": {
     "github": {

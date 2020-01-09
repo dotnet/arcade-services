@@ -12,6 +12,7 @@
     <FabActUtilWorkingDir>$(BaseIntermediateOutputPath)\FabActUtilTemp</FabActUtilWorkingDir>
     <SignAssembly>false</SignAssembly>
     <LangVersion>7.1</LangVersion>
+    <DebugType>Full</DebugType>
   </PropertyGroup>
 
   <!-- Disable the service fabric actors build time logic on non windows because it has dependencies on windows -->
@@ -34,11 +35,11 @@
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\src\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\src\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
     <ProjectReference Include="..\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
     <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
     <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
-    <ProjectReference Include="..\Maestro.GitHub\Maestro.GitHub.csproj" />
     <ProjectReference Include="..\Maestro.MergePolicies\Maestro.MergePolicies.csproj" />
   </ItemGroup>
 

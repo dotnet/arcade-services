@@ -120,7 +120,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="sourceRepo">Filter by the source repository of the subscription.</param>
         /// <param name="targetRepo">Filter by the target repository of the subscription.</param>
-        /// <param name="channelId">Filter by the target channel id of the subscription.</param>
+        /// <param name="channelId">Filter by the source channel id of the subscription.</param>
         /// <returns>Set of subscription.</returns>
         public Task<IEnumerable<Subscription>> GetSubscriptionsAsync(
             string sourceRepo = null,
@@ -353,11 +353,11 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="dependencies">Dependencies to find leaves for.</param>
         /// <remarks>
-        ///     Leaves of the coherent dependency trees.  Basically 
+        ///     Leaves of the coherent dependency trees.  Basically
         ///     this means that the coherent dependency is not
         ///     pointed to by another dependency, or is pointed to by only
         ///     pinned dependencies.
-        ///     
+        ///
         ///     Examples:
         ///         - A->B(pinned)->C->D(pinned)
         ///         - C
@@ -406,8 +406,8 @@ namespace Microsoft.DotNet.DarcLib
             IRemoteFactory remoteFactory)
         {
             List<DependencyUpdate> toUpdate = new List<DependencyUpdate>();
-            
-            IEnumerable<DependencyDetail> leavesOfCoherencyTrees = 
+
+            IEnumerable<DependencyDetail> leavesOfCoherencyTrees =
                 CalculateLeavesOfCoherencyTrees(dependencies);
 
             if (!leavesOfCoherencyTrees.Any())
@@ -804,8 +804,17 @@ namespace Microsoft.DotNet.DarcLib
                     if (!engCommonFiles.Where(f => f.FilePath == file.FilePath).Any())
                     {
                         deletedFiles.Add(file.FilePath);
-                        file.Operation = GitFileOperation.Delete;
-                        filesToCommit.Add(file);
+                        // This is a file in the repo's eng/common folder that isn't present in Arcade at the
+                        // requested SHA so delete it during the update.
+                        // GitFile instances do not have public setters since we insert/retrieve them from an
+                        // In-memory cache and we don't want anything to modify the cached references,
+                        // so add a copy with a Delete FileOperation.
+                        filesToCommit.Add(new GitFile(
+                                file.FilePath,
+                                file.Content,
+                                file.ContentEncoding,
+                                file.Mode,
+                                GitFileOperation.Delete));
                     }
                 }
 
@@ -845,7 +854,7 @@ namespace Microsoft.DotNet.DarcLib
         public async Task<GitDiff> GitDiffAsync(string repoUri, string baseVersion, string targetVersion)
         {
             CheckForValidGitClient();
-            
+
             // If base and target are the same, return no diff
             if (baseVersion.Equals(targetVersion, StringComparison.OrdinalIgnoreCase))
             {
@@ -902,6 +911,17 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Retrieve a specific channel by id.
+        /// </summary>
+        /// <param name="channel">Channel id.</param>
+        /// <returns>Channel or null if not found.</returns>
+        public Task<Channel> GetChannelAsync(int channel)
+        {
+            CheckForValidBarClient();
+            return _barClient.GetChannelAsync(channel);
+        }
+
+        /// <summary>
         ///     Retrieve the latest build of a repository on a specific channel.
         /// </summary>
         /// <param name="repoUri">URI of repository to obtain a build for.</param>
@@ -916,7 +936,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 return await _barClient.GetLatestBuildAsync(repoUri: repoUri, channelId: channelId);
             }
-            catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
+            catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.NotFound)
             {
                 return null;
             }
@@ -1162,6 +1182,43 @@ namespace Microsoft.DotNet.DarcLib
                     dependency.Locations = currentAssetLocations;
                 }
             }
+        }
+
+        /// <summary>
+        ///     Update an existing build.
+        /// </summary>
+        /// <param name="buildId">Build to update</param>
+        /// <param name="buildUpdate">Updated build info</param>
+        /// <returns>Updated build</returns>
+        public Task<Build> UpdateBuildAsync(int buildId, BuildUpdate buildUpdate)
+        {
+            CheckForValidBarClient();
+            return _barClient.UpdateBuildAsync(buildId, buildUpdate);
+        }
+
+        /// <summary>
+        ///  Creates a new goal or updates the existing goal (in minutes) for a Defintion in a Channel.
+        /// </summary>
+        /// <param name="channel">Name of channel. For eg: .Net Core 5 Dev</param>
+        /// <param name="definitionId">Azure DevOps DefinitionId.</param>
+        /// <param name="minutes">Goal in minutes for a Definition in a Channel.</param>
+        /// <returns>Async task.</returns>
+        public Task<Goal> SetGoalAsync(string channel, int definitionId, int minutes)
+        {
+            CheckForValidBarClient();
+            return _barClient.SetGoalAsync(channel, definitionId, minutes);
+        }
+
+        /// <summary>
+        ///     Gets goal (in minutes) for a Defintion in a Channel.
+        /// </summary>
+        /// <param name="channel">Name of channel. For eg: .Net Core 5 Dev</param>
+        /// <param name="definitionId">Azure DevOps DefinitionId.</param>
+        /// <returns>Returns Goal in minutes.</returns>
+        public Task<Goal> GetGoalAsync(string channel, int definitionId)
+        {
+            CheckForValidBarClient();
+            return _barClient.GetGoalAsync(channel, definitionId);
         }
     }
 }

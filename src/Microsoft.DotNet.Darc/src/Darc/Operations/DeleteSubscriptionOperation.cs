@@ -23,28 +23,10 @@ namespace Microsoft.DotNet.Darc.Operations
             _options = options;
         }
 
-        public override async Task<int> ExecuteAsync()
+        public override Task<int> ExecuteAsync()
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
-
-            try
-            {
-                Subscription deletedSubscription = await remote.DeleteSubscriptionAsync(_options.Id);
-                Console.WriteLine($"Successfully deleted subscription with id '{_options.Id}'");
-                return Constants.SuccessCode;
-            }
-            catch (RestApiException e) when (e.Response.StatusCode == HttpStatusCode.NotFound)
-            {
-                // Not found is fine to ignore.  If we get this, it will be an aggregate exception with an inner API exception
-                // that has a response message code of NotFound.  Return success.
-                Console.WriteLine($"Subscription with id '{_options.Id}' does not exist.");
-                return Constants.SuccessCode;
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e, $"Failed to delete subscription with id '{_options.Id}'");
-                return Constants.ErrorCode;
-            }
+            Console.WriteLine("The 'delete-subscription' command has been removed. Please use 'delete-subscriptions' instead");
+            return Task.FromResult(Constants.ErrorCode);
         }
     }
 }

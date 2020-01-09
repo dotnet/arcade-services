@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,9 +24,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                     host.ConfigureServices(
                         services =>
                         {
-                            services.AddSingleton(
-                                provider => ServiceHostConfiguration.Get(
-                                    provider.GetRequiredService<IHostingEnvironment>()));
+                            services.AddKeyVaultMappedConfiguration();
                             services.Configure<AzureDevOpsTimelineOptions>((o, p) =>
                             {
                                 var c = p.GetRequiredService<IConfigurationRoot>();

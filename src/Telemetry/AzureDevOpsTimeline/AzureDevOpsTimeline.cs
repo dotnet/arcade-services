@@ -14,10 +14,13 @@ using Kusto.Data.Common;
 using Kusto.Data.Exceptions;
 using Kusto.Data.Net.Client;
 using Kusto.Ingest;
+using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.DotNet.Shared;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.AzureDevOpsTimeline
 {
@@ -177,10 +180,27 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
             var records = new List<AugmentedTimelineRecord>();
             var issues = new List<AugmentedTimelineIssue>();
+            var augmentedBuilds = new List<AugmentedBuild>();
 
             _logger.LogTrace("Aggregating results...");
             foreach ((Build build, Task<Timeline> timelineTask) in tasks)
             {
+                string targetBranch = "";
+
+                try
+                {
+                    if (build.Reason == "pullRequest")
+                    {
+                        targetBranch = (string) JObject.Parse(build.Parameters)["system.pullRequest.targetBranch"];
+                    }
+                }
+                catch (JsonReaderException e)
+                {
+                    _logger.LogError(e.ToString());
+                }
+
+                augmentedBuilds.Add(new AugmentedBuild(build, targetBranch));
+
                 Timeline timeline = await timelineTask;
                 if (timeline?.Records == null)
                 {
@@ -243,22 +263,23 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 options.KustoDatabase,
                 "TimelineBuilds",
                 _logger,
-                builds,
+                augmentedBuilds,
                 b => new[]
                 {
-                    new KustoValue("BuildId", b.Id.ToString(), KustoDataTypes.Int),
-                    new KustoValue("Status", b.Status, KustoDataTypes.String),
-                    new KustoValue("Result", b.Result, KustoDataTypes.String),
-                    new KustoValue("Repository", b.Repository?.Name ?? b.Repository?.Id, KustoDataTypes.String),
-                    new KustoValue("Reason", b.Reason, KustoDataTypes.String),
-                    new KustoValue("BuildNumber", b.BuildNumber, KustoDataTypes.String),
-                    new KustoValue("QueueTime", b.QueueTime, KustoDataTypes.DateTime),
-                    new KustoValue("StartTime", b.StartTime, KustoDataTypes.DateTime),
-                    new KustoValue("FinishTime", b.FinishTime, KustoDataTypes.DateTime),
-                    new KustoValue("Project", b.Project?.Name, KustoDataTypes.String),
-                    new KustoValue("DefinitionId", b.Definition?.Id.ToString(), KustoDataTypes.String),
-                    new KustoValue("Definition", $"{b.Definition?.Path}\\{b.Definition?.Name}", KustoDataTypes.String),
-                    new KustoValue("SourceBranch", b.SourceBranch, KustoDataTypes.String),
+                    new KustoValue("BuildId", b.Build.Id.ToString(), KustoDataTypes.Int),
+                    new KustoValue("Status", b.Build.Status, KustoDataTypes.String),
+                    new KustoValue("Result", b.Build.Result, KustoDataTypes.String),
+                    new KustoValue("Repository", b.Build.Repository?.Name ?? b.Build.Repository?.Id, KustoDataTypes.String),
+                    new KustoValue("Reason", b.Build.Reason, KustoDataTypes.String),
+                    new KustoValue("BuildNumber", b.Build.BuildNumber, KustoDataTypes.String),
+                    new KustoValue("QueueTime", b.Build.QueueTime, KustoDataTypes.DateTime),
+                    new KustoValue("StartTime", b.Build.StartTime, KustoDataTypes.DateTime),
+                    new KustoValue("FinishTime", b.Build.FinishTime, KustoDataTypes.DateTime),
+                    new KustoValue("Project", b.Build.Project?.Name, KustoDataTypes.String),
+                    new KustoValue("DefinitionId", b.Build.Definition?.Id.ToString(), KustoDataTypes.String),
+                    new KustoValue("Definition", $"{b.Build.Definition?.Path}\\{b.Build.Definition?.Name}", KustoDataTypes.String),
+                    new KustoValue("SourceBranch", GitHelpers.NormalizeBranchName(b.Build.SourceBranch), KustoDataTypes.String),
+                    new KustoValue("TargetBranch", GitHelpers.NormalizeBranchName(b.TargetBranch), KustoDataTypes.String),
                 });
 
             _logger.LogInformation("Saving TimelineValidationMessages...");
@@ -380,6 +401,18 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             CancellationToken cancellationToken)
         {
             return await azureServer.ListBuilds(project, cancellationToken, minDateTime, limit);
+        }
+
+        private class AugmentedBuild
+        {
+            public AugmentedBuild(Build build, string targetBranch)
+            {
+                Build = build;
+                TargetBranch = targetBranch;
+            }
+
+            public Build Build { get; }
+            public string TargetBranch { get; }
         }
 
         private class AugmentedTimelineRecord

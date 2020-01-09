@@ -151,6 +151,11 @@ namespace SubscriptionActorService
             return ToClientModelBuild(build);
         }
 
+        public Task<Build> UpdateBuildAsync(int buildId, BuildUpdate buildUpdate)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         ///     Get a list of builds for the given repo uri and commit.
         /// </summary>
@@ -217,14 +222,32 @@ namespace SubscriptionActorService
 
         private Build ToClientModelBuild(Maestro.Data.Models.Build other)
         {
-            return new Build(other.Id, other.DateProduced, other.Staleness, other.PublishUsingPipelines, other.Commit,
-                null, other.Assets?.Select(a => ToClientModelAsset(a)).ToImmutableList(), null)
+            return new Build(other.Id, other.DateProduced, other.Staleness, false, other.PublishUsingPipelines, other.Commit,
+                null, other.Assets?.Select(a => ToClientModelAsset(a)).ToImmutableList(),
+                other.DependentBuildIds?.Select(b => new BuildRef(b.BuildId, b.IsProduct, b.TimeToInclusionInMinutes)).ToImmutableList())
             {
                 AzureDevOpsBranch = other.AzureDevOpsBranch,
                 GitHubBranch = other.GitHubBranch,
                 GitHubRepository = other.GitHubRepository,
                 AzureDevOpsRepository = other.AzureDevOpsRepository,
             };
+        }
+
+        public Task<Channel> GetChannelAsync(int channelId)
+        {
+            throw new NotImplementedException();
+        }
+
+        ///  Unsupported method
+        public Task<Goal> SetGoalAsync(string channel, int definitionId, int minutes)
+        {
+            throw new NotImplementedException();
+        }
+
+        ///  Unsupported method
+        public Task<Goal> GetGoalAsync(string channel, int definitionId)
+        {
+            throw new NotImplementedException();
         }
     }
 }
