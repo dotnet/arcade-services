@@ -143,9 +143,7 @@ namespace DarcBot
                 }
             }
 
-            log.LogInformation($"buildId: {triageItem.BuildId}, recordId: {triageItem.RecordId}, index: {triageItem.Index}");
-            log.LogInformation($"category: {triageItem.UpdatedCategory}");
-            log.LogInformation($"url: {triageItem.Url}");
+            log.LogInformation($"buildId: {triageItem.BuildId}, recordId: {triageItem.RecordId}, index: {triageItem.Index}, category: {triageItem.UpdatedCategory}, url: {triageItem.Url}");
 
             await IngestTriageItemsIntoKusto(new[] { triageItem }, log);
 
