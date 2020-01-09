@@ -12,129 +12,164 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using DotNet.Grafana;
+using Microsoft.Azure.KeyVault.Models;
 
-namespace DotNet.Grafana
+namespace Microsoft.DotNet.Grafana
 {
-    public static class DeployTool
+    public sealed class DeployTool : IDisposable
     {
-        public static async Task PostExportPack(GrafanaClient grafanaClient, string inputFilePath)
+        private const string DashboardExtension = ".dashboard.json";
+        private const string DatasourceExtension = ".datasource.json";
+
+        private readonly string _dashboardDirectory;
+        private readonly string _datasourceDirectory;
+        private readonly Lazy<KeyVaultClient> _keyVault;
+
+        private KeyVaultClient KeyVault => _keyVault.Value;
+
+        public DeployTool(string dashboardDirectory, string datasourceDirectory)
         {
-            var folderIdMap = new Dictionary<string, int>();
+            _dashboardDirectory = dashboardDirectory;
+            _keyVault = new Lazy<KeyVaultClient>(GetKeyVaultClient);
+            _datasourceDirectory = datasourceDirectory;
+        }
 
-            using var sr = new StreamReader(inputFilePath);
-            using var jr = new JsonTextReader(sr);
-            JObject data = await JObject.LoadAsync(jr).ConfigureAwait(false);
+        public async Task PostToGrafana(GrafanaClient grafanaClient, string inputFilePath)
+        {
+            JArray folderArray = await grafanaClient.ListFoldersAsync().ConfigureAwait(false);
+            List<FolderData> folders = folderArray.Select(f => new FolderData(f.Value<string>("uid"), f.Value<string>("title")))
+                .ToList();
 
-            if (data.ContainsKey("folders"))
+            foreach (string datasourcePath in Directory.GetFiles(_datasourceDirectory,
+                "*" + DatasourceExtension,
+                SearchOption.AllDirectories))
             {
-                foreach (var folder in data["folders"])
+                JObject data;
+                using (var sr = new StreamReader(datasourcePath))
+                using (var jr = new JsonTextReader(sr))
                 {
-                    string folderUid = folder["uid"].Value<string>();
-                    string folderTitle = folder["title"].Value<string>();
-
-                    var result = await grafanaClient.CreateFolderAsync(folderUid, folderTitle).ConfigureAwait(false);
-                    int folderId = result["id"].Value<int>();
-
-                    folderIdMap.Add(folderUid, folderId);
+                    data = await JObject.LoadAsync(jr).ConfigureAwait(false);
                 }
-            }
 
-            if (data.ContainsKey("datasources"))
-            {
-                foreach (var datasource in data["datasources"])
+                var secureJsonData = data.Value<JObject>("secureJsonData");
+                foreach (var (key, value) in secureJsonData)
                 {
-                    foreach (var secretData in datasource["secureJsonData"].Children<JProperty>())
+                    if (!TryGetSecretName(value.Value<string>(), out string secretName))
                     {
-                        string secretExpression = secretData.Value.ToString();
-
-                        if (!TryGetSecretName(secretExpression, out string secretName))
-                        {
-                            continue;
-                        }
-
-                        secretData.Value = await GetSecretAsync(secretName).ConfigureAwait(false);
+                        continue;
                     }
 
-                    await grafanaClient.CreateDatasourceAsync((JObject)datasource).ConfigureAwait(false);
+                    secureJsonData[key] = await GetSecretAsync(secretName).ConfigureAwait(false);
                 }
+
+                await grafanaClient.CreateDatasourceAsync(data).ConfigureAwait(false);
             }
 
-            if (data.ContainsKey("dashboards"))
+            foreach (string dashboardPath in Directory.GetFiles(_dashboardDirectory,
+                "*" + DashboardExtension,
+                SearchOption.AllDirectories))
             {
-                foreach (var dashboard in data["dashboards"])
+
+                string folderName = Path.GetDirectoryName(dashboardPath);
+
+                FolderData folder = folders.FirstOrDefault(f => f.Title == folderName);
+                
+                JObject result = await grafanaClient.CreateFolderAsync(folderName, folderName).ConfigureAwait(false);
+                string folderUid = result["uid"].Value<string>();
+                int folderId = result["id"].Value<int>();
+
+                if (folder == null)
                 {
-                    string dashboardFolderUid = dashboard["meta"]["folderUid"].Value<string>();
-
-                    int folderId = folderIdMap[dashboardFolderUid];
-
-                    await grafanaClient.CreateDashboardAsync((JObject)dashboard["dashboard"], folderId).ConfigureAwait(false);
+                    folder = new FolderData(folderUid, folderName);
                 }
+
+                folder.Id = folderId;
+
+                JObject data;
+                using (var sr = new StreamReader(dashboardPath))
+                using (var jr = new JsonTextReader(sr))
+                {
+                    data = await JObject.LoadAsync(jr).ConfigureAwait(false);
+                }
+
+                JObject tagObject = null;
+                if (data.TryGetValue("tags", out JToken tagToken))
+                {
+                    tagObject = tagToken as JObject;
+                }
+
+                if (tagObject == null)
+                {
+                    data["tags"] = tagObject = new JObject();
+                }
+
+                tagObject["uid"] = data.Value<string>("uid");
+                await grafanaClient.CreateDashboardAsync(data, folderId);
             }
         }
 
-        public static async Task MakeExportPack(GrafanaClient grafanaClient, IEnumerable<string> dashboardUids, string outputFilePath)
+        public async Task ImportFromGrafana(GrafanaClient grafanaClient, IEnumerable<string> dashboardUids)
         {
-            var dashboards = new List<JObject>();
-            var folders = new List<JObject>();
-            var dataSources = new List<JObject>();
-
-            foreach (var dashboardUid in dashboardUids)
+            foreach (string dashboardUid in dashboardUids)
             {
                 // Get a dashboard
                 JObject dashboard = await grafanaClient.GetDashboardAsync(dashboardUid).ConfigureAwait(false);
 
                 // Cache dashboard data needed for post
-                JObject slimmedDashboard = Util.SanitizeDashboard(dashboard);
+                JObject slimmedDashboard = GrafanaSerialization.SanitizeDashboard(dashboard);
 
                 // Get the dashboard folder data and cache if not already present
-                int folderId = Util.ExtractFolderId(dashboard);
-                JObject folder = await grafanaClient.GetFolder(folderId).ConfigureAwait(false);                
-
-                // Cache if not already present
-                if (!folders.Any(v => v.SelectToken("$.uid").Value<string>() == folder["uid"].Value<string>()))
-                {
-                    JObject slimmedFolder = Util.SanitizeFolder(folder);
-                    folders.Add(slimmedFolder);
-                }
+                int folderId = GrafanaSerialization.ExtractFolderId(dashboard);
+                JObject folder = await grafanaClient.GetFolderAsync(folderId).ConfigureAwait(false);
+                FolderData folderData = GrafanaSerialization.SanitizeFolder(folder);
 
                 // Folder uid is needed for the dashboard export object                    
-
-                JObject dashboardObject = Util.ConstructDashboardExportObject(slimmedDashboard, folder["uid"].Value<string>());
-                dashboards.Add(dashboardObject);
+                JObject dashboardObject = GrafanaSerialization.ConstructDashboardExportObject(slimmedDashboard, folderData.Uid);
 
                 // Get datasources used in the dashboard
-                var dataSourceNames = Util.ExtractDataSourceNames(dashboard);
+                IEnumerable<string> dataSourceNames = GrafanaSerialization.ExtractDataSourceNames(dashboard);
 
-                foreach (var datasourceName in dataSourceNames)
+                foreach (string datasourceName in dataSourceNames)
                 {
-                    // Cache if not already present
-                    if (!dataSources.Any(v => v.SelectToken("$.name").Value<string>() == datasourceName))
+                    string datasourcePath = GetDatasourceFilePath(datasourceName);
+                    if (File.Exists(datasourcePath))
                     {
-                        JObject dataSource = await grafanaClient.GetDataSource(datasourceName).ConfigureAwait(false);
-                        dataSource = Util.SanitizeDataSource(dataSource);
-                        dataSources.Add(dataSource);
+                        // If we already have that datasource, don't overwrite it's useful values with empty ones
+                        continue;
+                    }
+
+                    JObject datasource = await grafanaClient.GetDataSource(datasourceName).ConfigureAwait(false);
+                    datasource = GrafanaSerialization.SanitizeDataSource(datasource);
+                    using (var datasourceStreamWriter = new StreamWriter(datasourcePath))
+                    using (var datasourceJsonWriter = new JsonTextWriter(datasourceStreamWriter))
+                    {
+                        await datasource.WriteToAsync(datasourceJsonWriter);
                     }
                 }
+
+
+                string dashboardPath = GetDashboardFilePath(folderData.Title, dashboard.Value<string>("uid"));
+                using (var dashboardStreamWriter = new StreamWriter(dashboardPath))
+                using (var dashboardJsonWriter = new JsonTextWriter(dashboardStreamWriter))
+                {
+                    await dashboardObject.WriteToAsync(dashboardJsonWriter);
+                }
             }
-
-            JObject output = new JObject
-            {
-                ["folders"] = new JArray(folders),
-                ["dashboards"] = new JArray(dashboards),
-                ["datasources"] = new JArray(dataSources)
-            };
-
-            using var outFile = new StreamWriter(outputFilePath);
-            using var writer = new JsonTextWriter(outFile);
-            await output.WriteToAsync(writer);
         }
 
-        
+        private string GetDashboardFilePath(string folder, string uid)
+        {
+            return Path.Combine(_dashboardDirectory, folder, uid + DashboardExtension);
+        }
 
-        /// <summary>
-        /// Extract the name of a secret from a marker in the form of [vault(secretName)]
-        /// </summary>
-        public static bool TryGetSecretName(string data, out string secret)
+        private string GetDatasourceFilePath(string datasourceName)
+        {
+            return Path.Combine(_datasourceDirectory, datasourceName + DatasourceExtension);
+        }
+
+
+        private static bool TryGetSecretName(string data, out string secret)
         {
             Regex r = new Regex(@"\[[vV]ault\((.*)\)\]");
             var match = r.Match(data);
@@ -149,16 +184,24 @@ namespace DotNet.Grafana
             return true;
         }
 
-        private static async Task<string> GetSecretAsync(string name)
+        private async Task<string> GetSecretAsync(string name)
         {
-            // TODO: This whole thing should be moved to a seperate secrets manager
-
-            // Instantiate a new KeyVaultClient object, with an access token to Key Vault
-            var azureServiceTokenProvider1 = new AzureServiceTokenProvider();
-            using var kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(azureServiceTokenProvider1.KeyVaultTokenCallback));
-
-            var result = await kv.GetSecretAsync("https://dotnet-grafana.vault.azure.net/", name).ConfigureAwait(false);
+            SecretBundle result = await KeyVault.GetSecretAsync("https://dotnet-grafana.vault.azure.net/", name).ConfigureAwait(false);
             return result.Value;
+        }
+
+        private KeyVaultClient GetKeyVaultClient()
+        {
+            var tokenProvider = new AzureServiceTokenProvider();
+            return new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback));
+        }
+
+        public void Dispose()
+        {
+            if (_keyVault.IsValueCreated)
+            {
+                _keyVault.Value.Dispose();
+            }
         }
     }
 }

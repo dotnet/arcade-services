@@ -39,27 +39,30 @@
   <Target Name="PublishGrafana">
     <Error Text="GrafanaHost is required" Condition=" '$(GrafanaHost)' == '' "/>
     <Error Text="GrafanaAccessToken is required" Condition=" '$(GrafanaAccessToken)' == '' "/>
-    <ItemGroup>
-      <Dashboard Include="$(DashboardDirectory)\*.dashboard.json" />
-      <DataSource Include="$(DataSourceDirectory)\*.datasource.json" />
-    </ItemGroup>
+    <Error Text="GrafanaKeyVaultName is required" Condition=" '$(GrafanaKeyVaultName)' == '' "/>
+    <Error Text="GrafanaKeyVaultConnectionString is required" Condition=" '$(GrafanaKeyVaultConnectionString)' == '' "/>
     <MonitoringPublish
-      DataSource="@(DataSource)"
-      Dashboard="@(Dashboard)"
+      DashboardDirectory="$(DashboardDirectory)"
+      DataSourceDirectory="$(DataSourceDirectory)"
       Host="$(GrafanaHost)"
       AccessToken="$(GrafanaAccessToken)"
+      KeyVaultName="$(GrafanaKeyVaultName)"
+      KeyVaultConnectionString="$(GrafanaKeyVaultConnectionString)"
+      Tag="$(GrafanaDashboardTag)"
     />
   </Target>
   <Target Name="ImportGrafana">
     <Error Text="GrafanaHost is required" Condition=" '$(GrafanaHost)' == '' "/>
     <Error Text="GrafanaAccessToken is required" Condition=" '$(GrafanaAccessToken)' == '' "/>
     <Error Text="DashboardId is required" Condition=" '$(DashboardId)' == '' "/>
+
     <MonitoringImport
       DashboardDirectory="$(DashboardDirectory)"
       DataSourceDirectory="$(DataSourceDirectory)"
       DashboardId="$(DashboardId)"
       Host="$(GrafanaHost)"
       AccessToken="$(GrafanaAccessToken)"
+      Tag="$(GrafanaDashboardTag)"
     />
   </Target>
 </Project>

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -24,7 +25,7 @@ namespace DotNet.Grafana
         {
             _logger = logger;
             _client = client;
-            BaseUrl = baseUrl;
+            _baseUrl = baseUrl;
         }
 
         /// <summary>
@@ -34,7 +35,7 @@ namespace DotNet.Grafana
         /// <example>
         /// https://dotnet-eng-grafana.westus2.cloudapp.azure.com/
         /// </example>
-        public string BaseUrl { get; set; }
+        private string _baseUrl;
 
         public Credentials Credentials
         {
@@ -48,7 +49,7 @@ namespace DotNet.Grafana
 
         public async Task<Health> GetHealthAsync()
         {
-            var uri = new Uri(new Uri(BaseUrl), "/api/health");
+            var uri = new Uri(new Uri(_baseUrl), "/api/health");
             Health health = null;
 
             using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
@@ -73,7 +74,7 @@ namespace DotNet.Grafana
 
         public async Task<JObject> GetDashboardAsync(string uid)
         {
-            var uri = new Uri(new Uri(BaseUrl), $"/api/dashboards/uid/{uid}");
+            var uri = new Uri(new Uri(_baseUrl), $"/api/dashboards/uid/{uid}");
             JObject dashboard = new JObject();
 
             using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
@@ -99,14 +100,32 @@ namespace DotNet.Grafana
             return dashboard;
         }
 
+        public async Task<JArray> ListFoldersAsync()
+        {
+            var uri = new Uri(new Uri(_baseUrl), "/api/folders?limit=50");
+            var folder = new JObject();
+
+            using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
+            {
+                response.EnsureSuccessStatusCode();
+
+                using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                using (var streamReader = new StreamReader(stream))
+                using (var jsonReader = new JsonTextReader(streamReader))
+                {
+                    return await JArray.LoadAsync(jsonReader).ConfigureAwait(false);
+                }
+            }
+        }
+
         /// <summary>
         /// Get a Grafana Folder by its uid
         /// </summary>
         /// <param name="uid">The folder uid</param>
         /// <returns>The Folder JSON object</returns>
-        public async Task<JObject> GetFolder(string uid)
+        public async Task<JObject> GetFolderAsync(string uid)
         {
-            var uri = new Uri(new Uri(BaseUrl), $"/api/folders/{uid}");
+            var uri = new Uri(new Uri(_baseUrl), $"/api/folders/{uid}");
             var folder = new JObject();
 
             using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
@@ -137,9 +156,9 @@ namespace DotNet.Grafana
         /// </summary>
         /// <param name="id">The folder id</param>
         /// <returns>The Folder JSON object</returns>
-        public async Task<JObject> GetFolder(int id)
+        public async Task<JObject> GetFolderAsync(int id)
         {
-            var uri = new Uri(new Uri(BaseUrl), $"/api/folders/id/{id}");
+            var uri = new Uri(new Uri(_baseUrl), $"/api/folders/id/{id}");
             var folder = new JObject();
 
             using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
@@ -172,7 +191,7 @@ namespace DotNet.Grafana
         /// <returns>The Data Source JSON object as defined by the Grafana Data Source API</returns>
         public async Task<JObject> GetDataSource(string name)
         {
-            var uri = new Uri(new Uri(BaseUrl), $"/api/datasources/name/{name}");
+            var uri = new Uri(new Uri(_baseUrl), $"/api/datasources/name/{name}");
             var folder = new JObject();
 
             using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
@@ -200,54 +219,32 @@ namespace DotNet.Grafana
 
         public async Task<JObject> CreateFolderAsync(string uid, string title)
         {
-            var uri = new Uri(new Uri(BaseUrl), "/api/folders");
+            var uri = new Uri(new Uri(_baseUrl), "/api/folders");
 
             var body = new JObject(
                 new JProperty("uid", uid),
                 new JProperty("title", title));
 
-            var folderResponse = new JObject();
-
-            using (var stream = new MemoryStream())
-            using (var textWriter = new StreamWriter(stream))
-            using (var jsonStream = new JsonTextWriter(textWriter))
+            using (var content = new StringContent(body.ToString()))
             {
-                var serializer = new JsonSerializer();
-                serializer.Serialize(jsonStream, body);
-
-                jsonStream.Flush();
-                stream.Position = 0;
-
-                using (var content = new StreamContent(stream))
+                content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                using (HttpResponseMessage response = await _client.PostAsync(uri, content).ConfigureAwait(false))
                 {
-                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                    using (HttpResponseMessage response = await _client.PostAsync(uri, content).ConfigureAwait(false))
+                    response.EnsureSuccessStatusCode();
+
+                    using (Stream responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                    using (var sr = new StreamReader(responseStream))
+                    using (var jr = new JsonTextReader(sr))
                     {
-                        if (!response.IsSuccessStatusCode)
-                        {
-                            _logger.LogWarning("Response does not indicate success");
-                            _logger.LogWarning("Status {}: {}", response.StatusCode, response.ReasonPhrase);
-                            _logger.LogDebug(await response.Content.ReadAsStringAsync().ConfigureAwait(false));
-
-                            // TODO: How to handle error?
-                        }
-
-                        using (var st = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                        using (var sr = new StreamReader(st))
-                        using (var jr = new JsonTextReader(sr))
-                        {
-                            folderResponse = await JObject.LoadAsync(jr).ConfigureAwait(false);
-                        }
+                        return await JObject.LoadAsync(jr).ConfigureAwait(false);
                     }
                 }
             }
-
-            return folderResponse;
         }
 
         public async Task<JObject> CreateDatasourceAsync(JObject datasource)
         {
-            var uri = new Uri(new Uri(BaseUrl), "/api/datasources");
+            var uri = new Uri(new Uri(_baseUrl), "/api/datasources");
             JObject responseJson;
 
             using (var stream = new MemoryStream())
@@ -289,12 +286,12 @@ namespace DotNet.Grafana
 
         public async Task<JObject> CreateDashboardAsync(JObject dashboard, int folderId)
         {
-            var uri = new Uri(new Uri(BaseUrl), "/api/dashboards/db");
+            var uri = new Uri(new Uri(_baseUrl), "/api/dashboards/db");
 
             var dashboardBody = new JObject(
                 new JProperty("dashboard", dashboard),
                 new JProperty("folderId", folderId),
-                new JProperty("overwrite", false));
+                new JProperty("overwrite", true));
 
             JObject responseJson;
 
@@ -335,5 +332,9 @@ namespace DotNet.Grafana
 
             return responseJson;
         }
+    }
+
+    public class Health
+    {
     }
 }

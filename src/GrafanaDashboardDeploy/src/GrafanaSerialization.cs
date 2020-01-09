@@ -12,7 +12,7 @@ namespace DotNet.Grafana
     /// <summary>
     /// Utility class to hold methods manipulating JSON in ways specific to the Grafana API
     /// </summary>
-    public class Util
+    public static class GrafanaSerialization
     {
         /// <summary>
         /// Extract the Folder ID of a Dashboard from a JSON object returned by the api/dashboards/uid endpoint
@@ -43,52 +43,51 @@ namespace DotNet.Grafana
         /// <returns></returns>
         public static IEnumerable<string> ExtractDataSourceNames(JObject dashboard)
         {
-            // Datasources live in panel[*].datasource, unless the "Mixed Datasource" feature
+            // Data sources live in panel[*].datasource, unless the "Mixed Data source" feature
             // is used. Then, get names from panel[*].target.datasource. 
-            var datasourceNames = dashboard
+
+            return dashboard
                 .SelectTokens("$.dashboard.panels[*]..datasource")
                 .Values<string>()
                 .Where(x => !String.IsNullOrEmpty(x))
                 .Where(x => x != "-- Mixed --")
                 .Distinct();
-
-            return datasourceNames;
         }
         
         /// <summary>
         /// Modify a Data Source JSON object as retrieved from the Grafana API into
         /// something suitable to post back to the API
         /// </summary>
-        public static JObject SanitizeDataSource(JObject dataSource)
+        public static JObject SanitizeDataSource(JObject datasource)
         {
-            JObject slimmedDatasource = new JObject(dataSource);
+            string datasourceName = datasource.Value<string>("name");
+
+            var slimmedDatasource = new JObject(datasource);
             slimmedDatasource.Remove("id");
             slimmedDatasource.Remove("orgId");
             slimmedDatasource.Remove("url");
 
             // Add an entry in secureJsonData for each secureJsonField and decorate as a KeyVault insert.
-            if (dataSource.ContainsKey("secureJsonFields"))
+            var secureFields = datasource.Value<JObject>("secureJsonFields");
+            if (secureFields == null)
             {
-                var secureJsonData = new JObject();
-                foreach (var secretField in dataSource["secureJsonFields"].Children<JProperty>())
-                {
-                    secureJsonData.Add(new JProperty(secretField.Name, $"[vault({secretField.Name})]"));
-                }
-
-                slimmedDatasource.Add(new JProperty("secureJsonData", secureJsonData));
+                return slimmedDatasource;
             }
+
+            var secureJsonData = new JObject();
+            foreach (var (name, _) in secureFields)
+            {
+                secureJsonData[name] = $"[vault({datasourceName}-{name})]";
+            }
+
+            slimmedDatasource.Add("secureJsonFields", secureJsonData);
 
             return slimmedDatasource;
         }
 
-        public static JObject SanitizeFolder(JObject folder)
+        public static FolderData SanitizeFolder(JObject folder)
         {
-            var folderUid = folder["uid"].Value<string>();
-            var folderName = folder["title"].Value<string>();
-
-            return new JObject(
-                new JProperty("uid", folderUid),
-                new JProperty("title", folderName));
+            return new FolderData(folder.Value<string>("uid"), folder.Value<string>("title"));
         }
 
         /// <summary>
@@ -103,5 +102,19 @@ namespace DotNet.Grafana
 
             return dashboardObject;
         }
+    }
+
+    public class FolderData
+    {
+        public FolderData(string uid, string title)
+        {
+            Uid = uid;
+            Title = title;
+        }
+
+        public string Uid { get; }
+        public string Title { get; }
+
+        public int? Id { get; set; }
     }
 }

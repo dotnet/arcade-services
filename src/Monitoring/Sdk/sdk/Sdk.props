@@ -4,6 +4,7 @@
 
   <PropertyGroup>
     <MicrosoftDotNetMonitoringSdkTasksAssembly>$(MSBuildThisFileDirectory)netcoreapp2.1/Microsoft.DotNet.Monitoring.Sdk.dll</MicrosoftDotNetMonitoringSdkTasksAssembly>
+    <GrafanaDashboardTag Condition="'$(GrafanaDashboardTag)' == ''">$(MSBuildProjectName)</GrafanaDashboardTag>
   </PropertyGroup>
 
   <PropertyGroup>
