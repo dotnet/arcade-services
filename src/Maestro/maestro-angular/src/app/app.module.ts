@@ -34,6 +34,7 @@ import { StatefulModule } from "src/stateful";
 import { AppRoutingModule } from "./app-routing.module";
 import { AppComponent } from "./app.component";
 import { BuildComponent } from "./page/build/build.component";
+import { ChannelComponent } from './page/channel/channel.component';
 import { MainComponent } from "./page/main/main.component";
 import { SideBarChannelComponent } from "./widget/side-bar-channel/side-bar-channel.component";
 import { SideBarComponent } from "./widget/side-bar/side-bar.component";
@@ -53,7 +54,7 @@ import { GetRepositoryNamePipe } from './pipes/get-repository-name.pipe';
 import { AssetTableComponent } from './page/asset-table/asset-table.component';
 import { ApplicationInsightsService } from './services/application-insights.service';
 import { RouterEventHandlerService } from './services/router-event-handler.service';
-import { SubscriptionsTableComponent } from './page/subscriptions-table/subscriptions-table.component';
+import { SubscriptionsTableComponent } from './page/subscriptions-table/subscriptions-table.component'
 
 @NgModule({
   declarations: [
@@ -74,6 +75,7 @@ import { SubscriptionsTableComponent } from './page/subscriptions-table/subscrip
     GetRepositoryNamePipe,
     AssetTableComponent,
     SubscriptionsTableComponent,
+    ChannelComponent,
   ],
   imports: [
     BrowserModule,

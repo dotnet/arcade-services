@@ -16,6 +16,9 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Build = Maestro.Data.Models.Build;
 using Channel = Maestro.Web.Api.v2018_07_16.Models.Channel;
+using FlowGraph = Maestro.Web.Api.v2018_07_16.Models.FlowGraph;
+using FlowRef = Maestro.Web.Api.v2018_07_16.Models.FlowRef;
+using FlowEdge = Maestro.Web.Api.v2018_07_16.Models.FlowEdge;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
 {
@@ -293,6 +296,53 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             await _context.SaveChangesAsync();
 
             return StatusCode((int)HttpStatusCode.OK);
+        }
+
+        [HttpGet("graph")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(FlowGraph), Description = "The dependency flow graph for a channel")]
+        [ValidateModelState]
+        public IActionResult GetFlowGraph(int? channelId)
+        {
+            IQueryable<Data.Models.Subscription> subscriptionQuery = _context.Subscriptions.Include(s => s.Channel);
+
+            if (channelId.HasValue)
+            {
+                subscriptionQuery = subscriptionQuery.Where(sub => sub.ChannelId == channelId.Value);
+            }
+
+            IQueryable<Data.Models.DefaultChannel> defaultChannelQuery = _context.DefaultChannels.Include(d => d.Channel);
+
+            if (channelId.HasValue)
+            {
+                defaultChannelQuery = defaultChannelQuery.Where(dc => dc.ChannelId == channelId.Value);
+            }
+
+            List<FlowRef> nodes = new List<FlowRef>();
+            List<FlowEdge> edges = new List<FlowEdge>();
+
+            foreach (var defaultChannel in defaultChannelQuery.ToList())
+            {
+                nodes.Add(new FlowRef(defaultChannel.Id, defaultChannel.Repository, defaultChannel.Branch));
+            }
+            foreach (var subscription in subscriptionQuery.ToList())
+            {
+                FlowRef destinationNode = nodes.FirstOrDefault(n => n.Repository == subscription.TargetRepository &&
+                                                                    n.Branch == subscription.TargetBranch);
+
+                if (destinationNode == null)
+                {
+                    continue;
+                }
+
+                IEnumerable<FlowRef> sourceNodes = nodes.Where(n => n.Repository == subscription.SourceRepository);
+
+                foreach (var sourceNode in sourceNodes)
+                {
+                    edges.Add(new FlowEdge(destinationNode.DefaultChannelId, sourceNode.DefaultChannelId));
+                }
+            }
+
+            return Ok(FlowGraph.Create(nodes, edges));
         }
     }
 }

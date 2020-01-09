@@ -771,6 +771,12 @@ export interface IChannelsApi {
             pipelineId: number,
         }
     ): Observable<void>;
+
+    getFlowGraphAsync(
+        parameters: {
+            id: number,
+        }
+    ): Observable<models.FlowGraph>;
 }
 
 export class ChannelsApiService implements IChannelsApi {
@@ -1120,6 +1126,46 @@ export class ChannelsApiService implements IChannelsApi {
                 params: queryParameters,
                 responseType: "text",
             }
+        );
+
+    }
+
+    public getFlowGraphAsync(
+        {
+            id,
+        }: {
+            id: number,
+        }
+    ): Observable<models.FlowGraph> {
+        const apiVersion = "2019-01-16";
+        let _path = this.options.baseUrl;
+        if (_path.endsWith("/"))
+        {
+            _path = _path.slice(0, -1);
+        }
+        _path = _path + "/api/channels/graph";
+
+        let queryParameters = new HttpParams();
+        let headerParameters = new HttpHeaders(this.options.defaultHeaders);
+
+        if (id)
+        {
+            queryParameters = queryParameters.set("channelId", id + "");
+        }
+
+        queryParameters = queryParameters.set("api-version", apiVersion);
+
+
+        return this.client.request(
+            "get",
+            _path,
+            {
+                headers: headerParameters,
+                params: queryParameters,
+                responseType: "json",
+            }
+        ).pipe(
+            map(raw => models.FlowGraph.fromRawObject(raw))
         );
 
     }

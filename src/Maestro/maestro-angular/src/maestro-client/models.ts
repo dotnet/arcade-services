@@ -1,6 +1,7 @@
 import { parseISO } from "date-fns";
 
 import { Helper } from "./helper";
+import { THIS_EXPR } from '@angular/compiler/src/output/output_ast';
 
 
 export enum AddAssetLocationToAssetAssetLocationType {
@@ -1003,6 +1004,184 @@ export class BuildRef {
         result["buildId"] = value._buildId;
         result["isProduct"] = value._isProduct;
         result["timeToInclusionInMinutes"] = value._timeToInclusionInMinutes;
+        return result;
+    }
+}
+
+export class FlowGraph {
+    public constructor(
+        {
+            nodes,
+            edges,
+        }: {
+            nodes: Record<string, FlowRef>,
+            edges: FlowEdge[],
+        }
+    ) {
+        this._nodes = nodes;
+        this._edges = edges;
+    }
+
+    private _nodes: Record<string, FlowRef>;
+    private _edges: FlowEdge[];
+
+    public get nodes(): Record<string, FlowRef> {
+        return this._nodes;
+    }
+
+    public get edges(): FlowEdge[] {
+        return this._edges;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._nodes !== undefined && this._edges !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): FlowGraph {
+        let result = new FlowGraph({
+            nodes: value["flowrefs"] == null ? undefined : Helper.mapValues(value["flowrefs"], (v: any) => FlowRef.fromRawObject(v)) as any,
+            edges: value["flowedges"] == null ? undefined : value["flowedges"].map((e: any) => FlowEdge.fromRawObject(e)) as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: FlowGraph): any {
+        let result: any = {};
+        result["flowref"] = Helper.mapValues(value._nodes, (v: any) => FlowRef.toRawObject(v));
+        result["flowedge"] = value._edges.map((e: any) => FlowEdge.toRawObject(e));
+        return result;
+    }
+}
+
+export class FlowRef {
+    public constructor(
+        {
+            defaultChannelId,
+            repository,
+            branch,
+            officialBuildTime,
+            prBuildTime,
+        }: {
+            defaultChannelId: number,
+            repository: string,
+            branch: string,
+            officialBuildTime: number,
+            prBuildTime: number,
+        }
+    ) {
+        this._defaultChannelId = defaultChannelId;
+        this._repository = repository;
+        this._branch = branch;
+        this._officialBuildTime = officialBuildTime;
+        this._prBuildTime = prBuildTime;
+    }
+
+    private _defaultChannelId: number;
+
+    public get defaultChannelId(): number {
+        return this._defaultChannelId;
+    }
+
+    private _repository: string;
+
+    public get repository(): string {
+        return this._repository;
+    }
+
+    private _branch: string;
+
+    public get branch(): string {
+        return this._branch;
+    }
+
+    private _officialBuildTime: number;
+
+    public get officialBuildTime(): number {
+        return this._officialBuildTime;
+    }
+
+    private _prBuildTime: number;
+
+    public get prBuildTime(): number {
+        return this._prBuildTime;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._defaultChannelId !== undefined &&
+            this._officialBuildTime !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): FlowRef {
+        let result = new FlowRef({
+            defaultChannelId: value["defaultChannelId"] == null ? undefined : value["defaultChannelId"] as any,
+            repository: value["repository"] == null ? undefined : value["repository"] as any,
+            branch: value["branch"] == null ? undefined : value["branch"] as any,
+            officialBuildTime: value["officialBuildTime"] == null ? undefined : value["officialBuildTime"] as any,
+            prBuildTime: value["prBuildTime"] == null ? undefined : value["prBuildTime"] as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: FlowRef): any {
+        let result: any = {};
+        result["defaultChannelId"] = value._defaultChannelId;
+        result["repository"] = value._repository;
+        result["branch"] = value._branch;
+        result["officialBuildTime"] = value._officialBuildTime;
+        result["prBuildTime"] = value._prBuildTime;
+        return result;
+    }
+}
+
+export class FlowEdge {
+    public constructor(
+        {
+            to,
+            from,
+        }: {
+            to: number,
+            from: number,
+        }
+    ) {
+        this._toId = to;
+        this._fromId = from;
+    }
+
+    private _toId: number;
+
+    public get toId(): number {
+        return this._toId;
+    }
+
+    private _fromId: number;
+
+    public get fromId(): number {
+        return this._fromId;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._toId !== undefined &&
+            this._fromId !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): FlowEdge {
+        let result = new FlowEdge({
+            to: value["toId"] == null ? undefined : value["toId"] as any,
+            from: value["fromId"] == null ? undefined : value["fromId"] as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: FlowEdge): any {
+        let result: any = {};
+        result["toId"] = value._toId;
+        result["fromId"] = value._fromId;
         return result;
     }
 }

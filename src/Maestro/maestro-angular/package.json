@@ -33,10 +33,11 @@
     "core-js": "^2.6.11",
     "date-fns": "^2.8.1",
     "jquery": "^3.4.1",
-    "ngx-pagination": "^3.3.1",
-    "popper.js": "^1.16.0",
-    "rxjs": "^6.5.4",
-    "tslib": "^1.10.0",
+    "ngx-pagination": "^3.2.1",
+    "popper.js": "^1.15.0",
+    "rxjs": "^6.4.0",
+    "tslib": "^1.9.0",
+    "viz.js": "^2.1.2",
     "zone.js": "~0.8.26"
   },
   "devDependencies": {
