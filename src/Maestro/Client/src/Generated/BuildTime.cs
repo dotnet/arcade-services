@@ -74,7 +74,6 @@ namespace Microsoft.DotNet.Maestro.Client
                 {
                     if (_res.Status < 200 || _res.Status >= 300)
                     {
-                        // await OnGetBuildTimesFailed(_req, _res).ConfigureAwait(false);
                         return new Models.BuildTime(id, 0, 0);
                     }
 
