@@ -206,18 +206,18 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         // Append best case
                         nodeBuilder.Append(@"\n");
-                        nodeBuilder.Append($"Best Case: {node.BestCasePathTime}");
+                        nodeBuilder.Append($"Best Case: {Math.Round(node.BestCasePathTime, 2, MidpointRounding.AwayFromZero)} min");
                         nodeBuilder.Append(@"\n");
 
                         // Append worst case
-                        nodeBuilder.Append($"Worst Case: {node.WorstCasePathTime}");
+                        nodeBuilder.Append($"Worst Case: {Math.Round(node.WorstCasePathTime, 2, MidpointRounding.AwayFromZero)} min");
                         nodeBuilder.Append(@"\n");
 
                         // Append build times
-                        nodeBuilder.Append($"Official Build Time: {node.OfficialBuildTime}");
+                        nodeBuilder.Append($"Official Build Time: {Math.Round(node.OfficialBuildTime, 2, MidpointRounding.AwayFromZero)} min");
                         nodeBuilder.Append(@"\n");
 
-                        nodeBuilder.Append($"PR Build Time: {node.PrBuildTime}");
+                        nodeBuilder.Append($"PR Build Time: {Math.Round(node.PrBuildTime, 2, MidpointRounding.AwayFromZero)} min");
                     }
 
                     // Append end of label and end of node.
@@ -274,6 +274,12 @@ namespace Microsoft.DotNet.Darc.Operations
                 await writer.WriteLineAsync("        a->b[label = \"Updated Every Day\", style = dashed];");
                 await writer.WriteLineAsync("        e->f[label = \"Disabled/Updated On-demand\", style = dotted];");
                 await writer.WriteLineAsync("    }");
+                await writer.WriteLineAsync("    subgraph cluster2{");
+                await writer.WriteLineAsync("        style=invis;");
+                await writer.WriteLineAsync("        note[shape=plaintext label=\"* Longest build path marked in red\"];");
+                await writer.WriteLineAsync("    }");
+                await writer.WriteLineAsync("    d->note[lhead=cluster2, ltail=cluster1, style=invis];");
+                
             
                 await writer.WriteLineAsync("}");
             }
