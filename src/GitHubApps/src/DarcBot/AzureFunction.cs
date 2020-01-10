@@ -51,7 +51,6 @@ namespace DarcBot
                 return new OkObjectResult($"DarcBot has nothing to do with github issue action '{issuePayload.Action}'");
             }
 
-
             // Determine identifiable information for triage item
             TriageItem triageItem = GetTriageItemProperties(issuePayload.Issue.Body);
 
