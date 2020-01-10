@@ -10,6 +10,7 @@ using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Logging;
 using Octokit;
+using Octokit.Internal;
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
@@ -31,39 +32,40 @@ namespace DarcBot
             [HttpTrigger(AuthorizationLevel.Function, "POST", Route = null)]
             HttpRequestMessage req, ILogger log)
         {
-            dynamic data = await req.Content.ReadAsAsync<object>();
+            var payloadJson = await req.Content.ReadAsStringAsync();
+            SimpleJsonSerializer serializer = new SimpleJsonSerializer();
+            IssueEventPayload issuePayload = serializer.Deserialize<IssueEventPayload>(payloadJson);
 
-            string userType = data?.comment?.user?.type;
-            if (userType == "Bot")
+            if(issuePayload == null)
+            {
+                log.LogInformation("IssueEventPayload is null, nothing to do");
+                return new BadRequestObjectResult("IssueEventPayload is null");
+            }
+            if (issuePayload.Issue.User.Type.HasValue && 
+                issuePayload.Issue.User.Type.Value == AccountType.Bot)
             {
                 log.LogInformation("Comment is from DarcBot, ignoring.");
                 return new OkObjectResult($"Ignoring DarcBot comment");
             }
-            string gitHubAction = data?.action;
 
-            int installationId = data?.installation?.id;
-            long repositoryId = data?.repository?.id;
-            int issueNumber = data?.issue?.number;
-
-            if (gitHubAction != "opened" &&
-                gitHubAction != "reopened" &&
-                gitHubAction != "closed")
+            if (issuePayload.Action != "opened" &&
+                issuePayload.Action != "reopened" &&
+                issuePayload.Action != "closed")
             {
-                log.LogInformation($"Received github action '{gitHubAction}', nothing to do");
-                return new OkObjectResult($"DarcBot has nothing to do with github issue action '{gitHubAction}'");
+                log.LogInformation($"Received github action '{issuePayload.Action}', nothing to do");
+                return new OkObjectResult($"DarcBot has nothing to do with github issue action '{issuePayload.Action}'");
             }
 
-            // Determine identifiable information for triage item
-            string issueBody = data?.issue?.body;
-            TriageItem triageItem = GetTriageItemProperties(issueBody);
 
-            string issueUrl = data?.issue?.html_url;
-            triageItem.Url = issueUrl;
+            // Determine identifiable information for triage item
+            TriageItem triageItem = GetTriageItemProperties(issuePayload.Issue.Body);
+
+            triageItem.Url = issuePayload.Issue.HtmlUrl;
 
             if (triageItem == null)
             {
                 /* Item is not a triage item (does not contain identifiable information), do nothing */
-                log.LogInformation($"{data?.issue?.url} is not a triage type issue.");
+                log.LogInformation($"{issuePayload.Issue.Url} is not a triage type issue.");
                 return new OkObjectResult("No identifiable information detected");
             }
 
@@ -84,7 +86,7 @@ namespace DarcBot
             };
 
             // using the client, create an installation token
-            AccessToken token = await appClient.GitHubApps.CreateInstallationToken(installationId);
+            AccessToken token = await appClient.GitHubApps.CreateInstallationToken(issuePayload.Installation.Id);
 
             // with the installation token, create a new GitHubClient that has the apps permissions
             var gitHubClient = new GitHubClient(new ProductHeaderValue("DarcBot-Installation"))
@@ -92,9 +94,9 @@ namespace DarcBot
                 Credentials = new Credentials(token.Token)
             };
 
-            if (gitHubAction == "created" ||
-                gitHubAction == "opened" ||
-                gitHubAction == "reopened")
+            if (issuePayload.Action == "created" ||
+                issuePayload.Action == "opened" ||
+                issuePayload.Action == "reopened")
             {
                 // First, look for duplicate issues that are open
                 var openIssues = new RepositoryIssueRequest
@@ -107,37 +109,37 @@ namespace DarcBot
                 openIssues.Labels.Add(_darcBotLabelName);
 
                 log.LogInformation("Getting open issues");
-                var issues = await gitHubClient.Issue.GetAllForRepository(repositoryId, openIssues);
+                var issues = await gitHubClient.Issue.GetAllForRepository(issuePayload.Repository.Id, openIssues);
                 log.LogInformation($"There are {issues.Count} open issues with the '{_darcBotLabelName}' label");
                 foreach (var checkissue in issues)
                 {
-                    if (checkissue.Number != issueNumber)
+                    if (checkissue.Number != issuePayload.Issue.Number)
                     {
                         TriageItem issueItem = GetTriageItemProperties(checkissue.Body);
                         if (triageItem.Equals(issueItem))
                         {
-                            await gitHubClient.Issue.Comment.Create(repositoryId, issueNumber, $"DarcBot has detected a duplicate issue.\n\nClosing as duplicate of {checkissue.HtmlUrl}\n\nFor more information see {_docLink}");
+                            await gitHubClient.Issue.Comment.Create(issuePayload.Repository.Id, issuePayload.Issue.Number, $"DarcBot has detected a duplicate issue.\n\nClosing as duplicate of {checkissue.HtmlUrl}\n\nFor more information see {_docLink}");
                             var issueUpdate = new IssueUpdate
                             {
                                 State = ItemState.Closed,
                             };
-                            await gitHubClient.Issue.Update(repositoryId, issueNumber, issueUpdate);
+                            await gitHubClient.Issue.Update(issuePayload.Repository.Id, issuePayload.Issue.Number, issueUpdate);
                             return new OkObjectResult($"Resolved as duplicate of {checkissue.Number}");
                         }
                     }
                 }
 
                 // No duplicates, add label and move issue to triage
-                var issue = await gitHubClient.Issue.Get(repositoryId, issueNumber);
+                var issue = await gitHubClient.Issue.Get(issuePayload.Repository.Id, issuePayload.Issue.Number);
                 var update = issue.ToUpdate();
                 update.AddLabel(_darcBotLabelName);
-                await gitHubClient.Issue.Update(repositoryId, issueNumber, update);
+                await gitHubClient.Issue.Update(issuePayload.Repository.Id, issuePayload.Issue.Number, update);
                 triageItem.UpdatedCategory = "InTriage";
             }
 
-            if (gitHubAction == "closed")
+            if (issuePayload.Action == "closed")
             {
-                IReadOnlyList<IssueComment> comments = gitHubClient.Issue.Comment.GetAllForIssue(repositoryId, issueNumber).Result;
+                IReadOnlyList<IssueComment> comments = gitHubClient.Issue.Comment.GetAllForIssue(issuePayload.Repository.Id, issuePayload.Issue.Number).Result;
 
                 foreach (var comment in comments)
                 {
@@ -154,7 +156,7 @@ namespace DarcBot
 
             await IngestTriageItemsIntoKusto(new[] { triageItem }, log);
 
-            await gitHubClient.Issue.Comment.Create(repositoryId, issueNumber, $"DarcBot has updated the 'TimelineIssuesTriage' database.\n**PowerBI reports may take up to 24 hours to refresh**\n\nSee {_docLink} for more information and 'darcbot' usage.");
+            await gitHubClient.Issue.Comment.Create(issuePayload.Repository.Id, issuePayload.Issue.Number, $"DarcBot has updated the 'TimelineIssuesTriage' database.\n**PowerBI reports may take up to 24 hours to refresh**\n\nSee {_docLink} for more information and 'darcbot' usage.");
             return new OkObjectResult("Success");
         }
 
