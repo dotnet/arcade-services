@@ -1,0 +1,16 @@
+{
+  "id": 1,
+  "uid": "Tk55B9tWz",
+  "name": "Teams Notification Test",
+  "type": "teams",
+  "isDefault": false,
+  "sendReminder": false,
+  "disableResolveMessage": false,
+  "frequency": "",
+  "settings": {
+    "autoResolve": true,
+    "httpMethod": "POST",
+    "uploadImage": true,
+    "url": "[vault(teams-notification-url)]"
+  }
+}

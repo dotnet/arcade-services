@@ -1,0 +1,24 @@
+{
+  "name": "AI - dnc-eng",
+  "type": "grafana-azure-monitor-datasource",
+  "typeLogoUrl": "",
+  "access": "proxy",
+  "password": "",
+  "user": "",
+  "database": "",
+  "basicAuth": false,
+  "basicAuthUser": "",
+  "basicAuthPassword": "",
+  "withCredentials": false,
+  "isDefault": false,
+  "jsonData": {
+    "appInsightsAppId": "b9f0e0b0-bb36-4375-b774-da2f4a222136",
+    "azureLogAnalyticsSameAs": false,
+    "cloudName": "azuremonitor"
+  },
+  "secureJsonFields": {
+    "appInsightsApiKey": "[vault(dnc-eng-app-insights-api-key)]"
+  },
+  "version": 3,
+  "readOnly": false
+}
