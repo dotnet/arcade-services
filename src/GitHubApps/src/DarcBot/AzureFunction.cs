@@ -24,8 +24,8 @@ namespace DarcBot
         private static readonly Regex _darcBotIssueIdentifierRegex = new Regex(@"\[BuildId=(?<buildid>[^,]+),RecordId=(?<recordid>[^,]+),Index=(?<index>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
         // Search for a darcbot property, example = "[Category=foo]"
         private static readonly Regex _darcBotPropertyRegex = new Regex(@"\[(?<key>.+)=(?<value>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
-        private static readonly string docLink = "[DarcBot documentation](https://github.com/dotnet/arcade-services/tree/master/src/GitHubApps/src/DarcBot/Readme.md)";
-
+        private static readonly string _docLink = "[DarcBot documentation](https://github.com/dotnet/arcade-services/tree/master/src/GitHubApps/src/DarcBot/Readme.md)";
+        private static readonly string _darcBotLabelName = "darcbot";
         [FunctionName("GitHubWebHook")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "POST", Route = null)]
@@ -43,7 +43,7 @@ namespace DarcBot
 
             int installationId = data?.installation?.id;
             long repositoryId = data?.repository?.id;
-            int prNumber = data?.issue?.number;
+            int issueNumber = data?.issue?.number;
 
             if (gitHubAction != "opened" &&
                 gitHubAction != "reopened" &&
@@ -92,7 +92,8 @@ namespace DarcBot
                 Credentials = new Credentials(token.Token)
             };
 
-            if (gitHubAction == "opened" ||
+            if (gitHubAction == "created" ||
+                gitHubAction == "opened" ||
                 gitHubAction == "reopened")
             {
                 // First, look for duplicate issues that are open
@@ -101,36 +102,42 @@ namespace DarcBot
                     Filter = IssueFilter.All,
                     State = ItemStateFilter.Open,
                     SortProperty = IssueSort.Created,
-                    SortDirection = SortDirection.Ascending
+                    SortDirection = SortDirection.Ascending,
                 };
+                openIssues.Labels.Add(_darcBotLabelName);
+
                 log.LogInformation("Getting open issues");
                 var issues = await gitHubClient.Issue.GetAllForRepository(repositoryId, openIssues);
-                log.LogInformation($"There are {issues.Count} open issues");
-                foreach (var issue in issues)
+                log.LogInformation($"There are {issues.Count} open issues with the '{_darcBotLabelName}' label");
+                foreach (var checkissue in issues)
                 {
-                    if (issue.Number != prNumber)
+                    if (checkissue.Number != issueNumber)
                     {
-                        TriageItem issueItem = GetTriageItemProperties(issue.Body);
+                        TriageItem issueItem = GetTriageItemProperties(checkissue.Body);
                         if (triageItem.Equals(issueItem))
                         {
-                            await gitHubClient.Issue.Comment.Create(repositoryId, prNumber, $"DarcBot has detected a duplicate issue.\n\nClosing as duplicate of {issue.HtmlUrl}\n\nFor more information see {docLink}");
+                            await gitHubClient.Issue.Comment.Create(repositoryId, issueNumber, $"DarcBot has detected a duplicate issue.\n\nClosing as duplicate of {checkissue.HtmlUrl}\n\nFor more information see {_docLink}");
                             var issueUpdate = new IssueUpdate
                             {
                                 State = ItemState.Closed,
                             };
-                            await gitHubClient.Issue.Update(repositoryId, prNumber, issueUpdate);
-                            return new OkObjectResult($"Resolved as duplicate of {issue.Number}");
+                            await gitHubClient.Issue.Update(repositoryId, issueNumber, issueUpdate);
+                            return new OkObjectResult($"Resolved as duplicate of {checkissue.Number}");
                         }
                     }
                 }
 
-                // No duplicates, move issue to triage
+                // No duplicates, add label and move issue to triage
+                var issue = await gitHubClient.Issue.Get(repositoryId, issueNumber);
+                var update = issue.ToUpdate();
+                update.AddLabel(_darcBotLabelName);
+                await gitHubClient.Issue.Update(repositoryId, issueNumber, update);
                 triageItem.UpdatedCategory = "InTriage";
             }
 
             if (gitHubAction == "closed")
             {
-                IReadOnlyList<IssueComment> comments = gitHubClient.Issue.Comment.GetAllForIssue(repositoryId, prNumber).Result;
+                IReadOnlyList<IssueComment> comments = gitHubClient.Issue.Comment.GetAllForIssue(repositoryId, issueNumber).Result;
 
                 foreach (var comment in comments)
                 {
@@ -147,7 +154,7 @@ namespace DarcBot
 
             await IngestTriageItemsIntoKusto(new[] { triageItem }, log);
 
-            await gitHubClient.Issue.Comment.Create(repositoryId, prNumber, $"DarcBot has updated the 'TimelineIssuesTriage' database.\n**PowerBI reports may take up to 24 hours to refresh**\n\nSee {docLink} for more information and 'darcbot' usage.");
+            await gitHubClient.Issue.Comment.Create(repositoryId, issueNumber, $"DarcBot has updated the 'TimelineIssuesTriage' database.\n**PowerBI reports may take up to 24 hours to refresh**\n\nSee {_docLink} for more information and 'darcbot' usage.");
             return new OkObjectResult("Success");
         }
 

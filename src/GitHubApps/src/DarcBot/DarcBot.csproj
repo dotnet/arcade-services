@@ -1,17 +1,12 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <AzureFunctionsVersion>v2</AzureFunctionsVersion>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Settings.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="..\..\..\Shared\Microsoft.DotNet.Kusto\CsvWriterExtensions.cs" Link="CsvWriterExtensions.cs" />
-    <Compile Include="..\..\..\Shared\Microsoft.DotNet.Kusto\KustoDataTypes.cs" Link="KustoDataTypes.cs" />
-    <Compile Include="..\..\..\Shared\Microsoft.DotNet.Kusto\KustoHelpers.cs" Link="KustoHelpers.cs" />
-    <Compile Include="..\..\..\Shared\Microsoft.DotNet.Kusto\KustoValue.cs" Link="KustoValue.cs" />
-  </ItemGroup>  
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights" Version="2.12.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.PerfCounterCollector" Version="2.12.0" />
@@ -29,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
+    <ProjectReference Include="..\..\..\Shared\Microsoft.DotNet.Kusto\Microsoft.DotNet.Kusto.csproj" />
   </ItemGroup>
 
   <ItemGroup>
