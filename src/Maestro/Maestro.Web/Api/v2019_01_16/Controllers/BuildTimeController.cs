@@ -76,7 +76,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             // as all PRs come in as refs/heads/#/merge rather than what branch they are trying to
             // apply to.
             string publicQueryText = $@"TimelineBuilds 
-                | project Repository, SourceBranch, DefinitionId, StartTime, FinishTime, Result, Project, Reason
+                | project Repository, SourceBranch, TargetBranch, DefinitionId, StartTime, FinishTime, Result, Project, Reason
                 | where Project == 'public'
                 | where Reason == 'pullRequest' 
                 | where TargetBranch == _SourceBranch
