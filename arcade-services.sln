@@ -124,7 +124,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Monitoring", "Monitoring", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Monitoring.Sdk", "src\Monitoring\Sdk\Microsoft.DotNet.Monitoring.Sdk.csproj", "{0D7A312A-D3A5-4219-A023-25B0668BA191}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Monitoring.ArcadeServices", "src\Monitoring\Monitoring.ArcadeServices\Monitoring.ArcadeServices.csproj", "{95A4D032-4512-4F9F-ADAB-C8D072532449}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Monitoring.ArcadeServices", "src\Monitoring\Monitoring.ArcadeServices\Monitoring.ArcadeServices.proj", "{95A4D032-4512-4F9F-ADAB-C8D072532449}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Metrics", "src\Monitoring\Microsoft.DotNet.Metrics\Microsoft.DotNet.Metrics.csproj", "{A2B7789F-0CDF-4209-9DB9-164497E3C891}"
 EndProject
