@@ -36,11 +36,6 @@ namespace DarcBot
             SimpleJsonSerializer serializer = new SimpleJsonSerializer();
             IssueEventPayload issuePayload = serializer.Deserialize<IssueEventPayload>(payloadJson);
 
-            if(issuePayload == null)
-            {
-                log.LogInformation("IssueEventPayload is null, nothing to do");
-                return new BadRequestObjectResult("IssueEventPayload is null");
-            }
             if (issuePayload.Issue.User.Type.HasValue && 
                 issuePayload.Issue.User.Type.Value == AccountType.Bot)
             {
