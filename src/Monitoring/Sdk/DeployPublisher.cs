@@ -22,6 +22,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         private readonly string _keyVaultName;
         private readonly string _keyVaultConnectionString;
         private readonly Lazy<KeyVaultClient> _keyVault;
+        private readonly string _environment;
 
         private KeyVaultClient KeyVault => _keyVault.Value;
 
@@ -31,11 +32,14 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             string keyVaultConnectionString,
             string sourceTagValue,
             string dashboardDirectory,
-            string datasourceDirectory) : base(
-            grafanaClient, sourceTagValue, dashboardDirectory, datasourceDirectory)
+            string datasourceDirectory,
+            string notificationsDirectory,
+            string environment) : base(
+            grafanaClient, sourceTagValue, dashboardDirectory, datasourceDirectory, notificationsDirectory)
         {
             _keyVaultName = keyVaultName;
             _keyVaultConnectionString = keyVaultConnectionString;
+            _environment = environment;
             _keyVault = new Lazy<KeyVaultClient>(GetKeyVaultClient);
         }
 
@@ -50,9 +54,9 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
         public async Task PostToGrafanaAsync()
         {
-            await PostDatasourcesAsync();
+            await PostDatasourcesAsync().ConfigureAwait(false);
 
-            await PostDashboardsAsync();
+            await PostDashboardsAsync().ConfigureAwait(false);
         }
 
         private async Task PostDashboardsAsync()
@@ -60,14 +64,12 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             JArray folderArray = await GrafanaClient.ListFoldersAsync().ConfigureAwait(false);
             List<FolderData> folders = folderArray.Select(f => new FolderData(f.Value<string>("uid"), f.Value<string>("title")))
                 .ToList();
-            List<string> knownUids = new List<string>();
-            foreach (string dashboardPath in Directory.GetFiles(DashboardDirectory,
-                "*" + DashboardExtension,
-                SearchOption.AllDirectories))
+            var knownUids = new HashSet<string>();
+            foreach (string dashboardPath in GetAllDashboardPaths())
             {
                 string folderName = Path.GetDirectoryName(dashboardPath);
                 string dashboardFileName = Path.GetFileName(dashboardPath);
-                string uid = dashboardFileName.Substring(0, dashboardFileName.Length - DashboardExtension.Length);
+                string uid = GetUidFromDashboardFile(dashboardFileName);
                 knownUids.Add(uid);
 
                 FolderData folder = folders.FirstOrDefault(f => f.Title == folderName);
@@ -113,17 +115,41 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                     newTags.Add(tag);
                 }
 
-                tagArray.Add(BaseUidTagPrefix + uid);
-                tagArray.Add(SourceTagPrefix + SourceTagValue);
+                tagArray.Add(GetUidTag(uid));
+                tagArray.Add(SourceTag);
                 data["tags"] = newTags;
                 data["uid"] = uid;
-                await GrafanaClient.CreateDashboardAsync(data, folderId);
+                await GrafanaClient.CreateDashboardAsync(data, folderId).ConfigureAwait(false);
             }
+
+            await ClearExtraneousDashboardsAsync(knownUids);
+        }
+
+        private async Task ClearExtraneousDashboardsAsync(HashSet<string> knownUids)
+        {
+            JArray allTagged = await GrafanaClient.SearchDashboardsByTagAsync(SourceTag).ConfigureAwait(false);
+            HashSet<string> toRemove =  allTagged.Where(IsManagedDashboard).Select(d => d.Value<string>("uid")).ToHashSet();
+
+            // We shouldn't remove the ones we just deployed
+            toRemove.ExceptWith(knownUids);
+
+            foreach (string uid in toRemove)
+            {
+                await GrafanaClient.DeleteDashboardAsync(uid).ConfigureAwait(false);
+            }
+        }
+
+        private static bool IsManagedDashboard(JToken d)
+        {
+            string uid = d.Value<string>("uid");
+            // If the uid tag (which we set whenever we publish) doesn't match, that means someone copied it
+            // so it's not managed by us. If it does match, that means it is managed and we deployed it
+            return uid == d.Value<JObject>()?.Value<string>(GetUidTag(uid));
         }
 
         private async Task PostDatasourcesAsync()
         {
-            foreach (string datasourcePath in Directory.GetFiles(DatasourceDirectory,
+            foreach (string datasourcePath in Directory.GetFiles(EnvironmentDatasourceDirectory,
                 "*" + DatasourceExtension,
                 SearchOption.AllDirectories))
             {
@@ -134,20 +160,46 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                     data = await JObject.LoadAsync(jr).ConfigureAwait(false);
                 }
 
-                var secureJsonData = data.Value<JObject>("secureJsonData");
-                foreach (var (key, value) in secureJsonData)
-                {
-                    if (!TryGetSecretName(value.Value<string>(), out string secretName))
-                    {
-                        continue;
-                    }
-
-                    secureJsonData[key] = await GetSecretAsync(secretName).ConfigureAwait(false);
-                }
+                await ReplaceVaultAsync(data);
 
                 await GrafanaClient.CreateDatasourceAsync(data).ConfigureAwait(false);
             }
         }
+
+        public async Task<JToken> ReplaceVaultAsync(JToken data)
+        {
+            switch (data)
+            {
+                case JObject jObject:
+                    foreach (var (key, value) in jObject)
+                    {
+                        jObject[key] = await ReplaceVaultAsync(value);
+                    }
+                    return jObject;
+
+                case JArray jArray:
+                    for (int i = 0; i < jArray.Count; i++)
+                    {
+                        jArray[i] = await ReplaceVaultAsync(jArray[i]);
+                    }
+                    return jArray;
+
+                case JValue jValue:
+                {
+                    if (jValue.Type != JTokenType.String ||
+                        !TryGetSecretName((string)jValue.Value, out string secretName))
+                    {
+                        return jValue;
+                    }
+
+                    return await GetSecretAsync(secretName).ConfigureAwait(false);
+                }
+                default:
+                    return data;
+            }
+        }
+
+        private string EnvironmentDatasourceDirectory => Path.Combine(DatasourceDirectory, _environment);
 
         private static bool TryGetSecretName(string data, out string secret)
         {

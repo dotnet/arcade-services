@@ -77,10 +77,10 @@ namespace DotNet.Grafana
             var secureJsonData = new JObject();
             foreach (var (name, _) in secureFields)
             {
-                secureJsonData[name] = $"[vault({datasourceName}-{name})]";
+                secureJsonData[name] = $"[vault(PLACEHOLDER:{datasourceName}:{name})]";
             }
 
-            slimmedDatasource.Add("secureJsonFields", secureJsonData);
+            slimmedDatasource["secureJsonFields"] = secureJsonData;
 
             return slimmedDatasource;
         }
@@ -101,6 +101,11 @@ namespace DotNet.Grafana
                     new JProperty("folderUid", folderUid))));
 
             return dashboardObject;
+        }
+
+        public static JObject SanitizeNotificationChannel(JObject notificationChannel)
+        {
+            return notificationChannel;
         }
     }
 

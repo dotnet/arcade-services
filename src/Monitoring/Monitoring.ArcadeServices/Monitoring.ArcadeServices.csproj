@@ -13,10 +13,7 @@
   </PropertyGroup>
   <ItemGroup />
   <ItemGroup>
-    <None Include="dashboard\example2.dashboard.json" />
-    <None Include="dashboard\example.dashboard.json" />
-    <None Include="datasource\example-ds2.datasource.json" />
-    <None Include="datasource\example-ds.datasource.json" />
+    <None Include="**\*" />
   </ItemGroup>
   <!-- <Import Sdk="Microsoft.DotNet.Helix.Sdk" Project="Sdk.targets"/> -->
   <!-- Using locally built version of the helix sdk, normal projects replace the below Import with the SDK import above-->

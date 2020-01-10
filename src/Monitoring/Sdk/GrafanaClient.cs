@@ -10,20 +10,17 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-using TaskLoggingHelper = Microsoft.Build.Utilities.TaskLoggingHelper;
-
 namespace Microsoft.DotNet.Monitoring.Sdk
 {
     public sealed class GrafanaClient : IDisposable
     {
         private readonly HttpClient _client;
-        private readonly TaskLoggingHelper _logger;
+
         // e.g. https://dotnet-eng-grafana.westus2.cloudapp.azure.com/
         private readonly string _baseUrl;
 
-        public GrafanaClient(TaskLoggingHelper logger, string baseUrl, string apiToken)
+        public GrafanaClient(string baseUrl, string apiToken)
         {
-            _logger = logger;
             _baseUrl = baseUrl;
             _client = new HttpClient();
             _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiToken);
@@ -89,7 +86,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         /// </summary>
         /// <param name="name">The data source name</param>
         /// <returns>The Data Source JSON object as defined by the Grafana Data Source API</returns>
-        public async Task<JObject> GetDataSource(string name)
+        public async Task<JObject> GetDataSourceAsync(string name)
         {
             var uri = new Uri(new Uri(_baseUrl), $"/api/datasources/name/{name}");
 
@@ -200,6 +197,50 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                             await JObject.LoadAsync(jr).ConfigureAwait(false);
                         }
                     }
+                }
+            }
+        }
+
+        public async Task<JArray> SearchDashboardsByTagAsync(string tag)
+        {
+            var uri = new Uri(new Uri(_baseUrl), $"/api/search?tag={Uri.EscapeDataString(tag)}");
+
+            using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
+            {
+                response.EnsureSuccessStatusCode();
+
+                using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                using (var streamReader = new StreamReader(stream))
+                using (var jsonReader = new JsonTextReader(streamReader))
+                {
+                    return await JArray.LoadAsync(jsonReader).ConfigureAwait(false);
+                }
+            }
+        }
+
+        public async Task DeleteDashboardAsync(string uid)
+        {
+            var uri = new Uri(new Uri(_baseUrl), $"/api/dashboards/uid/{Uri.EscapeDataString(uid)}");
+
+            using (HttpResponseMessage response = await _client.DeleteAsync(uri).ConfigureAwait(false))
+            {
+                response.EnsureSuccessStatusCode();
+            }
+        }
+
+        public async Task<JObject> GetNotificationChannelAsync(string uid)
+        {
+            var uri = new Uri(new Uri(_baseUrl), $"/api/alert-notifications/uid/{Uri.EscapeDataString(uid)}");
+
+            using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
+            {
+                response.EnsureSuccessStatusCode();
+
+                using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                using (var streamReader = new StreamReader(stream))
+                using (var jsonReader = new JsonTextReader(streamReader))
+                {
+                    return await JObject.LoadAsync(jsonReader).ConfigureAwait(false);
                 }
             }
         }

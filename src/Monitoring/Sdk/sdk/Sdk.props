@@ -17,5 +17,11 @@
   <PropertyGroup>
     <DashboardDirectory>dashboard</DashboardDirectory>
     <DataSourceDirectory>datasource</DataSourceDirectory>
+    <NotificationsDirectory>notifications</NotificationsDirectory>
   </PropertyGroup>
+
+  <ItemGroup>
+    <GrafanaEnvironments Include="Staging"/>
+    <GrafanaEnvironments Include="Production"/>
+  </ItemGroup>
 </Project>
