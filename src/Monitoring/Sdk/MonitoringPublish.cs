@@ -24,7 +24,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         public string DataSourceDirectory{ get; set; }
 
         [Required]
-        public string NotificationsDirectory { get; set; }
+        public string NotificationDirectory { get; set; }
         
         [Required]
         public string KeyVaultName { get; set; }
@@ -46,7 +46,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         private async Task<bool> ExecuteAsync()
         {
             using (var client = new GrafanaClient(Host, AccessToken))
-            using (var deploy = new DeployPublisher(client, KeyVaultName, KeyVaultConnectionString, Tag, DashboardDirectory, DataSourceDirectory, NotificationsDirectory, Environment))
+            using (var deploy = new DeployPublisher(client, KeyVaultName, KeyVaultConnectionString, Tag, DashboardDirectory, DataSourceDirectory, NotificationDirectory, Environment))
             {
                 try
                 {

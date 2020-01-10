@@ -33,15 +33,18 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             string sourceTagValue,
             string dashboardDirectory,
             string datasourceDirectory,
-            string notificationsDirectory,
+            string notificationDirectory,
             string environment) : base(
-            grafanaClient, sourceTagValue, dashboardDirectory, datasourceDirectory, notificationsDirectory)
+            grafanaClient, sourceTagValue, dashboardDirectory, datasourceDirectory, notificationDirectory)
         {
             _keyVaultName = keyVaultName;
             _keyVaultConnectionString = keyVaultConnectionString;
             _environment = environment;
             _keyVault = new Lazy<KeyVaultClient>(GetKeyVaultClient);
         }
+        
+        private string EnvironmentDatasourceDirectory => Path.Combine(DatasourceDirectory, _environment);
+        private string EnvironmentNotificationDirectory => Path.Combine(NotificationDirectory, _environment);
 
         public void Dispose()
         {
@@ -56,7 +59,47 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         {
             await PostDatasourcesAsync().ConfigureAwait(false);
 
+            await PostNotificationsAsync().ConfigureAwait(false);
+
             await PostDashboardsAsync().ConfigureAwait(false);
+        }
+
+        private async Task PostDatasourcesAsync()
+        {
+            foreach (string datasourcePath in Directory.GetFiles(EnvironmentDatasourceDirectory,
+                "*" + DatasourceExtension,
+                SearchOption.AllDirectories))
+            {
+                JObject data;
+                using (var sr = new StreamReader(datasourcePath))
+                using (var jr = new JsonTextReader(sr))
+                {
+                    data = await JObject.LoadAsync(jr).ConfigureAwait(false);
+                }
+
+                await ReplaceVaultAsync(data);
+
+                await GrafanaClient.CreateDatasourceAsync(data).ConfigureAwait(false);
+            }
+        }
+
+        private async Task PostNotificationsAsync()
+        {
+            foreach (string notificationDirectory in Directory.GetFiles(EnvironmentNotificationDirectory,
+                "*" + DatasourceExtension,
+                SearchOption.AllDirectories))
+            {
+                JObject data;
+                using (var sr = new StreamReader(notificationDirectory))
+                using (var jr = new JsonTextReader(sr))
+                {
+                    data = await JObject.LoadAsync(jr).ConfigureAwait(false);
+                }
+
+                await ReplaceVaultAsync(data);
+
+                await GrafanaClient.CreateNotificationChannelAsync(data).ConfigureAwait(false);
+            }
         }
 
         private async Task PostDashboardsAsync()
@@ -147,25 +190,6 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             return uid == d.Value<JObject>()?.Value<string>(GetUidTag(uid));
         }
 
-        private async Task PostDatasourcesAsync()
-        {
-            foreach (string datasourcePath in Directory.GetFiles(EnvironmentDatasourceDirectory,
-                "*" + DatasourceExtension,
-                SearchOption.AllDirectories))
-            {
-                JObject data;
-                using (var sr = new StreamReader(datasourcePath))
-                using (var jr = new JsonTextReader(sr))
-                {
-                    data = await JObject.LoadAsync(jr).ConfigureAwait(false);
-                }
-
-                await ReplaceVaultAsync(data);
-
-                await GrafanaClient.CreateDatasourceAsync(data).ConfigureAwait(false);
-            }
-        }
-
         public async Task<JToken> ReplaceVaultAsync(JToken data)
         {
             switch (data)
@@ -198,8 +222,6 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                     return data;
             }
         }
-
-        private string EnvironmentDatasourceDirectory => Path.Combine(DatasourceDirectory, _environment);
 
         private static bool TryGetSecretName(string data, out string secret)
         {

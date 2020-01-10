@@ -23,9 +23,9 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             string sourceTagValue,
             string dashboardDirectory,
             string datasourceDirectory,
-            string notificationsDirectory,
+            string notificationDirectory,
             string[] environments) : base(
-            grafanaClient, sourceTagValue, dashboardDirectory, datasourceDirectory, notificationsDirectory)
+            grafanaClient, sourceTagValue, dashboardDirectory, datasourceDirectory, notificationDirectory)
         {
             _environments = environments;
         }

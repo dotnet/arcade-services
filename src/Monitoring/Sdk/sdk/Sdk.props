@@ -17,7 +17,7 @@
   <PropertyGroup>
     <DashboardDirectory>dashboard</DashboardDirectory>
     <DataSourceDirectory>datasource</DataSourceDirectory>
-    <NotificationsDirectory>notifications</NotificationsDirectory>
+    <NotificationDirectory>notifications</NotificationDirectory>
   </PropertyGroup>
 
   <ItemGroup>

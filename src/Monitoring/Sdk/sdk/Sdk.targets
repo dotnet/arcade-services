@@ -46,7 +46,7 @@
     <MonitoringPublish
       DashboardDirectory="$(DashboardDirectory)"
       DataSourceDirectory="$(DataSourceDirectory)"
-      NotificationsDirectory="$(NotificationsDirectory)"
+      NotificationDirectory="$(NotificationDirectory)"
       Host="$(GrafanaHost)"
       AccessToken="$(GrafanaAccessToken)"
       KeyVaultName="$(GrafanaKeyVaultName)"
@@ -64,7 +64,7 @@
     <MonitoringImport
       DashboardDirectory="$(DashboardDirectory)"
       DataSourceDirectory="$(DataSourceDirectory)"
-      NotificationsDirectory="$(NotificationsDirectory)"
+      NotificationDirectory="$(NotificationDirectory)"
       DashboardId="$(DashboardId)"
       Host="$(GrafanaHost)"
       AccessToken="$(GrafanaAccessToken)"

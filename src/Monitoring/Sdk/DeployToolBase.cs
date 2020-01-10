@@ -19,20 +19,20 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         protected GrafanaClient GrafanaClient { get; }
         protected string DashboardDirectory { get; }
         protected string DatasourceDirectory { get; }
-        protected string NotificationsDirectory { get; }
+        protected string NotificationDirectory { get; }
 
         protected DeployToolBase(
             GrafanaClient grafanaClient,
             string sourceTagValue,
             string dashboardDirectory,
             string datasourceDirectory,
-            string notificationsDirectory)
+            string notificationDirectory)
         {
             GrafanaClient = grafanaClient;
             _sourceTagValue = sourceTagValue;
             DashboardDirectory = dashboardDirectory;
             DatasourceDirectory = datasourceDirectory;
-            NotificationsDirectory = notificationsDirectory;
+            NotificationDirectory = notificationDirectory;
         }
 
         protected string SourceTag => SourceTagPrefix + _sourceTagValue;
@@ -49,7 +49,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
         protected string GetNotificationPath(string environment, string uid)
         {
-            return Path.Combine(NotificationsDirectory, environment, uid + NotificationExtension);
+            return Path.Combine(NotificationDirectory, environment, uid + NotificationExtension);
         }
 
         protected static string GetUidTag(string uid)

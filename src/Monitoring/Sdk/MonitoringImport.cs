@@ -26,7 +26,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         public string DataSourceDirectory{ get; set; }
 
         [Required]
-        public string NotificationsDirectory { get; set; }
+        public string NotificationDirectory { get; set; }
 
         [Required]
         public string DashboardId { get; set; }
@@ -52,7 +52,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                     Tag,
                     DashboardDirectory,
                     DataSourceDirectory,
-                    NotificationsDirectory,
+                    NotificationDirectory,
                     Environments.Select(e => e.ItemSpec).ToArray()
                 );
 

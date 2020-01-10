@@ -105,41 +105,34 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
         public async Task<JObject> CreateFolderAsync(string uid, string title)
         {
-            var uri = new Uri(new Uri(_baseUrl), "/api/folders");
-
             var body = new JObject
             {
                 {"uid", uid},
                 {"title", title},
             };
 
-            using (var content = new StringContent(body.ToString()))
-            {
-                content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                using (HttpResponseMessage response = await _client.PostAsync(uri, content).ConfigureAwait(false))
-                {
-                    response.EnsureSuccessStatusCode();
-
-                    using (Stream responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                    using (var sr = new StreamReader(responseStream))
-                    using (var jr = new JsonTextReader(sr))
-                    {
-                        return await JObject.LoadAsync(jr).ConfigureAwait(false);
-                    }
-                }
-            }
+            
+            return await PostObjectAsync(body, new Uri(new Uri(_baseUrl), "/api/folderss"));
+        }
+        
+        public Task CreateDatasourceAsync(JObject datasource)
+        {
+            return PostObjectAsync(datasource, new Uri(new Uri(_baseUrl), "/api/datasources"));
         }
 
-        public async Task CreateDatasourceAsync(JObject datasource)
+        public Task CreateNotificationChannelAsync(JObject notificationChannel)
         {
-            var uri = new Uri(new Uri(_baseUrl), "/api/datasources");
+            return PostObjectAsync(notificationChannel, new Uri(new Uri(_baseUrl), "/api/alert-notifications"));
+        }
 
+        private async Task<JObject> PostObjectAsync(JObject value, Uri uri)
+        {
             using (var stream = new MemoryStream())
             using (var textWriter = new StreamWriter(stream))
             using (var jsonStream = new JsonTextWriter(textWriter))
             {
                 var serializer = new JsonSerializer();
-                serializer.Serialize(jsonStream, datasource);
+                serializer.Serialize(jsonStream, value);
 
                 jsonStream.Flush();
                 stream.Position = 0;
@@ -155,7 +148,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                         using (var sr = new StreamReader(st))
                         using (var jr = new JsonTextReader(sr))
                         {
-                            await JObject.LoadAsync(jr).ConfigureAwait(false);
+                            return await JObject.LoadAsync(jr).ConfigureAwait(false);
                         }
                     }
                 }
