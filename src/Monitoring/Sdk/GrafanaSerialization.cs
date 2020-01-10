@@ -33,6 +33,12 @@ namespace DotNet.Grafana
             var slimmedDashboard = new JObject((JObject)dashboard["dashboard"]);
             slimmedDashboard.Remove("id");
             slimmedDashboard.Remove("version");
+            var allTargets = slimmedDashboard.SelectTokens("panels.[*].targets.[*]");
+            foreach (JToken jToken in allTargets)
+            {
+                var target = (JObject) jToken;
+                target.Remove("subscription");
+            }
             return slimmedDashboard;
         }
 
