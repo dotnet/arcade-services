@@ -44,7 +44,6 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
         private async Task<bool> ExecuteAsync()
         {
-            Debugger.Launch();
             using (var client = new GrafanaClient(Host, AccessToken))
             {
                 var deploy = new DeployImporter(
@@ -65,7 +64,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                     Log.LogErrorFromException(e,
                         showStackTrace: false,
                         showDetail: false,
-                        file: "MonitoringPublish");
+                        file: "MonitoringImport");
                     return false;
                 }
             }
