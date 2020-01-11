@@ -6,10 +6,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using DotNet.Grafana;
+using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Task = System.Threading.Tasks.Task;
 
 namespace Microsoft.DotNet.Monitoring.Sdk
 {
@@ -24,8 +26,9 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             string dashboardDirectory,
             string datasourceDirectory,
             string notificationDirectory,
-            string[] environments) : base(
-            grafanaClient, sourceTagValue, dashboardDirectory, datasourceDirectory, notificationDirectory)
+            string[] environments,
+            TaskLoggingHelper log) : base(
+            grafanaClient, sourceTagValue, dashboardDirectory, datasourceDirectory, notificationDirectory, log)
         {
             _environments = environments;
         }
@@ -83,10 +86,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 int folderId = GrafanaSerialization.ExtractFolderId(dashboard);
                 JObject folder = await GrafanaClient.GetFolderAsync(folderId).ConfigureAwait(false);
                 FolderData folderData = GrafanaSerialization.SanitizeFolder(folder);
-
-                // Folder uid is needed for the dashboard export object                    
-                JObject dashboardObject = GrafanaSerialization.ConstructDashboardExportObject(slimmedDashboard, folderData.Uid);
-
+                
                 // Get datasources used in the dashboard
                 IEnumerable<string> dataSourceNames = GrafanaSerialization.ExtractDataSourceNames(dashboard);
 
@@ -104,6 +104,8 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                             // If we already have that datasource, don't overwrite it's useful values with empty ones
                             continue;
                         }
+
+                        Log.LogMessage(MessageImportance.Normal, "Importing datasource {0}...", datasourceName);
 
                         Directory.CreateDirectory(Path.GetDirectoryName(datasourcePath));
                         using (var datasourceStreamWriter = new StreamWriter(datasourcePath))
@@ -133,6 +135,8 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                             // If we already have that notification, don't overwrite it's useful values with empty ones
                             continue;
                         }
+
+                        Log.LogMessage(MessageImportance.Normal, "Importing notification channel {0}...", notificationUid);
                         
                         Directory.CreateDirectory(Path.GetDirectoryName(notificationPath));
                         using (var datasourceStreamWriter = new StreamWriter(notificationPath))
@@ -143,14 +147,15 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                     }
                 }
 
-
+                
+                Log.LogMessage(MessageImportance.Normal, "Importing dashboard {0}...", targetUid);
                 string dashboardPath = GetDashboardFilePath(folderData.Title, targetUid);
                 Directory.CreateDirectory(Path.GetDirectoryName(dashboardPath));
 
                 using (var dashboardStreamWriter = new StreamWriter(dashboardPath))
                 using (var dashboardJsonWriter = new JsonTextWriter(dashboardStreamWriter))
                 {
-                    _serializer.Serialize(dashboardJsonWriter, dashboardObject);
+                    _serializer.Serialize(dashboardJsonWriter, slimmedDashboard);
                 }
             }
         }

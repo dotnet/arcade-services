@@ -12,8 +12,11 @@ using DotNet.Grafana;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Task = System.Threading.Tasks.Task;
 
 namespace Microsoft.DotNet.Monitoring.Sdk
 {
@@ -34,8 +37,9 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             string dashboardDirectory,
             string datasourceDirectory,
             string notificationDirectory,
-            string environment) : base(
-            grafanaClient, sourceTagValue, dashboardDirectory, datasourceDirectory, notificationDirectory)
+            string environment,
+            TaskLoggingHelper log) : base(
+            grafanaClient, sourceTagValue, dashboardDirectory, datasourceDirectory, notificationDirectory, log)
         {
             _keyVaultName = keyVaultName;
             _keyVaultConnectionString = keyVaultConnectionString;
@@ -70,6 +74,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 "*" + DatasourceExtension,
                 SearchOption.AllDirectories))
             {
+                var name = GetNameFromDatasourceFile(Path.GetFileName(datasourcePath));
                 JObject data;
                 using (var sr = new StreamReader(datasourcePath))
                 using (var jr = new JsonTextReader(sr))
@@ -77,24 +82,34 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                     data = await JObject.LoadAsync(jr).ConfigureAwait(false);
                 }
 
+                data["name"] = name;
+
+                Log.LogMessage(MessageImportance.Normal, "Posting datasource {0}...", name);
+
                 await ReplaceVaultAsync(data);
 
+                JObject existing = await GrafanaClient.GetDataSourceAsync(name);
                 await GrafanaClient.CreateDatasourceAsync(data).ConfigureAwait(false);
             }
         }
 
         private async Task PostNotificationsAsync()
         {
-            foreach (string notificationDirectory in Directory.GetFiles(EnvironmentNotificationDirectory,
+            foreach (string notificationPath in Directory.GetFiles(EnvironmentNotificationDirectory,
                 "*" + DatasourceExtension,
                 SearchOption.AllDirectories))
             {
+                string uid = GetUidFromNotificationFile(Path.GetFileName(notificationPath));
+
                 JObject data;
-                using (var sr = new StreamReader(notificationDirectory))
+                using (var sr = new StreamReader(notificationPath))
                 using (var jr = new JsonTextReader(sr))
                 {
                     data = await JObject.LoadAsync(jr).ConfigureAwait(false);
                 }
+
+                data["uid"] = uid;
+                Log.LogMessage(MessageImportance.Normal, "Posting notification {0}...", uid);
 
                 await ReplaceVaultAsync(data);
 
@@ -110,7 +125,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             var knownUids = new HashSet<string>();
             foreach (string dashboardPath in GetAllDashboardPaths())
             {
-                string folderName = Path.GetDirectoryName(dashboardPath);
+                string folderName = Path.GetFileName(Path.GetDirectoryName(dashboardPath));
                 string dashboardFileName = Path.GetFileName(dashboardPath);
                 string uid = GetUidFromDashboardFile(dashboardFileName);
                 knownUids.Add(uid);
@@ -162,6 +177,9 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 tagArray.Add(SourceTag);
                 data["tags"] = newTags;
                 data["uid"] = uid;
+
+                Log.LogMessage(MessageImportance.Normal, "Posting dashboard {0}...", uid);
+
                 await GrafanaClient.CreateDashboardAsync(data, folderId).ConfigureAwait(false);
             }
 
@@ -178,6 +196,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
             foreach (string uid in toRemove)
             {
+                Log.LogMessage(MessageImportance.Normal, "Deleting extra dashboard {0}...", uid);
                 await GrafanaClient.DeleteDashboardAsync(uid).ConfigureAwait(false);
             }
         }

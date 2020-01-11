@@ -1,5 +1,4 @@
 {
-  "name": "Azure Monitor - helix-prod",
   "type": "grafana-azure-monitor-datasource",
   "typeLogoUrl": "",
   "access": "proxy",
@@ -23,6 +22,5 @@
     "appInsightsApiKey": "[vault(helix-app-insights-api-key)]",
     "clientSecret": "[vault(helix-grafana-ad-client-secret)]"
   },
-  "version": 15,
   "readOnly": false
 }

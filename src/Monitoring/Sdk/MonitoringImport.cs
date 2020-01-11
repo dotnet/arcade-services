@@ -52,8 +52,8 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                     DashboardDirectory,
                     DataSourceDirectory,
                     NotificationDirectory,
-                    Environments.Select(e => e.ItemSpec).ToArray()
-                );
+                    Environments.Select(e => e.ItemSpec).ToArray(),
+                    Log);
 
                 try
                 {

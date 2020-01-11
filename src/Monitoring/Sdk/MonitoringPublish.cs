@@ -2,7 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Diagnostics;
 using System.Net.Http;
+using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Build.Framework;
 using BuildTask = Microsoft.Build.Utilities.Task;
@@ -40,13 +42,14 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
         public sealed override bool Execute()
         {
+            var s = Assembly.GetExecutingAssembly();
             return ExecuteAsync().GetAwaiter().GetResult();
         }
 
         private async Task<bool> ExecuteAsync()
         {
             using (var client = new GrafanaClient(Host, AccessToken))
-            using (var deploy = new DeployPublisher(client, KeyVaultName, KeyVaultConnectionString, Tag, DashboardDirectory, DataSourceDirectory, NotificationDirectory, Environment))
+            using (var deploy = new DeployPublisher(client, KeyVaultName, KeyVaultConnectionString, Tag, DashboardDirectory, DataSourceDirectory, NotificationDirectory, Environment, Log))
             {
                 try
                 {

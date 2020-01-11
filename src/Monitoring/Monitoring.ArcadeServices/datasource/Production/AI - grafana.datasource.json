@@ -1,5 +1,4 @@
 {
-  "name": "AI - dnc-eng",
   "type": "grafana-azure-monitor-datasource",
   "typeLogoUrl": "",
   "access": "proxy",
@@ -12,13 +11,12 @@
   "withCredentials": false,
   "isDefault": false,
   "jsonData": {
-    "appInsightsAppId": "b5c84363-e751-4af8-91b9-0f926522da18",
+    "appInsightsAppId": "1c3b3f1e-85e9-4aec-9bf1-b450d35a2558",
     "azureLogAnalyticsSameAs": false,
     "cloudName": "azuremonitor"
   },
   "secureJsonFields": {
-    "appInsightsApiKey": "[vault(dnc-eng-app-insights-api-key)]"
+    "appInsightsApiKey": "[vault(grafana-app-insights-api-key)]"
   },
-  "version": 3,
   "readOnly": false
 }

@@ -4,6 +4,7 @@
 
 using System;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
@@ -92,6 +93,9 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
             using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
             {
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                    return null;
+
                 response.EnsureSuccessStatusCode();
 
                 using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
@@ -103,30 +107,96 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             }
         }
 
-        public async Task<JObject> CreateFolderAsync(string uid, string title)
+        public Task<JObject> CreateFolderAsync(string uid, string title)
         {
-            var body = new JObject
+            var folder = new JObject
             {
                 {"uid", uid},
                 {"title", title},
             };
 
-            
-            return await PostObjectAsync(body, new Uri(new Uri(_baseUrl), "/api/folderss"));
+            return CreateOrUpdateAsync(
+                folder,
+                folder.Value<string>("uid"),
+                u => $"/api/folders/{Uri.EscapeDataString(u)}",
+                "/api/folders",
+                _ => (HttpMethod.Put, $"/api/folders/{uid}"),
+                (d, x) =>
+                {
+                    d.Remove("uid");
+                    d["version"] = x.Value<int>("version");
+                }
+            );
         }
         
         public Task CreateDatasourceAsync(JObject datasource)
         {
-            return PostObjectAsync(datasource, new Uri(new Uri(_baseUrl), "/api/datasources"));
+            return CreateOrUpdateAsync(
+                datasource,
+                datasource.Value<string>("name"),
+                n => $"/api/datasources/name/{Uri.EscapeDataString(n)}",
+                "/api/datasources",
+                x => (HttpMethod.Put, $"/api/datasources/{x.Value<int>("id")}"),
+                (d, x) =>
+                {
+                    d["id"] = x.Value<int>("id");
+                    d["version"] = x.Value<int>("version");
+                }
+            );
         }
 
         public Task CreateNotificationChannelAsync(JObject notificationChannel)
         {
-            return PostObjectAsync(notificationChannel, new Uri(new Uri(_baseUrl), "/api/alert-notifications"));
+            return CreateOrUpdateAsync(
+                notificationChannel,
+                notificationChannel.Value<string>("uid"),
+                uid => $"/api/alert-notifications/uid/{Uri.EscapeDataString(uid)}",
+                "/api/alert-notifications",
+                x => (HttpMethod.Put, $"/api/alert-notifications/uid/{x.Value<int>("id")}"),
+                (d, x) =>
+                {
+                    d["id"] = x.Value<int>("id");
+                    d["version"] = x.Value<int>("version");
+                }
+            );
         }
 
-        private async Task<JObject> PostObjectAsync(JObject value, Uri uri)
+        private async Task<JObject> CreateOrUpdateAsync<TExternalId>(
+            JObject data,
+            TExternalId id,
+            Func<TExternalId, string> getUrl,
+            string createUrl,
+            Func<JObject, (HttpMethod method, string url)> updateUrl,
+            Action<JObject, JObject> updateState)
         {
+            using (var exist = await _client.GetAsync(new Uri(new Uri(_baseUrl), getUrl(id))).ConfigureAwait(false))
+            {
+                if (exist.StatusCode == HttpStatusCode.NotFound)
+                {
+                    return await SendObjectAsync(data, new Uri(new Uri(_baseUrl), createUrl)).ConfigureAwait(false);
+                }
+
+                exist.EnsureSuccessStatusCode();
+
+                (HttpMethod method, string url) updateInfo;
+                using (var st = await exist.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                using (var sr = new StreamReader(st))
+                using (var jr = new JsonTextReader(sr))
+                {
+                    JObject existingData = await JObject.LoadAsync(jr).ConfigureAwait(false);
+                    updateState(data, existingData);
+                    updateInfo = updateUrl(existingData);
+                }
+
+
+                return await SendObjectAsync(data, new Uri(new Uri(_baseUrl), updateInfo.url), updateInfo.method)
+                    .ConfigureAwait(false);
+            }
+        }
+
+        private async Task<JObject> SendObjectAsync(JObject value, Uri uri, HttpMethod method = null)
+        {
+            method ??= HttpMethod.Post;
             using (var stream = new MemoryStream())
             using (var textWriter = new StreamWriter(stream))
             using (var jsonStream = new JsonTextWriter(textWriter))
@@ -140,7 +210,8 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 using (var content = new StreamContent(stream))
                 {
                     content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                    using (HttpResponseMessage response = await _client.PostAsync(uri, content).ConfigureAwait(false))
+                    using (var request = new HttpRequestMessage(method, uri) {Content = content})
+                    using (HttpResponseMessage response = await _client.SendAsync(request).ConfigureAwait(false))
                     {
                         response.EnsureSuccessStatusCode();
 
@@ -155,10 +226,8 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             }
         }
 
-        public async Task CreateDashboardAsync(JObject dashboard, int folderId)
+        public Task CreateDashboardAsync(JObject dashboard, int folderId)
         {
-            var uri = new Uri(new Uri(_baseUrl), "/api/dashboards/db");
-
             var dashboardBody = new JObject
             {
                 {"dashboard", dashboard},
@@ -166,32 +235,20 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 {"overwrite", true},
             };
 
-            using (var stream = new MemoryStream())
-            using (var textWriter = new StreamWriter(stream))
-            using (var jsonStream = new JsonTextWriter(textWriter))
-            {
-                var serializer = new JsonSerializer();
-                serializer.Serialize(jsonStream, dashboardBody);
-
-                jsonStream.Flush();
-                stream.Position = 0;
-
-                using (var content = new StreamContent(stream))
+            return CreateOrUpdateAsync(
+                dashboardBody,
+                dashboardBody.Value<JObject>("dashboard").Value<string>("uid"),
+                u => $"/api/dashboards/uid/{Uri.EscapeDataString(u)}",
+                "/api/dashboards/db",
+                _ => (HttpMethod.Post, "/api/dashboards/db"),
+                (d, x) =>
                 {
-                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                    using (HttpResponseMessage response = await _client.PostAsync(uri, content).ConfigureAwait(false))
-                    {
-                        response.EnsureSuccessStatusCode();
-
-                        using (var st = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
-                        using (var sr = new StreamReader(st))
-                        using (var jr = new JsonTextReader(sr))
-                        {
-                            await JObject.LoadAsync(jr).ConfigureAwait(false);
-                        }
-                    }
+                    var dObj = d.Value<JObject>("dashboard");
+                    var xObj = d.Value<JObject>("dashboard");
+                    dObj["id"] = xObj.Value<int>("id");
+                    dObj["version"] = xObj.Value<int>("version");
                 }
-            }
+            );
         }
 
         public async Task<JArray> SearchDashboardsByTagAsync(string tag)

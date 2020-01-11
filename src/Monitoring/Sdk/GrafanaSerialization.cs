@@ -32,6 +32,7 @@ namespace DotNet.Grafana
         {
             var slimmedDashboard = new JObject((JObject)dashboard["dashboard"]);
             slimmedDashboard.Remove("id");
+            slimmedDashboard.Remove("uid");
             slimmedDashboard.Remove("version");
             var allTargets = slimmedDashboard.SelectTokens("panels.[*].targets.[*]");
             foreach (JToken jToken in allTargets)
@@ -72,6 +73,8 @@ namespace DotNet.Grafana
             slimmedDatasource.Remove("id");
             slimmedDatasource.Remove("orgId");
             slimmedDatasource.Remove("url");
+            slimmedDatasource.Remove("version");
+            slimmedDatasource.Remove("name");
 
             // Add an entry in secureJsonData for each secureJsonField and decorate as a KeyVault insert.
             var secureFields = datasource.Value<JObject>("secureJsonFields");
@@ -96,21 +99,10 @@ namespace DotNet.Grafana
             return new FolderData(folder.Value<string>("uid"), folder.Value<string>("title"));
         }
 
-        /// <summary>
-        /// Construct a $.dashboards.item element
-        /// </summary>
-        public static JObject ConstructDashboardExportObject(JObject dashboard, string folderUid)
-        {
-            JObject dashboardObject = new JObject(
-                new JProperty("dashboard", dashboard),
-                new JProperty("meta", new JObject(
-                    new JProperty("folderUid", folderUid))));
-
-            return dashboardObject;
-        }
-
         public static JObject SanitizeNotificationChannel(JObject notificationChannel)
         {
+            notificationChannel.Remove("id");
+            notificationChannel.Remove("uid");
             return notificationChannel;
         }
     }

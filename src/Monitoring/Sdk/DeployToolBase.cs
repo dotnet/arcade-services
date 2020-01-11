@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.IO;
+using Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Monitoring.Sdk
 {
@@ -17,6 +18,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         private readonly string _sourceTagValue;
 
         protected GrafanaClient GrafanaClient { get; }
+        protected TaskLoggingHelper Log { get; }
         protected string DashboardDirectory { get; }
         protected string DatasourceDirectory { get; }
         protected string NotificationDirectory { get; }
@@ -26,13 +28,15 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             string sourceTagValue,
             string dashboardDirectory,
             string datasourceDirectory,
-            string notificationDirectory)
+            string notificationDirectory,
+            TaskLoggingHelper log)
         {
             GrafanaClient = grafanaClient;
             _sourceTagValue = sourceTagValue;
             DashboardDirectory = dashboardDirectory;
             DatasourceDirectory = datasourceDirectory;
             NotificationDirectory = notificationDirectory;
+            Log = log;
         }
 
         protected string SourceTag => SourceTagPrefix + _sourceTagValue;
@@ -44,7 +48,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         
         protected string GetDatasourcePath(string environment, string uid)
         {
-            return Path.Combine(DatasourceDirectory, environment, uid + DashboardExtension);
+            return Path.Combine(DatasourceDirectory, environment, uid + DatasourceExtension);
         }
 
         protected string GetNotificationPath(string environment, string uid)
@@ -63,10 +67,20 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 "*" + DashboardExtension,
                 SearchOption.AllDirectories);
         }
-
-        protected static string GetUidFromDashboardFile(string dashboardFileName)
+        
+        protected static string GetUidFromDashboardFile(string fileName)
         {
-            return dashboardFileName.Substring(0, dashboardFileName.Length - DashboardExtension.Length);
+            return fileName.Substring(0, fileName.Length - DashboardExtension.Length);
+        }
+
+        protected static string GetUidFromNotificationFile(string fileName)
+        {
+            return fileName.Substring(0, fileName.Length - NotificationExtension.Length);
+        }
+
+        protected static string GetNameFromDatasourceFile(string fileName)
+        {
+            return fileName.Substring(0, fileName.Length - DatasourceExtension.Length);
         }
     }
 }
