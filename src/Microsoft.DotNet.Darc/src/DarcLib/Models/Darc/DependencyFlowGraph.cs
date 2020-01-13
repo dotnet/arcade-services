@@ -128,7 +128,10 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///    Mark the back edges of the graph so that they can be ignored when walking it
+        ///    Mark the back edges of the graph so that they can be ignored when walking it.
+        ///    Determine the backedges by computing dominators for each node. A node n is said to
+        ///    dominate another node if every path from the start to the other node must go through
+        ///    n.
         /// </summary>
         public void MarkBackEdges()
         {
@@ -148,8 +151,7 @@ namespace Microsoft.DotNet.DarcLib
             }
             Nodes.Add(startNode);
 
-            // Compute dominators. Start with a full set of nodes
-            // on edge dominator
+            // Dominator set for each node starts with the full set of nodes.
             Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> dominators = new Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>>();
             foreach (var node in Nodes)
             {
