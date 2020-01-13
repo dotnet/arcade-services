@@ -235,6 +235,7 @@ namespace Microsoft.DotNet.DarcLib
         public void CalculateLongestBuildPaths()
         {
             List<DependencyFlowNode> roots = Nodes.Where(n => n.OutgoingEdges.Count == 0).ToList();
+            Dictionary<DependencyFlowNode, List<DependencyFlowNode>> visitedNodes = new Dictionary<DependencyFlowNode, List<DependencyFlowNode>>();
 
             Queue<DependencyFlowNode> nodesToVisit = new Queue<DependencyFlowNode>();
 
@@ -245,15 +246,30 @@ namespace Microsoft.DotNet.DarcLib
                 while (nodesToVisit.Count > 0)
                 {
                     DependencyFlowNode node = nodesToVisit.Dequeue();
-                    node.VisitedNodes.Add(node);
+                    if (visitedNodes.ContainsKey(node))
+                    {
+                        visitedNodes[node].Add(node);
+                    }
+                    else
+                    {
+                        visitedNodes.Add(node, new List<DependencyFlowNode>(){node});
+                    }
 
                     foreach (var edge in node.IncomingEdges)
                     {
                         DependencyFlowNode child = edge.From;
 
-                        if (!node.VisitedNodes.Contains(child) && !nodesToVisit.Contains(child))
+                        if (!visitedNodes[node].Contains(child) && !nodesToVisit.Contains(child))
                         {
-                            child.VisitedNodes.AddRange(node.VisitedNodes);
+                            if (visitedNodes.ContainsKey(child))
+                            {
+                                visitedNodes[child].AddRange(visitedNodes[node]);
+                            }
+                            else
+                            {
+                                visitedNodes.Add(child, new List<DependencyFlowNode>(visitedNodes[node]));
+                            }
+                            
                             nodesToVisit.Enqueue(child);
                         }
                     }

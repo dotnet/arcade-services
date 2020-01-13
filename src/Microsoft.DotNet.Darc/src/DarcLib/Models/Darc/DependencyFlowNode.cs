@@ -18,7 +18,6 @@ namespace Microsoft.DotNet.DarcLib
             InputChannels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             OutgoingEdges = new List<DependencyFlowEdge>();
             IncomingEdges = new List<DependencyFlowEdge>();
-            VisitedNodes = new List<DependencyFlowNode>();
             WorstCasePathTime = 0;
             BestCasePathTime = 0;
             OnLongestBuildPath = false;
@@ -32,8 +31,6 @@ namespace Microsoft.DotNet.DarcLib
 
         public List<DependencyFlowEdge> OutgoingEdges { get; set; }
         public List<DependencyFlowEdge> IncomingEdges { get; set; }
-
-        public List<DependencyFlowNode> VisitedNodes { get; set; }
 
         public double OfficialBuildTime { get; set; }
         public double PrBuildTime { get; set; }
