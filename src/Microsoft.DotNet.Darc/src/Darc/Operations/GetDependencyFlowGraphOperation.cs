@@ -275,8 +275,11 @@ namespace Microsoft.DotNet.Darc.Operations
                 await writer.WriteLineAsync("        e->f[label = \"Disabled/Updated On-demand\", style = dotted];");
                 await writer.WriteLineAsync("    }");
                 await writer.WriteLineAsync("    subgraph cluster2{");
+                await writer.WriteLineAsync("        rankdir=BT;");
                 await writer.WriteLineAsync("        style=invis;");
                 await writer.WriteLineAsync("        note[shape=plaintext label=\"* Longest build path marked in red\"];");
+                await writer.WriteLineAsync("        best[shape=plaintext label=\"Best Case: Time through the graph assuming no dependency flow\"];");
+                await writer.WriteLineAsync("        worst[shape=plaintext label=\"Worst Case: Time through the graph with dependency flow (PRs)\"];");
                 await writer.WriteLineAsync("    }");
                 await writer.WriteLineAsync("    d->note[lhead=cluster2, ltail=cluster1, style=invis];");
                 
