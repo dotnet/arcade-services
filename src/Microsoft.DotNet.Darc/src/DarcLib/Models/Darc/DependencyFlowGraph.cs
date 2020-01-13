@@ -249,9 +249,6 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         DependencyFlowNode child = edge.From;
 
-                        // Match based on repository and branch since we are updating 
-                        // if (node.VisitedNodes.Where(n => n.Repository == child.Repository && n.Branch == child.Branch).Count() == 0
-                        //     && nodesToVisit.Where(n => n.Repository == child.Repository && n.Branch == child.Branch).Count() == 0)
                         if (!node.VisitedNodes.Contains(child) && !nodesToVisit.Contains(child))
                         {
                             child.VisitedNodes.AddRange(node.VisitedNodes);
