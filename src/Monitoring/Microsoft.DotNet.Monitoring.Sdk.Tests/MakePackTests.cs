@@ -34,7 +34,7 @@ namespace DotNet.Grafana.Tests
                                 },
                             }
                         },
-                        {"other-proeprty", "IGNORED"},
+                        {"other-property", "IGNORED"},
                     }
                 },
             };
