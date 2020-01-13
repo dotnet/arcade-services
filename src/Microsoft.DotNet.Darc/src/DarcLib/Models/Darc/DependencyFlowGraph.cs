@@ -293,7 +293,7 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
-        public static async Task<DependencyFlowGraph> Build(
+        public static async Task<DependencyFlowGraph> BuildAsync(
             List<DefaultChannel> defaultChannels,
             List<Subscription> subscriptions,
             IRemote barOnlyRemote,

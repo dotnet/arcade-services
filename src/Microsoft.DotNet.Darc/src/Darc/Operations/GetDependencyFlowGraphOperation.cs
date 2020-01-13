@@ -65,7 +65,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // Build, then prune out what we don't want to see if the user specified
                 // channels.
-                DependencyFlowGraph flowGraph = await DependencyFlowGraph.Build(defaultChannels, subscriptions, barOnlyRemote, _options.Days);
+                DependencyFlowGraph flowGraph = await DependencyFlowGraph.BuildAsync(defaultChannels, subscriptions, barOnlyRemote, _options.Days);
 
                 Channel targetChannel = null;
                 if (!string.IsNullOrEmpty(_options.Channel))
