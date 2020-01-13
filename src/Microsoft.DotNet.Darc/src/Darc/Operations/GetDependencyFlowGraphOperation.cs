@@ -90,7 +90,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     flowGraph.MarkLongestBuildPath();
                 }
 
-                await LogGraphViz(targetChannel, flowGraph, _options.IncludeBuildTimes);
+                await LogGraphVizAsync(targetChannel, flowGraph, _options.IncludeBuildTimes);
 
                 return Constants.SuccessCode;
             }
@@ -168,7 +168,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// For more info see https://www.graphviz.org/
         /// </remarks>
         /// <returns>Async task</returns>
-        private async Task LogGraphViz(Channel targetChannel, DependencyFlowGraph graph, bool includeBuildTimes)
+        private async Task LogGraphVizAsync(Channel targetChannel, DependencyFlowGraph graph, bool includeBuildTimes)
         {
             StringBuilder subgraphClusterWriter = null;
             bool writeToSubgraphCluster = targetChannel != null;

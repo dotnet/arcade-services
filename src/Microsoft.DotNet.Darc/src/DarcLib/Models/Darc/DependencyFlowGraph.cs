@@ -102,7 +102,7 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         // Nothing to do
                         continue;
-                    }                    
+                    }
                     foreach (var inputEdge in currentNode.IncomingEdges)
                     {
                         if (isInterestingEdge(inputEdge))
