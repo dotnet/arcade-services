@@ -20,29 +20,6 @@ namespace Maestro.Data.Models
         private string _azureDevOpsBranch;
         private string _githubBranch;
 
-        static Build()
-        {
-            Triggers<Build>.Inserted += entry =>
-            {
-                Build build = entry.Entity;
-                var context = (BuildAssetRegistryContext) entry.Context;
-
-                context.BuildChannels.AddRange((
-                    from dc in context.DefaultChannels
-                    where (dc.Enabled)
-                    where (dc.Repository == build.GitHubRepository || dc.Repository == build.AzureDevOpsRepository)
-                    where (dc.Branch == build.GitHubBranch || dc.Branch == build.AzureDevOpsBranch)
-                    select new BuildChannel
-                    {
-                        Channel = dc.Channel,
-                        Build = build,
-                        DateTimeAdded = DateTimeOffset.UtcNow
-                    }).Distinct());
-
-                context.SaveChangesWithTriggers(b => context.SaveChanges(b));
-            };
-        }
-
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
