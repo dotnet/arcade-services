@@ -46,7 +46,7 @@ steps:
   workingDirectory: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
   displayName: Prepare For UI Tests
 
-- script: npm run-script test -- --watch=false --reporters progress,junit
+- script: npm run-script test -- --watch=false --reporters progress,junit --browsers ChromeHeadless
   workingDirectory: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
   displayName: Run UI Tests
 
