@@ -42,6 +42,9 @@ steps:
     pathToSources: '$(Build.SourcesDirectory)'
     publishRunAttachments: true
 
+- script: echo "export const token = '';" > src/environments/token.ts
+  workingDirectory: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
+
 - script: npm run-script test -- --watch=false --reporters junit
   workingDirectory: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
 
