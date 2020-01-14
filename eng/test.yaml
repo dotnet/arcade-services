@@ -42,7 +42,7 @@ steps:
     pathToSources: '$(Build.SourcesDirectory)'
     publishRunAttachments: true
 
-- script: npm run-script test -- -- --watch=false --reporters 'junit'
+- script: npm run-script test -- --watch=false --reporters junit
   workingDirectory: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
 
 - task: PublishTestResults@2
