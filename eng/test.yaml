@@ -51,6 +51,6 @@ steps:
 - task: PublishTestResults@2
   inputs:
     testResultsFormat: 'JUnit'
-    testResultsFiles: '**/TEST-*.xml' 
+    testResultsFiles: '**/TESTS-*.xml' 
     searchFolder: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
     testRunTitle: UI Tests
