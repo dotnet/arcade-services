@@ -19,7 +19,7 @@
   "links": [],
   "panels": [
     {
-      "datasource": "Azure Monitor - helix",
+      "datasource": "AzureMonitor-helix",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -73,7 +73,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Azure Monitor - helix",
+      "datasource": "AzureMonitor-helix",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -255,7 +255,7 @@
     },
     {
       "collapsed": false,
-      "datasource": "Azure Monitor - helix",
+      "datasource": "AzureMonitor-helix",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -310,7 +310,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Azure Monitor - helix",
+      "datasource": "AzureMonitor-helix",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -492,7 +492,7 @@
     },
     {
       "collapsed": false,
-      "datasource": "Azure Monitor - helix",
+      "datasource": "AzureMonitor-helix",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -547,7 +547,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Azure Monitor - helix-prod",
+      "datasource": "AzureMonitor-helix-prod",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -769,7 +769,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Azure Monitor - helix",
+      "datasource": "AzureMonitor-helix",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -958,7 +958,7 @@
     },
     {
       "collapsed": false,
-      "datasource": "Azure Monitor - helix",
+      "datasource": "AzureMonitor-helix",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1017,7 +1017,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "AI - dnc-eng",
+      "datasource": "AI-dnc-eng",
       "description": "Availability tests for the site source.dot.net.",
       "fill": 1,
       "fillGradient": 0,
@@ -1241,7 +1241,7 @@
     },
     {
       "collapsed": false,
-      "datasource": "Azure Monitor - helix",
+      "datasource": "AzureMonitor-helix",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1258,7 +1258,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Azure Monitor - helix",
+      "datasource": "AzureMonitor-helix",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1436,7 +1436,7 @@
     },
     {
       "collapsed": false,
-      "datasource": "Azure Monitor - helix",
+      "datasource": "AzureMonitor-helix",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1495,7 +1495,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Azure Monitor - helix-prod",
+      "datasource": "AzureMonitor-helix-prod",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1672,7 +1672,7 @@
     },
     {
       "collapsed": false,
-      "datasource": "Azure Monitor - helix",
+      "datasource": "AzureMonitor-helix",
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1689,7 +1689,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "AI - grafana",
+      "datasource": "AI-grafana",
       "description": "Monitoring and alerting for the Grafana infrastructure is managed by Azure.",
       "fill": 1,
       "fillGradient": 0,
