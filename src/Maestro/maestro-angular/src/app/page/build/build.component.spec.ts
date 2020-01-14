@@ -3,10 +3,10 @@ import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { RouterTestingModule } from '@angular/router/testing';
 
 import { BuildComponent } from "./build.component";
-import { MomentModule } from 'ngx-moment';
 import { StatefulModule } from 'src/stateful';
 import { MaestroService } from 'src/maestro-client';
 import { BuildStatusService } from 'src/app/services/build-status.service';
+import { MockBuildLink, MockCommitLink } from "src/app/mock-pipes.spec";
 
 describe("BuildComponent", () => {
   let component: BuildComponent;
@@ -16,6 +16,8 @@ describe("BuildComponent", () => {
     TestBed.configureTestingModule({
       declarations: [
         BuildComponent,
+        MockBuildLink,
+        MockCommitLink,
       ],
       providers: [
         {
@@ -31,7 +33,6 @@ describe("BuildComponent", () => {
       ],
       imports: [
         RouterTestingModule,
-        MomentModule,
         StatefulModule,
       ],
       schemas: [

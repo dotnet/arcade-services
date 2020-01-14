@@ -1,4 +1,6 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { NgxPaginationModule } from "ngx-pagination";
 
 import { AssetTableComponent } from './asset-table.component';
 
@@ -8,7 +10,9 @@ describe('AssetTableComponent', () => {
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ AssetTableComponent ]
+      imports: [ NgxPaginationModule ],
+      declarations: [ AssetTableComponent ],
+      schemas: [ NO_ERRORS_SCHEMA ],
     })
     .compileComponents();
   }));

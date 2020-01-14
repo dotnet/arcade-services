@@ -41,3 +41,13 @@ steps:
     reportDirectory: '$(Build.SourcesDirectory)\CodeCoverage'
     pathToSources: '$(Build.SourcesDirectory)'
     publishRunAttachments: true
+
+- script: npm run-script test -- -- --watch=false --reporters 'junit'
+  workingDirectory: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
+
+- task: PublishTestResults@2
+  inputs:
+    testResultsFormat: 'JUnit'
+    testResultsFiles: '**/TEST-*.xml' 
+    searchFolder: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
+    testRunTitle: UI Tests
