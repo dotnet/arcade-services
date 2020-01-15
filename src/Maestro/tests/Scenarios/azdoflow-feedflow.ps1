@@ -17,7 +17,9 @@ $sourceBranch = "master"
 $proxyFeed = "https://some-proxy.azurewebsites.net/container/some-container/sig/somesig/se/2020-02-02/darc-int-maestro-test1-bababababab-1/index.json"
 $azdoFeed1 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-efabaababababe-1/nuget/v3/index.json"
 $azdoFeed2 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-efabaababababd-1/nuget/v3/index.json"
+$azdoFeed3 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-efabaababababf-1/nuget/v3/index.json"
 $regularFeed = "https://dotnetfeed.blob.core.windows.net/maestro-test1/index.json"
+$buildContainer = "https://dev.azure.com/dnceng/internal/_apis/build/builds/9999999/artifacts" 
 
 $sourceAssets = @(
     @{
@@ -51,6 +53,20 @@ $sourceAssets = @(
             @{
                 location = $regularFeed
                 type = "nugetFeed"
+            }
+        )
+    },
+    @{
+        name = "Hamburger"
+        version = "4.1.0"
+        locations = @(
+            @{
+                location = $azdoFeed3
+                type = "nugetFeed"
+            },
+            @{
+                location = $buildContainer
+                type = "container"
             }
         )
     }
@@ -94,6 +110,7 @@ try {
         Darc-Command add-dependency --name Foo --type product --repo "$sourceRepoUri"
         Darc-Command add-dependency --name Bar --type product --repo "$sourceRepoUri"
         Darc-Command add-dependency --name Pizza --type product --repo "$sourceRepoUri"
+        Darc-Command add-dependency --name Hamburger --type product --repo "$sourceRepoUri"
     }
     finally {
         Pop-Location
@@ -130,10 +147,17 @@ try {
         "Commit:           $sourceCommit",
         "Type:             Product",
         "Pinned:           False",
+        "",
+        "Name:             Hamburger",
+        "Version:          4.1.0",
+        "Repo:             $sourceRepoUri",
+        "Commit:           $sourceCommit",
+        "Type:             Product",
+        "Pinned:           False",
         ""
     )
 
-    $expectedFeeds = @($proxyFeed, $azdoFeed1)
+    $expectedFeeds = @($proxyFeed, $azdoFeed1, $azdoFeed3)
     $notExpectedFeeds = @($regularFeed, $azdoFeed2)
 
     Write-Host "Waiting on PR to be opened in $targetRepoUri"

@@ -1173,7 +1173,10 @@ namespace Microsoft.DotNet.DarcLib
                 var latestAsset = matchingAssetsFromSameSha.OrderByDescending(a => a.BuildId).FirstOrDefault();
                 if (latestAsset != null)
                 {
-                    IEnumerable<String> currentAssetLocations = latestAsset.Locations?.Select(l => l.Location);
+                    IEnumerable<String> currentAssetLocations = latestAsset.Locations?
+                        .Where(l=>l.Type == LocationType.NugetFeed)
+                        .Select(l => l.Location);
+
                     if (currentAssetLocations == null)
                     {
                         continue;
