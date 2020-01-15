@@ -158,7 +158,7 @@ try {
     )
 
     $expectedFeeds = @($proxyFeed, $azdoFeed1, $azdoFeed3)
-    $notExpectedFeeds = @($regularFeed, $azdoFeed2)
+    $notExpectedFeeds = @($regularFeed, $azdoFeed2, $buildContainer)
 
     Write-Host "Waiting on PR to be opened in $targetRepoUri"
     $success = Check-NonBatched-AzDO-PullRequest $sourceRepoName $targetRepoName $targetBranch $expectedDependencies $false $expectedFeeds $notExpectedFeeds
