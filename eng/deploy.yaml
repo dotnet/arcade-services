@@ -10,6 +10,7 @@ resources:
         include:
         - master
         - production
+        - SplitPipelines
 
 variables:
 - ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
