@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.IO;
 using System.Collections.Generic;
+using Microsoft.DotNet.Monitoring.Sdk;
 
 namespace DotNet.Grafana.Tests
 {

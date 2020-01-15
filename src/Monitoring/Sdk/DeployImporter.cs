@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using DotNet.Grafana;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
 using Newtonsoft.Json;
@@ -116,11 +115,10 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                     }
                 }
 
-                HashSet<string> usedNotifications = slimmedDashboard
+                HashSet<string> usedNotifications = new HashSet<string>(slimmedDashboard
                     .SelectTokens("panels.[*].alert.notifications.[*].uid")
                     .Select(t => t.Value<string>())
-                    .Where(uid => !string.IsNullOrEmpty(uid))
-                    .ToHashSet();
+                    .Where(uid => !string.IsNullOrEmpty(uid)));
                 foreach (string notificationUid in usedNotifications)
                 {
                     JObject notificationChannel = await GrafanaClient.GetNotificationChannelAsync(notificationUid);

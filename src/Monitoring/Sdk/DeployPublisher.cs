@@ -8,7 +8,6 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using DotNet.Grafana;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
@@ -189,7 +188,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         private async Task ClearExtraneousDashboardsAsync(HashSet<string> knownUids)
         {
             JArray allTagged = await GrafanaClient.SearchDashboardsByTagAsync(SourceTag).ConfigureAwait(false);
-            HashSet<string> toRemove =  allTagged.Where(IsManagedDashboard).Select(d => d.Value<string>("uid")).ToHashSet();
+            HashSet<string> toRemove =  new HashSet<string>(allTagged.Where(IsManagedDashboard).Select(d => d.Value<string>("uid")));
 
             // We shouldn't remove the ones we just deployed
             toRemove.ExceptWith(knownUids);

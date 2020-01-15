@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp2.1</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netcoreapp2.1;net472</TargetFrameworks>
     <PackageType>MSBuildSdk</PackageType>
     <LangVersion>latest</LangVersion>
     <ExcludeFromSourceBuild>true</ExcludeFromSourceBuild>
