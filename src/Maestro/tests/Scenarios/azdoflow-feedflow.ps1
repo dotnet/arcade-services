@@ -15,7 +15,8 @@ $sourceBuildNumber = Get-Random
 $sourceCommit = Get-Random
 $sourceBranch = "master"
 $proxyFeed = "https://some-proxy.azurewebsites.net/container/some-container/sig/somesig/se/2020-02-02/darc-int-maestro-test1-bababababab-1/index.json"
-$azdoFeed = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-efabaababababe-1/nuget/v3/index.json"
+$azdoFeed1 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-efabaababababe-1/nuget/v3/index.json"
+$azdoFeed2 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-efabaababababd-1/nuget/v3/index.json"
 $regularFeed = "https://dotnetfeed.blob.core.windows.net/maestro-test1/index.json"
 
 $sourceAssets = @(
@@ -34,7 +35,17 @@ $sourceAssets = @(
         version = "2.1.0"
         locations = @(
             @{
-                location = $azdoFeed
+                location = $azdoFeed1
+                type = "nugetFeed"
+            }
+        )
+    },
+    @{
+        name = "Pizza"
+        version = "3.1.0"
+        locations = @(
+            @{
+                location = $azdoFeed2
                 type = "nugetFeed"
             },
             @{
@@ -82,6 +93,7 @@ try {
         Push-Location -Path $(Get-Repo-Location $targetRepoName)
         Darc-Command add-dependency --name Foo --type product --repo "$sourceRepoUri"
         Darc-Command add-dependency --name Bar --type product --repo "$sourceRepoUri"
+        Darc-Command add-dependency --name Pizza --type product --repo "$sourceRepoUri"
     }
     finally {
         Pop-Location
@@ -111,11 +123,18 @@ try {
         "Commit:           $sourceCommit",
         "Type:             Product",
         "Pinned:           False",
+        "",
+        "Name:             Pizza",
+        "Version:          3.1.0",
+        "Repo:             $sourceRepoUri",
+        "Commit:           $sourceCommit",
+        "Type:             Product",
+        "Pinned:           False",
         ""
     )
 
-    $expectedFeeds = @($proxyFeed, $azdoFeed)
-    $notExpectedFeeds = @($regularFeed)
+    $expectedFeeds = @($proxyFeed, $azdoFeed1)
+    $notExpectedFeeds = @($regularFeed, $azdoFeed2)
 
     Write-Host "Waiting on PR to be opened in $targetRepoUri"
     $success = Check-NonBatched-AzDO-PullRequest $sourceRepoName $targetRepoName $targetBranch $expectedDependencies $false $expectedFeeds $notExpectedFeeds
