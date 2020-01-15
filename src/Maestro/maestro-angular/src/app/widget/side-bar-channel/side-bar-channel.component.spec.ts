@@ -1,34 +1,32 @@
 import { async, ComponentFixture, TestBed } from "@angular/core/testing";
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { RouterTestingModule } from '@angular/router/testing';
-import { of } from 'rxjs';
 
 import { SideBarChannelComponent } from "./side-bar-channel.component";
-import { MaestroService } from 'src/maestro-client';
+import { MockRepoName } from "src/app/mock-pipes.spec";
+import { StatefulModule } from 'src/stateful';
+import { ChannelService } from 'src/app/services/channel.service';
 
 describe("SideBarChannelComponent", () => {
   let component: SideBarChannelComponent;
   let fixture: ComponentFixture<SideBarChannelComponent>;
 
   beforeEach(async(() => {
+    const mockChannelService = jasmine.createSpyObj("ChannelService", ["getRepositories"]);
     TestBed.configureTestingModule({
       declarations: [
         SideBarChannelComponent,
+        MockRepoName,
       ],
       providers: [
         {
-          provide: MaestroService,
-          useValue: {
-            defaultChannels: {
-              listAsync() {
-                return of();
-              },
-            },
-          },
+          provide: ChannelService,
+          useValue: mockChannelService,
         },
       ],
       imports: [
         RouterTestingModule,
+        StatefulModule,
       ],
       schemas: [
         NO_ERRORS_SCHEMA,
