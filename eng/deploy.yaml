@@ -1,57 +1,14 @@
-trigger: none
-pr: none
-
-resources:
-  pipelines:
-  - pipeline: Build
-    source: arcade-services-internal-ci
-    trigger:
-      branches:
-        include:
-        - master
-        - production
-        - SplitPipelines
-
-variables:
-- ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-  - name: DeploymentEnvironment
-    value: Staging
-  - name: DotNetStatusAppName
-    value: dotneteng-status-staging
-  - name: DotNetStatusEndpoint
-    value: .NET Engineering Deployment Notification - Staging
-  - name: MaestroPublishEndpoint
-    value: https://maestro-prod.westus2.cloudapp.azure.com
-  - name: MaestroTestEndpoint
-    value: https://maestro-int.westus2.cloudapp.azure.com
-  - name: PublishProfile
-    value: Int
-  - name: ServiceFabricConnection
-    value: Maestro-Int
-  - name: Subscription
-    value: NetHelixStaging
-  - group: MaestroInt KeyVault
-  - group: DotNetStatus Staging
-- ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-  - name: DeploymentEnvironment
-    value: Production
-  - name: DotNetStatusAppName
-    value: dotneteng-status
-  - name: DotNetStatusEndpoint
-    value: .NET Engineering Deployment Notification - Production
-  - name: MaestroPublishEndpoint
-    value: https://maestro-prod.westus2.cloudapp.azure.com
-  - name: MaestroTestEndpoint
-    value: https://maestro-prod.westus2.cloudapp.azure.com
-  - name: PublishProfile
-    value: Prod
-  - name: ServiceFabricConnection
-    value: Maestro-Prod
-  - name: Subscription
-    value: NetHelix
-  - group: MaestroProd KeyVault
-  - group: DotNetStatus Production
-
+parameters:
+  Subscription: ''
+  ServiceFabricConnection: ''
+  PublishProfile: ''
+  DotNetStatusAppName: ''
+  DeploymentEnvironment: ''
+  VariableGroup: ''
+  MaestroPublishEndpoint: ''
+  MaestroTestEndpoint: ''
+  DotNetStatusEndpoint: ''
+  StatusVariableGroup: ''
 
   # --- Secret Variable group requirements ---
   # maestro-admin-sql-connection-string
@@ -63,6 +20,8 @@ variables:
 stages:
 - stage: predeploy
   displayName: Pre-Deployment
+  variables:
+  - group: ${{ parameters.StatusVariableGroup }}
   jobs:
   - job: notifyStartDeployment
     displayName: Notify deployment start
@@ -72,7 +31,7 @@ stages:
       displayName: Notify dotnet-eng-staus/start
       continueOnError: true
       inputs:
-        serviceConnection: $(DotNetStatusEndpoint)
+        serviceConnection: ${{ parameters.DotNetStatusEndpoint }}
         method: POST
         headers: |
           {
@@ -85,12 +44,13 @@ stages:
   dependsOn:
   - predeploy
   variables:
+  - group: ${{ parameters.VariableGroup }}
   - name: PublishProfile
-    value: $(PublishProfile)
+    value: ${{ parameters.PublishProfile }}
   jobs:
   - deployment: approval
     displayName: deployment approval (conditional)
-    environment: $(DeploymentEnvironment)
+    environment: ${{ parameters.DeploymentEnvironment }}
     strategy:
       runOnce:
         deploy:
@@ -118,7 +78,7 @@ stages:
     - task: AzurePowerShell@3
       displayName: eng\firewall.ps1 -Add
       inputs:
-        azureSubscription: $(Subscription)
+        azureSubscription: ${{ parameters.Subscription }}
         ScriptPath: $(Pipeline.Workspace)/Build/ReleaseUtilities/firewall.ps1
         ScriptArguments: -RuleName UnblockSQLForUpgrade -Add -ConnectionString "$(maestro-admin-sql-connection-string)"
         azurePowerShellVersion: LatestVersion
@@ -134,7 +94,7 @@ stages:
     - task: AzurePowerShell@3
       displayName: eng\firewall.ps1 -Remove
       inputs:
-        azureSubscription: $(Subscription)
+        azureSubscription: ${{ parameters.Subscription }}
         ScriptPath: $(Pipeline.Workspace)/Build/ReleaseUtilities/firewall.ps1
         ScriptArguments: -RuleName UnblockSQLForUpgrade -Remove -ConnectionString "$(maestro-admin-sql-connection-string)"
         azurePowerShellVersion: LatestVersion
@@ -152,7 +112,7 @@ stages:
       displayName: Deploy Service Fabric Application (Maestro)
       inputs:
         applicationPackagePath: $(Pipeline.Workspace)/Build/MaestroApplication/applicationpackage
-        serviceConnectionName: $(ServiceFabricConnection)
+        serviceConnectionName: ${{ parameters.ServiceFabricConnection }}
         publishProfilePath: $(Pipeline.Workspace)/Build/MaestroApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
         applicationParameterPath: $(Pipeline.Workspace)/Build/MaestroApplication/projectartifacts/ApplicationParameters/$(PublishProfile).xml
 
@@ -167,7 +127,7 @@ stages:
       displayName: Deploy Service Fabric Application (Telemetry)
       inputs:
         applicationPackagePath: $(Pipeline.Workspace)/Build/TelemetryApplication/applicationpackage
-        serviceConnectionName: $(ServiceFabricConnection)
+        serviceConnectionName: ${{ parameters.ServiceFabricConnection }}
         publishProfilePath: $(Pipeline.Workspace)/Build/TelemetryApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
         applicationParameterPath: $(Pipeline.Workspace)/Build/TelemetryApplication/projectartifacts/ApplicationParameters/$(PublishProfile).xml
 
@@ -181,9 +141,9 @@ stages:
     - task: AzureRmWebAppDeployment@4
       inputs:
         ConnectionType: AzureRM
-        azureSubscription: $(Subscription)
+        azureSubscription: ${{ parameters.Subscription }}
         appType: webApp
-        WebAppName: $(DotNetStatusAppName)
+        WebAppName: ${{ parameters.DotNetStatusAppName }}
         deployToSlotOrASE: true
         ResourceGroupName: monitoring
         SlotName: staging
@@ -197,6 +157,8 @@ stages:
   dependsOn:
   - deploy
   condition: always()
+  variables:
+  - group: ${{ parameters.StatusVariableGroup }}
   jobs:
   - job: notifyEndDeployment
     displayName: Notify deployment end
@@ -218,8 +180,9 @@ stages:
   dependsOn: 
   - deploy
   variables:
+  - group: ${{ parameters.VariableGroup }}
   - name: MaestroTestEndpoint
-    value: $(MaestroTestEndpoint)
+    value: ${{ parameters.MaestroTestEndpoint }}
   jobs:
   - job: scenario
     displayName: Scenario tests
