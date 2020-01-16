@@ -15,7 +15,7 @@ resources:
 stages:
 - template: eng\deploy.yaml
   parameters:
-    ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+    ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
       DeploymentEnvironment: Staging
       DotNetStatusAppName: dotneteng-status-staging
       DotNetStatusEndpoint: .NET Engineering Deployment Notification - Staging
