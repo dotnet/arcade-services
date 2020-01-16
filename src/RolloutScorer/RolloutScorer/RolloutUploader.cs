@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.WindowsAzure.Storage.Table;
-using Microsoft.Azure.KeyVault.Models;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 

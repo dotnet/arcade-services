@@ -12,7 +12,7 @@ namespace RolloutScorerAzureFunction
                 new RepoConfig
                 {
                     Repo = "dotnet-helix-service",
-                    DefinitionId = "620",
+                    BuildDefinitionIds = new List<string> { "620", "697" },
                     AzdoInstance = "dnceng",
                     GithubIssueLabel = "Rollout Helix",
                     ExpectedTime = 30,
@@ -21,7 +21,7 @@ namespace RolloutScorerAzureFunction
                 new RepoConfig
                 {
                     Repo = "dotnet-helix-machines",
-                    DefinitionId = "596",
+                    BuildDefinitionIds = new List<string> { "596" },
                     AzdoInstance = "dnceng",
                     GithubIssueLabel = "Rollout OSOB",
                     ExpectedTime = 60,
@@ -30,11 +30,11 @@ namespace RolloutScorerAzureFunction
                 new RepoConfig
                 {
                     Repo = "dotnet-arcade-services",
-                    DefinitionId = "28",
+                    BuildDefinitionIds = new List<string> { "252" },
                     AzdoInstance = "dnceng",
                     GithubIssueLabel = "Rollout Arcade Services",
                     ExpectedTime = 30,
-                    ExcludeStages = new List<string>(),
+                    ExcludeStages = new List<string> { "" },
                 },
             },
             AzdoInstanceConfigs = new List<AzdoInstanceConfig>()

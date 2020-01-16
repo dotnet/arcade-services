@@ -30,7 +30,7 @@ stages:
     pool: server
     steps:
     - task: InvokeRESTAPI@1
-      displayName: Notify dotnet-eng-staus/start
+      displayName: Notify dotnet-eng-status/start
       continueOnError: true
       inputs:
         serviceConnection: ${{ parameters.DotNetStatusEndpoint }}
@@ -154,6 +154,20 @@ stages:
         enableCustomDeployment: true
         DeploymentType: webDeploy
         RemoveAdditionalFilesFlag: true
+  
+  - job: deployRolloutScorer
+    displayName: Deploy rollout scorer azure function
+    dependsOn: 
+    - approval
+    steps:
+    - download: current
+      artifact: RolloutScorer
+    - task: AzureFunctionApp@1
+      displayName: Deploy AutoScaleService
+      inputs:
+        azureSubscription: ${{ parameters.Subscription }}
+        package: $(Build.ArtifactStagingDirectory)/AutoScaleService.zip
+        appName: helix-autoscale-int
 
 - stage: postdeploy
   displayName: Post-Deployment
@@ -168,7 +182,7 @@ stages:
     pool: server
     steps:
     - task: InvokeRESTAPI@1
-      displayName: Notify dotnet-eng-staus/end
+      displayName: Notify dotnet-eng-status/end
       continueOnError: true
       inputs:
         serviceConnection: .NET Engineering Deployment Notification - Staging

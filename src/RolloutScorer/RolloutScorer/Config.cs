@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace RolloutScorer
 {
@@ -21,7 +21,7 @@ namespace RolloutScorer
     public class RepoConfig
     {
         public string Repo { get; set; }
-        public string DefinitionId { get; set; }
+        public List<string> BuildDefinitionIds { get; set; }
         public string AzdoInstance { get; set; }
         public string GithubIssueLabel { get; set; }
         public int ExpectedTime { get; set; }

@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -49,23 +50,28 @@ namespace RolloutScorer
             // Convert the rollout start time and end time to the strings the AzDO API recognizes and fetch builds
             string rolloutStartTimeUriString = RolloutStartDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
             string rolloutEndTimeUriString = RolloutEndDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
-            JObject responseContent = await GetAzdoApiResponseAsync($"https://dev.azure.com/{RepoConfig.AzdoInstance}/" +
-                $"{AzdoConfig.Project}/_apis/build/builds?definitions={RepoConfig.DefinitionId}&branchName={Branch}" +
+
+            foreach (string buildDefinitionId in RepoConfig.BuildDefinitionIds)
+            {
+                JObject responseContent = await GetAzdoApiResponseAsync($"https://dev.azure.com/{RepoConfig.AzdoInstance}/" +
+                $"{AzdoConfig.Project}/_apis/build/builds?definitions={buildDefinitionId}&branchName={Branch}" +
                 $"&minTime={rolloutStartTimeUriString}&maxTime={rolloutEndTimeUriString}&api-version=5.1");
 
-            // No builds is a valid case (e.g. a failed rollout) and so the rest of the code can handle this
-            // It still is potentially unexpected, so we're going to warn the user here
-            if (responseContent.Value<int>("count") == 0)
-            {
-                Utilities.WriteWarning($"No builds were found for repo '{RepoConfig.Repo}' " +
-                        $"(Build ID: '{RepoConfig.DefinitionId}') during the specified dates ({RolloutStartDate} to {RolloutEndDate})", Log);
-            }
+                // No builds is a valid case (e.g. a failed rollout) and so the rest of the code can handle this
+                // It still is potentially unexpected, so we're going to warn the user here
+                if (responseContent.Value<int>("count") == 0)
+                {
+                    Utilities.WriteWarning($"No builds were found for repo '{RepoConfig.Repo}' " +
+                            $"(Build ID: '{buildDefinitionId}') during the specified dates ({RolloutStartDate} to {RolloutEndDate})", Log);
+                }
 
-            JArray builds = responseContent.Value<JArray>("value");
-            foreach (JToken build in builds)
-            {
-                BuildBreakdowns.Add(new ScorecardBuildBreakdown(build.ToObject<BuildSummary>()));
+                JArray builds = responseContent.Value<JArray>("value");
+                foreach (JToken build in builds)
+                {
+                    BuildBreakdowns.Add(new ScorecardBuildBreakdown(build.ToObject<BuildSummary>()));
+                }
             }
+            BuildBreakdowns.Sort((x,y) => x.BuildSummary.FinishTime.CompareTo(y.BuildSummary.FinishTime));
         }
 
         /// <summary>
@@ -184,7 +190,8 @@ namespace RolloutScorer
 
         public bool DetermineFailure()
         {
-            return BuildBreakdowns.Count == 0 || BuildBreakdowns.Last().BuildSummary.Result != "succeeded";
+            string lastBuildResult = BuildBreakdowns.Last().BuildSummary.Result;
+            return BuildBreakdowns.Count == 0 || (lastBuildResult != "succeeded" && lastBuildResult != "partiallySucceeded");
         }
 
         /// <summary>
