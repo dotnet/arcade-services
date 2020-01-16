@@ -120,7 +120,15 @@ namespace DotNet.Status.Web
 
         private void AddServices(IServiceCollection services)
         {
-            services.AddMvc().WithRazorPagesRoot("/Pages").AddRazorPagesOptions(o => o.Conventions.AuthorizeFolder("/", MsftAuthorizationPolicyName).AllowAnonymousToPage("/Index"));
+            services.AddMvc()
+                .WithRazorPagesRoot("/Pages")
+                .AddRazorPagesOptions(o =>
+                    o.Conventions
+                        .AuthorizeFolder("/", MsftAuthorizationPolicyName)
+                        .AllowAnonymousToPage("/Index")
+                        .AllowAnonymousToPage("/Status")
+                        .AllowAnonymousToPage("/Error")
+                    );
             services.AddApplicationInsightsTelemetry(Configuration.GetSection("ApplicationInsights").Bind);
             services.Configure<LoggerFilterOptions>(o =>
             {
