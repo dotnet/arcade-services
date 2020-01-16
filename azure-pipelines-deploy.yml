@@ -13,7 +13,7 @@ resources:
         - SplitPipelines
 
 stages:
-- template: eng\deploy.yml
+- template: eng\deploy.yaml
   parameters:
     ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
       DeploymentEnvironment: Staging
