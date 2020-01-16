@@ -10,7 +10,6 @@ resources:
         include:
         - master
         - production
-        - SplitPipelines
 
 stages:
 - template: eng\deploy.yaml
