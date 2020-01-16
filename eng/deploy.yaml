@@ -20,6 +20,8 @@ parameters:
 stages:
 - stage: predeploy
   displayName: Pre-Deployment
+  pool:
+    name: Hosted VS2017
   variables:
   - group: ${{ parameters.StatusVariableGroup }}
   jobs:
@@ -41,6 +43,8 @@ stages:
 
 - stage: deploy
   displayName: Deploy
+  pool:
+    name: Hosted VS2017
   dependsOn:
   - predeploy
   variables:
@@ -154,6 +158,8 @@ stages:
 
 - stage: postdeploy
   displayName: Post-Deployment
+  pool:
+    name: Hosted VS2017
   dependsOn:
   - deploy
   condition: always()
@@ -175,8 +181,11 @@ stages:
             "Authorization": "Bearer $(dotnet-build-bot-dotnet-eng-status-token)",
           }
         urlSuffix: /arcade-services/$(Build.BuildNumber)/end
+
 - stage: validateDeployment
   displayName: Validate deployment
+  pool:
+    name: Hosted VS2017
   dependsOn: 
   - deploy
   variables:
