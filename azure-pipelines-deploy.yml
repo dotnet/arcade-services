@@ -15,25 +15,25 @@ resources:
 stages:
 - template: eng\deploy.yml
   parameters:
-  ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
-    DeploymentEnvironment: Staging
-    DotNetStatusAppName: dotneteng-status-staging
-    DotNetStatusEndpoint: .NET Engineering Deployment Notification - Staging
-    MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
-    MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
-    PublishProfile: Int
-    ServiceFabricConnection: Maestro-Int
-    Subscription: NetHelixStaging
-    VariableGroup: MaestroInt KeyVault
-    StatusVariableGroup: DotNetStatus Staging
-  ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
-    DeploymentEnvironment: Production
-    DotNetStatusAppName: dotneteng-status
-    DotNetStatusEndpoint: .NET Engineering Deployment Notification - Production
-    MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
-    MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
-    PublishProfile: Prod
-    ServiceFabricConnection: Maestro-Prod
-    Subscription: NetHelix
-    VariableGroup: MaestroProd KeyVault
-    StatusVariableGroup: DotNetStatus Production
+    ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/master') }}:
+      DeploymentEnvironment: Staging
+      DotNetStatusAppName: dotneteng-status-staging
+      DotNetStatusEndpoint: .NET Engineering Deployment Notification - Staging
+      MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+      MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
+      PublishProfile: Int
+      ServiceFabricConnection: Maestro-Int
+      Subscription: NetHelixStaging
+      VariableGroup: MaestroInt KeyVault
+      StatusVariableGroup: DotNetStatus Staging
+    ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+      DeploymentEnvironment: Production
+      DotNetStatusAppName: dotneteng-status
+      DotNetStatusEndpoint: .NET Engineering Deployment Notification - Production
+      MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+      MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+      PublishProfile: Prod
+      ServiceFabricConnection: Maestro-Prod
+      Subscription: NetHelix
+      VariableGroup: MaestroProd KeyVault
+      StatusVariableGroup: DotNetStatus Production
