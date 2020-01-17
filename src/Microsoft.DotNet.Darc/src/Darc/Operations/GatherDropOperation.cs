@@ -526,12 +526,13 @@ namespace Microsoft.DotNet.Darc.Operations
 
             var filteredBuilds = FilterReleasedBuilds(builds);
 
-            if (graph.DependenciesMissingBuilds.Any())
+            var nodesWithNoContributingBuilds = graph.Nodes.Where(node => !node.ContributingBuilds.Any());
+            if (nodesWithNoContributingBuilds.Any())
             {
-                Console.WriteLine("Dependencies missing builds:");
-                foreach (DependencyDetail dependency in graph.DependenciesMissingBuilds)
+                Console.WriteLine("Dependency graph nodes missing builds:");
+                foreach (var node in nodesWithNoContributingBuilds)
                 {
-                    Console.WriteLine($"  {dependency.Name}@{dependency.Version} @ ({dependency.RepoUri}@{dependency.Commit})");
+                    Console.WriteLine($"  {node.Repository}@{node.Commit}");
                 }
                 if (!_options.ContinueOnError)
                 {
