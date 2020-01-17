@@ -1,4 +1,12 @@
 import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from "@angular/router";
+import { map, switchMap, tap } from 'rxjs/operators';
+
+import { FlowGraph, Channel} from 'src/maestro-client/models';
+import { Observable, of, timer, OperatorFunction } from 'rxjs';
+import { statefulSwitchMap, StatefulResult, statefulPipe } from 'src/stateful';
+import { ChannelService} from 'src/app/services/channel.service';
+import { MaestroService } from 'src/maestro-client/maestro';
 
 @Component({
   selector: 'mc-channel',
@@ -7,9 +15,37 @@ import { Component, OnInit } from '@angular/core';
 })
 export class ChannelComponent implements OnInit {
 
-  constructor() { }
+  constructor(private route: ActivatedRoute, private channelService: ChannelService, private maestroService: MaestroService) { }
+
+  public graph$!: Observable<StatefulResult<FlowGraph>>;
 
   ngOnInit() {
+    const params$ = this.route.paramMap.pipe(
+      map(params => {
+        const channelId = params.get("channelId");
+
+        if ( channelId == null ) {
+          throw new Error("channelId was null");
+        } 
+
+        return {channelId};
+      }),
+      tap(v => {
+        console.log("Params: ", v);
+      })
+    );
+    const channelId$ = params$.pipe(
+      switchMap(params => {
+        return of(+params.channelId);
+      })
+    )
+    this.graph$ = channelId$.pipe(
+      statefulPipe(
+        statefulSwitchMap((id) => {
+          return this.channelService.getFlowGraph(id);
+        })
+      )
+    )
   }
 
 }

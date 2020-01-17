@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Linq;
 
 namespace Microsoft.DotNet.Services.Utility
 {
@@ -17,5 +18,5 @@ namespace Microsoft.DotNet.Services.Utility
             }
             return branch;
         }
-}
+    }
 }

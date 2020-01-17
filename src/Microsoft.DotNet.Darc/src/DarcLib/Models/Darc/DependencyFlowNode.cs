@@ -14,6 +14,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             Repository = repository;
             Branch = branch;
+            Id = Guid.NewGuid().ToString();
             OutputChannels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             InputChannels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             OutgoingEdges = new List<DependencyFlowEdge>();
@@ -25,6 +26,7 @@ namespace Microsoft.DotNet.DarcLib
 
         public readonly string Repository;
         public readonly string Branch;
+        public readonly string Id;
 
         public HashSet<string> OutputChannels { get; set; }
         public HashSet<string> InputChannels { get; set; }

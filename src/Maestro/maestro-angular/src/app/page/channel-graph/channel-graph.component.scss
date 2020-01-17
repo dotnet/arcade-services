@@ -1,0 +1,21 @@
+text {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serf;
+    font-size: 10px;
+    font-weight: normal;
+    text-align: center;
+    text-anchor: middle;
+  }
+  
+  .node rect {
+    stroke: #333;
+    fill: #fff;
+    stroke-width: 1.5px;
+    font-size: 10px;
+    font-weight: normal;
+  }
+  
+  .edgePath path.path {
+    stroke: #333;
+    fill: none;
+    stroke-width: 1.5px;
+  }

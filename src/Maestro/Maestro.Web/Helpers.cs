@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.Kusto;
 
 namespace Maestro.Web
 {
@@ -98,6 +100,61 @@ namespace Maestro.Web
                 return new EmptyResult();
             }
 
+        }
+
+        public static Dictionary<string, KustoQuery> CreateBuildTimesQueries(string repository, string branch, int days)
+        {
+            var parameters = new List<KustoParameter> {
+                new KustoParameter("_Repository", KustoDataTypes.String,  repository.Split("/").Last()),
+                new KustoParameter("_SourceBranch", KustoDataTypes.String, branch),
+                new KustoParameter("_Days", KustoDataTypes.TimeSpan, $"{days}d")
+            };
+
+            string publicProject = "public";
+
+            // Builds in AzDo are only found in the internal project
+            if (repository.Contains("dev.azure.com"))
+            {
+                publicProject = "internal";
+            }
+
+            // We only care about builds that complete successfully or partially successfully 
+            // from the given repository. We summarize duration of the builds over the last 7 days.
+            // There are multiple different definitions that run in parallel, so we summarize
+            // on the definition id and ultimately choose the definition that took the longest.
+            string commonQueryText = @"| where Result != 'failed' and Result != 'canceled' 
+                | where FinishTime > ago(_Days) 
+                | extend duration = FinishTime - StartTime 
+                | summarize average_duration = avg(duration) by DefinitionId
+                | summarize max(average_duration)";
+
+            // We only want the pull request time from the public ci. We exclude on target branch,
+            // as all PRs come in as refs/heads/#/merge rather than what branch they are trying to
+            // apply to.
+            string publicQueryText = $@"TimelineBuilds 
+                | project Repository, SourceBranch, TargetBranch, DefinitionId, StartTime, FinishTime, Result, Project, Reason
+                | where Project == '{publicProject}'
+                | where Repository endswith _Repository
+                | where Reason == 'pullRequest' 
+                | where TargetBranch == _SourceBranch
+                {commonQueryText}";
+
+            // For the official build times, we want the builds that were generated as a CI run 
+            // (either batchedCI or individualCI) for a specific branch--i.e. we want the builds
+            // that are part of generating the product.
+            string internalQueryText = $@"TimelineBuilds 
+                | project Repository, SourceBranch, DefinitionId, StartTime, FinishTime, Result, Project, Reason
+                | where Project == 'internal' 
+                | where Repository endswith _Repository
+                | where Reason == 'batchedCI' or Reason == 'individualCI'
+                | where SourceBranch == _SourceBranch
+                {commonQueryText}";
+
+            Dictionary<string, KustoQuery> queries = new Dictionary<string, KustoQuery>();
+            queries["internal"] = new KustoQuery(internalQueryText, parameters);
+            queries["public"] = new KustoQuery(publicQueryText, parameters);
+
+            return queries;
         }
     }
 }

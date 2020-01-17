@@ -55,48 +55,10 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                 return NotFound();
             }
 
-            var parameters = new List<KustoParameter> {
-                new KustoParameter("_Repository", KustoDataTypes.String,  defaultChannel.Repository.Split("/").Last()),
-                new KustoParameter("_SourceBranch", KustoDataTypes.String, defaultChannel.Branch),
-                new KustoParameter("_Days", KustoDataTypes.TimeSpan, $"{days}d")
-            };
+            Dictionary<string, KustoQuery> queries = Helpers.CreateBuildTimesQueries(defaultChannel.Repository, defaultChannel.Branch, days);
 
-            // We only care about builds that complete successfully or partially successfully 
-            // from the given repository. We summarize duration of the builds over the last 7 days.
-            // There are multiple different definitions that run in parallel, so we summarize
-            // on the definition id and ultimately choose the definition that took the longest.
-            string commonQueryText = @"| where Repository endswith _Repository
-                | where Result != 'failed' and Result != 'canceled' 
-                | where FinishTime > ago(_Days) 
-                | extend duration = FinishTime - StartTime 
-                | summarize average_duration = avg(duration) by DefinitionId
-                | summarize max(average_duration)";
-
-            // We only want the pull request time from the public ci. We exclude on target branch,
-            // as all PRs come in as refs/heads/#/merge rather than what branch they are trying to
-            // apply to.
-            string publicQueryText = $@"TimelineBuilds 
-                | project Repository, SourceBranch, TargetBranch, DefinitionId, StartTime, FinishTime, Result, Project, Reason
-                | where Project == 'public'
-                | where Reason == 'pullRequest' 
-                | where TargetBranch == _SourceBranch
-                {commonQueryText}";
-
-            // For the official build times, we want the builds that were generated as a CI run 
-            // (either batchedCI or individualCI) for a specific branch--i.e. we want the builds
-            // that are part of generating the product.
-            string internalQueryText = $@"TimelineBuilds 
-                | project Repository, SourceBranch, DefinitionId, StartTime, FinishTime, Result, Project, Reason
-                | where Project == 'internal' 
-                | where Reason == 'batchedCI' or Reason == 'individualCI'
-                | where SourceBranch == _SourceBranch
-                {commonQueryText}";
-
-            KustoQuery internalQuery = new KustoQuery(internalQueryText, parameters);
-            KustoQuery publicQuery = new KustoQuery(publicQueryText, parameters);
-
-            var results = await Task.WhenAll<TimeSpan>(_kustoClientProvider.GetSingleValueFromQueryAsync<TimeSpan>(internalQuery), 
-                _kustoClientProvider.GetSingleValueFromQueryAsync<TimeSpan>(publicQuery));
+            var results = await Task.WhenAll<TimeSpan>(_kustoClientProvider.GetSingleValueFromQueryAsync<TimeSpan>(queries["internal"]), 
+                _kustoClientProvider.GetSingleValueFromQueryAsync<TimeSpan>(queries["public"]));
 
             double officialTime = results[0].TotalMinutes;
             double prTime = results[1].TotalMinutes;

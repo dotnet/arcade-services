@@ -1,8 +1,5 @@
 using System;
-<<<<<<< HEAD
 using System.Collections.Generic;
-=======
->>>>>>> Add long path calculations to darc
 using System.Collections.Immutable;
 using System.IO;
 using System.Text;
@@ -10,12 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
-<<<<<<< HEAD
-
-
-=======
 using Microsoft.DotNet.Maestro.Client.Models;
->>>>>>> Add long path calculations to darc
 
 namespace Microsoft.DotNet.Maestro.Client
 {
@@ -48,10 +40,6 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-<<<<<<< HEAD
-
-=======
->>>>>>> Add long path calculations to darc
             if (days == default(int))
             {
                 throw new ArgumentNullException(nameof(days));
@@ -87,11 +75,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 {
                     if (_res.Status < 200 || _res.Status >= 300)
                     {
-<<<<<<< HEAD
-                        await OnGetBuildTimesFailed(_req, _res).ConfigureAwait(false);
-=======
                         return new Models.BuildTime(id, 0, 0);
->>>>>>> Add long path calculations to darc
                     }
 
                     if (_res.ContentStream == null)
@@ -120,19 +104,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-<<<<<<< HEAD
-            var ex = new RestApiException<Models.ApiError>(
-                req,
-                res,
-                content,
-                Client.Deserialize<Models.ApiError>(content)
-=======
             var ex = new RestApiException<ApiError>(
                 req,
                 res,
                 content,
                 Client.Deserialize<ApiError>(content)
->>>>>>> Add long path calculations to darc
                 );
             HandleFailedGetBuildTimesRequest(ex);
             HandleFailedRequest(ex);

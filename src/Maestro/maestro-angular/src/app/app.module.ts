@@ -54,7 +54,8 @@ import { GetRepositoryNamePipe } from './pipes/get-repository-name.pipe';
 import { AssetTableComponent } from './page/asset-table/asset-table.component';
 import { ApplicationInsightsService } from './services/application-insights.service';
 import { RouterEventHandlerService } from './services/router-event-handler.service';
-import { SubscriptionsTableComponent } from './page/subscriptions-table/subscriptions-table.component'
+import { SubscriptionsTableComponent } from './page/subscriptions-table/subscriptions-table.component';
+import { ChannelGraphComponent } from './page/channel-graph/channel-graph.component'
 
 @NgModule({
   declarations: [
@@ -76,6 +77,7 @@ import { SubscriptionsTableComponent } from './page/subscriptions-table/subscrip
     AssetTableComponent,
     SubscriptionsTableComponent,
     ChannelComponent,
+    ChannelGraphComponent,
   ],
   imports: [
     BrowserModule,

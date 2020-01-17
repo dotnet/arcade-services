@@ -6,6 +6,7 @@ import { parseISO } from "date-fns";
 
 import * as models from "./models";
 import { Helper } from "./helper";
+import { query } from '@angular/core/src/render3';
 
 type RequestOptions = {
   body?: any;
@@ -1143,15 +1144,15 @@ export class ChannelsApiService implements IChannelsApi {
         {
             _path = _path.slice(0, -1);
         }
-        _path = _path + "/api/channels/graph";
+        _path = _path + "/api/channels/{id}/graph";
+        _path = _path.replace("{id}", id + "");
 
         let queryParameters = new HttpParams();
         let headerParameters = new HttpHeaders(this.options.defaultHeaders);
 
-        if (id)
-        {
-            queryParameters = queryParameters.set("channelId", id + "");
-        }
+        queryParameters = queryParameters.set("includeDisabledSubscriptions", "false");
+        queryParameters = queryParameters.set("includeBuildTimes", "true");
+        queryParameters = queryParameters.set("days", "7");
 
         queryParameters = queryParameters.set("api-version", apiVersion);
 

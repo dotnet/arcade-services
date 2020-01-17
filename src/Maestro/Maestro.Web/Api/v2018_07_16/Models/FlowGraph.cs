@@ -1,23 +1,24 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
+using Microsoft.DotNet.DarcLib;
 
 namespace Maestro.Web.Api.v2018_07_16.Models
 {
     public class FlowGraph
     {
-        public static FlowGraph Create(IEnumerable<FlowRef> flowRefs, List<FlowEdge> flowEdges)
+        public static FlowGraph Create(DependencyFlowGraph other)
         {
-            return new FlowGraph(flowRefs.ToDictionary(f => f.DefaultChannelId, f => f), flowEdges);
+            return new FlowGraph(other.Nodes.Select(n => FlowRef.Create(n)).ToList(), other.Edges.Select(e => FlowEdge.Create(e)).ToList());
         }
-        public FlowGraph(IDictionary<int, FlowRef> flowRefs, List<FlowEdge> flowEdges)
+        public FlowGraph(List<FlowRef> flowRefs, List<FlowEdge> flowEdges)
         {
             FlowRefs = flowRefs;
             FlowEdges = flowEdges;
         }
 
         [Required]
-        public IDictionary<int, FlowRef> FlowRefs { get; }
+        public List<FlowRef> FlowRefs { get; }
         [Required]
         public List<FlowEdge> FlowEdges { get; }
     }
