@@ -140,7 +140,7 @@ namespace Microsoft.DotNet.DarcLib
             // Add a start node to the graph (a node that connects all nodes that have no outgoing edges
             // We will also reverse the graph by flipping the interpretation of incoming and outgoing.
             DependencyFlowNode startNode = new DependencyFlowNode("start", "start");
-            foreach (var node in Nodes)
+            foreach (DependencyFlowNode node in Nodes)
             {
                 if (!node.OutgoingEdges.Any())
                 {
@@ -153,7 +153,7 @@ namespace Microsoft.DotNet.DarcLib
 
             // Dominator set for each node starts with the full set of nodes.
             Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> dominators = new Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>>();
-            foreach (var node in Nodes)
+            foreach (DependencyFlowNode node in Nodes)
             {
                 dominators.Add(node, new HashSet<DependencyFlowNode>(Nodes));
             }
@@ -163,17 +163,17 @@ namespace Microsoft.DotNet.DarcLib
 
             while (workList.Count != 0)
             {
-                var currentNode = workList.Dequeue();
+                DependencyFlowNode currentNode = workList.Dequeue();
 
                 // Compute a new dominator set for this node. Remeber we are 
                 // flipping the interepretation of incoming and outgoing
                 HashSet<DependencyFlowNode> newDom = null;
 
-                var predecessors = currentNode.OutgoingEdges.Select(e => e.To);
-                var successors = currentNode.IncomingEdges.Select(e => e.From);
+                IEnumerable<DependencyFlowNode> predecessors = currentNode.OutgoingEdges.Select(e => e.To);
+                IEnumerable<DependencyFlowNode> successors = currentNode.IncomingEdges.Select(e => e.From);
 
                 // Compute the intersection of the dominators for the predecessors
-                foreach (var predNode in predecessors)
+                foreach (DependencyFlowNode predNode in predecessors)
                 {
                     if (newDom == null)
                     {
@@ -199,7 +199,7 @@ namespace Microsoft.DotNet.DarcLib
                     dominators[currentNode] = newDom;
 
                     // Queue all of the successors
-                    foreach (var succ in successors)
+                    foreach (DependencyFlowNode succ in successors)
                     {
                         workList.Enqueue(succ);
                     }
@@ -208,7 +208,7 @@ namespace Microsoft.DotNet.DarcLib
 
             // Determine backedges
             List<DependencyFlowEdge> toRemove = new List<DependencyFlowEdge>();
-            foreach (var edge in Edges)
+            foreach (DependencyFlowEdge edge in Edges)
             {
                 if (dominators[edge.To].Contains(edge.From))
                 {
@@ -217,7 +217,7 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             // Remove the start node we created and links to it
-            foreach (var edge in startNode.IncomingEdges)
+            foreach (DependencyFlowEdge edge in startNode.IncomingEdges)
             {
                 RemoveEdge(edge);
             }
@@ -239,7 +239,7 @@ namespace Microsoft.DotNet.DarcLib
 
             Queue<DependencyFlowNode> nodesToVisit = new Queue<DependencyFlowNode>();
 
-            foreach (var root in roots)
+            foreach (DependencyFlowNode root in roots)
             {
                 nodesToVisit.Enqueue(root);
 
@@ -255,7 +255,7 @@ namespace Microsoft.DotNet.DarcLib
                         visitedNodes.Add(node, new List<DependencyFlowNode>(){node});
                     }
 
-                    foreach (var edge in node.IncomingEdges)
+                    foreach (DependencyFlowEdge edge in node.IncomingEdges)
                     {
                         DependencyFlowNode child = edge.From;
 
@@ -291,7 +291,7 @@ namespace Microsoft.DotNet.DarcLib
             MarkLongestPath(startNode);
         }
 
-        public void MarkLongestPath(DependencyFlowNode node)
+        private void MarkLongestPath(DependencyFlowNode node)
         {
             // The edges we are interested in are those that haven't been marked as on the longest build path 
             // and aren't back edges, both of which indicate a cycle
@@ -319,8 +319,6 @@ namespace Microsoft.DotNet.DarcLib
                 StringComparer.OrdinalIgnoreCase);
             List<DependencyFlowEdge> edges = new List<DependencyFlowEdge>();
 
-            var rand = new Random();
-
             // First create all the channel nodes. There may be disconnected
             // nodes in the graph, so we must process all channels and all subscriptions
             foreach (DefaultChannel channel in defaultChannels)
@@ -331,8 +329,8 @@ namespace Microsoft.DotNet.DarcLib
                 if (channel.Id != default(int))
                 {
                     BuildTime buildTime = await barOnlyRemote.GetBuildTimeAsync(channel.Id, days);
-                    flowNode.OfficialBuildTime = buildTime.OfficialBuildTime;
-                    flowNode.PrBuildTime = buildTime.PrBuildTime;
+                    flowNode.OfficialBuildTime = 10; // buildTime.OfficialBuildTime;
+                    flowNode.PrBuildTime = 10; //buildTime.PrBuildTime;
                 }
                 else
                 {

@@ -136,7 +136,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <returns></returns>
         private string GetEdgeStyle(DependencyFlowEdge edge)
         {
-            string color = edge.OnLongestBuildPath ? "color=red" : "";
+            string color = edge.OnLongestBuildPath ? "color=\"black:invis:black\"" : "";
             switch (edge.Subscription.Policy.UpdateFrequency)
             {
                 case UpdateFrequency.EveryBuild:
@@ -187,13 +187,13 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     StringBuilder nodeBuilder = new StringBuilder();
 
-                    string color = node.OnLongestBuildPath ? "color=red style=bold" : "";
+                    string style = node.OnLongestBuildPath ? "style=\"diagonals,bold\"" : "";
 
                     // First add the node name
                     nodeBuilder.Append($"    {UxHelpers.CalculateGraphVizNodeName(node)}");
 
                     // Then add the label.  label looks like [label="<info here>"]
-                    nodeBuilder.Append($"[{color}\nlabel=\"");
+                    nodeBuilder.Append($"[{style}\nlabel=\"");
 
                     // Append friendly repo name
                     nodeBuilder.Append(UxHelpers.GetSimpleRepoName(node.Repository));
@@ -270,14 +270,17 @@ namespace Microsoft.DotNet.Darc.Operations
                 await writer.WriteLineAsync("        d[style = invis];");
                 await writer.WriteLineAsync("        e[style = invis];");
                 await writer.WriteLineAsync("        f[style = invis];");
+                await writer.WriteLineAsync("        g[style = \"diagonals,bold\"];");
+                await writer.WriteLineAsync("        h[style = \"diagonals,bold\"];");
                 await writer.WriteLineAsync("        c->d[label = \"Updated Every Build\", style = bold];");
                 await writer.WriteLineAsync("        a->b[label = \"Updated Every Day\", style = dashed];");
                 await writer.WriteLineAsync("        e->f[label = \"Disabled/Updated On-demand\", style = dotted];");
+                await writer.WriteLineAsync("        g->h[label = \"Longest Build Path\", color=\"black:invis:black\"];");
                 await writer.WriteLineAsync("    }");
                 await writer.WriteLineAsync("    subgraph cluster2{");
                 await writer.WriteLineAsync("        rankdir=BT;");
                 await writer.WriteLineAsync("        style=invis;");
-                await writer.WriteLineAsync("        note[shape=plaintext label=\"* Longest build path marked in red\nBest Case: Time through the graph assuming no dependency flow\nWorst Case: Time through the graph with dependency flow (PRs)\"];");
+                await writer.WriteLineAsync("        note[shape=plaintext label=\"Best Case: Time through the graph assuming no dependency flow\nWorst Case: Time through the graph with dependency flow (PRs)\"];");
                 await writer.WriteLineAsync("    }");
                 await writer.WriteLineAsync("    d->note[lhead=cluster2, ltail=cluster1, style=invis];");
                 
