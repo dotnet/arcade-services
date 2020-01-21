@@ -948,10 +948,22 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="buildId">Build id</param>
         /// <param name="channelId">Channel id</param>
         /// <returns>Async task</returns>
-        public Task AssignBuildToChannel(int buildId, int channelId)
+        public Task AssignBuildToChannelAsync(int buildId, int channelId)
         {
             CheckForValidBarClient();
-            return _barClient.AssignBuildToChannel(buildId, channelId);
+            return _barClient.AssignBuildToChannelAsync(buildId, channelId);
+        }
+
+        /// <summary>
+        ///     Remove a particular build from a channel
+        /// </summary>
+        /// <param name="buildId">Build id</param>
+        /// <param name="channelId">Channel id</param>
+        /// <returns>Async task</returns>
+        public Task DeleteBuildFromChannelAsync(int buildId, int channelId)
+        {
+            CheckForValidBarClient();
+            return _barClient.DeleteBuildFromChannelAsync(buildId, channelId);
         }
 
         /// <summary>
