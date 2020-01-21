@@ -103,6 +103,8 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         {
             notificationChannel.Remove("id");
             notificationChannel.Remove("uid");
+            notificationChannel.Remove("created");
+            notificationChannel.Remove("updated");
             return notificationChannel;
         }
     }

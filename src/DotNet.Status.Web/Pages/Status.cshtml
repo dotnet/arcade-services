@@ -14,6 +14,9 @@
         case "403":
             @Html.Raw("{\"message\":\"Unauthorized\"}");
             break;
+        case "401":
+            @Html.Raw("{\"message\":\"Authorization Required\"}");
+            break;
         default:
             @Html.Raw("{\"message\":\"Unknown error\"}");
             break;
@@ -36,6 +39,9 @@ else
             case "403":
                 <title>Unauthorized</title>
                 break;
+            case "401":
+                <title>Authorization Required</title>
+                break;
             default:
                 <title>Error</title>
                 break;
@@ -43,13 +49,16 @@ else
         }
     </head>
     <body>
-        @switch (@Request.Query["code"].ToString())
+        @switch (Request.Query["code"].ToString())
         {
             case "404":
                 <h1>404 Not found</h1>
                 break;
             case "403":
                 <h1>403 Unauthorized</h1>
+                break;
+            case "401":
+                <h1>401 Authorization Required</h1>
                 break;
             default:
                 <h1>Error</h1>

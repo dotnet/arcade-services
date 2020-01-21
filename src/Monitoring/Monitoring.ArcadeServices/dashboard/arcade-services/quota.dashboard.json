@@ -134,7 +134,7 @@
         "noDataState": "keep_state",
         "notifications": [
           {
-            "uid": "Tk55B9tWz"
+            "uid": "statusHook"
           }
         ]
       },
@@ -306,7 +306,7 @@
         "noDataState": "keep_state",
         "notifications": [
           {
-            "uid": "Tk55B9tWz"
+            "uid": "statusHook"
           }
         ]
       },
@@ -472,7 +472,7 @@
         "noDataState": "keep_state",
         "notifications": [
           {
-            "uid": "Tk55B9tWz"
+            "uid": "statusHook"
           }
         ]
       },

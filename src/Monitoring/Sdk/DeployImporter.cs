@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Microsoft.Build.Framework;
@@ -68,11 +69,12 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 JObject dashboard = await GrafanaClient.GetDashboardAsync(dashboardUid).ConfigureAwait(false);
 
                 // Cache dashboard data needed for post
+
+                string targetUid = dashboard.Value<JObject>("dashboard").Value<string>("uid");
+
                 JObject slimmedDashboard = GrafanaSerialization.SanitizeDashboard(dashboard);
 
                 UpdateNotificationIds(slimmedDashboard, usedNotificationIds);
-
-                string targetUid = slimmedDashboard.Value<string>("uid");
 
                 JArray tags = slimmedDashboard.Value<JArray>("tags");
                 JToken uidTag = tags.FirstOrDefault(t => t.Value<string>().StartsWith(BaseUidTagPrefix));

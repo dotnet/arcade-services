@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -85,6 +86,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
                 Log.LogMessage(MessageImportance.Normal, "Posting datasource {0}...", name);
 
+                Debugger.Launch();
                 await ReplaceVaultAsync(data);
 
                 JObject existing = await GrafanaClient.GetDataSourceAsync(name);

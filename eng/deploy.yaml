@@ -22,8 +22,6 @@ stages:
   displayName: Pre-Deployment
   pool:
     name: Hosted VS2017
-  variables:
-  - group: ${{ parameters.StatusVariableGroup }}
   jobs:
   - job: notifyStartDeployment
     displayName: Notify deployment start
@@ -35,10 +33,6 @@ stages:
       inputs:
         serviceConnection: ${{ parameters.DotNetStatusEndpoint }}
         method: POST
-        headers: |
-          {
-            "Authorization": "Bearer $(dotnet-build-bot-dotnet-eng-status-token)",
-          }
         urlSuffix: /arcade-services/$(Build.BuildNumber)/start
 
 - stage: deploy
@@ -165,6 +159,14 @@ stages:
   condition: always()
   variables:
   - group: ${{ parameters.StatusVariableGroup }}
+  - group: ${{ parameters.VariableGroup }}
+  - group: ${{ parameters.GrafanaVariableGroup }}
+  - name: DeploymentEnvironment
+    value: ${{ parameters.DeploymentEnvironment }}
+  - name: GrafanaHost
+    value: ${{ parameters.GrafanaHost }}
+  - name: GrafanaKeyVault
+    value: ${{ parameters.GrafanaKeyVault }}
   jobs:
   - job: notifyEndDeployment
     displayName: Notify deployment end
@@ -176,11 +178,36 @@ stages:
       inputs:
         serviceConnection: .NET Engineering Deployment Notification - Staging
         method: POST
-        headers: |
-          {
-            "Authorization": "Bearer $(dotnet-build-bot-dotnet-eng-status-token)",
-          }
         urlSuffix: /arcade-services/$(Build.BuildNumber)/end
+  - job: updateMetrics
+    displayName: Update Grafana Metrics
+    dependsOn:
+    steps:
+    - task: UseDotNet@2
+      displayName: Use .NET 3.0.x SDK
+      inputs:
+        packageType: sdk
+        version: 3.0.x
+    # This step isn't necessary for most repositories (they would restore it from nuget, we built it in this repo)
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: custom
+        custom: publish
+        projects: $(Build.SourcesDirectory)\src\Monitoring\Sdk\Microsoft.DotNet.Monitoring.Sdk.csproj
+        arguments: -f netcoreapp2.1
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: custom
+        custom: publish
+        projects: $(Build.SourcesDirectory)\src\Monitoring\Monitoring.ArcadeServices\Monitoring.ArcadeServices.proj
+        arguments: >-
+          -t:PublishGrafana
+          "-p:GrafanaAccessToken=$(granfana-admin-api-key)"
+          -p:GrafanaHost=$(GrafanaHost)
+          -p:GrafanaKeyVaultName=$(GrafanaKeyVault)
+          -p:GrafanaKeyVaultAppId=2bdfceef-194a-4775-99d9-b5575c77bc6b
+          -p:GrafanaKeyVaultAppSecret=$(key-vault-app-secret)
+          -p:GrafanaEnvironment=$(DeploymentEnvironment)
 
 - stage: validateDeployment
   displayName: Validate deployment

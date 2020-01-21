@@ -218,6 +218,9 @@ stages:
               PathtoPublish: $(Build.ArtifactStagingDirectory)\tests\scenarios
               ArtifactName: ScenarioTests
               ArtifactType: Container
+          
+          - task: CopyFiles@2
+            displayName: Pre
 
           # Reenable tagging when stable package versions can be generated.
           # https://github.com/dotnet/arcade-services/issues/59

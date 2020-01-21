@@ -16,7 +16,7 @@ namespace DotNet.Status.Web.Controllers
             string state,
             string imageUrl,
             string message,
-            ImmutableArray<GrafanaNotificationMatch> evalMatches,
+            IImmutableList<GrafanaNotificationMatch> evalMatches,
             ImmutableDictionary<string, string> tags)
         {
             Title = title;
@@ -37,7 +37,7 @@ namespace DotNet.Status.Web.Controllers
         public string State { get; }
         public string ImageUrl { get; }
         public string Message { get; }
-        public ImmutableArray<GrafanaNotificationMatch> EvalMatches { get; }
+        public IImmutableList<GrafanaNotificationMatch> EvalMatches { get; }
         public ImmutableDictionary<string, string> Tags { get; }
     }
 }

@@ -1,0 +1,16 @@
+{
+  "name": ".NET Status Alert",
+  "type": "webhook",
+  "isDefault": false,
+  "sendReminder": false,
+  "disableResolveMessage": false,
+  "frequency": "",
+  "settings": {
+    "autoResolve": true,
+    "httpMethod": "POST",
+    "password": "[vault(dotnet-build-bot-dotnet-eng-status-token)]",
+    "uploadImage": true,
+    "url": "https://dotneteng-status-staging.azurewebsites.net/api/alert",
+    "username": "ignored"
+  }
+}
