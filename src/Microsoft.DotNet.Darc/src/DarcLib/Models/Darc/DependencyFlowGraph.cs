@@ -329,8 +329,8 @@ namespace Microsoft.DotNet.DarcLib
                 if (channel.Id != default(int))
                 {
                     BuildTime buildTime = await barOnlyRemote.GetBuildTimeAsync(channel.Id, days);
-                    flowNode.OfficialBuildTime = 10; // buildTime.OfficialBuildTime;
-                    flowNode.PrBuildTime = 10; //buildTime.PrBuildTime;
+                    flowNode.OfficialBuildTime = buildTime.OfficialBuildTime;
+                    flowNode.PrBuildTime = buildTime.PrBuildTime;
                 }
                 else
                 {

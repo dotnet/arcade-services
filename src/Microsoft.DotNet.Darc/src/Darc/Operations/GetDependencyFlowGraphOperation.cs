@@ -136,7 +136,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <returns></returns>
         private string GetEdgeStyle(DependencyFlowEdge edge)
         {
-            string color = edge.OnLongestBuildPath ? "color=\"black:invis:black\"" : "";
+            string color = edge.OnLongestBuildPath ? "color=\"red:invis:red\"" : "";
             switch (edge.Subscription.Policy.UpdateFrequency)
             {
                 case UpdateFrequency.EveryBuild:
@@ -187,7 +187,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     StringBuilder nodeBuilder = new StringBuilder();
 
-                    string style = node.OnLongestBuildPath ? "style=\"diagonals,bold\"" : "";
+                    string style = node.OnLongestBuildPath ? "style=\"diagonals,bold\" color=red" : "";
 
                     // First add the node name
                     nodeBuilder.Append($"    {UxHelpers.CalculateGraphVizNodeName(node)}");
@@ -270,12 +270,12 @@ namespace Microsoft.DotNet.Darc.Operations
                 await writer.WriteLineAsync("        d[style = invis];");
                 await writer.WriteLineAsync("        e[style = invis];");
                 await writer.WriteLineAsync("        f[style = invis];");
-                await writer.WriteLineAsync("        g[style = \"diagonals,bold\"];");
-                await writer.WriteLineAsync("        h[style = \"diagonals,bold\"];");
+                await writer.WriteLineAsync("        g[style = \"diagonals,bold\" color=red];");
+                await writer.WriteLineAsync("        h[style = \"diagonals,bold\" color=red];");
                 await writer.WriteLineAsync("        c->d[label = \"Updated Every Build\", style = bold];");
                 await writer.WriteLineAsync("        a->b[label = \"Updated Every Day\", style = dashed];");
                 await writer.WriteLineAsync("        e->f[label = \"Disabled/Updated On-demand\", style = dotted];");
-                await writer.WriteLineAsync("        g->h[label = \"Longest Build Path\", color=\"black:invis:black\"];");
+                await writer.WriteLineAsync("        g->h[label = \"Longest Build Path\", color=\"red:invis:red\"];");
                 await writer.WriteLineAsync("    }");
                 await writer.WriteLineAsync("    subgraph cluster2{");
                 await writer.WriteLineAsync("        rankdir=BT;");
