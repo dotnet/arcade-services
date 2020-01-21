@@ -52,7 +52,11 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         public readonly string Commit;
 
+        /// <summary>
+        /// Builds that potentially contributed the assets in this node in the graph.
+        /// </summary>
         public HashSet<Build> ContributingBuilds { get; set; }
+
         /// <summary>
         ///     Dependencies of the node at RepoUri and Commit.
         /// </summary>
