@@ -86,10 +86,8 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
                 Log.LogMessage(MessageImportance.Normal, "Posting datasource {0}...", name);
 
-                Debugger.Launch();
                 await ReplaceVaultAsync(data);
 
-                JObject existing = await GrafanaClient.GetDataSourceAsync(name);
                 await GrafanaClient.CreateDatasourceAsync(data).ConfigureAwait(false);
             }
         }
