@@ -441,8 +441,12 @@ namespace Microsoft.DotNet.DarcLib
                 logger.LogInformation($"Starting build of graph from ({repoUri}@{commit})");
             }
 
-            // Look up the dependency and get the creating build.
-            IRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(logger);
+            IRemote barOnlyRemote = null;
+            if (remote)
+            {
+                // Look up the dependency and get the creating build.
+                barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(logger);
+            }
 
             List<LinkedList<DependencyGraphNode>> cycles = new List<LinkedList<DependencyGraphNode>>();
             Dictionary<string, Task<IEnumerable<Build>>> buildLookupTasks = null;
@@ -651,8 +655,7 @@ namespace Microsoft.DotNet.DarcLib
                                                                               IEnumerable<DependencyGraphNode> allNodes,
                                                                               ILogger logger)
         {
-            AssetComparer assetEqualityComparer = new AssetComparer();
-            logger.LogInformation($"Computing contributing builds");
+            logger.LogInformation("Computing contributing builds");
 
             List<Build> allContributingBuilds = new List<Build>();
 
@@ -675,14 +678,15 @@ namespace Microsoft.DotNet.DarcLib
                 }
             }
 
-            logger.LogInformation($"Done computing contributing builds");
+            logger.LogInformation("Done computing contributing builds");
 
             return allContributingBuilds;
         }
         
         /// <summary>
         /// Determines whether a build contributes to a given node by looking at the parents'
-        /// input dependencies. If there are no parents, then we assume that the build could contribute.
+        /// input dependencies. If there are no parents, then we assume that the build could contribute. This
+        /// would happen for the root node.
         /// </summary>
         /// <param name="node">Node</param>
         /// <param name="potentialContributingBuild">Potentially contributing build</param>
