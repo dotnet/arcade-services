@@ -10,6 +10,8 @@ using System.Linq;
 using EntityFrameworkCore.Triggers;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 
 namespace Maestro.Data.Models
 {
@@ -19,6 +21,54 @@ namespace Maestro.Data.Models
         private string _gitHubRepository;
         private string _azureDevOpsBranch;
         private string _githubBranch;
+
+        static Build()
+        {
+            var builder = new ConfigurationBuilder();
+            IConfigurationRefresher configRefresher = null;
+            IConfiguration dynamicConfigs = null;
+
+            builder.AddAzureAppConfiguration(options =>
+            {
+                options.Connect(Environment.GetEnvironmentVariable("AppConfigurationConnectionString"))
+                    .ConfigureRefresh(refresh =>
+                    {
+                        refresh.Register("AutoBuildPromotion", "Maestro")
+                            .SetCacheExpiration(TimeSpan.FromSeconds(1));
+                    }).UseFeatureFlags();
+
+                configRefresher = options.GetRefresher();
+            });
+
+            dynamicConfigs = builder.Build();
+
+            Triggers<Build>.Inserted += entry =>
+            {
+                configRefresher.Refresh().GetAwaiter().GetResult();
+
+                bool.TryParse(dynamicConfigs["AutoBuildPromotion"], out var autoBuildPromotion);
+
+                if (autoBuildPromotion)
+                {
+                    Build build = entry.Entity;
+                    var context = (BuildAssetRegistryContext)entry.Context;
+
+                    context.BuildChannels.AddRange((
+                        from dc in context.DefaultChannels
+                        where (dc.Enabled)
+                        where (dc.Repository == build.GitHubRepository || dc.Repository == build.AzureDevOpsRepository)
+                        where (dc.Branch == build.GitHubBranch || dc.Branch == build.AzureDevOpsBranch)
+                        select new BuildChannel
+                        {
+                            Channel = dc.Channel,
+                            Build = build,
+                            DateTimeAdded = DateTimeOffset.UtcNow
+                        }).Distinct());
+
+                    context.SaveChangesWithTriggers(b => context.SaveChanges(b));
+                }
+            };
+        }
 
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
