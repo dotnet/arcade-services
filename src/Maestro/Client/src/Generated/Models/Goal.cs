@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public int DefinitionId { get; set; }
 
         [JsonProperty("channel")]
-        public Channel Channel { get; set; }
+        public Models.Channel Channel { get; set; }
 
         [JsonProperty("minutes")]
         public int Minutes { get; set; }

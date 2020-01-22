@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Text;
@@ -6,13 +7,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
-using Microsoft.DotNet.Maestro.Client.Models;
+
+
 
 namespace Microsoft.DotNet.Maestro.Client
 {
     public partial interface ISubscriptions
     {
-        Task<IImmutableList<Subscription>> ListSubscriptionsAsync(
+        Task<IImmutableList<Models.Subscription>> ListSubscriptionsAsync(
             int? channelId = default,
             bool? enabled = default,
             string sourceRepository = default,
@@ -20,28 +22,28 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
-        Task<Subscription> CreateAsync(
-            SubscriptionData body,
+        Task<Models.Subscription> CreateAsync(
+            Models.SubscriptionData body,
             CancellationToken cancellationToken = default
         );
 
-        Task<Subscription> GetSubscriptionAsync(
+        Task<Models.Subscription> GetSubscriptionAsync(
             Guid id,
             CancellationToken cancellationToken = default
         );
 
-        Task<Subscription> DeleteSubscriptionAsync(
+        Task<Models.Subscription> DeleteSubscriptionAsync(
             Guid id,
             CancellationToken cancellationToken = default
         );
 
-        Task<Subscription> UpdateSubscriptionAsync(
+        Task<Models.Subscription> UpdateSubscriptionAsync(
             Guid id,
-            SubscriptionUpdate body = default,
+            Models.SubscriptionUpdate body = default,
             CancellationToken cancellationToken = default
         );
 
-        Task<Subscription> TriggerSubscriptionAsync(
+        Task<Models.Subscription> TriggerSubscriptionAsync(
             Guid id,
             CancellationToken cancellationToken = default
         );
@@ -50,7 +52,12 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
-        Task<PagedResponse<SubscriptionHistoryItem>> GetSubscriptionHistoryAsync(
+        AsyncPageable<Models.SubscriptionHistoryItem> GetSubscriptionHistoryAsync(
+            Guid id,
+            CancellationToken cancellationToken = default
+        );
+
+        Task<Page<Models.SubscriptionHistoryItem>> GetSubscriptionHistoryPageAsync(
             Guid id,
             int? page = default,
             int? perPage = default,
@@ -78,7 +85,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedListSubscriptionsRequest(RestApiException ex);
 
-        public async Task<IImmutableList<Subscription>> ListSubscriptionsAsync(
+        public async Task<IImmutableList<Models.Subscription>> ListSubscriptionsAsync(
             int? channelId = default,
             bool? enabled = default,
             string sourceRepository = default,
@@ -86,6 +93,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
+
             const string apiVersion = "2019-01-16";
 
             var _baseUri = Client.Options.BaseUri;
@@ -134,7 +142,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Subscription>>(_content);
+                        var _body = Client.Deserialize<IImmutableList<Models.Subscription>>(_content);
                         return _body;
                     }
                 }
@@ -152,11 +160,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedListSubscriptionsRequest(ex);
             HandleFailedRequest(ex);
@@ -166,12 +174,13 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedCreateRequest(RestApiException ex);
 
-        public async Task<Subscription> CreateAsync(
-            SubscriptionData body,
+        public async Task<Models.Subscription> CreateAsync(
+            Models.SubscriptionData body,
             CancellationToken cancellationToken = default
         )
         {
-            if (body == default(SubscriptionData))
+
+            if (body == default(Models.SubscriptionData))
             {
                 throw new ArgumentNullException(nameof(body));
             }
@@ -198,7 +207,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 _req.Uri = _url;
                 _req.Method = RequestMethod.Post;
 
-                if (body != default(SubscriptionData))
+                if (body != default(Models.SubscriptionData))
                 {
                     _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
                     _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
@@ -219,7 +228,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Subscription>(_content);
+                        var _body = Client.Deserialize<Models.Subscription>(_content);
                         return _body;
                     }
                 }
@@ -237,11 +246,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedCreateRequest(ex);
             HandleFailedRequest(ex);
@@ -251,11 +260,12 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedGetSubscriptionRequest(RestApiException ex);
 
-        public async Task<Subscription> GetSubscriptionAsync(
+        public async Task<Models.Subscription> GetSubscriptionAsync(
             Guid id,
             CancellationToken cancellationToken = default
         )
         {
+
             if (id == default(Guid))
             {
                 throw new ArgumentNullException(nameof(id));
@@ -293,7 +303,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Subscription>(_content);
+                        var _body = Client.Deserialize<Models.Subscription>(_content);
                         return _body;
                     }
                 }
@@ -311,11 +321,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetSubscriptionRequest(ex);
             HandleFailedRequest(ex);
@@ -325,11 +335,12 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedDeleteSubscriptionRequest(RestApiException ex);
 
-        public async Task<Subscription> DeleteSubscriptionAsync(
+        public async Task<Models.Subscription> DeleteSubscriptionAsync(
             Guid id,
             CancellationToken cancellationToken = default
         )
         {
+
             if (id == default(Guid))
             {
                 throw new ArgumentNullException(nameof(id));
@@ -367,7 +378,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Subscription>(_content);
+                        var _body = Client.Deserialize<Models.Subscription>(_content);
                         return _body;
                     }
                 }
@@ -385,11 +396,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedDeleteSubscriptionRequest(ex);
             HandleFailedRequest(ex);
@@ -399,12 +410,13 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedUpdateSubscriptionRequest(RestApiException ex);
 
-        public async Task<Subscription> UpdateSubscriptionAsync(
+        public async Task<Models.Subscription> UpdateSubscriptionAsync(
             Guid id,
-            SubscriptionUpdate body = default,
+            Models.SubscriptionUpdate body = default,
             CancellationToken cancellationToken = default
         )
         {
+
             if (id == default(Guid))
             {
                 throw new ArgumentNullException(nameof(id));
@@ -427,7 +439,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 _req.Uri = _url;
                 _req.Method = RequestMethod.Patch;
 
-                if (body != default(SubscriptionUpdate))
+                if (body != default(Models.SubscriptionUpdate))
                 {
                     _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
                     _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
@@ -448,7 +460,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Subscription>(_content);
+                        var _body = Client.Deserialize<Models.Subscription>(_content);
                         return _body;
                     }
                 }
@@ -466,11 +478,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedUpdateSubscriptionRequest(ex);
             HandleFailedRequest(ex);
@@ -480,11 +492,12 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedTriggerSubscriptionRequest(RestApiException ex);
 
-        public async Task<Subscription> TriggerSubscriptionAsync(
+        public async Task<Models.Subscription> TriggerSubscriptionAsync(
             Guid id,
             CancellationToken cancellationToken = default
         )
         {
+
             if (id == default(Guid))
             {
                 throw new ArgumentNullException(nameof(id));
@@ -522,7 +535,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Subscription>(_content);
+                        var _body = Client.Deserialize<Models.Subscription>(_content);
                         return _body;
                     }
                 }
@@ -540,11 +553,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedTriggerSubscriptionRequest(ex);
             HandleFailedRequest(ex);
@@ -558,6 +571,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
+
             const string apiVersion = "2019-01-16";
 
             var _baseUri = Client.Options.BaseUri;
@@ -599,11 +613,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedTriggerDailyUpdateRequest(ex);
             HandleFailedRequest(ex);
@@ -613,13 +627,48 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedGetSubscriptionHistoryRequest(RestApiException ex);
 
-        public async Task<PagedResponse<SubscriptionHistoryItem>> GetSubscriptionHistoryAsync(
+        public AsyncPageable<Models.SubscriptionHistoryItem> GetSubscriptionHistoryAsync(
+            Guid id,
+            CancellationToken cancellationToken = default
+        )
+        {
+            async IAsyncEnumerable<Page<Models.SubscriptionHistoryItem>> GetPages(string _continueToken, int? _pageSizeHint)
+            {
+                int? page = 1;
+                int? perPage = _pageSizeHint;
+
+                if (!string.IsNullOrEmpty(_continueToken))
+                {
+                    page = int.Parse(_continueToken);
+                }
+
+                while (true)
+                {
+                    var _page = await GetSubscriptionHistoryPageAsync(
+                        id,
+                        page,
+                        perPage,
+                        cancellationToken
+                    ).ConfigureAwait(false);
+                    if (_page.Values.Count < 1)
+                    {
+                        yield break;
+                    }
+                    yield return _page;
+                    page++;
+                }
+            }
+            return AsyncPageable.Create(GetPages);
+        }
+
+        public async Task<Page<Models.SubscriptionHistoryItem>> GetSubscriptionHistoryPageAsync(
             Guid id,
             int? page = default,
             int? perPage = default,
             CancellationToken cancellationToken = default
         )
         {
+
             if (id == default(Guid))
             {
                 throw new ArgumentNullException(nameof(id));
@@ -665,8 +714,8 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<SubscriptionHistoryItem>>(_content);
-                        return new PagedResponse<SubscriptionHistoryItem>(Client, OnGetSubscriptionHistoryFailed, _res, _body);
+                        var _body = Client.Deserialize<IImmutableList<Models.SubscriptionHistoryItem>>(_content);
+                        return Page<Models.SubscriptionHistoryItem>.FromValues(_body, (page + 1).ToString(), _res);
                     }
                 }
             }
@@ -683,11 +732,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetSubscriptionHistoryRequest(ex);
             HandleFailedRequest(ex);
@@ -703,6 +752,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
+
             if (id == default(Guid))
             {
                 throw new ArgumentNullException(nameof(id));
@@ -754,11 +804,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedRetrySubscriptionActionAsyncRequest(ex);
             HandleFailedRequest(ex);

@@ -6,7 +6,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class SubscriptionData
     {
-        public SubscriptionData(string channelName, string sourceRepository, string targetRepository, string targetBranch, SubscriptionPolicy policy)
+        public SubscriptionData(string channelName, string sourceRepository, string targetRepository, string targetBranch, Models.SubscriptionPolicy policy)
         {
             ChannelName = channelName;
             SourceRepository = sourceRepository;
@@ -31,7 +31,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public bool? Enabled { get; set; }
 
         [JsonProperty("policy")]
-        public SubscriptionPolicy Policy { get; set; }
+        public Models.SubscriptionPolicy Policy { get; set; }
 
         [JsonIgnore]
         public bool IsValid
@@ -54,7 +54,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
                 {
                     return false;
                 }
-                if (Policy == default(SubscriptionPolicy))
+                if (Policy == default(Models.SubscriptionPolicy))
                 {
                     return false;
                 }

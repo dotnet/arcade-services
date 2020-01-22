@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Text;
@@ -6,19 +7,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
-using Microsoft.DotNet.Maestro.Client.Models;
+
+
 
 namespace Microsoft.DotNet.Maestro.Client
 {
     public partial interface IRepository
     {
-        Task<IImmutableList<RepositoryBranch>> ListRepositoriesAsync(
+        Task<IImmutableList<Models.RepositoryBranch>> ListRepositoriesAsync(
             string branch = default,
             string repository = default,
             CancellationToken cancellationToken = default
         );
 
-        Task<IImmutableList<MergePolicy>> GetMergePoliciesAsync(
+        Task<IImmutableList<Models.MergePolicy>> GetMergePoliciesAsync(
             string branch,
             string repository,
             CancellationToken cancellationToken = default
@@ -27,11 +29,17 @@ namespace Microsoft.DotNet.Maestro.Client
         Task SetMergePoliciesAsync(
             string branch,
             string repository,
-            IImmutableList<MergePolicy> body = default,
+            IImmutableList<Models.MergePolicy> body = default,
             CancellationToken cancellationToken = default
         );
 
-        Task<PagedResponse<RepositoryHistoryItem>> GetHistoryAsync(
+        AsyncPageable<Models.RepositoryHistoryItem> GetHistoryAsync(
+            string branch = default,
+            string repository = default,
+            CancellationToken cancellationToken = default
+        );
+
+        Task<Page<Models.RepositoryHistoryItem>> GetHistoryPageAsync(
             string branch = default,
             int? page = default,
             int? perPage = default,
@@ -61,12 +69,13 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedListRepositoriesRequest(RestApiException ex);
 
-        public async Task<IImmutableList<RepositoryBranch>> ListRepositoriesAsync(
+        public async Task<IImmutableList<Models.RepositoryBranch>> ListRepositoriesAsync(
             string branch = default,
             string repository = default,
             CancellationToken cancellationToken = default
         )
         {
+
             const string apiVersion = "2019-01-16";
 
             var _baseUri = Client.Options.BaseUri;
@@ -107,7 +116,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<RepositoryBranch>>(_content);
+                        var _body = Client.Deserialize<IImmutableList<Models.RepositoryBranch>>(_content);
                         return _body;
                     }
                 }
@@ -125,11 +134,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedListRepositoriesRequest(ex);
             HandleFailedRequest(ex);
@@ -139,12 +148,13 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedGetMergePoliciesRequest(RestApiException ex);
 
-        public async Task<IImmutableList<MergePolicy>> GetMergePoliciesAsync(
+        public async Task<IImmutableList<Models.MergePolicy>> GetMergePoliciesAsync(
             string branch,
             string repository,
             CancellationToken cancellationToken = default
         )
         {
+
             if (string.IsNullOrEmpty(branch))
             {
                 throw new ArgumentNullException(nameof(branch));
@@ -195,7 +205,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<MergePolicy>>(_content);
+                        var _body = Client.Deserialize<IImmutableList<Models.MergePolicy>>(_content);
                         return _body;
                     }
                 }
@@ -213,11 +223,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetMergePoliciesRequest(ex);
             HandleFailedRequest(ex);
@@ -230,10 +240,11 @@ namespace Microsoft.DotNet.Maestro.Client
         public async Task SetMergePoliciesAsync(
             string branch,
             string repository,
-            IImmutableList<MergePolicy> body = default,
+            IImmutableList<Models.MergePolicy> body = default,
             CancellationToken cancellationToken = default
         )
         {
+
             if (string.IsNullOrEmpty(branch))
             {
                 throw new ArgumentNullException(nameof(branch));
@@ -269,7 +280,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 _req.Uri = _url;
                 _req.Method = RequestMethod.Post;
 
-                if (body != default(IImmutableList<MergePolicy>))
+                if (body != default(IImmutableList<Models.MergePolicy>))
                 {
                     _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
                     _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
@@ -299,11 +310,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedSetMergePoliciesRequest(ex);
             HandleFailedRequest(ex);
@@ -313,7 +324,43 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedGetHistoryRequest(RestApiException ex);
 
-        public async Task<PagedResponse<RepositoryHistoryItem>> GetHistoryAsync(
+        public AsyncPageable<Models.RepositoryHistoryItem> GetHistoryAsync(
+            string branch = default,
+            string repository = default,
+            CancellationToken cancellationToken = default
+        )
+        {
+            async IAsyncEnumerable<Page<Models.RepositoryHistoryItem>> GetPages(string _continueToken, int? _pageSizeHint)
+            {
+                int? page = 1;
+                int? perPage = _pageSizeHint;
+
+                if (!string.IsNullOrEmpty(_continueToken))
+                {
+                    page = int.Parse(_continueToken);
+                }
+
+                while (true)
+                {
+                    var _page = await GetHistoryPageAsync(
+                        branch,
+                        page,
+                        perPage,
+                        repository,
+                        cancellationToken
+                    ).ConfigureAwait(false);
+                    if (_page.Values.Count < 1)
+                    {
+                        yield break;
+                    }
+                    yield return _page;
+                    page++;
+                }
+            }
+            return AsyncPageable.Create(GetPages);
+        }
+
+        public async Task<Page<Models.RepositoryHistoryItem>> GetHistoryPageAsync(
             string branch = default,
             int? page = default,
             int? perPage = default,
@@ -321,6 +368,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
+
             const string apiVersion = "2019-01-16";
 
             var _baseUri = Client.Options.BaseUri;
@@ -369,8 +417,8 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<RepositoryHistoryItem>>(_content);
-                        return new PagedResponse<RepositoryHistoryItem>(Client, OnGetHistoryFailed, _res, _body);
+                        var _body = Client.Deserialize<IImmutableList<Models.RepositoryHistoryItem>>(_content);
+                        return Page<Models.RepositoryHistoryItem>.FromValues(_body, (page + 1).ToString(), _res);
                     }
                 }
             }
@@ -387,11 +435,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetHistoryRequest(ex);
             HandleFailedRequest(ex);
@@ -408,6 +456,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
+
             if (string.IsNullOrEmpty(branch))
             {
                 throw new ArgumentNullException(nameof(branch));
@@ -472,11 +521,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedRetryActionAsyncRequest(ex);
             HandleFailedRequest(ex);

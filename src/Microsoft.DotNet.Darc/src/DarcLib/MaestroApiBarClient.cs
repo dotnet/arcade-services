@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 
@@ -302,9 +303,9 @@ namespace Microsoft.DotNet.DarcLib
                                                  int? buildId = null,
                                                  bool? nonShipping = null)
         {
-            PagedResponse<Asset> pagedResponse = await _barClient.Assets.ListAssetsAsync(name: name,
+            AsyncPageable<Asset> pagedResponse = _barClient.Assets.ListAssetsAsync(name: name,
                 version: version, buildId: buildId, loadLocations: true);
-            return await pagedResponse.EnumerateAll().ToListAsync(CancellationToken.None);
+            return await pagedResponse.ToListAsync(CancellationToken.None);
         }
 
         /// <summary>
@@ -326,9 +327,9 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public async Task<IEnumerable<Build>> GetBuildsAsync(string repoUri, string commit)
         {
-            var pagedResponse = await _barClient.Builds.ListBuildsAsync(repository: repoUri,
+            AsyncPageable<Build> pagedResponse = _barClient.Builds.ListBuildsAsync(repository: repoUri,
                 commit: commit, loadCollections: true);
-            return await pagedResponse.EnumerateAll().ToListAsync(CancellationToken.None);
+            return await pagedResponse.ToListAsync(CancellationToken.None);
         }
 
         public async Task AssignBuildToChannelAsync(int buildId, int channelId)
