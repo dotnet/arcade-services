@@ -16,6 +16,7 @@ $testScripts = (
     'channels.ps1',
     'clone.ps1',
     'default-channels.ps1',
+    'promote-build.ps1',
     'githubflow-batched.ps1',
     'githubflow-nonbatched.ps1',
     'githubflow-nonbatched-all-checks-successful.ps1',
