@@ -71,6 +71,7 @@ namespace DotNet.Status.Web.Controllers
                             using (HttpResponseMessage response = await client.SendAsync(request, CancellationToken.None))
                             {
                                 _logger.LogTrace("Response from grafana {responseCode} {reason}", response.StatusCode, response.ReasonPhrase);
+                                response.EnsureSuccessStatusCode();
                                 return await response.Content.ReadAsAsync<NewGrafanaAnnotationResponse>(s_grafanaFormatters, CancellationToken.None);
                             }
                         }
