@@ -4,12 +4,14 @@ import { of } from 'rxjs';
 
 import { SideBarComponent } from "./side-bar.component";
 import { ChannelService } from 'src/app/services/channel.service';
+import { StatefulModule } from 'src/stateful';
 
 describe("SideBarComponent", () => {
   let component: SideBarComponent;
   let fixture: ComponentFixture<SideBarComponent>;
 
   beforeEach(async(() => {
+    const mockChannelService = jasmine.createSpyObj("ChannelService", ["getChannels"]);
     TestBed.configureTestingModule({
       declarations: [
         SideBarComponent,
@@ -17,12 +19,11 @@ describe("SideBarComponent", () => {
       providers: [
         {
           provide: ChannelService,
-          useValue: {
-            getChannels() {
-              return of();
-            },
-          },
+          useValue: mockChannelService,
         },
+      ],
+      imports: [
+        StatefulModule,
       ],
       schemas: [
         NO_ERRORS_SCHEMA,

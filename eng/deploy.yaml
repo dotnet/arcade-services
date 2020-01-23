@@ -20,10 +20,8 @@ parameters:
 stages:
 - stage: predeploy
   displayName: Pre-Deployment
-  dependsOn:
-  - build
-  variables:
-  - group: ${{ parameters.StatusVariableGroup }}
+  pool:
+    name: Hosted VS2017
   jobs:
   - job: notifyStartDeployment
     displayName: Notify deployment start
@@ -35,16 +33,13 @@ stages:
       inputs:
         serviceConnection: ${{ parameters.DotNetStatusEndpoint }}
         method: POST
-        headers: |
-          {
-            "Authorization": "Bearer $(dotnet-build-bot-dotnet-eng-status-token)",
-          }
         urlSuffix: /arcade-services/$(Build.BuildNumber)/start
 
 - stage: deploy
   displayName: Deploy
+  pool:
+    name: Hosted VS2017
   dependsOn:
-  - build
   - predeploy
   variables:
   - group: ${{ parameters.VariableGroup }}
@@ -64,9 +59,9 @@ stages:
     - approval
     displayName: Update BuildAssetRegistry database
     steps:
-    - download: current
+    - download: Build
       artifact: ReleaseUtilities
-    - download: current
+    - download: Build
       artifact: Maestro.Data
     - task: UseDotNet@2
       displayName: Use .NET 3.0.x SDK
@@ -82,23 +77,23 @@ stages:
       displayName: eng\firewall.ps1 -Add
       inputs:
         azureSubscription: ${{ parameters.Subscription }}
-        ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
+        ScriptPath: $(Pipeline.Workspace)/Build/ReleaseUtilities/firewall.ps1
         ScriptArguments: -RuleName UnblockSQLForUpgrade -Add -ConnectionString "$(maestro-admin-sql-connection-string)"
         azurePowerShellVersion: LatestVersion
     - task: PowerShell@2
       displayName: update-database.ps1
       inputs:
         targetType: filePath
-        filePath: $(Pipeline.Workspace)/Maestro.Data/update-database.ps1
+        filePath: $(Pipeline.Workspace)/Build/Maestro.Data/update-database.ps1
         arguments: Maestro.Data.dll
-        workingDirectory: $(Pipeline.Workspace)/Maestro.Data
+        workingDirectory: $(Pipeline.Workspace)/Build/Maestro.Data
       env:
         BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(maestro-admin-sql-connection-string)
     - task: AzurePowerShell@3
       displayName: eng\firewall.ps1 -Remove
       inputs:
         azureSubscription: ${{ parameters.Subscription }}
-        ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
+        ScriptPath: $(Pipeline.Workspace)/Build/ReleaseUtilities/firewall.ps1
         ScriptArguments: -RuleName UnblockSQLForUpgrade -Remove -ConnectionString "$(maestro-admin-sql-connection-string)"
         azurePowerShellVersion: LatestVersion
       condition: always()
@@ -109,37 +104,37 @@ stages:
     - updateDatabase
     - approval
     steps:
-    - download: current
+    - download: Build
       artifact: MaestroApplication
     - task: ServiceFabricDeploy@1
       displayName: Deploy Service Fabric Application (Maestro)
       inputs:
-        applicationPackagePath: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
+        applicationPackagePath: $(Pipeline.Workspace)/Build/MaestroApplication/applicationpackage
         serviceConnectionName: ${{ parameters.ServiceFabricConnection }}
-        publishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
-        applicationParameterPath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/ApplicationParameters/$(PublishProfile).xml
+        publishProfilePath: $(Pipeline.Workspace)/Build/MaestroApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
+        applicationParameterPath: $(Pipeline.Workspace)/Build/MaestroApplication/projectartifacts/ApplicationParameters/$(PublishProfile).xml
 
   - job: deployTelemetry
     displayName: Deploy telemetry service fabric application
     dependsOn: 
     - approval
     steps:
-    - download: current
+    - download: Build
       artifact: TelemetryApplication
     - task: ServiceFabricDeploy@1
       displayName: Deploy Service Fabric Application (Telemetry)
       inputs:
-        applicationPackagePath: $(Pipeline.Workspace)/TelemetryApplication/applicationpackage
+        applicationPackagePath: $(Pipeline.Workspace)/Build/TelemetryApplication/applicationpackage
         serviceConnectionName: ${{ parameters.ServiceFabricConnection }}
-        publishProfilePath: $(Pipeline.Workspace)/TelemetryApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
-        applicationParameterPath: $(Pipeline.Workspace)/TelemetryApplication/projectartifacts/ApplicationParameters/$(PublishProfile).xml
+        publishProfilePath: $(Pipeline.Workspace)/Build/TelemetryApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
+        applicationParameterPath: $(Pipeline.Workspace)/Build/TelemetryApplication/projectartifacts/ApplicationParameters/$(PublishProfile).xml
 
   - job: deployStatus
     displayName: Deploy dotnet-status web app
     dependsOn: 
     - approval
     steps:
-    - download: current
+    - download: Build
       artifact: DotNetStatus
     - task: AzureRmWebAppDeployment@4
       inputs:
@@ -150,7 +145,7 @@ stages:
         deployToSlotOrASE: true
         ResourceGroupName: monitoring
         SlotName: staging
-        Package: $(Pipeline.Workspace)/DotNetStatus/DotNetStatus.zip
+        Package: $(Pipeline.Workspace)/Build/DotNetStatus/DotNetStatus.zip
         enableCustomDeployment: true
         DeploymentType: webDeploy
         RemoveAdditionalFilesFlag: true
@@ -183,11 +178,21 @@ stages:
 
 - stage: postdeploy
   displayName: Post-Deployment
+  pool:
+    name: Hosted VS2017
   dependsOn:
   - deploy
   condition: always()
   variables:
   - group: ${{ parameters.StatusVariableGroup }}
+  - group: ${{ parameters.VariableGroup }}
+  - group: ${{ parameters.GrafanaVariableGroup }}
+  - name: DeploymentEnvironment
+    value: ${{ parameters.DeploymentEnvironment }}
+  - name: GrafanaHost
+    value: ${{ parameters.GrafanaHost }}
+  - name: GrafanaKeyVault
+    value: ${{ parameters.GrafanaKeyVault }}
   jobs:
   - job: notifyEndDeployment
     displayName: Notify deployment end
@@ -199,13 +204,18 @@ stages:
       inputs:
         serviceConnection: .NET Engineering Deployment Notification - Staging
         method: POST
-        headers: |
-          {
-            "Authorization": "Bearer $(dotnet-build-bot-dotnet-eng-status-token)",
-          }
         urlSuffix: /arcade-services/$(Build.BuildNumber)/end
+  - job: updateMetrics
+    displayName: Update Grafana Metrics
+    dependsOn:
+    steps:
+    - script: dotnet publish $(Build.SourcesDirectory)\src\Monitoring\Sdk\Microsoft.DotNet.Monitoring.Sdk.csproj -f netcoreapp2.1
+    - script: dotnet build $(Build.SourcesDirectory)\src\Monitoring\Monitoring.ArcadeServices\Monitoring.ArcadeServices.proj -t:PublishGrafana -p:GrafanaAccessToken=$(grafana-admin-api-key) -p:GrafanaHost=$(GrafanaHost) -p:GrafanaKeyVaultName=$(GrafanaKeyVault) -p:GrafanaKeyVaultAppId=2bdfceef-194a-4775-99d9-b5575c77bc6b -p:GrafanaKeyVaultAppSecret=$(key-vault-app-secret) -p:GrafanaEnvironment=$(DeploymentEnvironment)
+
 - stage: validateDeployment
   displayName: Validate deployment
+  pool:
+    name: Hosted VS2017
   dependsOn: 
   - deploy
   variables:
@@ -216,9 +226,9 @@ stages:
   - job: scenario
     displayName: Scenario tests
     steps:
-    - download: current
+    - download: Build
       artifact: ScenarioTests
-    - download: current
+    - download: Build
       artifact: PackageArtifacts
     - task: NuGetToolInstaller@1
       displayName: Use NuGet
@@ -238,7 +248,7 @@ stages:
       displayName: Run Scenario Tests
       inputs:
         targetType: filePath
-        filePath: $(Pipeline.Workspace)/ScenarioTests/all.ps1
-        arguments: -maestroInstallation "$(MaestroTestEndpoint)" -darcVersion "$(darcVersion)" -maestroBearerToken "$(scenario-test-maestro-token)" -githubPAT "$(maestro-scenario-test-github-token)" -azdoPAT "$(dn-bot-dnceng-build-rw-code-rw-release-rw)" -darcPackageSource "$(Pipeline.Workspace)\PackageArtifacts"
-        workingDirectory: $(Pipeline.Workspace)/ScenarioTests
+        filePath: $(Pipeline.Workspace)/Build/ScenarioTests/all.ps1
+        arguments: -maestroInstallation "$(MaestroTestEndpoint)" -darcVersion "$(darcVersion)" -maestroBearerToken "$(scenario-test-maestro-token)" -githubPAT "$(maestro-scenario-test-github-token)" -azdoPAT "$(dn-bot-dnceng-build-rw-code-rw-release-rw)" -darcPackageSource "$(Pipeline.Workspace)\Build\PackageArtifacts"
+        workingDirectory: $(Pipeline.Workspace)/Build/ScenarioTests
       timeoutInMinutes: 90

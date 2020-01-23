@@ -34,7 +34,7 @@ namespace RolloutScorerAzureFunction
                     AzdoInstance = "dnceng",
                     GithubIssueLabel = "Rollout Arcade Services",
                     ExpectedTime = 30,
-                    ExcludeStages = new List<string> { "" },
+                    ExcludeStages = new List<string> { "Post-Deployment", "Validate deployment" },
                 },
             },
             AzdoInstanceConfigs = new List<AzdoInstanceConfig>()

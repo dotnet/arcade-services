@@ -526,12 +526,13 @@ namespace Microsoft.DotNet.Darc.Operations
 
             var filteredBuilds = FilterReleasedBuilds(builds);
 
-            if (graph.DependenciesMissingBuilds.Any())
+            var nodesWithNoContributingBuilds = graph.Nodes.Where(node => !node.ContributingBuilds.Any());
+            if (nodesWithNoContributingBuilds.Any())
             {
-                Console.WriteLine("Dependencies missing builds:");
-                foreach (DependencyDetail dependency in graph.DependenciesMissingBuilds)
+                Console.WriteLine("Dependency graph nodes missing builds:");
+                foreach (var node in nodesWithNoContributingBuilds)
                 {
-                    Console.WriteLine($"  {dependency.Name}@{dependency.Version} @ ({dependency.RepoUri}@{dependency.Commit})");
+                    Console.WriteLine($"  {node.Repository}@{node.Commit}");
                 }
                 if (!_options.ContinueOnError)
                 {
@@ -601,6 +602,11 @@ namespace Microsoft.DotNet.Darc.Operations
             using (HttpClient client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
                 var assets = await remote.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?)false : null));
+                if (!string.IsNullOrEmpty(_options.AssetFilter))
+                {
+                    assets = assets.Where(asset => Regex.IsMatch(asset.Name, _options.AssetFilter));
+                }
+
                 using (var clientThrottle = new SemaphoreSlim(_options.MaxConcurrentDownloads, _options.MaxConcurrentDownloads))
                 {
                     await Task.WhenAll(assets.Select(async asset =>
@@ -959,7 +965,18 @@ namespace Microsoft.DotNet.Darc.Operations
                                                                                 List<string> errors,
                                                                                 StringBuilder downloadOutput)
         {
-            string packageContentUrl = $"https://pkgs.dev.azure.com/{feedAccount}/{feedVisibility}_apis/packaging/feeds/{feedName}/nuget/packages/{asset.Name}/versions/{asset.Version}/content";
+            string assetName = asset.Name;
+
+            // Some blobs get pushed as packages. This is an artifact of a one-off issue in core-sdk
+            // see https://github.com/dotnet/arcade/issues/4608 for an overall fix of this.
+            // For now, if we get here, ensure that we ask for the package from the right location by
+            // stripping off the leading path elements.
+            if (!_options.NoWorkarounds)
+            {
+                assetName = Path.GetFileName(assetName);
+            }
+
+            string packageContentUrl = $"https://pkgs.dev.azure.com/{feedAccount}/{feedVisibility}_apis/packaging/feeds/{feedName}/nuget/packages/{assetName}/versions/{asset.Version}/content";
 
             // feedVisibility == "" means that the feed is internal.
             AuthenticationHeaderValue authHeader = null;

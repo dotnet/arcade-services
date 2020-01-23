@@ -1,0 +1,944 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "iteration": 1573575875517,
+  "links": [
+    {
+      "icon": "external link",
+      "tags": [],
+      "targetBlank": true,
+      "title": "Azure Portal: HelixProd - Usage + quotas",
+      "type": "link",
+      "url": "https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/subscriptions/68672ab8-de0c-40f1-8d1b-ffb20bd62c0f/quotas"
+    }
+  ],
+  "panels": [
+    {
+      "dashboardFilter": "",
+      "dashboardTags": [],
+      "datasource": null,
+      "folderId": null,
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 8,
+      "limit": 10,
+      "nameFilter": "",
+      "onlyAlertsOnDashboard": true,
+      "options": {},
+      "show": "current",
+      "sortOrder": 3,
+      "stateFilter": [],
+      "targets": [
+        {
+          "appInsights": {
+            "dimension": "none",
+            "metricName": "select",
+            "rawQuery": false,
+            "rawQueryString": "",
+            "timeColumn": "timestamp",
+            "timeGrain": "auto",
+            "valueColumn": ""
+          },
+          "azureLogAnalytics": {
+            "query": "//change this example to create your own time series query\n<table name>                                                              //the table to query (e.g. Usage, Heartbeat, Perf)\n| where $__timeFilter(TimeGenerated)                                      //this is a macro used to show the full chart’s time range, choose the datetime column here\n| summarize count() by <group by column>, bin(TimeGenerated, $__interval) //change “group by column” to a column in your table, such as “Computer”. The $__interval macro is used to auto-select the time grain. Can also use 1h, 5m etc.\n| order by TimeGenerated asc",
+            "resultFormat": "time_series"
+          },
+          "azureMonitor": {
+            "aggOptions": [],
+            "dimensionFilter": "*",
+            "metricDefinition": "select",
+            "metricName": "select",
+            "metricNamespace": "select",
+            "resourceGroup": "select",
+            "resourceName": "select",
+            "timeGrain": "auto",
+            "timeGrains": []
+          },
+          "queryType": "Azure Monitor",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "",
+      "type": "alertlist"
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 16,
+      "panels": [],
+      "title": "Alerts and Notifications",
+      "type": "row"
+    },
+    {
+      "alert": {
+        "alertRuleTags": {
+          "NotificationId": "e2be2ec3e22e46d28730bab54ff8fa77"
+        },
+        "conditions": [
+          {
+            "evaluator": {
+              "params": [
+                80
+              ],
+              "type": "gt"
+            },
+            "operator": {
+              "type": "and"
+            },
+            "query": {
+              "params": [
+                "B",
+                "5m",
+                "now"
+              ]
+            },
+            "reducer": {
+              "params": [],
+              "type": "avg"
+            },
+            "type": "query"
+          }
+        ],
+        "executionErrorState": "keep_state",
+        "for": "5m",
+        "frequency": "1m",
+        "handler": 1,
+        "message": "An Azure Resource Quota is nearing its limit in region westus!",
+        "name": "Azure Alert for westus",
+        "noDataState": "keep_state",
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
+      },
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "AI-dnc-eng",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 6
+      },
+      "id": 24,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "hideZero": true,
+        "max": true,
+        "min": false,
+        "show": true,
+        "sort": "max",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [
+        {
+          "title": "",
+          "url": ""
+        }
+      ],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "appInsights": {
+            "dimension": "none",
+            "metricName": "select",
+            "rawQuery": true,
+            "rawQueryString": "customEvents\r\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\r\n| project\r\n    timestamp,\r\n    resource = tostring(customDimensions.name),\r\n    location = tostring(customDimensions.location),\r\n    current = toreal(customMeasurements.current),\r\n    ['limit'] = toreal(customMeasurements.['limit'])\r\n| where resource != 'NetworkWatchers'\n| where location == 'westus'\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, current/['limit'] * 100)\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), resource\r\n| order by timestamp asc, resource",
+            "segmentColumn": "resource",
+            "timeColumn": "timestamp",
+            "timeGrain": "auto",
+            "valueColumn": "percent of limit"
+          },
+          "azureLogAnalytics": {
+            "query": "//change this example to create your own time series query\n<table name>                                                              //the table to query (e.g. Usage, Heartbeat, Perf)\n| where $__timeFilter(TimeGenerated)                                      //this is a macro used to show the full chart’s time range, choose the datetime column here\n| summarize count() by <group by column>, bin(TimeGenerated, $__interval) //change “group by column” to a column in your table, such as “Computer”. The $__interval macro is used to auto-select the time grain. Can also use 1h, 5m etc.\n| order by TimeGenerated asc",
+            "resultFormat": "time_series"
+          },
+          "azureMonitor": {
+            "aggOptions": [],
+            "dimensionFilter": "*",
+            "metricDefinition": "select",
+            "metricName": "select",
+            "metricNamespace": "select",
+            "resourceGroup": "select",
+            "resourceName": "select",
+            "timeGrain": "auto",
+            "timeGrains": []
+          },
+          "hide": false,
+          "queryType": "Application Insights",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 80,
+          "yaxis": "left"
+        }
+      ],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "westus",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "alert": {
+        "alertRuleTags": {
+          "NotificationId": "44aff3c937c042caa09f821ae923c26c"
+        },
+        "conditions": [
+          {
+            "evaluator": {
+              "params": [
+                80
+              ],
+              "type": "gt"
+            },
+            "operator": {
+              "type": "and"
+            },
+            "query": {
+              "params": [
+                "B",
+                "5m",
+                "now"
+              ]
+            },
+            "reducer": {
+              "params": [],
+              "type": "avg"
+            },
+            "type": "query"
+          }
+        ],
+        "executionErrorState": "keep_state",
+        "for": "5m",
+        "frequency": "1m",
+        "handler": 1,
+        "message": "An Azure Resource Quota is nearing its limit in region westus!",
+        "name": "Azure Alert for westus2",
+        "noDataState": "keep_state",
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
+      },
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "AI-dnc-eng",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 6
+      },
+      "id": 26,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "hideZero": true,
+        "max": true,
+        "min": false,
+        "show": true,
+        "sort": "max",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "appInsights": {
+            "dimension": "none",
+            "metricName": "select",
+            "rawQuery": true,
+            "rawQueryString": "customEvents\r\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\r\n| project\r\n    timestamp,\r\n    resource = tostring(customDimensions.name),\r\n    location = tostring(customDimensions.location),\r\n    current = toreal(customMeasurements.current),\r\n    ['limit'] = toreal(customMeasurements.['limit'])\r\n| where resource != 'NetworkWatchers'\n| where location == 'westus2'\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, current/['limit'] * 100)\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), resource\r\n| order by timestamp asc, resource",
+            "segmentColumn": "resource",
+            "timeColumn": "timestamp",
+            "timeGrain": "auto",
+            "valueColumn": "percent of limit"
+          },
+          "azureLogAnalytics": {
+            "query": "//change this example to create your own time series query\n<table name>                                                              //the table to query (e.g. Usage, Heartbeat, Perf)\n| where $__timeFilter(TimeGenerated)                                      //this is a macro used to show the full chart’s time range, choose the datetime column here\n| summarize count() by <group by column>, bin(TimeGenerated, $__interval) //change “group by column” to a column in your table, such as “Computer”. The $__interval macro is used to auto-select the time grain. Can also use 1h, 5m etc.\n| order by TimeGenerated asc",
+            "resultFormat": "time_series"
+          },
+          "azureMonitor": {
+            "aggOptions": [],
+            "dimensionFilter": "*",
+            "metricDefinition": "select",
+            "metricName": "select",
+            "metricNamespace": "select",
+            "resourceGroup": "select",
+            "resourceName": "select",
+            "timeGrain": "auto",
+            "timeGrains": []
+          },
+          "hide": false,
+          "queryType": "Application Insights",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 80,
+          "yaxis": "left"
+        }
+      ],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "westus2",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "alert": {
+        "alertRuleTags": {
+          "NotificationId": "b50b57fa7d1840438da5232711af4485"
+        },
+        "conditions": [
+          {
+            "evaluator": {
+              "params": [
+                80
+              ],
+              "type": "gt"
+            },
+            "operator": {
+              "type": "and"
+            },
+            "query": {
+              "params": [
+                "B",
+                "5m",
+                "now"
+              ]
+            },
+            "reducer": {
+              "params": [],
+              "type": "avg"
+            },
+            "type": "query"
+          }
+        ],
+        "executionErrorState": "keep_state",
+        "for": "5m",
+        "frequency": "1m",
+        "handler": 1,
+        "message": "An Azure Resource Quota is nearing its limit in region westus!",
+        "name": "Azure Alert for eastus",
+        "noDataState": "keep_state",
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
+      },
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "AI-dnc-eng",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 6
+      },
+      "id": 28,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "hideZero": true,
+        "max": true,
+        "min": false,
+        "show": true,
+        "sort": "max",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "appInsights": {
+            "dimension": "none",
+            "metricName": "select",
+            "rawQuery": true,
+            "rawQueryString": "customEvents\r\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\r\n| project\r\n    timestamp,\r\n    resource = tostring(customDimensions.name),\r\n    location = tostring(customDimensions.location),\r\n    current = toreal(customMeasurements.current),\r\n    ['limit'] = toreal(customMeasurements.['limit'])\r\n| where resource != 'NetworkWatchers'\n| where location == 'eastus'\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, current/['limit'] * 100)\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), resource\r\n| order by timestamp asc, resource",
+            "segmentColumn": "resource",
+            "timeColumn": "timestamp",
+            "timeGrain": "auto",
+            "valueColumn": "percent of limit"
+          },
+          "azureLogAnalytics": {
+            "query": "//change this example to create your own time series query\n<table name>                                                              //the table to query (e.g. Usage, Heartbeat, Perf)\n| where $__timeFilter(TimeGenerated)                                      //this is a macro used to show the full chart’s time range, choose the datetime column here\n| summarize count() by <group by column>, bin(TimeGenerated, $__interval) //change “group by column” to a column in your table, such as “Computer”. The $__interval macro is used to auto-select the time grain. Can also use 1h, 5m etc.\n| order by TimeGenerated asc",
+            "resultFormat": "time_series"
+          },
+          "azureMonitor": {
+            "aggOptions": [],
+            "dimensionFilter": "*",
+            "metricDefinition": "select",
+            "metricName": "select",
+            "metricNamespace": "select",
+            "resourceGroup": "select",
+            "resourceName": "select",
+            "timeGrain": "auto",
+            "timeGrains": []
+          },
+          "hide": false,
+          "queryType": "Application Insights",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 80,
+          "yaxis": "left"
+        }
+      ],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "eastus",
+      "tooltip": {
+        "shared": true,
+        "sort": 2,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 4,
+      "panels": [],
+      "repeat": "Resource",
+      "scopedVars": {
+        "Resource": {
+          "selected": true,
+          "text": "cores",
+          "value": "cores"
+        }
+      },
+      "title": "Resource: $Resource",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "AI-dnc-eng",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 10,
+        "x": 0,
+        "y": 16
+      },
+      "id": 2,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "scopedVars": {
+        "Resource": {
+          "selected": true,
+          "text": "cores",
+          "value": "cores"
+        }
+      },
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "appInsights": {
+            "aggOptions": [
+              "avg",
+              "min",
+              "max",
+              "sum",
+              "count",
+              "unique"
+            ],
+            "aggregation": "max",
+            "alias": "{{groupbyvalue}}",
+            "dimension": "customDimensions/location",
+            "dimensionFilter": "customDimensions/name eq '$Resource'",
+            "dimensions": [
+              "customEvent/name",
+              "operation/name",
+              "operation/synthetic",
+              "operation/syntheticSource",
+              "user/authenticated",
+              "application/version",
+              "client/type",
+              "client/model",
+              "client/os",
+              "client/city",
+              "client/stateOrProvince",
+              "client/countryOrRegion",
+              "client/browser",
+              "cloud/roleName",
+              "cloud/roleInstance",
+              "customDimensions/ServiceFabric.ApplicationName",
+              "customDimensions/AspNetCoreEnvironment",
+              "customDimensions/ServiceFabric.NodeName",
+              "customDimensions/ServiceFabric.ApplicationTypeName",
+              "customDimensions/ServiceFabric.InstanceId",
+              "customDimensions/ServiceFabric.ServiceName",
+              "customDimensions/ServiceFabric.ServiceTypeName",
+              "customDimensions/localizedName",
+              "customDimensions/subscription",
+              "customDimensions/location",
+              "customDimensions/name",
+              "customDimensions/resourceGroupName",
+              "customDimensions/usageDate",
+              "customDimensions/currency"
+            ],
+            "metricName": "customEvents/custom/current",
+            "rawQuery": true,
+            "rawQueryString": "customEvents \n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\n| where tostring(customDimensions.name) == '$Resource'\n| project timestamp, location = tostring(customDimensions.location), resource = toreal(customMeasurements.current), ['limit'] = toreal(customMeasurements.['limit'])\n//| summarize resource = max(toreal(resource / ['limit'])) by bin(timestamp, $__interval), locationtimestamp \n| summarize (max_resource, resource) = arg_max(resource, resource / ['limit'] * 100) by bin(timestamp, $__interval), location\n| project-away max_resource\n| order by timestamp asc, location asc",
+            "segmentColumn": "location",
+            "timeColumn": "timestamp",
+            "timeGrain": "auto",
+            "valueColumn": "resource"
+          },
+          "azureLogAnalytics": {
+            "query": "//change this example to create your own time series query\n<table name>                                                              //the table to query (e.g. Usage, Heartbeat, Perf)\n| where $__timeFilter(TimeGenerated)                                      //this is a macro used to show the full chart’s time range, choose the datetime column here\n| summarize count() by <group by column>, bin(TimeGenerated, $__interval) //change “group by column” to a column in your table, such as “Computer”. The $__interval macro is used to auto-select the time grain. Can also use 1h, 5m etc.\n| order by TimeGenerated asc",
+            "resultFormat": "time_series"
+          },
+          "azureMonitor": {
+            "aggOptions": [
+              "Average",
+              "Count",
+              "Maximum",
+              "Minimum",
+              "Total"
+            ],
+            "aggregation": "Average",
+            "allowedTimeGrainsMs": [
+              60000,
+              300000,
+              900000,
+              1800000,
+              3600000,
+              21600000,
+              43200000,
+              86400000
+            ],
+            "dimension": "",
+            "dimensionFilter": "*",
+            "dimensions": [],
+            "metricDefinition": "microsoft.insights/components",
+            "metricName": "current",
+            "metricNamespace": "Azure.ApplicationInsights",
+            "resourceGroup": "dotnet-eng-cluster",
+            "resourceName": "dotnet-eng",
+            "timeGrain": "auto",
+            "timeGrains": [
+              {
+                "text": "auto",
+                "value": "auto"
+              },
+              {
+                "text": "1 minute",
+                "value": "PT1M"
+              },
+              {
+                "text": "5 minutes",
+                "value": "PT5M"
+              },
+              {
+                "text": "15 minutes",
+                "value": "PT15M"
+              },
+              {
+                "text": "30 minutes",
+                "value": "PT30M"
+              },
+              {
+                "text": "1 hour",
+                "value": "PT1H"
+              },
+              {
+                "text": "6 hours",
+                "value": "PT6H"
+              },
+              {
+                "text": "12 hours",
+                "value": "PT12H"
+              },
+              {
+                "text": "1 day",
+                "value": "P1D"
+              }
+            ]
+          },
+          "hide": false,
+          "queryType": "Application Insights",
+          "refId": "A"
+        },
+        {
+          "appInsights": {
+            "dimension": "none",
+            "metricName": "select",
+            "rawQuery": true,
+            "rawQueryString": "customEvents\r\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\r\n| project\r\n    timestamp,\r\n    resource = tostring(customDimensions.name),\r\n    location = tostring(customDimensions.location),\r\n    current = toreal(customMeasurements.current),\r\n    ['limit'] = toreal(customMeasurements.['limit'])\r\n| where resource != 'NetworkWatchers'\n| where location == 'westus'\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, current/['limit'])\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), location, resource\r\n| order by timestamp asc, location asc, resource",
+            "segmentColumn": "resource",
+            "timeColumn": "timestamp",
+            "timeGrain": "auto",
+            "valueColumn": "percent of limit"
+          },
+          "azureLogAnalytics": {
+            "query": "//change this example to create your own time series query\n<table name>                                                              //the table to query (e.g. Usage, Heartbeat, Perf)\n| where $__timeFilter(TimeGenerated)                                      //this is a macro used to show the full chart’s time range, choose the datetime column here\n| summarize count() by <group by column>, bin(TimeGenerated, $__interval) //change “group by column” to a column in your table, such as “Computer”. The $__interval macro is used to auto-select the time grain. Can also use 1h, 5m etc.\n| order by TimeGenerated asc",
+            "resultFormat": "time_series"
+          },
+          "azureMonitor": {
+            "aggOptions": [],
+            "dimensionFilter": "*",
+            "metricDefinition": "select",
+            "metricName": "select",
+            "metricNamespace": "select",
+            "resourceGroup": "select",
+            "resourceName": "select",
+            "timeGrain": "auto",
+            "timeGrains": []
+          },
+          "hide": true,
+          "queryType": "Application Insights",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "$Resource",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 20,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "cores + standardDv3Family",
+          "value": [
+            "cores",
+            "standardDv3Family"
+          ]
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "Resource",
+        "multi": true,
+        "name": "Resource",
+        "options": [
+          {
+            "selected": true,
+            "text": "cores",
+            "value": "cores"
+          },
+          {
+            "selected": false,
+            "text": "standardDv3Family",
+            "value": "standardDv3Family"
+          },
+          {
+            "selected": false,
+            "text": "StandardDiskCount",
+            "value": "StandardDiskCount"
+          },
+          {
+            "selected": false,
+            "text": "PremiumDiskCount",
+            "value": "PremiumDiskCount"
+          },
+          {
+            "selected": false,
+            "text": "StandardSnapshotCount",
+            "value": "StandardSnapshotCount"
+          }
+        ],
+        "query": "cores,standardDv3Family,StandardDiskCount,PremiumDiskCount,StandardSnapshotCount",
+        "skipUrlSync": false,
+        "type": "custom"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
+  },
+  "timezone": "",
+  "title": "Azure Quota Limits"
+}

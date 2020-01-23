@@ -327,20 +327,17 @@ function Add-Build-To-Channel ($buildId, $channelName) {
     $channelId = Get-ChannelId $channelName
 
     Write-Host "Adding build ${buildId} to channel ${channelId}"
-    $headers = Get-Bar-Headers 'text/plain'
-    $uri = "$maestroInstallation/api/channels/${channelId}/builds/${buildId}?api-version=${barApiVersion}"
-    Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
+    $darcParams = @("add-build-to-channel", "--id", "$buildId", "--channel", "$channelName" )
+    Darc-Command -darcParams $darcParams
 }
-
 
 function Remove-Build-From-Channel ($buildId, $channelName) {
     # Look up the channel id
     $channelId = Get-ChannelId $channelName
 
     Write-Host "Removing build ${buildId} from channel ${channelId}"
-    $headers = Get-Bar-Headers 'text/plain'
-    $uri = "$maestroInstallation/api/channels/${channelId}/builds/${buildId}?api-version=${barApiVersion}"
-    Invoke-WebRequest -Uri $uri -Headers $headers -Method Delete
+    $darcParams = @("delete-build-from-channel", "--id", "$buildId", "--channel", "$channelName" )
+    Darc-Command -darcParams $darcParams
 }
 
 function New-Build($repository, $branch, $commit, $buildNumber, $assets, $publishUsingPipelines, $dependencies) {

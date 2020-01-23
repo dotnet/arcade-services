@@ -49,7 +49,7 @@
     <ng-container *ngIf="userName">
       <ng-container *ngIf="authorized; else: notAuthorized">
         <mc-side-bar [(opened)]="sidebarOpen" [dockedSize]="'45px'" [fullSize]="'250px'" #sideBar></mc-side-bar>
-        <div class="d-flex flex-grow-1 grow-children" style="overflow-y: auto;">
+        <div class="d-flex flex-grow-1 grow-children" style="overflow-y: auto;" role="main">
           <router-outlet class="flex-grow-0"></router-outlet>
         </div>
       </ng-container>
