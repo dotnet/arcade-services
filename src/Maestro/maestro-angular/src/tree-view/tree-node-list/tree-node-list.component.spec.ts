@@ -1,6 +1,7 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { TreeNodeListComponent } from './tree-node-list.component';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 
 describe('TreeNodeListComponent', () => {
   let component: TreeNodeListComponent;
@@ -8,7 +9,8 @@ describe('TreeNodeListComponent', () => {
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ TreeNodeListComponent ]
+      declarations: [ TreeNodeListComponent ],
+      schemas: [ NO_ERRORS_SCHEMA ],
     })
     .compileComponents();
   }));

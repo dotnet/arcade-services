@@ -34,41 +34,6 @@ namespace Microsoft.DotNet.DarcLib
         LatestInChannel,
     }
 
-    public enum EarlyBreakOnType
-    {
-        /// <summary>
-        /// Do not break graph build early
-        /// </summary>
-        None,
-        /// <summary>
-        /// Break graph when all the specified dependencies have
-        /// been found
-        /// </summary>
-        Dependencies,
-        /// <summary>
-        /// Break when the specified assets have been found
-        /// </summary>
-        Assets
-    }
-
-    public class EarlyBreakOn
-    {
-        /// <summary>
-        ///     Do not break early
-        /// </summary>
-        public static readonly EarlyBreakOn NoEarlyBreak = new EarlyBreakOn() { Type = EarlyBreakOnType.None };
-
-        /// <summary>
-        ///     When should early breaking be done (how should the BreakOn list be interpreted)
-        /// </summary>
-        public EarlyBreakOnType Type { get; set; }
-        /// <summary>
-        ///     When all the elements in BreakOn have been found,
-        ///     (interpreted based on Type), break the graph build.
-        /// </summary>
-        public List<string> BreakOn { get; set; }
-    }
-
     public class DependencyGraphBuildOptions
     {
         /// <summary>
@@ -80,23 +45,23 @@ namespace Microsoft.DotNet.DarcLib
         /// Lookup build information for each node. Only valid for remote builds.
         /// </summary>
         public bool LookupBuilds { get; set; }
-        
+
+        /// <summary>
+        /// Determine which dependencies are missing builds
+        /// </summary>
+        public bool ComputeMissingBuilds { get; set; }
+
         /// <summary>
         /// Type of node diff to perform. Local build only supports 'None' 
         /// </summary>
         public NodeDiff NodeDiff { get; set; } = NodeDiff.None;
-        
-        /// <summary>
-        /// Stop the graph build based on the provided options
-        /// </summary>
-        public EarlyBreakOn EarlyBuildBreak { get; set; } = EarlyBreakOn.NoEarlyBreak;
 
         /// <summary>
         ///     If true, cycles are computed as part of the graph build
         ///     if cycles are encountered, and the Cycles member of DependencyGraph
         ///     will be non-empty
         /// </summary>
-        public bool ComputeCyclePaths { get; set; } = true;
+        public bool ComputeCyclePaths { get; set; } = false;
 
         /// <summary>
         ///     Location of git executable for use if any git commands need to be run.
@@ -115,7 +80,6 @@ namespace Microsoft.DotNet.DarcLib
             IEnumerable<DependencyGraphNode> allNodes,
             IEnumerable<DependencyGraphNode> incoherentNodes,
             IEnumerable<Build> contributingBuilds,
-            IEnumerable<DependencyDetail> dependenciesMissingBuilds,
             IEnumerable<IEnumerable<DependencyGraphNode>> cycles)
         {
             Root = root;
@@ -124,7 +88,6 @@ namespace Microsoft.DotNet.DarcLib
             IncoherentNodes = incoherentNodes;
             IncoherentDependencies = incoherentDependencies;
             ContributingBuilds = contributingBuilds;
-            DependenciesMissingBuilds = dependenciesMissingBuilds;
             Cycles = cycles;
         }
 
@@ -157,12 +120,6 @@ namespace Microsoft.DotNet.DarcLib
         ///     Builds that contributed dependencies to the graph.
         /// </summary>
         public IEnumerable<Build> ContributingBuilds { get; set; }
-
-        /// <summary>
-        ///     Dependencies in the graph for which a corresponding build could not
-        ///     be found.
-        /// </summary>
-        public IEnumerable<DependencyDetail> DependenciesMissingBuilds { get; set; }
 
         /// <summary>
         ///     A list of cycles.  Each cycle is represented as a list of nodes
@@ -467,7 +424,7 @@ namespace Microsoft.DotNet.DarcLib
             IEnumerable<string> remotesMap,
             string testPath)
         {
-            ValidateBuildOptions(remoteFactory, rootDependencies, repoUri, commit, 
+            ValidateBuildOptions(remoteFactory, rootDependencies, repoUri, commit,
                 options, remote, logger, reposFolder, remotesMap, testPath);
 
             if (rootDependencies != null)
@@ -484,49 +441,27 @@ namespace Microsoft.DotNet.DarcLib
                 logger.LogInformation($"Starting build of graph from ({repoUri}@{commit})");
             }
 
-            AssetComparer assetEqualityComparer = new AssetComparer();
-            HashSet<Build> allContributingBuilds = null;
-            HashSet<DependencyDetail> dependenciesMissingBuilds = null;
-            HashSet<Build> rootNodeBuilds = null;
-            Dictionary<DependencyDetail, Build> dependencyCache =
-                new Dictionary<DependencyDetail, Build>(new DependencyDetailComparer());
-            List<LinkedList<DependencyGraphNode>> cycles = new List<LinkedList<DependencyGraphNode>>();
-
-            EarlyBreakOnType breakOnType = options.EarlyBuildBreak.Type;
-            HashSet<string> breakOn = null;
-            if (breakOnType != EarlyBreakOnType.None)
+            IRemote barOnlyRemote = null;
+            if (remote)
             {
-                breakOn = new HashSet<string>(options.EarlyBuildBreak.BreakOn, StringComparer.OrdinalIgnoreCase);
+                // Look up the dependency and get the creating build.
+                barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(logger);
             }
+
+            List<LinkedList<DependencyGraphNode>> cycles = new List<LinkedList<DependencyGraphNode>>();
+            Dictionary<string, Task<IEnumerable<Build>>> buildLookupTasks = null;
 
             if (options.LookupBuilds)
             {
-                allContributingBuilds = new HashSet<Build>(new BuildComparer());
-                dependenciesMissingBuilds = new HashSet<DependencyDetail>(new DependencyDetailComparer());
-                rootNodeBuilds = new HashSet<Build>(new BuildComparer());
+                buildLookupTasks = new Dictionary<string, Task<IEnumerable<Build>>>();
 
                 // Look up the dependency and get the creating build.
-                IRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(logger);
-                IEnumerable<Build> potentialRootNodeBuilds = await barOnlyRemote.GetBuildsAsync(repoUri, commit);
-                // Filter by those actually producing the root dependencies, if they were supplied
-                if (rootDependencies != null)
-                {
-                    potentialRootNodeBuilds = potentialRootNodeBuilds.Where(b =>
-                        b.Assets.Any(a => rootDependencies.Any(d => assetEqualityComparer.Equals(a, d))));
-                }
-                // It's entirely possible that the root has no builds (e.g. change just checked in).
-                // Don't record those. Instead, users of the graph should just look at the
-                // root node's contributing builds and determine whether it's empty or not.
-                foreach (Build build in potentialRootNodeBuilds)
-                {
-                    allContributingBuilds.Add(build);
-                    rootNodeBuilds.Add(build);
-                    AddAssetsToBuildCache(build, dependencyCache, breakOnType, breakOn);
-                }
+                buildLookupTasks.Add($"{repoUri}@{commit}", barOnlyRemote.GetBuildsAsync(repoUri, commit));
             }
 
             // Create the root node and add the repo to the visited bit vector.
-            DependencyGraphNode rootGraphNode = new DependencyGraphNode(repoUri, commit, rootDependencies, rootNodeBuilds);
+            List<Build> allContributingBuilds = null;
+            DependencyGraphNode rootGraphNode = new DependencyGraphNode(repoUri, commit, rootDependencies, null);
             rootGraphNode.VisitedNodes.Add(repoUri);
             // Nodes to visit is a queue, so that the evaluation order
             // of the graph is breadth first.
@@ -539,25 +474,11 @@ namespace Microsoft.DotNet.DarcLib
                 uniqueDependencyDetails = new HashSet<DependencyDetail>(
                     rootGraphNode.Dependencies,
                     new DependencyDetailComparer());
-                // Remove the dependencies details from the
-                // break on if break on type is Dependencies
-                if (breakOnType == EarlyBreakOnType.Dependencies)
-                {
-                    rootGraphNode.Dependencies.Select(d => breakOn.Remove(d.Name));
-                }
             }
             else
             {
                 uniqueDependencyDetails = new HashSet<DependencyDetail>(
                     new DependencyDetailComparer());
-            }
-
-            // If we already found the assets/dependencies we wanted, clear the
-            // visit list and we'll drop through.
-            if (breakOnType != EarlyBreakOnType.None && breakOn.Count == 0)
-            {
-                logger.LogInformation($"Stopping graph build after finding all assets/dependencies.");
-                nodesToVisit.Clear();
             }
 
             // Cache of nodes we've visited. If we reach a repo/commit combo already in the cache,
@@ -619,6 +540,14 @@ namespace Microsoft.DotNet.DarcLib
                             continue;
                         }
 
+                        if (options.LookupBuilds)
+                        {
+                            if (!buildLookupTasks.ContainsKey($"{dependency.RepoUri}@{dependency.Commit}"))
+                            {
+                                buildLookupTasks.Add($"{dependency.RepoUri}@{dependency.Commit}", barOnlyRemote.GetBuildsAsync(dependency.RepoUri, dependency.Commit));
+                            }
+                        }
+
                         // If the dependency's repo uri has been traversed, we've reached a cycle in this subgraph
                         // and should break.
                         if (node.VisitedNodes.Contains(dependency.RepoUri))
@@ -647,57 +576,10 @@ namespace Microsoft.DotNet.DarcLib
                             incoherentDependenciesCache.Add(dependency.Name, dependency);
                         }
 
-                        HashSet<Build> nodeContributingBuilds = null;
-                        if (options.LookupBuilds)
-                        {
-                            nodeContributingBuilds = new HashSet<Build>(new BuildComparer());
-                            // Look up dependency in cache first
-                            if (dependencyCache.TryGetValue(dependency, out Build existingBuild))
-                            {
-                                nodeContributingBuilds.Add(existingBuild);
-                                allContributingBuilds.Add(existingBuild);
-                            }
-                            else
-                            {
-                                // Look up the dependency and get the creating build.
-                                IRemote barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(logger);
-                                IEnumerable<Build> potentiallyContributingBuilds = await barOnlyRemote.GetBuildsAsync(dependency.RepoUri, dependency.Commit);
-                                // Filter by those actually producing the dependency. Most of the time this won't
-                                // actually result in a different set of contributing builds, but should avoid any subtle bugs where
-                                // there might be overlap between repos, or cases where there were multiple builds at the same sha.
-                                potentiallyContributingBuilds = potentiallyContributingBuilds.Where(b =>
-                                    b.Assets.Any(a => assetEqualityComparer.Equals(a, dependency)));
-                                if (!potentiallyContributingBuilds.Any())
-                                {
-                                    // Couldn't find a build that produced the dependency.
-                                    dependenciesMissingBuilds.Add(dependency);
-                                }
-                                else
-                                {
-                                    foreach (Build build in potentiallyContributingBuilds)
-                                    {
-                                        allContributingBuilds.Add(build);
-                                        nodeContributingBuilds.Add(build);
-                                        AddAssetsToBuildCache(build, dependencyCache, breakOnType, breakOn);
-                                    }
-                                }
-                            }
-                        }
-
                         // We may have visited this node before.  If so, add it as a child and avoid additional walks.
                         // Update the list of contributing builds.
                         if (nodeCache.TryGetValue($"{dependency.RepoUri}@{dependency.Commit}", out DependencyGraphNode existingNode))
                         {
-                            if (options.LookupBuilds)
-                            {
-                                // Add the contributing builds. It's possible that
-                                // different dependencies on a single node (repo/sha) were produced
-                                // from multiple builds
-                                foreach (Build build in nodeContributingBuilds)
-                                {
-                                    existingNode.ContributingBuilds.Add(build);
-                                }
-                            }
                             logger.LogInformation($"Node {dependency.RepoUri}@{dependency.Commit} has already been created, adding as child");
                             node.AddChild(existingNode, dependency);
                             continue;
@@ -709,14 +591,14 @@ namespace Microsoft.DotNet.DarcLib
                             dependency.Commit,
                             null,
                             node.VisitedNodes,
-                            nodeContributingBuilds);
-                        
+                            null);
+
                         // Cache the dependency and add it to the visitation stack.
                         nodeCache.Add($"{dependency.RepoUri}@{dependency.Commit}", newNode);
                         nodesToVisit.Enqueue(newNode);
                         newNode.VisitedNodes.Add(dependency.RepoUri);
                         node.AddChild(newNode, dependency);
-                        
+
                         // Calculate incoherencies. If we've not yet visited the repo uri, add the
                         // new node based on its repo uri. Otherwise, add both the new node and the visited
                         // node to the incoherent nodes.
@@ -729,25 +611,18 @@ namespace Microsoft.DotNet.DarcLib
                         {
                             visitedRepoUriNodes.Add(newNode.Repository, newNode);
                         }
-
-                        // If breaking on dependencies, then decide whether we need to break
-                        // here.
-                        if (breakOnType == EarlyBreakOnType.Dependencies)
-                        {
-                            breakOn.Remove(dependency.Name);
-                        }
-
-                        if (breakOnType != EarlyBreakOnType.None && breakOn.Count == 0)
-                        {
-                            logger.LogInformation($"Stopping graph build after finding all assets/dependencies.");
-                            nodesToVisit.Clear();
-                            break;
-                        }
                     }
                 }
             }
 
-            switch(options.NodeDiff)
+            if (options.LookupBuilds)
+            {
+                allContributingBuilds = await ComputeContributingBuildsAsync(buildLookupTasks,
+                                                                             nodeCache.Values,
+                                                                             logger);
+            }
+
+            switch (options.NodeDiff)
             {
                 case NodeDiff.None:
                     // Nothing
@@ -766,8 +641,77 @@ namespace Microsoft.DotNet.DarcLib
                                        nodeCache.Values,
                                        incoherentNodes,
                                        allContributingBuilds,
-                                       dependenciesMissingBuilds,
                                        cycles);
+        }
+
+        /// <summary>
+        /// Compute which builds contribute to each node in the graph, as well as the overall graph
+        /// </summary>
+        /// <param name="buildLookupTasks">Set of tasks that are looking up builds</param>
+        /// <param name="allNodes">All nodes in the graph</param>
+        /// <param name="logger">Logger</param>
+        /// <returns></returns>
+        private static async Task<List<Build>> ComputeContributingBuildsAsync(Dictionary<string, Task<IEnumerable<Build>>> buildLookupTasks,
+                                                                              IEnumerable<DependencyGraphNode> allNodes,
+                                                                              ILogger logger)
+        {
+            logger.LogInformation("Computing contributing builds");
+
+            List<Build> allContributingBuilds = new List<Build>();
+
+            foreach (DependencyGraphNode node in allNodes)
+            {
+                node.ContributingBuilds = new HashSet<Build>(new BuildComparer());
+                IEnumerable<Build> potentiallyContributingBuilds = await buildLookupTasks[$"{node.Repository}@{node.Commit}"];
+
+                // Filter down. The parent nodes of this node may have specific dependency versions that narrow down
+                // which potential builds this could be.  For instance, if sha A was built twice, producing asset B.1 and B.2,
+                // we wouldn't know which by a simple query. But we can narrow the potential
+                // builds by any of those that produced assets that match any parent's dependency name+version
+                foreach (var potentialContributingBuild in potentiallyContributingBuilds)
+                {
+                    if (BuildContributesToNode(node, potentialContributingBuild))
+                    {
+                        allContributingBuilds.Add(potentialContributingBuild);
+                        node.ContributingBuilds.Add(potentialContributingBuild);
+                    }
+                }
+            }
+
+            logger.LogInformation("Done computing contributing builds");
+
+            return allContributingBuilds;
+        }
+        
+        /// <summary>
+        /// Determines whether a build contributes to a given node by looking at the parents'
+        /// input dependencies. If there are no parents, then we assume that the build could contribute. This
+        /// would happen for the root node.
+        /// </summary>
+        /// <param name="node">Node</param>
+        /// <param name="potentialContributingBuild">Potentially contributing build</param>
+        /// <returns>True if the build contributes, false otherwise.</returns>
+        private static bool BuildContributesToNode(DependencyGraphNode node, Build potentialContributingBuild)
+        {
+            if (!node.Parents.Any())
+            {
+                return true;
+            }
+
+            AssetComparer assetEqualityComparer = new AssetComparer();
+            foreach (DependencyGraphNode parentNode in node.Parents)
+            {
+                foreach (var dependency in parentNode.Dependencies)
+                {
+                    if (dependency.Commit == node.Commit &&
+                        dependency.RepoUri == node.Repository &&
+                        potentialContributingBuild.Assets.Any(a => assetEqualityComparer.Equals(a, dependency)))
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         /// <summary>
@@ -811,41 +755,6 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             return allCyclesRootedAtNode;
-        }
-
-        /// <summary>
-        ///     Add the assets from each build to the cache.
-        ///     Also evaluate whether we see any of the assets that we are supposed to break
-        ///     on, and remove them from the break on set if so.
-        /// </summary>
-        /// <param name="build">Build producing assets</param>
-        /// <param name="dependencyCache">Dependency cache</param>
-        /// <param name="earlyBreakOnType">Early break on type</param>
-        /// <param name="breakOn">Hash set of assets. Any assets in the <paramref name="build"/>
-        ///     that exist in <paramref name="breakOn"/> will be removed from
-        ///     <paramref name="breakOn"/> if <paramref name="earlyBreakOnType"/> is "Assets"</param>
-        private static void AddAssetsToBuildCache(
-            Build build, 
-            Dictionary<DependencyDetail, Build> dependencyCache,
-            EarlyBreakOnType earlyBreakOnType,
-            HashSet<string> breakOn)
-        {
-            foreach (Asset buildAsset in build.Assets)
-            {
-                DependencyDetail newDependency =
-                    new DependencyDetail() { Name = buildAsset.Name, Version = buildAsset.Version, Commit = build.Commit };
-                // Possible that the same asset could be listed multiple times in a build, so avoid accidentally adding
-                // things multiple times
-                if (!dependencyCache.ContainsKey(newDependency))
-                {
-                    dependencyCache.Add(newDependency, build);
-                }
-
-                if (earlyBreakOnType == EarlyBreakOnType.Assets)
-                {
-                    breakOn.Remove(buildAsset.Name);
-                }
-            }
         }
 
         private static string GetRepoPath(

@@ -228,7 +228,15 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="buildId">Build id</param>
         /// <param name="channelId">Channel id</param>
         /// <returns>Async task</returns>
-        Task AssignBuildToChannel(int buildId, int channelId);
+        Task AssignBuildToChannelAsync(int buildId, int channelId);
+
+        /// <summary>
+        ///     Remove a particular build from a channel
+        /// </summary>
+        /// <param name="buildId">Build id</param>
+        /// <param name="channelId">Channel id</param>
+        /// <returns>Async task</returns>
+        Task DeleteBuildFromChannelAsync(int buildId, int channelId);
 
         /// <summary>
         ///     Update an existing build.

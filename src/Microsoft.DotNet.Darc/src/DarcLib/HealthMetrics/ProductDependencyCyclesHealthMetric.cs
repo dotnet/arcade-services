@@ -40,7 +40,6 @@ namespace Microsoft.DotNet.DarcLib.HealthMetrics
 
             DependencyGraphBuildOptions options = new DependencyGraphBuildOptions
             {
-                EarlyBuildBreak = EarlyBreakOn.NoEarlyBreak,
                 IncludeToolset = false,
                 LookupBuilds = false,
                 NodeDiff = NodeDiff.None,

@@ -112,7 +112,7 @@ namespace SubscriptionActorService
             throw new NotImplementedException();
         }
 
-        public Task AssignBuildToChannel(int buildId, int channelId)
+        public Task AssignBuildToChannelAsync(int buildId, int channelId)
         {
             throw new NotImplementedException();
         }
@@ -246,6 +246,11 @@ namespace SubscriptionActorService
 
         ///  Unsupported method
         public Task<Goal> GetGoalAsync(string channel, int definitionId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task DeleteBuildFromChannelAsync(int buildId, int channelId)
         {
             throw new NotImplementedException();
         }

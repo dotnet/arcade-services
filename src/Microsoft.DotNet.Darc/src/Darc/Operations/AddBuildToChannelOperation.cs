@@ -8,11 +8,9 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Net;
-using System.Threading.Tasks;
-using Microsoft.DotNet.Maestro.Client;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -59,7 +57,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 Console.WriteLine();
                 Console.Write(UxHelpers.GetBuildDescription(build));
 
-                await remote.AssignBuildToChannel(_options.Id, targetChannel.Id);
+                await remote.AssignBuildToChannelAsync(_options.Id, targetChannel.Id);
 
                 // Be helpful. Let the user know what will happen.
                 string buildRepo = build.GitHubRepository ?? build.AzureDevOpsRepository;
