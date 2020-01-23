@@ -95,7 +95,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             {
                 if (response.StatusCode == HttpStatusCode.NotFound)
                     return null;
-                
+
                 await response.EnsureSuccessWithContentAsync();
 
                 using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
