@@ -4,6 +4,7 @@
 
 using GitHubJwt;
 using Microsoft.Extensions.Options;
+using System.Text;
 
 namespace Microsoft.Dotnet.GitHub.Authentication
 {
@@ -11,18 +12,32 @@ namespace Microsoft.Dotnet.GitHub.Authentication
     {
         private readonly IOptions<GitHubTokenProviderOptions> _options;
 
-        public GitHubAppTokenProvider(IOptions<GitHubTokenProviderOptions> options)
+        public GitHubAppTokenProvider(IOptions<GitHubTokenProviderOptions> options = null)
         {
             _options = options;
         }
 
         public string GetAppToken()
         {
+            return GetAppToken(_options.Value.GitHubAppId, new StringPrivateKeySource(_options.Value.PrivateKey));
+        }
+
+        public string GetAppTokenFromEnvironmentVariableBase64(int gitHubAppId, string environmentVariableName)
+        {
+            string encodedKey = System.Environment.GetEnvironmentVariable(environmentVariableName);
+            byte[] keydata = System.Convert.FromBase64String(encodedKey);
+            string privateKey = Encoding.UTF8.GetString(keydata);
+
+            return GetAppToken(gitHubAppId, new StringPrivateKeySource(privateKey));
+        }
+
+        private string GetAppToken(int gitHubAppId, IPrivateKeySource privateKeySource)
+        {
             var generator = new GitHubJwtFactory(
-                new StringPrivateKeySource(_options.Value.PrivateKey),
+                privateKeySource,
                 new GitHubJwtFactoryOptions
                 {
-                    AppIntegrationId = _options.Value.GitHubAppId,
+                    AppIntegrationId = gitHubAppId,
                     ExpirationSeconds = 600
                 });
             return generator.CreateEncodedJwtToken();
