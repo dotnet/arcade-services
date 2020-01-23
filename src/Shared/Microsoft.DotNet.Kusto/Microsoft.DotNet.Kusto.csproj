@@ -8,6 +8,7 @@
     <LangVersion>7.1</LangVersion>
     <RootNamespace>Microsoft.DotNet.Kusto</RootNamespace>
     <AssemblyName>Microsoft.DotNet.Kusto</AssemblyName>
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
   
   <ItemGroup>
