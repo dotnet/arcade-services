@@ -32,7 +32,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
             var uri = new Uri(new Uri(_baseUrl), $"/api/dashboards/uid/{uid}");
             using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
             {
-                response.EnsureSuccessStatusCode();
+                await response.EnsureSuccessWithContentAsync();
 
                 using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                 using (var streamReader = new StreamReader(stream))
@@ -49,7 +49,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
             using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
             {
-                response.EnsureSuccessStatusCode();
+                await response.EnsureSuccessWithContentAsync();
 
                 using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                 using (var streamReader = new StreamReader(stream))
@@ -71,7 +71,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
             using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
             {
-                response.EnsureSuccessStatusCode();
+                await response.EnsureSuccessWithContentAsync();
 
                 using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                 using (var streamReader = new StreamReader(stream))
@@ -96,7 +96,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 if (response.StatusCode == HttpStatusCode.NotFound)
                     return null;
 
-                response.EnsureSuccessStatusCode();
+                await response.EnsureSuccessWithContentAsync();
 
                 using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                 using (var streamReader = new StreamReader(stream))
@@ -175,8 +175,8 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 {
                     return await SendObjectAsync(data, new Uri(new Uri(_baseUrl), createUrl)).ConfigureAwait(false);
                 }
-
-                exist.EnsureSuccessStatusCode();
+                
+                await exist.EnsureSuccessWithContentAsync();
 
                 (HttpMethod method, string url) updateInfo;
                 using (var st = await exist.Content.ReadAsStreamAsync().ConfigureAwait(false))
@@ -213,7 +213,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                     using (var request = new HttpRequestMessage(method, uri) {Content = content})
                     using (HttpResponseMessage response = await _client.SendAsync(request).ConfigureAwait(false))
                     {
-                        response.EnsureSuccessStatusCode();
+                        await response.EnsureSuccessWithContentAsync();
 
                         using (var st = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                         using (var sr = new StreamReader(st))
@@ -257,7 +257,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
             using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
             {
-                response.EnsureSuccessStatusCode();
+                await response.EnsureSuccessWithContentAsync();
 
                 using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                 using (var streamReader = new StreamReader(stream))
@@ -274,7 +274,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
             using (HttpResponseMessage response = await _client.DeleteAsync(uri).ConfigureAwait(false))
             {
-                response.EnsureSuccessStatusCode();
+                await response.EnsureSuccessWithContentAsync();
             }
         }
 
@@ -284,7 +284,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
             using (HttpResponseMessage response = await _client.GetAsync(uri).ConfigureAwait(false))
             {
-                response.EnsureSuccessStatusCode();
+                await response.EnsureSuccessWithContentAsync();
 
                 using (Stream stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
                 using (var streamReader = new StreamReader(stream))
