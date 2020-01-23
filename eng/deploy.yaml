@@ -176,7 +176,7 @@ stages:
       displayName: Notify dotnet-eng-staus/end
       continueOnError: true
       inputs:
-        serviceConnection: .NET Engineering Deployment Notification - Staging
+        serviceConnection: ${{ parameters.DotNetStatusEndpoint }}
         method: POST
         urlSuffix: /arcade-services/$(Build.BuildNumber)/end
   - job: updateMetrics
