@@ -24,29 +24,39 @@ namespace Maestro.Data.Models
 
         static Build()
         {
-            var builder = new ConfigurationBuilder();
             IConfigurationRefresher configRefresher = null;
             IConfiguration dynamicConfigs = null;
+            string appConfigurationConnString = Environment.GetEnvironmentVariable("AppConfigurationConnectionString");
 
-            builder.AddAzureAppConfiguration(options =>
+            if (!string.IsNullOrWhiteSpace(appConfigurationConnString))
             {
-                options.Connect(Environment.GetEnvironmentVariable("AppConfigurationConnectionString"))
-                    .ConfigureRefresh(refresh =>
-                    {
-                        refresh.Register("AutoBuildPromotion", "Maestro")
-                            .SetCacheExpiration(TimeSpan.FromSeconds(1));
-                    }).UseFeatureFlags();
+                var builder = new ConfigurationBuilder();
 
-                configRefresher = options.GetRefresher();
-            });
+                builder.AddAzureAppConfiguration(options =>
+                {
+                    options.Connect(appConfigurationConnString)
+                        .ConfigureRefresh(refresh =>
+                        {
+                            refresh.Register("AutoBuildPromotion", "Maestro")
+                                .SetCacheExpiration(TimeSpan.FromSeconds(1));
+                        }).UseFeatureFlags();
 
-            dynamicConfigs = builder.Build();
+                    configRefresher = options.GetRefresher();
+                });
+
+                dynamicConfigs = builder.Build();
+            }
 
             Triggers<Build>.Inserted += entry =>
             {
-                configRefresher.Refresh().GetAwaiter().GetResult();
+                bool autoBuildPromotion = false;
 
-                bool.TryParse(dynamicConfigs["AutoBuildPromotion"], out var autoBuildPromotion);
+                if (!string.IsNullOrWhiteSpace(appConfigurationConnString))
+                {
+                    configRefresher.Refresh().GetAwaiter().GetResult();
+
+                    bool.TryParse(dynamicConfigs["AutoBuildPromotion"], out autoBuildPromotion);
+                }
 
                 if (autoBuildPromotion)
                 {
