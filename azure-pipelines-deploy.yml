@@ -25,6 +25,9 @@ stages:
       Subscription: NetHelixStaging
       VariableGroup: MaestroInt KeyVault
       StatusVariableGroup: DotNetStatus Staging
+      GrafanaHost: https://dotnet-eng-grafana-staging.westus2.cloudapp.azure.com
+      GrafanaKeyVault: dotnet-grafana-staging
+      GrafanaVariableGroup: Dotnet-Grafana-Staging
     ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
       DeploymentEnvironment: Production
       DotNetStatusAppName: dotneteng-status
@@ -36,3 +39,6 @@ stages:
       Subscription: NetHelix
       VariableGroup: MaestroProd KeyVault
       StatusVariableGroup: DotNetStatus Production
+      GrafanaHost: https://dotnet-eng-grafana.westus2.cloudapp.azure.com
+      GrafanaKeyVault: dotnet-grafana
+      GrafanaVariableGroup: Dotnet-Grafana-Production

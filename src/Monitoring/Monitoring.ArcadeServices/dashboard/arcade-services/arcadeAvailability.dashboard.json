@@ -33,13 +33,13 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "a1e9e56d5d864d59858a9ac204aaf3de"
+          "NotificationId": "7d6ec51ee9274a01925388aa55e8e96e"
         },
         "conditions": [
           {
             "evaluator": {
               "params": [
-                5
+                30
               ],
               "type": "gt"
             },
@@ -67,7 +67,11 @@
         "message": "Internal Pool Provider Average Response Time is high",
         "name": "Average Response Time alert",
         "noDataState": "keep_state",
-        "notifications": []
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
       },
       "aliasColors": {},
       "bars": false,
@@ -210,7 +214,7 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 5
+          "value": 30
         }
       ],
       "timeFrom": null,
@@ -276,7 +280,7 @@
           {
             "evaluator": {
               "params": [
-                5
+                30
               ],
               "type": "gt"
             },
@@ -304,7 +308,11 @@
         "message": "Public Pool Provider Average Response Time is high",
         "name": "Average Response Time alert",
         "noDataState": "keep_state",
-        "notifications": []
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
       },
       "aliasColors": {},
       "bars": false,
@@ -447,7 +455,7 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 5
+          "value": 30
         }
       ],
       "timeFrom": null,
@@ -541,13 +549,17 @@
         "message": "Helix API availability alert!",
         "name": "Helix API availability alert",
         "noDataState": "keep_state",
-        "notifications": []
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
       },
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "AzureMonitor-helix-prod",
+      "datasource": "Azure Monitor - helix-prod",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -761,7 +773,7 @@
         "noDataState": "keep_state",
         "notifications": [
           {
-            "uid": "Tk55B9tWz"
+            "uid": "statusHook"
           }
         ]
       },
@@ -912,8 +924,7 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 5,
-          "yaxis": "left"
+          "value": 5
         }
       ],
       "timeFrom": null,
@@ -958,7 +969,7 @@
     },
     {
       "collapsed": false,
-      "datasource": "AzureMonitor-helix",
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -973,7 +984,7 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "c79dc72c1f0547b1a13c62fdb99afd4d"
+          "NotificationId": "c9ebe5ffb613408fa26d42db069275e6"
         },
         "conditions": [
           {
@@ -1009,7 +1020,7 @@
         "noDataState": "keep_state",
         "notifications": [
           {
-            "uid": "Tk55B9tWz"
+            "uid": "statusHook"
           }
         ]
       },
@@ -1017,7 +1028,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "AI-dnc-eng",
+      "datasource": "AI - dnc-eng",
       "description": "Availability tests for the site source.dot.net.",
       "fill": 1,
       "fillGradient": 0,
@@ -1241,7 +1252,7 @@
     },
     {
       "collapsed": false,
-      "datasource": "AzureMonitor-helix",
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1258,7 +1269,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "AzureMonitor-helix",
+      "datasource": null,
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1436,7 +1447,7 @@
     },
     {
       "collapsed": false,
-      "datasource": "AzureMonitor-helix",
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1451,7 +1462,7 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "4057b3290b144908b7628b51a87f2e26"
+          "NotificationId": "d09e4531f3d441f2b24d1c4556b47044"
         },
         "conditions": [
           {
@@ -1487,7 +1498,7 @@
         "noDataState": "keep_state",
         "notifications": [
           {
-            "uid": "Tk55B9tWz"
+            "uid": "statusHook"
           }
         ]
       },
@@ -1495,7 +1506,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "AzureMonitor-helix-prod",
+      "datasource": "Azure Monitor - helix-prod",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1672,7 +1683,7 @@
     },
     {
       "collapsed": false,
-      "datasource": "AzureMonitor-helix",
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1689,7 +1700,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "AI-grafana",
+      "datasource": "AI - grafana",
       "description": "Monitoring and alerting for the Grafana infrastructure is managed by Azure.",
       "fill": 1,
       "fillGradient": 0,
