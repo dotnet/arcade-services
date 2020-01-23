@@ -22,6 +22,8 @@ namespace RolloutScorerAzureFunction
         {
             AzureServiceTokenProvider tokenProvider = new AzureServiceTokenProvider();
 
+            string deploymentEnvironment = Environment.GetEnvironmentVariable("DeploymentEnvironment") ?? "Staging";
+
             SecretBundle scorecardsStorageAccountKey = await GetStorageAccountKeyAsync(tokenProvider,
                 Utilities.KeyVaultUri, ScorecardsStorageAccount.KeySecretName);
             SecretBundle deploymentTableSasToken = await GetStorageAccountKeyAsync(tokenProvider,
@@ -94,8 +96,8 @@ namespace RolloutScorerAzureFunction
                     }
 
                     log.LogInformation($"Uploading results for {string.Join(", ", scorecards.Select(s => s.Repo))}");
-                    await RolloutUploader.UploadResultsAsync(scorecards,
-                        Utilities.GetGithubClient(githubPat.Value), scorecardsStorageAccountKey.Value, Configs.DefaultConfig.GithubConfig);
+                    await RolloutUploader.UploadResultsAsync(scorecards, Utilities.GetGithubClient(githubPat.Value),
+                        scorecardsStorageAccountKey.Value, Configs.DefaultConfig.GithubConfig, makePr: deploymentEnvironment == "Production");
                 }
                 else
                 {

@@ -18,7 +18,7 @@
     },
     {
       "Repo": "dotnet-arcade-services",
-      "BuildDefinitionIds": [ "252" ],
+      "BuildDefinitionIds": [ "252", "728" ],
       "AzdoInstance": "dnceng",
       "GithubIssueLabel": "Rollout Arcade Services",
       "ExpectedTime": 30,

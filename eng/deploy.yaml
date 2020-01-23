@@ -163,11 +163,23 @@ stages:
     - download: current
       artifact: RolloutScorer
     - task: AzureFunctionApp@1
-      displayName: Deploy AutoScaleService
+      displayName: Deploy RolloutScorer
       inputs:
         azureSubscription: ${{ parameters.Subscription }}
-        package: $(Build.ArtifactStagingDirectory)/AutoScaleService.zip
-        appName: helix-autoscale-int
+        ${{ if ne(parameters.DeploymentEnvironment, 'Production') }}:
+          appSettings: >
+            -DeploymentEnvironment Staging
+            -ScorecardsStorageAccountKeySecretName "rolloutscorecardsstaging-storage-key"
+            -ScorecardsStorageAccountName "rolloutscorecardsstaging"
+            -ScorecardsStorageAccountTableName "scorecardsstaging"
+        ${{ if eq(parameters.DeploymentEnvironment, 'Production') }}:
+          appSettings: >
+            -DeploymentEnvironment Production
+            -ScorecardsStorageAccountKeySecretName "rolloutscorecards-storage-key"
+            -ScorecardsStorageAccountName "rolloutscorecards"
+            -ScorecardsStorageAccountTableName "scorecards"
+        package: $(Build.ArtifactStagingDirectory)/RolloutScorer.zip
+        appName: ${{ parameters.RolloutScorerAppName }}
 
 - stage: postdeploy
   displayName: Post-Deployment

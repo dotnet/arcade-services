@@ -1,5 +1,8 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace RolloutScorer
 {
@@ -21,6 +24,9 @@ namespace RolloutScorer
 
         [JsonIgnore]
         public bool DeploymentReached { get; set; } = false;
+        [JsonIgnore]
+        public List<BuildTimelineEntry> Stages { get; set; } = new List<BuildTimelineEntry>();
+
         [JsonIgnore]
         public string SelfLink => Links.SelfLink.Href;
         [JsonIgnore]
