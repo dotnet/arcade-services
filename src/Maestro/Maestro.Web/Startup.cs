@@ -44,6 +44,7 @@ using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Azure.Identity;
+using Azure.Core;
 
 namespace Maestro.Web
 {
@@ -246,10 +247,13 @@ namespace Maestro.Web
             // Configure access to Azure App Configuration
             string appConfigEndpointUri = Configuration["AppConfigurationUri"];
             ConfigurationBuilder builder = new ConfigurationBuilder();
+            TokenCredential credential = appConfigEndpointUri.Contains("maestrolocal") ? 
+                new DefaultAzureCredential() : 
+                (TokenCredential) new ManagedIdentityCredential();
 
             builder.AddAzureAppConfiguration(options =>
             {
-                options.Connect(new Uri(appConfigEndpointUri), new ManagedIdentityCredential())
+                options.Connect(new Uri(appConfigEndpointUri), credential)
                     .ConfigureRefresh(refresh =>
                     {
                         refresh.Register("AutoBuildPromotion", "Maestro")
