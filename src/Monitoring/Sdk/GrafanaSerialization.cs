@@ -89,7 +89,8 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 secureJsonData[name] = $"[vault(PLACEHOLDER:{datasourceName}:{name})]";
             }
 
-            slimmedDatasource["secureJsonFields"] = secureJsonData;
+            slimmedDatasource["secureJsonData"] = secureJsonData;
+            slimmedDatasource.Remove("secureJsonFields");
 
             return slimmedDatasource;
         }

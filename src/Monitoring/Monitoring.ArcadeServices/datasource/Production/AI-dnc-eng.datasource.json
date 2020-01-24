@@ -15,7 +15,7 @@
     "azureLogAnalyticsSameAs": false,
     "cloudName": "azuremonitor"
   },
-  "secureJsonFields": {
+  "secureJsonData": {
     "appInsightsApiKey": "[vault(dnc-eng-app-insights-api-key)]"
   },
   "readOnly": false
