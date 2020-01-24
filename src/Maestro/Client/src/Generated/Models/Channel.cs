@@ -6,7 +6,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class Channel
     {
-        public Channel(int id, string name, string classification, IImmutableList<ReleasePipeline> releasePipelines)
+        public Channel(int id, string name, string classification, IImmutableList<Models.ReleasePipeline> releasePipelines)
         {
             Id = id;
             Name = name;
@@ -24,7 +24,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public string Classification { get; }
 
         [JsonProperty("releasePipelines")]
-        public IImmutableList<ReleasePipeline> ReleasePipelines { get; }
+        public IImmutableList<Models.ReleasePipeline> ReleasePipelines { get; }
 
         [JsonIgnore]
         public bool IsValid

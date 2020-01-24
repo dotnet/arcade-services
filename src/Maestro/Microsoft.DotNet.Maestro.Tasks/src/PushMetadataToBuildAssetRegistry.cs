@@ -203,11 +203,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
             {
                 return value;
             }
-            var assets = await client.Assets.ListAssetsAsync(name: dep.Name, version: dep.Version, cancellationToken: cancellationToken);
+            var assets = client.Assets.ListAssetsAsync(name: dep.Name, version: dep.Version, cancellationToken: cancellationToken);
             List<Asset> matchingAssetsFromSameSha = new List<Asset>();
 
             // Filter out those assets which do not have matching commits
-            foreach (Asset asset in assets)
+            await foreach (Asset asset in assets)
             {
                 if (!buildCache.TryGetValue(asset.BuildId, out Client.Models.Build producingBuild))
                 {

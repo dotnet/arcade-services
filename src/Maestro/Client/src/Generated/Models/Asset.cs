@@ -6,7 +6,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class Asset
     {
-        public Asset(int id, int buildId, bool nonShipping, string name, string version, IImmutableList<AssetLocation> locations)
+        public Asset(int id, int buildId, bool nonShipping, string name, string version, IImmutableList<Models.AssetLocation> locations)
         {
             Id = id;
             BuildId = buildId;
@@ -32,6 +32,6 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public bool NonShipping { get; set; }
 
         [JsonProperty("locations")]
-        public IImmutableList<AssetLocation> Locations { get; }
+        public IImmutableList<Models.AssetLocation> Locations { get; }
     }
 }
