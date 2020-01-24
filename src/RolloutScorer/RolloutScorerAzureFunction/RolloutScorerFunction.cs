@@ -97,7 +97,7 @@ namespace RolloutScorerAzureFunction
 
                     log.LogInformation($"Uploading results for {string.Join(", ", scorecards.Select(s => s.Repo))}");
                     await RolloutUploader.UploadResultsAsync(scorecards, Utilities.GetGithubClient(githubPat.Value),
-                        scorecardsStorageAccountKey.Value, Configs.DefaultConfig.GithubConfig, makePr: deploymentEnvironment == "Production");
+                        scorecardsStorageAccountKey.Value, Configs.DefaultConfig.GithubConfig, skipPr: deploymentEnvironment == "Production");
                 }
                 else
                 {

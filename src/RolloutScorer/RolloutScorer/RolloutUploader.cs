@@ -71,13 +71,13 @@ namespace RolloutScorer
         /// <param name="githubClient">An authenticated Octokit.GitHubClient instance</param>
         /// <param name="storageAccountKey">Key to the rollout scorecards storage account</param>
         /// <param name="githubConfig">GitHubConfig object representing config</param>
-        public async static Task UploadResultsAsync(List<Scorecard> scorecards, GitHubClient githubClient, string storageAccountKey, GithubConfig githubConfig, bool makePr = true)
+        public async static Task UploadResultsAsync(List<Scorecard> scorecards, GitHubClient githubClient, string storageAccountKey, GithubConfig githubConfig, bool skipPr = false)
         {
             // We batch the scorecards by date so they can be sorted into markdown files properly
             IEnumerable<ScorecardBatch> scorecardBatches = scorecards
                 .GroupBy(s => s.Date).Select(g => new ScorecardBatch { Date = g.Key, Scorecards = g.ToList() });
 
-            if (makePr)
+            if (!skipPr)
             {
                 Reference masterBranch = await githubClient.Git.Reference
                 .Get(githubConfig.ScorecardsGithubOrg, githubConfig.ScorecardsGithubRepo, "heads/master");

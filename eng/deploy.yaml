@@ -155,7 +155,7 @@ stages:
     dependsOn: 
     - approval
     steps:
-    - download: current
+    - download: Build
       artifact: RolloutScorer
     - task: AzureFunctionApp@1
       displayName: Deploy RolloutScorer

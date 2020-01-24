@@ -71,7 +71,7 @@ namespace RolloutScorer
                     BuildBreakdowns.Add(new ScorecardBuildBreakdown(build.ToObject<BuildSummary>()));
                 }
             }
-            BuildBreakdowns.Sort((x, y) => x.BuildSummary.FinishTime.CompareTo(y.BuildSummary.FinishTime));
+            BuildBreakdowns.OrderBy(x => x.BuildSummary.FinishTime);
             await Task.WhenAll(BuildBreakdowns.Select(b => CollectStages(b)));
         }
 
@@ -134,9 +134,7 @@ namespace RolloutScorer
             // Loop over all the builds in the returned content and calculate start and end times
             foreach (ScorecardBuildBreakdown build in BuildBreakdowns)
             {
-                TimeSpan duration = TimeSpan.Zero;
-
-                duration = GetPipelineDurationFromStages(build.BuildSummary.Stages);
+                TimeSpan duration = GetPipelineDurationFromStages(build.BuildSummary.Stages);
                 rolloutBuildTimes.Add(duration);
                 build.Score.TimeToRollout = duration;
             }
@@ -193,8 +191,21 @@ namespace RolloutScorer
 
         public bool DetermineFailure()
         {
+            if (BuildBreakdowns.Count == 0)
+            {
+                return true;
+            }
+
             string lastBuildResult = BuildBreakdowns.Last().BuildSummary.Result;
-            return BuildBreakdowns.Count == 0 || (lastBuildResult != "succeeded" && lastBuildResult != "partiallySucceeded");
+            switch (lastBuildResult)
+            {
+                case "succeeded":
+                case "partiallySucceeded":
+                    return false;
+
+                default:
+                    return true;
+            }
         }
 
         /// <summary>
@@ -332,7 +343,8 @@ namespace RolloutScorer
                 .Select(s => (DateTimeOffset.TryParse(s.StartTime, out DateTimeOffset start) && DateTimeOffset.TryParse(s.EndTime, out DateTimeOffset end)) ? end - start : TimeSpan.Zero)
                 .Aggregate(TimeSpan.Zero, (l, r) => l + r);
 
-            return (endTime - startTime) - approvalTime;
+            TimeSpan duration = (endTime - startTime) - approvalTime;
+            return duration >= TimeSpan.Zero ? duration : TimeSpan.Zero;
         }
 
         /// <summary>
