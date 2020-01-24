@@ -22,41 +22,18 @@ namespace Maestro.Data.Models
         private string _azureDevOpsBranch;
         private string _githubBranch;
 
+        // Used to fetch dynamic configurations from Azure App Configuration
+        // These fields are set by Startup.cs at system initialization
+        public static IConfigurationRefresher s_configurationRefresher;
+        public static IConfiguration s_dynamicConfigs;
+
         static Build()
         {
-            IConfigurationRefresher configRefresher = null;
-            IConfiguration dynamicConfigs = null;
-            string appConfigurationConnString = Environment.GetEnvironmentVariable("AppConfigurationConnectionString");
-
-            if (!string.IsNullOrWhiteSpace(appConfigurationConnString))
-            {
-                var builder = new ConfigurationBuilder();
-
-                builder.AddAzureAppConfiguration(options =>
-                {
-                    options.Connect(appConfigurationConnString)
-                        .ConfigureRefresh(refresh =>
-                        {
-                            refresh.Register("AutoBuildPromotion", "Maestro")
-                                .SetCacheExpiration(TimeSpan.FromSeconds(1));
-                        }).UseFeatureFlags();
-
-                    configRefresher = options.GetRefresher();
-                });
-
-                dynamicConfigs = builder.Build();
-            }
-
             Triggers<Build>.Inserted += entry =>
             {
-                bool autoBuildPromotion = false;
+                s_configurationRefresher.Refresh().GetAwaiter().GetResult();
 
-                if (!string.IsNullOrWhiteSpace(appConfigurationConnString))
-                {
-                    configRefresher.Refresh().GetAwaiter().GetResult();
-
-                    bool.TryParse(dynamicConfigs["AutoBuildPromotion"], out autoBuildPromotion);
-                }
+                bool.TryParse(s_dynamicConfigs["AutoBuildPromotion"], out var autoBuildPromotion);
 
                 if (autoBuildPromotion)
                 {

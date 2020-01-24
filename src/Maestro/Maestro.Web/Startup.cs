@@ -43,6 +43,7 @@ using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
+using Azure.Identity;
 
 namespace Maestro.Web
 {
@@ -240,6 +241,25 @@ namespace Maestro.Web
             );
 
             services.AddMergePolicies();
+
+
+            // Configure access to Azure App Configuration
+            string appConfigEndpointUri = Configuration["AppConfigurationUri"];
+            ConfigurationBuilder builder = new ConfigurationBuilder();
+
+            builder.AddAzureAppConfiguration(options =>
+            {
+                options.Connect(new Uri(appConfigEndpointUri), new ManagedIdentityCredential())
+                    .ConfigureRefresh(refresh =>
+                    {
+                        refresh.Register("AutoBuildPromotion", "Maestro")
+                            .SetCacheExpiration(TimeSpan.FromSeconds(1));
+                    }).UseFeatureFlags();
+
+                Build.s_configurationRefresher = options.GetRefresher();
+            });
+
+            Build.s_dynamicConfigs = builder.Build();
         }
 
         public void ConfigureContainer(ContainerBuilder builder)
