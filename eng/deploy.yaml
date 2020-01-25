@@ -173,7 +173,7 @@ stages:
             -ScorecardsStorageAccountKeySecretName "rolloutscorecards-storage-key"
             -ScorecardsStorageAccountName "rolloutscorecards"
             -ScorecardsStorageAccountTableName "scorecards"
-        package: $(Build.ArtifactStagingDirectory)/RolloutScorer.zip
+        package: $(Pipeline.Workspace)/Build/RolloutScorer/RolloutScorer.zip
         appName: ${{ parameters.RolloutScorerAppName }}
 
 - stage: postdeploy
