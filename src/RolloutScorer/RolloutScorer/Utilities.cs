@@ -134,8 +134,11 @@ namespace RolloutScorer
 
     public static class ScorecardsStorageAccount
     {
-        public const string KeySecretName = "rolloutscorecards-storage-key";
-        public const string Name = "rolloutscorecards";
-        public const string ScorecardsTableName = "scorecards";
+        public static string KeySecretName = 
+            Environment.GetEnvironmentVariable("ScorecardsStorageAccountKeySecretName") ?? "rolloutscorecards-storage-key";
+        public static string Name = 
+            Environment.GetEnvironmentVariable("ScorecardsStorageAccountName") ?? "rolloutscorecards";
+        public static string ScorecardsTableName = 
+            Environment.GetEnvironmentVariable("ScorecardsStorageAccountTableName") ?? "scorecards";
     }
 }

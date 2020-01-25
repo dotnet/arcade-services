@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -49,22 +50,76 @@ namespace RolloutScorer
             // Convert the rollout start time and end time to the strings the AzDO API recognizes and fetch builds
             string rolloutStartTimeUriString = RolloutStartDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
             string rolloutEndTimeUriString = RolloutEndDate.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ");
-            JObject responseContent = await GetAzdoApiResponseAsync($"https://dev.azure.com/{RepoConfig.AzdoInstance}/" +
-                $"{AzdoConfig.Project}/_apis/build/builds?definitions={RepoConfig.DefinitionId}&branchName={Branch}" +
+
+            foreach (string buildDefinitionId in RepoConfig.BuildDefinitionIds)
+            {
+                JObject responseContent = await GetAzdoApiResponseAsync($"https://dev.azure.com/{RepoConfig.AzdoInstance}/" +
+                $"{AzdoConfig.Project}/_apis/build/builds?definitions={buildDefinitionId}&branchName={Branch}" +
                 $"&minTime={rolloutStartTimeUriString}&maxTime={rolloutEndTimeUriString}&api-version=5.1");
 
-            // No builds is a valid case (e.g. a failed rollout) and so the rest of the code can handle this
-            // It still is potentially unexpected, so we're going to warn the user here
-            if (responseContent.Value<int>("count") == 0)
-            {
-                Utilities.WriteWarning($"No builds were found for repo '{RepoConfig.Repo}' " +
-                        $"(Build ID: '{RepoConfig.DefinitionId}') during the specified dates ({RolloutStartDate} to {RolloutEndDate})", Log);
-            }
+                // No builds is a valid case (e.g. a failed rollout) and so the rest of the code can handle this
+                // It still is potentially unexpected, so we're going to warn the user here
+                if (responseContent.Value<int>("count") == 0)
+                {
+                    Utilities.WriteWarning($"No builds were found for repo '{RepoConfig.Repo}' " +
+                            $"(Build ID: '{buildDefinitionId}') during the specified dates ({RolloutStartDate} to {RolloutEndDate})", Log);
+                }
 
-            JArray builds = responseContent.Value<JArray>("value");
-            foreach (JToken build in builds)
+                JArray builds = responseContent.Value<JArray>("value");
+                foreach (JToken build in builds)
+                {
+                    BuildBreakdowns.Add(new ScorecardBuildBreakdown(build.ToObject<BuildSummary>()));
+                }
+            }
+            BuildBreakdowns.OrderBy(x => x.BuildSummary.FinishTime);
+            await Task.WhenAll(BuildBreakdowns.Select(b => CollectStages(b)));
+        }
+
+        public async Task CollectStages(ScorecardBuildBreakdown buildBreakdown)
+        {
+            string timelineLinkWithAttempts = $"{buildBreakdown.BuildSummary.TimelineLink}?changeId=1";
+            JObject jsonTimelineResponse = await GetAzdoApiResponseAsync(timelineLinkWithAttempts);
+            BuildTimeline timeline = jsonTimelineResponse.ToObject<BuildTimeline>();
+
+            if (timeline.Records != null)
             {
-                BuildBreakdowns.Add(new ScorecardBuildBreakdown(build.ToObject<BuildSummary>()));
+                // We're going to use this to store previous attempts as we find them
+                Dictionary<string, BuildTimeline> previousAttemptTimelines = new Dictionary<string, BuildTimeline>();
+
+                foreach (BuildTimelineEntry record in timeline.Records)
+                {
+                    // We measure times at the stage level because this is the simplest thing to do
+                    // By taking the min start time and max end time of all the stages except for the ones we exclude,
+                    // we can determine a pretty accurate measurement of how long it took to rollout
+                    if ((record.Type == "Checkpoint.Approval" || record.Type == "Stage") && !RepoConfig.ExcludeStages.Any(s => s == record.Name))
+                    {
+                        buildBreakdown.BuildSummary.Stages.Add(record);
+
+                        if (record.PreviousAttempts.Count > 0)
+                        {
+                            // we're going to just add these attempts as additional stages
+                            foreach (PreviousAttempt attempt in record.PreviousAttempts)
+                            {
+                                if (!previousAttemptTimelines.ContainsKey(attempt.TimelineId))
+                                {
+                                    previousAttemptTimelines.Add(attempt.TimelineId,
+                                        (await GetAzdoApiResponseAsync($"{buildBreakdown.BuildSummary.TimelineLink}/{attempt.TimelineId}")).ToObject<BuildTimeline>());
+                                }
+
+                                if (previousAttemptTimelines[attempt.TimelineId] != null)
+                                {
+                                    buildBreakdown.BuildSummary.Stages.Add(previousAttemptTimelines[attempt.TimelineId].Records
+                                        .Where(t => (t.Type == "Checkpoint.Approval" || t.Type == "Stage") && t.Name == record.Name).First());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (buildBreakdown.BuildSummary.Stages.Any(s => s.Name.StartsWith("deploy", StringComparison.InvariantCultureIgnoreCase) && !string.IsNullOrEmpty(s.EndTime)))
+                {
+                    buildBreakdown.BuildSummary.DeploymentReached = true;
+                }
             }
         }
 
@@ -72,62 +127,14 @@ namespace RolloutScorer
         /// Calculates the "Time to Rollout" portion of the scorecard
         /// </summary>
         /// <returns>A timespan representing the total time to rollout and a list of scorecard build breakdowns for each rollout</returns>
-        public async Task<TimeSpan> CalculateTimeToRolloutAsync()
+        public TimeSpan CalculateTimeToRollout()
         {
             List<TimeSpan> rolloutBuildTimes = new List<TimeSpan>();
 
             // Loop over all the builds in the returned content and calculate start and end times
             foreach (ScorecardBuildBreakdown build in BuildBreakdowns)
             {
-                TimeSpan duration = TimeSpan.Zero;
-                string timelineLinkWithAttempts = $"{build.BuildSummary.TimelineLink}?changeId=1";
-                JObject jsonTimelineResponse = await GetAzdoApiResponseAsync(timelineLinkWithAttempts);
-                BuildTimeline timeline = jsonTimelineResponse.ToObject<BuildTimeline>();
-
-                // We're going to use this to store previous attempts as we find them
-                Dictionary<string, BuildTimeline> previousAttemptTimelines = new Dictionary<string, BuildTimeline>();
-
-                if (timeline.Records != null)
-                {
-                    List<BuildTimelineEntry> stages = new List<BuildTimelineEntry>();
-                    List<BuildTimelineEntry> approvalCheckpoints = new List<BuildTimelineEntry>();
-
-                    foreach (BuildTimelineEntry record in timeline.Records)
-                    {
-                        // We measure times at the stage level because this is the simplest thing to do
-                        // By taking the min start time and max end time of all the stages except for the ones we exclude,
-                        // we can determine a pretty accurate measurement of how long it took to rollout
-                        if ((record.Type == "Checkpoint.Approval" || record.Type == "Stage") && !RepoConfig.ExcludeStages.Any(s => s == record.Name))
-                        {
-                            stages.Add(record);
-
-                            if (record.PreviousAttempts.Count > 0)
-                            {
-                                // we're going to just add these attempts as additional stages
-                                foreach (PreviousAttempt attempt in record.PreviousAttempts)
-                                {
-                                    if (!previousAttemptTimelines.ContainsKey(attempt.TimelineId))
-                                    {
-                                        previousAttemptTimelines.Add(attempt.TimelineId,
-                                            (await GetAzdoApiResponseAsync($"{build.BuildSummary.TimelineLink}/{attempt.TimelineId}")).ToObject<BuildTimeline>());
-                                    }
-
-                                    if (previousAttemptTimelines[attempt.TimelineId] != null)
-                                    {
-                                        stages.Add(previousAttemptTimelines[attempt.TimelineId].Records
-                                            .Where(t => (t.Type == "Checkpoint.Approval" || t.Type == "Stage") && t.Name == record.Name).First());
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    duration = GetPipelineDurationFromStages(stages);
-
-                    if (stages.Any(s => s.Name.StartsWith("deploy", StringComparison.InvariantCultureIgnoreCase) && !string.IsNullOrEmpty(s.EndTime)))
-                    {
-                        build.BuildSummary.DeploymentReached = true;
-                    }
-                }
+                TimeSpan duration = GetPipelineDurationFromStages(build.BuildSummary.Stages);
                 rolloutBuildTimes.Add(duration);
                 build.Score.TimeToRollout = duration;
             }
@@ -158,13 +165,13 @@ namespace RolloutScorer
                 BuildSource source = (await GetAzdoApiResponseAsync(build.BuildSummary.SourceLink)).ToObject<BuildSource>();
 
                 // we can only automatically calculate rollbacks if they're tagged; so we specifically don't try when --assume-no-tags is passed
-                if (!AssumeNoTags && source.Comment.StartsWith(AzureDevOpsCommitTags.RollbackTag, StringComparison.InvariantCultureIgnoreCase))
+                if (!AssumeNoTags && source.Comment.Contains(AzureDevOpsCommitTags.RollbackTag, StringComparison.InvariantCultureIgnoreCase))
                 {
                     numRollbacks++;
                     build.Score.Rollbacks = 1;
                 }
                 // if we're assuming no tags, every deployment after the first is assumed to be a hotfix; otherwise we need to look specifically for the hotfix tag
-                else if (AssumeNoTags || source.Comment.StartsWith(AzureDevOpsCommitTags.HotfixTag, StringComparison.InvariantCultureIgnoreCase))
+                else if (AssumeNoTags || source.Comment.Contains(AzureDevOpsCommitTags.HotfixTag, StringComparison.InvariantCultureIgnoreCase))
                 {
                     numHotfixes++;
                     build.Score.Hotfixes = 1;
@@ -184,7 +191,21 @@ namespace RolloutScorer
 
         public bool DetermineFailure()
         {
-            return BuildBreakdowns.Count == 0 || BuildBreakdowns.Last().BuildSummary.Result != "succeeded";
+            if (BuildBreakdowns.Count == 0)
+            {
+                return true;
+            }
+
+            string lastBuildResult = BuildBreakdowns.Last().BuildSummary.Result;
+            switch (lastBuildResult)
+            {
+                case "succeeded":
+                case "partiallySucceeded":
+                    return false;
+
+                default:
+                    return true;
+            }
         }
 
         /// <summary>
@@ -322,7 +343,8 @@ namespace RolloutScorer
                 .Select(s => (DateTimeOffset.TryParse(s.StartTime, out DateTimeOffset start) && DateTimeOffset.TryParse(s.EndTime, out DateTimeOffset end)) ? end - start : TimeSpan.Zero)
                 .Aggregate(TimeSpan.Zero, (l, r) => l + r);
 
-            return (endTime - startTime) - approvalTime;
+            TimeSpan duration = (endTime - startTime) - approvalTime;
+            return duration >= TimeSpan.Zero ? duration : TimeSpan.Zero;
         }
 
         /// <summary>
