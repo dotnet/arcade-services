@@ -17,6 +17,6 @@
   },
   "readOnly": false,
   "secureJsonData": {
-    "appInsightsApiKey": "[vault(pool-provider-public-app-insights-api-keyy)]"
+    "appInsightsApiKey": "[vault(pool-provider-public-app-insights-api-key)]"
   }
 }
