@@ -95,7 +95,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
         private async Task PostNotificationsAsync()
         {
             foreach (string notificationPath in Directory.GetFiles(EnvironmentNotificationDirectory,
-                "*" + DatasourceExtension,
+                "*" + NotificationExtension,
                 SearchOption.AllDirectories))
             {
                 string uid = GetUidFromNotificationFile(Path.GetFileName(notificationPath));

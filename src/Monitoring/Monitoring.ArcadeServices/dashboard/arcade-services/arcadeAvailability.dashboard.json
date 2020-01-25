@@ -39,7 +39,7 @@
           {
             "evaluator": {
               "params": [
-                30
+                30000
               ],
               "type": "gt"
             },
@@ -77,7 +77,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "AzureMonitor-helix",
+      "datasource": "AI-pool-provider-internal",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -114,8 +114,42 @@
       "targets": [
         {
           "appInsights": {
+            "aggOptions": [
+              "avg",
+              "min",
+              "max",
+              "sum",
+              "count"
+            ],
+            "aggregation": "avg",
             "dimension": "none",
-            "metricName": "select",
+            "dimensions": [
+              "request/source",
+              "request/name",
+              "request/urlHost",
+              "request/urlPath",
+              "request/success",
+              "request/resultCode",
+              "request/performanceBucket",
+              "operation/name",
+              "operation/synthetic",
+              "operation/syntheticSource",
+              "user/authenticated",
+              "application/version",
+              "client/type",
+              "client/model",
+              "client/os",
+              "client/city",
+              "client/stateOrProvince",
+              "client/countryOrRegion",
+              "client/browser",
+              "cloud/roleName",
+              "cloud/roleInstance",
+              "customDimensions/_MS.ProcessedByMetricExtractors",
+              "customDimensions/AspNetCoreEnvironment",
+              "customDimensions/ConnectionId"
+            ],
+            "metricName": "requests/duration",
             "rawQuery": false,
             "rawQueryString": "",
             "timeColumn": "timestamp",
@@ -204,7 +238,7 @@
               }
             ]
           },
-          "queryType": "Azure Monitor",
+          "queryType": "Application Insights",
           "refId": "A"
         }
       ],
@@ -214,7 +248,8 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 30
+          "value": 30000,
+          "yaxis": "left"
         }
       ],
       "timeFrom": null,
@@ -236,7 +271,7 @@
       },
       "yaxes": [
         {
-          "format": "s",
+          "format": "ms",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -280,7 +315,7 @@
           {
             "evaluator": {
               "params": [
-                30
+                30000
               ],
               "type": "gt"
             },
@@ -318,7 +353,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "AzureMonitor-helix",
+      "datasource": "AI-pool-provider-public",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -355,8 +390,42 @@
       "targets": [
         {
           "appInsights": {
+            "aggOptions": [
+              "avg",
+              "min",
+              "max",
+              "sum",
+              "count"
+            ],
+            "aggregation": "avg",
             "dimension": "none",
-            "metricName": "select",
+            "dimensions": [
+              "request/source",
+              "request/name",
+              "request/urlHost",
+              "request/urlPath",
+              "request/success",
+              "request/resultCode",
+              "request/performanceBucket",
+              "operation/name",
+              "operation/synthetic",
+              "operation/syntheticSource",
+              "user/authenticated",
+              "application/version",
+              "client/type",
+              "client/model",
+              "client/os",
+              "client/city",
+              "client/stateOrProvince",
+              "client/countryOrRegion",
+              "client/browser",
+              "cloud/roleName",
+              "cloud/roleInstance",
+              "customDimensions/_MS.ProcessedByMetricExtractors",
+              "customDimensions/AspNetCoreEnvironment",
+              "customDimensions/ConnectionId"
+            ],
+            "metricName": "requests/duration",
             "rawQuery": false,
             "rawQueryString": "",
             "timeColumn": "timestamp",
@@ -445,7 +514,7 @@
               }
             ]
           },
-          "queryType": "Azure Monitor",
+          "queryType": "Application Insights",
           "refId": "A"
         }
       ],
@@ -455,7 +524,8 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 30
+          "value": 30000,
+          "yaxis": "left"
         }
       ],
       "timeFrom": null,
@@ -477,7 +547,7 @@
       },
       "yaxes": [
         {
-          "format": "s",
+          "format": "ms",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -559,7 +629,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Azure Monitor - helix-prod",
+      "datasource": "AzureMonitor-helix",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -743,7 +813,7 @@
           {
             "evaluator": {
               "params": [
-                5
+                5000
               ],
               "type": "gt"
             },
@@ -824,8 +894,41 @@
       "targets": [
         {
           "appInsights": {
+            "aggOptions": [
+              "avg",
+              "min",
+              "max",
+              "sum",
+              "count"
+            ],
+            "aggregation": "avg",
             "dimension": "none",
-            "metricName": "select",
+            "dimensions": [
+              "request/source",
+              "request/name",
+              "request/urlHost",
+              "request/urlPath",
+              "request/success",
+              "request/resultCode",
+              "request/performanceBucket",
+              "operation/name",
+              "operation/synthetic",
+              "operation/syntheticSource",
+              "user/authenticated",
+              "application/version",
+              "client/type",
+              "client/model",
+              "client/os",
+              "client/city",
+              "client/stateOrProvince",
+              "client/countryOrRegion",
+              "client/browser",
+              "cloud/roleName",
+              "cloud/roleInstance",
+              "customDimensions/AI internal",
+              "customDimensions/webJobTypeName"
+            ],
+            "metricName": "requests/duration",
             "rawQuery": false,
             "rawQueryString": "",
             "timeColumn": "timestamp",
@@ -914,7 +1017,7 @@
               }
             ]
           },
-          "queryType": "Azure Monitor",
+          "queryType": "Application Insights",
           "refId": "A"
         }
       ],
@@ -924,7 +1027,7 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 5
+          "value": 5000
         }
       ],
       "timeFrom": null,
@@ -946,7 +1049,7 @@
       },
       "yaxes": [
         {
-          "format": "s",
+          "format": "ms",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1028,7 +1131,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "AI - dnc-eng",
+      "datasource": "AI-dnc-eng",
       "description": "Availability tests for the site source.dot.net.",
       "fill": 1,
       "fillGradient": 0,
@@ -1269,7 +1372,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
+      "datasource": "AI-maestro",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1312,8 +1415,37 @@
       "targets": [
         {
           "appInsights": {
-            "dimension": "none",
-            "metricName": "select",
+            "aggOptions": [
+              "avg",
+              "count"
+            ],
+            "aggregation": "avg",
+            "dimension": "availabilityResult/location",
+            "dimensions": [
+              "availabilityResult/name",
+              "availabilityResult/location",
+              "availabilityResult/success",
+              "operation/name",
+              "operation/synthetic",
+              "operation/syntheticSource",
+              "user/authenticated",
+              "application/version",
+              "client/type",
+              "client/model",
+              "client/os",
+              "client/city",
+              "client/stateOrProvince",
+              "client/countryOrRegion",
+              "client/browser",
+              "cloud/roleName",
+              "cloud/roleInstance",
+              "customDimensions/FullTestResultAvailable",
+              "customDimensions/WebtestArmResourceName",
+              "customDimensions/SyntheticMonitorId",
+              "customDimensions/WebtestLocationId",
+              "customDimensions/SourceId"
+            ],
+            "metricName": "availabilityResults/availabilityPercentage",
             "rawQuery": false,
             "rawQueryString": "",
             "timeColumn": "timestamp",
@@ -1400,7 +1532,7 @@
               }
             ]
           },
-          "queryType": "Azure Monitor",
+          "queryType": "Application Insights",
           "refId": "A"
         }
       ],
@@ -1506,7 +1638,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Azure Monitor - helix-prod",
+      "datasource": "AzureMonitor-helix",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -1700,7 +1832,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "AI - grafana",
+      "datasource": "AI-grafana",
       "description": "Monitoring and alerting for the Grafana infrastructure is managed by Azure.",
       "fill": 1,
       "fillGradient": 0,
