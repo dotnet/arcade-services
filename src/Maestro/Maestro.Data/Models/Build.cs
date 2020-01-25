@@ -24,35 +24,40 @@ namespace Maestro.Data.Models
 
         // Used to fetch dynamic configurations from Azure App Configuration
         // These fields are set by Startup.cs at system initialization
-        public static IConfigurationRefresher s_configurationRefresher;
-        public static IConfiguration s_dynamicConfigs;
+        public static IConfigurationRefresher s_configurationRefresher { get; set; }
+        public static IConfiguration s_dynamicConfigs { get; set; }
 
         static Build()
         {
             Triggers<Build>.Inserted += entry =>
             {
-                s_configurationRefresher.Refresh().GetAwaiter().GetResult();
-
-                bool.TryParse(s_dynamicConfigs["AutoBuildPromotion"], out var autoBuildPromotion);
-
-                if (autoBuildPromotion)
+                // The need to check for null here is because these properties are usually set in Startup.cs in Maestro.Web
+                // however they aren't set for unit test cases but this class is used there.
+                if (s_configurationRefresher != null && s_dynamicConfigs != null)
                 {
-                    Build build = entry.Entity;
-                    var context = (BuildAssetRegistryContext)entry.Context;
+                    s_configurationRefresher.Refresh().GetAwaiter().GetResult();
 
-                    context.BuildChannels.AddRange((
-                        from dc in context.DefaultChannels
-                        where (dc.Enabled)
-                        where (dc.Repository == build.GitHubRepository || dc.Repository == build.AzureDevOpsRepository)
-                        where (dc.Branch == build.GitHubBranch || dc.Branch == build.AzureDevOpsBranch)
-                        select new BuildChannel
-                        {
-                            Channel = dc.Channel,
-                            Build = build,
-                            DateTimeAdded = DateTimeOffset.UtcNow
-                        }).Distinct());
+                    bool.TryParse(s_dynamicConfigs["AutoBuildPromotion"], out var autoBuildPromotion);
 
-                    context.SaveChangesWithTriggers(b => context.SaveChanges(b));
+                    if (autoBuildPromotion)
+                    {
+                        Build build = entry.Entity;
+                        var context = (BuildAssetRegistryContext)entry.Context;
+
+                        context.BuildChannels.AddRange((
+                            from dc in context.DefaultChannels
+                            where (dc.Enabled)
+                            where (dc.Repository == build.GitHubRepository || dc.Repository == build.AzureDevOpsRepository)
+                            where (dc.Branch == build.GitHubBranch || dc.Branch == build.AzureDevOpsBranch)
+                            select new BuildChannel
+                            {
+                                Channel = dc.Channel,
+                                Build = build,
+                                DateTimeAdded = DateTimeOffset.UtcNow
+                            }).Distinct());
+
+                        context.SaveChangesWithTriggers(b => context.SaveChanges(b));
+                    }
                 }
             };
         }
