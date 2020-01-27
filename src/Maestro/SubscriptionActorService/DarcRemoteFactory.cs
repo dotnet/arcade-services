@@ -83,7 +83,7 @@ namespace SubscriptionActorService
                     case "github.com":
                         if (installationId == default)
                         {
-                            throw new DependencyException($"No installation is avaliable for repository '{normalizedUrl}'");
+                            throw new GithubApplicationInstallationException($"No installation is avaliable for repository '{normalizedUrl}'");
                         }
 
                         gitClient = new GitHubClient(_gitExecutable, await GitHubTokenProvider.GetTokenForInstallationAsync(installationId),
