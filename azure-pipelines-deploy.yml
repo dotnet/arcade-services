@@ -44,3 +44,4 @@ stages:
       GrafanaHost: https://dotnet-eng-grafana.westus2.cloudapp.azure.com
       GrafanaKeyVault: dotnet-grafana
       GrafanaVariableGroup: Dotnet-Grafana-Production
+      DarcBotVariableGroup: Deploy DarcBot KeyVault Variables (Production)      

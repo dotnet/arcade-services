@@ -9,6 +9,7 @@ parameters:
   MaestroTestEndpoint: ''
   DotNetStatusEndpoint: ''
   StatusVariableGroup: ''
+  DarcBotVariableGroup: ''
 
   # --- Secret Variable group requirements ---
   # maestro-admin-sql-connection-string
@@ -175,6 +176,42 @@ stages:
             -ScorecardsStorageAccountTableName "scorecards"
         package: $(Pipeline.Workspace)/Build/RolloutScorer/RolloutScorer.zip
         appName: ${{ parameters.RolloutScorerAppName }}
+
+  - ${{ if ne(parameters.DarcBotVariableGroup, '') }}:
+    - job: deployDarcBot
+      displayName: Deploy DarcBot GitHub app
+      dependsOn:
+      - approval
+      variables:
+      - group: ${{ parameters.DarcBotVariableGroup }}
+      - name: IngestConnectionString
+        value: $(nethelix-engsrv-kusto-connection-string-ingest)
+      steps:
+      - download: current
+        artifact: DarcBot
+      - task: ArchiveFiles@2
+        displayName: Archive DarcBot files
+        inputs:
+          rootFolderOrFile: $(Pipeline.Workspace)/DarcBot
+          includeRootFolder: false
+          archiveFile: $(Build.ArtifactStagingDirectory)/DarcBot.zip
+      - task: AzureFunctionApp@1
+        displayName: Deploy DarcBot
+        inputs:
+          azureSubscription: ${{ parameters.Subscription }}
+          appSettings: >
+            -AppId $(GitHubApp-DarcBot-AppId)
+            -APPINSIGHTS_INSTRUMENTATIONKEY "$(GitHubApp-DarcBot-AppInsights-InstrumentationKey)"
+            -AzureWebJobsDashboard "$(GitHubApp-DarcBot-AzureWebJobsDashboard)"
+            -AzureWebJobsStorage "$(GitHubApp-DarcBot-AzureWebJobsStorage)"
+            -FUNCTIONS_EXTENSION_VERSION ~2
+            -FUNCTIONS_WORKER_RUNTIME dotnet
+            -KustoDatabaseName engineeringdata
+            -KustoIngestConnectionString "$(IngestConnectionString)"
+            -PrivateKey "$(GitHubApp-DarcBot-PrivateKey)"
+            -WEBSITE_RUN_FROM_PACKAGE 1
+          package: $(Build.ArtifactStagingDirectory)/DarcBot.zip
+          appName: DarcBotProd
 
 - stage: postdeploy
   displayName: Post-Deployment
