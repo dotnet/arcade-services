@@ -172,7 +172,6 @@ stages:
           - publish: $(Build.ArtifactStagingDirectory)/DotNet.Status.Web/package
             artifact: DotNetStatus
             displayName: Publish DotNet.Status.Web
-<<<<<<< HEAD
 
           - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\DarcBot
             workingDirectory: src/GitHubApps/src/DarcBot
@@ -182,7 +181,6 @@ stages:
             artifact: DarcBot
             displayName: Publish DarcBot Artifacts
 
-=======
           
           - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\RolloutScorerAzureFunction\publish -f netcoreapp3.0
             workingDirectory: src/RolloutScorer/RolloutScorerAzureFunction
@@ -200,7 +198,6 @@ stages:
             artifact: RolloutScorer
             displayName: Publish RolloutScorerAzureFunction
           
->>>>>>> 35a3a6a2a55eec77d9f83b52fafea710eee62cd1
           ## Prepare database update artifact
           - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp2.1
             workingDirectory: src/Maestro/Maestro.Data
