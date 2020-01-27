@@ -48,6 +48,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
         private async Task<bool> ExecuteAsync()
         {
+            Debugger.Launch();
             using (var client = new GrafanaClient(Host, AccessToken))
             using (var deploy = new DeployPublisher(client, KeyVaultName, KeyVaultConnectionString, Tag, DashboardDirectory, DataSourceDirectory, NotificationDirectory, Environment, Log))
             {
