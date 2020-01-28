@@ -20,7 +20,7 @@ export class ChannelComponent implements OnInit {
   public graph$!: Observable<StatefulResult<FlowGraph>>;
 
   ngOnInit() {
-    const params$ = this.route.paramMap.pipe(
+    const channelId$ = this.route.paramMap.pipe(
       map(params => {
         const channelId = params.get("channelId");
 
@@ -28,17 +28,13 @@ export class ChannelComponent implements OnInit {
           throw new Error("channelId was null");
         } 
 
-        return {channelId};
+        return +channelId;
       }),
       tap(v => {
         console.log("Params: ", v);
       })
     );
-    const channelId$ = params$.pipe(
-      switchMap(params => {
-        return of(+params.channelId);
-      })
-    )
+
     this.graph$ = channelId$.pipe(
       statefulPipe(
         statefulSwitchMap((id) => {

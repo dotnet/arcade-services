@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, SimpleChanges, AfterContentInit } from '@angular/core';
+import { Component, Input, AfterContentInit } from '@angular/core';
 import { graphlib, render } from 'dagre-d3';
 import { select } from 'd3';
 
@@ -76,14 +76,11 @@ function getEdgeDescription(edge:FlowEdge, graph:FlowGraph): string {
   templateUrl: './channel-graph.component.html',
   styleUrls: ['./channel-graph.component.scss']
 })
-export class ChannelGraphComponent implements OnChanges, AfterContentInit {
+export class ChannelGraphComponent implements AfterContentInit {
 
   @Input() public graph?: FlowGraph;
 
   constructor() { }
-
-  ngOnChanges(changes: SimpleChanges) {
-  }
 
   ngAfterContentInit() {
     var g = new graphlib.Graph().setGraph({});
