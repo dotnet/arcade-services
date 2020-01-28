@@ -16,9 +16,9 @@ namespace Microsoft.DotNet.Darc.Operations
 {
     internal class AddBuildToChannelOperation : Operation
     {
-        private int BuildPromotionPipelineId { get; } = 750;
-        private string BuildPromotionPipelineAccountName { get; } = "dnceng";
-        private string BuildPromotionPipelineProjectName { get; } = "internal";
+        private const int BuildPromotionPipelineId = 750;
+        private const string BuildPromotionPipelineAccountName = "dnceng";
+        private const string BuildPromotionPipelineProjectName = "internal";
 
         AddBuildToChannelCommandLineOptions _options;
         public AddBuildToChannelOperation(AddBuildToChannelCommandLineOptions options)
