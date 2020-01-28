@@ -18,6 +18,10 @@ namespace Microsoft.DotNet.Darc.Operations
 {
     internal class AddBuildToChannelOperation : Operation
     {
+        private int BuildPromotionPipelineId { get; } = 715;
+        private string BuildPromotionPipelineAccountName { get; } = "dnceng";
+        private string BuildPromotionPipelineProjectName { get; } = "internal";
+
         AddBuildToChannelCommandLineOptions _options;
         public AddBuildToChannelOperation(AddBuildToChannelCommandLineOptions options)
             : base(options)
@@ -59,7 +63,10 @@ namespace Microsoft.DotNet.Darc.Operations
                 Console.WriteLine();
                 Console.Write(UxHelpers.GetBuildDescription(build));
 
-                await remote.AssignBuildToChannel(_options.Id, targetChannel.Id);
+                // Queues a build of the Build Promotion pipeline that will takes care of making sure
+                // that the build assets are published to the right location and also promoting the build
+                // to the requested channel
+                await PromoteBuildAsync(targetChannel.Id);
 
                 // Be helpful. Let the user know what will happen.
                 string buildRepo = build.GitHubRepository ?? build.AzureDevOpsRepository;
@@ -75,6 +82,33 @@ namespace Microsoft.DotNet.Darc.Operations
                 Logger.LogError(e, $"Error: Failed to assign build '{_options.Id}' to channel '{_options.Channel}'.");
                 return Constants.ErrorCode;
             }
+        }
+
+        private async Task PromoteBuildAsync(int PromoteToMaestroChannelId)
+        {
+            LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
+
+            AzureDevOpsClient azdoClient = new AzureDevOpsClient(gitExecutable: null, localSettings.AzureDevOpsToken, Logger, temporaryRepositoryPath: null);
+
+            string jsonSigningValidation = (_options.DoSigningValidation != null) ? $", \"EnableSigningValidation\": \"{ _options.DoSigningValidation }\"" : string.Empty;
+            string jsonNuGetValidation = (_options.DoNuGetValidation != null) ? $", \"EnableNugetValidation\": \"{ _options.DoNuGetValidation }\"" : string.Empty;
+            string jsonSourceLinkValidation = (_options.DoSourcelinkValidation != null) ? $", \"EnableSourceLinkValidation\": \"{ _options.DoSourcelinkValidation }\"" : string.Empty;
+            string jsonSDLValidation = (_options.DoSDLValidation != null) ? $", \"EnableSDLValidation\": \"{ _options.DoSDLValidation }\"" : string.Empty;
+            string jsonSDLValidationAdditionalParams = (_options.SDLValidationParams != null) ? $", \"SDLValidationCustomParams\": \"{ _options.SDLValidationParams }\"" : string.Empty;
+            string jsonSDLValidationContinueOnError = (_options.SDLValidationContinueOnError != null) ? $", \"SDLValidationContinueOnError\": \"{ _options.SDLValidationContinueOnError }\"" : string.Empty;
+
+            var queueTimeVariables = $"{{" +
+                $"\"BARBuildId\": \"{ _options.Id }\", " +
+                $"\"PromoteToMaestroChannelId\": \"{ PromoteToMaestroChannelId }\" " +
+                jsonSigningValidation +
+                jsonNuGetValidation +
+                jsonSourceLinkValidation +
+                jsonSDLValidation +
+                jsonSDLValidationAdditionalParams +
+                jsonSDLValidationContinueOnError +
+                $"}}";
+
+            await azdoClient.StartNewBuildAsync(BuildPromotionPipelineAccountName, BuildPromotionPipelineProjectName, BuildPromotionPipelineId, queueTimeVariables);
         }
 
         private void PrintSubscriptionInfo(List<Subscription> applicableSubscriptions)
