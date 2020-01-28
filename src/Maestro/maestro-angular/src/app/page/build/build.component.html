@@ -86,13 +86,13 @@
             Dependencies
           </h5>
           <span class="form-check float-right">
-            <mc-switch [style]="" [(value)]="includeToolsets"></mc-switch>
+            <mc-switch [style]="" [(value)]="includeToolsets" title="Include Toolsets"></mc-switch>
             <label class="form-check-label">
               Include Toolsets
             </label>
           </span>
           <span class="form-check float-right">
-            <mc-switch [style]="" [(value)]="showAllDependencies"></mc-switch>
+            <mc-switch [style]="" [(value)]="showAllDependencies" title="Show Sub-Dependencies"></mc-switch>
             <label class="form-check-label">
               Show Sub-Dependencies
             </label>
@@ -120,8 +120,6 @@
           <progress-ring [style]="{ 'width.px': 150, 'height.px': 150 }"></progress-ring>
         </ng-template>
       </div>
-
-      <div class="container-fluid">
         <div class="card mt-3">
           <div class="card-body">
             <h5 class="card-title float-left">
@@ -136,8 +134,6 @@
             <progress-ring [style]="{ 'width.px': 150, 'height.px': 150 }"></progress-ring>
           </ng-template>
         </div>
-      </div>
-
       <mc-asset-table [assets]="build.assets"></mc-asset-table>
     </div>
   </ng-container>

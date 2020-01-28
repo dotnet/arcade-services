@@ -181,6 +181,7 @@ namespace DotNet.Status.Web.Controllers
 ".Replace("\r\n","\n")
             };
 
+            issue.Labels.Add(NotificationIdLabel);
             issue.Labels.Add(ActiveAlertLabel);
             foreach (string label in options.AlertLabels.OrEmpty())
             {

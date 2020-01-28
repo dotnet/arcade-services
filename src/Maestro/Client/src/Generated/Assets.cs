@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Text;
@@ -6,13 +7,23 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
-using Microsoft.DotNet.Maestro.Client.Models;
+
+
 
 namespace Microsoft.DotNet.Maestro.Client
 {
     public partial interface IAssets
     {
-        Task<PagedResponse<Asset>> ListAssetsAsync(
+        AsyncPageable<Models.Asset> ListAssetsAsync(
+            int? buildId = default,
+            bool? loadLocations = default,
+            string name = default,
+            bool? nonShipping = default,
+            string version = default,
+            CancellationToken cancellationToken = default
+        );
+
+        Task<Page<Models.Asset>> ListAssetsPageAsync(
             int? buildId = default,
             bool? loadLocations = default,
             string name = default,
@@ -27,14 +38,14 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
-        Task<Asset> GetAssetAsync(
+        Task<Models.Asset> GetAssetAsync(
             int id,
             CancellationToken cancellationToken = default
         );
 
-        Task<AssetLocation> AddAssetLocationToAssetAsync(
+        Task<Models.AssetLocation> AddAssetLocationToAssetAsync(
             int assetId,
-            AddAssetLocationToAssetAssetLocationType assetLocationType,
+            Models.AddAssetLocationToAssetAssetLocationType assetLocationType,
             string location,
             CancellationToken cancellationToken = default
         );
@@ -60,7 +71,49 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedListAssetsRequest(RestApiException ex);
 
-        public async Task<PagedResponse<Asset>> ListAssetsAsync(
+        public AsyncPageable<Models.Asset> ListAssetsAsync(
+            int? buildId = default,
+            bool? loadLocations = default,
+            string name = default,
+            bool? nonShipping = default,
+            string version = default,
+            CancellationToken cancellationToken = default
+        )
+        {
+            async IAsyncEnumerable<Page<Models.Asset>> GetPages(string _continueToken, int? _pageSizeHint)
+            {
+                int? page = 1;
+                int? perPage = _pageSizeHint;
+
+                if (!string.IsNullOrEmpty(_continueToken))
+                {
+                    page = int.Parse(_continueToken);
+                }
+
+                while (true)
+                {
+                    var _page = await ListAssetsPageAsync(
+                        buildId,
+                        loadLocations,
+                        name,
+                        nonShipping,
+                        page,
+                        perPage,
+                        version,
+                        cancellationToken
+                    ).ConfigureAwait(false);
+                    if (_page.Values.Count < 1)
+                    {
+                        yield break;
+                    }
+                    yield return _page;
+                    page++;
+                }
+            }
+            return AsyncPageable.Create(GetPages);
+        }
+
+        public async Task<Page<Models.Asset>> ListAssetsPageAsync(
             int? buildId = default,
             bool? loadLocations = default,
             string name = default,
@@ -71,6 +124,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
+
             const string apiVersion = "2019-01-16";
 
             var _baseUri = Client.Options.BaseUri;
@@ -131,8 +185,8 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Asset>>(_content);
-                        return new PagedResponse<Asset>(Client, OnListAssetsFailed, _res, _body);
+                        var _body = Client.Deserialize<IImmutableList<Models.Asset>>(_content);
+                        return Page<Models.Asset>.FromValues(_body, (page + 1).ToString(), _res);
                     }
                 }
             }
@@ -149,11 +203,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedListAssetsRequest(ex);
             HandleFailedRequest(ex);
@@ -167,6 +221,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
+
             const string apiVersion = "2019-01-16";
 
             var _baseUri = Client.Options.BaseUri;
@@ -217,11 +272,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetDarcVersionRequest(ex);
             HandleFailedRequest(ex);
@@ -231,11 +286,12 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedGetAssetRequest(RestApiException ex);
 
-        public async Task<Asset> GetAssetAsync(
+        public async Task<Models.Asset> GetAssetAsync(
             int id,
             CancellationToken cancellationToken = default
         )
         {
+
             if (id == default(int))
             {
                 throw new ArgumentNullException(nameof(id));
@@ -273,7 +329,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Asset>(_content);
+                        var _body = Client.Deserialize<Models.Asset>(_content);
                         return _body;
                     }
                 }
@@ -291,11 +347,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetAssetRequest(ex);
             HandleFailedRequest(ex);
@@ -305,19 +361,20 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedAddAssetLocationToAssetRequest(RestApiException ex);
 
-        public async Task<AssetLocation> AddAssetLocationToAssetAsync(
+        public async Task<Models.AssetLocation> AddAssetLocationToAssetAsync(
             int assetId,
-            AddAssetLocationToAssetAssetLocationType assetLocationType,
+            Models.AddAssetLocationToAssetAssetLocationType assetLocationType,
             string location,
             CancellationToken cancellationToken = default
         )
         {
+
             if (assetId == default(int))
             {
                 throw new ArgumentNullException(nameof(assetId));
             }
 
-            if (assetLocationType == default(AddAssetLocationToAssetAssetLocationType))
+            if (assetLocationType == default(Models.AddAssetLocationToAssetAssetLocationType))
             {
                 throw new ArgumentNullException(nameof(assetLocationType));
             }
@@ -340,7 +397,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("location", Client.Serialize(location));
             }
-            if (assetLocationType != default(AddAssetLocationToAssetAssetLocationType))
+            if (assetLocationType != default(Models.AddAssetLocationToAssetAssetLocationType))
             {
                 _url.AppendQuery("assetLocationType", Client.Serialize(assetLocationType));
             }
@@ -367,7 +424,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<AssetLocation>(_content);
+                        var _body = Client.Deserialize<Models.AssetLocation>(_content);
                         return _body;
                     }
                 }
@@ -385,11 +442,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedAddAssetLocationToAssetRequest(ex);
             HandleFailedRequest(ex);
@@ -405,6 +462,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
+
             if (assetId == default(int))
             {
                 throw new ArgumentNullException(nameof(assetId));
@@ -456,11 +514,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedRemoveAssetLocationFromAssetRequest(ex);
             HandleFailedRequest(ex);

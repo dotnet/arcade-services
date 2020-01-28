@@ -1,0 +1,26 @@
+{
+  "type": "grafana-azure-monitor-datasource",
+  "typeLogoUrl": "",
+  "access": "proxy",
+  "password": "",
+  "user": "",
+  "database": "",
+  "basicAuth": false,
+  "basicAuthUser": "",
+  "basicAuthPassword": "",
+  "withCredentials": false,
+  "isDefault": false,
+  "jsonData": {
+    "appInsightsAppId": "4a08ede4-b083-4103-aa4a-fd94c8369906",
+    "azureLogAnalyticsSameAs": false,
+    "clientId": "a2541735-8225-40af-9c8a-2ae233203739",
+    "cloudName": "azuremonitor",
+    "subscriptionId": "68672ab8-de0c-40f1-8d1b-ffb20bd62c0f",
+    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47"
+  },
+  "secureJsonData": {
+    "appInsightsApiKey": "[vault(helix-app-insights-api-key)]",
+    "clientSecret": "[vault(helix-grafana-ad-client-secret)]"
+  },
+  "readOnly": false
+}

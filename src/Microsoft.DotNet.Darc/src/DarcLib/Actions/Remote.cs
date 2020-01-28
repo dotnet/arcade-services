@@ -2,17 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -120,7 +119,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="sourceRepo">Filter by the source repository of the subscription.</param>
         /// <param name="targetRepo">Filter by the target repository of the subscription.</param>
-        /// <param name="channelId">Filter by the target channel id of the subscription.</param>
+        /// <param name="channelId">Filter by the source channel id of the subscription.</param>
         /// <returns>Set of subscription.</returns>
         public Task<IEnumerable<Subscription>> GetSubscriptionsAsync(
             string sourceRepo = null,
@@ -487,20 +486,7 @@ namespace Microsoft.DotNet.DarcLib
                 foreach (DependencyDetail dependencyInUpdateChain in updateList)
                 {
                     (Asset coherentAsset, Build buildForAsset) =
-                        FindAssetInBuildTree(dependencyInUpdateChain.Name, rootNode);
-
-                    // If we originally got the root node from the cache the graph may be incomplete.
-                    // Rebuild to attempt to find all the assets we have left to find. If we still can't find, or if
-                    // the root node did not come the cache, then we're in an invalid state.
-                    if (coherentAsset == null && nodeFromCache)
-                    {
-                        _logger.LogInformation($"Asset {dependencyInUpdateChain.Name} was not found in cached graph, rebuilding from " +
-                            $"{currentDependency.RepoUri}@{currentDependency.Commit}");
-                        rootNode = await BuildGraphAtDependencyAsync(remoteFactory, currentDependency, leftToFind, nodeCache);
-                        // And attempt to find again.
-                        (coherentAsset, buildForAsset) =
-                            FindAssetInBuildTree(dependencyInUpdateChain.Name, rootNode);
-                    }
+                        FindNewestAssetInBuildTree(dependencyInUpdateChain.Name, rootNode);
 
                     if (coherentAsset == null)
                     {
@@ -557,12 +543,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 IncludeToolset = true,
                 LookupBuilds = true,
-                NodeDiff = NodeDiff.None,
-                EarlyBuildBreak = new EarlyBreakOn
-                {
-                    Type = EarlyBreakOnType.Assets,
-                    BreakOn = new List<string>(updateList.Select(d => d.Name))
-                }
+                NodeDiff = NodeDiff.None
             };
 
             DependencyGraph dependencyGraph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
@@ -582,40 +563,49 @@ namespace Microsoft.DotNet.DarcLib
 
         /// <summary>
         ///     Given an asset name, find the asset in the dependency tree.
-        ///     Returns the asset with the shortest path to the root node.
+        ///     Returns the newest asset in the tree.
         /// </summary>
         /// <param name="assetName">Name of asset.</param>
         /// <param name="currentNode">Dependency graph node to find the asset in.</param>
         /// <returns>(Asset, Build, depth), or (null, null, maxint) if not found.</returns>
-        private (Asset asset, Build build, int buildDepth) FindAssetInBuildTree(string assetName, DependencyGraphNode currentNode, int currentDepth)
+        private (Asset asset, Build build) FindNewestAssetInBuildTree(string assetName, DependencyGraphNode currentNode, DateTimeOffset assetProductionTime)
         {
+            Asset newestMatchingAsset = null;
+            Build newestMatchingBuild = null;
+            DateTimeOffset newestAssetProductionTime = assetProductionTime;
             foreach (Build build in currentNode.ContributingBuilds)
             {
+                // If the contributing build is older than the current asset production time,
+                // don't need to check here
+                if (build.DateProduced.CompareTo(newestAssetProductionTime) < 0)
+                {
+                    continue;
+                }
+                
                 Asset matchingAsset = build.Assets.FirstOrDefault(a => a.Name.Equals(assetName, StringComparison.OrdinalIgnoreCase));
                 if (matchingAsset != null)
                 {
-                    return (matchingAsset, build, currentDepth);
+                    newestMatchingAsset = matchingAsset;
+                    newestMatchingBuild = build;
+                    newestAssetProductionTime = build.DateProduced;
                 }
             }
 
             // Walk child nodes
-            Asset shallowestAsset = null;
-            Build shallowestBuild = null;
-            int shallowestBuildDepth = int.MaxValue;
             foreach (DependencyGraphNode childNode in currentNode.Children)
             {
-                (Asset asset, Build build, int buildDepth) = FindAssetInBuildTree(assetName, childNode, currentDepth + 1);
+                (Asset asset, Build build) = FindNewestAssetInBuildTree(assetName, childNode, newestAssetProductionTime);
                 if (asset != null)
                 {
-                    if (buildDepth < shallowestBuildDepth)
+                    if (build.DateProduced.CompareTo(newestAssetProductionTime) > 0)
                     {
-                        shallowestAsset = asset;
-                        shallowestBuild = build;
-                        shallowestBuildDepth = buildDepth;
+                        newestMatchingAsset = asset;
+                        newestMatchingBuild = build;
+                        newestAssetProductionTime = build.DateProduced;
                     }
                 }
             }
-            return (shallowestAsset, shallowestBuild, shallowestBuildDepth);
+            return (newestMatchingAsset, newestMatchingBuild);
         }
 
         /// <summary>
@@ -625,9 +615,9 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="assetName">Name of asset.</param>
         /// <param name="currentNode">Dependency graph node to find the asset in.</param>
         /// <returns>(Asset, Build), or (null, null) if not found.</returns>
-        private (Asset asset, Build build) FindAssetInBuildTree(string assetName, DependencyGraphNode currentNode)
+        private (Asset asset, Build build) FindNewestAssetInBuildTree(string assetName, DependencyGraphNode currentNode)
         {
-            (Asset asset, Build build, int depth) = FindAssetInBuildTree(assetName, currentNode, 0);
+            (Asset asset, Build build) = FindNewestAssetInBuildTree(assetName, currentNode, DateTimeOffset.MinValue);
             return (asset, build);
         }
 
@@ -948,10 +938,22 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="buildId">Build id</param>
         /// <param name="channelId">Channel id</param>
         /// <returns>Async task</returns>
-        public Task AssignBuildToChannel(int buildId, int channelId)
+        public Task AssignBuildToChannelAsync(int buildId, int channelId)
         {
             CheckForValidBarClient();
-            return _barClient.AssignBuildToChannel(buildId, channelId);
+            return _barClient.AssignBuildToChannelAsync(buildId, channelId);
+        }
+
+        /// <summary>
+        ///     Remove a particular build from a channel
+        /// </summary>
+        /// <param name="buildId">Build id</param>
+        /// <param name="channelId">Channel id</param>
+        /// <returns>Async task</returns>
+        public Task DeleteBuildFromChannelAsync(int buildId, int channelId)
+        {
+            CheckForValidBarClient();
+            return _barClient.DeleteBuildFromChannelAsync(buildId, channelId);
         }
 
         /// <summary>
@@ -1173,7 +1175,10 @@ namespace Microsoft.DotNet.DarcLib
                 var latestAsset = matchingAssetsFromSameSha.OrderByDescending(a => a.BuildId).FirstOrDefault();
                 if (latestAsset != null)
                 {
-                    IEnumerable<String> currentAssetLocations = latestAsset.Locations?.Select(l => l.Location);
+                    IEnumerable<String> currentAssetLocations = latestAsset.Locations?
+                        .Where(l=>l.Type == LocationType.NugetFeed)
+                        .Select(l => l.Location);
+
                     if (currentAssetLocations == null)
                     {
                         continue;

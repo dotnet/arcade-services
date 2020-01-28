@@ -2,15 +2,15 @@
   "RepoConfigs": [
     {
       "Repo": "dotnet-helix-service",
-      "DefinitionId": "620",
+      "BuildDefinitionIds": [ "620", "697" ],
       "AzdoInstance": "dnceng",
       "GithubIssueLabel": "Rollout Helix",
       "ExpectedTime": 30,
-      "ExcludeStages": [ "Post_Deployment_Tests" ]
+      "ExcludeStages": []
     },
     {
       "Repo": "dotnet-helix-machines",
-      "DefinitionId": "596",
+      "BuildDefinitionIds": [ "596" ],
       "AzdoInstance": "dnceng",
       "GithubIssueLabel": "Rollout OSOB",
       "ExpectedTime": 60,
@@ -18,11 +18,11 @@
     },
     {
       "Repo": "dotnet-arcade-services",
-      "DefinitionId": "28",
+      "BuildDefinitionIds": [ "252", "728" ],
       "AzdoInstance": "dnceng",
       "GithubIssueLabel": "Rollout Arcade Services",
       "ExpectedTime": 30,
-      "ExcludeStages": []
+      "ExcludeStages": [ "Post-Deployment", "Validate deployment" ]
     }
   ],
 

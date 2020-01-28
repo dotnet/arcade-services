@@ -40,7 +40,7 @@ namespace RolloutScorer
             {
                 Repo = rolloutScorer.RepoConfig,
                 Date = rolloutScorer.RolloutStartDate,
-                TimeToRollout = await rolloutScorer.CalculateTimeToRolloutAsync(),
+                TimeToRollout = rolloutScorer.CalculateTimeToRollout(),
                 CriticalIssues = githubIssues
                     .Count(issue => Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.IssueLabel, repoLabel, rolloutScorer.Log)),
                 Hotfixes = numHotfixes + githubIssues

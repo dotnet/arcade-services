@@ -1,40 +1,70 @@
 ﻿@page
+@model DotNet.Status.Web.Pages.StatusModel
 @{
     Layout = null;
 }
 
-<!DOCTYPE html>
-
-<html>
-<head>
-    <meta name="viewport" content="width=device-width" />
+@if (Request.Headers["Accept"].ToString().StartsWith("application/json"))
+{
     @switch (@Request.Query["code"].ToString())
     {
         case "404":
-            <title>Not Found</title>
+            @Html.Raw("{\"message\":\"Not Found\"}");
             break;
         case "403":
-            <title>Unauthorized</title>
+            @Html.Raw("{\"message\":\"Unauthorized\"}");
+            break;
+        case "401":
+            @Html.Raw("{\"message\":\"Authorization Required\"}");
             break;
         default:
-            <title>Error</title>
+            @Html.Raw("{\"message\":\"Unknown error\"}");
             break;
 
     }
-</head>
-<body>
-    @switch (@Request.Query["code"].ToString())
-    {
-        case "404":
-            <h1>404 Not found</h1>
-            break;
-        case "403":
-            <h1>403 Unauthorized</h1>
-            break;
-        default:
-            <h1>Error</h1>
-            break;
+}
+else
+{
 
-    }
-</body>
+    <!DOCTYPE html>
+
+    <html>
+    <head>
+        <meta name="viewport" content="width=device-width" />
+        @switch (@Request.Query["code"].ToString())
+        {
+            case "404":
+                <title>Not Found</title>
+                break;
+            case "403":
+                <title>Unauthorized</title>
+                break;
+            case "401":
+                <title>Authorization Required</title>
+                break;
+            default:
+                <title>Error</title>
+                break;
+
+        }
+    </head>
+    <body>
+        @switch (Request.Query["code"].ToString())
+        {
+            case "404":
+                <h1>404 Not found</h1>
+                break;
+            case "403":
+                <h1>403 Unauthorized</h1>
+                break;
+            case "401":
+                <h1>401 Authorization Required</h1>
+                break;
+            default:
+                <h1>Error</h1>
+                break;
+
+        }
+    </body>
 </html>
+}

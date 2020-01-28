@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Text;
@@ -6,13 +7,25 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
-using Microsoft.DotNet.Maestro.Client.Models;
+
+
 
 namespace Microsoft.DotNet.Maestro.Client
 {
     public partial interface IBuilds
     {
-        Task<PagedResponse<Build>> ListBuildsAsync(
+        AsyncPageable<Models.Build> ListBuildsAsync(
+            string buildNumber = default,
+            int? channelId = default,
+            string commit = default,
+            bool? loadCollections = default,
+            DateTimeOffset? notAfter = default,
+            DateTimeOffset? notBefore = default,
+            string repository = default,
+            CancellationToken cancellationToken = default
+        );
+
+        Task<Page<Models.Build>> ListBuildsPageAsync(
             string buildNumber = default,
             int? channelId = default,
             string commit = default,
@@ -25,22 +38,22 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
-        Task<Build> CreateAsync(
-            BuildData body,
+        Task<Models.Build> CreateAsync(
+            Models.BuildData body,
             CancellationToken cancellationToken = default
         );
 
-        Task<Build> GetBuildAsync(
+        Task<Models.Build> GetBuildAsync(
             int id,
             CancellationToken cancellationToken = default
         );
 
-        Task<BuildGraph> GetBuildGraphAsync(
+        Task<Models.BuildGraph> GetBuildGraphAsync(
             int id,
             CancellationToken cancellationToken = default
         );
 
-        Task<Build> GetLatestAsync(
+        Task<Models.Build> GetLatestAsync(
             string buildNumber = default,
             int? channelId = default,
             string commit = default,
@@ -51,8 +64,8 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
-        Task<Build> UpdateAsync(
-            BuildUpdate body,
+        Task<Models.Build> UpdateAsync(
+            Models.BuildUpdate body,
             int buildId,
             CancellationToken cancellationToken = default
         );
@@ -72,7 +85,53 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedListBuildsRequest(RestApiException ex);
 
-        public async Task<PagedResponse<Build>> ListBuildsAsync(
+        public AsyncPageable<Models.Build> ListBuildsAsync(
+            string buildNumber = default,
+            int? channelId = default,
+            string commit = default,
+            bool? loadCollections = default,
+            DateTimeOffset? notAfter = default,
+            DateTimeOffset? notBefore = default,
+            string repository = default,
+            CancellationToken cancellationToken = default
+        )
+        {
+            async IAsyncEnumerable<Page<Models.Build>> GetPages(string _continueToken, int? _pageSizeHint)
+            {
+                int? page = 1;
+                int? perPage = _pageSizeHint;
+
+                if (!string.IsNullOrEmpty(_continueToken))
+                {
+                    page = int.Parse(_continueToken);
+                }
+
+                while (true)
+                {
+                    var _page = await ListBuildsPageAsync(
+                        buildNumber,
+                        channelId,
+                        commit,
+                        loadCollections,
+                        notAfter,
+                        notBefore,
+                        page,
+                        perPage,
+                        repository,
+                        cancellationToken
+                    ).ConfigureAwait(false);
+                    if (_page.Values.Count < 1)
+                    {
+                        yield break;
+                    }
+                    yield return _page;
+                    page++;
+                }
+            }
+            return AsyncPageable.Create(GetPages);
+        }
+
+        public async Task<Page<Models.Build>> ListBuildsPageAsync(
             string buildNumber = default,
             int? channelId = default,
             string commit = default,
@@ -85,6 +144,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
+
             const string apiVersion = "2019-01-16";
 
             var _baseUri = Client.Options.BaseUri;
@@ -153,8 +213,8 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<Build>>(_content);
-                        return new PagedResponse<Build>(Client, OnListBuildsFailed, _res, _body);
+                        var _body = Client.Deserialize<IImmutableList<Models.Build>>(_content);
+                        return Page<Models.Build>.FromValues(_body, (page + 1).ToString(), _res);
                     }
                 }
             }
@@ -171,11 +231,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedListBuildsRequest(ex);
             HandleFailedRequest(ex);
@@ -185,12 +245,13 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedCreateRequest(RestApiException ex);
 
-        public async Task<Build> CreateAsync(
-            BuildData body,
+        public async Task<Models.Build> CreateAsync(
+            Models.BuildData body,
             CancellationToken cancellationToken = default
         )
         {
-            if (body == default(BuildData))
+
+            if (body == default(Models.BuildData))
             {
                 throw new ArgumentNullException(nameof(body));
             }
@@ -217,7 +278,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 _req.Uri = _url;
                 _req.Method = RequestMethod.Post;
 
-                if (body != default(BuildData))
+                if (body != default(Models.BuildData))
                 {
                     _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
                     _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
@@ -238,7 +299,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Build>(_content);
+                        var _body = Client.Deserialize<Models.Build>(_content);
                         return _body;
                     }
                 }
@@ -256,11 +317,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedCreateRequest(ex);
             HandleFailedRequest(ex);
@@ -270,11 +331,12 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedGetBuildRequest(RestApiException ex);
 
-        public async Task<Build> GetBuildAsync(
+        public async Task<Models.Build> GetBuildAsync(
             int id,
             CancellationToken cancellationToken = default
         )
         {
+
             if (id == default(int))
             {
                 throw new ArgumentNullException(nameof(id));
@@ -312,7 +374,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Build>(_content);
+                        var _body = Client.Deserialize<Models.Build>(_content);
                         return _body;
                     }
                 }
@@ -330,11 +392,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetBuildRequest(ex);
             HandleFailedRequest(ex);
@@ -344,11 +406,12 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedGetBuildGraphRequest(RestApiException ex);
 
-        public async Task<BuildGraph> GetBuildGraphAsync(
+        public async Task<Models.BuildGraph> GetBuildGraphAsync(
             int id,
             CancellationToken cancellationToken = default
         )
         {
+
             if (id == default(int))
             {
                 throw new ArgumentNullException(nameof(id));
@@ -386,7 +449,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<BuildGraph>(_content);
+                        var _body = Client.Deserialize<Models.BuildGraph>(_content);
                         return _body;
                     }
                 }
@@ -404,11 +467,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetBuildGraphRequest(ex);
             HandleFailedRequest(ex);
@@ -418,7 +481,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedGetLatestRequest(RestApiException ex);
 
-        public async Task<Build> GetLatestAsync(
+        public async Task<Models.Build> GetLatestAsync(
             string buildNumber = default,
             int? channelId = default,
             string commit = default,
@@ -429,6 +492,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
+
             const string apiVersion = "2019-01-16";
 
             var _baseUri = Client.Options.BaseUri;
@@ -489,7 +553,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Build>(_content);
+                        var _body = Client.Deserialize<Models.Build>(_content);
                         return _body;
                     }
                 }
@@ -507,11 +571,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetLatestRequest(ex);
             HandleFailedRequest(ex);
@@ -521,13 +585,14 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedUpdateRequest(RestApiException ex);
 
-        public async Task<Build> UpdateAsync(
-            BuildUpdate body,
+        public async Task<Models.Build> UpdateAsync(
+            Models.BuildUpdate body,
             int buildId,
             CancellationToken cancellationToken = default
         )
         {
-            if (body == default(BuildUpdate))
+
+            if (body == default(Models.BuildUpdate))
             {
                 throw new ArgumentNullException(nameof(body));
             }
@@ -554,7 +619,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 _req.Uri = _url;
                 _req.Method = RequestMethod.Patch;
 
-                if (body != default(BuildUpdate))
+                if (body != default(Models.BuildUpdate))
                 {
                     _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
                     _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
@@ -575,7 +640,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Build>(_content);
+                        var _body = Client.Deserialize<Models.Build>(_content);
                         return _body;
                     }
                 }
@@ -593,11 +658,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedUpdateRequest(ex);
             HandleFailedRequest(ex);

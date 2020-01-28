@@ -6,14 +6,18 @@ import { Router, Event, NavigationEnd, ActivatedRouteSnapshot } from '@angular/r
   providedIn: 'root'
 })
 export class ApplicationInsightsService extends ApplicationInsights {
-  constructor(private router: Router) {
-    super({
-      config: {
-        instrumentationKey: (window as any).applicationData.aiKey,
-        disableFetchTracking: false,
-      },
-    });
-    this.loadAppInsights();
+  constructor() {
+    const ikey = (window as any).applicationData.aiKey;
+    if (ikey) {
+      super({
+        config: {
+          instrumentationKey: ikey,
+          disableTelemetry: ikey == '00000000-0000-0000-0000-000000000000',
+          disableFetchTracking: false,
+        },
+      });
+      this.loadAppInsights();
+    }
   }
 
   public start() {

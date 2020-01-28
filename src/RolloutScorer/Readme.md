@@ -23,6 +23,9 @@ The Rollout Scorer scrapes the specified repo's build definition for all of the 
 * **Downtime** &mdash; Calculated from GitHub issues with the `Rollout Downtime` label (downtime is specified in the issue/its comments or else calculated from creation/close time); additional downtime can be specified by the user
 * **Failure to rollout** &mdash; If the last deployed build is a failure, the rollout failed; can also be manually specified by the user 
 
+### Special notes on rollout time calculation
+The duration of the rollout is currently (as of Jan 2020) calculated by walking the build timeline provided by the Azure DevOps API. In the future, we will be able to calculate this more simply as we are adding build steps to indicate "deployment start" and "deployment end" times in Kusto.
+
 ## Config.json
 
 The `config.json` file contains all of the config information needed to calculate the rollout score. It is divided into three sections, defining the configs for Repos, AzDO instances, and rollout score weights.

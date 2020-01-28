@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" />
+
+  <PropertyGroup>
+    <MicrosoftDotNetMonitoringSdkTasksAssembly>$(MSBuildThisFileDirectory)netcoreapp2.1/Microsoft.DotNet.Monitoring.Sdk.dll</MicrosoftDotNetMonitoringSdkTasksAssembly>
+    <MicrosoftDotNetMonitoringSdkTasksAssembly Condition="!Exists('$(MicrosoftDotNetMonitoringSdkTasksAssembly)')">$(MSBuildThisFileDirectory)/../tools/netcoreapp2.1/Microsoft.DotNet.Monitoring.Sdk.dll</MicrosoftDotNetMonitoringSdkTasksAssembly>
+    <GrafanaDashboardTag Condition="'$(GrafanaDashboardTag)' == ''">$(MSBuildProjectName)</GrafanaDashboardTag>
+    <GrafanaKeyVaultTenantId Condition="'$(GrafanaKeyVaultTenantId)' == ''">72f988bf-86f1-41af-91ab-2d7cd011db47</GrafanaKeyVaultTenantId>
+    <GrafanaKeyVaultConnectionString Condition="'$(GrafanaKeyVaultConnectionString)' == '' AND '$(GrafanaKeyVaultAppId)' != '' AND '$(GrafanaKeyVaultAppSecret)' != ''">RunAs=App;AppId=$(GrafanaKeyVaultAppId);TenantId=$(GrafanaKeyVaultTenantId);AppKey=$(GrafanaKeyVaultAppSecret)</GrafanaKeyVaultConnectionString>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <NETCORE_ENGINEERING_TELEMETRY>Grafana</NETCORE_ENGINEERING_TELEMETRY>
+  </PropertyGroup>
+
+  <UsingTask TaskName="MonitoringPublish" AssemblyFile="$(MicrosoftDotNetMonitoringSdkTasksAssembly)"/>
+  <UsingTask TaskName="MonitoringImport" AssemblyFile="$(MicrosoftDotNetMonitoringSdkTasksAssembly)"/>
+
+  <PropertyGroup>
+    <DashboardDirectory>dashboard</DashboardDirectory>
+    <DataSourceDirectory>datasource</DataSourceDirectory>
+    <NotificationDirectory>notifications</NotificationDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <GrafanaEnvironments Include="Staging"/>
+    <GrafanaEnvironments Include="Production"/>
+  </ItemGroup>
+</Project>

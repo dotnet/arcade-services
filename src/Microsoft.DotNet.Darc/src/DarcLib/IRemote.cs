@@ -96,7 +96,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="sourceRepo">Filter by the source repository of the subscription.</param>
         /// <param name="targetRepo">Filter by the target repository of the subscription.</param>
-        /// <param name="channelId">Filter by the target channel id of the subscription.</param>
+        /// <param name="channelId">Filter by the source channel id of the subscription.</param>
         /// <returns>Set of subscription.</returns>
         Task<IEnumerable<Subscription>> GetSubscriptionsAsync(
             string sourceRepo = null,
@@ -412,7 +412,15 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="buildId">Build id</param>
         /// <param name="channelId">Channel id</param>
         /// <returns>Async task</returns>
-        Task AssignBuildToChannel(int buildId, int channelId);
+        Task AssignBuildToChannelAsync(int buildId, int channelId);
+
+        /// <summary>
+        ///     Remove a particular build from a channel
+        /// </summary>
+        /// <param name="buildId">Build id</param>
+        /// <param name="channelId">Channel id</param>
+        /// <returns>Async task</returns>
+        Task DeleteBuildFromChannelAsync(int buildId, int channelId);
 
         /// <summary>
         ///     Get assets matching a particular set of properties. All are optional.
