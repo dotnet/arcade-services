@@ -60,12 +60,12 @@
             "type": "query"
           }
         ],
-        "executionErrorState": "alerting",
+        "executionErrorState": "keep_state",
         "for": "5m",
         "frequency": "1m",
         "handler": 1,
         "message": "Internal Pool Provider Average Response Time is high",
-        "name": "Average Response Time alert",
+        "name": "Internal Pool Provider Average Response Time",
         "noDataState": "keep_state",
         "notifications": [
           {
@@ -336,12 +336,12 @@
             "type": "query"
           }
         ],
-        "executionErrorState": "alerting",
+        "executionErrorState": "keep_state",
         "for": "5m",
         "frequency": "1m",
         "handler": 1,
         "message": "Public Pool Provider Average Response Time is high",
-        "name": "Average Response Time alert",
+        "name": "Public Pool Provider - Average Response Time alert",
         "noDataState": "keep_state",
         "notifications": [
           {
@@ -612,12 +612,12 @@
             "type": "query"
           }
         ],
-        "executionErrorState": "alerting",
+        "executionErrorState": "keep_state",
         "for": "5m",
         "frequency": "1m",
         "handler": 1,
         "message": "Helix API availability alert!",
-        "name": "Helix API availability alert",
+        "name": "Helix API availability",
         "noDataState": "keep_state",
         "notifications": [
           {
@@ -834,12 +834,12 @@
             "type": "query"
           }
         ],
-        "executionErrorState": "alerting",
+        "executionErrorState": "keep_state",
         "for": "5m",
         "frequency": "1m",
         "handler": 1,
         "message": "Helix API Average Response Time is high!",
-        "name": "Average Response Time alert",
+        "name": "Helix API Average Response Time",
         "noDataState": "keep_state",
         "notifications": [
           {
@@ -1119,7 +1119,7 @@
         "frequency": "1m",
         "handler": 1,
         "message": "source.dot.net availability is low!",
-        "name": "source.dot.net Availability Alert",
+        "name": "source.dot.net Availability",
         "noDataState": "keep_state",
         "notifications": [
           {
@@ -1621,12 +1621,12 @@
             "type": "query"
           }
         ],
-        "executionErrorState": "alerting",
+        "executionErrorState": "keep_state",
         "for": "5m",
         "frequency": "1m",
         "handler": 1,
         "message": "Mission Control alert!",
-        "name": "Mission Control alert",
+        "name": "Mission Control availability",
         "noDataState": "keep_state",
         "notifications": [
           {

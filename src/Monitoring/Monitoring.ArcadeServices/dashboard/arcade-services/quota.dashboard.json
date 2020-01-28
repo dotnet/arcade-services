@@ -130,7 +130,7 @@
         "frequency": "1m",
         "handler": 1,
         "message": "An Azure Resource Quota is nearing its limit in region westus!",
-        "name": "Azure Alert for westus",
+        "name": "Azure quota usage for west us",
         "noDataState": "keep_state",
         "notifications": [
           {
@@ -302,7 +302,7 @@
         "frequency": "1m",
         "handler": 1,
         "message": "An Azure Resource Quota is nearing its limit in region westus!",
-        "name": "Azure Alert for westus2",
+        "name": "Azure quota usage for west us 2",
         "noDataState": "keep_state",
         "notifications": [
           {
@@ -468,7 +468,7 @@
         "frequency": "1m",
         "handler": 1,
         "message": "An Azure Resource Quota is nearing its limit in region westus!",
-        "name": "Azure Alert for eastus",
+        "name": "Azure quota usage for east us",
         "noDataState": "keep_state",
         "notifications": [
           {
