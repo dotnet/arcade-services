@@ -17,7 +17,17 @@
 
 After successfully running `bootstrap.ps1` running the `MaestroApplication` project via F5 in VS (launch as elevated) will run the application on `https://localhost:4430`
 
-## Troubleshooting.
+## Azure AppConfiguration
+
+Maestro.Web uses Azure AppConfiguration (AAC) to dynamically enable/disable automatic build to channel assignment. AAC works basically as a KeyVault, however it doesn't need to necessarily store secrets. We use Azure Managed Service Identity (AMSI) to authenticate to AAC. 
+
+##### Useful resources about AAC: 
+
+- https://docs.microsoft.com/en-us/azure/azure-app-configuration/overview
+- https://zimmergren.net/introduction-azure-app-configuration-store-csharp-dotnetcore/
+- https://docs.microsoft.com/en-us/azure/azure-app-configuration/howto-integrate-azure-managed-service-identity
+
+## Troubleshooting
 
 Things to try:
 - Clean your repo before building/running.
