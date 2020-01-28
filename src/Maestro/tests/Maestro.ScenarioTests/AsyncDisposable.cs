@@ -1,11 +1,12 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Maestro.ScenarioTests
 {
     public class AsyncDisposable : IAsyncDisposable
     {
-        private readonly Func<ValueTask> _dispose;
+        private Func<ValueTask> _dispose;
 
         public static IAsyncDisposable Create(Func<ValueTask> dispose)
         {
@@ -19,7 +20,8 @@ namespace Maestro.ScenarioTests
 
         public ValueTask DisposeAsync()
         {
-            return _dispose();
+            Func<ValueTask> dispose = Interlocked.Exchange(ref _dispose, null);
+            return dispose?.Invoke() ?? new ValueTask(Task.CompletedTask);
         }
     }
 }

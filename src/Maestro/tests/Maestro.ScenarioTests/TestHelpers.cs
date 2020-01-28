@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -16,21 +17,22 @@ namespace Maestro.ScenarioTests
             testOutput.WriteLine($"{executable} {string.Join(" ", args.Select(a => $"\"{a}\""))}");
             var output = new StringBuilder();
 
-            void ProcessDataReceived(object sender, DataReceivedEventArgs e)
+            void WriteOutput(string message)
             {
-                if (e.Data != null)
+                if (message != null)
                 {
-                    output.AppendLine(e.Data);
-                    testOutput.WriteLine(e.Data);
+                    Debug.WriteLine(message);
+                    output.AppendLine(message);
+                    testOutput.WriteLine(message);
                 }
             }
 
             var psi = new ProcessStartInfo(executable)
             {
                 RedirectStandardError = true,
-                RedirectStandardOutput = true
+                RedirectStandardOutput = true,
             };
-            foreach (var arg in args)
+            foreach (string arg in args)
             {
                 psi.ArgumentList.Add(arg);
             }
@@ -40,15 +42,49 @@ namespace Maestro.ScenarioTests
                 StartInfo = psi
             };
             var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-            process.OutputDataReceived += ProcessDataReceived;
-            process.ErrorDataReceived += ProcessDataReceived;
             process.EnableRaisingEvents = true;
             process.Exited += (s, e) => { tcs.TrySetResult(true); };
             process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
 
-            await tcs.Task.ConfigureAwait(false);
+            Task<bool> exitTask = tcs.Task;
+            Task<string> stdout = process.StandardOutput.ReadLineAsync();
+            Task<string> stderr = process.StandardError.ReadLineAsync();
+            var list = new List<Task> {exitTask, stdout, stderr};
+            while (list.Count != 0)
+            {
+                var done = await Task.WhenAny(list);
+                list.Remove(done);
+                if (done == exitTask)
+                {
+                    continue;
+                }
+
+                if (done == stdout)
+                {
+                    var data = await stdout;
+                    WriteOutput(data);
+                    if (data != null)
+                    {
+                        list.Add(stdout = process.StandardOutput.ReadLineAsync());
+                    }
+                    continue;
+                }
+
+                if (done == stderr)
+                {
+                    var data = await stderr;
+                    WriteOutput(data);
+                    if (data != null)
+                    {
+                        list.Add(stderr = process.StandardError.ReadLineAsync());
+                    }
+                    continue;
+                }
+
+                throw new InvalidOperationException("Unexpected Task completed.");
+            }
+
+
 
             if (process.ExitCode != 0)
             {
@@ -62,7 +98,7 @@ namespace Maestro.ScenarioTests
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                var cmd = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd";
+                string cmd = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd";
                 return (await RunExecutableAsync(testOutput, cmd, "/c", $"where {command}")).Trim();
             }
 

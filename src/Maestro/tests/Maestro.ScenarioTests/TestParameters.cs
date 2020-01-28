@@ -18,23 +18,23 @@ namespace Maestro.ScenarioTests
 
         public static async Task<TestParameters> GetAsync(ITestOutputHelper testOutput)
         {
-            var userSecrets = new ConfigurationBuilder()
+            IConfigurationRoot userSecrets = new ConfigurationBuilder()
                 .AddUserSecrets<TestParameters>()
                 .Build();
 
-            var maestroBaseUri = Environment.GetEnvironmentVariable("MAESTRO_BASEURI") ?? "https://maestro-int.westus2.cloudapp.azure.com";
-            var maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
-            var githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
-            var darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE");
+            string maestroBaseUri = Environment.GetEnvironmentVariable("MAESTRO_BASEURI") ?? "https://maestro-int.westus2.cloudapp.azure.com";
+            string maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
+            string githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
+            string darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE");
 
             using var testDir = Shareable.Create(TemporaryDirectory.Get());
 
-            var maestroApi = maestroToken == null
+            IMaestroApi maestroApi = maestroToken == null
                 ? ApiFactory.GetAnonymous(maestroBaseUri)
                 : ApiFactory.GetAuthenticated(maestroBaseUri, maestroToken);
 
-            var darcVersion = await maestroApi.Assets.GetDarcVersionAsync();
-            var dotnetExe = await TestHelpers.Which(testOutput, "dotnet");
+            string darcVersion = await maestroApi.Assets.GetDarcVersionAsync();
+            string dotnetExe = await TestHelpers.Which(testOutput, "dotnet");
 
             var toolInstallArgs = new List<string>
             {
@@ -50,9 +50,9 @@ namespace Maestro.ScenarioTests
             }
             await TestHelpers.RunExecutableAsync(testOutput, dotnetExe, toolInstallArgs.ToArray());
 
-            var darcExe = Path.Join(testDir.Peek()!.Directory, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
+            string darcExe = Path.Join(testDir.Peek()!.Directory, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
 
-            var assembly = typeof(TestParameters).Assembly;
+            Assembly assembly = typeof(TestParameters).Assembly;
             var githubApi =
                 new GitHubClient(
                     new ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),

@@ -1,10 +1,11 @@
 using System;
+using System.Threading;
 
 namespace Maestro.ScenarioTests
 {
     public class Disposable : IDisposable
     {
-        private readonly Action _dispose;
+        private Action _dispose;
 
         public static IDisposable Create(Action dispose)
         {
@@ -18,7 +19,7 @@ namespace Maestro.ScenarioTests
 
         public void Dispose()
         {
-            _dispose();
+            Interlocked.Exchange(ref _dispose, null)?.Invoke();
         }
     }
 }

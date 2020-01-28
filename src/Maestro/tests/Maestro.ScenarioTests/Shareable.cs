@@ -5,7 +5,7 @@ namespace Maestro.ScenarioTests
 {
     public sealed class Shareable<T> : IDisposable where T : class, IDisposable
     {
-        private T? _inner;
+        private T _inner;
 
         internal Shareable(T inner)
         {
@@ -17,13 +17,17 @@ namespace Maestro.ScenarioTests
             _inner?.Dispose();
         }
 
-        public T? TryTake()
+        public T TryTake()
         {
             return Interlocked.Exchange(ref _inner, null);
         }
 
-        public T? Peek()
+        public T Peek()
         {
+            if (_inner == null)
+            {
+                throw new InvalidOperationException("Peek() called on null Shareable.");
+            }
             return _inner;
         }
     }

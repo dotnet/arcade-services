@@ -8,7 +8,7 @@ namespace Maestro.ScenarioTests
     {
         public static TemporaryDirectory Get()
         {
-            var dir = Path.Join(Path.GetTempPath(), Path.GetRandomFileName());
+            string dir = Path.Join(Path.GetTempPath(), Path.GetRandomFileName());
             System.IO.Directory.CreateDirectory(dir);
             return new TemporaryDirectory(dir);
         }
