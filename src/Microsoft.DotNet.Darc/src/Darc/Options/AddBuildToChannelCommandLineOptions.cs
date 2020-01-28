@@ -17,16 +17,16 @@ namespace Microsoft.DotNet.Darc.Options
         public string Channel { get; set; }
 
         [Option("validate-signing", HelpText = "Perform signing validation.")]
-        public bool? DoSigningValidation { get; set; }
+        public bool DoSigningValidation { get; set; }
 
         [Option("validate-nuget", HelpText = "Perform NuGet metadata validation.")]
-        public bool? DoNuGetValidation { get; set; }
+        public bool DoNuGetValidation { get; set; }
 
         [Option("validate-sourcelink", HelpText = "Perform SourceLink validation.")]
-        public bool? DoSourcelinkValidation { get; set; }
+        public bool DoSourcelinkValidation { get; set; }
 
         [Option("validate-SDL", HelpText = "Perform SDL validation.")]
-        public bool? DoSDLValidation { get; set; }
+        public bool DoSDLValidation { get; set; }
 
         [Option("sdl-validation-parameters", HelpText = "Custom parameters for SDL validation.")]
         public string SDLValidationParams { get; set; }

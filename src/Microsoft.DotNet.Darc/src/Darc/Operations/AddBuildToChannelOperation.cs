@@ -8,9 +8,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Net;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Maestro.Client;
 using System.Linq;
 using System.Collections.Generic;
 
@@ -18,7 +16,7 @@ namespace Microsoft.DotNet.Darc.Operations
 {
     internal class AddBuildToChannelOperation : Operation
     {
-        private int BuildPromotionPipelineId { get; } = 715;
+        private int BuildPromotionPipelineId { get; } = 750;
         private string BuildPromotionPipelineAccountName { get; } = "dnceng";
         private string BuildPromotionPipelineProjectName { get; } = "internal";
 
@@ -66,7 +64,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Queues a build of the Build Promotion pipeline that will takes care of making sure
                 // that the build assets are published to the right location and also promoting the build
                 // to the requested channel
-                await PromoteBuildAsync(targetChannel.Id);
+                await PromoteBuildAsync(targetChannel.Id).ConfigureAwait(false);
 
                 // Be helpful. Let the user know what will happen.
                 string buildRepo = build.GitHubRepository ?? build.AzureDevOpsRepository;
@@ -86,29 +84,30 @@ namespace Microsoft.DotNet.Darc.Operations
 
         private async Task PromoteBuildAsync(int PromoteToMaestroChannelId)
         {
-            LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
+            if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
+            {
+                LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
+                _options.AzureDevOpsPat = localSettings.AzureDevOpsToken;
+            }
 
-            AzureDevOpsClient azdoClient = new AzureDevOpsClient(gitExecutable: null, localSettings.AzureDevOpsToken, Logger, temporaryRepositoryPath: null);
-
-            string jsonSigningValidation = (_options.DoSigningValidation != null) ? $", \"EnableSigningValidation\": \"{ _options.DoSigningValidation }\"" : string.Empty;
-            string jsonNuGetValidation = (_options.DoNuGetValidation != null) ? $", \"EnableNugetValidation\": \"{ _options.DoNuGetValidation }\"" : string.Empty;
-            string jsonSourceLinkValidation = (_options.DoSourcelinkValidation != null) ? $", \"EnableSourceLinkValidation\": \"{ _options.DoSourcelinkValidation }\"" : string.Empty;
-            string jsonSDLValidation = (_options.DoSDLValidation != null) ? $", \"EnableSDLValidation\": \"{ _options.DoSDLValidation }\"" : string.Empty;
-            string jsonSDLValidationAdditionalParams = (_options.SDLValidationParams != null) ? $", \"SDLValidationCustomParams\": \"{ _options.SDLValidationParams }\"" : string.Empty;
-            string jsonSDLValidationContinueOnError = (_options.SDLValidationContinueOnError != null) ? $", \"SDLValidationContinueOnError\": \"{ _options.SDLValidationContinueOnError }\"" : string.Empty;
+            AzureDevOpsClient azdoClient = new AzureDevOpsClient(gitExecutable: null, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null);
 
             var queueTimeVariables = $"{{" +
                 $"\"BARBuildId\": \"{ _options.Id }\", " +
-                $"\"PromoteToMaestroChannelId\": \"{ PromoteToMaestroChannelId }\" " +
-                jsonSigningValidation +
-                jsonNuGetValidation +
-                jsonSourceLinkValidation +
-                jsonSDLValidation +
-                jsonSDLValidationAdditionalParams +
-                jsonSDLValidationContinueOnError +
+                $"\"PromoteToMaestroChannelId\": \"{ PromoteToMaestroChannelId }\", " +
+                $"\"EnableSigningValidation\": \"{ _options.DoSigningValidation }\", " +
+                $"\"EnableNugetValidation\": \"{ _options.DoNuGetValidation }\", " +
+                $"\"EnableSourceLinkValidation\": \"{ _options.DoSourcelinkValidation }\", " +
+                $"\"EnableSDLValidation\": \"{ _options.DoSDLValidation }\", " +
+                $"\"SDLValidationCustomParams\": \"{ _options.SDLValidationParams }\", " +
+                $"\"SDLValidationContinueOnError\": \"{ _options.SDLValidationContinueOnError }\", " +
                 $"}}";
 
-            await azdoClient.StartNewBuildAsync(BuildPromotionPipelineAccountName, BuildPromotionPipelineProjectName, BuildPromotionPipelineId, queueTimeVariables);
+            await azdoClient.StartNewBuildAsync(BuildPromotionPipelineAccountName, 
+                BuildPromotionPipelineProjectName, 
+                BuildPromotionPipelineId, 
+                queueTimeVariables)
+                .ConfigureAwait(false);
         }
 
         private void PrintSubscriptionInfo(List<Subscription> applicableSubscriptions)
