@@ -156,7 +156,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 (d, x) =>
                 {
                     d["id"] = x.Value<int>("id");
-                    d["uid"] = x.Value<int>("uid");
+                    d["uid"] = x.Value<string>("uid");
                     d["version"] = x.Value<int>("version");
                 }
             );
