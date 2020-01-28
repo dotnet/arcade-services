@@ -87,6 +87,8 @@ try {
     Write-Host "Set up build for intake into target repository"
     $buildId = New-Build -repository $sourceRepoUri -branch $sourceBranch -commit $sourceCommit -buildNumber $sourceBuildNumber -assets $assets "true"
     Write-Host "Created build: $buildId"
+    # Add the build to the target channel so that the release pipeline runs
+    Add-Build-To-Channel $buildId $testChannelName
 
     # Release Pipeline will run, and if it finishes, add the build to the channel.
     # This will trigger the dependency update. If we don't see the PR created after 10 attempts
