@@ -219,6 +219,9 @@ stages:
               ArtifactName: ScenarioTests
               ArtifactType: Container
 
+          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\netcoreapp3.0\publish
+            artifact: Maestro.ScenarioTests
+
           # Reenable tagging when stable package versions can be generated.
           # https://github.com/dotnet/arcade-services/issues/59
           # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:

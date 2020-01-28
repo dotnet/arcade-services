@@ -204,10 +204,20 @@ stages:
       artifact: ScenarioTests
     - download: Build
       artifact: PackageArtifacts
+    - download: Build
+      artifact: Maestro.ScenarioTests
+
     - task: NuGetToolInstaller@1
       displayName: Use NuGet
       inputs:
         versionSpec: 5.3.x
+
+    - tast: UseDotNet@2
+      displayName: Use .NET Core Sdk
+      inputs:
+        packageType: sdk
+        version: 3.0.101
+
     - powershell: |
         nuget sources add -Name "arcade" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-tools-internal/index.json"
         nuget sources add -Name "dotnet-core" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
@@ -218,6 +228,7 @@ stages:
         Write-Host "##vso[task.setvariable variable=darcVersion]$latestDarcVersion"
         Write-Host "Using Darc version $latestDarcVersion to run the tests"
       displayName: Get DARC version
+
     - task: PowerShell@2
       displayName: Run Scenario Tests
       inputs:
@@ -226,3 +237,29 @@ stages:
         arguments: -maestroInstallation "$(MaestroTestEndpoint)" -darcVersion "$(darcVersion)" -maestroBearerToken "$(scenario-test-maestro-token)" -githubPAT "$(maestro-scenario-test-github-token)" -azdoPAT "$(dn-bot-dnceng-build-rw-code-rw-release-rw)" -darcPackageSource "$(Pipeline.Workspace)\Build\PackageArtifacts"
         workingDirectory: $(Pipeline.Workspace)/Build/ScenarioTests
       timeoutInMinutes: 90
+
+    - task: DotNetCoreCLI@2
+      displayName: Test C# (dotnet vstest)
+      inputs:
+        command: 'custom'
+        custom: 'vstest'
+        workingDirectory: $(Pipeline.Workspace)/Build/Maestro.ScenarioTests
+        arguments: > 
+          --logger:trx;LogFileName=tests.trx
+      env:
+        MAESTRO_BASEURI: $(MaestroTestEndpoint)
+        MAESTRO_TOKEN: $(scenario-test-maestro-token)
+        GITHUB_TOKEN: $(maestro-scenario-test-github-token)
+        DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\Build\PackageArtifacts
+
+    - task: PublishTestResults@2
+      displayName: Publish Scenario Tests
+      inputs:
+        testResultsFormat: VSTest
+        testResultsFiles: tests.trx
+        searchFolder: $(Pipeline.Workspace)/Build/Maestro.ScenarioTests/TestResults
+        failTaskOnFailedTests: true
+      condition: succeededOrFailed()
+
+
+    
