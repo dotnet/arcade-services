@@ -6,8 +6,8 @@ import { FlowGraph, FlowRef, FlowEdge } from 'src/maestro-client/models';
 import { RepoNamePipe } from 'src/app/pipes/repo-name.pipe';
 import { analyzeAndValidateNgModules } from '@angular/compiler';
 
-function getRepositoryShortName(repo:string): string | undefined {
-  return RepoNamePipe.prototype.transform(repo);
+function getRepositoryShortName(repo:string): string {
+  return RepoNamePipe.prototype.transform(repo) || "unknown repository";
 }
 
 function getNodeLabel(node:FlowRef): string {

@@ -1,7 +1,7 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ChannelComponent } from './channel.component';
-import { NO_ERRORS_SCHEMA } from '@angular/compiler/src/core';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 
 describe('ChannelComponent', () => {
   let component: ChannelComponent;
