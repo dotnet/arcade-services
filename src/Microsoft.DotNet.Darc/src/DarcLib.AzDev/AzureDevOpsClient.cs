@@ -1077,6 +1077,29 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Queue a new build on the specified build definition with the given queue time variables.
+        /// </summary>
+        /// <param name="accountName">Account where the project is hosted.</param>
+        /// <param name="projectName">Project where the build definition is.</param>
+        /// <param name="azdoDefinitionId">ID of the build definition where a build should be queued.</param>
+        /// <param name="queueTimeVariables">A string in JSON format containing the queue time variables to be used.</param>
+        public async Task<int> StartNewBuildAsync(string accountName, string projectName, int azdoDefinitionId, string queueTimeVariables = null)
+        {
+            var body = $"{{ \"definition\": {{ \"id\": \"{azdoDefinitionId}\" }}, \"parameters\": '{queueTimeVariables}'  }}";
+
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Post,
+                accountName,
+                projectName,
+                $"_apis/build/builds/",
+                _logger,
+                body,
+                versionOverride: "5.1");
+
+            return content.GetValue("id").ToObject<int>();
+        }
+
+        /// <summary>
         /// Return the description of the release with ID informed.
         /// </summary>
         /// <param name="accountName">Azure DevOps account name</param>

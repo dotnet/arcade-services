@@ -16,6 +16,24 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("channel", Required = true, HelpText = "Channel to assign build to.")]
         public string Channel { get; set; }
 
+        [Option("validate-signing", HelpText = "Perform signing validation.")]
+        public bool DoSigningValidation { get; set; }
+
+        [Option("validate-nuget", HelpText = "Perform NuGet metadata validation.")]
+        public bool DoNuGetValidation { get; set; }
+
+        [Option("validate-sourcelink", HelpText = "Perform SourceLink validation.")]
+        public bool DoSourcelinkValidation { get; set; }
+
+        [Option("validate-SDL", HelpText = "Perform SDL validation.")]
+        public bool DoSDLValidation { get; set; }
+
+        [Option("sdl-validation-parameters", HelpText = "Custom parameters for SDL validation.")]
+        public string SDLValidationParams { get; set; }
+
+        [Option("sdl-validation-continue-on-error", HelpText = "Ignore SDL validation errors.")]
+        public string SDLValidationContinueOnError { get; set; }
+
         public override Operation GetOperation()
         {
             return new AddBuildToChannelOperation(this);
