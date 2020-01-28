@@ -9,7 +9,7 @@ We generate [PowerBi reports](https://dev.azure.com/dnceng/public/_dashboards/da
 DarcBot searches GitHub issues for issues which contain specific identifiable information in the body.
 
 ```text
-[BuildId=(Azure DevOps BuildId),RecordId=(Azure DevOps RecordId), Index=(Azure DevOps issue index)]
+[BuildId=(Azure DevOps BuildId),RecordId=(Azure DevOps RecordId),Index=(Azure DevOps issue index)]
 ```
 
 It is not expected that users manually provide this information, the issue body is auto-generated via links on the reports (see https://github.com/dotnet/arcade/blob/master/Documentation/Projects/PKPIs/Triage-Design.md#powerbi).
