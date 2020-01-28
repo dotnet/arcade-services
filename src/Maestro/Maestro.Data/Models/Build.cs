@@ -65,7 +65,7 @@ namespace Maestro.Data.Models
                 {
                     BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
                     ILogger<Build> logger = context.GetService<ILogger<Build>>();
-                    logger.LogInformation($"Automatic build insertion is disabled because no App Configuration was available.");
+                    logger.LogInformation("Automatic build promotion is disabled because no App Configuration was available.");
                 }
             };
         }
