@@ -10,8 +10,10 @@ using System.Linq;
 using EntityFrameworkCore.Triggers;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Services.Utility;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.AzureAppConfiguration;
+using Microsoft.Extensions.Logging;
 
 namespace Maestro.Data.Models
 {
@@ -37,7 +39,7 @@ namespace Maestro.Data.Models
                 {
                     s_configurationRefresher.Refresh().GetAwaiter().GetResult();
 
-                    bool.TryParse(s_dynamicConfigs["AutoBuildPromotion"], out var autoBuildPromotion);
+                    bool.TryParse(s_dynamicConfigs["FeatureManagement:AutoBuildPromotion"], out var autoBuildPromotion);
 
                     if (autoBuildPromotion)
                     {
@@ -58,6 +60,12 @@ namespace Maestro.Data.Models
 
                         context.SaveChangesWithTriggers(b => context.SaveChanges(b));
                     }
+                }
+                else
+                {
+                    BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
+                    ILogger<Build> logger = context.GetService<ILogger<Build>>();
+                    logger.LogInformation($"Automatic build insertion is disabled because no App Configuration was available.");
                 }
             };
         }

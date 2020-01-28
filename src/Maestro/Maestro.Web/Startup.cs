@@ -245,25 +245,34 @@ namespace Maestro.Web
 
 
             // Configure access to Azure App Configuration
-            string appConfigEndpointUri = Configuration["AppConfigurationUri"];
-            ConfigurationBuilder builder = new ConfigurationBuilder();
-            TokenCredential credential = appConfigEndpointUri.Contains("maestrolocal") ? 
-                new DefaultAzureCredential() : 
-                (TokenCredential) new ManagedIdentityCredential();
-
-            builder.AddAzureAppConfiguration(options =>
+            try
             {
-                options.Connect(new Uri(appConfigEndpointUri), credential)
-                    .ConfigureRefresh(refresh =>
-                    {
-                        refresh.Register("AutoBuildPromotion", "Maestro")
-                            .SetCacheExpiration(TimeSpan.FromSeconds(1));
-                    }).UseFeatureFlags();
+                string appConfigEndpointUri = Configuration["AppConfigurationUri"];
+                ConfigurationBuilder builder = new ConfigurationBuilder();
+                TokenCredential credential = appConfigEndpointUri.Contains("maestrolocal") ?
+                    new DefaultAzureCredential() :
+                    (TokenCredential)new ManagedIdentityCredential();
 
-                Build.s_configurationRefresher = options.GetRefresher();
-            });
+                builder.AddAzureAppConfiguration(options =>
+                {
+                    options.Connect(new Uri(appConfigEndpointUri), credential)
+                        .ConfigureRefresh(refresh =>
+                        {
+                            refresh.Register(".appconfig.featureflag/AutoBuildPromotion")
+                                .SetCacheExpiration(TimeSpan.FromSeconds(1));
+                        }).UseFeatureFlags();
 
-            Build.s_dynamicConfigs = builder.Build();
+                    Build.s_configurationRefresher = options.GetRefresher();
+                });
+
+                Build.s_dynamicConfigs = builder.Build();
+            }
+            catch (Exception)
+            {
+                // Disable AppConfigs lookup if for some reason the authentication failed
+                Build.s_configurationRefresher = null;
+                Build.s_dynamicConfigs = null;
+            }
         }
 
         public void ConfigureContainer(ContainerBuilder builder)
