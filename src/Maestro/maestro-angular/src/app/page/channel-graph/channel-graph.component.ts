@@ -6,26 +6,25 @@ import { FlowGraph, FlowRef, FlowEdge } from 'src/maestro-client/models';
 import { RepoNamePipe } from 'src/app/pipes/repo-name.pipe';
 import { analyzeAndValidateNgModules } from '@angular/compiler';
 
-function getRepositoryShortName(repo:string): string {
-  return `${RepoNamePipe.prototype.transform(repo)}`;
+function getRepositoryShortName(repo:string): string | undefined {
+  return RepoNamePipe.prototype.transform(repo);
 }
+
 function getNodeLabel(node:FlowRef): string {
-  let label = `${getRepositoryShortName(node.repository)}\n`;
-  label = `${label}${node.branch}\n`;
-  return label;
+  return `${getRepositoryShortName(node.repository)}\n`+
+         `${node.branch}`;
 }
 
 function getNodeTitle(node:FlowRef): string {
   let official = node.officialBuildTime == 0 ? "No successful runs in the last 7 days" : node.officialBuildTime.toFixed(2);
   let pr = node.prBuildTime == 0 ? "No successful runs in the last 7 days" : node.prBuildTime.toFixed(2);
 
-  let title = `Repository: ${getRepositoryShortName(node.repository)}\n`;
-  title = `${title}Branch: ${node.branch}\n`;
-  title = `${title}Official Build: ${official}\n`;
-  title = `${title}Dep Flow: ${pr}\n`;
-  title = `${title}Best Case Path Time: ${node.bestCaseTime.toFixed(2)}\n`;
-  title = `${title}Worst Case Path Time: ${node.worstCaseTime.toFixed(2)}`;
-  return title;
+  return `Repository: ${getRepositoryShortName(node.repository)}\n` +
+         `Branch: ${node.branch}\n` +
+         `Official Build: ${official}\n` +
+         `Dep Flow: ${pr}\n` +
+         `Best Case Path Time: ${node.bestCaseTime.toFixed(2)}\n` +
+         `Worst Case Path Time: ${node.worstCaseTime.toFixed(2)}`;
 }
 
 function getNodeDescription(node:FlowRef): string {
@@ -38,25 +37,36 @@ function getNodeDescription(node:FlowRef): string {
 
 function getEdgeDescription(edge:FlowEdge, graph:FlowGraph): string {
   let from = graph.nodes.find(x => x.id == edge.fromId);
-  let fromRepo = "";
-  let fromBranch = "";
+  let fromRepo: string | undefined = undefined;
+  let fromBranch: string | undefined = undefined;
+  let fromId = edge.fromId;
+
   if (from) {
     fromRepo = getRepositoryShortName(from.repository);
     fromBranch = from.branch;
   }
 
+  if (fromRepo && fromBranch) {
+    fromId = `${fromRepo}@${fromBranch}`;
+  }
+
   let to = graph.nodes.find(x => x.id == edge.toId);
-  let toRepo = "";
-  let toBranch = "";
+  let toRepo: string | undefined = undefined;
+  let toBranch: string | undefined = undefined;
+  let toId = edge.toId;
 
   if (to) {
     toRepo = getRepositoryShortName(to.repository);
     toBranch = to.branch;
   }
 
-  let description = `An edge that connects ${fromRepo}@${fromBranch} to ${toRepo}@${toBranch}`;
+  if (toRepo && toBranch) {
+    toId = `${toRepo}@${toBranch}`;
+  }
+
+  let description = `An edge that connects ${fromId} to ${toId}`;
   if (edge.onLongestBuildPath) {
-    description = `${description}\nOn the longest build path`;
+    description = `${description}\non the longest build path`;
   }
   return description;
 }
