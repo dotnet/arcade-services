@@ -237,16 +237,16 @@ namespace Maestro.ScenarioTests
         {
             Build build = await MaestroApi.Builds.CreateAsync(new BuildData(
                 commit: commit,
-                azureDevOpsAccount: "dnceng",
-                azureDevOpsProject: "internal",
+                azureDevOpsAccount: _parameters.AzureDevOpsAccount,
+                azureDevOpsProject: _parameters.AzureDevOpsProject,
                 azureDevOpsBuildNumber: buildNumber,
                 azureDevOpsRepository: repositoryUrl,
                 azureDevOpsBranch: branch,
                 publishUsingPipelines: false,
                 released: false)
             {
-                AzureDevOpsBuildId = 144618,
-                AzureDevOpsBuildDefinitionId = 6,
+                AzureDevOpsBuildId = _parameters.AzureDevOpsBuildId,
+                AzureDevOpsBuildDefinitionId = _parameters.AzureDevOpsBuildDefinitionId,
                 GitHubRepository = repositoryUrl,
                 GitHubBranch = branch,
                 Assets = assets,

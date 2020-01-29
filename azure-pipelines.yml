@@ -104,7 +104,7 @@ stages:
 
         - task: NodeTool@0
           inputs:
-            versionSpec: '>=11'
+            versionSpec: 12.x
 
         - task: NuGetCommand@2
           displayName: Restore Packages

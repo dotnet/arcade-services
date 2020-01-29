@@ -91,6 +91,14 @@ namespace Maestro.ScenarioTests
 
         public GitHubClient GitHubApi { get; }
 
+        public int AzureDevOpsBuildDefinitionId { get; } = 6;
+
+        public int AzureDevOpsBuildId { get; } = 144618;
+
+        public string AzureDevOpsAccount { get; } = "dnceng";
+
+        public string AzureDevOpsProject { get; } = "internal";
+
         public void Dispose()
         {
             _dir.Dispose();
