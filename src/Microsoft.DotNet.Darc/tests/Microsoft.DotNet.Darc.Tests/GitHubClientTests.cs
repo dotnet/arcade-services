@@ -128,10 +128,12 @@ namespace Microsoft.DotNet.Darc.Tests
                 await client.Object.GetGitTreeItem("path", treeItemsToGet[i].Item3, treeItemsToGet[i].Item1, treeItemsToGet[i].Item2);
             }
 
+            int expectedCacheHits = 0;
+            int expectedCacheMisses = treeItemsToGet.Count - 1;
             if (enableCache)
             {
-                Assert.Equal(treeItemsToGet.Count - 1, cache.CacheMisses);
-                Assert.Equal(0, cache.CacheHits);
+                Assert.Equal(expectedCacheMisses, cache.CacheMisses);
+                Assert.Equal(expectedCacheHits, cache.CacheHits);
             }
 
             // Request full set
@@ -142,6 +144,8 @@ namespace Microsoft.DotNet.Darc.Tests
 
             if (enableCache)
             {
+                expectedCacheMisses++;
+                expectedCacheHits += (treeItemsToGet.Count - 1);
                 Assert.Equal(treeItemsToGet.Count, cache.CacheMisses);
                 Assert.Equal(treeItemsToGet.Count - 1, cache.CacheHits);
             }
@@ -154,8 +158,33 @@ namespace Microsoft.DotNet.Darc.Tests
 
             if (enableCache)
             {
-                Assert.Equal(treeItemsToGet.Count, cache.CacheMisses);
-                Assert.Equal(treeItemsToGet.Count - 1 + treeItemsToGet.Count, cache.CacheHits);
+                expectedCacheHits += treeItemsToGet.Count;
+                Assert.Equal(expectedCacheMisses, cache.CacheMisses);
+                Assert.Equal(expectedCacheHits, cache.CacheHits);
+            }
+
+            // Request an item with the same SHA but different path
+            var renamedTreeItem = treeItemsToGet[0];
+            var renamedTreeItemBlob = renamedTreeItem.Item3;
+            renamedTreeItem.Item3 = new Octokit.TreeItem("anotherPath",
+                renamedTreeItemBlob.Mode,
+                Octokit.TreeType.Blob,
+                renamedTreeItemBlob.Size,
+                renamedTreeItemBlob.Sha,
+                renamedTreeItemBlob.Url);
+
+            await client.Object.GetGitTreeItem("anotherPath", renamedTreeItem.Item3, renamedTreeItem.Item1, renamedTreeItem.Item2);
+
+            if (enableCache)
+            {
+                // First time the new item should not be in the cache
+                expectedCacheMisses++;
+                Assert.Equal(expectedCacheMisses, cache.CacheMisses);
+                Assert.Equal(expectedCacheHits, cache.CacheHits);
+                // Get it again, this time it should be in the cache
+                expectedCacheHits++;
+                await client.Object.GetGitTreeItem("anotherPath", treeItemsToGet[0].Item3, treeItemsToGet[0].Item1, treeItemsToGet[0].Item2);
+                Assert.Equal(expectedCacheHits, cache.CacheHits);
             }
         }
     }
