@@ -11,13 +11,6 @@ namespace Microsoft.DotNet.Maestro.Client
 {
     partial class MaestroApiOptions
     {
-        private MaestroApiTokenCredential _maestroApiTokenCredential;
-
-        public MaestroApiOptions(MaestroApiTokenCredential maestroApiTokenCredential)
-        {
-            _maestroApiTokenCredential = maestroApiTokenCredential;
-        }
-
         partial void InitializeOptions()
         {
             if (Credentials != null)

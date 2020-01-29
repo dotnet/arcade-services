@@ -83,14 +83,15 @@ namespace DotNet.Grafana.Tests
             Assert.Null(result["id"]);
             Assert.Null(result["orgId"]);
             Assert.Null(result["url"]);
+            Assert.Null(result["secureJsonFields"]);
 
             // These are secure, so they shouldn't be exported
-            string df1 = result.Value<JObject>("secureJsonFields")?.Value<string>("dangerousField1");
+            string df1 = result.Value<JObject>("secureJsonData")?.Value<string>("dangerousField1");
             Assert.StartsWith("[vault(", df1);
             Assert.Contains("dangerousField1", df1);
             Assert.DoesNotContain("REMOVED", df1);
 
-            string df2 = result.Value<JObject>("secureJsonFields")?.Value<string>("dangerousField2");
+            string df2 = result.Value<JObject>("secureJsonData")?.Value<string>("dangerousField2");
             Assert.StartsWith("[vault(", df2);
             Assert.Contains("dangerousField2", df2);
             Assert.DoesNotContain("REMOVED", df2);

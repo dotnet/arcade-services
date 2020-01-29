@@ -173,6 +173,22 @@ stages:
             artifact: DotNetStatus
             displayName: Publish DotNet.Status.Web
           
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\RolloutScorerAzureFunction\publish -f netcoreapp3.0
+            workingDirectory: src/RolloutScorer/RolloutScorerAzureFunction
+            displayName: dotnet publish RolloutScorerAzureFunction
+
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: $(Build.ArtifactStagingDirectory)/RolloutScorerAzureFunction/publish
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: $(Build.ArtifactStagingDirectory)/RolloutScorerAzureFunction/package/RolloutScorer.zip
+              replaceExistingArchive: true
+
+          - publish: $(Build.ArtifactStagingDirectory)/RolloutScorerAzureFunction/package
+            artifact: RolloutScorer
+            displayName: Publish RolloutScorerAzureFunction
+          
           ## Prepare database update artifact
           - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp2.1
             workingDirectory: src/Maestro/Maestro.Data

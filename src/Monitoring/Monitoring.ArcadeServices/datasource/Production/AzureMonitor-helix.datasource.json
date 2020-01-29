@@ -18,7 +18,7 @@
     "subscriptionId": "68672ab8-de0c-40f1-8d1b-ffb20bd62c0f",
     "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47"
   },
-  "secureJsonFields": {
+  "secureJsonData": {
     "appInsightsApiKey": "[vault(helix-app-insights-api-key)]",
     "clientSecret": "[vault(helix-grafana-ad-client-secret)]"
   },

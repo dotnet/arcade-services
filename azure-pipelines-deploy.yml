@@ -21,6 +21,7 @@ stages:
       MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
       MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
       PublishProfile: Int
+      RolloutScorerAppName: rollout-scorer-int
       ServiceFabricConnection: Maestro-Int
       Subscription: NetHelixStaging
       VariableGroup: MaestroInt KeyVault
@@ -35,6 +36,7 @@ stages:
       MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
       MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
       PublishProfile: Prod
+      RolloutScorerAppName: rollout-scorer-prod
       ServiceFabricConnection: Maestro-Prod
       Subscription: NetHelix
       VariableGroup: MaestroProd KeyVault

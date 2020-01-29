@@ -21,6 +21,6 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public bool NonShipping { get; set; }
 
         [JsonProperty("locations")]
-        public IImmutableList<AssetLocationData> Locations { get; set; }
+        public IImmutableList<Models.AssetLocationData> Locations { get; set; }
     }
 }

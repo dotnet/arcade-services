@@ -1,4 +1,8 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace RolloutScorer
 {
@@ -7,13 +11,22 @@ namespace RolloutScorer
         [JsonProperty("buildNumber")]
         public string BuildNumber { get; set; }
         [JsonProperty("_links")]
-        public BuildLinks Links { get; set; }
+        public BuildLinks Links { get; set; } = new BuildLinks();
         [JsonProperty("result")]
         public string Result { get; set; }
+        [JsonProperty("queueTime")]
 
+        public DateTimeOffset QueueTime { get; set; }
+        [JsonProperty("startTime")]
+        public DateTimeOffset StartTime { get; set; }
+        [JsonProperty("finishTime")]
+        public DateTimeOffset FinishTime { get; set; }
 
         [JsonIgnore]
         public bool DeploymentReached { get; set; } = false;
+        [JsonIgnore]
+        public List<BuildTimelineEntry> Stages { get; set; } = new List<BuildTimelineEntry>();
+
         [JsonIgnore]
         public string SelfLink => Links.SelfLink.Href;
         [JsonIgnore]
@@ -27,13 +40,13 @@ namespace RolloutScorer
     public class BuildLinks
     {
         [JsonProperty("self")]
-        public BuildLink SelfLink { get; set; }
+        public BuildLink SelfLink { get; set; } = new BuildLink();
         [JsonProperty("web")]
-        public BuildLink WebLink { get; set; }
+        public BuildLink WebLink { get; set; } = new BuildLink();
         [JsonProperty("sourceVersionDisplayUri")]
-        public BuildLink SourceLink { get; set; }
+        public BuildLink SourceLink { get; set; } = new BuildLink();
         [JsonProperty("timeline")]
-        public BuildLink TimelineLink { get; set; }
+        public BuildLink TimelineLink { get; set; } = new BuildLink();
     }
 
     public class BuildLink

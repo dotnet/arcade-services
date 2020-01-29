@@ -870,6 +870,12 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 return dependencies;
             }
+            catch (GithubApplicationInstallationException gexc)
+            {
+                // This means the Maestro APP was not installed in the repo's org. Just keep going.
+                logger.LogWarning($"Failed to retrieve dependency information from {repoUri}@{commit}. Error: {gexc.Message}");
+                return null;
+            }
             catch (DependencyFileNotFoundException)
             {
                 // This is not an error. Dependencies can be specified with explicit shas that
