@@ -99,7 +99,9 @@ namespace Maestro.ScenarioTests
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 string cmd = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd";
-                return (await RunExecutableAsync(testOutput, cmd, "/c", $"where {command}")).Trim();
+                return (await RunExecutableAsync(testOutput, cmd, "/c", $"where {command}")).Trim()
+                       // get the first line of where's output
+                       .Split(new[] {'\n', '\r'}, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
             }
 
             return (await RunExecutableAsync(testOutput, "/bin/sh", "-c", $"which {command}")).Trim();

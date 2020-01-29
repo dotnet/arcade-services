@@ -219,7 +219,7 @@ stages:
               ArtifactName: ScenarioTests
               ArtifactType: Container
 
-          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\netcoreapp3.0\publish
+          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\netcoreapp2.1\publish
             artifact: Maestro.ScenarioTests
 
           # Reenable tagging when stable package versions can be generated.
