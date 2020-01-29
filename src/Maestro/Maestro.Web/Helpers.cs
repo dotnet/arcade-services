@@ -119,9 +119,9 @@ namespace Maestro.Web
             }
 
             // We only care about builds that complete successfully or partially successfully 
-            // from the given repository. We summarize duration of the builds over the last 7 days.
-            // There are multiple different definitions that run in parallel, so we summarize
-            // on the definition id and ultimately choose the definition that took the longest.
+            // from the given repository. We summarize duration of the builds over the last specified
+            // number of days. There are multiple different definitions that run in parallel, so we 
+            // summarize on the definition id and ultimately choose the definition that took the longest.
             string commonQueryText = @"| where Result != 'failed' and Result != 'canceled' 
                 | where FinishTime > ago(_Days) 
                 | extend duration = FinishTime - StartTime 
