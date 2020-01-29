@@ -6,15 +6,17 @@ namespace Maestro.Web.Api.v2019_01_16.Models
 {
     public class BuildTime
     {
-        public BuildTime(int defaultChannelId, double officialTime, double prTime)
+        public BuildTime(int defaultChannelId, double officialTime, double prTime, int goalTime)
         {
             DefaultChannelId = defaultChannelId;
             OfficialBuildTime = officialTime;
             PRBuildTime = prTime;
+            GoalTime = goalTime;
         }
 
         public int DefaultChannelId;
         public double OfficialBuildTime;
         public double PRBuildTime;
+        public int GoalTime;
     }
 }

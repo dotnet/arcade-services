@@ -1066,6 +1066,7 @@ export class FlowRef {
             bestCaseTime,
             worstCaseTime,
             onLongestBuildPath,
+            goalTime,
         }: {
             id: string,
             repository: string,
@@ -1075,6 +1076,7 @@ export class FlowRef {
             bestCaseTime: number,
             worstCaseTime: number,
             onLongestBuildPath: boolean,
+            goalTime: number,
         }
     ) {
         this._id = id;
@@ -1085,6 +1087,7 @@ export class FlowRef {
         this._bestCaseTime = bestCaseTime;
         this._worstCaseTime = worstCaseTime;
         this._onLongestBuildPath = onLongestBuildPath;
+        this._goalTime = goalTime;
     }
 
     private _id: string;
@@ -1134,6 +1137,12 @@ export class FlowRef {
     public get onLongestBuildPath(): boolean {
         return this._onLongestBuildPath;
     }
+
+    public _goalTime: number;
+
+    public get goalTime(): number {
+        return this._goalTime;
+    }
     
     public isValid(): boolean {
         return (
@@ -1152,6 +1161,7 @@ export class FlowRef {
             bestCaseTime: value["bestCasePathTime"] == null ? undefined : value["bestCasePathTime"] as any,
             worstCaseTime: value["worstCasePathTime"] == null ? undefined : value["worstCasePathTime"] as any,
             onLongestBuildPath: value["onLongestBuildPath"] == null ? undefined : value["onLongestBuildPath"] as any,
+            goalTime: value["goalTime"] == null ? undefined : value["goalTime"] as any,
         });
         return result;
     }
@@ -1166,6 +1176,7 @@ export class FlowRef {
         result["bestCasePathTime"] = value._bestCaseTime;
         result["worstCasePathTime"] = value._worstCaseTime;
         result["onLongestBuildPath"] = value._onLongestBuildPath;
+        result["goalTime"] = value._goalTime;
         return result;
     }
 }

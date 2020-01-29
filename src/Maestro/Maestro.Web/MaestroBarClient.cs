@@ -10,6 +10,7 @@ using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.TeamFoundation.Build.WebApi.Events;
 using System;
+using System.Data;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -287,18 +288,41 @@ namespace Maestro.Web
 
             if (defaultChannel == null)
             {
-                return new BuildTime(0, 0, 0);
+                return new BuildTime(0, 0, 0, 0);
             }
 
             Dictionary<string, KustoQuery> queries = Helpers.CreateBuildTimesQueries(defaultChannel.Repository, defaultChannel.Branch, days);
 
-            var results = await Task.WhenAll<TimeSpan>(_kustoClientProvider.GetSingleValueFromQueryAsync<TimeSpan>(queries["internal"]), 
-                _kustoClientProvider.GetSingleValueFromQueryAsync<TimeSpan>(queries["public"]));
+            var results = await Task.WhenAll<IDataReader>(_kustoClientProvider.ExecuteKustoQueryAsync(queries["internal"]), 
+                _kustoClientProvider.ExecuteKustoQueryAsync(queries["public"]));
 
-            double officialTime = results[0].TotalMinutes;
-            double prTime = results[1].TotalMinutes;
+            Tuple<int, TimeSpan> officialBuild = Helpers.ParseBuildTime(results[0]);
+            Tuple<int, TimeSpan> prBuild = Helpers.ParseBuildTime(results[1]);
 
-            return new BuildTime(defaultChannelId, officialTime, prTime);
+            double officialTime = 0;
+            double prTime = 0;
+            int goalTime = 0;
+
+            if (officialBuild != null)
+            {
+                officialTime = officialBuild.Item2.TotalMinutes;
+                
+                // Get goal time for definition id
+                Data.Models.GoalTime goal = await _context.GoalTime
+                    .FirstOrDefaultAsync(g => g.DefinitionId == officialBuild.Item1 && g.ChannelId == defaultChannel.ChannelId);
+
+                if (goal != null)
+                {
+                    goalTime = goal.Minutes;
+                }
+            }
+
+            if (prBuild != null)
+            {
+                prTime = prBuild.Item2.TotalMinutes;
+            }
+
+            return new BuildTime(defaultChannelId, officialTime, prTime, goalTime);
         }
     }
 }

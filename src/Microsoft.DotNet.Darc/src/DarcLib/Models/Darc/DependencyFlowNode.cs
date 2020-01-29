@@ -39,6 +39,7 @@ namespace Microsoft.DotNet.DarcLib
 
         public double OfficialBuildTime { get; set; }
         public double PrBuildTime { get; set; }
+        public int GoalTime { get; set; }
 
         public double WorstCasePathTime { get; set; }
         public double BestCasePathTime { get; set; }

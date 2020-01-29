@@ -20,8 +20,6 @@ namespace Maestro.Web.Api.v2018_07_16.Models
             Id = id;
             Repository = repository;
             Branch = branch;
-            IncomingEdges = new List<FlowEdge>();
-            OutgoingEdges = new List<FlowEdge>();
         }
 
         public FlowRef(string id, string repository, string branch, double officialBuildTime, double prBuildTime)
@@ -41,7 +39,8 @@ namespace Maestro.Web.Api.v2018_07_16.Models
             double prBuildTime,
             bool onLongestBuildPath,
             double bestCase,
-            double worstCase)
+            double worstCase,
+            int goalTime)
         {
             Id = id;
             Repository = repository;
@@ -51,6 +50,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
             OnLongestBuildPath = onLongestBuildPath;
             BestCasePathTime = bestCase;
             WorstCasePathTime = worstCase;
+            GoalTime = goalTime;
         }
 
         public static FlowRef Create(DependencyFlowNode other)
@@ -63,7 +63,8 @@ namespace Maestro.Web.Api.v2018_07_16.Models
                 other.PrBuildTime, 
                 other.OnLongestBuildPath, 
                 other.BestCasePathTime, 
-                other.WorstCasePathTime);
+                other.WorstCasePathTime,
+                other.GoalTime);
         }
 
         public string Repository { get; }
@@ -74,12 +75,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
         public bool OnLongestBuildPath { get; set; }
         public double BestCasePathTime { get; set; }
         public double WorstCasePathTime { get; set; }
-
-        [JsonIgnore]
-        public List<FlowEdge> IncomingEdges { get; set; }
-
-        [JsonIgnore]
-        public List<FlowEdge> OutgoingEdges { get; set; }
+        public int GoalTime { get; set; }
     }
 
     public class FlowEdge

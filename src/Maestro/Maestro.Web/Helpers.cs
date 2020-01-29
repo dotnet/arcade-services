@@ -1,4 +1,5 @@
 using System;
+using System.Data;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -125,8 +126,7 @@ namespace Maestro.Web
             string commonQueryText = @"| where Result != 'failed' and Result != 'canceled' 
                 | where FinishTime > ago(_Days) 
                 | extend duration = FinishTime - StartTime 
-                | summarize average_duration = avg(duration) by DefinitionId
-                | summarize max(average_duration)";
+                | summarize average_duration = avg(duration) by DefinitionId";
 
             // We only want the pull request time from the public ci. We exclude on target branch,
             // as all PRs come in as refs/heads/#/merge rather than what branch they are trying to
@@ -155,6 +155,34 @@ namespace Maestro.Web
             queries["public"] = new KustoQuery(publicQueryText, parameters);
 
             return queries;
+        }
+
+        public static Tuple<int, TimeSpan> ParseBuildTime(IDataReader reader)
+        {
+            // There was an exception when we queried the database
+            if (reader == null)
+            {
+                return null;
+            }
+            Dictionary<int, TimeSpan> buildTimeResults = new Dictionary<int, TimeSpan>();
+
+            while (reader.Read())
+            {
+                int definitionId = Int32.Parse(reader.GetString(0));
+                TimeSpan duration = (TimeSpan) reader.GetValue(1);
+                buildTimeResults[definitionId] = duration;
+            }
+
+            // There were no results
+            if (buildTimeResults.Count() == 0)
+            {
+                return null;
+            }
+
+            int maxDefinitionId = buildTimeResults.Aggregate((l,r) => l.Value > r.Value ? l : r).Key;
+            TimeSpan maxDuration = buildTimeResults[maxDefinitionId];
+
+            return new Tuple<int, TimeSpan>(maxDefinitionId, maxDuration);
         }
     }
 }

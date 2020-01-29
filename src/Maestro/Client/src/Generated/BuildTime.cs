@@ -75,7 +75,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 {
                     if (_res.Status < 200 || _res.Status >= 300)
                     {
-                        return new Models.BuildTime(id, 0, 0);
+                        return new Models.BuildTime(id, 0, 0, 0);
                     }
 
                     if (_res.ContentStream == null)
