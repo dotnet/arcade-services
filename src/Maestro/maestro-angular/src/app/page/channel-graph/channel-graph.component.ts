@@ -21,18 +21,17 @@ function getNodeTitle(node:FlowRef): string {
 
   return `Repository: ${getRepositoryShortName(node.repository)}\n` +
          `Branch: ${node.branch}\n` +
-         `Official Build: ${official}\n` +
-         `Dep Flow: ${pr}\n` +
-         `Best Case Path Time: ${node.bestCaseTime.toFixed(2)}\n` +
-         `Worst Case Path Time: ${node.worstCaseTime.toFixed(2)}`;
+         `Official Build: ${official} min\n` +
+         `Dep Flow: ${pr} min\n` +
+         `Best Case Path Time: ${node.bestCaseTime.toFixed(2)} min\n` +
+         `Worst Case Path Time: ${node.worstCaseTime.toFixed(2)} min`;
 }
 
 function getNodeDescription(node:FlowRef): string {
-  let description = "A node that is not on the longest build path";
   if (node.onLongestBuildPath) {
-    description = "A node that is on the longest build path";
+    return "A node that is on the longest build path";
   }
-  return description;
+  return "A node that is not on the longest build path";
 }
 
 function getEdgeDescription(edge:FlowEdge, graph:FlowGraph): string {
