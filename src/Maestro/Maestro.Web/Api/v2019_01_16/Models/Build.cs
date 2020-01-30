@@ -63,9 +63,17 @@ namespace Maestro.Web.Api.v2019_01_16.Models
 
         public string GitHubBranch { get; set; }
 
-        public DateTimeOffset DateProduced { get; }
+        public bool PublishUsingPipelines
+        {
+            get
+            {
+                return true;
+            }
 
-        public bool PublishUsingPipelines { get; set; }
+            set { }
+        }
+
+        public DateTimeOffset DateProduced { get; }
 
         public List<v2018_07_16.Models.Channel> Channels { get; }
 
