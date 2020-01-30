@@ -137,8 +137,6 @@ namespace Maestro.Data.Models
             }
         }
 
-        public bool PublishUsingPipelines { get; set; }
-
         public DateTimeOffset DateProduced { get; set; }
 
         public List<Asset> Assets { get; set; }

@@ -70,7 +70,7 @@ namespace Maestro.Web
                 }
                 else
                 {
-                    if (build.PublishUsingPipelines && ChannelHasAssociatedReleasePipeline(entity.ChannelId, context))
+                    if (ChannelHasAssociatedReleasePipeline(entity.ChannelId, context))
                     {
                         entry.Cancel = true;
                         var queue = context.GetService<BackgroundQueue>();
