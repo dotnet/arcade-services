@@ -16,13 +16,13 @@ function getNodeLabel(node:FlowRef): string {
 }
 
 function getNodeTitle(node:FlowRef): string {
-  let official = node.officialBuildTime == 0 ? "No successful runs in the last 7 days" : node.officialBuildTime.toFixed(2);
-  let pr = node.prBuildTime == 0 ? "No successful runs in the last 7 days" : node.prBuildTime.toFixed(2);
+  let official = node.officialBuildTime == 0 ? "No successful runs in the last 7 days" : `${node.officialBuildTime.toFixed(2)} min`;
+  let pr = node.prBuildTime == 0 ? "No successful runs in the last 7 days" : `${node.prBuildTime.toFixed(2)} min`;
 
   return `Repository: ${getRepositoryShortName(node.repository)}\n` +
          `Branch: ${node.branch}\n` +
-         `Official Build: ${official} min\n` +
-         `Dep Flow: ${pr} min\n` +
+         `Official Build: ${official}\n` +
+         `Dep Flow: ${pr}\n` +
          `Best Case Path Time: ${node.bestCaseTime.toFixed(2)} min\n` +
          `Worst Case Path Time: ${node.worstCaseTime.toFixed(2)} min`;
 }
