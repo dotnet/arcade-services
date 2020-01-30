@@ -72,33 +72,6 @@ namespace SubscriptionActorService.Tests
                     });
         }
 
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task DefaultChannelAssignmentTests(bool defaultChannelEnabled)
-        {
-            GivenATestChannel();
-            GivenADefaultChannel(defaultChannelEnabled);
-            GivenASubscription(
-                new SubscriptionPolicy
-                {
-                    Batchable = true,
-                    UpdateFrequency = UpdateFrequency.EveryBuild
-                });
-            Build newBuild = GivenANewBuild(false);
-
-            // Execute, which may or may not assign b to a channel
-            await Execute( async context => {
-                var barContext = context.Resolve<BuildAssetRegistryContext>();
-                var existingBuild = await barContext.Builds.Where(build => build.Id == newBuild.Id)
-                                                     .Include(b => b.BuildChannels)
-                                                     .ThenInclude(bc => bc.Channel)
-                                                     .FirstOrDefaultAsync();
-                bool isInChannel = existingBuild.BuildChannels.Where(bc => bc.ChannelId == Channel.Id).Any();
-                Assert.Equal(defaultChannelEnabled, isInChannel);
-            });
-        }
-
         [Fact]
         public async Task BatchableEveryBuildSubscription()
         {

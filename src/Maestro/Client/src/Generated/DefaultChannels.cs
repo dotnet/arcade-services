@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Text;
@@ -6,13 +7,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
-using Microsoft.DotNet.Maestro.Client.Models;
+
+
 
 namespace Microsoft.DotNet.Maestro.Client
 {
     public partial interface IDefaultChannels
     {
-        Task<IImmutableList<DefaultChannel>> ListAsync(
+        Task<IImmutableList<Models.DefaultChannel>> ListAsync(
             string branch = default,
             int? channelId = default,
             bool? enabled = default,
@@ -21,11 +23,11 @@ namespace Microsoft.DotNet.Maestro.Client
         );
 
         Task CreateAsync(
-            DefaultChannelCreateData body,
+            Models.DefaultChannelCreateData body,
             CancellationToken cancellationToken = default
         );
 
-        Task<DefaultChannel> GetAsync(
+        Task<Models.DefaultChannel> GetAsync(
             int id,
             CancellationToken cancellationToken = default
         );
@@ -35,9 +37,9 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
-        Task<DefaultChannel> UpdateAsync(
+        Task<Models.DefaultChannel> UpdateAsync(
             int id,
-            DefaultChannelUpdateData body = default,
+            Models.DefaultChannelUpdateData body = default,
             CancellationToken cancellationToken = default
         );
 
@@ -56,7 +58,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedListRequest(RestApiException ex);
 
-        public async Task<IImmutableList<DefaultChannel>> ListAsync(
+        public async Task<IImmutableList<Models.DefaultChannel>> ListAsync(
             string branch = default,
             int? channelId = default,
             bool? enabled = default,
@@ -64,6 +66,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
+
             const string apiVersion = "2019-01-16";
 
             var _baseUri = Client.Options.BaseUri;
@@ -112,7 +115,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<DefaultChannel>>(_content);
+                        var _body = Client.Deserialize<IImmutableList<Models.DefaultChannel>>(_content);
                         return _body;
                     }
                 }
@@ -130,11 +133,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedListRequest(ex);
             HandleFailedRequest(ex);
@@ -145,11 +148,12 @@ namespace Microsoft.DotNet.Maestro.Client
         partial void HandleFailedCreateRequest(RestApiException ex);
 
         public async Task CreateAsync(
-            DefaultChannelCreateData body,
+            Models.DefaultChannelCreateData body,
             CancellationToken cancellationToken = default
         )
         {
-            if (body == default(DefaultChannelCreateData))
+
+            if (body == default(Models.DefaultChannelCreateData))
             {
                 throw new ArgumentNullException(nameof(body));
             }
@@ -176,7 +180,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 _req.Uri = _url;
                 _req.Method = RequestMethod.Post;
 
-                if (body != default(DefaultChannelCreateData))
+                if (body != default(Models.DefaultChannelCreateData))
                 {
                     _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
                     _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
@@ -206,11 +210,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedCreateRequest(ex);
             HandleFailedRequest(ex);
@@ -220,11 +224,12 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedGetRequest(RestApiException ex);
 
-        public async Task<DefaultChannel> GetAsync(
+        public async Task<Models.DefaultChannel> GetAsync(
             int id,
             CancellationToken cancellationToken = default
         )
         {
+
             if (id == default(int))
             {
                 throw new ArgumentNullException(nameof(id));
@@ -262,7 +267,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<DefaultChannel>(_content);
+                        var _body = Client.Deserialize<Models.DefaultChannel>(_content);
                         return _body;
                     }
                 }
@@ -280,11 +285,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetRequest(ex);
             HandleFailedRequest(ex);
@@ -299,6 +304,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
+
             if (id == default(int))
             {
                 throw new ArgumentNullException(nameof(id));
@@ -345,11 +351,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedDeleteRequest(ex);
             HandleFailedRequest(ex);
@@ -359,12 +365,13 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedUpdateRequest(RestApiException ex);
 
-        public async Task<DefaultChannel> UpdateAsync(
+        public async Task<Models.DefaultChannel> UpdateAsync(
             int id,
-            DefaultChannelUpdateData body = default,
+            Models.DefaultChannelUpdateData body = default,
             CancellationToken cancellationToken = default
         )
         {
+
             if (id == default(int))
             {
                 throw new ArgumentNullException(nameof(id));
@@ -387,7 +394,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 _req.Uri = _url;
                 _req.Method = RequestMethod.Patch;
 
-                if (body != default(DefaultChannelUpdateData))
+                if (body != default(Models.DefaultChannelUpdateData))
                 {
                     _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
                     _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
@@ -408,7 +415,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<DefaultChannel>(_content);
+                        var _body = Client.Deserialize<Models.DefaultChannel>(_content);
                         return _body;
                     }
                 }
@@ -426,11 +433,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedUpdateRequest(ex);
             HandleFailedRequest(ex);

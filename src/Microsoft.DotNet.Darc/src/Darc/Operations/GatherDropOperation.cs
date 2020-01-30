@@ -526,12 +526,13 @@ namespace Microsoft.DotNet.Darc.Operations
 
             var filteredBuilds = FilterReleasedBuilds(builds);
 
-            if (graph.DependenciesMissingBuilds.Any())
+            var nodesWithNoContributingBuilds = graph.Nodes.Where(node => !node.ContributingBuilds.Any());
+            if (nodesWithNoContributingBuilds.Any())
             {
-                Console.WriteLine("Dependencies missing builds:");
-                foreach (DependencyDetail dependency in graph.DependenciesMissingBuilds)
+                Console.WriteLine("Dependency graph nodes missing builds:");
+                foreach (var node in nodesWithNoContributingBuilds)
                 {
-                    Console.WriteLine($"  {dependency.Name}@{dependency.Version} @ ({dependency.RepoUri}@{dependency.Commit})");
+                    Console.WriteLine($"  {node.Repository}@{node.Commit}");
                 }
                 if (!_options.ContinueOnError)
                 {
@@ -601,6 +602,11 @@ namespace Microsoft.DotNet.Darc.Operations
             using (HttpClient client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
                 var assets = await remote.GetAssetsAsync(buildId: build.Id, nonShipping: (!_options.IncludeNonShipping ? (bool?)false : null));
+                if (!string.IsNullOrEmpty(_options.AssetFilter))
+                {
+                    assets = assets.Where(asset => Regex.IsMatch(asset.Name, _options.AssetFilter));
+                }
+
                 using (var clientThrottle = new SemaphoreSlim(_options.MaxConcurrentDownloads, _options.MaxConcurrentDownloads))
                 {
                     await Task.WhenAll(assets.Select(async asset =>
@@ -908,7 +914,10 @@ namespace Microsoft.DotNet.Darc.Operations
                 string finalUri = assetLocation.Location.Substring(0, assetLocation.Location.Length - "index.json".Length);
                 finalUri += $"flatcontainer/{name}/{version}/{name}.{version}.nupkg";
 
-                if (await DownloadFileAsync(client, finalUri, null, fullTargetPath, errors, downloadOutput))
+                using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
+                var cancellationToken = cancellationTokenSource.Token;
+
+                if (await DownloadFileAsync(client, finalUri, null, fullTargetPath, errors, downloadOutput, cancellationToken))
                 {
                     return new DownloadedAsset()
                     {
@@ -956,7 +965,18 @@ namespace Microsoft.DotNet.Darc.Operations
                                                                                 List<string> errors,
                                                                                 StringBuilder downloadOutput)
         {
-            string packageContentUrl = $"https://pkgs.dev.azure.com/{feedAccount}/{feedVisibility}_apis/packaging/feeds/{feedName}/nuget/packages/{asset.Name}/versions/{asset.Version}/content";
+            string assetName = asset.Name;
+
+            // Some blobs get pushed as packages. This is an artifact of a one-off issue in core-sdk
+            // see https://github.com/dotnet/arcade/issues/4608 for an overall fix of this.
+            // For now, if we get here, ensure that we ask for the package from the right location by
+            // stripping off the leading path elements.
+            if (!_options.NoWorkarounds)
+            {
+                assetName = Path.GetFileName(assetName);
+            }
+
+            string packageContentUrl = $"https://pkgs.dev.azure.com/{feedAccount}/{feedVisibility}_apis/packaging/feeds/{feedName}/nuget/packages/{assetName}/versions/{asset.Version}/content";
 
             // feedVisibility == "" means that the feed is internal.
             AuthenticationHeaderValue authHeader = null;
@@ -973,7 +993,10 @@ namespace Microsoft.DotNet.Darc.Operations
                     Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _options.AzureDevOpsPat))));
             }
 
-            if (await DownloadFileAsync(client, packageContentUrl, authHeader, fullTargetPath, errors, downloadOutput))
+            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
+            var cancellationToken = cancellationTokenSource.Token;
+
+            if (await DownloadFileAsync(client, packageContentUrl, authHeader, fullTargetPath, errors, downloadOutput, cancellationToken))
             {
                 return new DownloadedAsset()
                 {
@@ -1085,13 +1108,17 @@ namespace Microsoft.DotNet.Darc.Operations
                 string finalBaseUri = assetLocation.Location.Substring(0, assetLocation.Location.Length - "index.json".Length);
                 string finalUri1 = $"{finalBaseUri}{asset.Name}";
                 string finalUri2 = $"{finalBaseUri}assets/{asset.Name}";
-                if (await DownloadFileAsync(client, finalUri1, null, fullTargetPath, errors, downloadOutput))
+
+                using var cancellationTokenSource1 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
+                using var cancellationTokenSource2 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
+
+                if (await DownloadFileAsync(client, finalUri1, null, fullTargetPath, errors, downloadOutput, cancellationTokenSource1.Token))
                 {
                     downloadedAsset.Successful = true;
                     downloadedAsset.SourceLocation = finalUri1;
                     return downloadedAsset;
                 }
-                if (await DownloadFileAsync(client, finalUri2, null, fullTargetPath, errors, downloadOutput))
+                if (await DownloadFileAsync(client, finalUri2, null, fullTargetPath, errors, downloadOutput, cancellationTokenSource2.Token))
                 {
                     downloadedAsset.Successful = true;
                     downloadedAsset.SourceLocation = finalUri2;
@@ -1103,7 +1130,9 @@ namespace Microsoft.DotNet.Darc.Operations
                 if (!_options.NoWorkarounds)
                 {
                     string finalUri3 = $"{finalBaseUri}assets/assets/{asset.Name}";
-                    if (await DownloadFileAsync(client, finalUri3, null, fullTargetPath, errors, downloadOutput))
+                    using var cancellationTokenSource3 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
+
+                    if (await DownloadFileAsync(client, finalUri3, null, fullTargetPath, errors, downloadOutput, cancellationTokenSource3.Token))
                     {
                         downloadedAsset.Successful = true;
                         downloadedAsset.SourceLocation = finalUri3;
@@ -1112,7 +1141,9 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     // Could also not be under /assets, so strip that from the url
                     string finalUri4 = finalUri1.Replace("assets/", "", StringComparison.OrdinalIgnoreCase);
-                    if (await DownloadFileAsync(client, finalUri4, null, fullTargetPath, errors, downloadOutput))
+                    using var cancellationTokenSource4 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
+
+                    if (await DownloadFileAsync(client, finalUri4, null, fullTargetPath, errors, downloadOutput, cancellationTokenSource4.Token))
                     {
                         downloadedAsset.Successful = true;
                         downloadedAsset.SourceLocation = finalUri4;
@@ -1191,7 +1222,13 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="downloadOutput">Console output for the download.</param>
         /// <param name="errors">List of errors. Append error messages to this list if there are failures.</param>
         /// <returns>True if the download succeeded, false otherwise.</returns>
-        private async Task<bool> DownloadFileAsync(HttpClient client, string sourceUri, AuthenticationHeaderValue authHeader, string targetFile, List<string> errors, StringBuilder downloadOutput)
+        private async Task<bool> DownloadFileAsync(HttpClient client, 
+            string sourceUri, 
+            AuthenticationHeaderValue authHeader, 
+            string targetFile, 
+            List<string> errors, 
+            StringBuilder downloadOutput,
+            CancellationToken cancellationToken)
         {
             if (_options.DryRun)
             {
@@ -1204,7 +1241,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 return true;
             }
 
-            if (await DownloadFileImplAsync(client, sourceUri, authHeader, targetFile, errors, downloadOutput))
+            if (await DownloadFileImplAsync(client, sourceUri, authHeader, targetFile, errors, downloadOutput, cancellationToken))
             {
                 return true;
             }
@@ -1213,7 +1250,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Append and attempt to use the suffixes that were passed in to download from the uri
                 foreach (string sasSuffix in _options.SASSuffixes)
                 {
-                    if (await DownloadFileImplAsync(client, $"{sourceUri}{sasSuffix}", authHeader, targetFile, errors, downloadOutput))
+                    if (await DownloadFileImplAsync(client, $"{sourceUri}{sasSuffix}", authHeader, targetFile, errors, downloadOutput, cancellationToken))
                     {
                         return true;
                     }
@@ -1228,12 +1265,18 @@ namespace Microsoft.DotNet.Darc.Operations
         /// </summary>
         /// <param name="client">Http client</param>
         /// <param name="sourceUri">Source uri</param>
-        /// <param name="targetFile">Target file path. Directories are created.</param>
         /// <param name="authHeader">Optional authentication header if necessary</param>
-        /// <param name="downloadOutput">Console output for the download.</param>
+        /// <param name="targetFile">Target file path. Directories are created.</param>
         /// <param name="errors">List of errors. Append error messages to this list if there are failures.</param>
+        /// <param name="downloadOutput">Console output for the download.</param>
         /// <returns>True if the download succeeded, false otherwise.</returns>
-        private async Task<bool> DownloadFileImplAsync(HttpClient client, string sourceUri, AuthenticationHeaderValue authHeader, string targetFile, List<string> errors, StringBuilder downloadOutput)
+        private async Task<bool> DownloadFileImplAsync(HttpClient client, 
+            string sourceUri, 
+            AuthenticationHeaderValue authHeader, 
+            string targetFile, 
+            List<string> errors, 
+            StringBuilder downloadOutput,
+            CancellationToken cancellationToken)
         {
             // Use a temporary in progress file name so we don't end up with corrupted
             // half downloaded files.
@@ -1277,7 +1320,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         using (var inStream = await response.Content.ReadAsStreamAsync())
                         {
                             downloadOutput.Append($"  {sourceUri} => {targetFile}...");
-                            await inStream.CopyToAsync(outStream);
+                            await inStream.CopyToAsync(outStream, cancellationToken);
                             downloadOutput.AppendLine("Done");
                         }
                     }
@@ -1301,6 +1344,10 @@ namespace Microsoft.DotNet.Darc.Operations
                     File.Delete(targetFile);
                 }
                 errors.Add($"Failed to download {sourceUri}: {e.Message}");
+            }
+            catch (OperationCanceledException e)
+            {
+                errors.Add($"The download operation was cancelled: {e.Message}");
             }
             finally
             {

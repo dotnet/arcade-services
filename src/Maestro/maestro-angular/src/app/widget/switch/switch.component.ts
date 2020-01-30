@@ -7,6 +7,7 @@ import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
 export class SwitchComponent {
   @Input() public style?: object;
   @Input() public theme: "primary" | "secondary" | "success" | "info" | "warning" | "danger" | "light" | "dark" = "primary";
+  @Input() public title?: string;
 
   @Input() public value: boolean = false;
   @Output() public valueChange = new EventEmitter<boolean>();

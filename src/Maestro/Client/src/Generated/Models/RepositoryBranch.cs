@@ -17,6 +17,6 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public string Branch { get; set; }
 
         [JsonProperty("mergePolicies")]
-        public IImmutableList<MergePolicy> MergePolicies { get; set; }
+        public IImmutableList<Models.MergePolicy> MergePolicies { get; set; }
     }
 }

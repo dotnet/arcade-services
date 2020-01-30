@@ -25,6 +25,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         IAssets Assets { get; }
         IBuilds Builds { get; }
+        IBuildTime BuildTime { get; }
         IChannels Channels { get; }
         IDefaultChannels DefaultChannels { get; }
         IGoal Goal { get; }
@@ -41,7 +42,7 @@ namespace Microsoft.DotNet.Maestro.Client
     public partial class MaestroApiOptions : ClientOptions
     {
         public MaestroApiOptions()
-            : this(new Uri("https://helix.dot.net"))
+            : this(new Uri("https://maestro-int.westus2.cloudapp.azure.com"))
         {
         }
 
@@ -51,7 +52,7 @@ namespace Microsoft.DotNet.Maestro.Client
         }
 
         public MaestroApiOptions(TokenCredential credentials)
-            : this(new Uri("https://helix.dot.net"), credentials)
+            : this(new Uri("https://maestro-int.westus2.cloudapp.azure.com"), credentials)
         {
         }
 
@@ -110,6 +111,8 @@ namespace Microsoft.DotNet.Maestro.Client
 
         public IBuilds Builds { get; }
 
+        public IBuildTime BuildTime { get; }
+
         public IChannels Channels { get; }
 
         public IDefaultChannels DefaultChannels { get; }
@@ -133,6 +136,7 @@ namespace Microsoft.DotNet.Maestro.Client
             Options = options;
             Assets = new Assets(this);
             Builds = new Builds(this);
+            BuildTime = new BuildTime(this);
             Channels = new Channels(this);
             DefaultChannels = new DefaultChannels(this);
             Goal = new Goal(this);

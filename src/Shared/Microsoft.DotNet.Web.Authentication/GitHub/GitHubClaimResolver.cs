@@ -27,11 +27,11 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
         public GitHubClaimResolver(
             IMemoryCache cache,
             IOptionsMonitor<GitHubAuthenticationOptions> options,
-            ILogger<GitHubClaimResolver> logger)
+            ILoggerFactory logger)
         {
             _cache = cache;
             _options = options;
-            _logger = logger;
+            _logger = logger.CreateLogger<GitHubClaimResolver>();
         }
 
         private struct UserInfoKey

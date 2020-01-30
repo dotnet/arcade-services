@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Text;
@@ -6,32 +7,33 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
-using Microsoft.DotNet.Maestro.Client.Models;
+
+
 
 namespace Microsoft.DotNet.Maestro.Client
 {
     public partial interface IPipelines
     {
-        Task<IImmutableList<ReleasePipeline>> ListAsync(
+        Task<IImmutableList<Models.ReleasePipeline>> ListAsync(
             string organization = default,
             int? pipelineIdentifier = default,
             string project = default,
             CancellationToken cancellationToken = default
         );
 
-        Task<ReleasePipeline> CreatePipelineAsync(
+        Task<Models.ReleasePipeline> CreatePipelineAsync(
             string organization,
             int pipelineIdentifier,
             string project,
             CancellationToken cancellationToken = default
         );
 
-        Task<ReleasePipeline> GetPipelineAsync(
+        Task<Models.ReleasePipeline> GetPipelineAsync(
             int id,
             CancellationToken cancellationToken = default
         );
 
-        Task<ReleasePipeline> DeletePipelineAsync(
+        Task<Models.ReleasePipeline> DeletePipelineAsync(
             int id,
             CancellationToken cancellationToken = default
         );
@@ -51,13 +53,14 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedListRequest(RestApiException ex);
 
-        public async Task<IImmutableList<ReleasePipeline>> ListAsync(
+        public async Task<IImmutableList<Models.ReleasePipeline>> ListAsync(
             string organization = default,
             int? pipelineIdentifier = default,
             string project = default,
             CancellationToken cancellationToken = default
         )
         {
+
             const string apiVersion = "2019-01-16";
 
             var _baseUri = Client.Options.BaseUri;
@@ -102,7 +105,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<IImmutableList<ReleasePipeline>>(_content);
+                        var _body = Client.Deserialize<IImmutableList<Models.ReleasePipeline>>(_content);
                         return _body;
                     }
                 }
@@ -120,11 +123,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedListRequest(ex);
             HandleFailedRequest(ex);
@@ -134,13 +137,14 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedCreatePipelineRequest(RestApiException ex);
 
-        public async Task<ReleasePipeline> CreatePipelineAsync(
+        public async Task<Models.ReleasePipeline> CreatePipelineAsync(
             string organization,
             int pipelineIdentifier,
             string project,
             CancellationToken cancellationToken = default
         )
         {
+
             if (string.IsNullOrEmpty(organization))
             {
                 throw new ArgumentNullException(nameof(organization));
@@ -200,7 +204,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<ReleasePipeline>(_content);
+                        var _body = Client.Deserialize<Models.ReleasePipeline>(_content);
                         return _body;
                     }
                 }
@@ -218,11 +222,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedCreatePipelineRequest(ex);
             HandleFailedRequest(ex);
@@ -232,11 +236,12 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedGetPipelineRequest(RestApiException ex);
 
-        public async Task<ReleasePipeline> GetPipelineAsync(
+        public async Task<Models.ReleasePipeline> GetPipelineAsync(
             int id,
             CancellationToken cancellationToken = default
         )
         {
+
             if (id == default(int))
             {
                 throw new ArgumentNullException(nameof(id));
@@ -274,7 +279,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<ReleasePipeline>(_content);
+                        var _body = Client.Deserialize<Models.ReleasePipeline>(_content);
                         return _body;
                     }
                 }
@@ -292,11 +297,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetPipelineRequest(ex);
             HandleFailedRequest(ex);
@@ -306,11 +311,12 @@ namespace Microsoft.DotNet.Maestro.Client
 
         partial void HandleFailedDeletePipelineRequest(RestApiException ex);
 
-        public async Task<ReleasePipeline> DeletePipelineAsync(
+        public async Task<Models.ReleasePipeline> DeletePipelineAsync(
             int id,
             CancellationToken cancellationToken = default
         )
         {
+
             if (id == default(int))
             {
                 throw new ArgumentNullException(nameof(id));
@@ -348,7 +354,7 @@ namespace Microsoft.DotNet.Maestro.Client
                     using (var _reader = new StreamReader(_res.ContentStream))
                     {
                         var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<ReleasePipeline>(_content);
+                        var _body = Client.Deserialize<Models.ReleasePipeline>(_content);
                         return _body;
                     }
                 }
@@ -366,11 +372,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedDeletePipelineRequest(ex);
             HandleFailedRequest(ex);

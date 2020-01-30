@@ -9,9 +9,9 @@ describe("workspace-project App", () => {
     page = new AppPage();
   });
 
-  it("should display welcome message", () => {
-    page.navigateTo();
-    expect(page.getTitleText()).toEqual("Welcome to maestro-angular!");
+  it("should display brand", async () => {
+    await page.navigateTo();
+    expect(await page.getBrandText()).toEqual("Maestro++");
   });
 
   afterEach(async () => {

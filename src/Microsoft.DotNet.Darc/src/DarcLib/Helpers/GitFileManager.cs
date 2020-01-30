@@ -251,7 +251,7 @@ namespace Microsoft.DotNet.DarcLib
 
             // At this point we only care about the Maestro managed locations for the assets. 
             // Flatten the dictionary into a set that has all the managed feeds
-            HashSet<string> managedFeeds = FlattenLocations(itemsToUpdateLocations, IsMaestroManagedFeed);
+            HashSet<string> managedFeeds = FlattenLocations(itemsToUpdateLocations);
 
             var updatedNugetConfig = UpdatePackageSources(nugetConfig, managedFeeds);
 
@@ -264,6 +264,11 @@ namespace Microsoft.DotNet.DarcLib
             };
 
             return fileContainer;
+        }
+
+        private bool IsOnlyPresentInMaestroManagedFeed(HashSet<string> locations)
+        {
+            return locations != null && locations.All(l => IsMaestroManagedFeed(l));
         }
 
         private bool IsMaestroManagedFeed(string feed)
@@ -987,17 +992,15 @@ namespace Microsoft.DotNet.DarcLib
             return dependencyDetails.Where(d => !d.Pinned);
         }
 
-        private HashSet<string> FlattenLocations(Dictionary<string, HashSet<string>> assetLocationMap, Func<string, bool> filter = null)
+        private HashSet<string> FlattenLocations(Dictionary<string, HashSet<string>> assetLocationMap)
         {
             HashSet<string> managedFeeds = new HashSet<string>();
-
-            foreach (HashSet<string> locations in assetLocationMap.Values)
+            foreach (string asset in assetLocationMap.Keys)
             {
-                IEnumerable<string> filteredLocations = filter != null ?
-                    locations.Where(filter) :
-                    locations;
-
-                managedFeeds.UnionWith(filteredLocations);
+                if (IsOnlyPresentInMaestroManagedFeed(assetLocationMap[asset]))
+                {
+                    managedFeeds.UnionWith(assetLocationMap[asset]);
+                }
             }
             return managedFeeds;
         }

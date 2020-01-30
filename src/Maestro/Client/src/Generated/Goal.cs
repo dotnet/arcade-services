@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Text;
@@ -6,7 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
-using Microsoft.DotNet.Maestro.Client.Models;
+
+
 
 namespace Microsoft.DotNet.Maestro.Client
 {
@@ -19,7 +21,7 @@ namespace Microsoft.DotNet.Maestro.Client
         );
 
         Task<Models.Goal> CreateAsync(
-            GoalRequestJson body,
+            Models.GoalRequestJson body,
             string channelName,
             int definitionId,
             CancellationToken cancellationToken = default
@@ -46,6 +48,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
+
             if (string.IsNullOrEmpty(channelName))
             {
                 throw new ArgumentNullException(nameof(channelName));
@@ -106,11 +109,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedGetGoalTimesRequest(ex);
             HandleFailedRequest(ex);
@@ -121,13 +124,14 @@ namespace Microsoft.DotNet.Maestro.Client
         partial void HandleFailedCreateRequest(RestApiException ex);
 
         public async Task<Models.Goal> CreateAsync(
-            GoalRequestJson body,
+            Models.GoalRequestJson body,
             string channelName,
             int definitionId,
             CancellationToken cancellationToken = default
         )
         {
-            if (body == default(GoalRequestJson))
+
+            if (body == default(Models.GoalRequestJson))
             {
                 throw new ArgumentNullException(nameof(body));
             }
@@ -159,7 +163,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 _req.Uri = _url;
                 _req.Method = RequestMethod.Put;
 
-                if (body != default(GoalRequestJson))
+                if (body != default(Models.GoalRequestJson))
                 {
                     _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
                     _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
@@ -198,11 +202,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<ApiError>(
+            var ex = new RestApiException<Models.ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<ApiError>(content)
+                Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedCreateRequest(ex);
             HandleFailedRequest(ex);
