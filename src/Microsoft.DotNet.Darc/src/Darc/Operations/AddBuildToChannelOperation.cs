@@ -64,7 +64,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Queues a build of the Build Promotion pipeline that will takes care of making sure
                 // that the build assets are published to the right location and also promoting the build
                 // to the requested channel
-                await PromoteBuildAsync(targetChannel.Id).ConfigureAwait(false);
+                await PromoteBuildAsync(build, targetChannel).ConfigureAwait(false);
 
                 // Be helpful. Let the user know what will happen.
                 string buildRepo = build.GitHubRepository ?? build.AzureDevOpsRepository;
@@ -82,19 +82,19 @@ namespace Microsoft.DotNet.Darc.Operations
             }
         }
 
-        private async Task PromoteBuildAsync(int PromoteToMaestroChannelId)
+        private async Task PromoteBuildAsync(Build build, Channel targetChannel)
         {
-            if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
-            {
-                LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
-                _options.AzureDevOpsPat = localSettings.AzureDevOpsToken;
-            }
+            LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
+            _options.AzureDevOpsPat = (string.IsNullOrEmpty(_options.AzureDevOpsPat)) ? localSettings.AzureDevOpsToken : _options.AzureDevOpsPat;
+            _options.GitHubPat = (string.IsNullOrEmpty(_options.GitHubPat)) ? localSettings.GitHubToken : _options.GitHubPat;
+
+            var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build).ConfigureAwait(false);
 
             AzureDevOpsClient azdoClient = new AzureDevOpsClient(gitExecutable: null, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null);
 
             var queueTimeVariables = $"{{" +
-                $"\"BARBuildId\": \"{ _options.Id }\", " +
-                $"\"PromoteToMaestroChannelId\": \"{ PromoteToMaestroChannelId }\", " +
+                $"\"BARBuildId\": \"{ build.Id }\", " +
+                $"\"PromoteToMaestroChannelId\": \"{ targetChannel.Id }\", " +
                 $"\"EnableSigningValidation\": \"{ _options.DoSigningValidation }\", " +
                 $"\"EnableNugetValidation\": \"{ _options.DoNuGetValidation }\", " +
                 $"\"EnableSourceLinkValidation\": \"{ _options.DoSourcelinkValidation }\", " +
@@ -103,11 +103,67 @@ namespace Microsoft.DotNet.Darc.Operations
                 $"\"SDLValidationContinueOnError\": \"{ _options.SDLValidationContinueOnError }\", " +
                 $"}}";
 
-            await azdoClient.StartNewBuildAsync(BuildPromotionPipelineAccountName, 
+            var azdoBuildId = await azdoClient.StartNewBuildAsync(BuildPromotionPipelineAccountName, 
                 BuildPromotionPipelineProjectName, 
                 BuildPromotionPipelineId, 
+                arcadeSDKSourceBranch,
+                arcadeSDKSourceSHA,
                 queueTimeVariables)
                 .ConfigureAwait(false);
+
+            Console.WriteLine($"Build {build.Id} will be assigned to channel '{targetChannel.Name}' once this promotion build finishes: " +
+                $"https://{BuildPromotionPipelineAccountName}.visualstudio.com/{BuildPromotionPipelineProjectName}/_build/results?buildId={azdoBuildId}&view=results");
+        }
+
+        /// <summary>
+        /// By default the source branch/SHA for the Build Promotion pipeline will be the branch/SHA
+        /// that produced the Arcade.SDK used by the build being promoted. The user can override that
+        /// by specifying both, channel & SHA, on the command line.
+        /// </summary>
+        /// <param name="build">Build for which the Arcade SDK dependency build will be inferred.</param>
+        private async Task<(string sourceBranch, string sourceVersion)> GetSourceBranchInfoAsync(Build build)
+        {
+            if (!string.IsNullOrEmpty(_options.SourceBranch) && !string.IsNullOrEmpty(_options.SourceSHA))
+            {
+                return (_options.SourceBranch, _options.SourceSHA);
+            }
+
+            IGitRepo targetBuildRepoClient = string.IsNullOrEmpty(build.GitHubRepository) ?
+                (IGitRepo) new AzureDevOpsClient(_options.GitLocation, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null) :
+                (IGitRepo) new GitHubClient(_options.GitLocation, _options.GitHubPat, Logger, temporaryRepositoryPath: null, cache: null);
+
+            IRemote barRemote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+
+            var gitFileManager = new GitFileManager(targetBuildRepoClient, Logger);
+
+            var sourceBuildDependencies = await gitFileManager.ParseVersionDetailsXmlAsync(
+                string.IsNullOrEmpty(build.GitHubRepository) ? 
+                    build.AzureDevOpsRepository : 
+                    build.GitHubRepository, 
+                build.Commit);
+
+            var sourceBuildArcadeSDKDependency = sourceBuildDependencies.FirstOrDefault(i => string.Equals(i.Name, "Microsoft.DotNet.Arcade.Sdk", StringComparison.OrdinalIgnoreCase));
+
+            if (sourceBuildArcadeSDKDependency == null)
+            {
+                throw new ArgumentException("You're trying to promote a build that doesn't have a dependency on Microsoft.DotNet.Arcade.Sdk.");
+            }
+
+            var sourceBuildArcadeSDKDepAsset = (await barRemote.GetAssetsAsync(sourceBuildArcadeSDKDependency.Name, sourceBuildArcadeSDKDependency.Version)).FirstOrDefault();
+
+            if (sourceBuildArcadeSDKDepAsset == null)
+            {
+                throw new ArgumentException($"Could not fetch information about Microsoft.DotNet.Arcade.Sdk asset version {sourceBuildArcadeSDKDependency.Version}.");
+            }
+
+            var sourceBuildArcadeSDKDepBuild = await barRemote.GetBuildAsync(sourceBuildArcadeSDKDepAsset.BuildId);
+
+            if (sourceBuildArcadeSDKDepBuild == null)
+            {
+                throw new ArgumentException($"Could not find information (in BAR) about the build that produced Microsoft.DotNet.Arcade.Sdk version {sourceBuildArcadeSDKDependency.Version}.");
+            }
+
+            return (sourceBuildArcadeSDKDepBuild.GitHubBranch, sourceBuildArcadeSDKDepBuild.Commit);
         }
 
         private void PrintSubscriptionInfo(List<Subscription> applicableSubscriptions)
