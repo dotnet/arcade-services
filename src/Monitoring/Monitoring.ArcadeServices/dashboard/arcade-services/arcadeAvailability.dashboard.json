@@ -7,8 +7,13 @@
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
+        "limit": 100,
         "name": "Annotations & Alerts",
-        "type": "dashboard"
+        "showIn": 0,
+        "tags": [
+          "deploy-arcade-services"
+        ],
+        "type": "tags"
       }
     ]
   },
@@ -86,6 +91,7 @@
         "x": 0,
         "y": 1
       },
+      "hiddenSeries": false,
       "id": 38,
       "legend": {
         "avg": true,
@@ -362,6 +368,7 @@
         "x": 0,
         "y": 10
       },
+      "hiddenSeries": false,
       "id": 34,
       "legend": {
         "avg": true,
@@ -638,6 +645,7 @@
         "x": 0,
         "y": 19
       },
+      "hiddenSeries": false,
       "id": 2,
       "legend": {
         "avg": false,
@@ -860,6 +868,7 @@
         "x": 12,
         "y": 19
       },
+      "hiddenSeries": false,
       "id": 20,
       "legend": {
         "avg": true,
@@ -1141,6 +1150,7 @@
         "x": 0,
         "y": 28
       },
+      "hiddenSeries": false,
       "id": 5,
       "legend": {
         "avg": false,
@@ -1381,6 +1391,7 @@
         "x": 0,
         "y": 37
       },
+      "hiddenSeries": false,
       "id": 16,
       "legend": {
         "avg": false,
@@ -1978,7 +1989,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 20,
+  "schemaVersion": 21,
   "style": "dark",
   "tags": [],
   "templating": {
