@@ -426,12 +426,13 @@ namespace Microsoft.DotNet.DarcLib
             // arcade update sent to each repository daily per subscription. This is inefficient, as it means we
             // request each file N times, where N is the number of subscriptions. The number of files (M),
             // is non-trivial, so reducing N*M to M is vast improvement.
-            // Use the treeItem.Sha as the key. I think it is overkill to hash the repo and owner into
+            // Use a combination of (treeItem.Path, treeItem.Sha as the key) as items with identical contents but
+            // different paths will have the same SHA. I think it is overkill to hash the repo and owner into
             // the key.
 
             if (Cache != null)
             {
-                return await Cache.GetOrCreateAsync(treeItem.Sha, async (entry) =>
+                return await Cache.GetOrCreateAsync((treeItem.Path, treeItem.Sha), async (entry) =>
                 {
                     GitFile file = await GetGitItemImpl(path, treeItem, owner, repo);
 
