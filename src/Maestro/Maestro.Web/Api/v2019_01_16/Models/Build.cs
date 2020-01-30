@@ -65,6 +65,8 @@ namespace Maestro.Web.Api.v2019_01_16.Models
 
         public DateTimeOffset DateProduced { get; }
 
+        public bool PublishUsingPipelines { get; set; }
+
         public List<v2018_07_16.Models.Channel> Channels { get; }
 
         public List<v2018_07_16.Models.Asset> Assets { get; }

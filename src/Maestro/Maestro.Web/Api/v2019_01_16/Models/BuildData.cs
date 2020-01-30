@@ -43,6 +43,8 @@ namespace Maestro.Web.Api.v2019_01_16.Models
 
         public string GitHubBranch { get; set; }
 
+        public bool PublishUsingPipelines { get; set; }
+
         public bool Released { get; set; }
 
         public Data.Models.Build ToDb()
