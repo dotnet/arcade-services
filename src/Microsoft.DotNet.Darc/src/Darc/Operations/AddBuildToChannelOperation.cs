@@ -64,7 +64,12 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Queues a build of the Build Promotion pipeline that will takes care of making sure
                 // that the build assets are published to the right location and also promoting the build
                 // to the requested channel
-                await PromoteBuildAsync(build, targetChannel).ConfigureAwait(false);
+                int promoteBuildQueuedStatus = await PromoteBuildAsync(build, targetChannel).ConfigureAwait(false);
+
+                if (promoteBuildQueuedStatus != Constants.SuccessCode)
+                {
+                    return Constants.ErrorCode;
+                }
 
                 // Be helpful. Let the user know what will happen.
                 string buildRepo = build.GitHubRepository ?? build.AzureDevOpsRepository;
@@ -82,13 +87,20 @@ namespace Microsoft.DotNet.Darc.Operations
             }
         }
 
-        private async Task PromoteBuildAsync(Build build, Channel targetChannel)
+        private async Task<int> PromoteBuildAsync(Build build, Channel targetChannel)
         {
             LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
             _options.AzureDevOpsPat = (string.IsNullOrEmpty(_options.AzureDevOpsPat)) ? localSettings.AzureDevOpsToken : _options.AzureDevOpsPat;
             _options.GitHubPat = (string.IsNullOrEmpty(_options.GitHubPat)) ? localSettings.GitHubToken : _options.GitHubPat;
 
             var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build).ConfigureAwait(false);
+
+            // This condition can happen when for some reason we failed to determine the source branch/sha 
+            // of the build that produced the used Arcade SDK
+            if (arcadeSDKSourceBranch == null || arcadeSDKSourceSHA == null)
+            {
+                return Constants.ErrorCode;
+            }
 
             AzureDevOpsClient azdoClient = new AzureDevOpsClient(gitExecutable: null, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null);
 
@@ -113,6 +125,8 @@ namespace Microsoft.DotNet.Darc.Operations
 
             Console.WriteLine($"Build {build.Id} will be assigned to channel '{targetChannel.Name}' once this promotion build finishes: " +
                 $"https://{BuildPromotionPipelineAccountName}.visualstudio.com/{BuildPromotionPipelineProjectName}/_build/results?buildId={azdoBuildId}&view=results");
+
+            return Constants.SuccessCode;
         }
 
         /// <summary>
@@ -128,39 +142,40 @@ namespace Microsoft.DotNet.Darc.Operations
                 return (_options.SourceBranch, _options.SourceSHA);
             }
 
-            IGitRepo targetBuildRepoClient = string.IsNullOrEmpty(build.GitHubRepository) ?
-                (IGitRepo) new AzureDevOpsClient(_options.GitLocation, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null) :
-                (IGitRepo) new GitHubClient(_options.GitLocation, _options.GitHubPat, Logger, temporaryRepositoryPath: null, cache: null);
+            string sourceBuildRepo = string.IsNullOrEmpty(build.GitHubRepository) ?
+                    build.AzureDevOpsRepository :
+                    build.GitHubRepository;
 
-            IRemote barRemote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+            IRemote repoAndBarRemote = RemoteFactory.GetRemote(_options, sourceBuildRepo, Logger);
 
-            var gitFileManager = new GitFileManager(targetBuildRepoClient, Logger);
+            IEnumerable<DependencyDetail> sourceBuildDependencies = await repoAndBarRemote.GetDependenciesAsync(sourceBuildRepo, build.Commit)
+                .ConfigureAwait(false);
 
-            var sourceBuildDependencies = await gitFileManager.ParseVersionDetailsXmlAsync(
-                string.IsNullOrEmpty(build.GitHubRepository) ? 
-                    build.AzureDevOpsRepository : 
-                    build.GitHubRepository, 
-                build.Commit);
-
-            var sourceBuildArcadeSDKDependency = sourceBuildDependencies.FirstOrDefault(i => string.Equals(i.Name, "Microsoft.DotNet.Arcade.Sdk", StringComparison.OrdinalIgnoreCase));
+            DependencyDetail sourceBuildArcadeSDKDependency = sourceBuildDependencies.FirstOrDefault(i => string.Equals(i.Name, "Microsoft.DotNet.Arcade.Sdk", StringComparison.OrdinalIgnoreCase));
 
             if (sourceBuildArcadeSDKDependency == null)
             {
-                throw new ArgumentException("You're trying to promote a build that doesn't have a dependency on Microsoft.DotNet.Arcade.Sdk.");
+                Console.WriteLine("You're trying to promote a build that doesn't have a dependency on Microsoft.DotNet.Arcade.Sdk.");
+                return (null, null);
             }
 
-            var sourceBuildArcadeSDKDepAsset = (await barRemote.GetAssetsAsync(sourceBuildArcadeSDKDependency.Name, sourceBuildArcadeSDKDependency.Version)).FirstOrDefault();
+            IEnumerable<Asset> listArcadeSDKAssets = await repoAndBarRemote.GetAssetsAsync(sourceBuildArcadeSDKDependency.Name, sourceBuildArcadeSDKDependency.Version)
+                .ConfigureAwait(false);
 
+            Asset sourceBuildArcadeSDKDepAsset = listArcadeSDKAssets.FirstOrDefault();
+            
             if (sourceBuildArcadeSDKDepAsset == null)
             {
-                throw new ArgumentException($"Could not fetch information about Microsoft.DotNet.Arcade.Sdk asset version {sourceBuildArcadeSDKDependency.Version}.");
+                Console.WriteLine($"Could not fetch information about Microsoft.DotNet.Arcade.Sdk asset version {sourceBuildArcadeSDKDependency.Version}.");
+                return (null, null);
             }
 
-            var sourceBuildArcadeSDKDepBuild = await barRemote.GetBuildAsync(sourceBuildArcadeSDKDepAsset.BuildId);
+            Build sourceBuildArcadeSDKDepBuild = await repoAndBarRemote.GetBuildAsync(sourceBuildArcadeSDKDepAsset.BuildId);
 
             if (sourceBuildArcadeSDKDepBuild == null)
             {
-                throw new ArgumentException($"Could not find information (in BAR) about the build that produced Microsoft.DotNet.Arcade.Sdk version {sourceBuildArcadeSDKDependency.Version}.");
+                Console.Write($"Could not find information (in BAR) about the build that produced Microsoft.DotNet.Arcade.Sdk version {sourceBuildArcadeSDKDependency.Version}.");
+                return (null, null);
             }
 
             return (sourceBuildArcadeSDKDepBuild.GitHubBranch, sourceBuildArcadeSDKDepBuild.Commit);
