@@ -108,22 +108,31 @@ namespace Microsoft.DotNet.Maestro.Client
 
                 while (true)
                 {
-                    var _page = await ListBuildsPageAsync(
-                        buildNumber,
-                        channelId,
-                        commit,
-                        loadCollections,
-                        notAfter,
-                        notBefore,
-                        page,
-                        perPage,
-                        repository,
-                        cancellationToken
-                    ).ConfigureAwait(false);
-                    if (_page.Values.Count < 1)
+                    Page<Models.Build> _page = null;
+
+                    try {
+                        _page = await ListBuildsPageAsync(
+                            buildNumber,
+                            channelId,
+                            commit,
+                            loadCollections,
+                            notAfter,
+                            notBefore,
+                            page,
+                            perPage,
+                            repository,
+                            cancellationToken
+                        ).ConfigureAwait(false);
+                        if (_page.Values.Count < 1)
+                        {
+                            yield break;
+                        }                   
+                    }
+                    catch (RestApiException) when (e.Response.Status == 404)
                     {
                         yield break;
                     }
+
                     yield return _page;
                     page++;
                 }
