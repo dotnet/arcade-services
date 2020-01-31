@@ -169,8 +169,8 @@
           "format": "short",
           "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
+          "max": "101",
+          "min": "90",
           "show": true
         },
         {
