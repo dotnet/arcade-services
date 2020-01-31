@@ -8,12 +8,14 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -78,9 +80,20 @@ namespace Microsoft.DotNet.Darc.Operations
                     }
                 }
 
+                JsonSerializer serializer = new JsonSerializer();
+
+                using (StreamWriter sw = new StreamWriter(@"D:\michelm\input.json"))
+                using (JsonWriter writer = new JsonTextWriter(sw))
+                {
+                    serializer.Serialize(writer, flowGraph);
+                }
+
+
                 if (targetChannel != null)
                 {
-                    flowGraph.PruneGraph(node => IsInterestingNode(targetChannel, node), edge => IsInterestingEdge(edge));
+                    flowGraph.PruneGraph(
+                        node => flowGraph.IsInterestingNode(targetChannel.Name, node), 
+                        edge => flowGraph.IsInterestingEdge(edge, _options.IncludeDisabledSubscriptions, _options.IncludedFrequencies));
                 }
 
                 if (_options.IncludeBuildTimes)
@@ -88,6 +101,12 @@ namespace Microsoft.DotNet.Darc.Operations
                     flowGraph.MarkBackEdges();
                     flowGraph.CalculateLongestBuildPaths();
                     flowGraph.MarkLongestBuildPath();
+                }
+
+                using (StreamWriter sw = new StreamWriter(@"D:\michelm\output.json"))
+                using (JsonWriter writer = new JsonTextWriter(sw))
+                {
+                    serializer.Serialize(writer, flowGraph);
                 }
 
                 await LogGraphVizAsync(targetChannel, flowGraph, _options.IncludeBuildTimes);
@@ -99,34 +118,6 @@ namespace Microsoft.DotNet.Darc.Operations
                 Logger.LogError(exc, "Something failed while getting the dependency graph.");
                 return Constants.ErrorCode;
             }
-        }
-
-        /// <summary>
-        ///     If pruning the graph is desired, determine whether a node is interesting.
-        /// </summary>
-        /// <param name="node">Node</param>
-        /// <returns>True if the node is interesting, false otherwise</returns>
-        private bool IsInterestingNode(Channel targetChannel, DependencyFlowNode node)
-        {
-            return node.OutputChannels.Any(c => c == targetChannel.Name);
-        }
-
-        /// <summary>
-        ///     If pruning the graph is desired, determine whether an edge is interesting
-        /// </summary>
-        /// <param name="edge">Edge</param>
-        /// <returns>True if the edge is interesting, false otherwise.</returns>
-        private bool IsInterestingEdge(DependencyFlowEdge edge)
-        {
-            if (!_options.IncludeDisabledSubscriptions && !edge.Subscription.Enabled)
-            {
-                return false;
-            }
-            if (!_options.IncludedFrequencies.Any(s => s.Equals(edge.Subscription.Policy.UpdateFrequency.ToString(), StringComparison.OrdinalIgnoreCase)))
-            {
-                return false;
-            }
-            return true;
         }
 
         /// <summary>

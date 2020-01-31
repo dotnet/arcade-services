@@ -25,6 +25,34 @@ namespace Microsoft.DotNet.DarcLib
         public List<DependencyFlowNode> Nodes { get; set; }
         public List<DependencyFlowEdge> Edges { get; set; }
 
+        /// <summary>
+        ///     If pruning the graph is desired, determine whether a node is interesting.
+        /// </summary>
+        /// <param name="node">Node</param>
+        /// <returns>True if the node is interesting, false otherwise</returns>
+        public bool IsInterestingNode(string targetChannel, DependencyFlowNode node)
+        {
+            return node.OutputChannels.Any(c => c == targetChannel);
+        }
+
+        /// <summary>
+        ///     If pruning the graph is desired, determine whether an edge is interesting
+        /// </summary>
+        /// <param name="edge">Edge</param>
+        /// <returns>True if the edge is interesting, false otherwise.</returns>
+        public bool IsInterestingEdge(DependencyFlowEdge edge, bool includeDisabledSubscriptions, IEnumerable<string> includedFrequencies)
+        {
+            if (!includeDisabledSubscriptions && !edge.Subscription.Enabled)
+            {
+                return false;
+            }
+            if (!includedFrequencies.Any(s => s.Equals(edge.Subscription.Policy.UpdateFrequency.ToString(), StringComparison.OrdinalIgnoreCase)))
+            {
+                return false;
+            }
+            return true;
+        }
+
         public void RemoveNode(DependencyFlowNode node)
         {
             // Remove the node from the list, then remove corresponding edges
@@ -139,7 +167,7 @@ namespace Microsoft.DotNet.DarcLib
             // (call them 'products').  Connect all of these via a start node.
             // Add a start node to the graph (a node that connects all nodes that have no outgoing edges
             // We will also reverse the graph by flipping the interpretation of incoming and outgoing.
-            DependencyFlowNode startNode = new DependencyFlowNode("start", "start");
+            DependencyFlowNode startNode = new DependencyFlowNode("start", "start", "start");
             foreach (DependencyFlowNode node in Nodes)
             {
                 if (!node.OutgoingEdges.Any())
@@ -379,7 +407,7 @@ namespace Microsoft.DotNet.DarcLib
             }
             else
             {
-                DependencyFlowNode newNode = new DependencyFlowNode(repo, branch);
+                DependencyFlowNode newNode = new DependencyFlowNode(repo, branch, Guid.NewGuid().ToString());
                 nodes.Add(key, newNode);
                 return newNode;
             }

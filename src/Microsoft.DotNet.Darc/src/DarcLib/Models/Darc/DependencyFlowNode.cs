@@ -5,16 +5,17 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.DarcLib
 {
     public class DependencyFlowNode
     {
-        public DependencyFlowNode(string repository, string branch)
+        public DependencyFlowNode(string repository, string branch, string id)
         {
             Repository = repository;
             Branch = branch;
-            Id = Guid.NewGuid().ToString();
+            Id = id;
             OutputChannels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             InputChannels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             OutgoingEdges = new List<DependencyFlowEdge>();
@@ -31,7 +32,9 @@ namespace Microsoft.DotNet.DarcLib
         public HashSet<string> OutputChannels { get; set; }
         public HashSet<string> InputChannels { get; set; }
 
+        [JsonIgnore]
         public List<DependencyFlowEdge> OutgoingEdges { get; set; }
+        [JsonIgnore]
         public List<DependencyFlowEdge> IncomingEdges { get; set; }
 
         public double OfficialBuildTime { get; set; }

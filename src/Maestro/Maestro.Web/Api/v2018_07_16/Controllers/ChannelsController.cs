@@ -365,9 +365,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             // channels.
             DependencyFlowGraph flowGraph = await DependencyFlowGraph.BuildAsync(defaultChannels, subscriptions, barOnlyRemote, days);
 
-            string[] frequencies = includedFrequencies == default || includedFrequencies.Count() == 0 ? 
+           IEnumerable<string> frequencies = includedFrequencies == default || includedFrequencies.Count() == 0 ? 
                                    new string[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", } : 
-                                   includedFrequencies.ToArray();
+                                   includedFrequencies;
 
             Microsoft.DotNet.Maestro.Client.Models.Channel targetChannel = null;
 
@@ -378,7 +378,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             if (targetChannel != null)
             {
-                flowGraph.PruneGraph(node => IsInterestingNode(targetChannel, node), edge => IsInterestingEdge(edge, includeDisabledSubscriptions, frequencies));
+                flowGraph.PruneGraph(
+                    node => flowGraph.IsInterestingNode(targetChannel.Name, node), 
+                    edge => flowGraph.IsInterestingEdge(edge, includeDisabledSubscriptions, frequencies));
             }
 
             if (includeBuildTimes)
@@ -391,28 +393,5 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             // Convert flow graph to correct return type
             return Ok(FlowGraph.Create(flowGraph));
         }
-
-        private bool IsInterestingNode(Microsoft.DotNet.Maestro.Client.Models.Channel targetChannel, DependencyFlowNode node)
-        {
-            return node.OutputChannels.Any(c => c == targetChannel.Name);
-        }
-
-        private bool IsInterestingEdge(DependencyFlowEdge edge, bool includeDisabledSubscriptions, string[] includedFrequencies)
-        {
-            if (!includeDisabledSubscriptions && !edge.Subscription.Enabled)
-            {
-                return false;
-            }
-            if (edge.Subscription.Policy == null)
-            {
-                return true;
-            }
-            if (!includedFrequencies.Any(s => s.Equals(edge.Subscription.Policy.UpdateFrequency.ToString(), StringComparison.OrdinalIgnoreCase)))
-            {
-                return false;
-            }
-            return true;
-        }
-
     }
 }
