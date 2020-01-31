@@ -65,8 +65,8 @@ namespace Microsoft.DotNet.Darc.Tests
             if (channelName != null)
             {
                 flowGraph.PruneGraph(
-                    node => flowGraph.IsInterestingNode(channelName, node), 
-                    edge => flowGraph.IsInterestingEdge(edge, includeDisabledSubscriptions, includedFrequencies));
+                    node => DependencyFlowGraph.IsInterestingNode(channelName, node), 
+                    edge => DependencyFlowGraph.IsInterestingEdge(edge, includeDisabledSubscriptions, includedFrequencies));
             }
 
             if (includeBuildTimes)

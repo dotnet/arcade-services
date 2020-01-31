@@ -379,8 +379,8 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             if (targetChannel != null)
             {
                 flowGraph.PruneGraph(
-                    node => flowGraph.IsInterestingNode(targetChannel.Name, node), 
-                    edge => flowGraph.IsInterestingEdge(edge, includeDisabledSubscriptions, frequencies));
+                    node => DependencyFlowGraph.IsInterestingNode(targetChannel.Name, node), 
+                    edge => DependencyFlowGraph.IsInterestingEdge(edge, includeDisabledSubscriptions, frequencies));
             }
 
             if (includeBuildTimes)

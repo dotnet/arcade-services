@@ -5,7 +5,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -32,9 +31,7 @@ namespace Microsoft.DotNet.DarcLib
         public HashSet<string> OutputChannels { get; set; }
         public HashSet<string> InputChannels { get; set; }
 
-        [JsonIgnore]
         public List<DependencyFlowEdge> OutgoingEdges { get; set; }
-        [JsonIgnore]
         public List<DependencyFlowEdge> IncomingEdges { get; set; }
 
         public double OfficialBuildTime { get; set; }

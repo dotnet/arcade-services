@@ -80,20 +80,11 @@ namespace Microsoft.DotNet.Darc.Operations
                     }
                 }
 
-                JsonSerializer serializer = new JsonSerializer();
-
-                using (StreamWriter sw = new StreamWriter(@"D:\michelm\input.json"))
-                using (JsonWriter writer = new JsonTextWriter(sw))
-                {
-                    serializer.Serialize(writer, flowGraph);
-                }
-
-
                 if (targetChannel != null)
                 {
                     flowGraph.PruneGraph(
-                        node => flowGraph.IsInterestingNode(targetChannel.Name, node), 
-                        edge => flowGraph.IsInterestingEdge(edge, _options.IncludeDisabledSubscriptions, _options.IncludedFrequencies));
+                        node => DependencyFlowGraph.IsInterestingNode(targetChannel.Name, node), 
+                        edge => DependencyFlowGraph.IsInterestingEdge(edge, _options.IncludeDisabledSubscriptions, _options.IncludedFrequencies));
                 }
 
                 if (_options.IncludeBuildTimes)
@@ -101,12 +92,6 @@ namespace Microsoft.DotNet.Darc.Operations
                     flowGraph.MarkBackEdges();
                     flowGraph.CalculateLongestBuildPaths();
                     flowGraph.MarkLongestBuildPath();
-                }
-
-                using (StreamWriter sw = new StreamWriter(@"D:\michelm\output.json"))
-                using (JsonWriter writer = new JsonTextWriter(sw))
-                {
-                    serializer.Serialize(writer, flowGraph);
                 }
 
                 await LogGraphVizAsync(targetChannel, flowGraph, _options.IncludeBuildTimes);

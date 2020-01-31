@@ -25,34 +25,6 @@ namespace Microsoft.DotNet.DarcLib
         public List<DependencyFlowNode> Nodes { get; set; }
         public List<DependencyFlowEdge> Edges { get; set; }
 
-        /// <summary>
-        ///     If pruning the graph is desired, determine whether a node is interesting.
-        /// </summary>
-        /// <param name="node">Node</param>
-        /// <returns>True if the node is interesting, false otherwise</returns>
-        public bool IsInterestingNode(string targetChannel, DependencyFlowNode node)
-        {
-            return node.OutputChannels.Any(c => c == targetChannel);
-        }
-
-        /// <summary>
-        ///     If pruning the graph is desired, determine whether an edge is interesting
-        /// </summary>
-        /// <param name="edge">Edge</param>
-        /// <returns>True if the edge is interesting, false otherwise.</returns>
-        public bool IsInterestingEdge(DependencyFlowEdge edge, bool includeDisabledSubscriptions, IEnumerable<string> includedFrequencies)
-        {
-            if (!includeDisabledSubscriptions && !edge.Subscription.Enabled)
-            {
-                return false;
-            }
-            if (!includedFrequencies.Any(s => s.Equals(edge.Subscription.Policy.UpdateFrequency.ToString(), StringComparison.OrdinalIgnoreCase)))
-            {
-                return false;
-            }
-            return true;
-        }
-
         public void RemoveNode(DependencyFlowNode node)
         {
             // Remove the node from the list, then remove corresponding edges
@@ -412,6 +384,34 @@ namespace Microsoft.DotNet.DarcLib
                 nodes.Add(key, newNode);
                 return newNode;
             }
+        }
+
+        /// <summary>
+        ///     If pruning the graph is desired, determine whether a node is interesting.
+        /// </summary>
+        /// <param name="node">Node</param>
+        /// <returns>True if the node is interesting, false otherwise</returns>
+        public static bool IsInterestingNode(string targetChannel, DependencyFlowNode node)
+        {
+            return node.OutputChannels.Any(c => c == targetChannel);
+        }
+
+        /// <summary>
+        ///     If pruning the graph is desired, determine whether an edge is interesting
+        /// </summary>
+        /// <param name="edge">Edge</param>
+        /// <returns>True if the edge is interesting, false otherwise.</returns>
+        public static bool IsInterestingEdge(DependencyFlowEdge edge, bool includeDisabledSubscriptions, IEnumerable<string> includedFrequencies)
+        {
+            if (!includeDisabledSubscriptions && !edge.Subscription.Enabled)
+            {
+                return false;
+            }
+            if (!includedFrequencies.Any(s => s.Equals(edge.Subscription.Policy.UpdateFrequency.ToString(), StringComparison.OrdinalIgnoreCase)))
+            {
+                return false;
+            }
+            return true;
         }
     }
 }
