@@ -249,35 +249,6 @@ namespace Maestro.Web
             throw new NotImplementedException();
         }
 
-        private AssetLocation ToClientAssetLocation(Maestro.Data.Models.AssetLocation other)
-        {
-            return new AssetLocation(other.Id, (LocationType)other.Type, other.Location);
-        }
-
-        private Asset ToClientModelAsset(Maestro.Data.Models.Asset other)
-        {
-            return new Asset(
-                other.Id,
-                other.BuildId,
-                other.NonShipping,
-                other.Name,
-                other.Version,
-                other.Locations?.Select(l => ToClientAssetLocation(l)).ToImmutableList());
-        }
-
-        private Build ToClientModelBuild(Maestro.Data.Models.Build other)
-        {
-            return new Build(other.Id, other.DateProduced, other.Staleness, false, other.PublishUsingPipelines, other.Commit,
-                null, other.Assets?.Select(a => ToClientModelAsset(a)).ToImmutableList(),
-                other.DependentBuildIds?.Select(b => new BuildRef(b.BuildId, b.IsProduct, b.TimeToInclusionInMinutes)).ToImmutableList())
-            {
-                AzureDevOpsBranch = other.AzureDevOpsBranch,
-                GitHubBranch = other.GitHubBranch,
-                GitHubRepository = other.GitHubRepository,
-                AzureDevOpsRepository = other.AzureDevOpsRepository,
-            };
-        }
-
         public async Task<Channel> GetChannelAsync(int channelId)
         {
             Data.Models.Channel channel = await _context.Channels
