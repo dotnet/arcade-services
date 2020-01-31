@@ -215,7 +215,12 @@ stages:
 - stage: validateDeployment
   displayName: Validate deployment
   pool:
-    name: Hosted VS2017
+    ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
+      name: NetCorePublic-Pool
+      queue: BuildPool.Windows.10.Amd64.VS2019.Open
+    ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+      name: NetCoreInternal-Pool
+      queue: BuildPool.Windows.10.Amd64.VS2019
   dependsOn: 
   - deploy
   variables:
@@ -230,10 +235,38 @@ stages:
       artifact: ScenarioTests
     - download: Build
       artifact: PackageArtifacts
+    - download: Build
+      artifact: Maestro.ScenarioTests
+
     - task: NuGetToolInstaller@1
       displayName: Use NuGet
       inputs:
         versionSpec: 5.3.x
+
+    - task: UseDotNet@2
+      displayName: Use .NET Core Sdk (3.0.101)
+      inputs:
+        packageType: sdk
+        version: 3.0.101
+
+    - task: UseDotNet@2
+      displayName: Use .NET Core Sdk (2.1.803)
+      inputs:
+        packageType: sdk
+        version: 2.1.803
+
+    - task: VSTest@2
+      inputs:
+        testSelector: testAssemblies
+        testAssemblyVer2: |
+          Maestro.ScenarioTests.dll
+        searchFolder: $(Pipeline.Workspace)/Build/Maestro.ScenarioTests
+      env:
+        MAESTRO_BASEURI: $(MaestroTestEndpoint)
+        MAESTRO_TOKEN: $(scenario-test-maestro-token)
+        GITHUB_TOKEN: $(maestro-scenario-test-github-token)
+        DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\Build\PackageArtifacts
+
     - powershell: |
         nuget sources add -Name "arcade" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-tools-internal/index.json"
         nuget sources add -Name "dotnet-core" -Source "https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json"
@@ -244,6 +277,7 @@ stages:
         Write-Host "##vso[task.setvariable variable=darcVersion]$latestDarcVersion"
         Write-Host "Using Darc version $latestDarcVersion to run the tests"
       displayName: Get DARC version
+
     - task: PowerShell@2
       displayName: Run Scenario Tests
       inputs:
@@ -252,3 +286,6 @@ stages:
         arguments: -maestroInstallation "$(MaestroTestEndpoint)" -darcVersion "$(darcVersion)" -maestroBearerToken "$(scenario-test-maestro-token)" -githubPAT "$(maestro-scenario-test-github-token)" -azdoPAT "$(dn-bot-dnceng-build-rw-code-rw-release-rw)" -darcPackageSource "$(Pipeline.Workspace)\Build\PackageArtifacts"
         workingDirectory: $(Pipeline.Workspace)/Build/ScenarioTests
       timeoutInMinutes: 90
+
+
+    
