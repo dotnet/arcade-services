@@ -32,7 +32,7 @@ namespace RolloutScorerAzureFunction
                     Repo = "dotnet-arcade-services",
                     BuildDefinitionIds = new List<string> { "252", "728" },
                     AzdoInstance = "dnceng",
-                    GithubIssueLabel = "Rollout Arcade Services",
+                    GithubIssueLabel = "Rollout Arcade-Services",
                     ExpectedTime = 30,
                     ExcludeStages = new List<string> { "Post-Deployment", "Validate deployment" },
                 },

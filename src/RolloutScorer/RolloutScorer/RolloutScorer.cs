@@ -177,7 +177,7 @@ namespace RolloutScorer
                     build.Score.Hotfixes = 1;
                 }
                 // if none of these caught this deployment, then there's an untagged deployment when tags should be present; we'll warn the user about this
-                else
+                else if (!source.Comment.Contains(AzureDevOpsCommitTags.RolloutTag, StringComparison.InvariantCultureIgnoreCase))
                 {
                     Utilities.WriteWarning($"Untagged deployment found: build number '{build.BuildSummary.BuildNumber}' with commit message '{source.Comment}'", Log);
                     Utilities.WriteWarning($"Web link: {build.BuildSummary.WebLink}", Log);
@@ -329,6 +329,11 @@ namespace RolloutScorer
 
         private TimeSpan GetPipelineDurationFromStages(List<BuildTimelineEntry> stages)
         {
+            if (stages.Count == 0)
+            {
+                return TimeSpan.Zero;
+            }   
+            
             DateTimeOffset startTime = stages.Min(s =>
             {
                 return DateTimeOffset.TryParse(s.StartTime, out DateTimeOffset start) ? start : DateTimeOffset.MaxValue;
