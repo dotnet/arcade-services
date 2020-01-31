@@ -111,12 +111,12 @@ namespace Maestro.Web
                 new KustoParameter("_Days", KustoDataTypes.TimeSpan, $"{days}d")
             };
 
-            string publicProject = "public";
+            string prProject = "public";
 
             // Builds in AzDo are only found in the internal project
             if (repository.Contains("dev.azure.com"))
             {
-                publicProject = "internal";
+                prProject = "internal";
             }
 
             // We only care about builds that complete successfully or partially successfully 
@@ -133,7 +133,7 @@ namespace Maestro.Web
             // apply to.
             string publicQueryText = $@"TimelineBuilds 
                 | project Repository, SourceBranch, TargetBranch, DefinitionId, StartTime, FinishTime, Result, Project, Reason
-                | where Project == '{publicProject}'
+                | where Project == '{prProject}'
                 | where Repository endswith _Repository
                 | where Reason == 'pullRequest' 
                 | where TargetBranch == _SourceBranch
