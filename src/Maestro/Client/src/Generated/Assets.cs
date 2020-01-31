@@ -110,7 +110,7 @@ namespace Microsoft.DotNet.Maestro.Client
                             yield break;
                         }                   
                     }
-                    catch (RestApiException) when (e.Response.Status == 404)
+                    catch (RestApiException e) when (e.Response.Status == 404)
                     {
                         yield break;
                     }
