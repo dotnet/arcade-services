@@ -25,6 +25,12 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("channel", HelpText = @"Only include nodes/edges with flow on this channel.")]
         public string Channel { get; set; }
 
+        [Option("include-build-times", HelpText = @"Include build times for nodes and edges")]
+        public bool IncludeBuildTimes { get; set; }
+
+        [Option("days", Default = 7, HelpText = @"Number of Days to summarize build times over")]
+        public int Days { get; set; }
+
         public override Operation GetOperation()
         {
             return new GetDependencyFlowGraphOperation(this);

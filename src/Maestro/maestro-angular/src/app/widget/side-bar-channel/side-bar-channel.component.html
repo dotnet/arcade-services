@@ -1,6 +1,6 @@
 <div class="card">
   <div class="card-header p-0">
-    <a tabindex="0" style="width: 100%; cursor: pointer;" class="btn btn-info" role="button" (click)="isCollapsed = !isCollapsed" [attr.aria-expanded]="!isCollapsed" id="channel-header-{{channel.id}}"
+    <a tabindex="0" style="width: 100%; cursor: pointer;" class="btn btn-info" role="button" [routerLink]="['/', channel.id, 'graph']" (click)="isCollapsed = !isCollapsed" [attr.aria-expanded]="!isCollapsed" id="channel-header-{{channel.id}}"
       attr.aria-controls="channel-body-{{channel.id}}">
       {{channel.name}}
     </a>

@@ -133,3 +133,70 @@ mc-switch {
     }
   }
 }
+
+.flowgraph {
+  height: 95%;
+  width: 95%;
+  
+  text {
+    display: inline;
+    font-weight: lighter;
+    letter-spacing: 2px;
+  }
+  
+  .node rect {
+    stroke: #01B8AA;
+    fill: #01B8AA;
+    stroke-width: 1.5px;
+    font-size: 10px;
+    font-weight: normal;
+    &:hover {
+      stroke-width: 3px;
+      fill: $gray-300;
+    }
+  }
+
+  .node polygon {
+    stroke: #FD625E;
+    fill: #FD625E;
+    stroke-width: 3px;
+    font-size: 10px;
+    font-weight: normal;
+    &:hover {
+      stroke-width: 3px;
+      fill: $gray-300;
+    }
+  }
+
+  .node ellipse {
+    stroke: #FD625E;
+    fill: #FD625E;
+    stroke-width: 3px;
+    font-size: 10px;
+    font-weight: normal;
+    &:hover {
+      stroke-width: 3px;
+      fill: $gray-300;
+    }
+  }
+  
+  .edgePath path.path {
+    stroke: $gray-900;
+    fill: none;
+    stroke-width: 1.5px;
+    &:hover {
+      stroke-width: 3px;
+    }
+  }
+
+  .longestPath {
+    stroke: #FD625E;
+    fill: #FD625E;
+    stroke-width: 1.5px;
+  }
+
+  .arrowhead {
+    fill: $gray-900;
+    stroke-width: 1.5px;
+  }
+}

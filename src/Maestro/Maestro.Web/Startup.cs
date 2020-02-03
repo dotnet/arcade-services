@@ -30,6 +30,7 @@ using Microsoft.AspNetCore.Rewrite;
 using Microsoft.AspNetCore.Rewrite.Internal;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -238,8 +239,8 @@ namespace Maestro.Web
                 {
                     IConfigurationSection section = Configuration.GetSection("Kusto");
                     section.Bind(options);
-                }
-            );
+                });
+            services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
 
             services.AddMergePolicies();
 

@@ -17,5 +17,5 @@ namespace Microsoft.DotNet.Services.Utility
             }
             return branch;
         }
-}
+    }
 }
