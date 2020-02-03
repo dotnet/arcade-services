@@ -215,12 +215,7 @@ stages:
 - stage: validateDeployment
   displayName: Validate deployment
   pool:
-    ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
-      name: NetCorePublic-Pool
-      queue: BuildPool.Windows.10.Amd64.VS2019.Open
-    ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-      name: NetCoreInternal-Pool
-      queue: BuildPool.Windows.10.Amd64.VS2019
+    vmImage: windows-2019
   dependsOn: 
   - deploy
   variables:
