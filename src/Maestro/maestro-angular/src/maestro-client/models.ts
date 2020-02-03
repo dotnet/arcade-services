@@ -1160,7 +1160,7 @@ export class FlowRef {
             bestCaseTime: value["bestCasePathTime"] == null ? undefined : value["bestCasePathTime"] as any,
             worstCaseTime: value["worstCasePathTime"] == null ? undefined : value["worstCasePathTime"] as any,
             onLongestBuildPath: value["onLongestBuildPath"] == null ? undefined : value["onLongestBuildPath"] as any,
-            goalTime: value["goalTime"] == null ? undefined : value["goalTime"] as any,
+            goalTime: value["goalTimeInMinutes"] == null ? undefined : value["goalTimeInMinutes"] as any,
         });
         return result;
     }
@@ -1175,7 +1175,7 @@ export class FlowRef {
         result["bestCasePathTime"] = value._bestCaseTime;
         result["worstCasePathTime"] = value._worstCaseTime;
         result["onLongestBuildPath"] = value._onLongestBuildPath;
-        result["goalTime"] = value._goalTime;
+        result["goalTimeInMinutes"] = value._goalTime;
         return result;
     }
 }
