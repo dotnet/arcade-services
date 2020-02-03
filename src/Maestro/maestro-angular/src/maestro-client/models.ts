@@ -1,7 +1,6 @@
 import { parseISO } from "date-fns";
 
 import { Helper } from "./helper";
-import { THIS_EXPR } from '@angular/compiler/src/output/output_ast';
 
 
 export enum AddAssetLocationToAssetAssetLocationType {

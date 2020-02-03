@@ -291,25 +291,25 @@ namespace Maestro.Web
                 return new BuildTime(0, 0, 0, 0);
             }
 
-            Dictionary<string, KustoQuery> queries = Helpers.CreateBuildTimesQueries(defaultChannel.Repository, defaultChannel.Branch, days);
+            MultiProjectKustoQuery queries = Helpers.CreateBuildTimesQueries(defaultChannel.Repository, defaultChannel.Branch, days);
 
-            var results = await Task.WhenAll<IDataReader>(_kustoClientProvider.ExecuteKustoQueryAsync(queries["internal"]), 
-                _kustoClientProvider.ExecuteKustoQueryAsync(queries["public"]));
+            var results = await Task.WhenAll<IDataReader>(_kustoClientProvider.ExecuteKustoQueryAsync(queries.Internal), 
+                _kustoClientProvider.ExecuteKustoQueryAsync(queries.Public));
 
-            Tuple<int, TimeSpan> officialBuild = Helpers.ParseBuildTime(results[0]);
-            Tuple<int, TimeSpan> prBuild = Helpers.ParseBuildTime(results[1]);
+            (int officialBuildId, TimeSpan officialBuildTime) = Helpers.ParseBuildTime(results[0]);
+            (int prBuildId, TimeSpan prBuildTime) = Helpers.ParseBuildTime(results[1]);
 
             double officialTime = 0;
             double prTime = 0;
             int goalTime = 0;
 
-            if (officialBuild != null)
+            if (officialBuildId != -1)
             {
-                officialTime = officialBuild.Item2.TotalMinutes;
+                officialTime = officialBuildTime.TotalMinutes;
                 
                 // Get goal time for definition id
                 Data.Models.GoalTime goal = await _context.GoalTime
-                    .FirstOrDefaultAsync(g => g.DefinitionId == officialBuild.Item1 && g.ChannelId == defaultChannel.ChannelId);
+                    .FirstOrDefaultAsync(g => g.DefinitionId == officialBuildId && g.ChannelId == defaultChannel.ChannelId);
 
                 if (goal != null)
                 {
@@ -317,9 +317,9 @@ namespace Maestro.Web
                 }
             }
 
-            if (prBuild != null)
+            if (prBuildId != -1)
             {
-                prTime = prBuild.Item2.TotalMinutes;
+                prTime = prBuildTime.TotalMinutes;
             }
 
             return new BuildTime(defaultChannelId, officialTime, prTime, goalTime);

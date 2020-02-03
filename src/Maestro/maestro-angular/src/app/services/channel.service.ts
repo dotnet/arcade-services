@@ -48,16 +48,22 @@ export class ChannelService {
     return this.buildRepositoriesList(channelId);
   }
 
-  public getFlowGraph(channelId: number): Observable<StatefulResult<FlowGraph>> {
-    return of(channelId).pipe(
-      statefulSwitchMap(id => {
-        if (id in ChannelService.graphCache) {
-          return of(ChannelService.graphCache[id]);
-        }
-        return this.maestro.channels.getFlowGraphAsync({id}).pipe(
-          tap(graph => ChannelService.graphCache[id] = graph),
-        );
-      }),
+  public getFlowGraph(id: number): Observable<StatefulResult<FlowGraph>> {
+    // return of(channelId).pipe(
+    //   statefulSwitchMap(id => {
+    //     if (id in ChannelService.graphCache) {
+    //       return of(ChannelService.graphCache[id]);
+    //     }
+    //     return this.maestro.channels.getFlowGraphAsync({id}).pipe(
+    //       tap(graph => ChannelService.graphCache[id] = graph),
+    //     );
+    //   }),
+    // );
+    if (id in ChannelService.graphCache) {
+      return of(ChannelService.graphCache[id]);
+    }
+    return this.maestro.channels.getFlowGraphAsync({id}).pipe(
+      tap(graph => ChannelService.graphCache[id] = graph),
     );
   }
 

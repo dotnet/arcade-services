@@ -165,7 +165,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 DependencyFlowNode currentNode = workList.Dequeue();
 
-                // Compute a new dominator set for this node. Remeber we are 
+                // Compute a new dominator set for this node. Remember we are 
                 // flipping the interepretation of incoming and outgoing
                 HashSet<DependencyFlowNode> newDom = null;
 
@@ -235,7 +235,7 @@ namespace Microsoft.DotNet.DarcLib
         public void CalculateLongestBuildPaths()
         {
             List<DependencyFlowNode> roots = Nodes.Where(n => n.OutgoingEdges.Count == 0).ToList();
-            Dictionary<DependencyFlowNode, List<DependencyFlowNode>> visitedNodes = new Dictionary<DependencyFlowNode, List<DependencyFlowNode>>();
+            Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> visitedNodes = new Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>>();
 
             Queue<DependencyFlowNode> nodesToVisit = new Queue<DependencyFlowNode>();
 
@@ -252,7 +252,7 @@ namespace Microsoft.DotNet.DarcLib
                     }
                     else
                     {
-                        visitedNodes.Add(node, new List<DependencyFlowNode>(){node});
+                        visitedNodes.Add(node, new HashSet<DependencyFlowNode>(){node});
                     }
 
                     foreach (DependencyFlowEdge edge in node.IncomingEdges)
@@ -263,11 +263,11 @@ namespace Microsoft.DotNet.DarcLib
                         {
                             if (visitedNodes.ContainsKey(child))
                             {
-                                visitedNodes[child].AddRange(visitedNodes[node]);
+                                visitedNodes[child].UnionWith(visitedNodes[node]);
                             }
                             else
                             {
-                                visitedNodes.Add(child, new List<DependencyFlowNode>(visitedNodes[node]));
+                                visitedNodes.Add(child, new HashSet<DependencyFlowNode>(visitedNodes[node]));
                             }
                             
                             nodesToVisit.Enqueue(child);
@@ -331,7 +331,7 @@ namespace Microsoft.DotNet.DarcLib
                     BuildTime buildTime = await barOnlyRemote.GetBuildTimeAsync(channel.Id, days);
                     flowNode.OfficialBuildTime = buildTime.OfficialBuildTime;
                     flowNode.PrBuildTime = buildTime.PrBuildTime;
-                    flowNode.GoalTime = buildTime.GoalTime;
+                    flowNode.GoalTimeInMinutes = buildTime.GoalTimeInMinutes;
                 }
                 else
                 {

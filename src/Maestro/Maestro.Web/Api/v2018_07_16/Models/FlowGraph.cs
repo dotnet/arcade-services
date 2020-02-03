@@ -15,6 +15,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
         {
             return new FlowGraph(other.Nodes.Select(n => FlowRef.Create(n)).ToList(), other.Edges.Select(e => FlowEdge.Create(e)).ToList());
         }
+        
         public FlowGraph(List<FlowRef> flowRefs, List<FlowEdge> flowEdges)
         {
             FlowRefs = flowRefs;

@@ -11,7 +11,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
             DefaultChannelId = defaultChannelId;
             OfficialBuildTime = officialBuildTime;
             PrBuildTime = prBuildTime;
-            GoalTime = goalTime;
+            GoalTimeInMinutes = goalTime;
         }
 
         [JsonProperty("defaultChannelId")]
@@ -24,6 +24,6 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public double PrBuildTime { get; set; }
 
         [JsonProperty("goalTime")]
-        public int GoalTime { get; set; }
+        public int GoalTimeInMinutes { get; set; }
     }
 }

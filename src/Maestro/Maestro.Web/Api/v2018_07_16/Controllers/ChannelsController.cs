@@ -308,8 +308,8 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return StatusCode((int)HttpStatusCode.OK);
         }
 
-        const int engLatestChannelId = 2;
-        const int eng3ChannelId = 344;
+        private const int EngLatestChannelId = 2;
+        private const int Eng3ChannelId = 344;
 
         /// <summary>
         ///   Get the dependency flow graph for the specified <see cref="Channel"/>
@@ -317,7 +317,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="channelId">The id of the <see cref="Channel"/></param>
         /// <param name="includeDisabledSubscriptions">Include disabled subscriptions</param>
         /// <param name="includedFrequencies">Frequencies to include</param>
-        /// <param name="includeBuildTimes"></param>
+        /// <param name="includeBuildTimes">If we should create the flow graph with build times</param>
         /// <param name="days">Number of days over which to summarize build times</param>
         [HttpGet("{channelId}/graph")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(FlowGraph), Description = "The dependency flow graph for a channel")]
@@ -333,8 +333,8 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         {
             var barOnlyRemote = await _remoteFactory.GetBarOnlyRemoteAsync(Logger);
 
-            Microsoft.DotNet.Maestro.Client.Models.Channel engLatestChannel = await barOnlyRemote.GetChannelAsync(engLatestChannelId);
-            Microsoft.DotNet.Maestro.Client.Models.Channel eng3Channel = await barOnlyRemote.GetChannelAsync(eng3ChannelId);
+            Microsoft.DotNet.Maestro.Client.Models.Channel engLatestChannel = await barOnlyRemote.GetChannelAsync(EngLatestChannelId);
+            Microsoft.DotNet.Maestro.Client.Models.Channel eng3Channel = await barOnlyRemote.GetChannelAsync(Eng3ChannelId);
 
             List<Microsoft.DotNet.Maestro.Client.Models.DefaultChannel> defaultChannels = (await barOnlyRemote.GetDefaultChannelsAsync()).ToList();
 
@@ -348,6 +348,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                     }
                 );
             }
+
             if (eng3Channel != null)
             {
                 defaultChannels.Add(
@@ -366,8 +367,8 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             DependencyFlowGraph flowGraph = await DependencyFlowGraph.BuildAsync(defaultChannels, subscriptions, barOnlyRemote, days);
 
            IEnumerable<string> frequencies = includedFrequencies == default || includedFrequencies.Count() == 0 ? 
-                                   new string[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", } : 
-                                   includedFrequencies;
+                new string[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", } : 
+                includedFrequencies;
 
             Microsoft.DotNet.Maestro.Client.Models.Channel targetChannel = null;
 

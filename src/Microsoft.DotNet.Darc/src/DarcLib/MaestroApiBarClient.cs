@@ -427,7 +427,6 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="channel">Name of channel. For eg: .Net Core 5 Dev</param>
         /// <param name="definitionId">Azure DevOps DefinitionId.</param>
         /// <returns>Goal in minutes</returns>
-
         public Task<Goal> GetGoalAsync(string channel, int definitionId)
         {
             return _barClient.Goal.GetGoalTimesAsync(channelName: channel, definitionId: definitionId);
@@ -439,7 +438,6 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="defaultChannelId">Id of the default channel</param>
         /// <param name="days">Number of days to summarize over</param>
         /// <returns>Returns BuildTime in minutes.</returns>
-
         public Task<BuildTime> GetBuildTimeAsync(int defaultChannelId, int days)
         {
             return _barClient.BuildTime.GetBuildTimesAsync(id: defaultChannelId, days: days);

@@ -50,7 +50,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
             OnLongestBuildPath = onLongestBuildPath;
             BestCasePathTime = bestCase;
             WorstCasePathTime = worstCase;
-            GoalTime = goalTime;
+            GoalTimeInMinutes = goalTime;
         }
 
         public static FlowRef Create(DependencyFlowNode other)
@@ -64,7 +64,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
                 other.OnLongestBuildPath, 
                 other.BestCasePathTime, 
                 other.WorstCasePathTime,
-                other.GoalTime);
+                other.GoalTimeInMinutes);
         }
 
         public string Repository { get; }
@@ -75,39 +75,6 @@ namespace Maestro.Web.Api.v2018_07_16.Models
         public bool OnLongestBuildPath { get; set; }
         public double BestCasePathTime { get; set; }
         public double WorstCasePathTime { get; set; }
-        public int GoalTime { get; set; }
-    }
-
-    public class FlowEdge
-    {
-        public FlowEdge (string to, string from)
-        {
-            ToId = to;
-            FromId = from;
-        }
-
-        public FlowEdge (string to, string from, bool onLongestBuildPath, bool isBackEdge)
-        {
-            ToId = to;
-            FromId = from;
-            OnLongestBuildPath = onLongestBuildPath;
-            IsBackEdge = isBackEdge;
-        }
-
-        public static FlowEdge Create(DependencyFlowEdge other)
-        {
-            return new FlowEdge(
-                other.To.Id, 
-                other.From.Id, 
-                other.OnLongestBuildPath, 
-                other.BackEdge);
-        }
-
-        public string ToId { get; }
-        public string FromId { get; }
-        public bool OnLongestBuildPath { get; set; }
-
-        [JsonIgnore]
-        public bool IsBackEdge { get; set; }
+        public int GoalTimeInMinutes { get; set; }
     }
 }

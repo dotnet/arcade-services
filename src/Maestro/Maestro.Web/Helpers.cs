@@ -103,7 +103,7 @@ namespace Maestro.Web
 
         }
 
-        public static Dictionary<string, KustoQuery> CreateBuildTimesQueries(string repository, string branch, int days)
+        public static MultiProjectKustoQuery CreateBuildTimesQueries(string repository, string branch, int days)
         {
             var parameters = new List<KustoParameter> {
                 new KustoParameter("_Repository", KustoDataTypes.String,  repository.Split("/").Last()),
@@ -113,8 +113,10 @@ namespace Maestro.Web
 
             string prProject = "public";
 
+            Uri uri = new Uri(repository);
+
             // Builds in AzDo are only found in the internal project
-            if (repository.Contains("dev.azure.com"))
+            if (uri.Host == "dev.azure.com")
             {
                 prProject = "internal";
             }
@@ -150,19 +152,15 @@ namespace Maestro.Web
                 | where SourceBranch == _SourceBranch
                 {commonQueryText}";
 
-            Dictionary<string, KustoQuery> queries = new Dictionary<string, KustoQuery>();
-            queries["internal"] = new KustoQuery(internalQueryText, parameters);
-            queries["public"] = new KustoQuery(publicQueryText, parameters);
-
-            return queries;
+            return new MultiProjectKustoQuery(new KustoQuery(internalQueryText, parameters), new KustoQuery(publicQueryText, parameters));
         }
 
-        public static Tuple<int, TimeSpan> ParseBuildTime(IDataReader reader)
+        public static (int buildId, TimeSpan buildTime) ParseBuildTime(IDataReader reader)
         {
             // There was an exception when we queried the database
             if (reader == null)
             {
-                return null;
+                return (-1, default(TimeSpan));
             }
             Dictionary<int, TimeSpan> buildTimeResults = new Dictionary<int, TimeSpan>();
 
@@ -176,13 +174,12 @@ namespace Maestro.Web
             // There were no results
             if (buildTimeResults.Count() == 0)
             {
-                return null;
+                return (-1, default(TimeSpan));
             }
 
-            int maxDefinitionId = buildTimeResults.Aggregate((l,r) => l.Value > r.Value ? l : r).Key;
-            TimeSpan maxDuration = buildTimeResults[maxDefinitionId];
+            KeyValuePair<int, TimeSpan> maxPair = buildTimeResults.Aggregate((l,r) => l.Value > r.Value ? l : r);
 
-            return new Tuple<int, TimeSpan>(maxDefinitionId, maxDuration);
+            return (maxPair.Key, maxPair.Value);
         }
     }
 }
