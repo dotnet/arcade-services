@@ -108,7 +108,8 @@ namespace RolloutScorerAzureFunction
             }
             else
             {
-                log.LogInformation($"Found no rollouts which occurred after last recorded rollout (date {scorecardEntries.Last().Date})");
+                log.LogInformation($"Found no rollouts which occurred after last recorded rollout " +
+                    $"({(scorecardEntries.Count > 0 ? $"date {scorecardEntries.Last().Date}" : "no rollouts in table")})");
             }
         }
 
