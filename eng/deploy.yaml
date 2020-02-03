@@ -163,12 +163,14 @@ stages:
         azureSubscription: ${{ parameters.Subscription }}
         ${{ if ne(parameters.DeploymentEnvironment, 'Production') }}:
           appSettings: >
+            -AzureServicesAuthConnectionString "RunAs=App;AppId=7d568741-c2b9-40a3-bbcc-9c3e82c3d872"
             -DeploymentEnvironment Staging
             -ScorecardsStorageAccountKeySecretName "rolloutscorecardsstaging-storage-key"
             -ScorecardsStorageAccountName "rolloutscorecardsstaging"
             -ScorecardsStorageAccountTableName "scorecardsstaging"
         ${{ if eq(parameters.DeploymentEnvironment, 'Production') }}:
           appSettings: >
+            -AzureServicesAuthConnectionString "RunAs=App;AppId=7d568741-c2b9-40a3-bbcc-9c3e82c3d872"
             -DeploymentEnvironment Production
             -ScorecardsStorageAccountKeySecretName "rolloutscorecards-storage-key"
             -ScorecardsStorageAccountName "rolloutscorecards"
