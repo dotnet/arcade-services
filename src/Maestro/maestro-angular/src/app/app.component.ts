@@ -29,6 +29,28 @@ export class AppComponent implements OnInit {
   public currentTheme!: string;
   public themes: Theme[] = (window as any).applicationData.themes;
 
+  public isApiRedirecting: boolean = (window as any).applicationData.isApiRedirecting;
+
+  public get isApiRedirectSkipped(): boolean {
+    if (this.cookieService.get("Skip-Api-Redirect")) {
+      return true;
+    }
+    return false;
+  }
+
+  public set isApiRedirectSkipped(value: boolean) {
+    if (value === this.isApiRedirectSkipped) {
+      return;
+    }
+    if (value) {
+      this.cookieService.set("Skip-Api-Redirect", "1");
+      window.location.reload();
+    } else {
+      this.cookieService.remove("Skip-Api-Redirect");
+      window.location.reload();
+    }
+  }
+
   public ngOnInit(): void {
     this.currentTheme = this.cookieService.get(AppComponent.themeCookieName) || "light";
   }
