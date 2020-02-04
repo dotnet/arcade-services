@@ -7,7 +7,7 @@ prior to creating the pull request so that it can be discussed.*
 
 ## Checklist
 - [ ] I have read the [Arcade Contributor Guidance doc](https://github.com/dotnet/arcade/blob/master/Documentation/Policy/ArcadeContributorGuidance.md)
-- [ ] Your code builds successfully
+- [ ] All PR checks have passed successfully
 - [ ] Your C# code follows the coding style laid out in the [runtime documentation](https://github.com/dotnet/runtime/blob/master/docs/coding-guidelines/coding-style.md)
 - [ ] Any PowerShell scripts you've written adhere to the guidelines laid out in the [arcade documentation](https://github.com/dotnet/arcade/blob/master/Documentation/Policy/PowershellBestPractices.md)
 - [ ] You have updated any documentation affected by your changes
