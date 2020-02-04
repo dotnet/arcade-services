@@ -399,6 +399,12 @@ namespace Maestro.Web
             // Redirect the entire cookie-authed api if it is in settings.
             if (DoApiRedirect)
             {
+                // when told to not redirect by the request, don't do it.
+                app.MapWhen(ctx => ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _), a =>
+                {
+                    a.UseMvc();
+                });
+
                 app.Run(ApiRedirectHandler);
             }
             else

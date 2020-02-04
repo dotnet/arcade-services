@@ -4,6 +4,7 @@
 @using Maestro.Data
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.Extensions.Configuration
 @{
     ViewBag.Title = "Index";
     Layout = null;
@@ -91,6 +92,7 @@
             }
           ],
           aiKey: '@Html.Raw(Model.InstrumentationKey)',
+          isApiRedirecting: @(DoApiRedirect ? "true" : "false"),
         };
     </script>
     <link rel="stylesheet" href="@Model.CurrentThemeFile" purpose="theme"/>
@@ -110,9 +112,13 @@
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IAuthorizationService Authorization
+@inject IConfiguration Configuration
 
 @functions
 {
+
+bool DoApiRedirect => !string.IsNullOrEmpty(Configuration.GetSection("ApiRedirect")["uri"]);
+
 
 async Task<string> GetUserNameAsync()
 {

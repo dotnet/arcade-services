@@ -1,6 +1,6 @@
 <ng-template #themePicker>
-  <div ngbDropdown placement="left">
-    <a class="nav-link" style="cursor: pointer;" id="navbarTheme" role="button" ngbDropdownToggle>
+  <div ngbDropdown class="dropdown-item" placement="left">
+    <a style="cursor: pointer;" id="navbarTheme" role="button" ngbDropdownToggle>
       Theme
     </a>
     <div ngbDropdownMenu aria-labelledby="navbarTheme">
@@ -30,8 +30,11 @@
             <a class="nav-link" style="cursor: pointer;" id="navbarDropdown" role="button" ngbDropdownToggle>
               {{userName}} <span class="caret"></span>
             </a>
-            <div ngbDropdownMenu aria-labelledby="navbarDropdown">
+            <div ngbDropdownMenu aria-labelledby="navbarDropdown" style="right: 0; left: auto;">
               <a class="dropdown-item" href="/Account/Tokens">Tokens</a>
+              <a class="dropdown-item" *ngIf="isApiRedirecting" (click)="isApiRedirectSkipped = !isApiRedirectSkipped" style="cursor: pointer;">
+                {{isApiRedirectSkipped ? 'Enable' : 'Disable'}} api redirection
+              </a>
               <ng-container *ngTemplateOutlet="themePicker"></ng-container>
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="/Account/SignOut">Sign Out</a>
