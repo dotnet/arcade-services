@@ -2,7 +2,7 @@
 - [ ] Release notes have been sent to dncpartners two days ago and accurately reflect the contents & impact of this rollout
 - [ ] The staging build is green and has been stable for at least two days
 - [ ] The commit message contains '[ROLLOUT]', '[HOTFIX]', or '[ROLLBACK]' as appropriate
-- [ ] The build master has approved the rollout
+- [ ] The rollout has leadership approval
 
 ## Remember...
 * If any downtime occurs as a result of this rollout, make sure you file an issue in dotnet/core-eng on GitHub and label it with the "Rollout Downtime" and "Rollout OSOB" labels
