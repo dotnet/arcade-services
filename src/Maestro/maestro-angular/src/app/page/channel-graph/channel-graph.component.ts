@@ -121,21 +121,21 @@ export class ChannelGraphComponent implements AfterContentInit {
     var svg = select("svg.flowgraph"),
         inner = svg.append("g");
 
-    render_graph(inner,g);
+    render_graph(inner as any,g);
 
     inner.selectAll("g.node")
       .append("svg:title")
-      .text(function(v) { return g.node(v).title });
+      .text(function(v:any) { return g.node(v).title });
 
     inner.selectAll("g.node")
       .append("svg:desc")
-      .text(function(v) { return g.node(v).description });
+      .text(function(v:any) { return g.node(v).description });
 
     inner.selectAll("g.node")
       .append("svg:a");
     inner.selectAll("g.edgePath")
       .append("svg:desc")
-      .text(function(v) { return g.edge(v).description });
+      .text(function(v:any) { return g.edge(v).description });
   
     var bbox = (svg.node() as SVGGraphicsElement).getBBox();
 

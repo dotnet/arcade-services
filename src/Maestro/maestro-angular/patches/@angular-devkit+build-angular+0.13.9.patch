@@ -1,0 +1,14 @@
+diff --git a/node_modules/@angular-devkit/build-angular/src/angular-cli-files/models/webpack-configs/common.js b/node_modules/@angular-devkit/build-angular/src/angular-cli-files/models/webpack-configs/common.js
+index ad1abbc..f73d218 100644
+--- a/node_modules/@angular-devkit/build-angular/src/angular-cli-files/models/webpack-configs/common.js
++++ b/node_modules/@angular-devkit/build-angular/src/angular-cli-files/models/webpack-configs/common.js
+@@ -282,6 +282,9 @@ function getCommonConfig(wco) {
+             ],
+         },
+         plugins: extraPlugins,
++        externals:  buildOptions.buildOptimizer ? {
++            'd3': 'd3'
++          } : undefined,
+     };
+ }
+ exports.getCommonConfig = getCommonConfig;
