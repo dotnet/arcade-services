@@ -97,7 +97,6 @@ namespace FeedCleaner.Tests
             };
 
             SetupAssetsFromFeeds(feeds);
-            var x = await _context.Value.Assets.ToListAsync();
 
             await cleaner.CleanManagedFeedsAsync();
 
@@ -199,7 +198,7 @@ namespace FeedCleaner.Tests
 
             var context = GetContext();
             context.Assets.AddRange(assets);
-            context.SaveChangesAsync();
+            context.SaveChanges();
         }
 
         private Dictionary<string, AzureDevOpsFeed> SetupFeeds(string account)
