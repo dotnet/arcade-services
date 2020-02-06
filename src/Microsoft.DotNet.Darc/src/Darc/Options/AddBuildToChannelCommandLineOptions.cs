@@ -41,7 +41,7 @@ namespace Microsoft.DotNet.Darc.Options
         public string SDLValidationContinueOnError { get; set; }
 
         [Option("skip-assets-publishing", HelpText = "Add the build to the channel without publishing assets to the channel's feeds.")]
-        public bool SkipAssetPublishing { get; set; }
+        public bool SkipAssetsPublishing { get; set; }
 
         public override Operation GetOperation()
         {

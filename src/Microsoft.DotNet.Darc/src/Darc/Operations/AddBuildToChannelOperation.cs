@@ -89,7 +89,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
         private async Task<int> PromoteBuildAsync(Build build, Channel targetChannel, IRemote remote)
         {
-            if (_options.SkipAssetPublishing)
+            if (_options.SkipAssetsPublishing)
             {
                 await remote.AssignBuildToChannelAsync(build.Id, targetChannel.Id);
                 Console.WriteLine($"Build {build.Id} was assigned to channel '{targetChannel.Name}' bypassing the promotion pipeline.");
