@@ -20,7 +20,6 @@ using Microsoft.VisualStudio.Services.WebApi;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using Octokit;
 
 namespace Microsoft.DotNet.DarcLib
 {
