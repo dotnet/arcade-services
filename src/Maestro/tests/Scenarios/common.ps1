@@ -327,7 +327,7 @@ function Add-Build-To-Channel ($buildId, $channelName) {
     $channelId = Get-ChannelId $channelName
 
     Write-Host "Adding build ${buildId} to channel ${channelId}"
-    $darcParams = @("add-build-to-channel", "--id", "$buildId", "--channel", "$channelName" )
+    $darcParams = @("add-build-to-channel", "--id", "$buildId", "--channel", "$channelName", "--bypass-promotion-pipeline" )
     Darc-Command -darcParams $darcParams
 }
 
