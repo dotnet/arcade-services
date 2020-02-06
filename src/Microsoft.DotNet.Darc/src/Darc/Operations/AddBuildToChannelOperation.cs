@@ -89,7 +89,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
         private async Task<int> PromoteBuildAsync(Build build, Channel targetChannel, IRemote remote)
         {
-            if (_options.BypassPromotionPipeline)
+            if (_options.SkipAssetPublishing)
             {
                 await remote.AssignBuildToChannelAsync(build.Id, targetChannel.Id);
                 Console.WriteLine($"Build {build.Id} was assigned to channel '{targetChannel.Name}' bypassing the promotion pipeline.");
@@ -102,7 +102,7 @@ namespace Microsoft.DotNet.Darc.Operations
             if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
             {
                 Console.WriteLine($"Promoting build {build.Id} with the given parameters would require starting the Build Promotion pipeline, however an AzDO PAT was not found.");
-                Console.WriteLine("Either specify an AzDO PAT as a parameter or add the --bypass-promotion-pipeline parameter when calling Darc add-build-to-channel.");
+                Console.WriteLine("Either specify an AzDO PAT as a parameter or add the --skip-assets-publishing parameter when calling Darc add-build-to-channel.");
                 return Constants.ErrorCode;
             }
 
