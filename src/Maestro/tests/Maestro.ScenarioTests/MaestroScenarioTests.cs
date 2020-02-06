@@ -263,7 +263,7 @@ namespace Maestro.ScenarioTests
 
         private async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName)
         {
-            await RunDarcAsync("add-build-to-channel", "--id", buildId.ToString(), "--channel", channelName);
+            await RunDarcAsync("add-build-to-channel", "--id", buildId.ToString(), "--channel", channelName, "--skip-assets-publishing");
             return AsyncDisposable.Create(async () =>
             {
                 _output.WriteLine($"Removing build {buildId} from channel {channelName}");

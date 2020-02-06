@@ -64,7 +64,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Queues a build of the Build Promotion pipeline that will takes care of making sure
                 // that the build assets are published to the right location and also promoting the build
                 // to the requested channel
-                int promoteBuildQueuedStatus = await PromoteBuildAsync(build, targetChannel).ConfigureAwait(false);
+                int promoteBuildQueuedStatus = await PromoteBuildAsync(build, targetChannel, remote).ConfigureAwait(false);
 
                 if (promoteBuildQueuedStatus != Constants.SuccessCode)
                 {
@@ -87,11 +87,24 @@ namespace Microsoft.DotNet.Darc.Operations
             }
         }
 
-        private async Task<int> PromoteBuildAsync(Build build, Channel targetChannel)
+        private async Task<int> PromoteBuildAsync(Build build, Channel targetChannel, IRemote remote)
         {
+            if (_options.SkipAssetsPublishing)
+            {
+                await remote.AssignBuildToChannelAsync(build.Id, targetChannel.Id);
+                Console.WriteLine($"Build {build.Id} was assigned to channel '{targetChannel.Name}' bypassing the promotion pipeline.");
+                return Constants.SuccessCode;
+            }
+
             LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
             _options.AzureDevOpsPat = (string.IsNullOrEmpty(_options.AzureDevOpsPat)) ? localSettings.AzureDevOpsToken : _options.AzureDevOpsPat;
-            _options.GitHubPat = (string.IsNullOrEmpty(_options.GitHubPat)) ? localSettings.GitHubToken : _options.GitHubPat;
+
+            if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
+            {
+                Console.WriteLine($"Promoting build {build.Id} with the given parameters would require starting the Build Promotion pipeline, however an AzDO PAT was not found.");
+                Console.WriteLine("Either specify an AzDO PAT as a parameter or add the --skip-assets-publishing parameter when calling Darc add-build-to-channel.");
+                return Constants.ErrorCode;
+            }
 
             var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build).ConfigureAwait(false);
 

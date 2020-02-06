@@ -40,6 +40,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("sdl-validation-continue-on-error", HelpText = "Ignore SDL validation errors.")]
         public string SDLValidationContinueOnError { get; set; }
 
+        [Option("skip-assets-publishing", HelpText = "Add the build to the channel without publishing assets to the channel's feeds.")]
+        public bool SkipAssetsPublishing { get; set; }
+
         public override Operation GetOperation()
         {
             return new AddBuildToChannelOperation(this);
