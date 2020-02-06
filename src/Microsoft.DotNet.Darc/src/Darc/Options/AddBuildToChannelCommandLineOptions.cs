@@ -40,7 +40,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("sdl-validation-continue-on-error", HelpText = "Ignore SDL validation errors.")]
         public string SDLValidationContinueOnError { get; set; }
 
-        [Option("bypass-promotion-pipeline", HelpText = "Add the build to the channel but don't run the build promotion pipeline.")]
+        [Option("bypass-promotion-pipeline", HelpText = "Add the build to the channel without publishing assets to the channel's feeds.")]
         public bool BypassPromotionPipeline { get; set; }
 
         public override Operation GetOperation()

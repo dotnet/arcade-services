@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Dependencies>
   <ProductDependencies>
+    <Dependency Name="Foo" Version="">
+      <Uri>https://dev.azure.com/dnceng/internal/_git/maestro-test1</Uri>
+      <Sha />
+    </Dependency>
+    <Dependency Name="Bar" Version="">
+      <Uri>https://dev.azure.com/dnceng/internal/_git/maestro-test1</Uri>
+      <Sha />
+    </Dependency>
+    <Dependency Name="Pizza" Version="">
+      <Uri>https://dev.azure.com/dnceng/internal/_git/maestro-test3</Uri>
+      <Sha />
+    </Dependency>
+    <Dependency Name="Hamburger" Version="">
+      <Uri>https://dev.azure.com/dnceng/internal/_git/maestro-test3</Uri>
+      <Sha />
+    </Dependency>
   </ProductDependencies>
   <ToolsetDependencies>
     <Dependency Name="Microsoft.DotNet.Arcade.Sdk" Version="5.0.0-beta.20103.5">
