@@ -50,14 +50,6 @@
     <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>5.0.0-beta.20103.5</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
     <MicrosoftDotNetGitIssueManagerVersion>5.0.0-beta.20103.5</MicrosoftDotNetGitIssueManagerVersion>
     <MicrosoftDotNetVersionToolsVersion>5.0.0-beta.20103.5</MicrosoftDotNetVersionToolsVersion>
-    <FooVersion>
-    </FooVersion>
-    <BarVersion>
-    </BarVersion>
-    <PizzaVersion>
-    </PizzaVersion>
-    <HamburgerVersion>
-    </HamburgerVersion>
   </PropertyGroup>
   <!--Package names-->
   <PropertyGroup>
