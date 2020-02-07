@@ -220,33 +220,19 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <returns>Root builds to start with, or null if a root build could not be found.</returns>
         private async Task<IEnumerable<Build>> GetRootBuildsAsync()
         {
-            if (!ValidateRootBuildsOptions())
-            {
-                return null;
-            }
-
             IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             string repoUri = GetRepoUri();
 
             if (_options.RootBuildIds.Any())
             {
-                List<Build> rootBuilds = new List<Build>();
+                List<Task<Build>> rootBuildTasks = new List<Task<Build>>();
                 foreach (var rootBuildId in _options.RootBuildIds)
                 {
                     Console.WriteLine($"Looking up build by id {rootBuildId}");
-                    Build rootBuild = await remote.GetBuildAsync(rootBuildId);
-                    if (rootBuild == null)
-                    {
-                        Console.WriteLine($"No build found with id {rootBuildId}");
-                        return null;
-                    }
-                    else
-                    {
-                        rootBuilds.Add(rootBuild);
-                    }
+                    rootBuildTasks.Add(remote.GetBuildAsync(rootBuildId));
                 }
-                return rootBuilds;
+                return await Task.WhenAll(rootBuildTasks);
             }
             else if (!string.IsNullOrEmpty(repoUri))
             {
@@ -496,6 +482,11 @@ namespace Microsoft.DotNet.Darc.Operations
         /// </remarks>
         private async Task<InputBuilds> GatherBuildsToDownloadAsync()
         {
+            if (!ValidateRootBuildsOptions())
+            {
+                return new InputBuilds { Successful = false };
+            }
+
             Console.WriteLine("Determining what builds to download...");
 
             // Gather the root build 
