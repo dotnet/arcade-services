@@ -7,6 +7,7 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.Services.Common;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
@@ -25,10 +26,26 @@ namespace Microsoft.DotNet.Darc.Operations
 {
     internal class DownloadedAsset
     {
+        /// <summary>
+        /// Asset that was downloaded.
+        /// </summary>
         public Asset Asset { get; set; }
+        /// <summary>
+        /// Source location (uri) where the asset came from.
+        /// </summary>
         public string SourceLocation { get; set; }
+        /// <summary>
+        /// Target location where the asset was downloaded to.
+        /// </summary>
         public string TargetLocation { get; set; }
+        /// <summary>
+        /// True if the asset download was successful. If false, Asset is the only valid property
+        /// </summary>
         public bool Successful { get; set; }
+        /// <summary>
+        /// Location type of the asset that actually got downloaded.
+        /// </summary>
+        public LocationType LocationType { get; set; }
     }
 
     internal class DownloadedBuild
@@ -114,6 +131,10 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // Write the release json
                 await WriteReleaseJson(downloadedBuilds, _options.OutputDirectory);
+
+                // Create the release nupkg layout
+                string nugetPublishFilesReleaseLocation = Path.Combine(_options.OutputDirectory, "publish_files", "nuget");
+                CreateReleasePackageLayout(downloadedBuilds, nugetPublishFilesReleaseLocation);
 
                 Console.WriteLine();
                 if (!success)
@@ -335,6 +356,198 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             // We only want to have shipping assets in the release json, so append that path
             return Path.Combine(build.OutputDirectory, shippingSubPath);
+        }
+
+        const string githubRepoPrefix = "https://github.com/";
+        const string azdoRepoPrefix = "https://dev.azure.com/dnceng/internal/_git/";
+        const string coreRepoCategory = "core";
+        const string aspnetCategory = "aspnet";
+        const string wcfCategory = "wcf";
+        
+        // The following is the list of repos that should be picked up by the tooling
+        // This list is effectively static, but not the full set of repos that are in the graph,
+        // as our release process does not publish all of the packages (e.g. not nuget.client).
+        // Each dictionary entry maps to a tuple of the category of the package (owner) and short name of the repo.
+        private static readonly Dictionary<string, (string, string)> repositories = new Dictionary<string, (string, string)>()
+        {
+            // Core
+
+            // Public
+            { $"{githubRepoPrefix}dotnet/corefx", (coreRepoCategory, "corefx") },
+            { $"{githubRepoPrefix}dotnet/coreclr", (coreRepoCategory, "coreclr") },
+            { $"{githubRepoPrefix}dotnet/core-setup", (coreRepoCategory, "core-setup") },
+            // Internal
+            { $"{azdoRepoPrefix}dotnet-corefx", (coreRepoCategory, "corefx") },
+            { $"{azdoRepoPrefix}dotnet-coreclr", (coreRepoCategory, "coreclr") },
+            { $"{azdoRepoPrefix}dotnet-core-setup", (coreRepoCategory, "core-setup") },
+
+            // ASPNET
+
+            // Public
+            { $"{githubRepoPrefix}dotnet/extensions", (aspnetCategory, "extensions") },
+            { $"{githubRepoPrefix}dotnet/aspnetcore", (aspnetCategory, "aspnetcore") },
+            { $"{githubRepoPrefix}dotnet/aspnetcore-tooling", (aspnetCategory, "aspnetcore-tooling") },
+            { $"{githubRepoPrefix}dotnet/efcore", (aspnetCategory, "efcore") },
+            { $"{githubRepoPrefix}dotnet/ef6", (aspnetCategory, "ef6") },
+            { $"{githubRepoPrefix}dotnet/blazor", (aspnetCategory, "blazor") },
+            // Internal
+            { $"{azdoRepoPrefix}dotnet-extensions", (aspnetCategory, "extensions") },
+            { $"{azdoRepoPrefix}dotnet-aspnetcore", (aspnetCategory, "aspnetcore") },
+            { $"{azdoRepoPrefix}dotnet-aspnetcore-tooling", (aspnetCategory, "aspnetcore-tooling") },
+            { $"{azdoRepoPrefix}dotnet-efcore", (aspnetCategory, "efcore") },
+            { $"{azdoRepoPrefix}dotnet-ef6", (aspnetCategory, "ef6") },
+            { $"{azdoRepoPrefix}dotnet-blazor", (aspnetCategory, "blazor") },
+
+            // WCF
+
+            // Public
+            { $"{githubRepoPrefix}dotnet/wcf", (wcfCategory, "wcf") },
+            // Internal
+            { $"{azdoRepoPrefix}dotnet-wcf", (wcfCategory, "wcf") },
+        };
+
+        private static readonly List<string> doNotListSymbolPackageFilenamePrefixes = new List<string>()
+        {
+            // Do not include targeting pack symbol packages: https://github.com/dotnet/core-setup/issues/8310
+            // They shouldn't have PDBs anyway, but due to tool behavior plus an artifact issue,
+            // they do have PDB and publishing them breaks PDB conversion later on.
+            "Microsoft.NETCore.App.Ref.",
+            "Microsoft.NETCore.App.Internal.",
+            "Microsoft.WindowsDesktop.App.Ref."
+        };
+
+        const string identitiesDirectoryName = "identities";
+        const string nupkgDirectoryName = "nupkgs";
+        const string sympkgsDirectoryName = "sympkgs";
+        const string allNupkgsFileName = "nupkgs-all-just-for-reference.txt";
+        const string nupkgsFileNamePrefix = "nupkgs-";
+        const string sympkgsFileName = "sympkgs-all.txt";
+        const string packagesSubDirs = "packages";
+        const string symPackagesSubDirs = "assets/symbols";
+
+        /// <summary>
+        ///     Create the nupkg layout required for the final release.
+        /// </summary>
+        /// <param name="downloadedBuilds">List of downloaded builds</param>
+        /// <param name="outputDirectory">Output directory to create the nupkg layout</param>
+        /// <remarks>
+        ///     Generates the nupkg layout that used by the release pipeline. The layout is as follows:
+        ///     identities\
+        ///         csv files containing package name + version, named with short name of repo
+        ///     nupkgs\
+        ///         repo-shortname\
+        ///             packages\
+        ///                 shipping packages from repo
+        ///     sympkgs\
+        ///         repo-shortname\
+        ///             assets\
+        ///                 symbols\
+        ///                     symbol packages from repo
+        ///     nupkgs-all-just-for-reference.txt - file list of all packages, 
+        ///     nupkgs-aspnet.txt - file list of all packages that aspnetcore owns on nuget.org
+        ///     nupkgs-core.txt - file list of all packages that dotnet core owns on nuget.org
+        ///     sympkgs-all.txt - file list of all symbol packages
+        /// </remarks>
+        /// <returns>Async task</returns>
+        private void CreateReleasePackageLayout(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
+        {
+            if (_options.DryRun || !_options.ReleaseLayout)
+            {
+                return;
+            }
+
+            // Identify the subdirectories. Do not need to create these now because
+            // we will create them as they go
+            string nupkgDirectory = Path.Combine(outputDirectory, nupkgDirectoryName);
+            string sympkgsDirectory = Path.Combine(outputDirectory, sympkgsDirectoryName);
+
+            // Universal text file content
+            StringBuilder allNupkgsFileContent = new StringBuilder();
+            StringBuilder sympkgsFileContent = new StringBuilder();
+
+            // Identity Csv contents
+            Dictionary<string, StringBuilder> identitiesFileContents = new Dictionary<string, StringBuilder>();
+
+            // core/wcf/aspnet nupkg lists
+            Dictionary<string, StringBuilder> nupkgFileContents = new Dictionary<string, StringBuilder>();
+
+            // Walk each input repo build and start filling out the directories
+            foreach (var downloadedBuild in downloadedBuilds)
+            {
+                // Start by determining whether we need to look at this build at all.
+                string repository = downloadedBuild.Build.GitHubRepository ?? downloadedBuild.Build.AzureDevOpsRepository;
+
+                if (!repositories.TryGetValue(repository, out (string, string) categoryAndShortName))
+                {
+                    continue;
+                }
+
+                string category = categoryAndShortName.Item1;
+                string shortName = categoryAndShortName.Item2;
+
+                // This goes into the release layout. Walk the downloaded assets
+                foreach (DownloadedAsset asset in downloadedBuild.DownloadedAssets)
+                {
+                    // If the asset is a shipping package, it goes into nupkgDirectory\<short name>\packages    
+                    if (!asset.Asset.NonShipping && asset.LocationType == LocationType.NugetFeed)
+                    {
+                        // Create the target directory
+                        string targetFile = Path.Combine(nupkgDirectory, shortName, packagesSubDirs, Path.GetFileName(asset.TargetLocation));
+                        Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+
+                        File.Copy(asset.TargetLocation, targetFile, true);
+
+                        // Add the relative path to the various spots. Choose paths are relative to the root output dir
+                        string relativePackagePath = Path.GetRelativePath(outputDirectory, targetFile);
+                        allNupkgsFileContent.AppendLine(relativePackagePath);
+
+                        StringBuilder categoryStringBuilder = nupkgFileContents.GetOrAddValue(category, () => new StringBuilder());
+                        categoryStringBuilder.AppendLine(relativePackagePath);
+
+                        // Do the same for the identity package. It gets a "name,version" (no file extension).
+                        // For the identities, the categories are by repo short name
+                        StringBuilder identityStringBuilder = identitiesFileContents.GetOrAddValue(shortName, () => new StringBuilder());
+                        identityStringBuilder.AppendLine($"{asset.Asset.Name},{asset.Asset.Version}");
+                    }
+                    // Otherwise, if the asset is a symbol package (ends in .symbols.nupkg), then copy it to symbols
+                    else if (asset.Asset.Name.EndsWith(".symbols.nupkg"))
+                    {
+                        if (doNotListSymbolPackageFilenamePrefixes.Any(doNotListPrefix => Path.GetFileName(asset.TargetLocation).StartsWith(doNotListPrefix)))
+                        {
+                            continue;
+                        }
+
+                        // Create the target directory
+                        string targetFile = Path.Combine(sympkgsDirectory, shortName, symPackagesSubDirs, Path.GetFileName(asset.TargetLocation));
+                        Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+
+                        File.Copy(asset.TargetLocation, targetFile, true);
+
+                        // Add the relative path to the sympkg list. Choose paths are relative to the root output dir
+                        string relativeSymPackagePath = Path.GetRelativePath(outputDirectory, targetFile);
+                        sympkgsFileContent.AppendLine(relativeSymPackagePath);
+                    }
+                }
+            }
+
+            Directory.CreateDirectory(outputDirectory);
+            
+            File.WriteAllText(Path.Combine(outputDirectory, allNupkgsFileName), allNupkgsFileContent.ToString());
+            File.WriteAllText(Path.Combine(outputDirectory, sympkgsFileName), sympkgsFileContent.ToString());
+                
+            // Write out for each category
+            foreach (KeyValuePair<string, StringBuilder> nupkgsByCategory in nupkgFileContents)
+            {
+                File.WriteAllText(Path.Combine(outputDirectory, $"{nupkgsFileNamePrefix}{nupkgsByCategory.Key}.txt"), nupkgsByCategory.Value.ToString());
+            }
+
+            // Write out the identities
+            string identitiesDirectory = Path.Combine(outputDirectory, identitiesDirectoryName);
+            Directory.CreateDirectory(identitiesDirectory);
+            foreach (KeyValuePair<string, StringBuilder> identityByCategory in identitiesFileContents)
+            {
+                File.WriteAllText(Path.Combine(identitiesDirectory, $"{identityByCategory.Key}.csv"), identityByCategory.Value.ToString());
+            }
         }
 
         /// <summary>
@@ -953,13 +1166,14 @@ namespace Microsoft.DotNet.Darc.Operations
                         Successful = true,
                         Asset = asset,
                         SourceLocation = finalUri,
-                        TargetLocation = fullTargetPath
+                        TargetLocation = fullTargetPath,
+                        LocationType = assetLocation.Type
                     };
                 }
             }
             else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out string feedAccount, out string feedVisibility, out string feedName))
             {
-                DownloadedAsset result =  await DownloadAssetFromAzureDevOpsFeedAsync(client, asset, feedAccount, feedVisibility, feedName, fullTargetPath, errors, downloadOutput);
+                DownloadedAsset result =  await DownloadAssetFromAzureDevOpsFeedAsync(client, asset, assetLocation, feedAccount, feedVisibility, feedName, fullTargetPath, errors, downloadOutput);
                 if (result != null)
                 {
                     return result;
@@ -987,6 +1201,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
         private async Task<DownloadedAsset> DownloadAssetFromAzureDevOpsFeedAsync(HttpClient client,
                                                                                 Asset asset,
+                                                                                AssetLocation assetLocation,
                                                                                 string feedAccount,
                                                                                 string feedVisibility,
                                                                                 string feedName,
@@ -1032,7 +1247,8 @@ namespace Microsoft.DotNet.Darc.Operations
                     Successful = true,
                     Asset = asset,
                     SourceLocation = packageContentUrl,
-                    TargetLocation = fullTargetPath
+                    TargetLocation = fullTargetPath,
+                    LocationType = assetLocation.Type
                 };
             }
             else
@@ -1123,8 +1339,10 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 Successful = false,
                 Asset = asset,
-                TargetLocation = fullTargetPath
+                TargetLocation = fullTargetPath,
+                LocationType = assetLocation.Type
             };
+
             // If the location is a blob storage account ending in index.json, as would be expected
             // if PushToBlobFeed was used, strip off the index.json and append the asset name. If that doesn't work,
             // prepend "assets/" to the asset name and try that.
@@ -1209,6 +1427,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 DownloadedAsset result = await DownloadAssetFromAzureDevOpsFeedAsync(client,
                     mangledAsset,
+                    assetLocation,
                     feedAccount,
                     feedVisibility,
                     feedName,
@@ -1221,6 +1440,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     return new DownloadedAsset
                     {
                         Asset = asset,
+                        LocationType = assetLocation.Type,
                         SourceLocation = result.SourceLocation,
                         Successful = result.Successful,
                         TargetLocation = fullTargetPath
