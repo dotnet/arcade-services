@@ -14,6 +14,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option('i', "id", HelpText = "BAR ID of build.")]
         public int RootBuildId { get; set; }
 
+        [Option("ids", Separator = ',', HelpText = "BAR ID's of the root build that we want to gather. comma separated.")]
+        public IEnumerable<int> RootBuildIds { get; set; }
+
         [Option('r', "repo", HelpText = "Gather a build drop for a build of this repo. Requires --commit or --channel.")]
         public string RepoUri { get; set; }
 
