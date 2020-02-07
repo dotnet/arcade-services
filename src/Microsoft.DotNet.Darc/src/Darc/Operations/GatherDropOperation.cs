@@ -173,28 +173,16 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <returns>True if they are being used properly, false otherwise.</returns>
         private bool ValidateRootBuildsOptions()
         {
-            bool hasNonIdRootBuildOptions =
-                (!string.IsNullOrEmpty(_options.RepoUri) ||
-                 !string.IsNullOrEmpty(_options.Channel) ||
-                 !string.IsNullOrEmpty(_options.Commit) ||
-                 _options.DownloadSdk ||
-                 _options.DownloadRuntime ||
-                 _options.DownloadAspNet);
-
-            if (_options.RootBuildId != 0)
+            if (_options.RootBuildIds.Any())
             {
-                if (hasNonIdRootBuildOptions || _options.RootBuildIds.Any())
+                if (!string.IsNullOrEmpty(_options.RepoUri) ||
+                    !string.IsNullOrEmpty(_options.Channel) ||
+                    !string.IsNullOrEmpty(_options.Commit) ||
+                    _options.DownloadSdk ||
+                    _options.DownloadRuntime ||
+                    _options.DownloadAspNet)
                 {
                     Console.WriteLine("--id should not be specified with other options.");
-                    return false;
-                }
-                return true;
-            }
-            else if (_options.RootBuildIds.Any())
-            {
-                if (hasNonIdRootBuildOptions || _options.RootBuildId != 0)
-                {
-                    Console.WriteLine("--ids should not be specified with other options.");
                     return false;
                 }
                 else if (_options.RootBuildIds.Any(id => id == 0))
@@ -240,17 +228,11 @@ namespace Microsoft.DotNet.Darc.Operations
             IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             string repoUri = GetRepoUri();
-            List<int> rootBuildIds = new List<int>();
-            if (_options.RootBuildId != 0)
-            {
-                rootBuildIds.Add(_options.RootBuildId);
-            }
-            rootBuildIds.AddRange(_options.RootBuildIds);
 
-            if (rootBuildIds.Any())
+            if (_options.RootBuildIds.Any())
             {
                 List<Build> rootBuilds = new List<Build>();
-                foreach (var rootBuildId in rootBuildIds)
+                foreach (var rootBuildId in _options.RootBuildIds)
                 {
                     Console.WriteLine($"Looking up build by id {rootBuildId}");
                     Build rootBuild = await remote.GetBuildAsync(rootBuildId);
@@ -367,6 +349,40 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             // We only want to have shipping assets in the release json, so append that path
             return Path.Combine(build.OutputDirectory, shippingSubPath);
+        }
+
+        /// <summary>
+        ///     Create the nupkg layout required for the final release.
+        /// </summary>
+        /// <param name="downloadedBuilds">List of downloaded builds</param>
+        /// <param name="outputDirectory">Output directory write the release json</param>
+        /// <returns>Async task</returns>
+        private async Task CreateReleasePackageLayout(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
+        {
+            if (_options.DryRun || !_options.ReleaseLayout)
+            {
+                return;
+            }
+
+            Directory.CreateDirectory(outputDirectory);
+            string outputPath = Path.Combine(outputDirectory, "release.json");
+
+            var releaseJson = new[]
+            {
+                new
+                {
+                    release = _options.ReleaseName,
+                    products = downloadedBuilds
+                        .Where(b => b.AnyShippingAssets)
+                        .Select(b =>
+                            new {
+                                name = GetProductNameForReleaseJson(b),
+                                fileshare = GetFileShareLocationForReleaseJson(b),
+                            }
+                        )
+                }
+            };
+            await File.WriteAllTextAsync(outputPath, JsonConvert.SerializeObject(releaseJson, Formatting.Indented));
         }
 
         /// <summary>
@@ -571,7 +587,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     builds.Add(build);
                 }
 
-                var nodesWithNoContributingBuilds = graph.Nodes.Where(node => !node.ContributingBuilds.Any());
+                var nodesWithNoContributingBuilds = graph.Nodes.Where(node => !node.ContributingBuilds.Any()).ToList();
                 if (nodesWithNoContributingBuilds.Any())
                 {
                     Console.WriteLine("Dependency graph nodes missing builds:");
