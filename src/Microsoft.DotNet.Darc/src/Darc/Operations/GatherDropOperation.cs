@@ -338,40 +338,6 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        ///     Create the nupkg layout required for the final release.
-        /// </summary>
-        /// <param name="downloadedBuilds">List of downloaded builds</param>
-        /// <param name="outputDirectory">Output directory write the release json</param>
-        /// <returns>Async task</returns>
-        private async Task CreateReleasePackageLayout(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
-        {
-            if (_options.DryRun || !_options.ReleaseLayout)
-            {
-                return;
-            }
-
-            Directory.CreateDirectory(outputDirectory);
-            string outputPath = Path.Combine(outputDirectory, "release.json");
-
-            var releaseJson = new[]
-            {
-                new
-                {
-                    release = _options.ReleaseName,
-                    products = downloadedBuilds
-                        .Where(b => b.AnyShippingAssets)
-                        .Select(b =>
-                            new {
-                                name = GetProductNameForReleaseJson(b),
-                                fileshare = GetFileShareLocationForReleaseJson(b),
-                            }
-                        )
-                }
-            };
-            await File.WriteAllTextAsync(outputPath, JsonConvert.SerializeObject(releaseJson, Formatting.Indented));
-        }
-
-        /// <summary>
         ///     Write the release json.  Only applicable for separated (ReleaseLayout) drops
         /// </summary>
         /// <param name="downloadedBuilds">List of downloaded builds</param>
