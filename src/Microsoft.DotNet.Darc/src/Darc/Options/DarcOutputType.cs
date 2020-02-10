@@ -8,7 +8,7 @@ namespace Microsoft.DotNet.Darc.Options
     /// Output type that darc should use. Commandline enum parsing is case sensitive
     /// so we put these as lower case.
     /// </summary>
-    enum DarcOutputType
+    public enum DarcOutputType
     {
         yaml,
         json

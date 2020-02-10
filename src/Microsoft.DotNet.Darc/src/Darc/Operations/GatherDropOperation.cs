@@ -110,7 +110,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
 
                 // Write the unified drop manifest
-                await WriteDropManifest(downloadedBuilds, _options.OutputDirectory);
+                await WriteDropManifestAsync(downloadedBuilds, _options.OutputDirectory);
 
                 // Write the release json
                 await WriteReleaseJson(downloadedBuilds, _options.OutputDirectory);
@@ -375,7 +375,7 @@ namespace Microsoft.DotNet.Darc.Operations
         ///     Write out a manifest of the items in the drop
         /// </summary>
         /// <returns></returns>
-        private async Task WriteDropManifest(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
+        private async Task WriteDropManifestAsync(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
         {
             if (_options.DryRun)
             {
@@ -386,10 +386,10 @@ namespace Microsoft.DotNet.Darc.Operations
             switch(_options.OutputFormat)
             {
                 case DarcOutputType.yaml:
-                    await WriteYamlDropManifest(downloadedBuilds, Path.Combine(outputDirectory, "manifest.yaml"));
+                    await WriteYamlDropManifestAsync(downloadedBuilds, Path.Combine(outputDirectory, "manifest.yaml"));
                     break;
                 case DarcOutputType.json:
-                    await WriteJsonDropManifest(downloadedBuilds, Path.Combine(outputDirectory, "manifest.json"));
+                    await WriteJsonDropManifestAsync(downloadedBuilds, Path.Combine(outputDirectory, "manifest.json"));
                     break;
                 default:
                     throw new NotImplementedException($"Darc output type {_options.OutputFormat} not supported in manifest generation");
@@ -402,7 +402,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="downloadedBuilds">List of downloaded builds in the manifest</param>
         /// <param name="outputPath">Output file path of the manifest</param>
         /// <returns>Async task</returns>
-        private async Task WriteYamlDropManifest(List<DownloadedBuild> downloadedBuilds, string outputPath)
+        private async Task WriteYamlDropManifestAsync(List<DownloadedBuild> downloadedBuilds, string outputPath)
         {
             if (_options.Overwrite)
             {
@@ -440,7 +440,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="downloadedBuilds">List of downloaded builds in the manifest</param>
         /// <param name="outputPath">Output file path of the manifest</param>
         /// <returns>Async task</returns>
-        private async Task WriteJsonDropManifest(List<DownloadedBuild> downloadedBuilds, string outputPath)
+        private async Task WriteJsonDropManifestAsync(List<DownloadedBuild> downloadedBuilds, string outputPath)
         {
             // Construct an ad-hoc object with the necessary fields and use the json
             // serializer to write it to disk
@@ -455,7 +455,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         branch = build.Build.AzureDevOpsBranch,
                         produced = build.Build.DateProduced,
                         buildNumber = build.Build.AzureDevOpsBuildNumber,
-                        barBuildID = build.Build.Id,
+                        barBuildId = build.Build.Id,
                         assets = build.DownloadedAssets.Select(asset =>
                         new
                         {
@@ -749,7 +749,7 @@ namespace Microsoft.DotNet.Darc.Operations
             // If separated drop, generate a manifest per build
             if (_options.ReleaseLayout)
             {
-                await WriteDropManifest(new List<DownloadedBuild>() { newBuild }, outputDirectory);
+                await WriteDropManifestAsync(new List<DownloadedBuild>() { newBuild }, outputDirectory);
             }
 
             return newBuild;
