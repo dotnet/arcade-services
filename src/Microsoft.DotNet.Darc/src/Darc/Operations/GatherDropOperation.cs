@@ -383,11 +383,32 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             Directory.CreateDirectory(outputDirectory);
-            string outputPath = Path.Combine(outputDirectory, "manifest.txt");
+            switch(_options.OutputFormat)
+            {
+                case DarcOutputType.yaml:
+                    await WriteYamlDropManifest(downloadedBuilds, Path.Combine(outputDirectory, "manifest.yaml"));
+                    break;
+                case DarcOutputType.json:
+                    await WriteJsonDropManifest(downloadedBuilds, Path.Combine(outputDirectory, "manifest.json"));
+                    break;
+                default:
+                    throw new NotImplementedException($"Darc output type {_options.OutputFormat} not supported in manifest generation");
+            }
+        }
+
+        /// <summary>
+        ///     Write the manifest in yaml format
+        /// </summary>
+        /// <param name="downloadedBuilds">List of downloaded builds in the manifest</param>
+        /// <param name="outputPath">Output file path of the manifest</param>
+        /// <returns>Async task</returns>
+        private async Task WriteYamlDropManifest(List<DownloadedBuild> downloadedBuilds, string outputPath)
+        {
             if (_options.Overwrite)
             {
                 File.Delete(outputPath);
             }
+
             using (StreamWriter writer = new StreamWriter(outputPath))
             {
                 await writer.WriteLineAsync($"Builds:");
@@ -411,6 +432,49 @@ namespace Microsoft.DotNet.Darc.Operations
                     }
                 }
             }
+        }
+
+        /// <summary>
+        ///     Write the manifest in json format
+        /// </summary>
+        /// <param name="downloadedBuilds">List of downloaded builds in the manifest</param>
+        /// <param name="outputPath">Output file path of the manifest</param>
+        /// <returns>Async task</returns>
+        private async Task WriteJsonDropManifest(List<DownloadedBuild> downloadedBuilds, string outputPath)
+        {
+            // Construct an ad-hoc object with the necessary fields and use the json
+            // serializer to write it to disk
+
+            var manifestJson = new
+            {
+                builds = downloadedBuilds.Select(build =>
+                    new
+                    {
+                        repo = build.Build.GitHubRepository ?? build.Build.AzureDevOpsRepository,
+                        commit = build.Build.Commit,
+                        branch = build.Build.AzureDevOpsBranch,
+                        produced = build.Build.DateProduced,
+                        buildNumber = build.Build.AzureDevOpsBuildNumber,
+                        barBuildID = build.Build.Id,
+                        assets = build.DownloadedAssets.Select(asset =>
+                        new
+                        {
+                            name = asset.Asset.Name,
+                            version = asset.Asset.Version,
+                            nonShipping = asset.Asset.NonShipping,
+                            source = asset.SourceLocation,
+                            target = asset.TargetLocation,
+                            barAssetId = asset.Asset.Id
+                        })
+                    })
+            };
+
+            if (_options.Overwrite)
+            {
+                File.Delete(outputPath);
+            }
+
+            await File.WriteAllTextAsync(outputPath, JsonConvert.SerializeObject(manifestJson, Formatting.Indented));
         }
 
         /// <summary>
