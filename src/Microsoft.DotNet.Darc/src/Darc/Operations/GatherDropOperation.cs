@@ -87,11 +87,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 if (!buildsToDownload.Successful)
                 {
-                    success = false;
-                    if (!_options.ContinueOnError)
-                    {
-                        return Constants.ErrorCode;
-                    }
+                    return Constants.ErrorCode;
                 }
 
                 Console.WriteLine();
@@ -175,18 +171,23 @@ namespace Microsoft.DotNet.Darc.Operations
         ///     quite expressive enough for the options
         /// </summary>
         /// <returns>True if they are being used properly, false otherwise.</returns>
-        private bool ValidateRootBuildOptions()
+        private bool ValidateRootBuildsOptions()
         {
-            if (_options.RootBuildId != 0)
+            if (_options.RootBuildIds.Any())
             {
                 if (!string.IsNullOrEmpty(_options.RepoUri) ||
-                  !string.IsNullOrEmpty(_options.Channel) ||
-                  !string.IsNullOrEmpty(_options.Commit) ||
-                  _options.DownloadSdk ||
-                  _options.DownloadRuntime ||
-                  _options.DownloadAspNet)
+                    !string.IsNullOrEmpty(_options.Channel) ||
+                    !string.IsNullOrEmpty(_options.Commit) ||
+                    _options.DownloadSdk ||
+                    _options.DownloadRuntime ||
+                    _options.DownloadAspNet)
                 {
                     Console.WriteLine("--id should not be specified with other options.");
+                    return false;
+                }
+                else if (_options.RootBuildIds.Any(id => id == 0))
+                {
+                    Console.WriteLine("0 is not a valid root build id");
                     return false;
                 }
                 return true;
@@ -214,29 +215,24 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        ///     Obtain the root build.
+        ///     Obtain the root builds to start with.
         /// </summary>
-        /// <returns>Root build to start with.</returns>
-        private async Task<Build> GetRootBuildAsync()
+        /// <returns>Root builds to start with, or null if a root build could not be found.</returns>
+        private async Task<IEnumerable<Build>> GetRootBuildsAsync()
         {
-            if (!ValidateRootBuildOptions())
-            {
-                return null;
-            }
-
             IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             string repoUri = GetRepoUri();
-            if (_options.RootBuildId != 0)
+
+            if (_options.RootBuildIds.Any())
             {
-                Console.WriteLine($"Looking up build by id {_options.RootBuildId}");
-                Build rootBuild = await remote.GetBuildAsync(_options.RootBuildId);
-                if (rootBuild == null)
+                List<Task<Build>> rootBuildTasks = new List<Task<Build>>();
+                foreach (var rootBuildId in _options.RootBuildIds)
                 {
-                    Console.WriteLine($"No build found with id {_options.RootBuildId}");
-                    return null;
+                    Console.WriteLine($"Looking up build by id {rootBuildId}");
+                    rootBuildTasks.Add(remote.GetBuildAsync(rootBuildId));
                 }
-                return rootBuild;
+                return await Task.WhenAll(rootBuildTasks);
             }
             else if (!string.IsNullOrEmpty(repoUri))
             {
@@ -261,7 +257,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         Console.WriteLine($"No build of '{repoUri}' found on channel '{targetChannel.Name}'");
                         return null;
                     }
-                    return rootBuild;
+                    return new List<Build> { rootBuild };
                 }
                 else if (!string.IsNullOrEmpty(_options.Commit))
                 {
@@ -281,8 +277,9 @@ namespace Microsoft.DotNet.Darc.Operations
                     if (rootBuild == null)
                     {
                         Console.WriteLine($"No builds were found of {_options.RepoUri}@{_options.Commit}");
+                        return null;
                     }
-                    return rootBuild;
+                    return new List<Build> { rootBuild };
                 }
             }
             // Shouldn't get here if ValidateRootBuildOptions is correct.
@@ -451,33 +448,52 @@ namespace Microsoft.DotNet.Darc.Operations
         /// </remarks>
         private async Task<InputBuilds> GatherBuildsToDownloadAsync()
         {
-            Console.WriteLine("Determining what builds to download...");
-
-            // Gather the root build 
-            Build rootBuild = await GetRootBuildAsync();
-            if (rootBuild == null)
+            if (!ValidateRootBuildsOptions())
             {
                 return new InputBuilds { Successful = false };
             }
-            Console.WriteLine($"Root build - Build number {rootBuild.AzureDevOpsBuildNumber} of {rootBuild.AzureDevOpsRepository} @ {rootBuild.Commit}");
+
+            Console.WriteLine("Determining what builds to download...");
+
+            // Gather the root build 
+            IEnumerable<Build> rootBuilds = await GetRootBuildsAsync();
+            if (rootBuilds == null)
+            {
+                return new InputBuilds { Successful = false };
+            }
+
+            foreach (Build rootBuild in rootBuilds)
+            {
+                Console.WriteLine($"Root build - Build number {rootBuild.AzureDevOpsBuildNumber} of {rootBuild.AzureDevOpsRepository} @ {rootBuild.Commit}");
+            }
 
             // If transitive (full tree) was not selected, we're done
             if (!_options.Transitive)
             {
+                var filteredNonTransitiveBuilds = FilterReleasedBuilds(rootBuilds);
+
+                if (!filteredNonTransitiveBuilds.Any())
+                {
+                    Console.WriteLine("All builds were already released.");
+                    return new InputBuilds()
+                    {
+                        Successful = false
+                    };
+                }
+
                 return new InputBuilds()
                 {
                     Successful = true,
-                    Builds = FilterReleasedBuilds(new List<Build>() { rootBuild })
+                    Builds = filteredNonTransitiveBuilds
                 };
             }
 
             HashSet<Build> builds = new HashSet<Build>(new BuildComparer());
-            builds.Add(rootBuild);
+            foreach (Build rootBuild in rootBuilds)
+            {
+                builds.Add(rootBuild);
+            }
             IRemoteFactory remoteFactory = new RemoteFactory(_options);
-            // Grab dependencies
-            IRemote rootBuildRemote = await remoteFactory.GetRemoteAsync(rootBuild.AzureDevOpsRepository, Logger);
-
-            Console.WriteLine($"Getting dependencies of root build...");
 
             // Flatten for convencience and remove dependencies of types that we don't want if need be.
             if (!_options.IncludeToolset)
@@ -492,56 +508,69 @@ namespace Microsoft.DotNet.Darc.Operations
                 NodeDiff = NodeDiff.None
             };
 
-            Console.WriteLine("Building graph of all dependencies under root build...");
-            DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
-                remoteFactory,
-                rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository,
-                rootBuild.Commit,
-                buildOptions,
-                Logger);
-
             Dictionary<DependencyDetail, Build> dependencyCache =
                 new Dictionary<DependencyDetail, Build>(new DependencyDetailComparer());
 
-            // Cache root build's assets
-            foreach (Asset buildAsset in rootBuild.Assets)
+            Console.WriteLine("Building graph of all dependencies under root builds...");
+            foreach (Build rootBuild in rootBuilds)
             {
-                dependencyCache.Add(
-                    new DependencyDetail
+                Console.WriteLine($"Building graph for {rootBuild.AzureDevOpsBuildNumber} of {rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository} @ {rootBuild.Commit}");
+
+                DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
+                    remoteFactory,
+                    rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository,
+                    rootBuild.Commit,
+                    buildOptions,
+                    Logger);
+
+                // Cache this root build's assets
+                foreach (Asset buildAsset in rootBuild.Assets)
+                {
+                    dependencyCache.Add(
+                        new DependencyDetail
+                        {
+                            Name = buildAsset.Name,
+                            Version = buildAsset.Version,
+                            Commit = rootBuild.Commit,
+                        },
+                        rootBuild);
+                }
+
+                Console.WriteLine($"There are {graph.UniqueDependencies.Count()} unique dependencies in the graph.");
+                Console.WriteLine("Full set of builds in graph:");
+                foreach (var build in graph.ContributingBuilds)
+                {
+                    Console.WriteLine($"  Build - {build.AzureDevOpsBuildNumber} of {build.GitHubRepository ?? build.AzureDevOpsRepository} @ {build.Commit}");
+                    builds.Add(build);
+                }
+
+                var nodesWithNoContributingBuilds = graph.Nodes.Where(node => !node.ContributingBuilds.Any()).ToList();
+                if (nodesWithNoContributingBuilds.Any())
+                {
+                    Console.WriteLine("Dependency graph nodes missing builds:");
+                    foreach (var node in nodesWithNoContributingBuilds)
                     {
-                        Name = buildAsset.Name,
-                        Version = buildAsset.Version,
-                        Commit = rootBuild.Commit,
-                    },
-                    rootBuild);
+                        Console.WriteLine($"  {node.Repository}@{node.Commit}");
+                    }
+                    if (!_options.ContinueOnError)
+                    {
+                        return new InputBuilds()
+                        {
+                            Successful = false
+                        };
+                    }
+                }
             }
 
-            Console.WriteLine($"There are {graph.UniqueDependencies.Count()} unique dependencies in the graph.");
-            Console.WriteLine("Full set of builds in graph:");
-            foreach (var build in graph.ContributingBuilds)
-            {
-                Console.WriteLine($"  Build - {build.AzureDevOpsBuildNumber} of {build.GitHubRepository ?? build.AzureDevOpsRepository} @ {build.Commit}");
-                builds.Add(build);
-            }
+            IEnumerable<Build> filteredBuilds = FilterReleasedBuilds(builds);
 
-            var filteredBuilds = FilterReleasedBuilds(builds);
-
-            var nodesWithNoContributingBuilds = graph.Nodes.Where(node => !node.ContributingBuilds.Any());
-            if (nodesWithNoContributingBuilds.Any())
+            if (!filteredBuilds.Any())
             {
-                Console.WriteLine("Dependency graph nodes missing builds:");
-                foreach (var node in nodesWithNoContributingBuilds)
+                Console.WriteLine("All builds were already released.");
+                return new InputBuilds()
                 {
-                    Console.WriteLine($"  {node.Repository}@{node.Commit}");
-                }
-                if (!_options.ContinueOnError)
-                {
-                    return new InputBuilds()
-                    {
-                        Successful = false,
-                        Builds = filteredBuilds
-                    };
-                }
+                    Successful = false
+                };
             }
 
             return new InputBuilds()
