@@ -80,6 +80,7 @@ try {
     $gatherDropOutput = $null
     try {
         $gatherDropOutput = Darc-Command -darcParams $darcParams
+        throw "Gather-drop should fail if all builds are released"
     }
     catch {
         if ((-not $gatherDropOutput -match "Skipping download of released build $sourceBuildNumber of $sourceRepoUri @ $sourceCommit")) {
@@ -93,7 +94,7 @@ try {
     Write-Host $gatherDropOutput
 
     # Unrelease the build
-    # $output = Darc-Update-Build -id $buildId -updateParams @( "--not-released" )
+    $output = Darc-Update-Build -id $buildId -updateParams @( "--not-released" )
     if (-not $output -match "Released: +False") {
         throw "Build should be marked unreleased"
     }
