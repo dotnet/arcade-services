@@ -358,11 +358,11 @@ namespace Microsoft.DotNet.Darc.Operations
             return Path.Combine(build.OutputDirectory, shippingSubPath);
         }
 
-        const string githubRepoPrefix = "https://github.com/";
-        const string azdoRepoPrefix = "https://dev.azure.com/dnceng/internal/_git/";
-        const string coreRepoCategory = "core";
-        const string aspnetCategory = "aspnet";
-        const string wcfCategory = "wcf";
+        private const string githubRepoPrefix = "https://github.com/";
+        private const string azdoRepoPrefix = "https://dev.azure.com/dnceng/internal/_git/";
+        private const string coreRepoCategory = "core";
+        private const string aspnetCategory = "aspnet";
+        private const string wcfCategory = "wcf";
         
         // The following is the list of repos that should be picked up by the tooling
         // This list is effectively static, but not the full set of repos that are in the graph,
@@ -376,10 +376,12 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{githubRepoPrefix}dotnet/corefx", (coreRepoCategory, "corefx") },
             { $"{githubRepoPrefix}dotnet/coreclr", (coreRepoCategory, "coreclr") },
             { $"{githubRepoPrefix}dotnet/core-setup", (coreRepoCategory, "core-setup") },
+            { $"{githubRepoPrefix}dotnet/runtime", (coreRepoCategory, "runtime") },
             // Internal
             { $"{azdoRepoPrefix}dotnet-corefx", (coreRepoCategory, "corefx") },
             { $"{azdoRepoPrefix}dotnet-coreclr", (coreRepoCategory, "coreclr") },
             { $"{azdoRepoPrefix}dotnet-core-setup", (coreRepoCategory, "core-setup") },
+            { $"{azdoRepoPrefix}dotnet-runtime", (coreRepoCategory, "runtime") },
 
             // ASPNET
 
@@ -416,14 +418,14 @@ namespace Microsoft.DotNet.Darc.Operations
             "Microsoft.WindowsDesktop.App.Ref."
         };
 
-        const string identitiesDirectoryName = "identities";
-        const string nupkgDirectoryName = "nupkgs";
-        const string sympkgsDirectoryName = "sympkgs";
-        const string allNupkgsFileName = "nupkgs-all-just-for-reference.txt";
-        const string nupkgsFileNamePrefix = "nupkgs-";
-        const string sympkgsFileName = "sympkgs-all.txt";
-        const string packagesSubDirs = "packages";
-        const string symPackagesSubDirs = "assets/symbols";
+        private const string identitiesDirectoryName = "identities";
+        private const string nupkgDirectoryName = "nupkgs";
+        private const string sympkgsDirectoryName = "sympkgs";
+        private const string allNupkgsFileName = "nupkgs-all-just-for-reference.txt";
+        private const string nupkgsFileNamePrefix = "nupkgs-";
+        private const string sympkgsFileName = "sympkgs-all.txt";
+        private const string packagesSubDir = "packages";
+        private const string symPackagesSubDir = "assets/symbols";
 
         /// <summary>
         ///     Create the nupkg layout required for the final release.
@@ -448,7 +450,6 @@ namespace Microsoft.DotNet.Darc.Operations
         ///     nupkgs-core.txt - file list of all packages that dotnet core owns on nuget.org
         ///     sympkgs-all.txt - file list of all symbol packages
         /// </remarks>
-        /// <returns>Async task</returns>
         private void CreateReleasePackageLayout(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
         {
             if (_options.DryRun || !_options.ReleaseLayout)
@@ -482,8 +483,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     continue;
                 }
 
-                string category = categoryAndShortName.Item1;
-                string shortName = categoryAndShortName.Item2;
+                (string category, string shortName) = categoryAndShortName;
 
                 // This goes into the release layout. Walk the downloaded assets
                 foreach (DownloadedAsset asset in downloadedBuild.DownloadedAssets)
@@ -492,7 +492,8 @@ namespace Microsoft.DotNet.Darc.Operations
                     if (!asset.Asset.NonShipping && asset.LocationType == LocationType.NugetFeed)
                     {
                         // Create the target directory
-                        string targetFile = Path.Combine(nupkgDirectory, shortName, packagesSubDirs, Path.GetFileName(asset.TargetLocation));
+                        string targetFile = Path.Combine(nupkgDirectory, shortName,
+                            packagesSubDir, Path.GetFileName(asset.TargetLocation));
                         Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
 
                         File.Copy(asset.TargetLocation, targetFile, true);
@@ -501,24 +502,28 @@ namespace Microsoft.DotNet.Darc.Operations
                         string relativePackagePath = Path.GetRelativePath(outputDirectory, targetFile);
                         allNupkgsFileContent.AppendLine(relativePackagePath);
 
-                        StringBuilder categoryStringBuilder = nupkgFileContents.GetOrAddValue(category, () => new StringBuilder());
+                        StringBuilder categoryStringBuilder = nupkgFileContents.GetOrAddValue(category,
+                            () => new StringBuilder());
                         categoryStringBuilder.AppendLine(relativePackagePath);
 
                         // Do the same for the identity package. It gets a "name,version" (no file extension).
                         // For the identities, the categories are by repo short name
-                        StringBuilder identityStringBuilder = identitiesFileContents.GetOrAddValue(shortName, () => new StringBuilder());
+                        StringBuilder identityStringBuilder = identitiesFileContents.GetOrAddValue(shortName,
+                            () => new StringBuilder());
                         identityStringBuilder.AppendLine($"{asset.Asset.Name},{asset.Asset.Version}");
                     }
                     // Otherwise, if the asset is a symbol package (ends in .symbols.nupkg), then copy it to symbols
                     else if (asset.Asset.Name.EndsWith(".symbols.nupkg"))
                     {
-                        if (doNotListSymbolPackageFilenamePrefixes.Any(doNotListPrefix => Path.GetFileName(asset.TargetLocation).StartsWith(doNotListPrefix)))
+                        if (doNotListSymbolPackageFilenamePrefixes.Any(doNotListPrefix => 
+                            Path.GetFileName(asset.TargetLocation).StartsWith(doNotListPrefix)))
                         {
                             continue;
                         }
 
                         // Create the target directory
-                        string targetFile = Path.Combine(sympkgsDirectory, shortName, symPackagesSubDirs, Path.GetFileName(asset.TargetLocation));
+                        string targetFile = Path.Combine(sympkgsDirectory, shortName,
+                            symPackagesSubDir, Path.GetFileName(asset.TargetLocation));
                         Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
 
                         File.Copy(asset.TargetLocation, targetFile, true);
@@ -538,7 +543,8 @@ namespace Microsoft.DotNet.Darc.Operations
             // Write out for each category
             foreach (KeyValuePair<string, StringBuilder> nupkgsByCategory in nupkgFileContents)
             {
-                File.WriteAllText(Path.Combine(outputDirectory, $"{nupkgsFileNamePrefix}{nupkgsByCategory.Key}.txt"), nupkgsByCategory.Value.ToString());
+                File.WriteAllText(Path.Combine(outputDirectory, $"{nupkgsFileNamePrefix}{nupkgsByCategory.Key}.txt"),
+                    nupkgsByCategory.Value.ToString());
             }
 
             // Write out the identities
@@ -546,7 +552,8 @@ namespace Microsoft.DotNet.Darc.Operations
             Directory.CreateDirectory(identitiesDirectory);
             foreach (KeyValuePair<string, StringBuilder> identityByCategory in identitiesFileContents)
             {
-                File.WriteAllText(Path.Combine(identitiesDirectory, $"{identityByCategory.Key}.csv"), identityByCategory.Value.ToString());
+                File.WriteAllText(Path.Combine(identitiesDirectory, $"{identityByCategory.Key}.csv"),
+                    identityByCategory.Value.ToString());
             }
         }
 
