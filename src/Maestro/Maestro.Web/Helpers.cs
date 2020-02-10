@@ -77,6 +77,57 @@ namespace Maestro.Web
                     }
                 }
 
+                // Add any missing security headers
+                if (!context.Response.Headers.ContainsKey("X-XSS-Protection"))
+                {
+                    context.Response.Headers.Add("X-XSS-Protection", "1");
+                }
+
+                if (!context.Response.Headers.ContainsKey("X-Frame-Options"))
+                {
+                    context.Response.Headers.Add("X-Frame-Options", "DENY");
+                }
+
+                if (!context.Response.Headers.ContainsKey("X-Content-Type-Options"))
+                {
+                    context.Response.Headers.Add("X-Content-Type-Options", "nosniff");
+                }
+
+                if (!context.Response.Headers.ContainsKey("Referrer-Policy"))
+                {
+                    context.Response.Headers.Add("Referrer-Policy", "no-referrer-when-downgrade");
+                }
+
+                if (!context.Response.Headers.ContainsKey("Content-Security-Policy"))
+                {
+                    context.Response.Headers.Add(
+                        "Content-Security-Policy",
+                        "default-src 'self';" +
+                        "style-src-elem 'self' 'unsafe-inline';" +
+                        "script-src-elem 'self' 'unsafe-inline';" +
+                        "style-src 'self' 'unsafe-inline';" +
+                        "connect-src 'self' https://dc.services.visualstudio.com;" +
+                        "img-src 'self' data:;" +
+                        "base-uri 'self';" +
+                        "form-action 'self';" +
+                        "frame-ancestors 'self';" +
+                        "object-src 'none';"
+                    );
+                }
+
+                if (!context.Response.Headers.ContainsKey("Cache-Control"))
+                {
+                    context.Response.Headers.Add("Cache-Control", "no-cache, no-store, must-revalidate, proxy-revalidate");
+                }
+                else
+                {
+                    context.Response.Headers.Append("Cache-Control", ", no-store, must-revalidate, proxy-revalidate");
+                }
+
+                if (!context.Response.Headers.ContainsKey("Pragma"))
+                {
+                    context.Response.Headers.Add("Pragma", "no-cache");
+                }
 
                 context.Response.StatusCode = (int) res.StatusCode;
                 if (res.Content != null)

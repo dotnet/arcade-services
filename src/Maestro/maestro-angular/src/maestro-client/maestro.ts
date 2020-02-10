@@ -80,8 +80,25 @@ export class MaestroService {
 })
 export class MaestroModule {
     public static defaultOptions: MaestroOptions = {
-        baseUrl: "https://maestro-prod.westus2.cloudapp.azure.com/",
-        defaultHeaders: {},
+      baseUrl: "https://maestro-prod.westus2.cloudapp.azure.com/",
+      defaultHeaders: {
+        "Content-Security-Policy":
+          "default-src 'self';" +
+          "style-src-elem 'self' 'unsafe-inline';" +
+          "script-src-elem 'self' 'unsafe-inline';" +
+          "style-src 'self' 'unsafe-inline';" +
+          "connect-src 'self' https://dc.services.visualstudio.com;" +
+          "img-src 'self' data:;" +
+          "base-uri 'self';" +
+          "form-action 'self';" +
+          "frame-ancestors 'self';" +
+          "object-src 'none';",
+        "Access-Control-Allow-Origin": "same",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        "Pragma": "no-cache",
+        "X-Frame-Options":"sameorigin",
+      }
     };
 
     public static forRoot(options?: Partial<MaestroOptions>) {
