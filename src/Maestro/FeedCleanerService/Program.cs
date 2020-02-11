@@ -3,18 +3,14 @@
 // See the LICENSE file in the project root for more information.
 
 using Maestro.AzureDevOps;
-using Maestro.Contracts;
 using Maestro.Data;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System.Fabric;
-using System.Linq;
 
-namespace FeedCleaner
+namespace FeedCleanerService
 {
     internal static class Program
     {
@@ -26,7 +22,7 @@ namespace FeedCleaner
             ServiceHost.Run(
                 host =>
                 {
-                    host.RegisterStatelessService<FeedCleaner>("FeedCleanerType");
+                    host.RegisterStatelessService<FeedCleanerService>("FeedCleanerServiceType");
                     host.ConfigureServices(
                         services =>
                         {

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<ServiceManifest Name="FeedCleanerPkg"
+<ServiceManifest Name="FeedCleanerServicePkg"
                  Version="1.0.42"
                  xmlns="http://schemas.microsoft.com/2011/01/fabric"
                  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
@@ -8,14 +8,14 @@
   <ServiceTypes>
     <!-- This is the name of your ServiceType. 
          This name must match the string used in RegisterServiceType call in Program.cs. -->
-    <StatelessServiceType ServiceTypeName="FeedCleanerType" />
+    <StatelessServiceType ServiceTypeName="FeedCleanerServiceType" />
   </ServiceTypes>
 
   <!-- Code package is your service executable. -->
   <CodePackage Name="Code" Version="1.0.42">
     <EntryPoint>
       <ExeHost>
-        <Program>FeedCleaner.exe</Program>
+        <Program>FeedCleanerService.exe</Program>
       </ExeHost>
     </EntryPoint>
     <EnvironmentVariables>

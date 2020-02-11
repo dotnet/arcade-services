@@ -21,21 +21,21 @@ using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace FeedCleaner
+namespace FeedCleanerService
 {
 
     /// <summary>
     ///     An instance of this class is created for each service replica by the Service Fabric runtime.
     /// </summary>
-    public sealed class FeedCleaner : IFeedCleaner, IServiceImplementation
+    public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementation
     {
 
         private readonly string MaestroManagedFeedPattern = @"darc-(?<type>(int|pub))-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)";
         private static readonly string NuGetOrgRegistrationBaseUrl = "https://api.nuget.org/v3/registration3-gz-semver2";
         private static readonly string NuGetOrgLocation = "https://api.nuget.org/v3/index.json";
 
-        public FeedCleaner(
-            ILogger<FeedCleaner> logger,
+        public FeedCleanerService(
+            ILogger<FeedCleanerService> logger,
             BuildAssetRegistryContext context,
             IOptions<FeedCleanerOptions> options)
         {
@@ -50,7 +50,7 @@ namespace FeedCleaner
             }
         }
 
-        public ILogger<FeedCleaner> Logger { get; }
+        public ILogger<FeedCleanerService> Logger { get; }
         public BuildAssetRegistryContext Context { get; }
 
         public FeedCleanerOptions Options => _options.Value;
@@ -86,18 +86,25 @@ namespace FeedCleaner
 
                     foreach (var feed in managedFeeds)
                     {
-                        await PopulatePackagesForFeedAsync(feed);
-                        foreach (var package in feed.Packages)
+                        try
                         {
-                            HashSet<string> updatedVersions =
-                                await UpdateReleasedVersionsForPackageAsync(feed, package, packagesInReleaseFeeds);
+                            await PopulatePackagesForFeedAsync(feed);
+                            foreach (var package in feed.Packages)
+                            {
+                                HashSet<string> updatedVersions =
+                                    await UpdateReleasedVersionsForPackageAsync(feed, package, packagesInReleaseFeeds);
 
-                            await DeletePackageVersionsFromFeedAsync(feed, package.Name, updatedVersions);
+                                await DeletePackageVersionsFromFeedAsync(feed, package.Name, updatedVersions);
+                            }
+                            // We may have deleted all packages in the previous operation, if so, we should delete the feed,
+                            // refresh the packages in the feed to check this.
+                            await PopulatePackagesForFeedAsync(feed);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError(ex, $"Something failed while trying to update the released packages in feed {feed.Name}");
                         }
 
-                        // We may have deleted all packages in the previous operation, if so, we should delete the feed,
-                        // refresh the packages in the feed to check this.
-                        await PopulatePackagesForFeedAsync(feed);
                         if (IsFeedEmpty(feed))
                         {
                             try
@@ -108,7 +115,7 @@ namespace FeedCleaner
                             }
                             catch (HttpRequestException ex)
                             {
-                                Logger.LogError(ex, $"Something went wrong when attempting to delete feed {feed.Name}");
+                                Logger.LogError(ex, $"Something failed when attempting to delete feed {feed.Name}");
                             }
                         }
                     }
@@ -143,7 +150,7 @@ namespace FeedCleaner
             {
                 string readableFeedURL = ComputeAzureArtifactsNuGetFeedUrl(feedName, account, project);
 
-                packagesWithVersionsInReleaseFeeds[readableFeedURL] = await GetPackageVersionsForFeed(account, project, feedName);
+                packagesWithVersionsInReleaseFeeds[readableFeedURL] = await GetPackageVersionsForFeedAsync(account, project, feedName);
             }
             return packagesWithVersionsInReleaseFeeds;
         }
@@ -169,16 +176,14 @@ namespace FeedCleaner
         /// <param name="project">Azure DevOps project the feed is hosted in.</param>
         /// <param name="feedName">Name of the feed</param>
         /// <returns>Dictionary where the key is the package name, and the value is a HashSet of the versions of the package in the feed</returns>
-        private async Task<Dictionary<string, HashSet<string>>> GetPackageVersionsForFeed(string account, string project, string feedName)
+        private async Task<Dictionary<string, HashSet<string>>> GetPackageVersionsForFeedAsync(string account, string project, string feedName)
         {
             var azdoClient = AzureDevOpsClients[account];
             var packagesWithVersions = new Dictionary<string, HashSet<string>>();
             List<AzureDevOpsPackage> packagesInFeed = await azdoClient.GetPackagesForFeedAsync(account, project, feedName);
             foreach (AzureDevOpsPackage package in packagesInFeed)
             {
-                {
-                    packagesWithVersions.Add(package.Name, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-                }
+                packagesWithVersions.Add(package.Name, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
                 packagesWithVersions[package.Name].UnionWith(package.Versions?.Where(v=> !v.IsDeleted).Select(v => v.Version));
             }
             return packagesWithVersions;

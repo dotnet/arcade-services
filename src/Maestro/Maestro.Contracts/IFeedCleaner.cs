@@ -7,7 +7,7 @@ using Microsoft.ServiceFabric.Services.Remoting;
 
 namespace Maestro.Contracts
 {
-    public interface IFeedCleaner : IService
+    public interface IFeedCleanerService : IService
     {
         Task CleanManagedFeedsAsync();
     }

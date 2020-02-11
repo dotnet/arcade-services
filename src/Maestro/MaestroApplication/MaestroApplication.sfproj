@@ -35,7 +35,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DependencyUpdater\DependencyUpdater.csproj" />
-    <ProjectReference Include="..\FeedCleaner\FeedCleaner.csproj" />
+    <ProjectReference Include="..\FeedCleanerService\FeedCleanerService.csproj" />
     <ProjectReference Include="..\Maestro.Web\Maestro.Web.csproj" />
     <ProjectReference Include="..\ReleasePipelineRunner\ReleasePipelineRunner.csproj" />
     <ProjectReference Include="..\SubscriptionActorService\SubscriptionActorService.csproj" />

@@ -6,6 +6,7 @@
     <SignAssembly>false</SignAssembly>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <LangVersion>7.1</LangVersion>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\FeedCleaner\FeedCleaner.csproj" />
+    <ProjectReference Include="..\..\FeedCleanerService\FeedCleanerService.csproj" />
     <ProjectReference Include="..\..\ServiceFabricMocks\ServiceFabricMocks.csproj" />
   </ItemGroup>
 

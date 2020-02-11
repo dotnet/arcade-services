@@ -17,9 +17,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace FeedCleaner.Tests
+namespace FeedCleanerService.Tests
 {
-    public class FeedCleanerTests : IDisposable
+    public class FeedCleanerServiceTests : IDisposable
     {
         private readonly Lazy<BuildAssetRegistryContext> _context;
         private readonly Mock<IHostingEnvironment> Env;
@@ -28,7 +28,7 @@ namespace FeedCleaner.Tests
 
         private static readonly string someAccount = "someAccount";
         
-        public FeedCleanerTests()
+        public FeedCleanerServiceTests()
         {
             var services = new ServiceCollection();
             Env = new Mock<IHostingEnvironment>(MockBehavior.Strict);
@@ -77,7 +77,7 @@ namespace FeedCleaner.Tests
         [Fact]
         public async void CleanFeedsAsyncTests()
         {
-            var cleaner = ActivatorUtilities.CreateInstance<FeedCleaner>(Scope.ServiceProvider);
+            var cleaner = ActivatorUtilities.CreateInstance<FeedCleanerService>(Scope.ServiceProvider);
             var feeds = SetupFeeds(someAccount);
 
             Mock<IAzureDevOpsClient> azdoClientMock = new Mock<IAzureDevOpsClient>(MockBehavior.Strict);
