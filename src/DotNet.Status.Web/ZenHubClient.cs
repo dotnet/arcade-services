@@ -23,7 +23,7 @@ namespace DotNet.Status.Web
             _logger = logger;
         }
 
-        public async Task AddIssueToEpic(IssueIdentifier child, IssueIdentifier epic)
+        public async Task AddIssueToEpicAsync(IssueIdentifier child, IssueIdentifier epic)
         {
             string apiToken = _options.CurrentValue.ApiToken;
 

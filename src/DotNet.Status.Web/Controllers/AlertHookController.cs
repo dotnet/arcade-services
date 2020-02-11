@@ -97,7 +97,7 @@ namespace DotNet.Status.Web.Controllers
                     );
 
                     _logger.LogInformation("Adding new issue to ZenHub...");
-                    await _zenHub.AddIssueToEpic(
+                    await _zenHub.AddIssueToEpicAsync(
                         new ZenHubClient.IssueIdentifier(issueRepoData.Id, issue.Number),
                         new ZenHubClient.IssueIdentifier(epicRepoData.Id, epic.IssueNumber)
                     );
