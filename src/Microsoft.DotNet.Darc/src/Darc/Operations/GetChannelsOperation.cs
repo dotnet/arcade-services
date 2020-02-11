@@ -5,10 +5,13 @@
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
-using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -33,14 +36,16 @@ namespace Microsoft.DotNet.Darc.Operations
                 IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
                 var allChannels = await remote.GetChannelsAsync();
-
-                // Write out a simple list of each channel's name
-                foreach (var channel in allChannels.OrderBy(c => c.Name))
+                switch (_options.OutputFormat)
                 {
-                    // Pad so that id's up to 9999 will result in consistent
-                    // listing
-                    string idPrefix = $"({channel.Id})".PadRight(7);
-                    Console.WriteLine($"{idPrefix}{channel.Name}");
+                    case DarcOutputType.json:
+                        WriteJsonChannelList(allChannels);
+                        break;
+                    case DarcOutputType.yaml:
+                        WriteYamlChannelList(allChannels);
+                        break;
+                    default:
+                        throw new NotImplementedException($"Output format {_options.OutputFormat} not supported for get-channels");
                 }
 
                 return Constants.SuccessCode;
@@ -49,6 +54,33 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 Logger.LogError(e, "Error: Failed to retrieve channels");
                 return Constants.ErrorCode;
+            }
+        }
+
+        private void WriteJsonChannelList(IEnumerable<Channel> allChannels)
+        {
+            var channelJson = new
+            {
+                channels = allChannels.OrderBy(c => c.Name).Select(channel =>
+                    new
+                    {
+                        id = channel.Id,
+                        name = channel.Name
+                    })
+            };
+
+            Console.WriteLine(JsonConvert.SerializeObject(channelJson, Formatting.Indented));
+        }
+
+        private void WriteYamlChannelList(IEnumerable<Channel> allChannels)
+        {
+            // Write out a simple list of each channel's name
+            foreach (var channel in allChannels.OrderBy(c => c.Name))
+            {
+                // Pad so that id's up to 9999 will result in consistent
+                // listing
+                string idPrefix = $"({channel.Id})".PadRight(7);
+                Console.WriteLine($"{idPrefix}{channel.Name}");
             }
         }
     }
