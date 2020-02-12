@@ -55,7 +55,7 @@ namespace Microsoft.DotNet.Darc.Operations
                             },
                             Formatting.Indented));
                         break;
-                    case DarcOutputType.yaml:
+                    case DarcOutputType.text:
                         Console.WriteLine($"Successfully created new channel with name '{_options.Name}' and id {newChannelInfo.Id}.");
                         break;
                     default:

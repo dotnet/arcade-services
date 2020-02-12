@@ -30,8 +30,8 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("git-location", Default = "git", HelpText = "Location of git executable used for internal commands.")]
         public string GitLocation { get; set; }
 
-        [Option("output-format", Default = DarcOutputType.yaml,
-            HelpText = "Desired output type of darc. Valid values are 'json' and 'yaml'. Case sensitive.")]
+        [Option("output-format", Default = DarcOutputType.text,
+            HelpText = "Desired output type of darc. Valid values are 'json' and 'text'. Case sensitive.")]
         public DarcOutputType OutputFormat { get; set; }
 
         public abstract Operation GetOperation();

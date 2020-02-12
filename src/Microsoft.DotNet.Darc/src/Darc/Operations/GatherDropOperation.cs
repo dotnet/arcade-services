@@ -605,7 +605,7 @@ namespace Microsoft.DotNet.Darc.Operations
             Directory.CreateDirectory(outputDirectory);
             switch(_options.OutputFormat)
             {
-                case DarcOutputType.yaml:
+                case DarcOutputType.text:
                     await WriteYamlDropManifestAsync(downloadedBuilds, Path.Combine(outputDirectory, "manifest.yaml"));
                     break;
                 case DarcOutputType.json:

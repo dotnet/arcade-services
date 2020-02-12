@@ -10,7 +10,7 @@ namespace Microsoft.DotNet.Darc.Options
     /// </summary>
     public enum DarcOutputType
     {
-        yaml,
+        text,
         json
     }
 }
