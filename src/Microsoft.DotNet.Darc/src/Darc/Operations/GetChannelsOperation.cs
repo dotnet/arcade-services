@@ -41,7 +41,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     case DarcOutputType.json:
                         WriteJsonChannelList(allChannels);
                         break;
-                    case DarcOutputType.yaml:
+                    case DarcOutputType.text:
                         WriteYamlChannelList(allChannels);
                         break;
                     default:
