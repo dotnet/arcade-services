@@ -14,6 +14,7 @@ using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -29,11 +30,6 @@ namespace FeedCleanerService
     /// </summary>
     public sealed class FeedCleanerService : IFeedCleanerService, IServiceImplementation
     {
-
-        private readonly string MaestroManagedFeedPattern = @"darc-(?<type>(int|pub))-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)";
-        private static readonly string NuGetOrgRegistrationBaseUrl = "https://api.nuget.org/v3/registration3-gz-semver2";
-        private static readonly string NuGetOrgLocation = "https://api.nuget.org/v3/index.json";
-
         public FeedCleanerService(
             ILogger<FeedCleanerService> logger,
             BuildAssetRegistryContext context,
@@ -82,7 +78,7 @@ namespace FeedCleanerService
                 {
                     var azdoClient = AzureDevOpsClients[azdoAccount];
                     List<AzureDevOpsFeed> allFeeds = await azdoClient.GetFeedsAsync(azdoAccount);
-                    IEnumerable<AzureDevOpsFeed> managedFeeds = allFeeds.Where(f => Regex.IsMatch(f.Name, MaestroManagedFeedPattern));
+                    IEnumerable<AzureDevOpsFeed> managedFeeds = allFeeds.Where(f => Regex.IsMatch(f.Name, FeedConstants.MaestroManagedFeedNamePattern));
 
                     foreach (var feed in managedFeeds)
                     {
@@ -222,7 +218,7 @@ namespace FeedCleanerService
                 }
                 else
                 {
-                    if (matchingAsset.Locations.Any(l => l.Location == NuGetOrgLocation ||
+                    if (matchingAsset.Locations.Any(l => l.Location == FeedConstants.NuGetOrgLocation ||
                         dotnetFeedsPackageMapping.Any(f => l.Location == f.Key)))
                     {
                         Logger.LogInformation($"Package {package.Name}.{version.Version} is already present in a public location.");
@@ -238,7 +234,7 @@ namespace FeedCleanerService
                         {
                             if (await IsPackageAvailableInNugetOrgAsync(package.Name, version.Version))
                             {
-                                feedsWherePackageIsAvailable.Add(NuGetOrgLocation);
+                                feedsWherePackageIsAvailable.Add(FeedConstants.NuGetOrgLocation);
                             }
                         }
                         catch (HttpRequestException e)
@@ -337,7 +333,7 @@ namespace FeedCleanerService
         {
             try
             {
-                using (HttpResponseMessage response = await _httpClient.GetAsync($"{NuGetOrgRegistrationBaseUrl}/{name.ToLower()}/{version}.json"))
+                using (HttpResponseMessage response = await _httpClient.GetAsync($"{FeedConstants.NuGetOrgRegistrationBaseUrl}/{name.ToLower()}/{version}.json"))
                 {
                     response.EnsureSuccessStatusCode();
                 }
