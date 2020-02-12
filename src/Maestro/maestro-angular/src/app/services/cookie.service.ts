@@ -36,4 +36,9 @@ export class CookieService {
     value = encodeURIComponent(value);
     document.cookie = `${key}=${value};path=/;samesite=lax;max-age=${100*365*24*60*60 /* 100 years */}`;
   }
+
+  public remove(key: string) {
+    key = encodeURIComponent(key);
+    document.cookie = `${key}=; path=/; samesite=lax; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  }
 }

@@ -120,6 +120,7 @@ namespace RolloutScorer
 
     public static class AzureDevOpsCommitTags
     {
+        public const string RolloutTag = "[ROLLOUT]";
         public const string HotfixTag = "[HOTFIX]";
         public const string RollbackTag = "[ROLLBACK]";
     }

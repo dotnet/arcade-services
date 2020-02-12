@@ -1,8 +1,10 @@
 import { Injectable } from "@angular/core";
-import { Observable, combineLatest } from "rxjs";
-import { Channel, DefaultChannel, Subscription } from 'src/maestro-client/models';
+import { Observable, of, combineLatest } from "rxjs";
+import { Channel, DefaultChannel, Subscription, FlowGraph } from 'src/maestro-client/models';
+import { StatefulResult, statefulSwitchMap } from 'src/stateful';
 import { MaestroService } from 'src/maestro-client';
-import { shareReplay, map } from 'rxjs/operators';
+import { tap, shareReplay, map } from 'rxjs/operators';
+
 
 function channelSorter(a: Channel, b: Channel): number {
   if (a.name == b.name) {
@@ -29,6 +31,7 @@ function repoSorter(a: DefaultChannel, b: DefaultChannel): number {
 })
 export class ChannelService {
   private channels$: Observable<Channel[]>;
+  static graphCache: Record<number, FlowGraph> = {};
 
   public constructor(private maestro: MaestroService) {
     this.channels$ = maestro.channels.listChannelsAsync({}).pipe(
@@ -43,6 +46,25 @@ export class ChannelService {
 
   public getRepositories(channelId: number): Observable<DefaultChannel[]> {
     return this.buildRepositoriesList(channelId);
+  }
+
+  public getFlowGraph(id: number): Observable<StatefulResult<FlowGraph>> {
+    // return of(channelId).pipe(
+    //   statefulSwitchMap(id => {
+    //     if (id in ChannelService.graphCache) {
+    //       return of(ChannelService.graphCache[id]);
+    //     }
+    //     return this.maestro.channels.getFlowGraphAsync({id}).pipe(
+    //       tap(graph => ChannelService.graphCache[id] = graph),
+    //     );
+    //   }),
+    // );
+    if (id in ChannelService.graphCache) {
+      return of(ChannelService.graphCache[id]);
+    }
+    return this.maestro.channels.getFlowGraphAsync({id}).pipe(
+      tap(graph => ChannelService.graphCache[id] = graph),
+    );
   }
 
   private buildRepositoriesList(channelId: number): Observable<DefaultChannel[]> {

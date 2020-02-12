@@ -7,6 +7,7 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.Services.Common;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
@@ -25,10 +26,26 @@ namespace Microsoft.DotNet.Darc.Operations
 {
     internal class DownloadedAsset
     {
+        /// <summary>
+        /// Asset that was downloaded.
+        /// </summary>
         public Asset Asset { get; set; }
+        /// <summary>
+        /// Source location (uri) where the asset came from.
+        /// </summary>
         public string SourceLocation { get; set; }
+        /// <summary>
+        /// Target location where the asset was downloaded to.
+        /// </summary>
         public string TargetLocation { get; set; }
+        /// <summary>
+        /// True if the asset download was successful. If false, Asset is the only valid property
+        /// </summary>
         public bool Successful { get; set; }
+        /// <summary>
+        /// Location type of the asset that actually got downloaded.
+        /// </summary>
+        public LocationType LocationType { get; set; }
     }
 
     internal class DownloadedBuild
@@ -87,11 +104,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 if (!buildsToDownload.Successful)
                 {
-                    success = false;
-                    if (!_options.ContinueOnError)
-                    {
-                        return Constants.ErrorCode;
-                    }
+                    return Constants.ErrorCode;
                 }
 
                 Console.WriteLine();
@@ -114,10 +127,14 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
 
                 // Write the unified drop manifest
-                await WriteDropManifest(downloadedBuilds, _options.OutputDirectory);
+                await WriteDropManifestAsync(downloadedBuilds, _options.OutputDirectory);
 
                 // Write the release json
                 await WriteReleaseJson(downloadedBuilds, _options.OutputDirectory);
+
+                // Create the release nupkg layout
+                string nugetPublishFilesReleaseLocation = Path.Combine(_options.OutputDirectory, "publish_files", "nuget");
+                CreateReleasePackageLayout(downloadedBuilds, nugetPublishFilesReleaseLocation);
 
                 Console.WriteLine();
                 if (!success)
@@ -175,18 +192,23 @@ namespace Microsoft.DotNet.Darc.Operations
         ///     quite expressive enough for the options
         /// </summary>
         /// <returns>True if they are being used properly, false otherwise.</returns>
-        private bool ValidateRootBuildOptions()
+        private bool ValidateRootBuildsOptions()
         {
-            if (_options.RootBuildId != 0)
+            if (_options.RootBuildIds.Any())
             {
                 if (!string.IsNullOrEmpty(_options.RepoUri) ||
-                  !string.IsNullOrEmpty(_options.Channel) ||
-                  !string.IsNullOrEmpty(_options.Commit) ||
-                  _options.DownloadSdk ||
-                  _options.DownloadRuntime ||
-                  _options.DownloadAspNet)
+                    !string.IsNullOrEmpty(_options.Channel) ||
+                    !string.IsNullOrEmpty(_options.Commit) ||
+                    _options.DownloadSdk ||
+                    _options.DownloadRuntime ||
+                    _options.DownloadAspNet)
                 {
                     Console.WriteLine("--id should not be specified with other options.");
+                    return false;
+                }
+                else if (_options.RootBuildIds.Any(id => id == 0))
+                {
+                    Console.WriteLine("0 is not a valid root build id");
                     return false;
                 }
                 return true;
@@ -214,29 +236,24 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        ///     Obtain the root build.
+        ///     Obtain the root builds to start with.
         /// </summary>
-        /// <returns>Root build to start with.</returns>
-        private async Task<Build> GetRootBuildAsync()
+        /// <returns>Root builds to start with, or null if a root build could not be found.</returns>
+        private async Task<IEnumerable<Build>> GetRootBuildsAsync()
         {
-            if (!ValidateRootBuildOptions())
-            {
-                return null;
-            }
-
             IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
             string repoUri = GetRepoUri();
-            if (_options.RootBuildId != 0)
+
+            if (_options.RootBuildIds.Any())
             {
-                Console.WriteLine($"Looking up build by id {_options.RootBuildId}");
-                Build rootBuild = await remote.GetBuildAsync(_options.RootBuildId);
-                if (rootBuild == null)
+                List<Task<Build>> rootBuildTasks = new List<Task<Build>>();
+                foreach (var rootBuildId in _options.RootBuildIds)
                 {
-                    Console.WriteLine($"No build found with id {_options.RootBuildId}");
-                    return null;
+                    Console.WriteLine($"Looking up build by id {rootBuildId}");
+                    rootBuildTasks.Add(remote.GetBuildAsync(rootBuildId));
                 }
-                return rootBuild;
+                return await Task.WhenAll(rootBuildTasks);
             }
             else if (!string.IsNullOrEmpty(repoUri))
             {
@@ -261,7 +278,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         Console.WriteLine($"No build of '{repoUri}' found on channel '{targetChannel.Name}'");
                         return null;
                     }
-                    return rootBuild;
+                    return new List<Build> { rootBuild };
                 }
                 else if (!string.IsNullOrEmpty(_options.Commit))
                 {
@@ -281,8 +298,9 @@ namespace Microsoft.DotNet.Darc.Operations
                     if (rootBuild == null)
                     {
                         Console.WriteLine($"No builds were found of {_options.RepoUri}@{_options.Commit}");
+                        return null;
                     }
-                    return rootBuild;
+                    return new List<Build> { rootBuild };
                 }
             }
             // Shouldn't get here if ValidateRootBuildOptions is correct.
@@ -340,6 +358,205 @@ namespace Microsoft.DotNet.Darc.Operations
             return Path.Combine(build.OutputDirectory, shippingSubPath);
         }
 
+        private const string githubRepoPrefix = "https://github.com/";
+        private const string azdoRepoPrefix = "https://dev.azure.com/dnceng/internal/_git/";
+        private const string coreRepoCategory = "core";
+        private const string aspnetCategory = "aspnet";
+        private const string wcfCategory = "wcf";
+        
+        // The following is the list of repos that should be picked up by the tooling
+        // This list is effectively static, but not the full set of repos that are in the graph,
+        // as our release process does not publish all of the packages (e.g. not nuget.client).
+        // Each dictionary entry maps to a tuple of the category of the package (owner) and short name of the repo.
+        private static readonly Dictionary<string, (string, string)> repositories = new Dictionary<string, (string, string)>()
+        {
+            // Core
+
+            // Public
+            { $"{githubRepoPrefix}dotnet/corefx", (coreRepoCategory, "corefx") },
+            { $"{githubRepoPrefix}dotnet/coreclr", (coreRepoCategory, "coreclr") },
+            { $"{githubRepoPrefix}dotnet/core-setup", (coreRepoCategory, "core-setup") },
+            { $"{githubRepoPrefix}dotnet/runtime", (coreRepoCategory, "runtime") },
+            // Internal
+            { $"{azdoRepoPrefix}dotnet-corefx", (coreRepoCategory, "corefx") },
+            { $"{azdoRepoPrefix}dotnet-coreclr", (coreRepoCategory, "coreclr") },
+            { $"{azdoRepoPrefix}dotnet-core-setup", (coreRepoCategory, "core-setup") },
+            { $"{azdoRepoPrefix}dotnet-runtime", (coreRepoCategory, "runtime") },
+
+            // ASPNET
+
+            // Public
+            { $"{githubRepoPrefix}dotnet/extensions", (aspnetCategory, "extensions") },
+            { $"{githubRepoPrefix}dotnet/aspnetcore", (aspnetCategory, "aspnetcore") },
+            { $"{githubRepoPrefix}dotnet/aspnetcore-tooling", (aspnetCategory, "aspnetcore-tooling") },
+            { $"{githubRepoPrefix}dotnet/efcore", (aspnetCategory, "efcore") },
+            { $"{githubRepoPrefix}dotnet/ef6", (aspnetCategory, "ef6") },
+            { $"{githubRepoPrefix}dotnet/blazor", (aspnetCategory, "blazor") },
+            // Internal
+            { $"{azdoRepoPrefix}dotnet-extensions", (aspnetCategory, "extensions") },
+            { $"{azdoRepoPrefix}dotnet-aspnetcore", (aspnetCategory, "aspnetcore") },
+            { $"{azdoRepoPrefix}dotnet-aspnetcore-tooling", (aspnetCategory, "aspnetcore-tooling") },
+            { $"{azdoRepoPrefix}dotnet-efcore", (aspnetCategory, "efcore") },
+            { $"{azdoRepoPrefix}dotnet-ef6", (aspnetCategory, "ef6") },
+            { $"{azdoRepoPrefix}dotnet-blazor", (aspnetCategory, "blazor") },
+
+            // WCF
+
+            // Public
+            { $"{githubRepoPrefix}dotnet/wcf", (wcfCategory, "wcf") },
+            // Internal
+            { $"{azdoRepoPrefix}dotnet-wcf", (wcfCategory, "wcf") },
+        };
+
+        private static readonly List<string> doNotListSymbolPackageFilenamePrefixes = new List<string>()
+        {
+            // Do not include targeting pack symbol packages: https://github.com/dotnet/core-setup/issues/8310
+            // They shouldn't have PDBs anyway, but due to tool behavior plus an artifact issue,
+            // they do have PDB and publishing them breaks PDB conversion later on.
+            "Microsoft.NETCore.App.Ref.",
+            "Microsoft.NETCore.App.Internal.",
+            "Microsoft.WindowsDesktop.App.Ref."
+        };
+
+        private const string identitiesDirectoryName = "identities";
+        private const string nupkgDirectoryName = "nupkgs";
+        private const string sympkgsDirectoryName = "sympkgs";
+        private const string allNupkgsFileName = "nupkgs-all-just-for-reference.txt";
+        private const string nupkgsFileNamePrefix = "nupkgs-";
+        private const string sympkgsFileName = "sympkgs-all.txt";
+        private const string packagesSubDir = "packages";
+        private const string symPackagesSubDir = "assets/symbols";
+
+        /// <summary>
+        ///     Create the nupkg layout required for the final release.
+        /// </summary>
+        /// <param name="downloadedBuilds">List of downloaded builds</param>
+        /// <param name="outputDirectory">Output directory to create the nupkg layout</param>
+        /// <remarks>
+        ///     Generates the nupkg layout that used by the release pipeline. The layout is as follows:
+        ///     identities\
+        ///         csv files containing package name + version, named with short name of repo
+        ///     nupkgs\
+        ///         repo-shortname\
+        ///             packages\
+        ///                 shipping packages from repo
+        ///     sympkgs\
+        ///         repo-shortname\
+        ///             assets\
+        ///                 symbols\
+        ///                     symbol packages from repo
+        ///     nupkgs-all-just-for-reference.txt - file list of all packages, 
+        ///     nupkgs-aspnet.txt - file list of all packages that aspnetcore owns on nuget.org
+        ///     nupkgs-core.txt - file list of all packages that dotnet core owns on nuget.org
+        ///     sympkgs-all.txt - file list of all symbol packages
+        /// </remarks>
+        private void CreateReleasePackageLayout(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
+        {
+            if (_options.DryRun || !_options.ReleaseLayout)
+            {
+                return;
+            }
+
+            // Identify the subdirectories. Do not need to create these now because
+            // we will create them as they go
+            string nupkgDirectory = Path.Combine(outputDirectory, nupkgDirectoryName);
+            string sympkgsDirectory = Path.Combine(outputDirectory, sympkgsDirectoryName);
+
+            // Universal text file content
+            StringBuilder allNupkgsFileContent = new StringBuilder();
+            StringBuilder sympkgsFileContent = new StringBuilder();
+
+            // Identity Csv contents
+            Dictionary<string, StringBuilder> identitiesFileContents = new Dictionary<string, StringBuilder>();
+
+            // core/wcf/aspnet nupkg lists
+            Dictionary<string, StringBuilder> nupkgFileContents = new Dictionary<string, StringBuilder>();
+
+            // Walk each input repo build and start filling out the directories
+            foreach (var downloadedBuild in downloadedBuilds)
+            {
+                // Start by determining whether we need to look at this build at all.
+                string repository = downloadedBuild.Build.GitHubRepository ?? downloadedBuild.Build.AzureDevOpsRepository;
+
+                if (!repositories.TryGetValue(repository, out (string, string) categoryAndShortName))
+                {
+                    continue;
+                }
+
+                (string category, string shortName) = categoryAndShortName;
+
+                // This goes into the release layout. Walk the downloaded assets
+                foreach (DownloadedAsset asset in downloadedBuild.DownloadedAssets)
+                {
+                    // If the asset is a shipping package, it goes into nupkgDirectory\<short name>\packages    
+                    if (!asset.Asset.NonShipping && asset.LocationType == LocationType.NugetFeed)
+                    {
+                        // Create the target directory
+                        string targetFile = Path.Combine(nupkgDirectory, shortName,
+                            packagesSubDir, Path.GetFileName(asset.TargetLocation));
+                        Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+
+                        File.Copy(asset.TargetLocation, targetFile, true);
+
+                        // Add the relative path to the various spots. Choose paths are relative to the root output dir
+                        string relativePackagePath = Path.GetRelativePath(outputDirectory, targetFile);
+                        allNupkgsFileContent.AppendLine(relativePackagePath);
+
+                        StringBuilder categoryStringBuilder = nupkgFileContents.GetOrAddValue(category,
+                            () => new StringBuilder());
+                        categoryStringBuilder.AppendLine(relativePackagePath);
+
+                        // Do the same for the identity package. It gets a "name,version" (no file extension).
+                        // For the identities, the categories are by repo short name
+                        StringBuilder identityStringBuilder = identitiesFileContents.GetOrAddValue(shortName,
+                            () => new StringBuilder());
+                        identityStringBuilder.AppendLine($"{asset.Asset.Name},{asset.Asset.Version}");
+                    }
+                    // Otherwise, if the asset is a symbol package (ends in .symbols.nupkg), then copy it to symbols
+                    else if (asset.Asset.Name.EndsWith(".symbols.nupkg"))
+                    {
+                        if (doNotListSymbolPackageFilenamePrefixes.Any(doNotListPrefix => 
+                            Path.GetFileName(asset.TargetLocation).StartsWith(doNotListPrefix)))
+                        {
+                            continue;
+                        }
+
+                        // Create the target directory
+                        string targetFile = Path.Combine(sympkgsDirectory, shortName,
+                            symPackagesSubDir, Path.GetFileName(asset.TargetLocation));
+                        Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
+
+                        File.Copy(asset.TargetLocation, targetFile, true);
+
+                        // Add the relative path to the sympkg list. Choose paths are relative to the root output dir
+                        string relativeSymPackagePath = Path.GetRelativePath(outputDirectory, targetFile);
+                        sympkgsFileContent.AppendLine(relativeSymPackagePath);
+                    }
+                }
+            }
+
+            Directory.CreateDirectory(outputDirectory);
+            
+            File.WriteAllText(Path.Combine(outputDirectory, allNupkgsFileName), allNupkgsFileContent.ToString());
+            File.WriteAllText(Path.Combine(outputDirectory, sympkgsFileName), sympkgsFileContent.ToString());
+                
+            // Write out for each category
+            foreach (KeyValuePair<string, StringBuilder> nupkgsByCategory in nupkgFileContents)
+            {
+                File.WriteAllText(Path.Combine(outputDirectory, $"{nupkgsFileNamePrefix}{nupkgsByCategory.Key}.txt"),
+                    nupkgsByCategory.Value.ToString());
+            }
+
+            // Write out the identities
+            string identitiesDirectory = Path.Combine(outputDirectory, identitiesDirectoryName);
+            Directory.CreateDirectory(identitiesDirectory);
+            foreach (KeyValuePair<string, StringBuilder> identityByCategory in identitiesFileContents)
+            {
+                File.WriteAllText(Path.Combine(identitiesDirectory, $"{identityByCategory.Key}.csv"),
+                    identityByCategory.Value.ToString());
+            }
+        }
+
         /// <summary>
         ///     Write the release json.  Only applicable for separated (ReleaseLayout) drops
         /// </summary>
@@ -378,7 +595,7 @@ namespace Microsoft.DotNet.Darc.Operations
         ///     Write out a manifest of the items in the drop
         /// </summary>
         /// <returns></returns>
-        private async Task WriteDropManifest(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
+        private async Task WriteDropManifestAsync(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
         {
             if (_options.DryRun)
             {
@@ -386,11 +603,32 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             Directory.CreateDirectory(outputDirectory);
-            string outputPath = Path.Combine(outputDirectory, "manifest.txt");
+            switch(_options.OutputFormat)
+            {
+                case DarcOutputType.yaml:
+                    await WriteYamlDropManifestAsync(downloadedBuilds, Path.Combine(outputDirectory, "manifest.yaml"));
+                    break;
+                case DarcOutputType.json:
+                    await WriteJsonDropManifestAsync(downloadedBuilds, Path.Combine(outputDirectory, "manifest.json"));
+                    break;
+                default:
+                    throw new NotImplementedException($"Darc output type {_options.OutputFormat} not supported in manifest generation");
+            }
+        }
+
+        /// <summary>
+        ///     Write the manifest in yaml format
+        /// </summary>
+        /// <param name="downloadedBuilds">List of downloaded builds in the manifest</param>
+        /// <param name="outputPath">Output file path of the manifest</param>
+        /// <returns>Async task</returns>
+        private async Task WriteYamlDropManifestAsync(List<DownloadedBuild> downloadedBuilds, string outputPath)
+        {
             if (_options.Overwrite)
             {
                 File.Delete(outputPath);
             }
+
             using (StreamWriter writer = new StreamWriter(outputPath))
             {
                 await writer.WriteLineAsync($"Builds:");
@@ -414,6 +652,49 @@ namespace Microsoft.DotNet.Darc.Operations
                     }
                 }
             }
+        }
+
+        /// <summary>
+        ///     Write the manifest in json format
+        /// </summary>
+        /// <param name="downloadedBuilds">List of downloaded builds in the manifest</param>
+        /// <param name="outputPath">Output file path of the manifest</param>
+        /// <returns>Async task</returns>
+        private async Task WriteJsonDropManifestAsync(List<DownloadedBuild> downloadedBuilds, string outputPath)
+        {
+            // Construct an ad-hoc object with the necessary fields and use the json
+            // serializer to write it to disk
+
+            var manifestJson = new
+            {
+                builds = downloadedBuilds.Select(build =>
+                    new
+                    {
+                        repo = build.Build.GitHubRepository ?? build.Build.AzureDevOpsRepository,
+                        commit = build.Build.Commit,
+                        branch = build.Build.AzureDevOpsBranch,
+                        produced = build.Build.DateProduced,
+                        buildNumber = build.Build.AzureDevOpsBuildNumber,
+                        barBuildId = build.Build.Id,
+                        assets = build.DownloadedAssets.Select(asset =>
+                        new
+                        {
+                            name = asset.Asset.Name,
+                            version = asset.Asset.Version,
+                            nonShipping = asset.Asset.NonShipping,
+                            source = asset.SourceLocation,
+                            target = asset.TargetLocation,
+                            barAssetId = asset.Asset.Id
+                        })
+                    })
+            };
+
+            if (_options.Overwrite)
+            {
+                File.Delete(outputPath);
+            }
+
+            await File.WriteAllTextAsync(outputPath, JsonConvert.SerializeObject(manifestJson, Formatting.Indented));
         }
 
         /// <summary>
@@ -451,33 +732,52 @@ namespace Microsoft.DotNet.Darc.Operations
         /// </remarks>
         private async Task<InputBuilds> GatherBuildsToDownloadAsync()
         {
-            Console.WriteLine("Determining what builds to download...");
-
-            // Gather the root build 
-            Build rootBuild = await GetRootBuildAsync();
-            if (rootBuild == null)
+            if (!ValidateRootBuildsOptions())
             {
                 return new InputBuilds { Successful = false };
             }
-            Console.WriteLine($"Root build - Build number {rootBuild.AzureDevOpsBuildNumber} of {rootBuild.AzureDevOpsRepository} @ {rootBuild.Commit}");
+
+            Console.WriteLine("Determining what builds to download...");
+
+            // Gather the root build 
+            IEnumerable<Build> rootBuilds = await GetRootBuildsAsync();
+            if (rootBuilds == null)
+            {
+                return new InputBuilds { Successful = false };
+            }
+
+            foreach (Build rootBuild in rootBuilds)
+            {
+                Console.WriteLine($"Root build - Build number {rootBuild.AzureDevOpsBuildNumber} of {rootBuild.AzureDevOpsRepository} @ {rootBuild.Commit}");
+            }
 
             // If transitive (full tree) was not selected, we're done
             if (!_options.Transitive)
             {
+                var filteredNonTransitiveBuilds = FilterReleasedBuilds(rootBuilds);
+
+                if (!filteredNonTransitiveBuilds.Any())
+                {
+                    Console.WriteLine("All builds were already released.");
+                    return new InputBuilds()
+                    {
+                        Successful = false
+                    };
+                }
+
                 return new InputBuilds()
                 {
                     Successful = true,
-                    Builds = FilterReleasedBuilds(new List<Build>() { rootBuild })
+                    Builds = filteredNonTransitiveBuilds
                 };
             }
 
             HashSet<Build> builds = new HashSet<Build>(new BuildComparer());
-            builds.Add(rootBuild);
+            foreach (Build rootBuild in rootBuilds)
+            {
+                builds.Add(rootBuild);
+            }
             IRemoteFactory remoteFactory = new RemoteFactory(_options);
-            // Grab dependencies
-            IRemote rootBuildRemote = await remoteFactory.GetRemoteAsync(rootBuild.AzureDevOpsRepository, Logger);
-
-            Console.WriteLine($"Getting dependencies of root build...");
 
             // Flatten for convencience and remove dependencies of types that we don't want if need be.
             if (!_options.IncludeToolset)
@@ -492,56 +792,69 @@ namespace Microsoft.DotNet.Darc.Operations
                 NodeDiff = NodeDiff.None
             };
 
-            Console.WriteLine("Building graph of all dependencies under root build...");
-            DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
-                remoteFactory,
-                rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository,
-                rootBuild.Commit,
-                buildOptions,
-                Logger);
-
             Dictionary<DependencyDetail, Build> dependencyCache =
                 new Dictionary<DependencyDetail, Build>(new DependencyDetailComparer());
 
-            // Cache root build's assets
-            foreach (Asset buildAsset in rootBuild.Assets)
+            Console.WriteLine("Building graph of all dependencies under root builds...");
+            foreach (Build rootBuild in rootBuilds)
             {
-                dependencyCache.Add(
-                    new DependencyDetail
+                Console.WriteLine($"Building graph for {rootBuild.AzureDevOpsBuildNumber} of {rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository} @ {rootBuild.Commit}");
+
+                DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
+                    remoteFactory,
+                    rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository,
+                    rootBuild.Commit,
+                    buildOptions,
+                    Logger);
+
+                // Cache this root build's assets
+                foreach (Asset buildAsset in rootBuild.Assets)
+                {
+                    dependencyCache.Add(
+                        new DependencyDetail
+                        {
+                            Name = buildAsset.Name,
+                            Version = buildAsset.Version,
+                            Commit = rootBuild.Commit,
+                        },
+                        rootBuild);
+                }
+
+                Console.WriteLine($"There are {graph.UniqueDependencies.Count()} unique dependencies in the graph.");
+                Console.WriteLine("Full set of builds in graph:");
+                foreach (var build in graph.ContributingBuilds)
+                {
+                    Console.WriteLine($"  Build - {build.AzureDevOpsBuildNumber} of {build.GitHubRepository ?? build.AzureDevOpsRepository} @ {build.Commit}");
+                    builds.Add(build);
+                }
+
+                var nodesWithNoContributingBuilds = graph.Nodes.Where(node => !node.ContributingBuilds.Any()).ToList();
+                if (nodesWithNoContributingBuilds.Any())
+                {
+                    Console.WriteLine("Dependency graph nodes missing builds:");
+                    foreach (var node in nodesWithNoContributingBuilds)
                     {
-                        Name = buildAsset.Name,
-                        Version = buildAsset.Version,
-                        Commit = rootBuild.Commit,
-                    },
-                    rootBuild);
+                        Console.WriteLine($"  {node.Repository}@{node.Commit}");
+                    }
+                    if (!_options.ContinueOnError)
+                    {
+                        return new InputBuilds()
+                        {
+                            Successful = false
+                        };
+                    }
+                }
             }
 
-            Console.WriteLine($"There are {graph.UniqueDependencies.Count()} unique dependencies in the graph.");
-            Console.WriteLine("Full set of builds in graph:");
-            foreach (var build in graph.ContributingBuilds)
-            {
-                Console.WriteLine($"  Build - {build.AzureDevOpsBuildNumber} of {build.GitHubRepository ?? build.AzureDevOpsRepository} @ {build.Commit}");
-                builds.Add(build);
-            }
+            IEnumerable<Build> filteredBuilds = FilterReleasedBuilds(builds);
 
-            var filteredBuilds = FilterReleasedBuilds(builds);
-
-            var nodesWithNoContributingBuilds = graph.Nodes.Where(node => !node.ContributingBuilds.Any());
-            if (nodesWithNoContributingBuilds.Any())
+            if (!filteredBuilds.Any())
             {
-                Console.WriteLine("Dependency graph nodes missing builds:");
-                foreach (var node in nodesWithNoContributingBuilds)
+                Console.WriteLine("All builds were already released.");
+                return new InputBuilds()
                 {
-                    Console.WriteLine($"  {node.Repository}@{node.Commit}");
-                }
-                if (!_options.ContinueOnError)
-                {
-                    return new InputBuilds()
-                    {
-                        Successful = false,
-                        Builds = filteredBuilds
-                    };
-                }
+                    Successful = false
+                };
             }
 
             return new InputBuilds()
@@ -656,7 +969,7 @@ namespace Microsoft.DotNet.Darc.Operations
             // If separated drop, generate a manifest per build
             if (_options.ReleaseLayout)
             {
-                await WriteDropManifest(new List<DownloadedBuild>() { newBuild }, outputDirectory);
+                await WriteDropManifestAsync(new List<DownloadedBuild>() { newBuild }, outputDirectory);
             }
 
             return newBuild;
@@ -924,13 +1237,14 @@ namespace Microsoft.DotNet.Darc.Operations
                         Successful = true,
                         Asset = asset,
                         SourceLocation = finalUri,
-                        TargetLocation = fullTargetPath
+                        TargetLocation = fullTargetPath,
+                        LocationType = assetLocation.Type
                     };
                 }
             }
             else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out string feedAccount, out string feedVisibility, out string feedName))
             {
-                DownloadedAsset result =  await DownloadAssetFromAzureDevOpsFeedAsync(client, asset, feedAccount, feedVisibility, feedName, fullTargetPath, errors, downloadOutput);
+                DownloadedAsset result =  await DownloadAssetFromAzureDevOpsFeedAsync(client, asset, assetLocation, feedAccount, feedVisibility, feedName, fullTargetPath, errors, downloadOutput);
                 if (result != null)
                 {
                     return result;
@@ -958,6 +1272,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
         private async Task<DownloadedAsset> DownloadAssetFromAzureDevOpsFeedAsync(HttpClient client,
                                                                                 Asset asset,
+                                                                                AssetLocation assetLocation,
                                                                                 string feedAccount,
                                                                                 string feedVisibility,
                                                                                 string feedName,
@@ -1003,7 +1318,8 @@ namespace Microsoft.DotNet.Darc.Operations
                     Successful = true,
                     Asset = asset,
                     SourceLocation = packageContentUrl,
-                    TargetLocation = fullTargetPath
+                    TargetLocation = fullTargetPath,
+                    LocationType = assetLocation.Type
                 };
             }
             else
@@ -1094,8 +1410,10 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 Successful = false,
                 Asset = asset,
-                TargetLocation = fullTargetPath
+                TargetLocation = fullTargetPath,
+                LocationType = assetLocation.Type
             };
+
             // If the location is a blob storage account ending in index.json, as would be expected
             // if PushToBlobFeed was used, strip off the index.json and append the asset name. If that doesn't work,
             // prepend "assets/" to the asset name and try that.
@@ -1180,6 +1498,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 DownloadedAsset result = await DownloadAssetFromAzureDevOpsFeedAsync(client,
                     mangledAsset,
+                    assetLocation,
                     feedAccount,
                     feedVisibility,
                     feedName,
@@ -1192,6 +1511,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     return new DownloadedAsset
                     {
                         Asset = asset,
+                        LocationType = assetLocation.Type,
                         SourceLocation = result.SourceLocation,
                         Successful = result.Successful,
                         TargetLocation = fullTargetPath

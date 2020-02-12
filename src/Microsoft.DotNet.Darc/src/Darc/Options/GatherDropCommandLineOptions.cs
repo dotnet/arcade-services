@@ -11,8 +11,8 @@ namespace Microsoft.DotNet.Darc.Options
     [Verb("gather-drop", HelpText = "Gather a drop of the outputs for a build")]
     internal class GatherDropCommandLineOptions : CommandLineOptions
     {
-        [Option('i', "id", HelpText = "BAR ID of build.")]
-        public int RootBuildId { get; set; }
+        [Option('i', "id", Separator = ',', HelpText = "BAR ID(s) of the root build(s) that we want to gather. comma separated.")]
+        public IEnumerable<int> RootBuildIds { get; set; }
 
         [Option('r', "repo", HelpText = "Gather a build drop for a build of this repo. Requires --commit or --channel.")]
         public string RepoUri { get; set; }

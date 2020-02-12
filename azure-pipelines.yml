@@ -104,7 +104,7 @@ stages:
 
         - task: NodeTool@0
           inputs:
-            versionSpec: '>=11'
+            versionSpec: 12.x
 
         - task: NuGetCommand@2
           displayName: Restore Packages
@@ -234,6 +234,9 @@ stages:
               PathtoPublish: $(Build.ArtifactStagingDirectory)\tests\scenarios
               ArtifactName: ScenarioTests
               ArtifactType: Container
+
+          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\netcoreapp2.1\publish
+            artifact: Maestro.ScenarioTests
 
           # Reenable tagging when stable package versions can be generated.
           # https://github.com/dotnet/arcade-services/issues/59

@@ -7,8 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Core;
-
-
+using Microsoft.DotNet.Maestro.Client.Models;
 
 namespace Microsoft.DotNet.Maestro.Client
 {
@@ -41,7 +40,6 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-
             if (days == default(int))
             {
                 throw new ArgumentNullException(nameof(days));
@@ -77,7 +75,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 {
                     if (_res.Status < 200 || _res.Status >= 300)
                     {
-                        await OnGetBuildTimesFailed(_req, _res).ConfigureAwait(false);
+                        return new Models.BuildTime(id, 0, 0, 0);
                     }
 
                     if (_res.ContentStream == null)
@@ -106,11 +104,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 }
             }
 
-            var ex = new RestApiException<Models.ApiError>(
+            var ex = new RestApiException<ApiError>(
                 req,
                 res,
                 content,
-                Client.Deserialize<Models.ApiError>(content)
+                Client.Deserialize<ApiError>(content)
                 );
             HandleFailedGetBuildTimesRequest(ex);
             HandleFailedRequest(ex);

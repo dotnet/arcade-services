@@ -170,8 +170,6 @@ namespace Maestro.Data.Migrations
 
                     b.Property<string>("GitHubRepository");
 
-                    b.Property<bool>("PublishUsingPipelines");
-
                     b.Property<bool>("Released");
 
                     b.HasKey("Id");

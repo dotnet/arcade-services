@@ -1007,6 +1007,238 @@ export class BuildRef {
     }
 }
 
+export class FlowGraph {
+    public constructor(
+        {
+            nodes,
+            edges,
+        }: {
+            nodes: FlowRef[],
+            edges: FlowEdge[],
+        }
+    ) {
+        this._nodes = nodes;
+        this._edges = edges;
+    }
+
+    private _nodes: FlowRef[];
+    private _edges: FlowEdge[];
+
+    public get nodes(): FlowRef[] {
+        return this._nodes;
+    }
+
+    public get edges(): FlowEdge[] {
+        return this._edges;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._nodes !== undefined && this._edges !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): FlowGraph {
+        let result = new FlowGraph({
+            nodes: value["flowRefs"] == null ? undefined : value["flowRefs"].map((n: any) => FlowRef.fromRawObject(n)) as any,
+            edges: value["flowEdges"] == null ? undefined : value["flowEdges"].map((e: any) => FlowEdge.fromRawObject(e)) as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: FlowGraph): any {
+        let result: any = {};
+        result["flowRef"] = value._nodes.map((n: any) => FlowRef.toRawObject(n));
+        result["flowEdge"] = value._edges.map((e: any) => FlowEdge.toRawObject(e));
+        return result;
+    }
+}
+
+export class FlowRef {
+    public constructor(
+        {
+            id,
+            repository,
+            branch,
+            officialBuildTime,
+            prBuildTime,
+            bestCaseTime,
+            worstCaseTime,
+            onLongestBuildPath,
+            goalTime,
+        }: {
+            id: string,
+            repository: string,
+            branch: string,
+            officialBuildTime: number,
+            prBuildTime: number,
+            bestCaseTime: number,
+            worstCaseTime: number,
+            onLongestBuildPath: boolean,
+            goalTime: number,
+        }
+    ) {
+        this._id = id;
+        this._repository = repository;
+        this._branch = branch;
+        this._officialBuildTime = officialBuildTime;
+        this._prBuildTime = prBuildTime;
+        this._bestCaseTime = bestCaseTime;
+        this._worstCaseTime = worstCaseTime;
+        this._onLongestBuildPath = onLongestBuildPath;
+        this._goalTime = goalTime;
+    }
+
+    private _id: string;
+
+    public get id(): string {
+        return this._id;
+    }
+
+    private _repository: string;
+
+    public get repository(): string {
+        return this._repository;
+    }
+
+    private _branch: string;
+
+    public get branch(): string {
+        return this._branch;
+    }
+
+    private _officialBuildTime: number;
+
+    public get officialBuildTime(): number {
+        return this._officialBuildTime;
+    }
+
+    private _prBuildTime: number;
+
+    public get prBuildTime(): number {
+        return this._prBuildTime;
+    }
+
+    private _bestCaseTime: number;
+
+    public get bestCaseTime(): number {
+        return this._bestCaseTime;
+    }
+
+    private _worstCaseTime: number;
+
+    public get worstCaseTime(): number {
+        return this._worstCaseTime;
+    }
+
+    private _onLongestBuildPath: boolean;
+
+    public get onLongestBuildPath(): boolean {
+        return this._onLongestBuildPath;
+    }
+
+    public _goalTime: number;
+
+    public get goalTime(): number {
+        return this._goalTime;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._id !== undefined &&
+            this._officialBuildTime !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): FlowRef {
+        let result = new FlowRef({
+            id: value["id"] == null ? undefined : value["id"] as any,
+            repository: value["repository"] == null ? undefined : value["repository"] as any,
+            branch: value["branch"] == null ? undefined : value["branch"] as any,
+            officialBuildTime: value["officialBuildTime"] == null ? undefined : value["officialBuildTime"] as any,
+            prBuildTime: value["prBuildTime"] == null ? undefined : value["prBuildTime"] as any,
+            bestCaseTime: value["bestCasePathTime"] == null ? undefined : value["bestCasePathTime"] as any,
+            worstCaseTime: value["worstCasePathTime"] == null ? undefined : value["worstCasePathTime"] as any,
+            onLongestBuildPath: value["onLongestBuildPath"] == null ? undefined : value["onLongestBuildPath"] as any,
+            goalTime: value["goalTimeInMinutes"] == null ? undefined : value["goalTimeInMinutes"] as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: FlowRef): any {
+        let result: any = {};
+        result["id"] = value._id;
+        result["repository"] = value._repository;
+        result["branch"] = value._branch;
+        result["officialBuildTime"] = value._officialBuildTime;
+        result["prBuildTime"] = value._prBuildTime;
+        result["bestCasePathTime"] = value._bestCaseTime;
+        result["worstCasePathTime"] = value._worstCaseTime;
+        result["onLongestBuildPath"] = value._onLongestBuildPath;
+        result["goalTimeInMinutes"] = value._goalTime;
+        return result;
+    }
+}
+
+export class FlowEdge {
+    public constructor(
+        {
+            to,
+            from,
+            onLongestBuildPath,
+        }: {
+            to: string,
+            from: string,
+            onLongestBuildPath: boolean,
+        }
+    ) {
+        this._toId = to;
+        this._fromId = from;
+        this._onLongestBuildPath = onLongestBuildPath;
+    }
+
+    private _toId: string;
+
+    public get toId(): string {
+        return this._toId;
+    }
+
+    private _fromId: string;
+
+    public get fromId(): string {
+        return this._fromId;
+    }
+
+    private _onLongestBuildPath: boolean;
+
+    public get onLongestBuildPath(): boolean {
+        return this._onLongestBuildPath;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._toId !== undefined &&
+            this._fromId !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): FlowEdge {
+        let result = new FlowEdge({
+            to: value["toId"] == null ? undefined : value["toId"] as any,
+            from: value["fromId"] == null ? undefined : value["fromId"] as any,
+            onLongestBuildPath: value["onLongestBuildPath"] == null ? undefined : value["onLongestBuildPath"] as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: FlowEdge): any {
+        let result: any = {};
+        result["toId"] = value._toId;
+        result["fromId"] = value._fromId;
+        return result;
+    }
+}
+
 export class Channel {
     public constructor(
         {

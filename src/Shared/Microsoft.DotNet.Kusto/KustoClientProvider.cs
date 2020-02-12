@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Kusto.Data.Common;
+using Kusto.Data.Exceptions;
 using Kusto.Data.Net.Client;
 using Microsoft.Extensions.Options;
 using System;
@@ -64,10 +65,17 @@ namespace Microsoft.DotNet.Kusto
                 text = $"declare query_parameters ({parameterList});{query.Text}";
             }
 
-            return await client.ExecuteQueryAsync(
-                DatabaseName,
-                text,
-                properties);
+            try
+            {
+                return await client.ExecuteQueryAsync(
+                    DatabaseName,
+                    text,
+                    properties);
+            }
+            catch (SemanticException)
+            {
+                return null;
+            }
         }
     }
 }

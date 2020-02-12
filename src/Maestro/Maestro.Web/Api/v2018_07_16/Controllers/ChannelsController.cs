@@ -6,7 +6,10 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Kusto;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -16,6 +19,9 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Build = Maestro.Data.Models.Build;
 using Channel = Maestro.Web.Api.v2018_07_16.Models.Channel;
+using FlowGraph = Maestro.Web.Api.v2018_07_16.Models.FlowGraph;
+using FlowRef = Maestro.Web.Api.v2018_07_16.Models.FlowRef;
+using FlowEdge = Maestro.Web.Api.v2018_07_16.Models.FlowEdge;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
 {
@@ -27,11 +33,18 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
     public class ChannelsController : Controller
     {
         private readonly BuildAssetRegistryContext _context;
+        private readonly IRemoteFactory _remoteFactory;
 
-        public ChannelsController(BuildAssetRegistryContext context)
+        public ChannelsController(BuildAssetRegistryContext context,
+                                  IRemoteFactory factory,
+                                  ILogger<ChannelsController> logger)
         {
             _context = context;
+            _remoteFactory = factory;
+            Logger = logger;
         }
+
+        public ILogger<ChannelsController> Logger { get; }
 
         /// <summary>
         ///   Gets a list of all <see cref="Channel"/>s that match the given classification.
@@ -293,6 +306,93 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             await _context.SaveChangesAsync();
 
             return StatusCode((int)HttpStatusCode.OK);
+        }
+
+        private const int EngLatestChannelId = 2;
+        private const int Eng3ChannelId = 344;
+
+        /// <summary>
+        ///   Get the dependency flow graph for the specified <see cref="Channel"/>
+        /// </summary>
+        /// <param name="channelId">The id of the <see cref="Channel"/></param>
+        /// <param name="includeDisabledSubscriptions">Include disabled subscriptions</param>
+        /// <param name="includedFrequencies">Frequencies to include</param>
+        /// <param name="includeBuildTimes">If we should create the flow graph with build times</param>
+        /// <param name="days">Number of days over which to summarize build times</param>
+        [HttpGet("{channelId}/graph")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(FlowGraph), Description = "The dependency flow graph for a channel")]
+        [ValidateModelState]
+        public async Task<IActionResult> GetFlowGraphAsync(
+            int channelId = 0, 
+            bool includeDisabledSubscriptions = false,
+#pragma warning disable API0001 // Versioned API methods should not expose non-versioned types.
+            IEnumerable<string> includedFrequencies = default,
+#pragma warning restore API0001 // Versioned API methods should not expose non-versioned types.
+            bool includeBuildTimes = false,
+            int days = 7)
+        {
+            var barOnlyRemote = await _remoteFactory.GetBarOnlyRemoteAsync(Logger);
+
+            Microsoft.DotNet.Maestro.Client.Models.Channel engLatestChannel = await barOnlyRemote.GetChannelAsync(EngLatestChannelId);
+            Microsoft.DotNet.Maestro.Client.Models.Channel eng3Channel = await barOnlyRemote.GetChannelAsync(Eng3ChannelId);
+
+            List<Microsoft.DotNet.Maestro.Client.Models.DefaultChannel> defaultChannels = (await barOnlyRemote.GetDefaultChannelsAsync()).ToList();
+
+            if (engLatestChannel != null)
+            {
+                defaultChannels.Add(
+                    new Microsoft.DotNet.Maestro.Client.Models.DefaultChannel(0, "https://github.com/dotnet/arcade", true)
+                    {
+                        Branch = "master",
+                        Channel = engLatestChannel
+                    }
+                );
+            }
+
+            if (eng3Channel != null)
+            {
+                defaultChannels.Add(
+                    new Microsoft.DotNet.Maestro.Client.Models.DefaultChannel(0, "https://github.com/dotnet/arcade", true)
+                    {
+                        Branch = "release/3.x",
+                        Channel = eng3Channel
+                    }
+                );
+            }
+
+            List<Microsoft.DotNet.Maestro.Client.Models.Subscription> subscriptions = (await barOnlyRemote.GetSubscriptionsAsync()).ToList();
+
+            // Build, then prune out what we don't want to see if the user specified
+            // channels.
+            DependencyFlowGraph flowGraph = await DependencyFlowGraph.BuildAsync(defaultChannels, subscriptions, barOnlyRemote, days);
+
+           IEnumerable<string> frequencies = includedFrequencies == default || includedFrequencies.Count() == 0 ? 
+                new string[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", } : 
+                includedFrequencies;
+
+            Microsoft.DotNet.Maestro.Client.Models.Channel targetChannel = null;
+
+            if (channelId != 0)
+            {
+                targetChannel = await barOnlyRemote.GetChannelAsync((int) channelId);
+            }
+
+            if (targetChannel != null)
+            {
+                flowGraph.PruneGraph(
+                    node => DependencyFlowGraph.IsInterestingNode(targetChannel.Name, node), 
+                    edge => DependencyFlowGraph.IsInterestingEdge(edge, includeDisabledSubscriptions, frequencies));
+            }
+
+            if (includeBuildTimes)
+            {
+                flowGraph.MarkBackEdges();
+                flowGraph.CalculateLongestBuildPaths();
+                flowGraph.MarkLongestBuildPath();
+            }
+
+            // Convert flow graph to correct return type
+            return Ok(FlowGraph.Create(flowGraph));
         }
     }
 }

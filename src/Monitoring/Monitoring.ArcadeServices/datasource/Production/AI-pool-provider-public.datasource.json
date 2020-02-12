@@ -11,7 +11,7 @@
   "withCredentials": false,
   "isDefault": false,
   "jsonData": {
-    "appInsightsAppId": "394ad143-e674-45c8-9a5b-0407069ff766",
+    "appInsightsAppId": "41be84c2-f30a-45b4-9022-0bf16f859db3",
     "azureLogAnalyticsSameAs": false,
     "cloudName": "azuremonitor"
   },
