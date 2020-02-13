@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Maestro.Data;
-using Maestro.Web.Api.v2019_01_16.Models;
+using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
@@ -16,14 +16,14 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
-namespace Maestro.Web.Api.v2019_01_16.Controllers
+namespace Maestro.Web.Api.v2020_02_20.Controllers
 {
     /// <summary>
     ///   Exposes methods to Read/Query/Create <see cref="Build"/>s.
     /// </summary>
     [Route("builds")]
-    [ApiVersion("2019-01-16")]
-    public class BuildsController : v2018_07_16.Controllers.BuildsController
+    [ApiVersion("2020-02-20")]
+    public class BuildsController : v2019_01_16.Controllers.BuildsController
     {
         public BuildsController(BuildAssetRegistryContext context)
             : base(context)
@@ -93,7 +93,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         [HttpGet("{id}/graph")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(BuildGraph), Description = "The tree of build dependencies")]
         [ValidateModelState]
-        public virtual async Task<IActionResult> GetBuildGraph(int id)
+        public override async Task<IActionResult> GetBuildGraph(int id)
         {
             Data.Models.Build build = await _context.Builds.FirstOrDefaultAsync(b => b.Id == id);
 
@@ -146,6 +146,12 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             return Ok(new Models.Build(build));
         }
 
+        [ApiRemoved]
+        public sealed override Task<IActionResult> Update(int buildId, [FromBody, Required] v2019_01_16.Models.BuildUpdate buildUpdate)
+        {
+            throw new NotImplementedException();
+        }
+
         [HttpPatch("{buildId}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "Update a build with new information.")]
         [ValidateModelState]
@@ -175,7 +181,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         }
 
         [ApiRemoved]
-        public sealed override Task<IActionResult> Create(v2018_07_16.Models.BuildData build)
+        public sealed override Task<IActionResult> Create(v2019_01_16.Models.BuildData build)
         {
             throw new NotImplementedException();
         }
@@ -187,7 +193,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         [HttpPost]
         [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Build), Description = "The created build")]
         [ValidateModelState]
-        public virtual async Task<IActionResult> Create([FromBody, Required] BuildData build)
+        public async Task<IActionResult> Create([FromBody, Required] BuildData build)
         {
             Data.Models.Build buildModel = build.ToDb();
             buildModel.DateProduced = DateTimeOffset.UtcNow;

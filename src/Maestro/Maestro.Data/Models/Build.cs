@@ -147,7 +147,14 @@ namespace Maestro.Data.Models
         /// If true, the build has been released to the public. This can be used to make decisions on whether certain
         /// builds should be included in future release drops.
         /// </summary>
-        public bool Released { get; set; } = false;
+        public bool Released { get; set; }
+
+        /// <summary>
+        /// If true, the build was marked with `$(DotNetFinalVersionKind) == 'release'`. Which means that it 
+        /// produced assets with only (Major).(Minor).(Patch) version.
+        /// More info is available here: https://github.com/dotnet/arcade/blob/master/Documentation/CorePackages/Versioning.md#build-kind
+        /// </summary>
+        public bool Stable { get; set; }
 
         [NotMapped]
         public int Staleness { get; set; }

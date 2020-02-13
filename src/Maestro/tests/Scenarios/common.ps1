@@ -10,7 +10,7 @@
 [string]$azdoProject = if (-not $azdoProject) { "internal" } else { $azdoProject }
 [string]$azdoApiVersion = if (-not $azdoApiVersion) { "5.0-preview.1" } else { $azdoApiVersion }
 [string]$darcPackageSource = if (-not $darcPackageSource) {""} else { $darcPackageSource }
-[string]$barApiVersion = "2019-01-16"
+[string]$barApiVersion = "2020-02-20"
 $global:gitHubPRsToClose = @()
 $global:githubBranchesToDelete = @()
 $global:azdoPRsToClose = @()
