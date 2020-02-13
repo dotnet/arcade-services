@@ -1,9 +1,9 @@
 <div class="d-flex flex-column" style="height: 100%;">
-  <ng-container *stateful="let channel from channel$">
-    <h5 class="card-title">
+  <h5 class="card-title">
+    <ng-container *stateful="let channel from channel$">
       {{channel.name}}
-    </h5>
-  </ng-container>
+    </ng-container>
+  </h5>
   <div class="container-fluid" style="height: 100%;">
     <ng-container *stateful="let graph from graph$">
       <mc-channel-graph [graph]="graph"></mc-channel-graph>
