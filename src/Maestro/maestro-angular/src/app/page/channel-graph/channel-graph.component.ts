@@ -87,6 +87,8 @@ export class ChannelGraphComponent implements AfterContentInit {
 
   ngAfterContentInit() {
     var g = new graphlib.Graph().setGraph({
+      marginy: 0,
+      marginx: 0,
       ranker: 'tight-tree'
     });
 
@@ -148,7 +150,9 @@ export class ChannelGraphComponent implements AfterContentInit {
       .text(function(v:any) { return g.edge(v).description });
   
     var bbox = (svg.node() as SVGGraphicsElement).getBBox();
+    var height = bbox.height < 800 ? 800 : bbox.height;
+    var width = bbox.width < 800 ? 800 : bbox.width;
 
-    svg.attr("viewBox", `0 0 ${bbox.width} ${bbox.height}`);
+    svg.attr("viewBox", `0 0 ${width} ${height}`);
   }
 }
