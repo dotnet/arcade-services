@@ -21,6 +21,14 @@ const routes: Routes = [
   {
     path: ":channelId/graph",
     component: ChannelComponent,
+    data: {
+      title(params: any) {
+        return `Channel ${params.channelId}`;
+      },
+      name(params: any) {
+        return `Channel ${params.channelId}`;
+      }
+    },
   },
   {
     path: ":channelId/:repository",

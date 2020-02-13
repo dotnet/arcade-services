@@ -11,8 +11,10 @@ function getRepositoryShortName(repo:string): string {
 }
 
 function getNodeLabel(node:FlowRef): string {
-  return `${getRepositoryShortName(node.repository)}\n`+
-         `${node.branch}`;
+  // The div makes the styling look better and centers the text
+  // Split the org and the repository on separate lines to make the nodes shorter
+  return `<div style="width:auto; height:auto;">${getRepositoryShortName(node.repository).split('/').join("<br>")}<br>`+
+         `${node.branch}</div>`;
 }
 
 function getNodeTitle(node:FlowRef): string {
@@ -84,12 +86,15 @@ export class ChannelGraphComponent implements AfterContentInit {
   constructor() { }
 
   ngAfterContentInit() {
-    var g = new graphlib.Graph().setGraph({});
+    var g = new graphlib.Graph().setGraph({
+      ranker: 'tight-tree'
+    });
 
     if (this.graph)
     {
       for ( var flowRef of this.graph.nodes ) {
         let nodeProperties:any = { 
+          labelType: "html",
           label: getNodeLabel(flowRef),
           title: getNodeTitle(flowRef),
           description: getNodeDescription(flowRef),
@@ -101,7 +106,7 @@ export class ChannelGraphComponent implements AfterContentInit {
 
         g.setNode(flowRef.id, nodeProperties);
       }
-      
+
       for (var edge of this.graph.edges) {
         let edgeProperties:any = { arrowheadClass: 'arrowhead',
                       description: getEdgeDescription(edge, this.graph)};
@@ -112,9 +117,14 @@ export class ChannelGraphComponent implements AfterContentInit {
         }
         
         g.setEdge(edge.fromId.toString(), edge.toId.toString(), edgeProperties);
-
       }
     }
+
+    // Round the node corners
+    g.nodes().forEach(function(v) {
+      var node = g.node(v);
+      node.rx = node.ry = 5;
+    });
 
     var render_graph = new render();
 

@@ -137,11 +137,16 @@ mc-switch {
 .flowgraph {
   height: 95%;
   width: 95%;
-  
+    
   text {
     display: inline;
     font-weight: lighter;
     letter-spacing: 2px;
+  }
+
+  div {
+    line-height: 110%;
+    font-weight: normal;
   }
   
   .node rect {
