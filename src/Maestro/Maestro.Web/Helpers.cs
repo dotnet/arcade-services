@@ -98,23 +98,6 @@ namespace Maestro.Web
                     context.Response.Headers.Add("Referrer-Policy", "no-referrer-when-downgrade");
                 }
 
-                if (!context.Response.Headers.ContainsKey("Content-Security-Policy"))
-                {
-                    context.Response.Headers.Add(
-                        "Content-Security-Policy",
-                        "default-src 'self';" +
-                        "style-src-elem 'self' 'unsafe-inline';" +
-                        "script-src-elem 'self' 'unsafe-inline';" +
-                        "style-src 'self' 'unsafe-inline';" +
-                        "connect-src 'self' https://dc.services.visualstudio.com;" +
-                        "img-src 'self' data:;" +
-                        "base-uri 'self';" +
-                        "form-action 'self';" +
-                        "frame-ancestors 'self';" +
-                        "object-src 'none';"
-                    );
-                }
-
                 if (!context.Response.Headers.ContainsKey("Cache-Control"))
                 {
                     context.Response.Headers.Add("Cache-Control", "no-cache, no-store, must-revalidate, proxy-revalidate");

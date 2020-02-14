@@ -166,7 +166,7 @@ namespace Maestro.Web
                 options =>
                 {
                     options.CheckConsentNeeded = context => true;
-                    options.MinimumSameSitePolicy = SameSiteMode.Strict;
+                    options.MinimumSameSitePolicy = SameSiteMode.Lax;
 
                     options.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
 
@@ -427,23 +427,6 @@ namespace Maestro.Web
                         if (!ctx.Response.Headers.ContainsKey("Referrer-Policy"))
                         {
                             ctx.Response.Headers.Add("Referrer-Policy", "no-referrer-when-downgrade");
-                        }
-
-                        if (!ctx.Response.Headers.ContainsKey("Content-Security-Policy"))
-                        {
-                            ctx.Response.Headers.Add(
-                                "Content-Security-Policy",
-                                "default-src 'self';" +
-                                "style-src-elem 'self' 'unsafe-inline';" +
-                                "script-src-elem 'self' 'unsafe-inline';" +
-                                "style-src 'self' 'unsafe-inline';" +
-                                "connect-src 'self' https://dc.services.visualstudio.com;" +
-                                "img-src 'self' data:;" +
-                                "base-uri 'self';" +
-                                "form-action 'self';" +
-                                "frame-ancestors 'self';" +
-                                "object-src 'none';"
-                                );
                         }
 
                         if (!ctx.Response.Headers.ContainsKey("Cache-Control"))
