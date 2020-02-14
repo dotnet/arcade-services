@@ -80,15 +80,8 @@ export class MaestroService {
 })
 export class MaestroModule {
     public static defaultOptions: MaestroOptions = {
-    //  baseUrl: "https://maestro-prod.westus2.cloudapp.azure.com/",
-    baseUrl: "localhost",
-      defaultHeaders: {
-        "Access-Control-Allow-Origin": "same",
-        "X-Content-Type-Options": "nosniff",
-        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-        "Pragma": "no-cache",
-        "X-Frame-Options":"sameorigin",
-      }
+    baseUrl: "https://maestro-prod.westus2.cloudapp.azure.com/",
+      defaultHeaders: {},
     };
 
     public static forRoot(options?: Partial<MaestroOptions>) {
