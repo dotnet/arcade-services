@@ -79,10 +79,10 @@ export class MaestroService {
     ],
 })
 export class MaestroModule {
-    public static defaultOptions: MaestroOptions = {
+  public static defaultOptions: MaestroOptions = {
     baseUrl: "https://maestro-prod.westus2.cloudapp.azure.com/",
-      defaultHeaders: {},
-    };
+    defaultHeaders: {},
+};
 
     public static forRoot(options?: Partial<MaestroOptions>) {
         return {
