@@ -431,11 +431,11 @@ namespace Maestro.Web
 
                         if (!ctx.Response.Headers.ContainsKey("Cache-Control"))
                         {
-                            ctx.Response.Headers.Add("Cache-Control", "no-cache, no-store, must-revalidate, proxy-revalidate");
+                            ctx.Response.Headers.Add("Cache-Control", "no-cache, must-revalidate, proxy-revalidate");
                         }
                         else
                         {
-                            ctx.Response.Headers.Append("Cache-Control", ", no-store, must-revalidate, proxy-revalidate");
+                            ctx.Response.Headers.Append("Cache-Control", "no-cache, must-revalidate, proxy-revalidate");
                         }
 
                         if (!ctx.Response.Headers.ContainsKey("Pragma"))
