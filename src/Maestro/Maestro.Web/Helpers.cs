@@ -77,6 +77,7 @@ namespace Maestro.Web
                     }
                 }
 
+
                 context.Response.StatusCode = (int) res.StatusCode;
                 if (res.Content != null)
                 {

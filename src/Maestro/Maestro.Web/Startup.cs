@@ -429,20 +429,6 @@ namespace Maestro.Web
                             ctx.Response.Headers.Add("Referrer-Policy", "no-referrer-when-downgrade");
                         }
 
-                        if (!ctx.Response.Headers.ContainsKey("Cache-Control"))
-                        {
-                            ctx.Response.Headers.Add("Cache-Control", "no-cache, must-revalidate, proxy-revalidate");
-                        }
-                        else
-                        {
-                            ctx.Response.Headers.Append("Cache-Control", "no-cache, must-revalidate, proxy-revalidate");
-                        }
-
-                        if (!ctx.Response.Headers.ContainsKey("Pragma"))
-                        {
-                            ctx.Response.Headers.Add("Pragma", "no-cache");
-                        }
-
                         return Task.CompletedTask;
                     });
 
