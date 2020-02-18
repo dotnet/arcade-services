@@ -11,7 +11,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
