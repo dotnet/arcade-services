@@ -18,6 +18,7 @@ export class ChannelComponent implements OnInit {
   constructor(private route: ActivatedRoute, private channelService: ChannelService, private maestroService: MaestroService) { }
 
   public graph$!: Observable<StatefulResult<FlowGraph>>;
+  public channel$?: Observable<StatefulResult<Channel>>;
 
   ngOnInit() {
     const channelId$ = this.route.paramMap.pipe(
@@ -34,6 +35,14 @@ export class ChannelComponent implements OnInit {
         console.log("Params: ", v);
       })
     );
+
+    this.channel$ = channelId$.pipe(
+      statefulPipe(
+        statefulSwitchMap((id) => {
+          return this.channelService.getChannel(id);
+        })
+      )
+    )
 
     this.graph$ = channelId$.pipe(
       statefulPipe(

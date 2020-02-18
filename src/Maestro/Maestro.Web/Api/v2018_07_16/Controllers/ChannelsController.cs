@@ -319,6 +319,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="includedFrequencies">Frequencies to include</param>
         /// <param name="includeBuildTimes">If we should create the flow graph with build times</param>
         /// <param name="days">Number of days over which to summarize build times</param>
+        /// <param name="includeArcade">If we should include arcade in the flow graph</param>
         [HttpGet("{channelId}/graph")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(FlowGraph), Description = "The dependency flow graph for a channel")]
         [ValidateModelState]
@@ -329,7 +330,8 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             IEnumerable<string> includedFrequencies = default,
 #pragma warning restore API0001 // Versioned API methods should not expose non-versioned types.
             bool includeBuildTimes = false,
-            int days = 7)
+            int days = 7,
+            bool includeArcade = true)
         {
             var barOnlyRemote = await _remoteFactory.GetBarOnlyRemoteAsync(Logger);
 
@@ -338,26 +340,29 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             List<Microsoft.DotNet.Maestro.Client.Models.DefaultChannel> defaultChannels = (await barOnlyRemote.GetDefaultChannelsAsync()).ToList();
 
-            if (engLatestChannel != null)
+            if (includeArcade)
             {
-                defaultChannels.Add(
-                    new Microsoft.DotNet.Maestro.Client.Models.DefaultChannel(0, "https://github.com/dotnet/arcade", true)
-                    {
-                        Branch = "master",
-                        Channel = engLatestChannel
-                    }
-                );
-            }
+                if (engLatestChannel != null)
+                {
+                    defaultChannels.Add(
+                        new Microsoft.DotNet.Maestro.Client.Models.DefaultChannel(0, "https://github.com/dotnet/arcade", true)
+                        {
+                            Branch = "master",
+                            Channel = engLatestChannel
+                        }
+                    );
+                }
 
-            if (eng3Channel != null)
-            {
-                defaultChannels.Add(
-                    new Microsoft.DotNet.Maestro.Client.Models.DefaultChannel(0, "https://github.com/dotnet/arcade", true)
-                    {
-                        Branch = "release/3.x",
-                        Channel = eng3Channel
-                    }
-                );
+                if (eng3Channel != null)
+                {
+                    defaultChannels.Add(
+                        new Microsoft.DotNet.Maestro.Client.Models.DefaultChannel(0, "https://github.com/dotnet/arcade", true)
+                        {
+                            Branch = "release/3.x",
+                            Channel = eng3Channel
+                        }
+                    );
+                }
             }
 
             List<Microsoft.DotNet.Maestro.Client.Models.Subscription> subscriptions = (await barOnlyRemote.GetSubscriptionsAsync()).ToList();

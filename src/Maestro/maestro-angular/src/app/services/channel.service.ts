@@ -44,21 +44,15 @@ export class ChannelService {
     return this.channels$;
   }
 
+  public getChannel(id: number): Observable<Channel> {
+    return this.maestro.channels.getChannelAsync({id});
+  }
+
   public getRepositories(channelId: number): Observable<DefaultChannel[]> {
     return this.buildRepositoriesList(channelId);
   }
 
   public getFlowGraph(id: number): Observable<StatefulResult<FlowGraph>> {
-    // return of(channelId).pipe(
-    //   statefulSwitchMap(id => {
-    //     if (id in ChannelService.graphCache) {
-    //       return of(ChannelService.graphCache[id]);
-    //     }
-    //     return this.maestro.channels.getFlowGraphAsync({id}).pipe(
-    //       tap(graph => ChannelService.graphCache[id] = graph),
-    //     );
-    //   }),
-    // );
     if (id in ChannelService.graphCache) {
       return of(ChannelService.graphCache[id]);
     }
