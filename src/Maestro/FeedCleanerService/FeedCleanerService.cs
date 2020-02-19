@@ -117,6 +117,10 @@ namespace FeedCleanerService
                     }
                 }
             }
+            else
+            {
+                Logger.LogInformation("Feed cleaner service is disabled in this environment");
+            }
         }
 
         /// <summary>
