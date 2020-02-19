@@ -136,10 +136,36 @@ namespace Microsoft.DotNet.Darc.Operations
                 queueTimeVariables)
                 .ConfigureAwait(false);
 
-            Console.WriteLine($"Build {build.Id} will be assigned to channel '{targetChannel.Name}' once this promotion build finishes: " +
-                $"https://{BuildPromotionPipelineAccountName}.visualstudio.com/{BuildPromotionPipelineProjectName}/_build/results?buildId={azdoBuildId}&view=results");
+            var promotionBuildUrl = $"https://{BuildPromotionPipelineAccountName}.visualstudio.com/{BuildPromotionPipelineProjectName}/_build/results?buildId={azdoBuildId}";
 
-            return Constants.SuccessCode;
+            Console.WriteLine($"Build {build.Id} will be assigned to channel '{targetChannel.Name}' once this promotion build finishes: {promotionBuildUrl}");
+
+            if (_options.NoWaitPromotionBuild)
+            {
+                Console.WriteLine("Returning before the promotion build finish.");
+                return Constants.SuccessCode;
+            }
+
+            var waitIntervalInSeconds = TimeSpan.FromSeconds(60);
+            AzureDevOpsBuild promotionBuild;
+
+            do
+            {
+                Console.WriteLine($"Waiting more {waitIntervalInSeconds.TotalSeconds} seconds for promotion build to complete.");
+                await Task.Delay(waitIntervalInSeconds);
+                promotionBuild = await azdoClient.GetBuildAsync(BuildPromotionPipelineAccountName, BuildPromotionPipelineProjectName, azdoBuildId);
+            } while (!promotionBuild.Status.Equals("completed", StringComparison.OrdinalIgnoreCase));
+
+            if (promotionBuild.Result.Equals("succeeded", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"Build '{build.Id}' was successfully added to channel '{targetChannel.Id}'");
+                return Constants.SuccessCode;
+            }
+            else
+            {
+                Console.WriteLine($"Error trying to promote build. The promotion build finished with this result: {promotionBuild.Result}");
+                return Constants.ErrorCode;
+            }
         }
 
         /// <summary>
