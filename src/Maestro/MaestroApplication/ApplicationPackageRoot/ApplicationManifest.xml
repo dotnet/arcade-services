@@ -16,6 +16,7 @@
     <Parameter Name="PullRequestActorService_PartitionCount" DefaultValue="10" />
     <Parameter Name="PullRequestActorService_MinReplicaSetSize" DefaultValue="3" />
     <Parameter Name="PullRequestActorService_TargetReplicaSetSize" DefaultValue="3" />
+    <Parameter Name="FeedCleanerService_InstanceCount" DefaultValue="1" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
@@ -55,6 +56,13 @@
       <EndpointBindingPolicy EndpointRef="ServiceEndpoint" CertificateRef="WebSslCert" />
     </Policies>
   </ServiceManifestImport>
+  <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="FeedCleanerServicePkg" ServiceManifestVersion="1.0.42" />
+    <ConfigOverrides />
+    <EnvironmentOverrides CodePackageRef="Code">
+      <EnvironmentVariable Name="ASPNETCORE_ENVIRONMENT" Value="[Environment]" />
+    </EnvironmentOverrides>
+  </ServiceManifestImport>
   <DefaultServices>
     <!-- The section below creates instances of service types, when an instance of this 
          application type is created. You can also create one or more instances of service type using the 
@@ -85,6 +93,11 @@
       <StatefulService ServiceTypeName="PullRequestActorServiceType" TargetReplicaSetSize="[PullRequestActorService_TargetReplicaSetSize]" MinReplicaSetSize="[PullRequestActorService_MinReplicaSetSize]">
         <UniformInt64Partition PartitionCount="[PullRequestActorService_PartitionCount]" LowKey="-9223372036854775808" HighKey="9223372036854775807" />
       </StatefulService>
+    </Service>
+    <Service Name="FeedCleanerService" ServicePackageActivationMode="ExclusiveProcess">
+      <StatelessService ServiceTypeName="FeedCleanerServiceType" InstanceCount="[FeedCleanerService_InstanceCount]">
+        <SingletonPartition />
+      </StatelessService>
     </Service>
   </DefaultServices>
   <Certificates>

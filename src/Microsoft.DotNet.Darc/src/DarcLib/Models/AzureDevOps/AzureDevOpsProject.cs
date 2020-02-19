@@ -6,5 +6,10 @@ namespace Microsoft.DotNet.DarcLib
 {
     public partial class AzureDevOpsProject : AzureDevOpsIdNamePair
     {
+        public AzureDevOpsProject(string name, string id)
+        {
+            Id = id;
+            Name = name;
+        }
     }
 }

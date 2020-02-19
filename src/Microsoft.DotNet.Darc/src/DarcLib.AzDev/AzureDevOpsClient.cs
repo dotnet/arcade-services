@@ -4,14 +4,12 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
@@ -23,7 +21,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public class AzureDevOpsClient : RemoteRepoBase, IGitRepo
+    public class AzureDevOpsClient : RemoteRepoBase, IGitRepo, IAzureDevOpsClient
     {
         private const string DefaultApiVersion = "5.0-preview.1";
 
@@ -59,7 +57,7 @@ namespace Microsoft.DotNet.DarcLib
         ///     The AzureDevopsClient currently does not utilize the memory cache
         /// </remarks>
         public AzureDevOpsClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath)
-            : base (gitExecutable, temporaryRepositoryPath, null)
+            : base(gitExecutable, temporaryRepositoryPath, null)
         {
             _personalAccessToken = accessToken;
             _logger = logger;
@@ -180,10 +178,10 @@ namespace Microsoft.DotNet.DarcLib
 
             await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Post,
-                accountName, 
-                projectName, 
-                $"_apis/git/repositories/{repoName}/refs", 
-                _logger, 
+                accountName,
+                projectName,
+                $"_apis/git/repositories/{repoName}/refs",
+                _logger,
                 body);
         }
 
@@ -201,10 +199,10 @@ namespace Microsoft.DotNet.DarcLib
 
             await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Post,
-                accountName, 
-                projectName, 
-                $"_apis/git/repositories/{repoName}/refs", 
-                _logger, 
+                accountName,
+                projectName,
+                $"_apis/git/repositories/{repoName}/refs",
+                _logger,
                 body);
         }
 
@@ -304,7 +302,6 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             throw new DarcException($"Failed to parse PR status: {content["status"]}");
-            
         }
 
         /// <summary>
@@ -610,7 +607,7 @@ namespace Microsoft.DotNet.DarcLib
                     Valid = true
                 };
             }
-            catch (HttpRequestException reqEx) when(reqEx.Message.Contains("404 (Not Found)"))
+            catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)"))
             {
                 return GitDiff.UnknownDiff();
             }
@@ -772,7 +769,11 @@ namespace Microsoft.DotNet.DarcLib
                                                                             logFailure);
                 using (var response = await requestManager.ExecuteAsync(retryCount))
                 {
-                    return JObject.Parse(await response.Content.ReadAsStringAsync());
+                    string responseContent = response.StatusCode == HttpStatusCode.NoContent ?
+                        "{}" :
+                        await response.Content.ReadAsStringAsync();
+
+                    return JObject.Parse(responseContent);
                 }
             }
         }
@@ -809,7 +810,8 @@ namespace Microsoft.DotNet.DarcLib
                 address += $"{projectName}/";
             }
 
-            var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }) {
+            var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true })
+            {
                 BaseAddress = new Uri(address)
             };
 
@@ -881,12 +883,12 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        /// Returns the project ID for a combination of Azure DevOps account and project name
+        ///   Returns the project ID for a combination of Azure DevOps account and project name
         /// </summary>
         /// <param name="accountName">Azure DevOps account</param>
         /// <param name="projectName">Azure DevOps project to get the ID for</param>
         /// <returns>Project Id</returns>
-       public async Task<string> GetProjectIdAsync(string accountName, string projectName)
+        public async Task<string> GetProjectIdAsync(string accountName, string projectName)
         {
             JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Get,
@@ -929,12 +931,12 @@ namespace Microsoft.DotNet.DarcLib
         public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
             return this.CommitFilesAsync(
-                filesToCommit, 
-                repoUri, 
-                branch, 
-                commitMessage, 
-                _logger, 
-                _personalAccessToken, 
+                filesToCommit,
+                repoUri,
+                branch,
+                commitMessage,
+                _logger,
+                _personalAccessToken,
                 "DotNet-Bot",
                 "dn-bot@microsoft.com");
         }
@@ -1059,6 +1061,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="accountName">Azure DevOps account name</param>
         /// <param name="projectName">Project name</param>
         /// <param name="releaseDefinition">Release definition to be updated</param>
+        /// <returns>Id of the started release</returns>
         public async Task<int> StartNewReleaseAsync(string accountName, string projectName, AzureDevOpsReleaseDefinition releaseDefinition, int barBuildId)
         {
             var body = $"{{ \"definitionId\": {releaseDefinition.Id}, \"variables\": {{ \"BARBuildId\": {{ \"value\": \"{barBuildId}\" }} }} }}";
@@ -1100,12 +1103,12 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        /// Return the description of the release with ID informed.
+        ///   Return the description of the release with ID informed.
         /// </summary>
         /// <param name="accountName">Azure DevOps account name</param>
         /// <param name="projectName">Project name</param>
         /// <param name="releaseId">ID of the release that should be looked up for</param>
-        /// <returns></returns>
+        /// <returns>AzureDevOpsRelease</returns>
         public async Task<AzureDevOpsRelease> GetReleaseAsync(string accountName, string projectName, int releaseId)
         {
             JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
@@ -1114,14 +1117,146 @@ namespace Microsoft.DotNet.DarcLib
                 projectName,
                 $"_apis/release/releases/{releaseId}",
                 _logger,
-                versionOverride: "5.1-preview.8",
+                versionOverride: "5.1-preview.1",
                 baseAddressSubpath: "vsrm.");
 
             return content.ToObject<AzureDevOpsRelease>();
         }
 
         /// <summary>
-        ///     Fetches an specific AzDO build based on its ID.
+        ///   Gets all Artifact feeds in an Azure DevOps account.
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account name</param>
+        /// <returns>List of Azure DevOps feeds in the account</returns>
+        public async Task<List<AzureDevOpsFeed>> GetFeedsAsync(string accountName)
+        {
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                null,
+                $"_apis/packaging/feeds",
+                _logger,
+                versionOverride: "5.1-preview.1",
+                baseAddressSubpath: "feeds.");
+
+            var list = ((JArray)content["value"]).ToObject<List<AzureDevOpsFeed>>();
+            list.ForEach(f => f.Account = accountName);
+            return list;
+        }
+
+        /// <summary>
+        ///   Gets all Artifact feeds along with their packages in an Azure DevOps account.
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account name.</param>
+        /// <returns>List of Azure DevOps feeds in the account.</returns>
+        public async Task<List<AzureDevOpsFeed>> GetFeedsAndPackagesAsync(string accountName)
+        {
+            var feeds = await GetFeedsAsync(accountName);
+            feeds.ForEach(async feed => feed.Packages = await GetPackagesForFeedAsync(accountName, feed.Project?.Name, feed.Name));
+            return feeds;
+        }
+
+        /// <summary>
+        ///   Gets a specified Artifact feed in an Azure DevOps account.
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account name</param>
+        /// <param name="project">Azure DevOps project where the feed is hosted</param>
+        /// <param name="feedIdentifier">ID or name of the feed</param>
+        /// <returns>List of Azure DevOps feeds in the account</returns>
+        public async Task<AzureDevOpsFeed> GetFeedAsync(string accountName, string project, string feedIdentifier)
+        {
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                project,
+                $"_apis/packaging/feeds/{feedIdentifier}",
+                _logger,
+                versionOverride: "5.1-preview.1",
+                baseAddressSubpath: "feeds.");
+
+            AzureDevOpsFeed feed = content.ToObject<AzureDevOpsFeed>();
+            feed.Account = accountName;
+            return feed;
+        }
+
+        /// <summary>
+        ///   Gets a specified Artifact feed with their pacckages in an Azure DevOps account.
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account name.</param>
+        /// <param name="project">Azure DevOps project that the feed is hosted in</param>
+        /// <param name="feedIdentifier">ID or name of the feed.</param>
+        /// <returns>List of Azure DevOps feeds in the account.</returns>
+        public async Task<AzureDevOpsFeed> GetFeedAndPackagesAsync(string accountName, string project, string feedIdentifier)
+        {
+            var feed = await GetFeedAsync(accountName, project, feedIdentifier);
+            feed.Packages = await GetPackagesForFeedAsync(accountName, project, feedIdentifier);
+
+            return feed;
+        }
+
+        /// <summary>
+        /// Gets all packages in a given Azure DevOps feed
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account name</param>
+        /// <param name="project">Project that the feed was created in</param>
+        /// <param name="feedIdentifier">Name or id of the feed</param>
+        /// <returns>List of packages in the feed</returns>
+        public async Task<List<AzureDevOpsPackage>> GetPackagesForFeedAsync(string accountName, string project, string feedIdentifier)
+        {
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                project,
+                $"_apis/packaging/feeds/{feedIdentifier}/packages?includeAllVersions=true&includeDeleted=true",
+                _logger,
+                versionOverride: "5.1-preview.1",
+                baseAddressSubpath: "feeds.");
+
+            return ((JArray)content["value"]).ToObject<List<AzureDevOpsPackage>>();
+        }
+
+        /// <summary>
+        ///   Deletes an Azure Artifacts feed and all of its packages
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account name</param>
+        /// <param name="project">Project that the feed was created in</param>
+        /// <param name="feedIdentifier">Name or id of the feed</param>
+        /// <returns>Async task</returns>
+        public async Task DeleteFeedAsync(string accountName, string project, string feedIdentifier)
+        {
+            await this.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Delete,
+                accountName,
+                project,
+                $"_apis/packaging/feeds/{feedIdentifier}",
+                _logger,
+                versionOverride: "5.1-preview.1",
+                baseAddressSubpath: "feeds.");
+        }
+
+        /// <summary>
+        ///   Deletes a NuGet package version from a feed.
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account name</param>
+        /// <param name="project">Project that the feed was created in</param>
+        /// <param name="feedIdentifier">Name or id of the feed</param>
+        /// <param name="packageName">Name of the package</param>
+        /// <param name="version">Version to delete</param>
+        /// <returns>Async task</returns>
+        public async Task DeleteNuGetPackageVersionFromFeedAsync(string accountName, string project, string feedIdentifier, string packageName, string version)
+        {
+            await this.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Delete,
+                accountName,
+                project,
+                $"_apis/packaging/feeds/{feedIdentifier}/nuget/packages/{packageName}/versions/{version}",
+                _logger,
+                versionOverride: "5.1-preview.1",
+                baseAddressSubpath: "pkgs.");
+        }
+
+        /// <summary>
+        ///   Fetches an specific AzDO build based on its ID.
         /// </summary>
         /// <param name="accountName">Azure DevOps account name</param>
         /// <param name="projectName">Project name</param>
