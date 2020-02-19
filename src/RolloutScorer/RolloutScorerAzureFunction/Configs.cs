@@ -29,7 +29,7 @@ namespace RolloutScorerAzureFunction
                 },
                 new RepoConfig
                 {
-                    Repo = "dotnet-arcade-services",
+                    Repo = "arcade-services",
                     BuildDefinitionIds = new List<string> { "252", "728" },
                     AzdoInstance = "dnceng",
                     GithubIssueLabel = "Rollout Arcade-Services",
