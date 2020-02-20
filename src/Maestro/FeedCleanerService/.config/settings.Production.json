@@ -1,0 +1,6 @@
+{
+  "KeyVaultUri": "https://maestroprod.vault.azure.net/",
+  "FeedCleaner": {
+    "Enabled": true
+  }
+}

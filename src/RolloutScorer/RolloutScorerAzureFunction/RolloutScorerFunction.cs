@@ -23,12 +23,15 @@ namespace RolloutScorerAzureFunction
             AzureServiceTokenProvider tokenProvider = new AzureServiceTokenProvider();
 
             string deploymentEnvironment = Environment.GetEnvironmentVariable("DeploymentEnvironment") ?? "Staging";
+            log.LogInformation($"Deployment Environment: {deploymentEnvironment}");
 
+            log.LogInformation("Getting storage account keys from KeyVault...");
             SecretBundle scorecardsStorageAccountKey = await GetStorageAccountKeyAsync(tokenProvider,
                 Utilities.KeyVaultUri, ScorecardsStorageAccount.KeySecretName);
             SecretBundle deploymentTableSasToken = await GetStorageAccountKeyAsync(tokenProvider,
                 "https://DotNetEng-Status-Prod.vault.azure.net", "deployment-table-sas-token");
 
+            log.LogInformation("Getting cloud tables...");
             CloudTable scorecardsTable = Utilities.GetScorecardsCloudTable(scorecardsStorageAccountKey.Value);
             CloudTable deploymentsTable = new CloudTable(
                 new Uri($"https://dotnetengstatusprod.table.core.windows.net/deployments{deploymentTableSasToken.Value}"));
@@ -39,18 +42,24 @@ namespace RolloutScorerAzureFunction
             List<AnnotationEntity> deploymentEntries =
                 await GetAllTableEntriesAsync<AnnotationEntity>(deploymentsTable);
             deploymentEntries.Sort((x, y) => (x.Ended ?? DateTimeOffset.MaxValue).CompareTo(y.Ended ?? DateTimeOffset.MaxValue));
+            log.LogInformation($"Found {scorecardEntries?.Count ?? -1} scorecard table entries and {deploymentEntries?.Count ?? -1} deployment table entries." +
+                $"(-1 indicates that null was returned.)");
 
             // The deployments we care about are ones that occurred after the last scorecard
             IEnumerable<AnnotationEntity> relevantDeployments =
                 deploymentEntries.Where(d => (d.Ended ?? DateTimeOffset.MaxValue) > scorecardEntries.Last().Date);
+            log.LogInformation($"Found {relevantDeployments?.Count() ?? -1} relevant deployments (deployments which occurred " +
+                $"after the last scorecard). (-1 indicates that null was returned.)");
 
             if (relevantDeployments.Count() > 0)
             {
+                log.LogInformation("Checking to see if the most recent deployment occurred more than two days ago...");
                 // We have only want to score if the buffer period has elapsed since the last deployment
                 if ((relevantDeployments.Last().Ended ?? DateTimeOffset.MaxValue) < DateTimeOffset.UtcNow - TimeSpan.FromDays(ScoringBufferInDays))
                 {
                     var scorecards = new List<Scorecard>();
 
+                    log.LogInformation("Rollouts will be scored. Fetching GitHub PAT...");
                     SecretBundle githubPat;
                     using (KeyVaultClient kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
                     {
@@ -60,6 +69,7 @@ namespace RolloutScorerAzureFunction
                     // We'll score the deployments by service
                     foreach (var deploymentGroup in relevantDeployments.GroupBy(d => d.Service))
                     {
+                        log.LogInformation($"Scoring {deploymentGroup?.Count() ?? -1} rollouts for repo '{deploymentGroup.Key}'");
                         RolloutScorer.RolloutScorer rolloutScorer = new RolloutScorer.RolloutScorer
                         {
                             Repo = deploymentGroup.Key,
@@ -68,11 +78,16 @@ namespace RolloutScorerAzureFunction
                             GithubConfig = Configs.DefaultConfig.GithubConfig,
                             Log = log,
                         };
+                        log.LogInformation($"Finding repo config for {rolloutScorer.Repo}...");
                         rolloutScorer.RepoConfig = Configs.DefaultConfig.RepoConfigs
                             .Find(r => r.Repo == rolloutScorer.Repo);
+                        log.LogInformation($"Repo config: {rolloutScorer.RepoConfig.Repo}");
+                        log.LogInformation($"Finding AzDO config... for {rolloutScorer.RepoConfig.AzdoInstance}");
                         rolloutScorer.AzdoConfig = Configs.DefaultConfig.AzdoInstanceConfigs
                             .Find(a => a.Name == rolloutScorer.RepoConfig.AzdoInstance);
+                        log.LogInformation($"AzdoConfig: {rolloutScorer.AzdoConfig.Name}");
 
+                        log.LogInformation($"Fetching AzDO PAT from KeyVault...");
                         using (KeyVaultClient kv = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(tokenProvider.KeyVaultTokenCallback)))
                         {
                             rolloutScorer.SetupHttpClient(
@@ -80,6 +95,7 @@ namespace RolloutScorerAzureFunction
                         }
                         rolloutScorer.SetupGithubClient(githubPat.Value);
 
+                        log.LogInformation($"Attempting to initialize RolloutScorer...");
                         try
                         {
                             await rolloutScorer.InitAsync();
@@ -91,6 +107,7 @@ namespace RolloutScorerAzureFunction
                             continue;
                         }
 
+                        log.LogInformation($"Creating rollout scorecard...");
                         scorecards.Add(await Scorecard.CreateScorecardAsync(rolloutScorer));
                         log.LogInformation($"Successfully created scorecard for {rolloutScorer.RolloutStartDate.Date} rollout of {rolloutScorer.Repo}.");
                     }
