@@ -12,7 +12,6 @@ function getRepositoryShortName(repo:string): string {
 }
 
 function getNodeLabel(node:FlowRef): string {
-  // The div makes the styling look better and centers the text
   // Split the org and the repository on separate lines to make the nodes shorter
   return `${getRepositoryShortName(node.repository).split('/').join("<br>")}<br>`+
          `${node.branch}`;
