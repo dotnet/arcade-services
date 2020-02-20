@@ -131,6 +131,7 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maestro.ScenarioTests", "src\Maestro\tests\Maestro.ScenarioTests\Maestro.ScenarioTests.csproj", "{5C7B6C2F-9173-4729-9BEC-A7B055312D5F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyUpdateErrorProcessor", "src\Maestro\DependencyUpdateErrorProcessor\DependencyUpdateErrorProcessor.csproj", "{7D7E290E-7A94-4F7B-AA05-27156C4A3CAC}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FeedCleanerService.Tests", "src\Maestro\tests\FeedCleaner.Tests\FeedCleanerService.Tests.csproj", "{93D3662A-65AB-4010-AA96-22AA54F56416}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FeedCleanerService", "src\Maestro\FeedCleanerService\FeedCleanerService.csproj", "{C7E8C999-F8AE-427D-B748-6BCF7202B476}"
