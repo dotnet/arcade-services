@@ -244,20 +244,25 @@ namespace Maestro.Web
 
             services.AddMergePolicies();
 
-
             // Configure access to Azure App Configuration
             try
             {
-                string appConfigEndpointUri = Configuration["AppConfigurationUri"];
                 ConfigurationBuilder builder = new ConfigurationBuilder();
-                TokenCredential credential = appConfigEndpointUri.Contains("maestrolocal") ?
-                    new DefaultAzureCredential() :
-                    (TokenCredential)new ManagedIdentityCredential();
 
                 builder.AddAzureAppConfiguration(options =>
                 {
-                    options.Connect(new Uri(appConfigEndpointUri), credential)
-                        .ConfigureRefresh(refresh =>
+                    if (!string.IsNullOrEmpty(Configuration["AppConfigurationConnectionString"]))
+                    {
+                        options.Connect(Configuration["AppConfigurationConnectionString"]);
+                    }
+                    else
+                    {
+                        string appConfigEndpointUri = Configuration["AppConfigurationUri"];
+
+                        options.Connect(new Uri(appConfigEndpointUri), new ManagedIdentityCredential());
+                    }
+
+                    options.ConfigureRefresh(refresh =>
                         {
                             refresh.Register(".appconfig.featureflag/AutoBuildPromotion")
                                 .SetCacheExpiration(TimeSpan.FromSeconds(1));
