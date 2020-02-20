@@ -169,7 +169,18 @@ namespace Maestro.Web
                 options =>
                 {
                     options.CheckConsentNeeded = context => true;
-                    options.MinimumSameSitePolicy = SameSiteMode.None;
+                    options.MinimumSameSitePolicy = SameSiteMode.Lax;
+
+                    options.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
+
+                    if (HostingEnvironment.IsDevelopment())
+                    {
+                        options.Secure = CookieSecurePolicy.SameAsRequest;
+                    }
+                    else
+                    {
+                        options.Secure = CookieSecurePolicy.Always;
+                    }
                 });
 
             services.AddBuildAssetRegistry(
@@ -291,7 +302,7 @@ namespace Maestro.Web
                     MvcJsonOptions jsonOptions =
                         ctx.RequestServices.GetRequiredService<IOptions<MvcJsonOptions>>().Value;
                     string output = JsonConvert.SerializeObject(result, jsonOptions.SerializerSettings);
-                    ctx.Response.StatusCode = (int) HttpStatusCode.InternalServerError;
+                    ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                     await ctx.Response.WriteAsync(output, Encoding.UTF8);
                 });
         }
@@ -319,7 +330,7 @@ namespace Maestro.Web
 
             using (var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
-                var uri = new UriBuilder(ApiRedirectTarget) {Path = ctx.Request.Path, Query = ctx.Request.QueryString.ToUriComponent(),};
+                var uri = new UriBuilder(ApiRedirectTarget) { Path = ctx.Request.Path, Query = ctx.Request.QueryString.ToUriComponent(), };
                 await ctx.ProxyRequestAsync(client, uri.Uri.AbsoluteUri,
                     req =>
                     {
@@ -371,11 +382,11 @@ namespace Maestro.Web
                             doc.Host = req.Host.Value;
                             if (HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric())
                             {
-                                doc.Schemes = new List<string> {"http"};
+                                doc.Schemes = new List<string> { "http" };
                             }
                             else
                             {
-                                doc.Schemes = new List<string> {"https"};
+                                doc.Schemes = new List<string> { "https" };
                             }
 
                             req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
@@ -431,6 +442,38 @@ namespace Maestro.Web
                 app.UseHsts();
                 app.UseHttpsRedirection();
             }
+
+            // Add security headers
+            app.Use(
+                (ctx, next) =>
+                {
+                    ctx.Response.OnStarting(() =>
+                    {
+                        if (!ctx.Response.Headers.ContainsKey("X-XSS-Protection"))
+                        {
+                            ctx.Response.Headers.Add("X-XSS-Protection", "1");
+                        }
+
+                        if (!ctx.Response.Headers.ContainsKey("X-Frame-Options"))
+                        {
+                            ctx.Response.Headers.Add("X-Frame-Options", "DENY");
+                        }
+
+                        if (!ctx.Response.Headers.ContainsKey("X-Content-Type-Options"))
+                        {
+                            ctx.Response.Headers.Add("X-Content-Type-Options", "nosniff");
+                        }
+
+                        if (!ctx.Response.Headers.ContainsKey("Referrer-Policy"))
+                        {
+                            ctx.Response.Headers.Add("Referrer-Policy", "no-referrer-when-downgrade");
+                        }
+
+                        return Task.CompletedTask;
+                    });
+
+                    return next();
+                });
 
             if (env.IsDevelopment() && !Program.RunningInServiceFabric())
             {
