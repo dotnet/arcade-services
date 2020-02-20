@@ -370,7 +370,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 BestCaseTimeInMinutes = longestBuildPathNodes.Max(n => n.BestCasePathTime),
                 WorstCaseTimeInMinutes = longestBuildPathNodes.Max(n => n.WorstCasePathTime),
                 ContributingRepositories = String.Join(';', longestBuildPath.ToArray()),
-                EndDate = DateTimeOffset.Now,
+                EndDate = DateTimeOffset.UtcNow,
             };
 
             await _context.LongestBuildPaths.AddAsync(lbp);
