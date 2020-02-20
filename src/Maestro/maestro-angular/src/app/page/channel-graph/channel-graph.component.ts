@@ -176,7 +176,6 @@ function drawFlowGraph(graph: FlowGraph, includeArcade: boolean) {
 
   select('svg.flowgraph').selectAll('*').remove();
   select('svg.flowgraph').attr("viewBox", "");
-  console.log(select('svg.flowgraph'));
 
   var svg = select("svg.flowgraph"),
       inner = svg.append("g");
