@@ -322,7 +322,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [HttpGet("{channelId}/graph")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(FlowGraph), Description = "The dependency flow graph for a channel")]
         [ValidateModelState]
-        public virtual async Task<IActionResult> GetFlowGraphAsync(
+        public async Task<IActionResult> GetFlowGraphAsync(
             int channelId = 0, 
             bool includeDisabledSubscriptions = false,
 #pragma warning disable API0001 // Versioned API methods should not expose non-versioned types.
