@@ -28,34 +28,32 @@ namespace Microsoft.DotNet.Darc.Operations
     /// 
     /// For user convenience reasons, the generally-intended mode of operation is to use a separate
     /// folder for .gitdirs, which allows a developer to do a "git clean" and not have to reclone
-    /// all of the repos again for the next build.
-    /// 
-    /// This is also useful for performance.  The general approach is:
+    /// all of the repos again for the next build. This is also useful for performance.
+    ///
+    /// The general approach is:
     /// 
     /// 1. Clone a "master" version of a repo.  LibGit2 does not currently support cloning with a
     ///    separate .gitdir, so we then:
     /// 2. Move the .gitdir to the specified location.  If there is none specified, the .gitdir
     ///    stays in the repo as usual.
-    /// 3. Create a file (not directory) called ".git" and containing the new .gitdir that we just
-    ///    moved so Git can use the "master" folder properly as a repo.
+    /// 3. Create a file (not directory) called ".git" pointing to the new .gitdir we just moved.
+    ///    This allows Git to use the "master" folder properly as a repo.
     ///      Note: The "master" folder is also the only one that will end up being a real Git repo
     ///      at the end of the process.
-    /// 4. For each SHA that we want a copy of a repo at, create a new folder called repo.hash and
-    ///    add the same .gitdir redirect.
-    /// 5. Checkout the SHA in that folder.  This causes a minor change in the "master" folder in
-    ///    that it changes the HEAD, but it will be otherwise unaffected.
-    /// 6. Delete the .gitdir redirect file in the new repo.hash folder to orphan the repo.  This is
-    ///    done to avoid confusion about every repo.hash folder showing up with dirty files (since
-    ///    the repo thinks its HEAD is at a different SHA).
+    /// 4. For each commit we want to check out, create a new folder called repo.hash and add the
+    ///    same .gitdir redirect as above.
+    /// 5. Checkout the desired commit in that folder.  This causes a minor change in the "master"
+    ///    folder (it changes the HEAD), but it is otherwise unaffected.
+    /// 6. Delete the .gitdir redirect file in the new repo.hash folder to unlink it from the
+    ///    "master" folder.  This is done to avoid confusion where every repo.hash folder shows up
+    ///    in Git as having dirty files (since the repo thinks its HEAD is at a different commit).
     /// 
-    /// Submodules add some complexity to this process.  Once a submodule has been initialized in
-    /// the .gitdir, it will be initialized for all repos; however, the submodule will not have one
-    /// of the .gitdir redirects.
-    /// 
-    /// In this case, we go back to the "master" folder, which will have a .git/modules/subrepo
-    /// directory, and redirect the submodule to this.  This means that if a submodule is included
-    /// in multiple repos, we will have multiple copies of it, but this hasn't seemed to have a
-    /// large perf impact.
+    /// Submodules inside repo.hash folders add some complexity to this process.  Once a submodule
+    /// has been initialized in the .gitdir, it will be initialized for all repos; however, the
+    /// submodule will not have one of the .gitdir redirects. In this case, we go back to the
+    /// "master" folder, which will have a .git/modules/subrepo directory, and redirect the
+    /// submodule to this.  This means that if a submodule is included in multiple repos, we will
+    /// have multiple copies of it, but this hasn't seemed to have a large perf impact.
     /// 
     /// After cloning, we use local dependency graph discovery to add new repo-hash combinations to
     /// clone at.  This is done in waves to support a "depth limit" of followed repos.
