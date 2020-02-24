@@ -4,6 +4,9 @@
 
 using Maestro.Contracts;
 using Maestro.Data;
+using Maestro.RemoteFactory;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Kusto;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
@@ -34,6 +37,15 @@ namespace DependencyUpdater
                                 {
                                     var config = provider.GetRequiredService<IConfigurationRoot>();
                                     options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
+                                });
+                            services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
+                            services.AddKustoClientProvider();
+                            services.Configure<KustoClientProviderOptions>(
+                                (options, provider) =>
+                                {
+                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    IConfigurationSection section = config.GetSection("Kusto");
+                                    section.Bind(options);
                                 });
                         });
                 });

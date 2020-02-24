@@ -9,6 +9,10 @@ namespace Microsoft.DotNet.Kusto
 {
     public static class KustoServiceCollectionExtensions
     {
+        public static IServiceCollection AddKustoClientProvider(this IServiceCollection services)
+        {
+            return services.AddSingleton<IKustoClientProvider, KustoClientProvider>();
+        }
         public static IServiceCollection AddKustoClientProvider(this IServiceCollection services, Action<KustoClientProviderOptions> configure)
         {
             services.AddSingleton<IKustoClientProvider, KustoClientProvider>();

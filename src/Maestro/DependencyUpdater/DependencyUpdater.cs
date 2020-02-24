@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -39,17 +40,20 @@ namespace DependencyUpdater
             IReliableStateManager stateManager,
             ILogger<DependencyUpdater> logger,
             BuildAssetRegistryContext context,
+            IRemoteFactory factory,
             Func<ActorId, ISubscriptionActor> subscriptionActorFactory)
         {
             StateManager = stateManager;
             Logger = logger;
             Context = context;
+            RemoteFactory = factory;
             SubscriptionActorFactory = subscriptionActorFactory;
         }
 
         public IReliableStateManager StateManager { get; }
         public ILogger<DependencyUpdater> Logger { get; }
         public BuildAssetRegistryContext Context { get; }
+        public IRemoteFactory RemoteFactory { get; }
         public Func<ActorId, ISubscriptionActor> SubscriptionActorFactory { get; }
 
         public async Task StartUpdateDependenciesAsync(int buildId, int channelId)
@@ -201,6 +205,61 @@ namespace DependencyUpdater
                     await UpdateSubscriptionAsync(s.subscription, s.latestBuild);
                 }
             }
+        }
+
+        /// <summary>
+        ///     Update Longest Build Path table once a day for each channel at midnight
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        [CronSchedule("0 0 0 1/1 * ? *", TimeZones.PST)]
+        public async Task UpdateLongestBuildPathAsync(CancellationToken cancellationToken)
+        {
+            IQueryable<Channel> query = Context.Channels;
+
+            List<Channel> channels = query.AsEnumerable().Select(c => new Channel() { Id = c.Id, Name = c.Name }).ToList();
+
+            // Get the flow graph
+            var barOnlyRemote = await RemoteFactory.GetBarOnlyRemoteAsync(Logger);
+
+            List<Microsoft.DotNet.Maestro.Client.Models.DefaultChannel> defaultChannels = (await barOnlyRemote.GetDefaultChannelsAsync()).ToList();
+            List<Microsoft.DotNet.Maestro.Client.Models.Subscription> subscriptions = (await barOnlyRemote.GetSubscriptionsAsync()).ToList();
+
+            IEnumerable<string> frequencies = 
+                new string[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", };
+
+            foreach (var channel in channels)
+            {
+                // Build, then prune out what we don't want to see if the user specified
+                // channels.
+                DependencyFlowGraph flowGraph = await DependencyFlowGraph.BuildAsync(defaultChannels, subscriptions, barOnlyRemote, 30);
+
+                flowGraph.PruneGraph(
+                    node => DependencyFlowGraph.IsInterestingNode(channel.Name, node), 
+                    edge => DependencyFlowGraph.IsInterestingEdge(edge, false, frequencies));
+
+                if (flowGraph.Nodes.Count > 0)
+                {
+
+                    flowGraph.MarkBackEdges();
+                    flowGraph.CalculateLongestBuildPaths();
+                    flowGraph.MarkLongestBuildPath();
+
+                    IEnumerable<DependencyFlowNode> longestBuildPathNodes = flowGraph.Nodes.Where(n => n.OnLongestBuildPath);
+
+                    LongestBuildPath lbp = new LongestBuildPath()
+                    {
+                        Channel = channel,
+                        BestCaseTimeInMinutes = longestBuildPathNodes.Max(n => n.BestCasePathTime),
+                        WorstCaseTimeInMinutes = longestBuildPathNodes.Max(n => n.WorstCasePathTime),
+                        ContributingRepositories = String.Join(';', longestBuildPathNodes.Select(n => $"{n.Repository}@{n.Branch}").ToArray()),
+                        EndDate = DateTimeOffset.UtcNow,
+                    };
+
+                    await Context.LongestBuildPaths.AddAsync(lbp);
+                }
+            }
+            await Context.SaveChangesAsync();
         }
 
         /// <summary>
