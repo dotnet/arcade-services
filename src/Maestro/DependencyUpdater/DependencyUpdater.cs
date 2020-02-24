@@ -245,7 +245,9 @@ namespace DependencyUpdater
                     flowGraph.CalculateLongestBuildPaths();
                     flowGraph.MarkLongestBuildPath();
 
-                    IEnumerable<DependencyFlowNode> longestBuildPathNodes = flowGraph.Nodes.Where(n => n.OnLongestBuildPath);
+                    // Get the nodes on the longest path and order them by path time so that the
+                    // contributing repos are in the right order
+                    IEnumerable<DependencyFlowNode> longestBuildPathNodes = flowGraph.Nodes.Where(n => n.OnLongestBuildPath).OrderByDescending(n => n.BestCasePathTime);
 
                     LongestBuildPath lbp = new LongestBuildPath()
                     {
