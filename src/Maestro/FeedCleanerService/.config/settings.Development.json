@@ -1,6 +1,5 @@
 {
   "KeyVaultUri": "https://maestrolocal.vault.azure.net/",
-  "AppConfigurationConnectionString": "[vault(azure-appconfiguration-connection-string)]",
   "BuildAssetRegistry": {
     "ConnectionString": "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true"
   }

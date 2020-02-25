@@ -1,0 +1,38 @@
+{
+  "BuildAssetRegistry": {
+    "ConnectionString": "[vault(build-asset-registry-sql-connection-string)]"
+  },
+  "FeedCleaner": {
+    "Enabled": false,
+    "ReleasePackageFeeds": [
+      {
+        "Account": "dnceng",
+        "Project": "public",
+        "Name": "dotnet3"
+      },
+      {
+        "Account": "dnceng",
+        "Project": "public",
+        "Name": "dotnet3.1"
+      },
+      {
+        "Account": "dnceng",
+        "Project": "public",
+        "Name": "dotnet5"
+      },
+      {
+        "Account": "dnceng",
+        "Project": "public",
+        "Name": "dotnet-tools"
+      }
+    ]
+  },
+  "AzureDevOps": {
+    "Tokens": [
+      {
+        "Account": "dnceng",
+        "Token": "[vault(dn-bot-dnceng-packaging-rwm)]"
+      }
+    ]
+  }
+}
