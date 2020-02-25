@@ -21,13 +21,16 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
     public class DelegatedStatelessWebService<TStartup> : StatelessService where TStartup : class
     {
         private readonly Action<ContainerBuilder> _configureContainer;
+        private readonly Action<IWebHostBuilder> _configureWebHost;
         private readonly Action<IServiceCollection> _configureServices;
 
         public DelegatedStatelessWebService(
             StatelessServiceContext context,
+            Action<IWebHostBuilder> configureWebHost,
             Action<IServiceCollection> configureServices,
             Action<ContainerBuilder> configureContainer) : base(context)
         {
+            _configureWebHost = configureWebHost;
             _configureServices = configureServices;
             _configureContainer = configureContainer;
         }
@@ -42,28 +45,34 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                         return new HttpSysCommunicationListener(
                             context,
                             "ServiceEndpoint",
-                            (url, listener) => new WebHostBuilder().UseHttpSys()
-                                .UseContentRoot(Directory.GetCurrentDirectory())
-                                .UseSetting(WebHostDefaults.ApplicationKey, typeof(TStartup).Assembly.GetName().Name)
-                                .ConfigureServices(
-                                    services =>
-                                    {
-                                        services.AddAutofac(_configureContainer);
-                                        services.AddSingleton<ServiceContext>(context);
-                                        services.AddSingleton(context);
-                                        services.AddSingleton<IStartup>(
-                                            provider =>
-                                            {
-                                                var env = provider.GetRequiredService<IHostingEnvironment>();
-                                                return new DelegatedStatelessWebServiceStartup<TStartup>(
-                                                    provider,
-                                                    env,
-                                                    _configureServices);
-                                            });
-                                    })
-                                .UseServiceFabricIntegration(listener, ServiceFabricIntegrationOptions.None)
-                                .UseUrls(url)
-                                .Build());
+                            (url, listener) =>
+                            {
+                                var builder = new WebHostBuilder().UseHttpSys()
+                                    .UseContentRoot(Directory.GetCurrentDirectory())
+                                    .UseSetting(WebHostDefaults.ApplicationKey,
+                                        typeof(TStartup).Assembly.GetName().Name);
+                                _configureWebHost(builder);
+
+                                return builder.ConfigureServices(
+                                        services =>
+                                        {
+                                            services.AddAutofac(_configureContainer);
+                                            services.AddSingleton<ServiceContext>(context);
+                                            services.AddSingleton(context);
+                                            services.AddSingleton<IStartup>(
+                                                provider =>
+                                                {
+                                                    var env = provider.GetRequiredService<IHostingEnvironment>();
+                                                    return new DelegatedStatelessWebServiceStartup<TStartup>(
+                                                        provider,
+                                                        env,
+                                                        _configureServices);
+                                                });
+                                        })
+                                    .UseServiceFabricIntegration(listener, ServiceFabricIntegrationOptions.None)
+                                    .UseUrls(url)
+                                    .Build();
+                            });
                     })
             };
         }
