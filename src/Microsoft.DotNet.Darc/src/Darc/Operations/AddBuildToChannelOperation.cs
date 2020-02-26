@@ -140,9 +140,9 @@ namespace Microsoft.DotNet.Darc.Operations
 
             Console.WriteLine($"Build {build.Id} will be assigned to channel '{targetChannel.Name}' once this build finishes publishing assets: {promotionBuildUrl}");
 
-            if (_options.NoWaitPublishing)
+            if (_options.NoWait)
             {
-                Console.WriteLine("Returning before asset publishing and build to channel assignment finishes. The operation continues asynchronously in AzDO.");
+                Console.WriteLine("Returning before asset publishing and channel assignment finishes. The operation continues asynchronously in AzDO.");
                 return Constants.SuccessCode;
             }
 
@@ -153,7 +153,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 do
                 {
-                    Console.WriteLine($"Waiting more {waitIntervalInSeconds.TotalSeconds} seconds for promotion build to complete.");
+                    Console.WriteLine($"Waiting '{waitIntervalInSeconds.TotalSeconds}' seconds for promotion build to complete.");
                     await Task.Delay(waitIntervalInSeconds);
                     promotionBuild = await azdoClient.GetBuildAsync(BuildPromotionPipelineAccountName, BuildPromotionPipelineProjectName, azdoBuildId);
                 } while (!promotionBuild.Status.Equals("completed", StringComparison.OrdinalIgnoreCase));
