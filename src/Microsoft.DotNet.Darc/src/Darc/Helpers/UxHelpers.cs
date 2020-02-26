@@ -266,7 +266,12 @@ namespace Microsoft.DotNet.Darc
         {
             try
             {
-                var dependencies = await remote.GetDependenciesAsync(repo, branch);
+                if (!(await VerifyAndConfirmRepositoryExistsAsync(remote, repo, false)))
+                {
+                    return false;
+                }
+
+                await remote.GetDependenciesAsync(repo, branch);
             }
             catch (DependencyFileNotFoundException)
             {
@@ -275,6 +280,7 @@ namespace Microsoft.DotNet.Darc
                 {
                     return PromptForYesNo("Continue?");
                 }
+                return false;
             }
 
             return true;
@@ -296,6 +302,7 @@ namespace Microsoft.DotNet.Darc
                 {
                     return PromptForYesNo("Continue?");
                 }
+                return false;
             }
 
             return true;
