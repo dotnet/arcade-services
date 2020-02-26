@@ -1,6 +1,7 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <IsPackable>true</IsPackable>
     <TargetFrameworks>netcoreapp3.1;netcoreapp2.1</TargetFrameworks>
   </PropertyGroup>
 
@@ -11,19 +12,19 @@
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp3.1' ">
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="3.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.1" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="3.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="3.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="[3.1.0, 4.0.0)" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="[3.1.0, 4.0.0)" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="[3.1.0, 4.0.0)" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="[3.1.0, 4.0.0)" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="[3.1.0, 4.0.0)" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netcoreapp2.1' ">
-    <PackageReference Include="Microsoft.Extensions.Configuration" Version="2.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="2.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.1" />
-    <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="2.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="2.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="[2.1.0, 3.0.0)" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="[2.1.0, 3.0.0)" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="[2.1.0, 3.0.0)" />
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="[2.1.0, 3.0.0)" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="[2.1.0, 3.0.0)" />
   </ItemGroup>
 
 </Project>

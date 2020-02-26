@@ -10,6 +10,8 @@ namespace Microsoft.DncEng.Configuration.Extensions
     public class MappedJsonConfigurationProvider : JsonConfigurationProvider
 #if NETCOREAPP2_1
         , IDisposable
+#elif NETSTANDARD
+#error This project cannot be built with netstandard, please build it for netcoreapp* or net*
 #endif
     {
         private readonly Func<string, string> _mapFunc;
