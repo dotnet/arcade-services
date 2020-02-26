@@ -20,7 +20,18 @@ namespace Microsoft.DncEng.Configuration.Extensions
             }
             TokenCredential credentials = ServiceConfigurationExtensions.GetAzureTokenCredential(bootstrapConfiguration);
             var client = new ConfigurationClient(new Uri(appConfigurationUri), credentials);
-            return RegexConfigMapper.Create(ConfigReferenceRegex, key => client.GetConfigurationSetting(key).Value.Value);
+            return RegexConfigMapper.Create(ConfigReferenceRegex, key =>
+            {
+                try
+                {
+
+                    return client.GetConfigurationSetting(key).Value.Value;
+                }
+                catch (RequestFailedException)
+                {
+                    return "";
+                }
+            });
         }
     }
 }

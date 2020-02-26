@@ -15,7 +15,17 @@ namespace Microsoft.DncEng.Configuration.Extensions
             var keyVaultUri = bootstrapConfiguration[ConfigurationConstants.KeyVaultUriConfigurationKey];
             var credentials = ServiceConfigurationExtensions.GetAzureTokenCredential(bootstrapConfiguration);
             var client = new SecretClient(new Uri(keyVaultUri), credentials);
-            return RegexConfigMapper.Create(VaultReferenceRegex, key => client.GetSecret(key).Value.Value);
+            return RegexConfigMapper.Create(VaultReferenceRegex, key =>
+            {
+                try
+                {
+                    return client.GetSecret(key).Value.Value;
+                }
+                catch (RequestFailedException)
+                {
+                    return "";
+                }
+            });
         }
     }
 }
