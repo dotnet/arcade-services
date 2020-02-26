@@ -136,10 +136,46 @@ namespace Microsoft.DotNet.Darc.Operations
                 queueTimeVariables)
                 .ConfigureAwait(false);
 
-            Console.WriteLine($"Build {build.Id} will be assigned to channel '{targetChannel.Name}' once this promotion build finishes: " +
-                $"https://{BuildPromotionPipelineAccountName}.visualstudio.com/{BuildPromotionPipelineProjectName}/_build/results?buildId={azdoBuildId}&view=results");
+            var promotionBuildUrl = $"https://{BuildPromotionPipelineAccountName}.visualstudio.com/{BuildPromotionPipelineProjectName}/_build/results?buildId={azdoBuildId}";
 
-            return Constants.SuccessCode;
+            Console.WriteLine($"Build {build.Id} will be assigned to channel '{targetChannel.Name}' once this build finishes publishing assets: {promotionBuildUrl}");
+
+            if (_options.NoWait)
+            {
+                Console.WriteLine("Returning before asset publishing and channel assignment finishes. The operation continues asynchronously in AzDO.");
+                return Constants.SuccessCode;
+            }
+
+            try
+            {
+                var waitIntervalInSeconds = TimeSpan.FromSeconds(60);
+                AzureDevOpsBuild promotionBuild;
+
+                do
+                {
+                    Console.WriteLine($"Waiting '{waitIntervalInSeconds.TotalSeconds}' seconds for promotion build to complete.");
+                    await Task.Delay(waitIntervalInSeconds);
+                    promotionBuild = await azdoClient.GetBuildAsync(BuildPromotionPipelineAccountName, BuildPromotionPipelineProjectName, azdoBuildId);
+                } while (!promotionBuild.Status.Equals("completed", StringComparison.OrdinalIgnoreCase));
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Darc couldn't check status of the promotion build. {e.Message}");
+                return Constants.ErrorCode;
+            }
+
+            build = await remote.GetBuildAsync(build.Id);
+
+            if (build.Channels.Any(c => c.Id == targetChannel.Id))
+            {
+                Console.WriteLine($"Build '{build.Id}' was successfully added to channel '({targetChannel.Id}) {targetChannel.Name}'");
+                return Constants.SuccessCode;
+            }
+            else
+            {
+                Console.WriteLine("The promotion build finished but the build isn't associated with the channel. This is an error scenario. Please contact @dnceng.");
+                return Constants.ErrorCode;
+            }
         }
 
         /// <summary>
