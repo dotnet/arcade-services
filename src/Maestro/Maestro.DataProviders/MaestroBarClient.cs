@@ -15,7 +15,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Maestro.RemoteFactory
+namespace Maestro.DataProviders
 {
     /// <summary>
     ///     A bar client interface for use by DarcLib which talks directly

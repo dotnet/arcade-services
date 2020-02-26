@@ -207,11 +207,6 @@ namespace DependencyUpdater
             }
         }
 
-        /// <summary>
-        ///     Update Longest Build Path table once a day for each channel at midnight
-        /// </summary>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         [CronSchedule("0 0 0 1/1 * ? *", TimeZones.PST)]
         public async Task UpdateLongestBuildPathAsync(CancellationToken cancellationToken)
         {
@@ -220,18 +215,16 @@ namespace DependencyUpdater
             List<Channel> channels = query.AsEnumerable().Select(c => new Channel() { Id = c.Id, Name = c.Name }).ToList();
 
             // Get the flow graph
-            var barOnlyRemote = await RemoteFactory.GetBarOnlyRemoteAsync(Logger);
+            IRemote barOnlyRemote = await RemoteFactory.GetBarOnlyRemoteAsync(Logger);
 
             List<Microsoft.DotNet.Maestro.Client.Models.DefaultChannel> defaultChannels = (await barOnlyRemote.GetDefaultChannelsAsync()).ToList();
             List<Microsoft.DotNet.Maestro.Client.Models.Subscription> subscriptions = (await barOnlyRemote.GetSubscriptionsAsync()).ToList();
 
-            IEnumerable<string> frequencies = 
-                new string[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", };
+            IEnumerable<string> frequencies = new[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", };
 
             foreach (var channel in channels)
             {
-                // Build, then prune out what we don't want to see if the user specified
-                // channels.
+                // Build, then prune out what we don't want to see if the user specified channels.
                 DependencyFlowGraph flowGraph = await DependencyFlowGraph.BuildAsync(defaultChannels, subscriptions, barOnlyRemote, 30);
 
                 flowGraph.PruneGraph(
@@ -247,7 +240,10 @@ namespace DependencyUpdater
 
                     // Get the nodes on the longest path and order them by path time so that the
                     // contributing repos are in the right order
-                    IEnumerable<DependencyFlowNode> longestBuildPathNodes = flowGraph.Nodes.Where(n => n.OnLongestBuildPath).OrderByDescending(n => n.BestCasePathTime);
+                    List<DependencyFlowNode> longestBuildPathNodes = flowGraph.Nodes
+                        .Where(n => n.OnLongestBuildPath)
+                        .OrderByDescending(n => n.BestCasePathTime)
+                        .ToList();
 
                     LongestBuildPath lbp = new LongestBuildPath()
                     {
@@ -255,7 +251,7 @@ namespace DependencyUpdater
                         BestCaseTimeInMinutes = longestBuildPathNodes.Max(n => n.BestCasePathTime),
                         WorstCaseTimeInMinutes = longestBuildPathNodes.Max(n => n.WorstCasePathTime),
                         ContributingRepositories = String.Join(';', longestBuildPathNodes.Select(n => $"{n.Repository}@{n.Branch}").ToArray()),
-                        EndDate = DateTimeOffset.UtcNow,
+                        ReportDate = DateTimeOffset.UtcNow,
                     };
 
                     await Context.LongestBuildPaths.AddAsync(lbp);

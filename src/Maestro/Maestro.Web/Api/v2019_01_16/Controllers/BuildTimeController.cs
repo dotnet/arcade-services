@@ -5,6 +5,7 @@
 using Kusto.Data.Common;
 using Kusto.Data.Exceptions;
 using Maestro.Data;
+using Maestro.DataProviders;
 using Maestro.Web.Api.v2019_01_16.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;

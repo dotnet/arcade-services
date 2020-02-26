@@ -333,62 +333,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             int days = 7,
             bool includeArcade = true)
         {
-            DependencyFlowGraph flowGraph = await CreateFlowGraph(
-                channelId, 
-                includeDisabledSubscriptions, 
-                includedFrequencies, 
-                includeBuildTimes, 
-                days, 
-                includeArcade);
-
-            // Convert flow graph to correct return type
-            return Ok(FlowGraph.Create(flowGraph));
-        }
-
-        /// <summary>
-        ///   Create the flow graph for a channel, calculate the longest build path, and record it
-        /// </summary>
-        /// <param name="channelId">The id of the <see cref="Channel"/></param>
-        [HttpPost("{channelId}/longestBuildPath")]
-        [SwaggerApiResponse(HttpStatusCode.Created, Description = "Longest Build Path time successfully added to Channel")]
-        public async Task<IActionResult> AddLongestBuildPathTimeForChannel(int channelId)
-        {
-            Data.Models.Channel channel = await _context.Channels.FindAsync(channelId);
-            if (channel == null)
-            {
-                return NotFound(new ApiError($"The channel with id '{channelId}' was not found."));
-            }
-
-            DependencyFlowGraph flowGraph = await CreateFlowGraph(channelId: channelId, includeBuildTimes: true, days: 30, includeArcade: false);
-
-            IEnumerable<DependencyFlowNode> longestBuildPathNodes = flowGraph.Nodes.Where(n => n.OnLongestBuildPath);
-            
-            List<string> longestBuildPath = longestBuildPathNodes.Select(n => $"{n.Repository}@{n.Branch}").ToList();
-
-            LongestBuildPath lbp = new LongestBuildPath() {
-                Channel = channel,
-                BestCaseTimeInMinutes = longestBuildPathNodes.Max(n => n.BestCasePathTime),
-                WorstCaseTimeInMinutes = longestBuildPathNodes.Max(n => n.WorstCasePathTime),
-                ContributingRepositories = String.Join(';', longestBuildPath.ToArray()),
-                EndDate = DateTimeOffset.UtcNow,
-            };
-
-            await _context.LongestBuildPaths.AddAsync(lbp);
-            await _context.SaveChangesAsync();
-            
-            return StatusCode((int)HttpStatusCode.Created);
-        }
-
-        private async Task<DependencyFlowGraph> CreateFlowGraph(
-            int channelId = 0, 
-            bool includeDisabledSubscriptions = false,
-#pragma warning disable API0001 // Versioned API methods should not expose non-versioned types.
-            IEnumerable<string> includedFrequencies = default,
-#pragma warning restore API0001 // Versioned API methods should not expose non-versioned types.
-            bool includeBuildTimes = false,
-            int days = 7,
-            bool includeArcade = true)
-        {
             var barOnlyRemote = await _remoteFactory.GetBarOnlyRemoteAsync(Logger);
 
             Microsoft.DotNet.Maestro.Client.Models.Channel engLatestChannel = await barOnlyRemote.GetChannelAsync(EngLatestChannelId);
@@ -452,7 +396,8 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 flowGraph.MarkLongestBuildPath();
             }
 
-            return flowGraph;
+            // Convert flow graph to correct return type
+            return Ok(FlowGraph.Create(flowGraph));
         }
     }
 }

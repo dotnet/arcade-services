@@ -9,7 +9,7 @@ using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace Maestro.RemoteFactory
+namespace Maestro.DataProviders
 {
     public class DarcRemoteFactory : IRemoteFactory
     {

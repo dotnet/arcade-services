@@ -1,9 +1,10 @@
+using Microsoft.DotNet.Kusto;
 using System;
 using System.Data;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Microsoft.DotNet.Kusto
+namespace Maestro.DataProviders
 {
     public static class SharedKustoQueries
     {

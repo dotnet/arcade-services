@@ -13,7 +13,7 @@ namespace Maestro.Data.Models
         public int Id { get; set; }
         public int ChannelId { get; set; }
         public Channel Channel { get; set; }
-        public DateTimeOffset EndDate { get; set; }
+        public DateTimeOffset ReportDate { get; set; }
         public double BestCaseTimeInMinutes { get; set; }
         public double WorstCaseTimeInMinutes { get; set; }
         public string ContributingRepositories { get; set; }

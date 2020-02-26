@@ -71,8 +71,8 @@
     <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
     <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
+    <ProjectReference Include="..\Maestro.DataProviders\Maestro.DataProviders.csproj" />
     <ProjectReference Include="..\Maestro.MergePolicies\Maestro.MergePolicies.csproj" />
-    <ProjectReference Include="..\Maestro.RemoteFactory\Maestro.RemoteFactory.csproj" />
     <ProjectReference Include="..\Microsoft.AspNetCore.ApiPagination\Microsoft.AspNetCore.ApiPagination.csproj" />
     <ProjectReference Include="..\Microsoft.AspNetCore.ApiVersioning.Swashbuckle\Microsoft.AspNetCore.ApiVersioning.Swashbuckle.csproj" />
     <ProjectReference Include="..\Microsoft.AspNetCore.ApiVersioning\Microsoft.AspNetCore.ApiVersioning.csproj" />
