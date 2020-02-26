@@ -88,7 +88,7 @@ namespace Microsoft.DncEng.Configuration.Extensions
             // we give the lock a total wait time of 1 hour because the breakpoint to do device code authentication is inside the lock
             using (await SentinelFileLock.AcquireAsync(DeviceCodeLockPath, 3600, TimeSpan.FromMilliseconds(1000)))
             {
-                _account = Task.Run(async () => await _app.GetAccountsAsync(), cancellationToken).Result.FirstOrDefault();
+                _account = (await _app.GetAccountsAsync()).FirstOrDefault();
                 if (_account == null || uiRequired)
                 {
                     var deviceCodeResult = await _app.AcquireTokenWithDeviceCode(requestContext.Scopes, DeviceCodeResultCallback)
@@ -118,7 +118,7 @@ namespace Microsoft.DncEng.Configuration.Extensions
 
         public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken)
         {
-            return Task.Run(async () => await GetTokenAsync(requestContext, cancellationToken), cancellationToken).Result;
+            return Task.Run(async () => await GetTokenAsync(requestContext, cancellationToken), cancellationToken).GetAwaiter().GetResult();
         }
     }
 }

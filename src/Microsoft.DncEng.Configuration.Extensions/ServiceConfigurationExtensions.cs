@@ -38,10 +38,6 @@ namespace Microsoft.DncEng.Configuration.Extensions
         ///   Authentication is handled by either MSI (optionally using the '<see cref="ConfigurationConstants.ManagedIdentityIdConfigurationKey"/>' configuration value for a user-assigned managed identity), or VS/az cli authentication.
         ///   Values will be refreshed every '<see cref="ConfigurationConstants.ReloadTimeSecondsConfigurationKey"/>' seconds.
         /// </summary>
-        /// <param name="builder"></param>
-        /// <param name="hostEnvironment"></param>
-        /// <param name="configPathFormat"></param>
-        /// <returns></returns>
         public static IConfigurationBuilder AddDefaultJsonConfiguration(this IConfigurationBuilder builder, IHostEnvironment hostEnvironment, string configPathFormat = ".config/settings{0}.json")
         {
             string rootConfigFile = string.Format(configPathFormat, "");
