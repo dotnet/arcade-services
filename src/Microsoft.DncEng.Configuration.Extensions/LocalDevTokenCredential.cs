@@ -98,7 +98,11 @@ namespace Microsoft.DncEng.Configuration.Extensions
                 }
             }
             
-            // a recursive call here is fine because _account will not be null and the call will hit the first if statement
+            // a recursive call here is fine because there wasn't any better way to do this, and this is local dev only
+            // This return statement will only get executed when `_account` was null at the top of the method,
+            // and it becomes non-null at line 91
+            // When that happens the function will either return the access token from AcquireTokenSilentAsync,
+            // or will hit the `uiRequired` branch and call AcquireTokenWithDeviceCode and return
             return await GetTokenAsync(requestContext, cancellationToken);
         }
 
