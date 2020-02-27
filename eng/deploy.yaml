@@ -18,6 +18,20 @@ parameters:
   # dotnet-build-bot-dotnet-eng-status-token
 
 stages:
+- stage: approval
+  dependsOn:
+  - build
+  - Validate
+  jobs:
+  - deployment: approval
+    displayName: deployment approval (conditional)
+    environment: ${{ parameters.DeploymentEnvironment }}
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: none
+
 - stage: predeploy
   displayName: Pre-Deployment
   pool:
@@ -25,6 +39,7 @@ stages:
   dependsOn:
   - build
   - Validate
+  - approval
   jobs:
   - job: notifyStartDeployment
     displayName: Notify deployment start
@@ -49,14 +64,6 @@ stages:
   - name: PublishProfile
     value: ${{ parameters.PublishProfile }}
   jobs:
-  - deployment: approval
-    displayName: deployment approval (conditional)
-    environment: ${{ parameters.DeploymentEnvironment }}
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - download: none
   - job: updateDatabase
     dependsOn: 
     - approval
