@@ -14,5 +14,8 @@ namespace DotNet.Status.Web
         public string[] AlertLabels { get; set; }
         public string TitlePrefix { get; set; }
         public string SupplementalBodyText { get; set; }
+        public string[] RcaRequestedLabels { get; set; }
+        public string[] RcaCopyLabelPrefixes { get; set; }
+        public string RcaLabel { get; set; }
     }
 }

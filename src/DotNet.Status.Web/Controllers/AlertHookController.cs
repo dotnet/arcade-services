@@ -78,7 +78,7 @@ namespace DotNet.Status.Web.Controllers
             IGitHubClient client =
                 await GetGitHubClientAsync(_githubOptions.Value.Organization, _githubOptions.Value.Repository);
             Issue issue = await GetExistingIssueAsync(client, notification);
-            await EnsureLabelsAsync(client, org, repo);
+            await EnsureLabelsAsync(client, org, repo, _logger);
             if (issue == null)
             {
                 _logger.LogInformation("No existing issue found, creating new active issue with {label}",
@@ -96,9 +96,10 @@ namespace DotNet.Status.Web.Controllers
                     InactiveAlertLabel,
                     ActiveAlertLabel);
 
-                await TryRemove(() => client.Issue.Labels.RemoveFromIssue(org, repo, issue.Number, InactiveAlertLabel));
-                await TryCreate(() =>
-                    client.Issue.Labels.AddToIssue(org, repo, issue.Number, new[] {ActiveAlertLabel}));
+                await GitHubModifications.TryRemoveAsync(() => client.Issue.Labels.RemoveFromIssue(org, repo, issue.Number, InactiveAlertLabel), _logger);
+                await GitHubModifications.TryCreateAsync(() =>
+                    client.Issue.Labels.AddToIssue(org, repo, issue.Number, new[] {ActiveAlertLabel}),
+                    _logger);
 
                 _logger.LogInformation("Adding recurrence comment to  {org}/{repo}#{issueNumber}",
                     org,
@@ -216,7 +217,7 @@ namespace DotNet.Status.Web.Controllers
             return icon;
         }
 
-        private async Task EnsureLabelsAsync(IGitHubClient client, string org, string repo)
+        private async Task EnsureLabelsAsync(IGitHubClient client, string org, string repo, ILogger logger)
         {
             // Assume someone didn't delete the labels, it's an expensive call to make every time
             if (s_labelsCreated)
@@ -232,57 +233,20 @@ namespace DotNet.Status.Web.Controllers
                     return;
                 }
 
-                _logger.LogInformation("Ensuring tags exist");
-
-                IReadOnlyList<Label> labels = await client.Issue.Labels.GetAllForRepository(org, repo);
-
-                async Task MakeLabel(string name, string color)
+                var desiredLabels = new[]
                 {
-                    if (labels.All(l => l.Name != name))
-                    {
-                        _logger.LogInformation("Missing tag {tag}, creating...", name);
-                        await TryCreate(() =>
-                            client.Issue.Labels.Create(org, repo, new NewLabel(name, color)));
-                    }
-                }
+                    new NewLabel(NotificationIdLabel, "f957b6"),
+                    new NewLabel(ActiveAlertLabel, "d73a4a"),
+                    new NewLabel(InactiveAlertLabel, "e4e669"),
+                };
 
-                await Task.WhenAll(
-                    MakeLabel(NotificationIdLabel, "f957b6"),
-                    MakeLabel(ActiveAlertLabel, "d73a4a"),
-                    MakeLabel(InactiveAlertLabel, "e4e669")
-                );
-
-                _logger.LogInformation("Tags ensured");
+                await GitHubModifications.CreateLabelsAsync(client, org, repo, logger, desiredLabels);
 
                 s_labelsCreated = true;
             }
             finally
             {
                 s_labelLock.Release();
-            }
-        }
-
-        private async Task TryCreate(Func<Task> createFunc)
-        {
-            try
-            {
-                await createFunc();
-            }
-            catch (ApiValidationException e) when (e.ApiError.Errors.Any(r => r.Code == "already_exists"))
-            {
-                _logger.LogWarning("github resource already exists: {exception}", e);
-            }
-        }
-
-        private async Task TryRemove(Func<Task> removeFunc)
-        {
-            try
-            {
-                await removeFunc();
-            }
-            catch (NotFoundException e)
-            {
-                _logger.LogWarning("github resource not found: {exception}", e);
             }
         }
 
@@ -306,9 +270,10 @@ namespace DotNet.Status.Web.Controllers
                 ActiveAlertLabel,
                 InactiveAlertLabel);
 
-            await TryRemove(() => client.Issue.Labels.RemoveFromIssue(org, repo, issue.Number, ActiveAlertLabel));
-            await TryCreate(() =>
-                client.Issue.Labels.AddToIssue(org, repo, issue.Number, new[] {InactiveAlertLabel}));
+            await GitHubModifications.TryRemoveAsync(() => client.Issue.Labels.RemoveFromIssue(org, repo, issue.Number, ActiveAlertLabel), _logger);
+            await GitHubModifications.TryCreateAsync(() =>
+                client.Issue.Labels.AddToIssue(org, repo, issue.Number, new[] {InactiveAlertLabel}),
+                _logger);
 
             _logger.LogInformation("Adding recurrence comment to  {org}/{repo}#{issueNumber}",
                 org,

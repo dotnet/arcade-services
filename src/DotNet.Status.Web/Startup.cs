@@ -45,6 +45,7 @@ namespace DotNet.Status.Web
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddSingleton(Configuration);
             services.AddSingleton<IKeyVaultProvider, AppTokenVaultProvider>();
             
             if (Env.IsDevelopment())
@@ -128,7 +129,8 @@ namespace DotNet.Status.Web
                         .AllowAnonymousToPage("/Index")
                         .AllowAnonymousToPage("/Status")
                         .AllowAnonymousToPage("/Error")
-                    );
+                    )
+                .AddGitHubWebHooks();
             services.AddApplicationInsightsTelemetry(Configuration.GetSection("ApplicationInsights").Bind);
             services.Configure<LoggerFilterOptions>(o =>
             {
