@@ -31,6 +31,9 @@ stages:
         deploy:
           steps:
           - download: none
+  - job: no_op
+    displayName: No-OP
+    pool: server
 
 - stage: predeploy
   displayName: Pre-Deployment
