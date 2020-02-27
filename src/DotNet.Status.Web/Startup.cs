@@ -76,6 +76,7 @@ namespace DotNet.Status.Web
             services.Configure<GitHubConnectionOptions>(Configuration.GetSection("GitHub").Bind);
             services.Configure<GrafanaOptions>(Configuration.GetSection("Grafana").Bind);
             services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth").Bind);
+            services.Configure<ZenHubOptions>(Configuration.GetSection("ZenHub").Bind);
 
             services.Configure<SimpleSigninOptions>(o => { o.ChallengeScheme = GitHubScheme; });
             services.ConfigureExternalCookie(options =>
@@ -189,6 +190,8 @@ namespace DotNet.Status.Web
                 o.SelectScheme = p => p.StartsWithSegments("/api") ? "github-token" : IdentityConstants.ApplicationScheme;
             });
             services.AddSingleton<GitHubJwtFactory>();
+
+            services.AddSingleton<ZenHubClient>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
