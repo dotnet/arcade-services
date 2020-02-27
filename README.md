@@ -66,7 +66,7 @@ For any deployment changes, the only way to test would be to kick off the [build
 
 Steps:
 - Execute the azurepipeline.yaml targeting dev branch by using run pipeline and selecting the branch
-![RunPipeline](Images/RunPipeline.png)
+![RunPipeline](Images/RunPipeline.PNG)
 
 - Once the testing is done, rerun the pipeline for master branch to return the deployment to a last known good.
 
