@@ -43,6 +43,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("skip-assets-publishing", HelpText = "Add the build to the channel without publishing assets to the channel's feeds.")]
         public bool SkipAssetsPublishing { get; set; }
 
+        [Option("no-wait", HelpText = "If set, Darc won't wait for the asset publishing and channel assignment. The operation continues asynchronously in AzDO.")]
+        public bool NoWait { get; set; }
+
         public override Operation GetOperation()
         {
             return new AddBuildToChannelOperation(this);

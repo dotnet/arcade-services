@@ -4,7 +4,7 @@
 
 using Maestro.AzureDevOps;
 using Maestro.Data;
-using Microsoft.DotNet.Configuration.Extensions;
+using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -47,7 +47,7 @@ namespace FeedCleanerService
                                     }
                                 }
                                 );
-                            services.AddKeyVaultMappedConfiguration();
+                            services.AddDefaultJsonConfiguration();
                             services.AddBuildAssetRegistry(
                                 (provider, options) =>
                                 {

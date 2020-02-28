@@ -6,6 +6,7 @@ using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.DataProviders;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Kusto;
@@ -31,11 +32,11 @@ namespace DependencyUpdater
                     host.ConfigureServices(
                         services =>
                         {
-                            services.AddKeyVaultMappedConfiguration();
+                            services.AddDefaultJsonConfiguration();
                             services.AddBuildAssetRegistry(
                                 (provider, options) =>
                                 {
-                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    var config = provider.GetRequiredService<IConfiguration>();
                                     options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
                                 });
                             services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
