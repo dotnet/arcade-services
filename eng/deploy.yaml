@@ -59,14 +59,13 @@ stages:
     name: Hosted VS2017
   dependsOn:
   - predeploy
+  - approval
   variables:
   - group: ${{ parameters.VariableGroup }}
   - name: PublishProfile
     value: ${{ parameters.PublishProfile }}
   jobs:
   - job: updateDatabase
-    dependsOn: 
-    - approval
     displayName: Update BuildAssetRegistry database
     steps:
     - download: current
@@ -112,7 +111,6 @@ stages:
     displayName: Deploy maestro service fabric application
     dependsOn: 
     - updateDatabase
-    - approval
     steps:
     - download: current
       artifact: MaestroApplication
@@ -126,8 +124,7 @@ stages:
 
   - job: deployTelemetry
     displayName: Deploy telemetry service fabric application
-    dependsOn: 
-    - approval
+    dependsOn:
     steps:
     - download: current
       artifact: TelemetryApplication
@@ -141,8 +138,7 @@ stages:
 
   - job: deployStatus
     displayName: Deploy dotnet-status web app
-    dependsOn: 
-    - approval
+    dependsOn:
     steps:
     - download: current
       artifact: DotNetStatus
@@ -162,8 +158,7 @@ stages:
   
   - job: deployRolloutScorer
     displayName: Deploy rollout scorer azure function
-    dependsOn: 
-    - approval
+    dependsOn:
     steps:
     - download: current
       artifact: RolloutScorer
