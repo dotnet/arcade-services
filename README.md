@@ -64,6 +64,10 @@ For any deployment changes, the only way to test would be to kick off the [build
 
 <Details>
 
+<Summary>
+:warning: :sweat: :boom:
+</Summary>
+
 Steps:
 - Execute the azurepipeline.yaml targeting dev branch by using run pipeline and selecting the branch
 ![RunPipeline](Images/RunPipeline.PNG)
