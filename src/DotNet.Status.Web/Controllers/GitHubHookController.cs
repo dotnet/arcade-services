@@ -122,7 +122,7 @@ For help filling out this form, see the [Root Cause Analysis](https://github.com
 
 ### What additional [telemetry](https://github.com/dotnet/core-eng/blob/master/Documentation/Alerting.md) would have allowed us to catch the issue sooner?
 
-### What new preventative steps can be taken? e.g [validation](https://github.com/dotnet/core-eng/tree/master/Documentation/Validation) or features
+### What additional [testing or validation](https://github.com/dotnet/core-eng/tree/master/Documentation/Validation) would have caught this error before rollout?
 
 ",
             };
