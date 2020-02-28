@@ -22,7 +22,7 @@ namespace SubscriptionActorService
     public class DarcRemoteFactory : IRemoteFactory
     {
         public DarcRemoteFactory(
-            IConfigurationRoot configuration,
+            IConfiguration configuration,
             IGitHubTokenProvider gitHubTokenProvider,
             IAzureDevOpsTokenProvider azureDevOpsTokenProvider,
             DarcRemoteMemoryCache memoryCache,
@@ -37,7 +37,7 @@ namespace SubscriptionActorService
             Context = context;
         }
         
-        public IConfigurationRoot Configuration { get; }
+        public IConfiguration Configuration { get; }
         public IGitHubTokenProvider GitHubTokenProvider { get; }
         public IAzureDevOpsTokenProvider AzureDevOpsTokenProvider { get; }
         public BuildAssetRegistryContext Context { get; }

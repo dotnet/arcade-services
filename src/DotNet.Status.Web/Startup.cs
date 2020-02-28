@@ -15,7 +15,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
-using Microsoft.DotNet.Configuration.Extensions;
+using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Web.Authentication;
@@ -32,7 +33,7 @@ namespace DotNet.Status.Web
     {
         public Startup(IConfiguration configuration, IHostingEnvironment env)
         {
-            Configuration = KeyVaultMappedJsonConfigurationExtensions.CreateConfiguration(configuration, env, new AppTokenVaultProvider(), "appsettings{0}.json");
+            Configuration = configuration;
             Env = env;
         }
         
@@ -46,8 +47,6 @@ namespace DotNet.Status.Web
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddSingleton(Configuration);
-            services.AddSingleton<IKeyVaultProvider, AppTokenVaultProvider>();
-            
             if (Env.IsDevelopment())
             {
                 services.AddDataProtection()
@@ -56,9 +55,9 @@ namespace DotNet.Status.Web
             else
             {
                 IConfigurationSection dpConfig = Configuration.GetSection("DataProtection");
-                AppTokenVaultProvider keyVaultProvider = new AppTokenVaultProvider();
-                KeyVaultClient kvClient = keyVaultProvider.CreateKeyVaultClient();
-                string vaultUri = Configuration["KeyVaultUri"];
+                var provider = new AzureServiceTokenProvider();
+                var kvClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(provider.KeyVaultTokenCallback));
+                string vaultUri = Configuration[ConfigurationConstants.KeyVaultUriConfigurationKey];
                 string keyVaultKeyIdentifierName = dpConfig["KeyIdentifier"];
                 KeyBundle key = kvClient.GetKeyAsync(vaultUri, keyVaultKeyIdentifierName).GetAwaiter().GetResult();
                 services.AddDataProtection()

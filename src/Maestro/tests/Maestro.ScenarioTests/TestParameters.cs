@@ -18,7 +18,7 @@ namespace Maestro.ScenarioTests
 
         public static async Task<TestParameters> GetAsync(ITestOutputHelper testOutput)
         {
-            IConfigurationRoot userSecrets = new ConfigurationBuilder()
+            IConfiguration userSecrets = new ConfigurationBuilder()
                 .AddUserSecrets<TestParameters>()
                 .Build();
 

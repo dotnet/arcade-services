@@ -7,8 +7,8 @@ using Maestro.AzureDevOps;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.MergePolicies;
+using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.Dotnet.GitHub.Authentication;
-using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
@@ -50,11 +50,11 @@ namespace SubscriptionActorService
                             // use a sized cache and some components, such as EFCore, do not implement their caching
                             // in such a way that will work with sizing.
                             services.AddSingleton<DarcRemoteMemoryCache>();
-                            services.AddKeyVaultMappedConfiguration();
+                            services.AddDefaultJsonConfiguration();
                             services.AddBuildAssetRegistry(
                                 (provider, options) =>
                                 {
-                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    var config = provider.GetRequiredService<IConfiguration>();
                                     options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
                                 });
                             services.Configure<GitHubClientOptions>(o =>
@@ -66,14 +66,14 @@ namespace SubscriptionActorService
                             services.Configure<GitHubTokenProviderOptions>(
                                 (options, provider) =>
                                 {
-                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    var config = provider.GetRequiredService<IConfiguration>();
                                     IConfigurationSection section = config.GetSection("GitHub");
                                     section.Bind(options);
                                 });
                             services.Configure<AzureDevOpsTokenProviderOptions>(
                                 (options, provider) =>
                                 {
-                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    var config = provider.GetRequiredService<IConfiguration>();
                                     var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
                                     foreach (IConfigurationSection token in tokenMap)
                                     {

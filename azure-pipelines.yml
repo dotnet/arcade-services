@@ -100,7 +100,7 @@ stages:
 
         - task: NuGetToolInstaller@0
           inputs:
-            versionSpec: 4.4.1
+            versionSpec: 5.4.0
 
         - task: NodeTool@0
           inputs:

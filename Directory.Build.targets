@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
+  <PropertyGroup Condition="$(TargetFrameworks.Contains('netcoreapp3.1')) or ('$(TargetFramework)' == 'netcoreapp3.1') ">
+    <Nullable>enable</Nullable>
+    <LangVersion>8.0</LangVersion>
+  </PropertyGroup>
   <Import Project="Sdk.targets" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 </Project>
