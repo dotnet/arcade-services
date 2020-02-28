@@ -138,6 +138,7 @@ stages:
 
   - job: deployStatus
     displayName: Deploy dotnet-status web app
+    dependsOn:
     steps:
     - download: current
       artifact: DotNetStatus
@@ -157,6 +158,7 @@ stages:
   
   - job: deployRolloutScorer
     displayName: Deploy rollout scorer azure function
+    dependsOn:
     steps:
     - download: current
       artifact: RolloutScorer
