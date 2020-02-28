@@ -80,7 +80,7 @@ namespace DotNet.Status.Web.Controllers
 
             IGitHubClient client = await GetGitHubClientAsync(_githubOptions.Value.Organization, _githubOptions.Value.Repository);
             Issue issue = await GetExistingIssueAsync(client, notification);
-            await EnsureLabelsAsync(client, org, repo, _logger);
+            await EnsureLabelsAsync(client, org, repo);
             if (issue == null)
             {
                 _logger.LogInformation("No existing issue found, creating new active issue with {label}",
