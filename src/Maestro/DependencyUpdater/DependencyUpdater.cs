@@ -210,9 +210,7 @@ namespace DependencyUpdater
         [CronSchedule("0 0 0 1/1 * ? *", TimeZones.PST)]
         public async Task UpdateLongestBuildPathAsync(CancellationToken cancellationToken)
         {
-            IQueryable<Channel> query = Context.Channels;
-
-            List<Channel> channels = query.AsEnumerable().Select(c => new Channel() { Id = c.Id, Name = c.Name }).ToList();
+            List<Channel> channels = Context.Channels.Select(c => new Channel() { Id = c.Id, Name = c.Name }).ToList();
 
             // Get the flow graph
             IRemote barOnlyRemote = await RemoteFactory.GetBarOnlyRemoteAsync(Logger);
