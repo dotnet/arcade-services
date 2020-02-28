@@ -238,7 +238,7 @@ namespace DotNet.Status.Web.Controllers
             return icon;
         }
 
-        private async Task EnsureLabelsAsync(IGitHubClient client, string org, string repo, ILogger logger)
+        private async Task EnsureLabelsAsync(IGitHubClient client, string org, string repo)
         {
             // Assume someone didn't delete the labels, it's an expensive call to make every time
             if (s_labelsCreated)
@@ -261,7 +261,7 @@ namespace DotNet.Status.Web.Controllers
                     new NewLabel(InactiveAlertLabel, "e4e669"),
                 };
 
-                await GitHubModifications.CreateLabelsAsync(client, org, repo, logger, desiredLabels);
+                await GitHubModifications.CreateLabelsAsync(client, org, repo, _logger, desiredLabels);
 
                 s_labelsCreated = true;
             }
