@@ -62,6 +62,7 @@ For any deployment changes, the only way to test would be to kick off the [build
 | ----------- | 
 | **This comes with a significant overhead of a possibility of leaving the int deployments in a broken or hung state, which then would require significant manual effort to undo the damage especially with the Service Fabric Clusters. This process should only be done if and only if absolutely necessary and after obtaining management approval.** | 
 
+<Details>
 
 Steps:
 - Execute the azurepipeline.yaml targeting dev branch by using run pipeline and selecting the branch
@@ -69,4 +70,5 @@ Steps:
 
 - Once the testing is done, rerun the pipeline for master branch to return the deployment to a last known good.
 
+</Details>
 
