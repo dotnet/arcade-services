@@ -19,6 +19,7 @@ export class ChannelComponent implements OnInit {
 
   public graph$!: Observable<StatefulResult<FlowGraph>>;
   public channel$?: Observable<StatefulResult<Channel>>;
+  public includeArcade: boolean = true;
 
   ngOnInit() {
     const channelId$ = this.route.paramMap.pipe(

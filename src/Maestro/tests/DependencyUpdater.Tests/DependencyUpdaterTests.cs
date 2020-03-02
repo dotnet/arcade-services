@@ -6,6 +6,7 @@ using System;
 using Maestro.Contracts;
 using Maestro.Data;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Actors;
@@ -23,12 +24,14 @@ namespace DependencyUpdater.Tests
         protected readonly IServiceScope Scope;
         protected readonly MockReliableStateManager StateManager;
         protected readonly Mock<ISubscriptionActor> SubscriptionActor;
+        protected readonly Mock<IRemoteFactory> RemoteFactory;
 
         public DependencyUpdaterTests()
         {
             var services = new ServiceCollection();
             StateManager = new MockReliableStateManager();
             SubscriptionActor = new Mock<ISubscriptionActor>(MockBehavior.Strict);
+            RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
             Env = new Mock<IHostingEnvironment>(MockBehavior.Strict);
             services.AddSingleton(Env.Object);
             services.AddSingleton<IReliableStateManager>(StateManager);
@@ -41,6 +44,7 @@ namespace DependencyUpdater.Tests
                     ActorId = id;
                     return SubscriptionActor.Object;
                 });
+            services.AddSingleton<IRemoteFactory>(RemoteFactory.Object);
             Provider = services.BuildServiceProvider();
             Scope = Provider.CreateScope();
 

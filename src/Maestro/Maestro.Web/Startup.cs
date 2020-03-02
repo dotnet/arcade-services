@@ -18,6 +18,7 @@ using Maestro.AzureDevOps;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
@@ -40,12 +41,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
-using Azure.Identity;
-using Azure.Core;
+using Microsoft.Azure.Services.AppAuthentication;
 
 namespace Maestro.Web
 {
@@ -129,13 +128,13 @@ namespace Maestro.Web
         public Startup(IConfiguration configuration, IHostingEnvironment env)
         {
             HostingEnvironment = env;
-            Configuration = KeyVaultMappedJsonConfigurationExtensions.CreateConfiguration(configuration, env, new ServiceHostKeyVaultProvider(env));
+            Configuration = configuration;
         }
 
         public static readonly TimeSpan LoginCookieLifetime = new TimeSpan(days: 120, hours: 0, minutes: 0, seconds: 0);
 
         public IHostingEnvironment HostingEnvironment { get; set; }
-        public IConfigurationRoot Configuration { get; }
+        public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -151,9 +150,9 @@ namespace Maestro.Web
 
                 string vaultUri = Configuration["KeyVaultUri"];
                 string keyVaultKeyIdentifierName = dpConfig["KeyIdentifier"];
-                KeyVaultClient kvClient = ServiceHostKeyVaultProvider.CreateKeyVaultClient(HostingEnvironment);
+                var provider = new AzureServiceTokenProvider();
+                var kvClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(provider.KeyVaultTokenCallback));
                 KeyBundle key = kvClient.GetKeyAsync(vaultUri, keyVaultKeyIdentifierName).GetAwaiter().GetResult();
-
 
 
                 services.AddDataProtection()
@@ -255,41 +254,7 @@ namespace Maestro.Web
 
             services.AddMergePolicies();
 
-            // Configure access to Azure App Configuration
-            try
-            {
-                ConfigurationBuilder builder = new ConfigurationBuilder();
-
-                builder.AddAzureAppConfiguration(options =>
-                {
-                    if (!string.IsNullOrEmpty(Configuration["AppConfigurationConnectionString"]))
-                    {
-                        options.Connect(Configuration["AppConfigurationConnectionString"]);
-                    }
-                    else
-                    {
-                        string appConfigEndpointUri = Configuration["AppConfigurationUri"];
-
-                        options.Connect(new Uri(appConfigEndpointUri), new ManagedIdentityCredential());
-                    }
-
-                    options.ConfigureRefresh(refresh =>
-                        {
-                            refresh.Register(".appconfig.featureflag/AutoBuildPromotion")
-                                .SetCacheExpiration(TimeSpan.FromSeconds(1));
-                        }).UseFeatureFlags();
-
-                    Build.s_configurationRefresher = options.GetRefresher();
-                });
-
-                Build.s_dynamicConfigs = builder.Build();
-            }
-            catch (Exception)
-            {
-                // Disable AppConfigs lookup if for some reason the authentication failed
-                Build.s_configurationRefresher = null;
-                Build.s_dynamicConfigs = null;
-            }
+            Build.s_dynamicConfigs = Configuration;
         }
 
         public void ConfigureContainer(ContainerBuilder builder)

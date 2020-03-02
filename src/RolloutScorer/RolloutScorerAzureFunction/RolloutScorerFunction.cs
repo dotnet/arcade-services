@@ -47,7 +47,7 @@ namespace RolloutScorerAzureFunction
 
             // The deployments we care about are ones that occurred after the last scorecard
             IEnumerable<AnnotationEntity> relevantDeployments =
-                deploymentEntries.Where(d => (d.Ended ?? DateTimeOffset.MaxValue) > scorecardEntries.Last().Date);
+                deploymentEntries.Where(d => (d.Ended ?? DateTimeOffset.MaxValue) > scorecardEntries.Last().Date.AddDays(ScoringBufferInDays));
             log.LogInformation($"Found {relevantDeployments?.Count() ?? -1} relevant deployments (deployments which occurred " +
                 $"after the last scorecard). (-1 indicates that null was returned.)");
 
@@ -114,7 +114,7 @@ namespace RolloutScorerAzureFunction
 
                     log.LogInformation($"Uploading results for {string.Join(", ", scorecards.Select(s => s.Repo))}");
                     await RolloutUploader.UploadResultsAsync(scorecards, Utilities.GetGithubClient(githubPat.Value),
-                        scorecardsStorageAccountKey.Value, Configs.DefaultConfig.GithubConfig, skipPr: deploymentEnvironment == "Production");
+                        scorecardsStorageAccountKey.Value, Configs.DefaultConfig.GithubConfig, skipPr: deploymentEnvironment != "Production");
                 }
                 else
                 {

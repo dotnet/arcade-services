@@ -12,8 +12,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Autofac;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Internal;
-using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +24,7 @@ using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 using Newtonsoft.Json;
+using IHostingEnvironment = Microsoft.Extensions.Hosting.IHostingEnvironment;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
@@ -202,12 +203,13 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 builder => { builder.RegisterType<TActor>().As<TActor>().InstancePerDependency(); });
         }
 
-        public ServiceHost RegisterStatelessWebService<TStartup>(string serviceTypeName) where TStartup : class
+        public ServiceHost RegisterStatelessWebService<TStartup>(string serviceTypeName, Action<IWebHostBuilder> configureWebHost = null) where TStartup : class
         {
             RegisterStatelessService(
                 serviceTypeName,
                 context => new DelegatedStatelessWebService<TStartup>(
                     context,
+                    configureWebHost ?? (builder => { }),
                     ApplyConfigurationToServices,
                     ApplyConfigurationToContainer));
             return ConfigureContainer(
@@ -240,13 +242,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     builder.AddDebug();
                     builder.AddFixedApplicationInsights(LogLevel.Information);
                 });
-            
-            services.AddSingleton<IKeyVaultProvider, ServiceHostKeyVaultProvider>();
         }
 
         private static HostingEnvironment InitializeEnvironment()
         {
-            IConfigurationRoot config = new ConfigurationBuilder().AddEnvironmentVariables("ASPNETCORE_").Build();
+            IConfiguration config = new ConfigurationBuilder().AddEnvironmentVariables("ASPNETCORE_").Build();
             var options = new WebHostOptions(config, GetApplicationName());
             var env = new HostingEnvironment();
             env.Initialize(AppContext.BaseDirectory, options);

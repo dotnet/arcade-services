@@ -100,6 +100,14 @@
       </StatelessService>
     </Service>
   </DefaultServices>
+  <Principals>
+    <Users>
+      <User Name="MaestroUser" LoadUserProfile="true" />
+    </Users>
+  </Principals>
+  <Policies>
+    <DefaultRunAsPolicy UserRef="MaestroUser" />
+  </Policies>
   <Certificates>
     <EndpointCertificate X509FindValue="[WebCertThumbprint]" Name="WebSslCert" />
   </Certificates>

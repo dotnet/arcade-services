@@ -320,6 +320,29 @@ namespace Maestro.Data.Migrations
                     b.ToTable("GoalTime");
                 });
 
+            modelBuilder.Entity("Maestro.Data.Models.LongestBuildPath", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<double>("BestCaseTimeInMinutes");
+
+                    b.Property<int>("ChannelId");
+
+                    b.Property<string>("ContributingRepositories");
+
+                    b.Property<DateTimeOffset>("ReportDate");
+
+                    b.Property<double>("WorstCaseTimeInMinutes");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChannelId");
+
+                    b.ToTable("LongestBuildPaths");
+                });
+
             modelBuilder.Entity("Maestro.Data.Models.ReleasePipeline", b =>
                 {
                     b.Property<int>("Id")
@@ -721,6 +744,14 @@ namespace Maestro.Data.Migrations
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.GoalTime", b =>
+                {
+                    b.HasOne("Maestro.Data.Models.Channel", "Channel")
+                        .WithMany()
+                        .HasForeignKey("ChannelId")
+                        .OnDelete(DeleteBehavior.Cascade);
+                });
+
+            modelBuilder.Entity("Maestro.Data.Models.LongestBuildPath", b =>
                 {
                     b.HasOne("Maestro.Data.Models.Channel", "Channel")
                         .WithMany()

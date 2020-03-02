@@ -1153,7 +1153,6 @@ export class ChannelsApiService implements IChannelsApi {
         queryParameters = queryParameters.set("includeDisabledSubscriptions", "false");
         queryParameters = queryParameters.set("includeBuildTimes", "true");
         queryParameters = queryParameters.set("days", "30");
-        queryParameters = queryParameters.set("includeArcade", "false");
 
         queryParameters = queryParameters.set("api-version", apiVersion);
 
