@@ -195,25 +195,19 @@ namespace Microsoft.DotNet.DarcLib
                 XmlNodeList versionList = versionDetails.SelectNodes($"//{VersionFiles.DependencyElementName}[translate(@Name,'ABCDEFGHIJKLMNOPQRSTUVWXYZ'," +
                     $"'abcdefghijklmnopqrstuvwxyz')='{itemToUpdate.Name.ToLower()}']");
 
-                if (versionList.Count != 1)
+                if (versionList.Count == 0)
                 {
-                    if (versionList.Count == 0)
-                    {
-                        throw new DependencyException($"No dependencies named '{itemToUpdate.Name}' found.");
-                    }
-                    else
-                    {
-                        throw new DarcException($"The use of the same asset '{itemToUpdate.Name}', even with a different version, is currently not " +
-                            "supported.");
-                    }
+                    throw new DependencyException($"No dependencies named '{itemToUpdate.Name}' found.");
                 }
 
-                XmlNode nodeToUpdate = versionList.Item(0);
-
-                SetAttribute(versionDetails, nodeToUpdate, VersionFiles.VersionAttributeName, itemToUpdate.Version);
-                SetAttribute(versionDetails, nodeToUpdate, VersionFiles.NameAttributeName, itemToUpdate.Name);
-                SetElement(versionDetails, nodeToUpdate, VersionFiles.ShaElementName, itemToUpdate.Commit);
-                SetElement(versionDetails, nodeToUpdate, VersionFiles.UriElementName, itemToUpdate.RepoUri);
+                for (int i = 0; i < versionList.Count; ++i)
+                {
+                    XmlNode nodeToUpdate = versionList.Item(i);
+                    SetAttribute(versionDetails, nodeToUpdate, VersionFiles.VersionAttributeName, itemToUpdate.Version);
+                    SetAttribute(versionDetails, nodeToUpdate, VersionFiles.NameAttributeName, itemToUpdate.Name);
+                    SetElement(versionDetails, nodeToUpdate, VersionFiles.ShaElementName, itemToUpdate.Commit);
+                    SetElement(versionDetails, nodeToUpdate, VersionFiles.UriElementName, itemToUpdate.RepoUri);
+                }
                 UpdateVersionFiles(versionProps, globalJson, itemToUpdate);
             }
 
