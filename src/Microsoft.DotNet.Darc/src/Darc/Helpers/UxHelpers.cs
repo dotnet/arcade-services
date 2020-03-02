@@ -280,7 +280,6 @@ namespace Microsoft.DotNet.Darc
                 {
                     return PromptForYesNo("Continue?");
                 }
-                return false;
             }
 
             return true;
@@ -302,7 +301,6 @@ namespace Microsoft.DotNet.Darc
                 {
                     return PromptForYesNo("Continue?");
                 }
-                return false;
             }
 
             return true;
