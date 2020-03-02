@@ -41,7 +41,7 @@ namespace DependencyUpdater
                             services.AddKustoClientProvider(
                                 (provider, options) =>
                                 {
-                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    var config = provider.GetRequiredService<IConfiguration>();
                                     IConfigurationSection section = config.GetSection("Kusto");
                                     section.Bind(options);
                                 });
