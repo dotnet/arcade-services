@@ -266,11 +266,6 @@ namespace Microsoft.DotNet.Darc
         {
             try
             {
-                if (!(await VerifyAndConfirmRepositoryExistsAsync(remote, repo, false)))
-                {
-                    return false;
-                }
-
                 await remote.GetDependenciesAsync(repo, branch);
             }
             catch (DependencyFileNotFoundException)
