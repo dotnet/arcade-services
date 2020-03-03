@@ -116,7 +116,7 @@ namespace Microsoft.DotNet.Darc.Helpers
                                 options.AzureDevOpsPat;
                         }
                     }
-                    
+
                     if (darcSettings.GitType == GitRepoType.None)
                     {
                         Console.WriteLine($"Unknown repository '{repoUri}', repo type set to 'None'. " +
