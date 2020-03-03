@@ -2,25 +2,25 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Maestro.Data;
+using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.ServiceFabric.Data;
 using Microsoft.ServiceFabric.Data.Collections;
-using Microsoft.Dotnet.GitHub.Authentication;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.DotNet.Git.IssueManager;
-using System.Text;
 using Newtonsoft.Json.Linq;
-using System.Net.Http;
-using Microsoft.TeamFoundation.Common;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
+using Octokit;
 
 namespace DependencyUpdateErrorProcessor
 {
@@ -33,34 +33,35 @@ namespace DependencyUpdateErrorProcessor
             IReliableStateManager stateManager,
             ILogger<DependencyUpdateErrorProcessor> logger,
             BuildAssetRegistryContext context,
-            IOptions<DependencyUpdateErrorProcessorOptions> dependencyUpdateErrorProcessorOptions
+            IOptions<DependencyUpdateErrorProcessorOptions> errorProcessor
             )
         {
             StateManager = stateManager;
             Logger = logger;
             Context = context;
-            DependencyUpdateErrorProcessorOptions = dependencyUpdateErrorProcessorOptions.Value;
+            ErrorProcessor = errorProcessor.Value;
         }
 
-        public IReliableStateManager StateManager { get; }
+        private IReliableStateManager StateManager { get; }
 
-        public ILogger<DependencyUpdateErrorProcessor> Logger { get; }
+        private ILogger<DependencyUpdateErrorProcessor> Logger { get; }
 
-        public BuildAssetRegistryContext Context { get; }
+        private BuildAssetRegistryContext Context { get; }
 
-        public DependencyUpdateErrorProcessorOptions DependencyUpdateErrorProcessorOptions { get; }
+        private DependencyUpdateErrorProcessorOptions ErrorProcessor { get; }
 
-        [CronSchedule("0 0 0/1 1/1 * ? *", TimeZones.PST)]
+
+        [CronSchedule("0 0/1 * 1/1 * ? *", TimeZones.PST)]
         public async Task DependencyUpdateErrorProcessing()
         {
 
-            if (DependencyUpdateErrorProcessorOptions.ConfigurationRefresherdPointUri != null && DependencyUpdateErrorProcessorOptions.DynamicConfigs != null)
+            if (ErrorProcessor.ConfigurationRefresherdPointUri != null && ErrorProcessor.DynamicConfigs != null)
             {
-                DependencyUpdateErrorProcessorOptions.ConfigurationRefresherdPointUri.Refresh().GetAwaiter().GetResult();
-           
-                bool.TryParse(DependencyUpdateErrorProcessorOptions.DynamicConfigs["FeatureManagement:DependencyUpdateErrorProcessor"], 
-                    out var autoDependencyUpdateErrorProcessor);
-                if (autoDependencyUpdateErrorProcessor)
+                await ErrorProcessor.ConfigurationRefresherdPointUri.Refresh();
+                
+                bool.TryParse(ErrorProcessor.DynamicConfigs["FeatureManagement:DependencyUpdateErrorProcessor"], 
+                    out var dependencyUpdateErrorProcessorFlag);
+                if (dependencyUpdateErrorProcessorFlag)
                 {
                     IReliableDictionary<string, DateTime> update =
                         await StateManager.GetOrAddAsync<IReliableDictionary<string, DateTime>>("update");
@@ -68,19 +69,14 @@ namespace DependencyUpdateErrorProcessor
                     {
                         using (ITransaction tx = StateManager.CreateTransaction())
                         {
-                            var previousTransactionDateTime = await update.GetOrAddAsync(
+                            var previousTransaction = await update.GetOrAddAsync(
                              tx,
                              "update",
-                             DateTime.Now
+                             //DateTime.UtcNow
+                             new DateTime(2002, 10, 18)
                              );
-                            var updatedTime = await CheckForError(previousTransactionDateTime, DependencyUpdateErrorProcessorOptions.GithubUrl);
-                            await update.TryUpdateAsync(
-                                tx,
-                                "update",
-                                updatedTime.UtcDateTime,
-                                previousTransactionDateTime
-                                );
                             await tx.CommitAsync();
+                            await CheckForErrorInRepositoryBranchHistoryTable(previousTransaction, ErrorProcessor.GithubUrl);
                         }
                     }
                     catch (Exception ex)
@@ -95,133 +91,206 @@ namespace DependencyUpdateErrorProcessor
             }
         }
 
-        public async Task<DateTimeOffset> CheckForError(DateTimeOffset previousTransactionDateTime , string whereToCreateIssue)
+        private async Task CheckForErrorInRepositoryBranchHistoryTable(DateTimeOffset previousTransaction , string repository)
         {
-            List<RepositoryBranchUpdateHistoryEntry> list = (from repo in Context.RepositoryBranchUpdateHistory
-                                                             where repo.Success == false
-                                                             where repo.Timestamp > previousTransactionDateTime.UtcDateTime
-                                                             orderby repo.Timestamp ascending
-                                                             select repo).ToList();
-            if (!list.Any())
+            // Looking for errors from the RepositoryBranchHistory table
+            List<RepositoryBranchUpdateHistoryEntry> unprocessedHistoryEntries = (from repoBranchUpdateHistory in Context.RepositoryBranchUpdateHistory
+                                                             where repoBranchUpdateHistory.Success == false
+                                                             where repoBranchUpdateHistory.Timestamp > previousTransaction.UtcDateTime
+                                                             orderby repoBranchUpdateHistory.Timestamp ascending
+                                                             select repoBranchUpdateHistory).ToList();
+            if (!unprocessedHistoryEntries.Any())
             {
-                return previousTransactionDateTime;
+                Logger.LogInformation("No errors found in the RepositoryBranchUpdateHistory table.");
             }
 
-            Logger.LogInformation($"Going to create the github issue");
+            Logger.LogInformation("Going to create the github issue.");
             try
             {
-                await CreateGitHubIssueAsync(previousTransactionDateTime.UtcDateTime,  list[0].Repository, list[0].Branch, 
-                    list[0].Action, list[0].ErrorMessage, list[0].Method , whereToCreateIssue);
+                foreach (var error in unprocessedHistoryEntries)
+                {
+                    //Skipping creating gitHub issue for SynchonizePullRequest method as it is not considered as an error.
+                    if (!error.Method.Equals("SynchronizePullRequestAsync"))
+                    {
+                        await CreateGitHubIssueAsync(error, repository);
+                        IReliableDictionary<string, DateTime> update =
+                                       await StateManager.GetOrAddAsync<IReliableDictionary<string, DateTime>>("update");
+                        try
+                        {
+                            using (ITransaction tx = StateManager.CreateTransaction())
+                            {
+                                await update.SetAsync(
+                                    tx,
+                                    "update",
+                                    error.Timestamp
+                                    );
+                                await tx.CommitAsync();
+                            }
+
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError(ex, "Failed to create a GitHub issue for the error : " + error.ErrorMessage);
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
-                Logger.LogError(ex, "Could not create a github issue for the error: " + list[0].ErrorMessage);
+                Logger.LogError(ex, "Could not create a github issue.");
             }
-            previousTransactionDateTime = list[0].Timestamp;
-            return previousTransactionDateTime;
+
         }
 
-        public async Task<bool> SearchCreatedIssueAsync(DateTime transactionDateTime , string errorMessage)
+        private async Task<GitHubClient> AuthenticateGitHubClient(string creatingIssueInRepo)
         {
-            var query = new StringBuilder();
-            HttpClient client = new HttpClient
-            {
-                BaseAddress = new Uri("https://api.github.com")
-            };
-            client.DefaultRequestHeaders.Add("User-Agent", @"Mozilla/5.0 (Windows NT 10; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0");
+            string gitHubToken = null;
+            IGitHubTokenProvider gitHubTokenProvider = Context.GetService<IGitHubTokenProvider>();
+            long installationId = await Context.GetInstallationId(creatingIssueInRepo);
+            gitHubToken = await gitHubTokenProvider.GetTokenForInstallationAsync(installationId);
 
-            query.Append($"is:issue+is:open+{"Error Message: " + errorMessage}in:title&order=desc");
-            JObject responseContent;
-            using (HttpResponseMessage response = await client.GetAsync(
-                $"search/issues?q={query}"))
-            {
-                responseContent = JObject.Parse(await response.Content.ReadAsStringAsync());
-            }
-            JArray items = JArray.Parse(responseContent["items"].ToString());
-            if (!items.IsNullOrEmpty())
-            {
-                foreach (JObject item in items)
-                {
-                    var createdDate = item.GetValue("created_at");
-                    var result = createdDate.ToObject<DateTime>();
-                    if (result <= transactionDateTime)
-                    {
-                        Logger.LogInformation("The issue already exists so skipping this error");
-                        return false;
-                    }
-                    else
-                        return true;
-                }
-            }
-            return true;
+            Logger.LogInformation("GitHub token acquired for " + creatingIssueInRepo);
+
+            Octokit.ProductHeaderValue _product;
+            string version = Assembly.GetExecutingAssembly()
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                .InformationalVersion;
+            _product = new Octokit.ProductHeaderValue("Maestro", version);
+            var client = new GitHubClient(_product);
+            var token = new Credentials(gitHubToken);
+
+            client.Credentials = token;
+            return client;
+
         }
-
-
-        private async Task CreateGitHubIssueAsync(DateTime transactionDateTime , string repositoryUrl, string branch, 
-            string action, String errorMessage, String method, string whereToCreateIssue)
+        private async Task CreateGitHubIssueAsync(RepositoryBranchUpdateHistoryEntry repositoryBranchUpdateHistory , string creatingIssueInRepo)
         {
-            Logger.LogInformation($"Something failed in the repository : {repositoryUrl} ");
+            Logger.LogInformation("Something failed in the repository : " + repositoryBranchUpdateHistory.Repository);
 
             string fyiHandles = "@epananth";
-            string gitHubToken = null, azureDevOpsToken = null;
             string label = "UpdateDependency";
 
-            using (Logger.BeginScope($"Opening GitHub issue for RepositoryBranchUpdateHistory."))
+            IReliableDictionary<string, int> gitHubIssueEvaulator =
+            await StateManager.GetOrAddAsync<IReliableDictionary<string, int>>("gitHubIssueEvaulator");
+            string repoBranchKey = repositoryBranchUpdateHistory.Repository + "_" + repositoryBranchUpdateHistory.Branch;
+
+            var client = await AuthenticateGitHubClient(creatingIssueInRepo);
+
+            StringBuilder description = new StringBuilder("Something failed during dependency update" +
+                Environment.NewLine);
+
+            switch (repositoryBranchUpdateHistory.Method)
             {
-                try
-                {
-                    if (!string.IsNullOrEmpty(whereToCreateIssue))
+                // Only UpdateAssetAsync method has subscriptionId as one of the parameters in the arguments column. Other methods do not have this info.
+                case "UpdateAssetsAsync":
+                    // Get the subscription details
+                    JArray arguments = JArray.Parse(repositoryBranchUpdateHistory.Arguments);
+                    string subscriptionId = arguments[0].ToString();
+                    Guid subscriptionGuid = GetSubscriptionGuid(subscriptionId);
+                    description.Append("SubscriptionId: " + $"{ arguments[0]}" +
+                        Environment.NewLine);
+                    List<Maestro.Data.Models.Subscription> subscription = (from sub in 
+                        Context.Subscriptions where sub.Id == subscriptionGuid select sub).ToList();
+                    // Subscription might be removed 
+                    if (subscription.Count == 0)
                     {
-                        IGitHubTokenProvider gitHubTokenProvider = Context.GetService<IGitHubTokenProvider>();
-                        long installationId = await Context.GetInstallationId(whereToCreateIssue);
-                        gitHubToken = await gitHubTokenProvider.GetTokenForInstallationAsync(installationId);
-
-                        Logger.LogInformation($"GitHub token acquired for '{whereToCreateIssue}'!");
-                    }
-
-                    IssueManager issueManager = new IssueManager(gitHubToken, azureDevOpsToken);
-
-                    string title = $"Repository Url :'{repositoryUrl}' Error :'{errorMessage}'";
-                    string description = $"Something failed during dependency update" +
-                    $"{Environment.NewLine} {Environment.NewLine}" +
-                    "RepositoryUrl :" + $"[{repositoryUrl}](repositoryUrl)" +
-                    $"{Environment.NewLine} {Environment.NewLine}" +
-                    "Branch Name :" + $"{branch}" +
-                    $"{Environment.NewLine} {Environment.NewLine}" +
-                    "Error Message : " + $"{errorMessage}" +
-                    $"{Environment.NewLine} {Environment.NewLine}" +
-                    "Method : " + $"{method}" +
-                    $"{Environment.NewLine} {Environment.NewLine}" +
-                    "Action : " + $"{action}" +
-                    $"{Environment.NewLine} {Environment.NewLine}" +
-                    "Failure Category :" + $"{label}" + // Work on failure category will be done as a part of -> https://github.com/dotnet/arcade/issues/1196
-                    $"{Environment.NewLine} {Environment.NewLine}" +
-                    $"/FYI: {fyiHandles}";
-
-
-                    Logger.LogInformation($"GitHub token acquired for '{whereToCreateIssue}'!");
-                    //Check if the issue already exists in Github
-                    if (await SearchCreatedIssueAsync(transactionDateTime, errorMessage))
-                    {
-                        int issueId = await issueManager.CreateNewIssueAsync(whereToCreateIssue, title, description);
-                        Logger.LogInformation($"Issue {issueId} was created in '{whereToCreateIssue}'");
-                        Logger.LogInformation("have to create issue");
+                        Logger.LogInformation("SubscriptionId :" + subscriptionId + " has been deleted.");
+                        break;
                     }
                     else
                     {
-                        Logger.LogInformation("Issue already exists for this particular error");
+                        description.Append("Source Repository :" + subscription[0].SourceRepository +
+                            $"{Environment.NewLine} {Environment.NewLine}" +
+                            "Target Repository :" + subscription[0].TargetRepository);
                     }
-                }
-                catch (Exception exc)
+                    break;
+                    // for all the other methods
+                default:
+                    description.Append("Repository :" + $"[{repositoryBranchUpdateHistory.Repository}](repositoryUrl)");
+                    break;
+
+            }
+
+            description.Append(Environment.NewLine +
+                "Branch Name :" + repositoryBranchUpdateHistory.Branch +
+                Environment.NewLine +
+                "Error Message :" +  repositoryBranchUpdateHistory.ErrorMessage +
+                Environment.NewLine +
+                "Method :" + repositoryBranchUpdateHistory.Method +
+                Environment.NewLine +
+                "Action :" + repositoryBranchUpdateHistory.Action +
+                Environment.NewLine +
+                $"/FYI {fyiHandles} " + 
+                Environment.NewLine);
+
+            // Get repo info used for create/ update gitHub issue
+            Octokit.Repository repo = await client.Repository.Get(ErrorProcessor.Owner, ErrorProcessor.Repository);
+
+            try
+            {
+                using (ITransaction tx = StateManager.CreateTransaction())
                 {
-                    Logger.LogError(exc, $"Something failed while attempting to create an issue based on repo '{repositoryUrl}' ");
+                    if (await gitHubIssueEvaulator.ContainsKeyAsync(tx, repoBranchKey))
+                    {
+                        // issue exists so just update the issue
+                        var issueNumber = await gitHubIssueEvaulator.TryGetValueAsync(tx, repoBranchKey);
+                        Logger.LogInformation("Updating a gitHub issue number : " + issueNumber + " for the error : " + repositoryBranchUpdateHistory.ErrorMessage +
+                            " for the repository : " + repositoryBranchUpdateHistory.Repository);
+                        try
+                        {
+                            IssueUpdate issueUpdate = new IssueUpdate
+                            {
+                                Body = description.ToString(),
+                            };
+                            await client.Issue.Update(repo.Id, issueNumber.Value, issueUpdate);
+                        }
+                        catch 
+                        {
+                            Logger.LogError("Unable to update issue number " + issueNumber + " in GitHub.") ;
+                        }
+                    }
+                    else
+                    {
+                        // issue does not exists so just create a new issue
+                        Logger.LogInformation("Creating a gitHub issue for the error : " + repositoryBranchUpdateHistory.ErrorMessage +
+                            " for the repository : " + repositoryBranchUpdateHistory.Repository);
+                        var createIssue = new NewIssue("Update Dependency ");
+                        createIssue.Body = description.ToString();
+                        createIssue.Labels.Add(label);
+                        try
+                        {
+                            var issue = await client.Issue.Create(repo.Id, createIssue);
+                            Logger.LogInformation("Issue Number " + issue.Number  + " was created in " + creatingIssueInRepo);
+                            await gitHubIssueEvaulator.SetAsync(tx, repoBranchKey, issue.Number);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError("Unable to create an issue in GitHub" + ex.ToString());
+                        }
+                    }
+                    await tx.CommitAsync();
                 }
+            }
+            catch (Exception exc)
+            {
+                Logger.LogError(exc, "Something failed while attempting to create an issue based on repo " + repositoryBranchUpdateHistory.Repository);
             }
         }
 
+        // Get the subscriptionIdGuid from the subscriptionId
+        private Guid GetSubscriptionGuid(string subscriptionId)
+        {
+            if (!Guid.TryParse(subscriptionId, out Guid subscriptionGuid))
+            {
+                throw new ArgumentException("Subscription id "+ subscriptionId + " is not a valid guid.");
+            }
+            return subscriptionGuid;
+        }
+
+        // This method runs everytime till the MaxValue is reached. Since we are implementing IServiceImplementation, this is one of the default method. Since we 
         public Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
         {
-            throw new NotImplementedException();
+            return Task.FromResult(TimeSpan.MaxValue);
         }
     }
 }

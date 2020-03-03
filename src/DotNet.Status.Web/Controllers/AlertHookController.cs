@@ -34,14 +34,17 @@ namespace DotNet.Status.Web.Controllers
         private readonly IOptions<GitHubClientOptions> _githubClientOptions;
         private readonly ILogger _logger;
         private readonly IGitHubTokenProvider _tokenProvider;
+        private readonly ZenHubClient _zenHub;
 
         public AlertHookController(
             IGitHubTokenProvider tokenProvider,
+            ZenHubClient zenHub,
             IOptions<GitHubConnectionOptions> githubOptions,
             IOptions<GitHubClientOptions> githubClientOptions,
             ILogger<AlertHookController> logger)
         {
             _tokenProvider = tokenProvider;
+            _zenHub = zenHub;
             _githubOptions = githubOptions;
             _githubClientOptions = githubClientOptions;
             _logger = logger;
@@ -75,8 +78,7 @@ namespace DotNet.Status.Web.Controllers
                 org,
                 repo);
 
-            IGitHubClient client =
-                await GetGitHubClientAsync(_githubOptions.Value.Organization, _githubOptions.Value.Repository);
+            IGitHubClient client = await GetGitHubClientAsync(_githubOptions.Value.Organization, _githubOptions.Value.Repository);
             Issue issue = await GetExistingIssueAsync(client, notification);
             await EnsureLabelsAsync(client, org, repo);
             if (issue == null)
@@ -85,6 +87,25 @@ namespace DotNet.Status.Web.Controllers
                     ActiveAlertLabel);
                 issue = await client.Issue.Create(org, repo, GenerateNewIssue(notification));
                 _logger.LogInformation("Github issue {org}/{repo}#{issueNumber} created", org, repo, issue.Number);
+
+                NotificationEpicOptions epic = _githubOptions.Value.NotificationEpic;
+                if (epic != null)
+                {
+                    (Repository epicRepoData, Repository issueRepoData) = await Task.WhenAll(
+                        client.Repository.Get(org, epic.Repository),
+                        client.Repository.Get(org, repo)
+                    );
+
+                    _logger.LogInformation("Adding new issue to ZenHub...");
+                    await _zenHub.AddIssueToEpicAsync(
+                        new ZenHubClient.IssueIdentifier(issueRepoData.Id, issue.Number),
+                        new ZenHubClient.IssueIdentifier(epicRepoData.Id, epic.IssueNumber)
+                    );
+                }
+                else
+                {
+                    _logger.LogInformation("No ZenHub epic configured, skipping...");
+                }
             }
             else
             {
@@ -332,7 +353,7 @@ namespace DotNet.Status.Web.Controllers
             string automationId = string.Format(BodyLabelTextFormat, id);
             var request = new SearchIssuesRequest(automationId)
             {
-                // We need to manaually quote the label here, because of
+                // We need to manually quote the label here, because of
                 // https://github.com/octokit/octokit.net/issues/2044
                 Labels = new[] {'"' + NotificationIdLabel + '"'},
                 Order = SortDirection.Descending,
@@ -364,11 +385,6 @@ namespace DotNet.Status.Web.Controllers
             {
                 Credentials = new Credentials(await _tokenProvider.GetTokenForRepository(org, repo))
             };
-        }
-
-        private bool IsValidToken(string token)
-        {
-            throw new NotImplementedException();
         }
     }
 }

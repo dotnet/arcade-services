@@ -12,7 +12,6 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 using Microsoft.Extensions.Logging;
 
 namespace Maestro.Data.Models
@@ -26,7 +25,6 @@ namespace Maestro.Data.Models
 
         // Used to fetch dynamic configurations from Azure App Configuration
         // These fields are set by Startup.cs at system initialization
-        public static IConfigurationRefresher s_configurationRefresher { get; set; }
         public static IConfiguration s_dynamicConfigs { get; set; }
 
         static Build()
@@ -35,11 +33,9 @@ namespace Maestro.Data.Models
             {
                 // The need to check for null here is because these properties are usually set in Startup.cs in Maestro.Web
                 // however they aren't set for unit test cases but this class is used there.
-                if (s_configurationRefresher != null && s_dynamicConfigs != null)
+                if (s_dynamicConfigs != null)
                 {
-                    s_configurationRefresher.Refresh().GetAwaiter().GetResult();
-
-                    bool.TryParse(s_dynamicConfigs["FeatureManagement:AutoBuildPromotion"], out var autoBuildPromotion);
+                    bool.TryParse(s_dynamicConfigs["EnableAutoBuildPromotion"], out var autoBuildPromotion);
 
                     if (autoBuildPromotion)
                     {

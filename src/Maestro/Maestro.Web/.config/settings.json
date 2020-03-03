@@ -42,6 +42,7 @@
   },
   "ApiRedirect": {
     "uri": "https://maestro-prod.westus2.cloudapp.azure.com",
-    "token": "[vault(prod-maestro-token)]" 
-  }
+    "token": "[vault(prod-maestro-token)]"
+  },
+  "EnableAutoBuildPromotion": "[config(FeatureManagement:AutoBuildPromotion)]" 
 }

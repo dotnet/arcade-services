@@ -7,13 +7,16 @@ using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options
 {
-    [Verb("update-dependencies", HelpText = "Update local dependencies from a channel.")]
+    [Verb("update-dependencies", HelpText = "Update local dependencies from a channel, build or local list of packages.")]
     class UpdateDependenciesCommandLineOptions : CommandLineOptions
     {
+        [Option("id", HelpText = "Optional BAR id of build to be used instead of the latest build in the channel.")]
+        public int BARBuildId { get; set; }
+
         [Option('c', "channel", HelpText = "Channel to pull dependencies from.")]
         public string Channel { get; set; }
 
-        [Option('n', "name", HelpText = "Optional name of dependency to update.  Otherwise all " +
+        [Option('n', "name", HelpText = "Optional name of dependency to update. Otherwise all " +
             "dependencies existing on 'channel' are updated.")]
         public string Name { get; set; }
 

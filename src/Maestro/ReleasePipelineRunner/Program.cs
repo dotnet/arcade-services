@@ -6,8 +6,8 @@ using System.Reflection;
 using Maestro.AzureDevOps;
 using Maestro.Contracts;
 using Maestro.Data;
+using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.Dotnet.GitHub.Authentication;
-using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
@@ -32,18 +32,18 @@ namespace ReleasePipelineRunner
                     host.ConfigureServices(
                         services =>
                         {
-                            services.AddKeyVaultMappedConfiguration();
+                            services.AddDefaultJsonConfiguration();
                             services.AddBuildAssetRegistry(
                                 (provider, options) =>
                                 {
-                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    var config = provider.GetRequiredService<IConfiguration>();
                                     options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
                                 });
                             services.AddAzureDevOpsTokenProvider();
                             services.Configure<AzureDevOpsTokenProviderOptions>(
                                 (options, provider) =>
                                 {
-                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    var config = provider.GetRequiredService<IConfiguration>();
                                     var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
                                     foreach (IConfigurationSection token in tokenMap)
                                     {
@@ -60,7 +60,7 @@ namespace ReleasePipelineRunner
                             services.Configure<GitHubTokenProviderOptions>(
                                 (options, provider) =>
                                 {
-                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    var config = provider.GetRequiredService<IConfiguration>();
                                     IConfigurationSection section = config.GetSection("GitHub");
                                     section.Bind(options);
                                 });

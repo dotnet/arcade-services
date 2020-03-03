@@ -4,7 +4,7 @@
 
 using Maestro.AzureDevOps;
 using Maestro.Data;
-using Microsoft.DotNet.Configuration.Extensions;
+using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -29,7 +29,7 @@ namespace FeedCleanerService
                             services.Configure<FeedCleanerOptions>(
                                 (options, provider) =>
                                 {
-                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    var config = provider.GetRequiredService<IConfiguration>();
                                     options.Enabled = config.GetSection("FeedCleaner").GetValue<bool>("Enabled");
                                     var releaseFeedsTokenMap = config.GetSection("FeedCleaner:ReleasePackageFeeds").GetChildren();
                                     foreach (IConfigurationSection token in releaseFeedsTokenMap)
@@ -47,18 +47,18 @@ namespace FeedCleanerService
                                     }
                                 }
                                 );
-                            services.AddKeyVaultMappedConfiguration();
+                            services.AddDefaultJsonConfiguration();
                             services.AddBuildAssetRegistry(
                                 (provider, options) =>
                                 {
-                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    var config = provider.GetRequiredService<IConfiguration>();
                                     options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
                                 });
                             services.AddAzureDevOpsTokenProvider();
                             services.Configure<AzureDevOpsTokenProviderOptions>(
                                 (options, provider) =>
                                 {
-                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    var config = provider.GetRequiredService<IConfiguration>();
                                     var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
                                     foreach (IConfigurationSection token in tokenMap)
                                     {

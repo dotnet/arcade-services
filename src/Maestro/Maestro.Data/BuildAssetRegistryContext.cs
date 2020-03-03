@@ -76,6 +76,7 @@ namespace Maestro.Data
         public DbQuery<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory { get; set; }
         public DbSet<DependencyFlowEvent> DependencyFlowEvents { get; set; }
         public DbSet<GoalTime> GoalTime { get; set; }
+        public DbSet<LongestBuildPath> LongestBuildPaths { get; set; }
 
         public override Task<int> SaveChangesAsync(
             bool acceptAllChangesOnSuccess,

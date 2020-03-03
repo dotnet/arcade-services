@@ -6,6 +6,7 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.Services.Utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -60,7 +61,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 return (string.IsNullOrEmpty(_options.Repository) || d.Repository.Contains(_options.Repository, StringComparison.OrdinalIgnoreCase)) &&
                        (string.IsNullOrEmpty(_options.Channel) || d.Channel.Name.Contains(_options.Channel, StringComparison.OrdinalIgnoreCase)) &&
-                       (string.IsNullOrEmpty(_options.Branch) || d.Branch.Contains(_options.Branch, StringComparison.OrdinalIgnoreCase));
+                       (string.IsNullOrEmpty(_options.Branch) || d.Branch.Contains(GitHelpers.NormalizeBranchName(_options.Branch), StringComparison.OrdinalIgnoreCase));
             });
 
             if (!matchingChannels.Any())
