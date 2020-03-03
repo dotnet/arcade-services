@@ -271,6 +271,14 @@ namespace Microsoft.DotNet.Darc.Operations
                 return (null, null);
             }
 
+            var oldestSupportedArcadeSDKDate = new DateTimeOffset(2020, 01, 28, 0, 0, 0, new TimeSpan(0, 0, 0));
+            if (DateTimeOffset.Compare(sourceBuildArcadeSDKDepBuild.DateProduced, oldestSupportedArcadeSDKDate) < 0)
+            {
+                Console.WriteLine($"The target build needs to use a version of Arcade SDK released after {oldestSupportedArcadeSDKDate}.");
+                Console.Write($"The target build uses an SDK released in {sourceBuildArcadeSDKDepBuild.DateProduced}");
+                return (null, null);
+            }
+
             return (sourceBuildArcadeSDKDepBuild.GitHubBranch, sourceBuildArcadeSDKDepBuild.Commit);
         }
 
