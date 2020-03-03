@@ -8,16 +8,14 @@ using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.TeamFoundation.Build.WebApi.Events;
 using System;
 using System.Data;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
-namespace Maestro.Web
+namespace Maestro.DataProviders
 {
     /// <summary>
     ///     A bar client interface for use by DarcLib which talks directly
@@ -291,13 +289,13 @@ namespace Maestro.Web
                 return new BuildTime(0, 0, 0, 0);
             }
 
-            MultiProjectKustoQuery queries = Helpers.CreateBuildTimesQueries(defaultChannel.Repository, defaultChannel.Branch, days);
+            MultiProjectKustoQuery queries = SharedKustoQueries.CreateBuildTimesQueries(defaultChannel.Repository, defaultChannel.Branch, days);
 
             var results = await Task.WhenAll<IDataReader>(_kustoClientProvider.ExecuteKustoQueryAsync(queries.Internal), 
                 _kustoClientProvider.ExecuteKustoQueryAsync(queries.Public));
 
-            (int officialBuildId, TimeSpan officialBuildTime) = Helpers.ParseBuildTime(results[0]);
-            (int prBuildId, TimeSpan prBuildTime) = Helpers.ParseBuildTime(results[1]);
+            (int officialBuildId, TimeSpan officialBuildTime) = SharedKustoQueries.ParseBuildTime(results[0]);
+            (int prBuildId, TimeSpan prBuildTime) = SharedKustoQueries.ParseBuildTime(results[1]);
 
             double officialTime = 0;
             double prTime = 0;

@@ -698,13 +698,13 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        /// Filter any released builds if the user specified --skip-released
+        /// Filter any released builds if the user did not specify --include-released
         /// </summary>
         /// <param name="inputBuilds">Input builds</param>
         /// <returns>Builds to download</returns>
         private IEnumerable<Build> FilterReleasedBuilds(IEnumerable<Build> builds)
         {
-            if (_options.SkipReleased)
+            if (!_options.IncludeReleased)
             {
                 var releasedBuilds = builds.Where(build => build.Released);
                 var nonReleasedBuilds = builds.Where(build => !build.Released);
@@ -792,38 +792,35 @@ namespace Microsoft.DotNet.Darc.Operations
                 NodeDiff = NodeDiff.None
             };
 
-            Dictionary<DependencyDetail, Build> dependencyCache =
-                new Dictionary<DependencyDetail, Build>(new DependencyDetailComparer());
-
             Console.WriteLine("Building graph of all dependencies under root builds...");
             foreach (Build rootBuild in rootBuilds)
             {
                 Console.WriteLine($"Building graph for {rootBuild.AzureDevOpsBuildNumber} of {rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository} @ {rootBuild.Commit}");
 
+                string rootBuildRepository = rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository;
                 DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                     remoteFactory,
-                    rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository,
+                    rootBuildRepository,
                     rootBuild.Commit,
                     buildOptions,
                     Logger);
 
-                // Cache this root build's assets
-                foreach (Asset buildAsset in rootBuild.Assets)
-                {
-                    dependencyCache.Add(
-                        new DependencyDetail
-                        {
-                            Name = buildAsset.Name,
-                            Version = buildAsset.Version,
-                            Commit = rootBuild.Commit,
-                        },
-                        rootBuild);
-                }
+                // Because the dependency graph starts the build from a repo+sha, it's possible
+                // that multiple unique builds of that root repo+sha were done. But we don't want those other builds.
+                // So as we walk the full list of contributing builds, filter those that are from rootBuild's repo + sha but not the
+                // same build id.
 
                 Console.WriteLine($"There are {graph.UniqueDependencies.Count()} unique dependencies in the graph.");
                 Console.WriteLine("Full set of builds in graph:");
                 foreach (var build in graph.ContributingBuilds)
                 {
+                    if ((build.GitHubRepository ?? build.AzureDevOpsRepository) == rootBuildRepository && 
+                        build.Commit == rootBuild.Commit &&
+                        build.Id != rootBuild.Id)
+                    {
+                        continue;
+                    }
+
                     Console.WriteLine($"  Build - {build.AzureDevOpsBuildNumber} of {build.GitHubRepository ?? build.AzureDevOpsRepository} @ {build.Commit}");
                     builds.Add(build);
                 }

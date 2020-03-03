@@ -2,20 +2,20 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Reflection;
+using Azure.Core;
+using Azure.Identity;
+using Maestro.AzureDevOps;
+using Maestro.Data;
+using Microsoft.DncEng.Configuration.Extensions;
+using Microsoft.Dotnet.GitHub.Authentication;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Maestro.Data;
-using Microsoft.Dotnet.GitHub.Authentication;
-using Maestro.AzureDevOps;
 using Octokit;
-using Microsoft.DotNet.GitHub.Authentication;
-using System;
-using Azure.Core;
-using Azure.Identity;
 
 namespace DependencyUpdateErrorProcessor
 {
@@ -34,18 +34,18 @@ namespace DependencyUpdateErrorProcessor
                     host.ConfigureServices(
                         services =>
                         {
-                            services.AddKeyVaultMappedConfiguration();
+                            services.AddDefaultJsonConfiguration();
                             services.AddBuildAssetRegistry(
                                 (provider, options) =>
                                 {
-                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    var config = provider.GetRequiredService<IConfiguration>();
                                     options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
                                 });
                             services.AddAzureDevOpsTokenProvider();
                             services.Configure<AzureDevOpsTokenProviderOptions>(
                                 (options, provider) =>
                                 {
-                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    var config = provider.GetRequiredService<IConfiguration>();
                                     var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
                                     foreach (IConfigurationSection token in tokenMap)
                                     {
@@ -62,7 +62,7 @@ namespace DependencyUpdateErrorProcessor
                             services.Configure<GitHubTokenProviderOptions>(
                                 (options, provider) =>
                                 {
-                                    var config = provider.GetRequiredService<IConfigurationRoot>();
+                                    var config = provider.GetRequiredService<IConfiguration>();
                                     IConfigurationSection section = config.GetSection("GitHub");
                                     section.Bind(options);
                                 });
@@ -70,7 +70,7 @@ namespace DependencyUpdateErrorProcessor
                             services.Configure<DependencyUpdateErrorProcessorOptions>(
                                 (options, provider) =>
                             {
-                                var config = provider.GetRequiredService<IConfigurationRoot>();
+                                var config = provider.GetRequiredService<IConfiguration>();
                                 
                                 string apiEndPointUri = config["AppConfigurationUri"];
                                 ConfigurationBuilder builder = new ConfigurationBuilder();
@@ -80,7 +80,7 @@ namespace DependencyUpdateErrorProcessor
                                 builder.AddAzureAppConfiguration(o =>
                                 {
                                     o.Connect(new Uri(apiEndPointUri), credential)
-                                        .ConfigureRefresh(refresh =>
+                                      .ConfigureRefresh(refresh =>
                                         {
                                             refresh.Register(".appconfig.featureflag/DependencyUpdateErrorProcessor")
                                                 .SetCacheExpiration(TimeSpan.FromSeconds(1));
@@ -90,6 +90,8 @@ namespace DependencyUpdateErrorProcessor
                                 });
                                 options.DynamicConfigs = builder.Build();
                                 options.GithubUrl = config["GithubUrl"];
+                                options.Owner = config["Owner"];
+                                options.Repository = config["Repository"];
                             });
                         });
                 });

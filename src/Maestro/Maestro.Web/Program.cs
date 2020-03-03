@@ -6,8 +6,10 @@ using System;
 using System.IO;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Logging;
+using IHostingEnvironment = Microsoft.Extensions.Hosting.IHostingEnvironment;
 
 namespace Maestro.Web
 {
@@ -38,6 +40,10 @@ namespace Maestro.Web
         {
             new WebHostBuilder().UseKestrel()
                 .UseContentRoot(Directory.GetCurrentDirectory())
+                .ConfigureAppConfiguration((context, builder) =>
+                {
+                    builder.AddDefaultJsonConfiguration((IHostingEnvironment)context.HostingEnvironment);
+                })
                 .ConfigureServices(services => { services.AddAutofac(); })
                 .ConfigureLogging(
                     builder =>
@@ -54,7 +60,14 @@ namespace Maestro.Web
 
         private static void ServiceFabricMain()
         {
-            ServiceHost.Run(host => host.RegisterStatelessWebService<Startup>("Maestro.WebType"));
+            ServiceHost.Run(host => host.RegisterStatelessWebService<Startup>("Maestro.WebType",
+                hostBuilder =>
+                {
+                    hostBuilder.ConfigureAppConfiguration((context, builder) =>
+                    {
+                        builder.AddDefaultJsonConfiguration((IHostingEnvironment) context.HostingEnvironment);
+                    });
+                }));
         }
     }
 }

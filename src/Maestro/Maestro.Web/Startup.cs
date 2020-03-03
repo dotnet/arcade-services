@@ -18,6 +18,7 @@ using Maestro.AzureDevOps;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
@@ -40,12 +41,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using Microsoft.DotNet.Configuration.Extensions;
 using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
-using Azure.Identity;
-using Azure.Core;
+using Microsoft.Azure.Services.AppAuthentication;
 
 namespace Maestro.Web
 {
@@ -129,13 +128,13 @@ namespace Maestro.Web
         public Startup(IConfiguration configuration, IHostingEnvironment env)
         {
             HostingEnvironment = env;
-            Configuration = KeyVaultMappedJsonConfigurationExtensions.CreateConfiguration(configuration, env, new ServiceHostKeyVaultProvider(env));
+            Configuration = configuration;
         }
 
         public static readonly TimeSpan LoginCookieLifetime = new TimeSpan(days: 120, hours: 0, minutes: 0, seconds: 0);
 
         public IHostingEnvironment HostingEnvironment { get; set; }
-        public IConfigurationRoot Configuration { get; }
+        public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -151,9 +150,9 @@ namespace Maestro.Web
 
                 string vaultUri = Configuration["KeyVaultUri"];
                 string keyVaultKeyIdentifierName = dpConfig["KeyIdentifier"];
-                KeyVaultClient kvClient = ServiceHostKeyVaultProvider.CreateKeyVaultClient(HostingEnvironment);
+                var provider = new AzureServiceTokenProvider();
+                var kvClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(provider.KeyVaultTokenCallback));
                 KeyBundle key = kvClient.GetKeyAsync(vaultUri, keyVaultKeyIdentifierName).GetAwaiter().GetResult();
-
 
 
                 services.AddDataProtection()
@@ -169,7 +168,18 @@ namespace Maestro.Web
                 options =>
                 {
                     options.CheckConsentNeeded = context => true;
-                    options.MinimumSameSitePolicy = SameSiteMode.None;
+                    options.MinimumSameSitePolicy = SameSiteMode.Lax;
+
+                    options.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
+
+                    if (HostingEnvironment.IsDevelopment())
+                    {
+                        options.Secure = CookieSecurePolicy.SameAsRequest;
+                    }
+                    else
+                    {
+                        options.Secure = CookieSecurePolicy.Always;
+                    }
                 });
 
             services.AddBuildAssetRegistry(
@@ -244,36 +254,7 @@ namespace Maestro.Web
 
             services.AddMergePolicies();
 
-
-            // Configure access to Azure App Configuration
-            try
-            {
-                string appConfigEndpointUri = Configuration["AppConfigurationUri"];
-                ConfigurationBuilder builder = new ConfigurationBuilder();
-                TokenCredential credential = appConfigEndpointUri.Contains("maestrolocal") ?
-                    new DefaultAzureCredential() :
-                    (TokenCredential)new ManagedIdentityCredential();
-
-                builder.AddAzureAppConfiguration(options =>
-                {
-                    options.Connect(new Uri(appConfigEndpointUri), credential)
-                        .ConfigureRefresh(refresh =>
-                        {
-                            refresh.Register(".appconfig.featureflag/AutoBuildPromotion")
-                                .SetCacheExpiration(TimeSpan.FromSeconds(1));
-                        }).UseFeatureFlags();
-
-                    Build.s_configurationRefresher = options.GetRefresher();
-                });
-
-                Build.s_dynamicConfigs = builder.Build();
-            }
-            catch (Exception)
-            {
-                // Disable AppConfigs lookup if for some reason the authentication failed
-                Build.s_configurationRefresher = null;
-                Build.s_dynamicConfigs = null;
-            }
+            Build.s_dynamicConfigs = Configuration;
         }
 
         public void ConfigureContainer(ContainerBuilder builder)
@@ -291,7 +272,7 @@ namespace Maestro.Web
                     MvcJsonOptions jsonOptions =
                         ctx.RequestServices.GetRequiredService<IOptions<MvcJsonOptions>>().Value;
                     string output = JsonConvert.SerializeObject(result, jsonOptions.SerializerSettings);
-                    ctx.Response.StatusCode = (int) HttpStatusCode.InternalServerError;
+                    ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                     await ctx.Response.WriteAsync(output, Encoding.UTF8);
                 });
         }
@@ -319,7 +300,7 @@ namespace Maestro.Web
 
             using (var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
-                var uri = new UriBuilder(ApiRedirectTarget) {Path = ctx.Request.Path, Query = ctx.Request.QueryString.ToUriComponent(),};
+                var uri = new UriBuilder(ApiRedirectTarget) { Path = ctx.Request.Path, Query = ctx.Request.QueryString.ToUriComponent(), };
                 await ctx.ProxyRequestAsync(client, uri.Uri.AbsoluteUri,
                     req =>
                     {
@@ -371,11 +352,11 @@ namespace Maestro.Web
                             doc.Host = req.Host.Value;
                             if (HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric())
                             {
-                                doc.Schemes = new List<string> {"http"};
+                                doc.Schemes = new List<string> { "http" };
                             }
                             else
                             {
-                                doc.Schemes = new List<string> {"https"};
+                                doc.Schemes = new List<string> { "https" };
                             }
 
                             req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
@@ -431,6 +412,38 @@ namespace Maestro.Web
                 app.UseHsts();
                 app.UseHttpsRedirection();
             }
+
+            // Add security headers
+            app.Use(
+                (ctx, next) =>
+                {
+                    ctx.Response.OnStarting(() =>
+                    {
+                        if (!ctx.Response.Headers.ContainsKey("X-XSS-Protection"))
+                        {
+                            ctx.Response.Headers.Add("X-XSS-Protection", "1");
+                        }
+
+                        if (!ctx.Response.Headers.ContainsKey("X-Frame-Options"))
+                        {
+                            ctx.Response.Headers.Add("X-Frame-Options", "DENY");
+                        }
+
+                        if (!ctx.Response.Headers.ContainsKey("X-Content-Type-Options"))
+                        {
+                            ctx.Response.Headers.Add("X-Content-Type-Options", "nosniff");
+                        }
+
+                        if (!ctx.Response.Headers.ContainsKey("Referrer-Policy"))
+                        {
+                            ctx.Response.Headers.Add("Referrer-Policy", "no-referrer-when-downgrade");
+                        }
+
+                        return Task.CompletedTask;
+                    });
+
+                    return next();
+                });
 
             if (env.IsDevelopment() && !Program.RunningInServiceFabric())
             {

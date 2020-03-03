@@ -29,6 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.DncEng.Configuration.Extensions\Microsoft.DncEng.Configuration.Extensions.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
     <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Kusto\Microsoft.DotNet.Kusto.csproj" />
     <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
