@@ -698,13 +698,13 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        /// Filter any released builds if the user specified --skip-released
+        /// Filter any released builds if the user did not specify --include-released
         /// </summary>
         /// <param name="inputBuilds">Input builds</param>
         /// <returns>Builds to download</returns>
         private IEnumerable<Build> FilterReleasedBuilds(IEnumerable<Build> builds)
         {
-            if (_options.SkipReleased)
+            if (!_options.IncludeReleased)
             {
                 var releasedBuilds = builds.Where(build => build.Released);
                 var nonReleasedBuilds = builds.Where(build => !build.Released);
