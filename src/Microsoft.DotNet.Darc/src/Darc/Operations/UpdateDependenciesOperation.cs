@@ -9,6 +9,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.Common;
 using NuGet.Packaging;
 using System;
 using System.Collections.Concurrent;
@@ -103,18 +104,20 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     try
                     {
-                        Console.WriteLine($"Looking up build with ID {_options.BARBuildId}");
-                        var specificBuild = await barOnlyRemote.GetBuildAsync(_options.BARBuildId);
-
                         if (!_options.CoherencyOnly)
                         {
+                            Console.WriteLine($"Looking up build with ID {_options.BARBuildId}");
+                            var specificBuild = await barOnlyRemote.GetBuildAsync(_options.BARBuildId);
+
                             await NonCoherencyUpdatesForBuildAsync(specificBuild, barOnlyRemote, currentDependencies, dependenciesToUpdate);
+
+                            finalMessage = $"Local dependencies updated based build with BAR id {_options.BARBuildId} " +
+                                $"({specificBuild.AzureDevOpsBuildNumber} from {specificBuild.GitHubRepository}@{specificBuild.GitHubBranch})";
                         }
 
                         await CoherencyUpdatesAsync(barOnlyRemote, remoteFactory, currentDependencies, dependenciesToUpdate);
 
-                        finalMessage = $"Local dependencies updated based build with BAR id {_options.BARBuildId} " +
-                            $"({specificBuild.AzureDevOpsBuildNumber} from {specificBuild.GitHubRepository}@{specificBuild.GitHubBranch})";
+                        finalMessage = finalMessage.IsNullOrEmpty() ? "Local dependencies successfully updated." : finalMessage;
                     }
                     catch (RestApiException e) when (e.Response.Status == 404)
                     {
