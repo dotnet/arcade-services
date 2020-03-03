@@ -1150,7 +1150,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="accountName">Azure DevOps account name</param>
         /// <param name="projectName">Project name</param>
         /// <returns>List of Azure DevOps build artifacts names.</returns>
-        public async Task<List<AzureDevOpsBuildArtifact>> GetBuildArtifactsAsync(string accountName, string projectName, int azureDevOpsBuildId)
+        public async Task<List<AzureDevOpsBuildArtifact>> GetBuildArtifactsAsync(string accountName, string projectName, int azureDevOpsBuildId, int maxRetries = 15)
         {
             JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Get,
@@ -1158,7 +1158,8 @@ namespace Microsoft.DotNet.DarcLib
                 projectName,
                 $"_apis/build/builds/{azureDevOpsBuildId}/artifacts",
                 _logger,
-                versionOverride: "5.0");
+                versionOverride: "5.0",
+                retryCount: maxRetries);
 
             return ((JArray)content["value"]).ToObject<List<AzureDevOpsBuildArtifact>>();
         }
