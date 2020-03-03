@@ -861,7 +861,10 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>True if the repository exists, false otherwise.</returns>
         public async Task<bool> RepositoryExistsAsync(string repoUri)
         {
-            CheckForValidGitClient();
+            if (string.IsNullOrWhiteSpace(repoUri) || _gitClient == null)
+            {
+                return false;
+            }
 
             return await _gitClient.RepoExistsAsync(repoUri);
         }
@@ -1052,7 +1055,7 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Called prior to operations requiring the BAR.  Throws if a git client isn't available;
+        ///     Called prior to operations requiring GIT.  Throws if a git client isn't available;
         /// </summary>
         private void CheckForValidGitClient()
         {
