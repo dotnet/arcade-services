@@ -106,13 +106,13 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         if (!_options.CoherencyOnly)
                         {
-                            Console.WriteLine($"Looking up build with ID {_options.BARBuildId}");
+                            Console.WriteLine($"Looking up build with BAR id {_options.BARBuildId}");
                             var specificBuild = await barOnlyRemote.GetBuildAsync(_options.BARBuildId);
 
                             await NonCoherencyUpdatesForBuildAsync(specificBuild, barOnlyRemote, currentDependencies, dependenciesToUpdate)
                                 .ConfigureAwait(false);
 
-                            finalMessage = $"Local dependencies updated based build with BAR id {_options.BARBuildId} " +
+                            finalMessage = $"Local dependencies updated based on build with BAR id {_options.BARBuildId} " +
                                 $"({specificBuild.AzureDevOpsBuildNumber} from {specificBuild.GitHubRepository}@{specificBuild.GitHubBranch})";
                         }
 
