@@ -109,13 +109,15 @@ namespace Microsoft.DotNet.Darc.Operations
                             Console.WriteLine($"Looking up build with ID {_options.BARBuildId}");
                             var specificBuild = await barOnlyRemote.GetBuildAsync(_options.BARBuildId);
 
-                            await NonCoherencyUpdatesForBuildAsync(specificBuild, barOnlyRemote, currentDependencies, dependenciesToUpdate);
+                            await NonCoherencyUpdatesForBuildAsync(specificBuild, barOnlyRemote, currentDependencies, dependenciesToUpdate)
+                                .ConfigureAwait(false);
 
                             finalMessage = $"Local dependencies updated based build with BAR id {_options.BARBuildId} " +
                                 $"({specificBuild.AzureDevOpsBuildNumber} from {specificBuild.GitHubRepository}@{specificBuild.GitHubBranch})";
                         }
 
-                        await CoherencyUpdatesAsync(barOnlyRemote, remoteFactory, currentDependencies, dependenciesToUpdate);
+                        await CoherencyUpdatesAsync(barOnlyRemote, remoteFactory, currentDependencies, dependenciesToUpdate)
+                            .ConfigureAwait(false);
 
                         finalMessage = finalMessage.IsNullOrEmpty() ? "Local dependencies successfully updated." : finalMessage;
                     }
@@ -177,11 +179,13 @@ namespace Microsoft.DotNet.Darc.Operations
                                 continue;
                             }
 
-                            await NonCoherencyUpdatesForBuildAsync(build, barOnlyRemote, currentDependencies, dependenciesToUpdate);
+                            await NonCoherencyUpdatesForBuildAsync(build, barOnlyRemote, currentDependencies, dependenciesToUpdate)
+                                .ConfigureAwait(false);
                         }
                     }
 
-                    await CoherencyUpdatesAsync(barOnlyRemote, remoteFactory, currentDependencies, dependenciesToUpdate);
+                    await CoherencyUpdatesAsync(barOnlyRemote, remoteFactory, currentDependencies, dependenciesToUpdate)
+                        .ConfigureAwait(false);
                 }
 
                 if (!dependenciesToUpdate.Any())
