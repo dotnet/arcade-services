@@ -112,7 +112,7 @@ namespace Microsoft.DotNet.Darc.Operations
             var targetAzdoBuildStatus = await ValidateAzDOBuildAsync(azdoClient, build.AzureDevOpsAccount, build.AzureDevOpsProject, build.AzureDevOpsBuildId.Value)
                 .ConfigureAwait(false);
 
-            if (targetAzdoBuildStatus == Constants.ErrorCode)
+            if (targetAzdoBuildStatus)
             {
                 return Constants.ErrorCode;
             }
@@ -187,7 +187,7 @@ namespace Microsoft.DotNet.Darc.Operations
             }
         }
 
-        private async Task<int> ValidateAzDOBuildAsync(AzureDevOpsClient azdoClient, string azureDevOpsAccount, string azureDevOpsProject, int azureDevOpsBuildId)
+        private async Task<bool> ValidateAzDOBuildAsync(AzureDevOpsClient azdoClient, string azureDevOpsAccount, string azureDevOpsProject, int azureDevOpsBuildId)
         {
             try
             {
@@ -197,28 +197,28 @@ namespace Microsoft.DotNet.Darc.Operations
                 if (!artifacts.Any(f => f.Name.Equals("AssetManifests")))
                 {
                     Console.Write($"The build that you want to promote doesn't have a Build Manifest. That's required for publishing. Aborting.");
-                    return Constants.ErrorCode;
+                    return true;
                 }
 
                 if ((_options.DoSigningValidation || _options.DoNuGetValidation || _options.DoSourcelinkValidation)
                     && !artifacts.Any(f => f.Name.Equals("PackageArtifacts")))
                 {
                     Console.Write($"The build that you want to promote doesn't have a list of package assets. That's required when running signing or NuGet validation. Aborting.");
-                    return Constants.ErrorCode;
+                    return true;
                 }
 
                 if (_options.DoSourcelinkValidation && !artifacts.Any(f => f.Name.Equals("BlobArtifacts")))
                 {
                     Console.Write($"The build that you want to promote doesn't have a list of blob assets. That's required when running SourceLink validation. Aborting.");
-                    return Constants.ErrorCode;
+                    return true;
                 }
 
-                return Constants.SuccessCode;
+                return true;
             }
             catch (HttpRequestException e) when (e.Message.Contains("404 (Not Found)"))
             {
                 Console.Write($"The build that you want to promote isn't available in AzDO anymore. Aborting.");
-                return Constants.ErrorCode;
+                return false;
             }
         }
 
@@ -274,8 +274,11 @@ namespace Microsoft.DotNet.Darc.Operations
             var oldestSupportedArcadeSDKDate = new DateTimeOffset(2020, 01, 28, 0, 0, 0, new TimeSpan(0, 0, 0));
             if (DateTimeOffset.Compare(sourceBuildArcadeSDKDepBuild.DateProduced, oldestSupportedArcadeSDKDate) < 0)
             {
-                Console.WriteLine($"The target build needs to use a version of Arcade SDK released after {oldestSupportedArcadeSDKDate}.");
-                Console.Write($"The target build uses an SDK released in {sourceBuildArcadeSDKDepBuild.DateProduced}");
+                Console.WriteLine($"The target build uses an SDK released in {sourceBuildArcadeSDKDepBuild.DateProduced}");
+                Console.WriteLine($"The target build needs to use an Arcade SDK version released after {oldestSupportedArcadeSDKDate} otherwise " +
+                    $"you must inform the `source-branch` / `source-sha` parameters to point to an specific Arcade build.");
+                Console.Write($"You can also pass the `skip-assets-publishing` parameter if all you want is to " +
+                    $"assign the build to a channel. Note, though, that this will not publish the build assets.");
                 return (null, null);
             }
 
