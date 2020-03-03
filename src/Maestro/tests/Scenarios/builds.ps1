@@ -64,7 +64,7 @@ try {
 
     # Gather a drop with released included
     $gatherWithReleasedDir = Join-Path -Path $testRoot -ChildPath "gather-with-released"
-    $darcParams = @( "gather-drop", "--id", "$buildId", "--dry-run", "--output-dir", $gatherWithReleasedDir )
+    $darcParams = @( "gather-drop", "--id", "$buildId", "--dry-run", "--include-released", "--output-dir", $gatherWithReleasedDir )
     $gatherDropOutput = Darc-Command -darcParams $darcParams
     if ((-not $gatherDropOutput -match "Gathering drop for build $sourceBuildNumber")) {
         throw "Build should download build $sourceBuildNumber"
@@ -74,9 +74,9 @@ try {
         throw "Build should download both Foo and Bar"
     }
 
-    # Gather with release excluded. gather-drop should throw an error
+    # Gather with release excluded (default behavior). gather-drop should throw an error
     $gatherWithNoReleasedDir = Join-Path -Path $testRoot -ChildPath "gather-no-released"
-    $darcParams = @( "gather-drop", "--id", "$buildId", "--dry-run", "--skip-released", "--output-dir", $gatherWithNoReleasedDir )
+    $darcParams = @( "gather-drop", "--id", "$buildId", "--dry-run", "--output-dir", $gatherWithNoReleasedDir )
     $gatherDropOutput = $null
     try {
         $gatherDropOutput = Darc-Command -darcParams $darcParams
@@ -99,9 +99,9 @@ try {
         throw "Build should be marked unreleased"
     }
 
-    # Gather with release excluded
+    # Gather with release excluded again (defualt behavior)
     $gatherWithNoReleased2Dir = Join-Path -Path $testRoot -ChildPath "gather-no-released-2"
-    $darcParams = @( "gather-drop", "--id", "$buildId", "--dry-run", "--skip-released", "--output-dir", $gatherWithNoReleased2Dir )
+    $darcParams = @( "gather-drop", "--id", "$buildId", "--dry-run", "--output-dir", $gatherWithNoReleased2Dir )
     $gatherDropOutput = Darc-Command -darcParams $darcParams
     if ((-not $gatherDropOutput -match "Gathering drop for build $sourceBuildNumber")) {
         throw "Build should download build $sourceBuildNumber"
