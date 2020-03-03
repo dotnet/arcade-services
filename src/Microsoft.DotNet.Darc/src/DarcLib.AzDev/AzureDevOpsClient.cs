@@ -1145,6 +1145,25 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///   Gets the list of Build Artifacts names.
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account name</param>
+        /// <param name="projectName">Project name</param>
+        /// <returns>List of Azure DevOps build artifacts names.</returns>
+        public async Task<List<AzureDevOpsBuildArtifact>> GetBuildArtifactsAsync(string accountName, string projectName, int azureDevOpsBuildId)
+        {
+            JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                projectName,
+                $"_apis/build/builds/{azureDevOpsBuildId}/artifacts",
+                _logger,
+                versionOverride: "5.0");
+
+            return ((JArray)content["value"]).ToObject<List<AzureDevOpsBuildArtifact>>();
+        }
+
+        /// <summary>
         ///   Gets all Artifact feeds along with their packages in an Azure DevOps account.
         /// </summary>
         /// <param name="accountName">Azure DevOps account name.</param>

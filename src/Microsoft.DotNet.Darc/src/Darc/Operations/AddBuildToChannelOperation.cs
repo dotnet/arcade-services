@@ -11,6 +11,7 @@ using System;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Generic;
+using System.Net.Http;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -106,6 +107,16 @@ namespace Microsoft.DotNet.Darc.Operations
                 return Constants.ErrorCode;
             }
 
+            AzureDevOpsClient azdoClient = new AzureDevOpsClient(gitExecutable: null, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null);
+
+            var targetAzdoBuildStatus = await ValidateAzDOBuildAsync(azdoClient, build.AzureDevOpsAccount, build.AzureDevOpsProject, build.AzureDevOpsBuildId.Value)
+                .ConfigureAwait(false);
+
+            if (targetAzdoBuildStatus == Constants.ErrorCode)
+            {
+                return Constants.ErrorCode;
+            }
+
             var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build).ConfigureAwait(false);
 
             // This condition can happen when for some reason we failed to determine the source branch/sha 
@@ -114,8 +125,6 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 return Constants.ErrorCode;
             }
-
-            AzureDevOpsClient azdoClient = new AzureDevOpsClient(gitExecutable: null, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null);
 
             var queueTimeVariables = $"{{" +
                 $"\"BARBuildId\": \"{ build.Id }\", " +
@@ -174,6 +183,41 @@ namespace Microsoft.DotNet.Darc.Operations
             else
             {
                 Console.WriteLine("The promotion build finished but the build isn't associated with the channel. This is an error scenario. Please contact @dnceng.");
+                return Constants.ErrorCode;
+            }
+        }
+
+        private async Task<int> ValidateAzDOBuildAsync(AzureDevOpsClient azdoClient, string azureDevOpsAccount, string azureDevOpsProject, int azureDevOpsBuildId)
+        {
+            try
+            {
+                var artifacts = await azdoClient.GetBuildArtifactsAsync(azureDevOpsAccount, azureDevOpsProject, azureDevOpsBuildId);
+
+                // The build manifest is always necessary
+                if (!artifacts.Any(f => f.Name.Equals("AssetManifests")))
+                {
+                    Console.Write($"The build that you want to promote doesn't have a Build Manifest. That's required for publishing. Aborting.");
+                    return Constants.ErrorCode;
+                }
+
+                if ((_options.DoSigningValidation || _options.DoNuGetValidation || _options.DoSourcelinkValidation)
+                    && !artifacts.Any(f => f.Name.Equals("PackageArtifacts")))
+                {
+                    Console.Write($"The build that you want to promote doesn't have a list of package assets. That's required when running signing or NuGet validation. Aborting.");
+                    return Constants.ErrorCode;
+                }
+
+                if (_options.DoSourcelinkValidation && !artifacts.Any(f => f.Name.Equals("BlobArtifacts")))
+                {
+                    Console.Write($"The build that you want to promote doesn't have a list of blob assets. That's required when running SourceLink validation. Aborting.");
+                    return Constants.ErrorCode;
+                }
+
+                return Constants.SuccessCode;
+            }
+            catch (HttpRequestException e) when (e.Message.Contains("404 (Not Found)"))
+            {
+                Console.Write($"The build that you want to promote isn't available in AzDO anymore. Aborting.");
                 return Constants.ErrorCode;
             }
         }
