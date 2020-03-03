@@ -106,7 +106,12 @@ namespace Microsoft.DotNet.Darc.Operations
                         Console.WriteLine($"Looking up build with ID {_options.BARBuildId}");
                         var specificBuild = await barOnlyRemote.GetBuildAsync(_options.BARBuildId);
 
-                        await NonCoherencyUpdatesForBuildAsync(specificBuild, barOnlyRemote, currentDependencies, dependenciesToUpdate);
+                        if (!_options.CoherencyOnly)
+                        {
+                            await NonCoherencyUpdatesForBuildAsync(specificBuild, barOnlyRemote, currentDependencies, dependenciesToUpdate);
+                        }
+
+                        await CoherencyUpdatesAsync(barOnlyRemote, remoteFactory, currentDependencies, dependenciesToUpdate);
 
                         finalMessage = $"Local dependencies updated based build with BAR id {_options.BARBuildId} " +
                             $"({specificBuild.AzureDevOpsBuildNumber} from {specificBuild.GitHubRepository}@{specificBuild.GitHubBranch})";
@@ -173,26 +178,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         }
                     }
 
-                    Console.WriteLine("Checking for coherency updates...");
-
-                    // Now run a coherency update based on the current set of dependencies updated
-                    // from the previous pass.
-                    List<DependencyUpdate> coherencyUpdates =
-                        await barOnlyRemote.GetRequiredCoherencyUpdatesAsync(currentDependencies, remoteFactory);
-
-                    foreach (DependencyUpdate dependencyUpdate in coherencyUpdates)
-                    {
-                        DependencyDetail from = dependencyUpdate.From;
-                        DependencyDetail to = dependencyUpdate.To;
-                        DependencyDetail coherencyParent = currentDependencies.First(d =>
-                            d.Name.Equals(from.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
-                        // Print out what we are going to do.	
-                        Console.WriteLine($"Updating '{from.Name}': '{from.Version}' => '{to.Version}' " +
-                            $"to ensure coherency with {from.CoherentParentDependencyName}@{coherencyParent.Version}");
-
-                        // Final list of dependencies to update
-                        dependenciesToUpdate.Add(to);
-                    }
+                    await CoherencyUpdatesAsync(barOnlyRemote, remoteFactory, currentDependencies, dependenciesToUpdate);
                 }
 
                 if (!dependenciesToUpdate.Any())
@@ -266,6 +252,34 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             return Constants.SuccessCode;
+        }
+
+        private async Task CoherencyUpdatesAsync(
+            IRemote barOnlyRemote, 
+            IRemoteFactory remoteFactory,
+            List<DependencyDetail> currentDependencies,
+            List<DependencyDetail> dependenciesToUpdate)
+        {
+            Console.WriteLine("Checking for coherency updates...");
+
+            // Now run a coherency update based on the current set of dependencies updated
+            // from the previous pass.
+            List<DependencyUpdate> coherencyUpdates =
+                await barOnlyRemote.GetRequiredCoherencyUpdatesAsync(currentDependencies, remoteFactory);
+
+            foreach (DependencyUpdate dependencyUpdate in coherencyUpdates)
+            {
+                DependencyDetail from = dependencyUpdate.From;
+                DependencyDetail to = dependencyUpdate.To;
+                DependencyDetail coherencyParent = currentDependencies.First(d =>
+                    d.Name.Equals(from.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
+                // Print out what we are going to do.	
+                Console.WriteLine($"Updating '{from.Name}': '{from.Version}' => '{to.Version}' " +
+                    $"to ensure coherency with {from.CoherentParentDependencyName}@{coherencyParent.Version}");
+
+                // Final list of dependencies to update
+                dependenciesToUpdate.Add(to);
+            }
         }
 
         private IEnumerable<DependencyDetail> GetDependenciesFromPackagesFolder(string pathToFolder, IEnumerable<DependencyDetail> dependencies)
