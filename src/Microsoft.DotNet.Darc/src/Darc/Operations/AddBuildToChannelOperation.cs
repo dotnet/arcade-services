@@ -186,7 +186,16 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="build">Build for which the Arcade SDK dependency build will be inferred.</param>
         private async Task<(string sourceBranch, string sourceVersion)> GetSourceBranchInfoAsync(Build build)
         {
-            if (!string.IsNullOrEmpty(_options.SourceBranch) && !string.IsNullOrEmpty(_options.SourceSHA))
+            var hasSourceBranch = !string.IsNullOrEmpty(_options.SourceBranch);
+            var hasSourceSHA = !string.IsNullOrEmpty(_options.SourceSHA);
+
+            if (hasSourceBranch ^ hasSourceSHA)
+            {
+                Console.WriteLine("The `source-branch` and `source-sha` parameters need to be specified together.");
+                return (null, null);
+            }
+
+            if (hasSourceBranch && hasSourceSHA)
             {
                 return (_options.SourceBranch, _options.SourceSHA);
             }
