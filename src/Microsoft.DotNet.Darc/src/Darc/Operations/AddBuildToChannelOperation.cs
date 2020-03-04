@@ -196,20 +196,20 @@ namespace Microsoft.DotNet.Darc.Operations
                 // The build manifest is always necessary
                 if (!artifacts.Any(f => f.Name.Equals("AssetManifests")))
                 {
-                    Console.Write("The build that you want to promote doesn't have a Build Manifest. That's required for publishing. Aborting.");
+                    Console.Write("The build that you want to add to a new channel doesn't have a Build Manifest. That's required for publishing. Aborting.");
                     return true;
                 }
 
                 if ((_options.DoSigningValidation || _options.DoNuGetValidation || _options.DoSourcelinkValidation)
                     && !artifacts.Any(f => f.Name.Equals("PackageArtifacts")))
                 {
-                    Console.Write("The build that you want to promote doesn't have a list of package assets. That's required when running signing or NuGet validation. Aborting.");
+                    Console.Write("The build that you want to add to a new channel doesn't have a list of package assets. That's required when running signing or NuGet validation. Aborting.");
                     return true;
                 }
 
                 if (_options.DoSourcelinkValidation && !artifacts.Any(f => f.Name.Equals("BlobArtifacts")))
                 {
-                    Console.Write("The build that you want to promote doesn't have a list of blob assets. That's required when running SourceLink validation. Aborting.");
+                    Console.Write("The build that you want to add to a new channel doesn't have a list of blob assets. That's required when running SourceLink validation. Aborting.");
                     return true;
                 }
 
@@ -217,12 +217,13 @@ namespace Microsoft.DotNet.Darc.Operations
             }
             catch (HttpRequestException e) when (e.Message.Contains("404 (Not Found)"))
             {
-                Console.Write("The build that you want to promote isn't available in AzDO anymore. Aborting.");
+                Console.Write("The build that you want to add to a new channel isn't available in AzDO anymore. Aborting.");
                 return false;
             }
             catch (HttpRequestException e) when (e.Message.Contains("401 (Unauthorized)"))
             {
-                Console.Write("Got permission denied response while trying to retrieve target build from Azure DevOps. Aborting.");
+                Console.WriteLine("Got permission denied response while trying to retrieve target build from Azure DevOps. Aborting.");
+                Console.Write("Please make sure that your Azure DevOps PAT has the build read and execute scopes set.");
                 return false;
             }
         }
@@ -253,7 +254,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
             if (sourceBuildArcadeSDKDependency == null)
             {
-                Console.WriteLine("You're trying to promote a build that doesn't have a dependency on Microsoft.DotNet.Arcade.Sdk.");
+                Console.WriteLine("The target build doesn't have a dependency on Microsoft.DotNet.Arcade.Sdk.");
                 return (null, null);
             }
 
