@@ -75,6 +75,16 @@ namespace Microsoft.DotNet.DarcLib
 
                             retriesRemaining = 0;
                         }
+                        else if (response.StatusCode == HttpStatusCode.Unauthorized)
+                        {
+                            if (_logFailure)
+                            {
+                                var errorDetails = await response.Content.ReadAsStringAsync();
+                                _logger.LogError($"A 401 (Unauthorized) response was returned from AzDO: {errorDetails}");
+                            }
+
+                            retriesRemaining = 0;
+                        }
 
                         response.EnsureSuccessStatusCode();
                         return response;
