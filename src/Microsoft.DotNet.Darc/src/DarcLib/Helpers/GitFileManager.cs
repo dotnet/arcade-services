@@ -966,11 +966,11 @@ namespace Microsoft.DotNet.DarcLib
 
                                 DependencyDetail dependencyDetail = new DependencyDetail
                                 {
-                                    Name = dependency.Attributes[VersionFiles.NameAttributeName].Value,
-                                    RepoUri = dependency.SelectSingleNode(VersionFiles.UriElementName).InnerText,
-                                    Commit = dependency.SelectSingleNode(VersionFiles.ShaElementName)?.InnerText,
-                                    Version = dependency.Attributes[VersionFiles.VersionAttributeName].Value,
-                                    CoherentParentDependencyName = dependency.Attributes[VersionFiles.CoherentParentAttributeName]?.Value,
+                                    Name = dependency.Attributes[VersionFiles.NameAttributeName].Value?.Trim(),
+                                    RepoUri = dependency.SelectSingleNode(VersionFiles.UriElementName).InnerText?.Trim(),
+                                    Commit = dependency.SelectSingleNode(VersionFiles.ShaElementName)?.InnerText?.Trim(),
+                                    Version = dependency.Attributes[VersionFiles.VersionAttributeName].Value?.Trim(),
+                                    CoherentParentDependencyName = dependency.Attributes[VersionFiles.CoherentParentAttributeName]?.Value?.Trim(),
                                     Pinned = isPinned,
                                     Type = type
                                 };
