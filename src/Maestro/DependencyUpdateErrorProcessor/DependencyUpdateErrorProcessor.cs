@@ -33,13 +33,13 @@ namespace DependencyUpdateErrorProcessor
             IReliableStateManager stateManager,
             ILogger<DependencyUpdateErrorProcessor> logger,
             BuildAssetRegistryContext context,
-            IOptions<DependencyUpdateErrorProcessorOptions> errorProcessor
+            IOptions<DependencyUpdateErrorProcessorOptions> options
             )
         {
             StateManager = stateManager;
             Logger = logger;
             Context = context;
-            ErrorProcessor = errorProcessor.Value;
+            Options = options.Value;
         }
 
         private IReliableStateManager StateManager { get; }
@@ -48,36 +48,38 @@ namespace DependencyUpdateErrorProcessor
 
         private BuildAssetRegistryContext Context { get; }
 
-        private DependencyUpdateErrorProcessorOptions ErrorProcessor { get; }
+        private DependencyUpdateErrorProcessorOptions Options { get; }
 
 
         [CronSchedule("0 0/1 * 1/1 * ? *", TimeZones.PST)]
         public async Task DependencyUpdateErrorProcessing()
         {
 
-            if (ErrorProcessor.ConfigurationRefresherdPointUri != null && ErrorProcessor.DynamicConfigs != null)
+           if (Options.ConfigurationRefresherdPointUri != null && Options.DynamicConfigs != null)
             {
-                await ErrorProcessor.ConfigurationRefresherdPointUri.Refresh();
+                await Options.ConfigurationRefresherdPointUri.Refresh();
                 
-                bool.TryParse(ErrorProcessor.DynamicConfigs["FeatureManagement:DependencyUpdateErrorProcessor"], 
+                bool.TryParse(Options.DynamicConfigs["FeatureManagement:DependencyUpdateErrorProcessor"], 
                     out var dependencyUpdateErrorProcessorFlag);
                 if (dependencyUpdateErrorProcessorFlag)
                 {
                     IReliableDictionary<string, DateTime> update =
                         await StateManager.GetOrAddAsync<IReliableDictionary<string, DateTime>>("update");
+                    DateTimeOffset previousTransaction;
                     try
                     {
                         using (ITransaction tx = StateManager.CreateTransaction())
                         {
-                            var previousTransaction = await update.GetOrAddAsync(
+                            previousTransaction = await update.GetOrAddAsync(
                              tx,
                              "update",
                              //DateTime.UtcNow
                              new DateTime(2002, 10, 18)
                              );
                             await tx.CommitAsync();
-                            await CheckForErrorInRepositoryBranchHistoryTable(previousTransaction, ErrorProcessor.GithubUrl);
+
                         }
+                        await CheckForErrorInRepositoryBranchHistoryTable(previousTransaction, Options.GithubUrl);
                     }
                     catch (Exception ex)
                     {
@@ -151,12 +153,11 @@ namespace DependencyUpdateErrorProcessor
 
             Logger.LogInformation("GitHub token acquired for " + creatingIssueInRepo);
 
-            Octokit.ProductHeaderValue _product;
             string version = Assembly.GetExecutingAssembly()
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                 .InformationalVersion;
-            _product = new Octokit.ProductHeaderValue("Maestro", version);
-            var client = new GitHubClient(_product);
+            Octokit.ProductHeaderValue product = new Octokit.ProductHeaderValue("Maestro", version);
+            var client = new GitHubClient(product);
             var token = new Credentials(gitHubToken);
 
             client.Credentials = token;
@@ -168,7 +169,7 @@ namespace DependencyUpdateErrorProcessor
             Logger.LogInformation("Something failed in the repository : " + repositoryBranchUpdateHistory.Repository);
 
             string fyiHandles = "@epananth";
-            string label = "UpdateDependency";
+            string label = "DependencyUpdateError";
 
             IReliableDictionary<string, int> gitHubIssueEvaulator =
             await StateManager.GetOrAddAsync<IReliableDictionary<string, int>>("gitHubIssueEvaulator");
@@ -187,21 +188,21 @@ namespace DependencyUpdateErrorProcessor
                     JArray arguments = JArray.Parse(repositoryBranchUpdateHistory.Arguments);
                     string subscriptionId = arguments[0].ToString();
                     Guid subscriptionGuid = GetSubscriptionGuid(subscriptionId);
-                    description.Append("SubscriptionId: " + $"{ arguments[0]}" +
+                    description.Append("SubscriptionId: " + $"{ subscriptionId}" +
                         Environment.NewLine);
-                    List<Maestro.Data.Models.Subscription> subscription = (from sub in 
-                        Context.Subscriptions where sub.Id == subscriptionGuid select sub).ToList();
+                    Maestro.Data.Models.Subscription subscription = (from sub in 
+                        Context.Subscriptions where sub.Id == subscriptionGuid select sub).FirstOrDefault();
                     // Subscription might be removed 
-                    if (subscription.Count == 0)
+                    if (subscription == null)
                     {
-                        Logger.LogInformation("SubscriptionId :" + subscriptionId + " has been deleted.");
-                        break;
+                        Logger.LogInformation("SubscriptionId :" + subscriptionId + " has been deleted for the repository : " + repositoryBranchUpdateHistory.Repository );
+                        return;
                     }
                     else
                     {
-                        description.Append("Source Repository :" + subscription[0].SourceRepository +
+                        description.Append("Source Repository :" + subscription.SourceRepository +
                             $"{Environment.NewLine} {Environment.NewLine}" +
-                            "Target Repository :" + subscription[0].TargetRepository);
+                            "Target Repository :" + subscription.TargetRepository);
                     }
                     break;
                     // for all the other methods
@@ -224,7 +225,7 @@ namespace DependencyUpdateErrorProcessor
                 Environment.NewLine);
 
             // Get repo info used for create/ update gitHub issue
-            Octokit.Repository repo = await client.Repository.Get(ErrorProcessor.Owner, ErrorProcessor.Repository);
+            Octokit.Repository repo = await client.Repository.Get(Options.Owner, Options.Repository);
 
             try
             {
@@ -236,17 +237,24 @@ namespace DependencyUpdateErrorProcessor
                         var issueNumber = await gitHubIssueEvaulator.TryGetValueAsync(tx, repoBranchKey);
                         Logger.LogInformation("Updating a gitHub issue number : " + issueNumber + " for the error : " + repositoryBranchUpdateHistory.ErrorMessage +
                             " for the repository : " + repositoryBranchUpdateHistory.Repository);
-                        try
+                        if (issueNumber.HasValue)
                         {
-                            IssueUpdate issueUpdate = new IssueUpdate
+                            try
                             {
-                                Body = description.ToString(),
-                            };
-                            await client.Issue.Update(repo.Id, issueNumber.Value, issueUpdate);
+                                IssueUpdate issueUpdate = new IssueUpdate
+                                {
+                                    Body = description.ToString(),
+                                };
+                                await client.Issue.Update(repo.Id, issueNumber.Value, issueUpdate);
+                            }
+                            catch(Exception ex)
+                            {
+                                Logger.LogError(ex,"Unable to update issue number " + issueNumber + " in GitHub.");
+                            }
                         }
-                        catch 
+                        else
                         {
-                            Logger.LogError("Unable to update issue number " + issueNumber + " in GitHub.") ;
+                            Logger.LogInformation("Unable to retrive the issuenumber from the reliable services.");
                         }
                     }
                     else
@@ -265,7 +273,7 @@ namespace DependencyUpdateErrorProcessor
                         }
                         catch (Exception ex)
                         {
-                            Logger.LogError("Unable to create an issue in GitHub" + ex.ToString());
+                            Logger.LogError(ex, "Unable to create an issue in GitHub for the error message :" + repositoryBranchUpdateHistory.ErrorMessage);
                         }
                     }
                     await tx.CommitAsync();
@@ -287,7 +295,7 @@ namespace DependencyUpdateErrorProcessor
             return subscriptionGuid;
         }
 
-        // This method runs everytime till the MaxValue is reached. Since we are implementing IServiceImplementation, this is one of the default method. Since we 
+        // This runs till the max value is reached then waits for some time and runs again till the maxValue.
         public Task<TimeSpan> RunAsync(CancellationToken cancellationToken)
         {
             return Task.FromResult(TimeSpan.MaxValue);
