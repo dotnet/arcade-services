@@ -11,6 +11,7 @@ using System;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Generic;
+using Microsoft.DotNet.Services.Utility;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -106,11 +107,13 @@ namespace Microsoft.DotNet.Darc.Operations
                 return Constants.ErrorCode;
             }
 
-            var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build).ConfigureAwait(false);
+            var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build)
+                .ConfigureAwait(false);
 
             // This condition can happen when for some reason we failed to determine the source branch/sha 
-            // of the build that produced the used Arcade SDK
-            if (arcadeSDKSourceBranch == null || arcadeSDKSourceSHA == null)
+            // of the build that produced the used Arcade SDK or when the user specify an invalid combination
+            // of source-sha/branch parameters.
+            if (arcadeSDKSourceBranch == null && arcadeSDKSourceSHA == null)
             {
                 return Constants.ErrorCode;
             }
@@ -189,15 +192,23 @@ namespace Microsoft.DotNet.Darc.Operations
             var hasSourceBranch = !string.IsNullOrEmpty(_options.SourceBranch);
             var hasSourceSHA = !string.IsNullOrEmpty(_options.SourceSHA);
 
-            if (hasSourceBranch ^ hasSourceSHA)
+            if (hasSourceBranch)
             {
-                Console.WriteLine("The `source-branch` and `source-sha` parameters need to be specified together.");
-                return (null, null);
+                _options.SourceBranch = GitHelpers.NormalizeBranchName(_options.SourceBranch);
             }
 
             if (hasSourceBranch && hasSourceSHA)
             {
                 return (_options.SourceBranch, _options.SourceSHA);
+            }
+            else if (hasSourceSHA && !hasSourceBranch)
+            {
+                Console.WriteLine("The `source-sha` parameter needs to be specified together with `source-branch`.");
+                return (null, null);
+            }
+            else if (hasSourceBranch)
+            {
+                return (_options.SourceBranch, null);
             }
 
             string sourceBuildRepo = string.IsNullOrEmpty(build.GitHubRepository) ?

@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("source-branch", HelpText = "Branch that should be used as base for the promotion build. Required if source-sha is specified.")]
         public string SourceBranch { get; set; }
 
-        [Option("source-sha", HelpText = "SHA that should be used as base for the promotion build. Required if source-branch is specified.")]
+        [Option("source-sha", HelpText = "SHA that should be used as base for the promotion build.")]
         public string SourceSHA { get; set; }
 
         [Option("validate-signing", HelpText = "Perform signing validation.")]
