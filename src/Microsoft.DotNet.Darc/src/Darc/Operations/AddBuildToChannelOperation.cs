@@ -11,6 +11,7 @@ using System;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Generic;
+using System.Net.Http;
 using Microsoft.DotNet.Services.Utility;
 
 namespace Microsoft.DotNet.Darc.Operations
@@ -107,8 +108,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 return Constants.ErrorCode;
             }
 
-            var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build)
-                .ConfigureAwait(false);
+            var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build).ConfigureAwait(false);
 
             // This condition can happen when for some reason we failed to determine the source branch/sha 
             // of the build that produced the used Arcade SDK or when the user specify an invalid combination
@@ -117,8 +117,16 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 return Constants.ErrorCode;
             }
-
             AzureDevOpsClient azdoClient = new AzureDevOpsClient(gitExecutable: null, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null);
+
+            var targetAzdoBuildStatus = await ValidateAzDOBuildAsync(azdoClient, build.AzureDevOpsAccount, build.AzureDevOpsProject, build.AzureDevOpsBuildId.Value)
+                .ConfigureAwait(false);
+
+            if (!targetAzdoBuildStatus)
+            {
+                return Constants.ErrorCode;
+            }
+
 
             var queueTimeVariables = $"{{" +
                 $"\"BARBuildId\": \"{ build.Id }\", " +
@@ -181,6 +189,47 @@ namespace Microsoft.DotNet.Darc.Operations
             }
         }
 
+        private async Task<bool> ValidateAzDOBuildAsync(AzureDevOpsClient azdoClient, string azureDevOpsAccount, string azureDevOpsProject, int azureDevOpsBuildId)
+        {
+            try
+            {
+                var artifacts = await azdoClient.GetBuildArtifactsAsync(azureDevOpsAccount, azureDevOpsProject, azureDevOpsBuildId, maxRetries: 5);
+
+                // The build manifest is always necessary
+                if (!artifacts.Any(f => f.Name.Equals("AssetManifests")))
+                {
+                    Console.Write("The build that you want to add to a new channel doesn't have a Build Manifest. That's required for publishing. Aborting.");
+                    return true;
+                }
+
+                if ((_options.DoSigningValidation || _options.DoNuGetValidation || _options.DoSourcelinkValidation)
+                    && !artifacts.Any(f => f.Name.Equals("PackageArtifacts")))
+                {
+                    Console.Write("The build that you want to add to a new channel doesn't have a list of package assets. That's required when running signing or NuGet validation. Aborting.");
+                    return true;
+                }
+
+                if (_options.DoSourcelinkValidation && !artifacts.Any(f => f.Name.Equals("BlobArtifacts")))
+                {
+                    Console.Write("The build that you want to add to a new channel doesn't have a list of blob assets. That's required when running SourceLink validation. Aborting.");
+                    return true;
+                }
+
+                return true;
+            }
+            catch (HttpRequestException e) when (e.Message.Contains("404 (Not Found)"))
+            {
+                Console.Write("The build that you want to add to a new channel isn't available in AzDO anymore. Aborting.");
+                return false;
+            }
+            catch (HttpRequestException e) when (e.Message.Contains("401 (Unauthorized)"))
+            {
+                Console.WriteLine("Got permission denied response while trying to retrieve target build from Azure DevOps. Aborting.");
+                Console.Write("Please make sure that your Azure DevOps PAT has the build read and execute scopes set.");
+                return false;
+            }
+        }
+
         /// <summary>
         /// By default the source branch/SHA for the Build Promotion pipeline will be the branch/SHA
         /// that produced the Arcade.SDK used by the build being promoted. The user can override that
@@ -224,7 +273,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
             if (sourceBuildArcadeSDKDependency == null)
             {
-                Console.WriteLine("You're trying to promote a build that doesn't have a dependency on Microsoft.DotNet.Arcade.Sdk.");
+                Console.WriteLine("The target build doesn't have a dependency on Microsoft.DotNet.Arcade.Sdk.");
                 return (null, null);
             }
 
@@ -244,6 +293,17 @@ namespace Microsoft.DotNet.Darc.Operations
             if (sourceBuildArcadeSDKDepBuild == null)
             {
                 Console.Write($"Could not find information (in BAR) about the build that produced Microsoft.DotNet.Arcade.Sdk version {sourceBuildArcadeSDKDependency.Version}.");
+                return (null, null);
+            }
+
+            var oldestSupportedArcadeSDKDate = new DateTimeOffset(2020, 01, 28, 0, 0, 0, new TimeSpan(0, 0, 0));
+            if (DateTimeOffset.Compare(sourceBuildArcadeSDKDepBuild.DateProduced, oldestSupportedArcadeSDKDate) < 0)
+            {
+                Console.WriteLine($"The target build uses an SDK released in {sourceBuildArcadeSDKDepBuild.DateProduced}");
+                Console.WriteLine($"The target build needs to use an Arcade SDK version released after {oldestSupportedArcadeSDKDate} otherwise " +
+                    $"you must inform the `source-branch` / `source-sha` parameters to point to a specific Arcade build.");
+                Console.Write($"You can also pass the `skip-assets-publishing` parameter if all you want is to " +
+                    $"assign the build to a channel. Note, though, that this will not publish the build assets.");
                 return (null, null);
             }
 
