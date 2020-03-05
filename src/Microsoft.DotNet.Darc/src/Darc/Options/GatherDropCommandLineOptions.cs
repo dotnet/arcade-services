@@ -32,9 +32,6 @@ namespace Microsoft.DotNet.Darc.Options
         [Option('f', "full", HelpText = "Gather the full drop (build and all input builds).")]
         public bool Transitive { get; set; }
 
-        [Option("release", HelpText = "Generate a layout compatible with releasing the product (separated drop, generate release json).")]
-        public bool ReleaseLayout { get; set; }
-
         [Option("release-name", Default ="3.0.0-previewN", HelpText = "Name of release to use when generating release json.")]
         public string ReleaseName { get; set; }
 
