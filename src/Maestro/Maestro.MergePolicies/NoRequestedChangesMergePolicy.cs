@@ -15,7 +15,7 @@ namespace Maestro.MergePolicies
 
         public static async Task EvaluateReviewAsync(IMergePolicyEvaluationContext context)
         {
-            IEnumerable<Review> reviews = await context.Darc.GetPullRequestReviewsAsync(context.PullRequestUrl);
+            IEnumerable<Review> reviews = await context.Darc.GetPullRequestReviewsAsync(context.PullRequest.Url);
 
             if (reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected))
             {
