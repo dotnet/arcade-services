@@ -57,29 +57,6 @@ namespace Maestro.Web
 
         static Startup()
         {
-            Triggers<BuildChannel>.Inserting += entry =>
-            {
-                BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
-                BuildChannel entity = entry.Entity;
-                Build build = context.Builds.Find(entity.BuildId);
-
-                if (build == null)
-                {
-                    ILogger<Startup> logger = context.GetService<ILogger<Startup>>();
-                    logger.LogError($"Could not find build with id {entity.BuildId} in BAR. Skipping pipeline triggering.");
-                }
-                else
-                {
-                    if (ChannelHasAssociatedReleasePipeline(entity.ChannelId, context))
-                    {
-                        entry.Cancel = true;
-                        var queue = context.GetService<BackgroundQueue>();
-                        var releasePipelineRunner = context.GetService<IReleasePipelineRunner>();
-                        queue.Post(() => releasePipelineRunner.StartAssociatedReleasePipelinesAsync(entity.BuildId, entity.ChannelId));
-                    }
-                }
-            };
-
             Triggers<BuildChannel>.Inserted += entry =>
             {
                 BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
@@ -112,17 +89,7 @@ namespace Maestro.Web
                         logger.LogInformation($"Skipping Dependency update for Build {entity.BuildId} because it contains no assets in valid locations");
                     }
                 }
-
             };
-        }
-
-        private static bool ChannelHasAssociatedReleasePipeline(int channelId, BuildAssetRegistryContext context)
-        {
-            return context.Channels
-                .Where(ch => ch.Id == channelId)
-                .Include(ch => ch.ChannelReleasePipelines)
-                .ThenInclude(crp => crp.ReleasePipeline)
-                .FirstOrDefault(c => c.ChannelReleasePipelines.Count > 0) != null;
         }
 
         public Startup(IConfiguration configuration, IHostingEnvironment env)
