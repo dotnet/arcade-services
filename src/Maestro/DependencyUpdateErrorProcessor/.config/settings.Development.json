@@ -6,6 +6,6 @@
   "AppConfigurationUri": "https://maestrolocal.azconfig.io/",
   "GithubUrl": "https://github.com/maestro-auth-test/maestro-test2",
   "Owner": "maestro-auth-test",
-  "Repository": "maestro-test2"
-
+  "Repository": "maestro-test2",
+  "FyiHandle": "@epananth"
 }

@@ -1,7 +1,6 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
-
 using System;
 using System.Reflection;
 using Azure.Core;
@@ -26,7 +25,6 @@ namespace DependencyUpdateErrorProcessor
         /// </summary>
         private static void Main()
         {
-
             ServiceHost.Run(
                 host =>
                 {
@@ -80,18 +78,19 @@ namespace DependencyUpdateErrorProcessor
                                 builder.AddAzureAppConfiguration(o =>
                                 {
                                     o.Connect(new Uri(apiEndPointUri), credential)
-                                      .ConfigureRefresh(refresh =>
+                                    .ConfigureRefresh(refresh =>
                                         {
                                             refresh.Register(".appconfig.featureflag/DependencyUpdateErrorProcessor")
                                                 .SetCacheExpiration(TimeSpan.FromSeconds(1));
                                         }).UseFeatureFlags();
 
-                                    options.ConfigurationRefresherdPointUri = o.GetRefresher();
+                                    options.ConfigurationRefresherdEndPointUri = o.GetRefresher();
                                 });
                                 options.DynamicConfigs = builder.Build();
                                 options.GithubUrl = config["GithubUrl"];
                                 options.Owner = config["Owner"];
                                 options.Repository = config["Repository"];
+                                options.FyiHandle = config["FyiHandle"];
                             });
                         });
                 });
