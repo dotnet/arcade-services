@@ -48,6 +48,7 @@ namespace DependencyUpdateErrorProcessor
 
         private DependencyUpdateErrorProcessorOptions _options;
 
+        //Runs every hour in staging for now, in production it will run once a day.
         [CronSchedule("0 0 0/1 1/1 * ? *", TimeZones.PST)]
         public async Task DependencyUpdateErrorProcessing()
         {
@@ -68,7 +69,7 @@ namespace DependencyUpdateErrorProcessor
                             previousTransaction = await update.GetOrAddAsync(
                              tx,
                              "update",
-                             DateTime.UtcNow
+                             DateTime.UtcNow 
                              );
                             await tx.CommitAsync();
                         }
@@ -121,7 +122,7 @@ namespace DependencyUpdateErrorProcessor
                     }
                     catch (Exception ex)
                     {
-                        Logger.LogError(ex.Message, "Failed to retrieve previous transaction time");
+                        Logger.LogError(ex.Message, "Failed to retrieve previous transaction time.");
                     }
                 }
             }
@@ -174,7 +175,7 @@ namespace DependencyUpdateErrorProcessor
                     return;
                 // for all the other methods
                 default:
-                    description.Append("Repository :" + $"[{repositoryBranchUpdateHistory.Repository}](repositoryUrl)");
+                    description.Append("Repository :" + repositoryBranchUpdateHistory.Repository);
                     break;
             }
             description.Append(Environment.NewLine);
@@ -256,8 +257,8 @@ namespace DependencyUpdateErrorProcessor
             JArray arguments = JArray.Parse(methodArguments);
             string subscriptionId = arguments[0].ToString();
             Guid subscriptionGuid = GetSubscriptionGuid(subscriptionId);
-            description.Append("SubscriptionId: " + $"{ subscriptionId}" +
-                Environment.NewLine);
+            description.Append("SubscriptionId: " + subscriptionId);
+            description.Append(Environment.NewLine);
             if (subscriptionGuid != null)
             {
                 Maestro.Data.Models.Subscription subscription = (from sub in
@@ -270,9 +271,9 @@ namespace DependencyUpdateErrorProcessor
                 }
                 else
                 {
-                    description.Append("Source Repository :" + subscription.SourceRepository +
-                        Environment.NewLine +
-                        "Target Repository :" + subscription.TargetRepository);
+                    description.Append("Source Repository :" + subscription.SourceRepository);
+                    description.Append(Environment.NewLine);
+                    description.Append("Target Repository :" + subscription.TargetRepository);
                 }
             }
             return description.ToString();
