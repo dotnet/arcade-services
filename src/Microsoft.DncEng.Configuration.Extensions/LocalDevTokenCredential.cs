@@ -111,7 +111,6 @@ namespace Microsoft.DncEng.Configuration.Extensions
         {
             if (!Debugger.IsAttached)
                 throw new InvalidOperationException("Debugger required for local service fabric authentication.");
-
             var userCode = arg.UserCode;
             var verificationUrl = arg.VerificationUrl;
             // If your debugger breaks here you need to authenticate to azure with a device code

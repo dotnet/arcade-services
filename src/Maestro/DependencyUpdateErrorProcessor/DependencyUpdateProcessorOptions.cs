@@ -9,10 +9,12 @@ namespace DependencyUpdateErrorProcessor
 {
     class DependencyUpdateErrorProcessorOptions
     {
-        public IConfigurationRefresher ConfigurationRefresherdPointUri { get; set; }
+        public IConfigurationRefresher ConfigurationRefresherEndPointUri { get; set; }
         public IConfiguration DynamicConfigs { get; set; }
         public string GithubUrl { get; set; }
         public string Owner { get; set; }
         public string Repository { get; set; }
+        public string FyiHandle { get; set; }
+
     }
 }
