@@ -93,8 +93,10 @@ namespace Maestro.Web
                                     .GetRequiredService<UserManager<ApplicationUser>>();
                                 var signInManager = context.HttpContext.RequestServices
                                     .GetRequiredService<SignInManager<ApplicationUser>>();
+                                var gitHubClaimResolver = context.HttpContext.RequestServices
+                                    .GetRequiredService<GitHubClaimResolver>();
 
-                                await UpdateUserIfNeededAsync(user, dbContext, userManager, signInManager);
+                                await UpdateUserIfNeededAsync(user, dbContext, userManager, signInManager, gitHubClaimResolver);
 
                                 ClaimsPrincipal principal = await signInManager.CreateUserPrincipalAsync(user);
                                 context.ReplacePrincipal(principal);
@@ -166,7 +168,8 @@ namespace Maestro.Web
                                 .GetRequiredService<UserManager<ApplicationUser>>();
                             var signInManager = ctx.HttpContext.RequestServices
                                 .GetRequiredService<SignInManager<ApplicationUser>>();
-
+                            var gitHubClaimResolver = ctx.HttpContext.RequestServices
+                                .GetRequiredService<GitHubClaimResolver>();
 
                             // extract the userId from the ClaimsPrincipal and read the user from the Db
                             ApplicationUser user = await userManager.GetUserAsync(ctx.Principal);
@@ -176,7 +179,7 @@ namespace Maestro.Web
                             }
                             else
                             {
-                                await UpdateUserIfNeededAsync(user, dbContext, userManager, signInManager);
+                                await UpdateUserIfNeededAsync(user, dbContext, userManager, signInManager, gitHubClaimResolver);
 
                                 ClaimsPrincipal principal = await signInManager.CreateUserPrincipalAsync(user);
                                 ctx.ReplacePrincipal(principal);
@@ -228,11 +231,11 @@ namespace Maestro.Web
             }
         }
 
-        private async Task UpdateUserIfNeededAsync(
-            ApplicationUser user,
+        private async Task UpdateUserIfNeededAsync(ApplicationUser user,
             BuildAssetRegistryContext dbContext,
             UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager)
+            SignInManager<ApplicationUser> signInManager,
+            GitHubClaimResolver gitHubClaimResolver)
         {
             while (true)
             {
@@ -240,7 +243,7 @@ namespace Maestro.Web
                 {
                     if (ShouldUpdateUser(user))
                     {
-                        await UpdateUserAsync(user, dbContext, userManager, signInManager);
+                        await UpdateUserAsync(user, dbContext, userManager, signInManager, gitHubClaimResolver);
                     }
 
                     break;
@@ -262,47 +265,30 @@ namespace Maestro.Web
             return DateTimeOffset.UtcNow - user.LastUpdated > new TimeSpan(0, 30, 0);
         }
 
-        private async Task UpdateUserAsync(
-            ApplicationUser user,
+        private async Task UpdateUserAsync(ApplicationUser user,
             BuildAssetRegistryContext dbContext,
             UserManager<ApplicationUser> userManager,
-            SignInManager<ApplicationUser> signInManager)
+            SignInManager<ApplicationUser> signInManager,
+            GitHubClaimResolver gitHubClaimResolver)
         {
             using (IDbContextTransaction txn = await dbContext.Database.BeginTransactionAsync())
             {
                 string token = await userManager.GetAuthenticationTokenAsync(user, GitHubScheme, "access_token");
-                var roles = new HashSet<string>(await GetGithubRolesAsync(token));
-                List<Claim> currentRoles = (await userManager.GetClaimsAsync(user))
-                    .Where(c => c.Type == ClaimTypes.Role)
-                    .ToList();
+                var newClaims = (await gitHubClaimResolver.GetUserInformationClaims(token)).Concat(
+                    await gitHubClaimResolver.GetMembershipClaims(token)
+                );
+                var currentClaims = (await userManager.GetClaimsAsync(user)).ToList();
 
-                // remove claims where github doesn't have the role anymore
-                await userManager.RemoveClaimsAsync(user, currentRoles.Where(c => !roles.Contains(c.Value)));
+                // remove old claims
+                await userManager.RemoveClaimsAsync(user, currentClaims);
 
                 // add new claims
-                await userManager.AddClaimsAsync(
-                    user,
-                    roles.Where(r => currentRoles.All(c => c.Value != r))
-                        .Select(r => new Claim(ClaimTypes.Role, r, ClaimValueTypes.String, GitHubScheme)));
+                await userManager.AddClaimsAsync(user, newClaims);
 
                 user.LastUpdated = DateTimeOffset.UtcNow;
                 await dbContext.SaveChangesAsync();
                 txn.Commit();
             }
-        }
-
-        private static async Task<IList<string>> GetGithubRolesAsync(string accessToken)
-        {
-            var client =
-                new GitHubClient(new ProductHeaderValue(ProductName, ProductVersion))
-                {
-                    Credentials = new Credentials(accessToken)
-                };
-            return (await client.Organization.GetAllForCurrent()).Select(org => $"github:org:{org.Login}")
-                .Concat(
-                    (await client.Organization.Team.GetAllForCurrent()).Select(
-                        team => $"github:team:{team.Organization.Login}:{team.Name}"))
-                .ToList();
         }
     }
 }

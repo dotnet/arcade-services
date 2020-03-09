@@ -195,7 +195,7 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
                     {
                         string teamName = team.Value<string>("name")?.ToLowerInvariant();
                         string orgName = team["organization"]?.Value<string>("login")?.ToLowerInvariant();
-                        string fullName = orgName + "/" + teamName;
+                        string fullName = orgName + ":" + teamName;
                         AddClaim(ClaimTypes.Role, "github:team:" + fullName);
                         AddClaim("urn:github:team", fullName);
                     }
