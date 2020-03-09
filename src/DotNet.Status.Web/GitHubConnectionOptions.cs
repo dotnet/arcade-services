@@ -13,5 +13,8 @@ namespace DotNet.Status.Web
         public string TitlePrefix { get; set; }
         public string SupplementalBodyText { get; set; }
         public NotificationEpicOptions NotificationEpic { get; set; }
+        public string[] RcaRequestedLabels { get; set; }
+        public string[] RcaCopyLabelPrefixes { get; set; }
+        public string RcaLabel { get; set; }
     }
 }

@@ -441,61 +441,81 @@ namespace Microsoft.DotNet.DarcLib
             string packageVersionAlternateElementName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(
                 dependency.Name);
 
-            // Select elements by local name, since the Project (DocumentElement) element often has a default
-            // xmlns set.
-            XmlNodeList propertyGroupNodes = versionProps.DocumentElement.SelectNodes($"//*[local-name()='PropertyGroup']");
-
-            bool addedPackageVersionElement = false;
-            // There can be more than one property group.  Find the appropriate one containing an existing element of
-            // the same type, and add it to the parent.
-            foreach (XmlNode propertyGroupNode in propertyGroupNodes)
+            // Attempt to find the element name or alternate element name under
+            // the property group nodes
+            XmlNode existingVersionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionElementName}' and parent::PropertyGroup]");
+            if (existingVersionNode == null)
             {
-                if (propertyGroupNode.HasChildNodes)
-                {
-                    foreach (XmlNode propertyNode in propertyGroupNode.ChildNodes)
-                    {
-                        if (!addedPackageVersionElement && propertyNode.Name.EndsWith(VersionFiles.VersionPropsVersionElementSuffix))
-                        {
-                            XmlNode newPackageVersionElement = versionProps.CreateElement(
-                                packageVersionElementName, 
-                                documentNamespaceUri);
-                            newPackageVersionElement.InnerText = dependency.Version;
-
-                            propertyGroupNode.AppendChild(newPackageVersionElement);
-                            addedPackageVersionElement = true;
-                            break;
-                        }
-                        // Test for alternate suffixes.  This will eventually be replaced by repo-level configuration:
-                        // https://github.com/dotnet/arcade/issues/1095
-                        else if (!addedPackageVersionElement && propertyNode.Name.EndsWith(
-                            VersionFiles.VersionPropsAlternateVersionElementSuffix))
-                        {
-                            XmlNode newPackageVersionElement = versionProps.CreateElement(
-                                packageVersionAlternateElementName, 
-                                documentNamespaceUri);
-                            newPackageVersionElement.InnerText = dependency.Version;
-
-                            propertyGroupNode.AppendChild(newPackageVersionElement);
-                            addedPackageVersionElement = true;
-                            break;
-                        }
-                    }
-                }
+                existingVersionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionAlternateElementName}' and parent::PropertyGroup]");
             }
 
-            // Add the property groups if none were present
-            if (!addedPackageVersionElement)
+            if (existingVersionNode != null)
             {
-                // If the repository doesn't have any package version element, then
-                // use the non-alternate element name.
-                XmlNode newPackageVersionElement = versionProps.CreateElement(packageVersionElementName, documentNamespaceUri);
-                newPackageVersionElement.InnerText = dependency.Version;
+                existingVersionNode.InnerText = dependency.Version;
+            }
+            else
+            {
+                // Select elements by local name, since the Project (DocumentElement) element often has a default
+                // xmlns set.
+                XmlNodeList propertyGroupNodes = versionProps.DocumentElement.SelectNodes($"//*[local-name()='PropertyGroup']");
 
-                XmlNode propertyGroupElement = versionProps.CreateElement("PropertyGroup", documentNamespaceUri);
-                XmlNode propertyGroupCommentElement = versionProps.CreateComment("Package versions");
-                versionProps.DocumentElement.AppendChild(propertyGroupCommentElement);
-                versionProps.DocumentElement.AppendChild(propertyGroupElement);
-                propertyGroupElement.AppendChild(newPackageVersionElement);
+                bool addedPackageVersionElement = false;
+                // There can be more than one property group.  Find the appropriate one containing an existing element of
+                // the same type, and add it to the parent.
+                foreach (XmlNode propertyGroupNode in propertyGroupNodes)
+                {
+                    if (propertyGroupNode.HasChildNodes)
+                    {
+                        foreach (XmlNode propertyNode in propertyGroupNode.ChildNodes)
+                        {
+                            if (!addedPackageVersionElement && propertyNode.Name.EndsWith(VersionFiles.VersionPropsVersionElementSuffix))
+                            {
+                                XmlNode newPackageVersionElement = versionProps.CreateElement(
+                                    packageVersionElementName,
+                                    documentNamespaceUri);
+                                newPackageVersionElement.InnerText = dependency.Version;
+
+                                propertyGroupNode.AppendChild(newPackageVersionElement);
+                                addedPackageVersionElement = true;
+                                break;
+                            }
+                            // Test for alternate suffixes.  This will eventually be replaced by repo-level configuration:
+                            // https://github.com/dotnet/arcade/issues/1095
+                            else if (!addedPackageVersionElement && propertyNode.Name.EndsWith(
+                                VersionFiles.VersionPropsAlternateVersionElementSuffix))
+                            {
+                                XmlNode newPackageVersionElement = versionProps.CreateElement(
+                                    packageVersionAlternateElementName,
+                                    documentNamespaceUri);
+                                newPackageVersionElement.InnerText = dependency.Version;
+
+                                propertyGroupNode.AppendChild(newPackageVersionElement);
+                                addedPackageVersionElement = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (addedPackageVersionElement)
+                    {
+                        break;
+                    }
+                }
+
+                // Add the property groups if none were present
+                if (!addedPackageVersionElement)
+                {
+                    // If the repository doesn't have any package version element, then
+                    // use the non-alternate element name.
+                    XmlNode newPackageVersionElement = versionProps.CreateElement(packageVersionElementName, documentNamespaceUri);
+                    newPackageVersionElement.InnerText = dependency.Version;
+
+                    XmlNode propertyGroupElement = versionProps.CreateElement("PropertyGroup", documentNamespaceUri);
+                    XmlNode propertyGroupCommentElement = versionProps.CreateComment("Package versions");
+                    versionProps.DocumentElement.AppendChild(propertyGroupCommentElement);
+                    versionProps.DocumentElement.AppendChild(propertyGroupElement);
+                    propertyGroupElement.AppendChild(newPackageVersionElement);
+                }
             }
 
             // TODO: This should not be done here.  This should return some kind of generic file container to the caller,
@@ -946,11 +966,11 @@ namespace Microsoft.DotNet.DarcLib
 
                                 DependencyDetail dependencyDetail = new DependencyDetail
                                 {
-                                    Name = dependency.Attributes[VersionFiles.NameAttributeName].Value,
-                                    RepoUri = dependency.SelectSingleNode(VersionFiles.UriElementName).InnerText,
-                                    Commit = dependency.SelectSingleNode(VersionFiles.ShaElementName)?.InnerText,
-                                    Version = dependency.Attributes[VersionFiles.VersionAttributeName].Value,
-                                    CoherentParentDependencyName = dependency.Attributes[VersionFiles.CoherentParentAttributeName]?.Value,
+                                    Name = dependency.Attributes[VersionFiles.NameAttributeName].Value?.Trim(),
+                                    RepoUri = dependency.SelectSingleNode(VersionFiles.UriElementName).InnerText?.Trim(),
+                                    Commit = dependency.SelectSingleNode(VersionFiles.ShaElementName)?.InnerText?.Trim(),
+                                    Version = dependency.Attributes[VersionFiles.VersionAttributeName].Value?.Trim(),
+                                    CoherentParentDependencyName = dependency.Attributes[VersionFiles.CoherentParentAttributeName]?.Value?.Trim(),
                                     Pinned = isPinned,
                                     Type = type
                                 };

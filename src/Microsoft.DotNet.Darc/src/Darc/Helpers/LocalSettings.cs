@@ -119,7 +119,10 @@ namespace Microsoft.DotNet.Darc.Helpers
 
                     if (darcSettings.GitType == GitRepoType.None)
                     {
-                        throw new DarcException($"Unknown repository '{repoUri}', repo type set to 'None'.");
+                        Console.WriteLine($"Unknown repository '{repoUri}', repo type set to 'None'. " +
+                            ((!repoUri.StartsWith("http", StringComparison.OrdinalIgnoreCase)) ? 
+                                $"Please inform the full URL of the repository including the http[s] prefix." 
+                                : string.Empty));
                     }
                 }
             }

@@ -115,6 +115,13 @@ stages:
         - powershell: eng\set-version-parameters.ps1
           displayName: Calculate release version variables
 
+        - powershell: |
+            [xml]$manifest = Get-Content src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml
+            $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name()='Policies']").RemoveAll()
+            $manifest.Save("src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml")
+            git diff
+          displayName: Remove Service Fabric RunAsPolicy
+
         - script: eng\common\cibuild.cmd
             -configuration $(_BuildConfig)
             -prepareMachine

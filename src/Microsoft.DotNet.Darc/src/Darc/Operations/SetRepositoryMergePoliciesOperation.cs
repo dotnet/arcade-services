@@ -9,6 +9,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.Common;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -125,6 +126,14 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             IRemote verifyRemote = RemoteFactory.GetRemote(_options, repository, Logger);
+            var targetRepository = await verifyRemote.GetRepositoriesAsync(repository);
+
+            if (targetRepository.IsNullOrEmpty())
+            {
+                Console.WriteLine($"The target repository '{repository}' doesn't have a Maestro installation. Aborting merge policy creation.");
+                return Constants.ErrorCode;
+            }
+
             if (!(await UxHelpers.VerifyAndConfirmBranchExistsAsync(verifyRemote, repository, branch, !_options.Quiet)))
             {
                 Console.WriteLine("Aborting merge policy creation.");

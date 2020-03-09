@@ -158,7 +158,7 @@ namespace Microsoft.DotNet.Darc.Tests
         /// Add, where the package version isn't in the details file, but is in Versions.props.
         /// This this case, should update Versions.props
         /// </summary>
-        [Fact(Skip = "Not able to update existing version info when adding new dependency. https://github.com/dotnet/arcade/issues/1095")]
+        [Fact]
         public void AddProductDependency5()
         {
             DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependency5), async driver =>
