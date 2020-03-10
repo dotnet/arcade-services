@@ -22,11 +22,11 @@
     <MicrosoftBuildTasksCoreVersion>16.3.0</MicrosoftBuildTasksCoreVersion>
     <MicrosoftBuildUtilitiesCoreVersion>16.3.0</MicrosoftBuildUtilitiesCoreVersion>
     <MicrosoftCodeAnalysisCSharpVersion>2.9.0</MicrosoftCodeAnalysisCSharpVersion>
-    <MicrosoftCodeCoverageVersion>16.4.0</MicrosoftCodeCoverageVersion>
+    <MicrosoftCodeCoverageVersion>16.5.0</MicrosoftCodeCoverageVersion>
     <MicrosoftIdentityModelClientsActiveDirectoryVersion>3.19.8</MicrosoftIdentityModelClientsActiveDirectoryVersion>
     <MicrosoftRestClientRuntimeVersion>2.3.13</MicrosoftRestClientRuntimeVersion>
     <MicrosoftExtensionsFileSystemGlobbingVersion>2.0.0</MicrosoftExtensionsFileSystemGlobbingVersion>
-    <MicrosoftNETTestSdkVersion>16.4.0</MicrosoftNETTestSdkVersion>
+    <MicrosoftNETTestSdkVersion>16.5.0</MicrosoftNETTestSdkVersion>
     <MoqVersion>4.8.3</MoqVersion>
     <MonoOptionsVersion>5.3.0.1</MonoOptionsVersion>
     <NewtonsoftJsonVersion>10.0.3</NewtonsoftJsonVersion>
