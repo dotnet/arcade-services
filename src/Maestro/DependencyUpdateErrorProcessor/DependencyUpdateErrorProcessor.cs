@@ -52,9 +52,9 @@ namespace DependencyUpdateErrorProcessor
         [CronSchedule("0 0 0/1 1/1 * ? *", TimeZones.PST)]
         public async Task DependencyUpdateErrorProcessing()
         {
-           if (_options.ConfigurationRefresherdEndPointUri != null && _options.DynamicConfigs != null)
+           if (_options.ConfigurationRefresherEndPointUri != null && _options.DynamicConfigs != null)
             {
-                await _options.ConfigurationRefresherdEndPointUri.Refresh();
+                await _options.ConfigurationRefresherEndPointUri.Refresh();
                 bool.TryParse(_options.DynamicConfigs["FeatureManagement:DependencyUpdateErrorProcessor"], 
                     out var dependencyUpdateErrorProcessorFlag);
                 if (dependencyUpdateErrorProcessorFlag)

@@ -84,7 +84,7 @@ namespace DependencyUpdateErrorProcessor
                                                 .SetCacheExpiration(TimeSpan.FromSeconds(1));
                                         }).UseFeatureFlags();
 
-                                    options.ConfigurationRefresherdEndPointUri = o.GetRefresher();
+                                    options.ConfigurationRefresherEndPointUri = o.GetRefresher();
                                 });
                                 options.DynamicConfigs = builder.Build();
                                 options.GithubUrl = config["GithubUrl"];
