@@ -50,7 +50,7 @@ namespace Maestro.MergePolicies
             }
             await AllChecksSuccessfulMergePolicy.EvaluateChecksAsync(context, ignoredChecks);
             await NoRequestedChangesMergePolicy.EvaluateReviewAsync(context);
-            await DontAutomergeDowngradesMergePolicy.EvaluateDowngradesAsync(context);
+            DontAutomergeDowngradesMergePolicy.EvaluateDowngrades(context);
         }
     }
 }
