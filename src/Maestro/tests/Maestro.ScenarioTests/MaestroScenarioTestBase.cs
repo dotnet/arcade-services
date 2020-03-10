@@ -14,18 +14,18 @@ using Xunit.Sdk;
 
 namespace Maestro.ScenarioTests
 {
-    public class MaestroScenarioTests : IAsyncLifetime
+    public class MaestroScenarioTestBase : IAsyncLifetime
     {
         private TestParameters _parameters;
-
         private readonly ITestOutputHelper _output;
-        private readonly Random _random = new Random();
+
+        internal readonly Random _random = new Random();
 
         public IMaestroApi MaestroApi => _parameters.MaestroApi;
 
         public GitHubClient GitHubApi => _parameters.GitHubApi;
 
-        public MaestroScenarioTests(ITestOutputHelper output)
+        public MaestroScenarioTestBase(ITestOutputHelper output)
         {
             _parameters = null!;
             _output = output;
@@ -40,81 +40,9 @@ namespace Maestro.ScenarioTests
         {
             _parameters.Dispose();
             return Task.CompletedTask;
-        }
+        }  
 
-        [Fact]
-        public async Task ArcadeSdkUpdate()
-        {
-            string testChannelName = "Test Channel " + _random.Next(int.MaxValue);
-            var sourceRepo = "arcade";
-            var sourceRepoUri = "https://github.com/dotnet/arcade";
-            var sourceBranch = "dependencyflow-tests";
-            var sourceCommit = "0b36b99e29b1751403e23cfad0a7dff585818051";
-            var sourceBuildNumber = _random.Next(int.MaxValue).ToString();
-            ImmutableList<AssetData> sourceAssets = ImmutableList.Create<AssetData>()
-                .Add(new AssetData(true)
-                {
-                    Name = "Microsoft.DotNet.Arcade.Sdk",
-                    Version = "2.1.0",
-                });
-            var targetRepo = "maestro-test2";
-            var targetBranch = _random.Next(int.MaxValue).ToString();
-            await using AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
-            await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none");
-            int buildId = await CreateBuildAsync(GetRepoUrl("dotnet", sourceRepo), sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
-            await using IAsyncDisposable _ = await AddBuildToChannelAsync(buildId, testChannelName);
-
-            using TemporaryDirectory repo = await CloneRepositoryAsync(targetRepo);
-            using (ChangeDirectory(repo.Directory))
-            {
-                await RunGitAsync("checkout", "-b", targetBranch).ConfigureAwait(false);
-                await RunDarcAsync("add-dependency",
-                    "--name", "Microsoft.DotNet.Arcade.Sdk",
-                    "--type", "toolset",
-                    "--repo", sourceRepoUri);
-                await RunGitAsync("commit", "-am", "Add dependencies.");
-                await using IAsyncDisposable ___ = await PushGitBranchAsync("origin", targetBranch);
-                await TriggerSubscriptionAsync(sub.Value);
-
-                PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
-
-                Assert.Equal($"[{targetBranch}] Update dependencies from dotnet/arcade", pr.Title);
-
-                await CheckoutRemoteRefAsync(pr.MergeCommitSha);
-
-                string dependencies = await RunDarcAsync("get-dependencies");
-                string[] dependencyLines = dependencies.Split(new[] {'\n', '\r'}, StringSplitOptions.RemoveEmptyEntries);
-                Assert.Equal(new[]
-                {
-                    "Name:             Microsoft.DotNet.Arcade.Sdk",
-                    "Version:          2.1.0",
-                    $"Repo:             {sourceRepoUri}",
-                    $"Commit:           {sourceCommit}",
-                    "Type:             Toolset",
-                    "Pinned:           False",
-                }, dependencyLines);
-
-                using TemporaryDirectory arcadeRepo = await CloneRepositoryAsync("dotnet", sourceRepo);
-                using (ChangeDirectory(arcadeRepo.Directory))
-                {
-                    await CheckoutRemoteRefAsync(sourceCommit);
-                }
-
-                var arcadeFiles = Directory.EnumerateFileSystemEntries(Path.Join(arcadeRepo.Directory, "eng", "common"),
-                        "*", SearchOption.AllDirectories)
-                    .Select(s => s.Substring(arcadeRepo.Directory.Length))
-                    .ToHashSet();
-                var repoFiles = Directory.EnumerateFileSystemEntries(Path.Join(repo.Directory, "eng", "common"), "*",
-                        SearchOption.AllDirectories)
-                    .Select(s => s.Substring(repo.Directory.Length))
-                    .ToHashSet();
-
-                Assert.Empty(arcadeFiles.Except(repoFiles));
-                Assert.Empty(repoFiles.Except(arcadeFiles));
-            }
-        }
-
-        private async Task<PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
+        public async Task<PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
         {
             Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo).ConfigureAwait(false);
             var attempts = 10;
@@ -140,7 +68,7 @@ namespace Maestro.ScenarioTests
             throw new XunitException($"No pull request was created in {targetRepo} targeting {targetBranch}");
         }
 
-        private async Task<IAsyncDisposable> PushGitBranchAsync(string remote, string branch)
+        public async Task<IAsyncDisposable> PushGitBranchAsync(string remote, string branch)
         {
             await RunGitAsync("push", remote, branch);
             return AsyncDisposable.Create(async () =>
@@ -150,27 +78,27 @@ namespace Maestro.ScenarioTests
             });
         }
 
-        private string GetRepoUrl(string org, string repository)
+        public string GetRepoUrl(string org, string repository)
         {
             return $"https://github.com/{org}/{repository}";
         }
 
-        private string GetRepoUrl(string repository)
+        public string GetRepoUrl(string repository)
         {
             return GetRepoUrl(_parameters.GitHubTestOrg, repository);
         }
 
-        private string GetRepoFetchUrl(string repository)
+        public string GetRepoFetchUrl(string repository)
         {
             return GetRepoFetchUrl(_parameters.GitHubTestOrg, repository);
         }
 
-        private string GetRepoFetchUrl(string org, string repository)
+        public string GetRepoFetchUrl(string org, string repository)
         {
             return $"https://{_parameters.GitHubUser}:{_parameters.GitHubToken}@github.com/{org}/{repository}";
         }
 
-        private Task<string> RunDarcAsync(params string[] args)
+        public Task<string> RunDarcAsync(params string[] args)
         {
             return TestHelpers.RunExecutableAsync(_output, _parameters.DarcExePath, args.Concat(new[]
             {
@@ -180,12 +108,12 @@ namespace Maestro.ScenarioTests
             }).ToArray());
         }
 
-        private Task<string> RunGitAsync(params string[] args)
+        public Task<string> RunGitAsync(params string[] args)
         {
             return TestHelpers.RunExecutableAsync(_output, _parameters.GitExePath, args);
         }
 
-        private async Task<AsyncDisposableValue<string>> CreateTestChannelAsync(string testChannelName)
+        public async Task<AsyncDisposableValue<string>> CreateTestChannelAsync(string testChannelName)
         {
             try
             {
@@ -205,7 +133,7 @@ namespace Maestro.ScenarioTests
             });
         }
 
-        private async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string sourceChannelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency)
+        public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string sourceChannelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency)
         {
             string output = await RunDarcAsync("add-subscription", "-q", "--no-trigger",
                 "--channel", sourceChannelName,
@@ -228,12 +156,12 @@ namespace Maestro.ScenarioTests
             throw new XunitException("Unable to create subscription.");
         }
 
-        private Task<int> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets)
+        public Task<int> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets)
         {
             return CreateBuildAsync(repositoryUrl, branch, commit, buildNumber, assets, ImmutableList<BuildRef>.Empty);
         }
 
-        private async Task<int> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets, IImmutableList<BuildRef> dependencies)
+        public async Task<int> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets, IImmutableList<BuildRef> dependencies)
         {
             Build build = await MaestroApi.Builds.CreateAsync(new BuildData(
                 commit: commit,
@@ -256,12 +184,12 @@ namespace Maestro.ScenarioTests
             return build.Id;
         }
 
-        private async Task TriggerSubscriptionAsync(string subscriptionId)
+        public async Task TriggerSubscriptionAsync(string subscriptionId)
         {
             await MaestroApi.Subscriptions.TriggerSubscriptionAsync(Guid.Parse(subscriptionId));
         }
 
-        private async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName)
+        public async Task<IAsyncDisposable> AddBuildToChannelAsync(int buildId, string channelName)
         {
             await RunDarcAsync("add-build-to-channel", "--id", buildId.ToString(), "--channel", channelName, "--skip-assets-publishing");
             return AsyncDisposable.Create(async () =>
@@ -271,7 +199,7 @@ namespace Maestro.ScenarioTests
             });
         }
 
-        private IDisposable ChangeDirectory(string directory)
+        public IDisposable ChangeDirectory(string directory)
         {
             string old = Directory.GetCurrentDirectory();
             _output.WriteLine($"Switching to directory {directory}");
@@ -283,12 +211,12 @@ namespace Maestro.ScenarioTests
             });
         }
 
-        private Task<TemporaryDirectory> CloneRepositoryAsync(string repository)
+        public Task<TemporaryDirectory> CloneRepositoryAsync(string repository)
         {
             return CloneRepositoryAsync(_parameters.GitHubTestOrg, repository);
         }
 
-        private async Task<TemporaryDirectory> CloneRepositoryAsync(string org, string repository)
+        public async Task<TemporaryDirectory> CloneRepositoryAsync(string org, string repository)
         {
             using var shareable = Shareable.Create(TemporaryDirectory.Get());
             string directory = shareable.Peek()!.Directory;
@@ -308,7 +236,7 @@ namespace Maestro.ScenarioTests
             return shareable.TryTake()!;
         }
 
-        private async Task CheckoutRemoteRefAsync(string commit)
+        public async Task CheckoutRemoteRefAsync(string commit)
         {
             await RunGitAsync("fetch", "origin", commit);
             await RunGitAsync("checkout", commit);
