@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Maestro.Data;
+using Maestro.Web.Pages.Account;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -45,7 +46,7 @@ namespace Maestro.Web
             {
                 o.SelectScheme = p => p.StartsWithSegments("/api") ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme;
             });
-            
+
             services.AddAuthentication()
                 .AddGitHubOAuth(Configuration.GetSection("GitHubAuthentication"), GitHubScheme)
                 .AddPersonalAccessToken<ApplicationUser>(
@@ -154,7 +155,7 @@ namespace Maestro.Web
                                 .Value;
 
                             // replace the ClaimsPrincipal we are about to serialize to the cookie with a reference
-                            Claim claim = ctx.Principal.Claims.Single(
+                            Claim claim = ctx.Principal.Claims.First(
                                 c => c.Type == identityOptions.ClaimsIdentity.UserIdClaimType);
                             Claim[] claims = {claim};
                             var identity = new ClaimsIdentity(claims, IdentityConstants.ApplicationScheme);
@@ -276,7 +277,7 @@ namespace Maestro.Web
                 string token = await userManager.GetAuthenticationTokenAsync(user, GitHubScheme, "access_token");
                 var newClaims = (await gitHubClaimResolver.GetUserInformationClaims(token)).Concat(
                     await gitHubClaimResolver.GetMembershipClaims(token)
-                );
+                ).Where(AccountController.ShouldAddClaimToUser);
                 var currentClaims = (await userManager.GetClaimsAsync(user)).ToList();
 
                 // remove old claims

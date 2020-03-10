@@ -116,9 +116,7 @@ namespace Maestro.Web.Pages.Account
                     return null;
                 }
 
-                IEnumerable<Claim> claimsToAdd = info.Principal.Claims.Where(
-                    c => c.Type == ClaimTypes.Email || c.Type == "urn:github:name" || c.Type == "urn:github:url" ||
-                         c.Type == ClaimTypes.Role);
+                IEnumerable<Claim> claimsToAdd = info.Principal.Claims.Where(ShouldAddClaimToUser);
 
                 result = await UserManager.AddClaimsAsync(user, claimsToAdd);
                 if (!result.Succeeded)
@@ -135,6 +133,11 @@ namespace Maestro.Web.Pages.Account
                 txn.Commit();
                 return user;
             }
+        }
+
+        public static bool ShouldAddClaimToUser(Claim c)
+        {
+            return c.Type == ClaimTypes.Email || c.Type == "urn:github:name" || c.Type == "urn:github:url" || c.Type == ClaimTypes.Role;
         }
 
         private IActionResult RedirectToLocal(string returnUrl)
