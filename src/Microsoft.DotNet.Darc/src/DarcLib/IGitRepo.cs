@@ -177,6 +177,13 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoDir">The local repo directory</param>
         /// <param name="repoUrl">The remote URL to add</param>
         void AddRemoteIfMissing(string repoDir, string repoUrl);
+
+        /// <summary>
+        ///     Delete a pull request's branch if it still exists
+        /// </summary>
+        /// <param name="pullRequestUri"></param>
+        /// <returns></returns>
+        Task DeletePullRequestBranchAsync(string pullRequestUri);
     }
 
     public class PullRequest
