@@ -34,4 +34,8 @@
     <PackageReference Include="Microsoft.ServiceFabric.Services" Version="3.3.664" />
     <PackageReference Include="Quartz" Version="3.0.6" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\MIcrosoft.DotNet.Internal.Logging\Microsoft.DotNet.Internal.Logging.csproj" />
+  </ItemGroup>
 </Project>
