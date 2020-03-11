@@ -182,7 +182,7 @@ namespace Microsoft.DotNet.DarcLib
         ///     Delete a pull request's branch if it still exists
         /// </summary>
         /// <param name="pullRequestUri"></param>
-        /// <returns></returns>
+        /// <returns>Async task</returns>
         Task DeletePullRequestBranchAsync(string pullRequestUri);
     }
 

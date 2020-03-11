@@ -337,6 +337,11 @@ namespace Microsoft.DotNet.DarcLib
             return _gitClient.UpdatePullRequestAsync(pullRequestUri, pullRequest);
         }
 
+        /// <summary>
+        ///     Delete a Pull Request branch
+        /// </summary>
+        /// <param name="pullRequestUri">URI of pull request to delete branch for</param>
+        /// <returns>Async task</returns>
         public async Task DeletePullRequestBranchAsync(string pullRequestUri)
         {
             try
