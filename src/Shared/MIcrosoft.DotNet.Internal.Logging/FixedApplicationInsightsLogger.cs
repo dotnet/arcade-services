@@ -12,7 +12,7 @@ using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.Internal.Logging
 {
     public class FixedApplicationInsightsLogger : ILogger
     {
@@ -57,17 +57,17 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 logDict = EmptyLogDict;
             }
 
-            foreach ((string key, string value) in logDict)
+            foreach (KeyValuePair<string, string> pair in logDict)
             {
-                if (key == "{OriginalFormat}")
+                if (pair.Key == "{OriginalFormat}")
                 {
                     continue;
                 }
 
                 // Fix up the format of key and value to not cause issues until
                 // https://github.com/dotnet/corefx/issues/31687 is fixed
-                string keyP = Regex.Replace(key, "[^a-zA-Z0-9]", "");
-                string valueP = JsonConvert.SerializeObject(value);
+                string keyP = Regex.Replace(pair.Key, "[^a-zA-Z0-9]", "");
+                string valueP = JsonConvert.SerializeObject(pair.Value);
                 op.AddBaggage(keyP, valueP);
             }
 
