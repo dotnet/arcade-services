@@ -6,7 +6,6 @@ steps:
     command: 'custom'
     projects: |
       src/**/*.Tests.csproj
-      !src/**/Microsoft.DotNet.Darc.Tests.csproj
     custom: 'test'
     arguments: > 
       --configuration $(_BuildConfig)

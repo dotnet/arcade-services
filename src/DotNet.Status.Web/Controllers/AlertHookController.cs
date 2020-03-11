@@ -34,14 +34,17 @@ namespace DotNet.Status.Web.Controllers
         private readonly IOptions<GitHubClientOptions> _githubClientOptions;
         private readonly ILogger _logger;
         private readonly IGitHubTokenProvider _tokenProvider;
+        private readonly ZenHubClient _zenHub;
 
         public AlertHookController(
             IGitHubTokenProvider tokenProvider,
+            ZenHubClient zenHub,
             IOptions<GitHubConnectionOptions> githubOptions,
             IOptions<GitHubClientOptions> githubClientOptions,
             ILogger<AlertHookController> logger)
         {
             _tokenProvider = tokenProvider;
+            _zenHub = zenHub;
             _githubOptions = githubOptions;
             _githubClientOptions = githubClientOptions;
             _logger = logger;
@@ -75,8 +78,7 @@ namespace DotNet.Status.Web.Controllers
                 org,
                 repo);
 
-            IGitHubClient client =
-                await GetGitHubClientAsync(_githubOptions.Value.Organization, _githubOptions.Value.Repository);
+            IGitHubClient client = await GetGitHubClientAsync(_githubOptions.Value.Organization, _githubOptions.Value.Repository);
             Issue issue = await GetExistingIssueAsync(client, notification);
             await EnsureLabelsAsync(client, org, repo);
             if (issue == null)
@@ -85,6 +87,25 @@ namespace DotNet.Status.Web.Controllers
                     ActiveAlertLabel);
                 issue = await client.Issue.Create(org, repo, GenerateNewIssue(notification));
                 _logger.LogInformation("Github issue {org}/{repo}#{issueNumber} created", org, repo, issue.Number);
+
+                NotificationEpicOptions epic = _githubOptions.Value.NotificationEpic;
+                if (epic != null)
+                {
+                    (Repository epicRepoData, Repository issueRepoData) = await Task.WhenAll(
+                        client.Repository.Get(org, epic.Repository),
+                        client.Repository.Get(org, repo)
+                    );
+
+                    _logger.LogInformation("Adding new issue to ZenHub...");
+                    await _zenHub.AddIssueToEpicAsync(
+                        new ZenHubClient.IssueIdentifier(issueRepoData.Id, issue.Number),
+                        new ZenHubClient.IssueIdentifier(epicRepoData.Id, epic.IssueNumber)
+                    );
+                }
+                else
+                {
+                    _logger.LogInformation("No ZenHub epic configured, skipping...");
+                }
             }
             else
             {
@@ -96,9 +117,10 @@ namespace DotNet.Status.Web.Controllers
                     InactiveAlertLabel,
                     ActiveAlertLabel);
 
-                await TryRemove(() => client.Issue.Labels.RemoveFromIssue(org, repo, issue.Number, InactiveAlertLabel));
-                await TryCreate(() =>
-                    client.Issue.Labels.AddToIssue(org, repo, issue.Number, new[] {ActiveAlertLabel}));
+                await GitHubModifications.TryRemoveAsync(() => client.Issue.Labels.RemoveFromIssue(org, repo, issue.Number, InactiveAlertLabel), _logger);
+                await GitHubModifications.TryCreateAsync(() =>
+                    client.Issue.Labels.AddToIssue(org, repo, issue.Number, new[] {ActiveAlertLabel}),
+                    _logger);
 
                 _logger.LogInformation("Adding recurrence comment to  {org}/{repo}#{issueNumber}",
                     org,
@@ -232,57 +254,20 @@ namespace DotNet.Status.Web.Controllers
                     return;
                 }
 
-                _logger.LogInformation("Ensuring tags exist");
-
-                IReadOnlyList<Label> labels = await client.Issue.Labels.GetAllForRepository(org, repo);
-
-                async Task MakeLabel(string name, string color)
+                var desiredLabels = new[]
                 {
-                    if (labels.All(l => l.Name != name))
-                    {
-                        _logger.LogInformation("Missing tag {tag}, creating...", name);
-                        await TryCreate(() =>
-                            client.Issue.Labels.Create(org, repo, new NewLabel(name, color)));
-                    }
-                }
+                    new NewLabel(NotificationIdLabel, "f957b6"),
+                    new NewLabel(ActiveAlertLabel, "d73a4a"),
+                    new NewLabel(InactiveAlertLabel, "e4e669"),
+                };
 
-                await Task.WhenAll(
-                    MakeLabel(NotificationIdLabel, "f957b6"),
-                    MakeLabel(ActiveAlertLabel, "d73a4a"),
-                    MakeLabel(InactiveAlertLabel, "e4e669")
-                );
-
-                _logger.LogInformation("Tags ensured");
+                await GitHubModifications.CreateLabelsAsync(client, org, repo, _logger, desiredLabels);
 
                 s_labelsCreated = true;
             }
             finally
             {
                 s_labelLock.Release();
-            }
-        }
-
-        private async Task TryCreate(Func<Task> createFunc)
-        {
-            try
-            {
-                await createFunc();
-            }
-            catch (ApiValidationException e) when (e.ApiError.Errors.Any(r => r.Code == "already_exists"))
-            {
-                _logger.LogWarning("github resource already exists: {exception}", e);
-            }
-        }
-
-        private async Task TryRemove(Func<Task> removeFunc)
-        {
-            try
-            {
-                await removeFunc();
-            }
-            catch (NotFoundException e)
-            {
-                _logger.LogWarning("github resource not found: {exception}", e);
             }
         }
 
@@ -306,9 +291,10 @@ namespace DotNet.Status.Web.Controllers
                 ActiveAlertLabel,
                 InactiveAlertLabel);
 
-            await TryRemove(() => client.Issue.Labels.RemoveFromIssue(org, repo, issue.Number, ActiveAlertLabel));
-            await TryCreate(() =>
-                client.Issue.Labels.AddToIssue(org, repo, issue.Number, new[] {InactiveAlertLabel}));
+            await GitHubModifications.TryRemoveAsync(() => client.Issue.Labels.RemoveFromIssue(org, repo, issue.Number, ActiveAlertLabel), _logger);
+            await GitHubModifications.TryCreateAsync(() =>
+                client.Issue.Labels.AddToIssue(org, repo, issue.Number, new[] {InactiveAlertLabel}),
+                _logger);
 
             _logger.LogInformation("Adding recurrence comment to  {org}/{repo}#{issueNumber}",
                 org,
@@ -332,7 +318,7 @@ namespace DotNet.Status.Web.Controllers
             string automationId = string.Format(BodyLabelTextFormat, id);
             var request = new SearchIssuesRequest(automationId)
             {
-                // We need to manaually quote the label here, because of
+                // We need to manually quote the label here, because of
                 // https://github.com/octokit/octokit.net/issues/2044
                 Labels = new[] {'"' + NotificationIdLabel + '"'},
                 Order = SortDirection.Descending,
@@ -364,11 +350,6 @@ namespace DotNet.Status.Web.Controllers
             {
                 Credentials = new Credentials(await _tokenProvider.GetTokenForRepository(org, repo))
             };
-        }
-
-        private bool IsValidToken(string token)
-        {
-            throw new NotImplementedException();
         }
     }
 }

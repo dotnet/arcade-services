@@ -11,6 +11,7 @@ using System;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Generic;
+using System.Net.Http;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -106,6 +107,16 @@ namespace Microsoft.DotNet.Darc.Operations
                 return Constants.ErrorCode;
             }
 
+            AzureDevOpsClient azdoClient = new AzureDevOpsClient(gitExecutable: null, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null);
+
+            var targetAzdoBuildStatus = await ValidateAzDOBuildAsync(azdoClient, build.AzureDevOpsAccount, build.AzureDevOpsProject, build.AzureDevOpsBuildId.Value)
+                .ConfigureAwait(false);
+
+            if (!targetAzdoBuildStatus)
+            {
+                return Constants.ErrorCode;
+            }
+
             var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build).ConfigureAwait(false);
 
             // This condition can happen when for some reason we failed to determine the source branch/sha 
@@ -114,8 +125,6 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 return Constants.ErrorCode;
             }
-
-            AzureDevOpsClient azdoClient = new AzureDevOpsClient(gitExecutable: null, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null);
 
             var queueTimeVariables = $"{{" +
                 $"\"BARBuildId\": \"{ build.Id }\", " +
@@ -136,10 +145,87 @@ namespace Microsoft.DotNet.Darc.Operations
                 queueTimeVariables)
                 .ConfigureAwait(false);
 
-            Console.WriteLine($"Build {build.Id} will be assigned to channel '{targetChannel.Name}' once this promotion build finishes: " +
-                $"https://{BuildPromotionPipelineAccountName}.visualstudio.com/{BuildPromotionPipelineProjectName}/_build/results?buildId={azdoBuildId}&view=results");
+            var promotionBuildUrl = $"https://{BuildPromotionPipelineAccountName}.visualstudio.com/{BuildPromotionPipelineProjectName}/_build/results?buildId={azdoBuildId}";
 
-            return Constants.SuccessCode;
+            Console.WriteLine($"Build {build.Id} will be assigned to channel '{targetChannel.Name}' once this build finishes publishing assets: {promotionBuildUrl}");
+
+            if (_options.NoWait)
+            {
+                Console.WriteLine("Returning before asset publishing and channel assignment finishes. The operation continues asynchronously in AzDO.");
+                return Constants.SuccessCode;
+            }
+
+            try
+            {
+                var waitIntervalInSeconds = TimeSpan.FromSeconds(60);
+                AzureDevOpsBuild promotionBuild;
+
+                do
+                {
+                    Console.WriteLine($"Waiting '{waitIntervalInSeconds.TotalSeconds}' seconds for promotion build to complete.");
+                    await Task.Delay(waitIntervalInSeconds);
+                    promotionBuild = await azdoClient.GetBuildAsync(BuildPromotionPipelineAccountName, BuildPromotionPipelineProjectName, azdoBuildId);
+                } while (!promotionBuild.Status.Equals("completed", StringComparison.OrdinalIgnoreCase));
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Darc couldn't check status of the promotion build. {e.Message}");
+                return Constants.ErrorCode;
+            }
+
+            build = await remote.GetBuildAsync(build.Id);
+
+            if (build.Channels.Any(c => c.Id == targetChannel.Id))
+            {
+                Console.WriteLine($"Build '{build.Id}' was successfully added to channel '({targetChannel.Id}) {targetChannel.Name}'");
+                return Constants.SuccessCode;
+            }
+            else
+            {
+                Console.WriteLine("The promotion build finished but the build isn't associated with the channel. This is an error scenario. Please contact @dnceng.");
+                return Constants.ErrorCode;
+            }
+        }
+
+        private async Task<bool> ValidateAzDOBuildAsync(AzureDevOpsClient azdoClient, string azureDevOpsAccount, string azureDevOpsProject, int azureDevOpsBuildId)
+        {
+            try
+            {
+                var artifacts = await azdoClient.GetBuildArtifactsAsync(azureDevOpsAccount, azureDevOpsProject, azureDevOpsBuildId, maxRetries: 5);
+
+                // The build manifest is always necessary
+                if (!artifacts.Any(f => f.Name.Equals("AssetManifests")))
+                {
+                    Console.Write("The build that you want to add to a new channel doesn't have a Build Manifest. That's required for publishing. Aborting.");
+                    return true;
+                }
+
+                if ((_options.DoSigningValidation || _options.DoNuGetValidation || _options.DoSourcelinkValidation)
+                    && !artifacts.Any(f => f.Name.Equals("PackageArtifacts")))
+                {
+                    Console.Write("The build that you want to add to a new channel doesn't have a list of package assets. That's required when running signing or NuGet validation. Aborting.");
+                    return true;
+                }
+
+                if (_options.DoSourcelinkValidation && !artifacts.Any(f => f.Name.Equals("BlobArtifacts")))
+                {
+                    Console.Write("The build that you want to add to a new channel doesn't have a list of blob assets. That's required when running SourceLink validation. Aborting.");
+                    return true;
+                }
+
+                return true;
+            }
+            catch (HttpRequestException e) when (e.Message.Contains("404 (Not Found)"))
+            {
+                Console.Write("The build that you want to add to a new channel isn't available in AzDO anymore. Aborting.");
+                return false;
+            }
+            catch (HttpRequestException e) when (e.Message.Contains("401 (Unauthorized)"))
+            {
+                Console.WriteLine("Got permission denied response while trying to retrieve target build from Azure DevOps. Aborting.");
+                Console.Write("Please make sure that your Azure DevOps PAT has the build read and execute scopes set.");
+                return false;
+            }
         }
 
         /// <summary>
@@ -168,7 +254,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
             if (sourceBuildArcadeSDKDependency == null)
             {
-                Console.WriteLine("You're trying to promote a build that doesn't have a dependency on Microsoft.DotNet.Arcade.Sdk.");
+                Console.WriteLine("The target build doesn't have a dependency on Microsoft.DotNet.Arcade.Sdk.");
                 return (null, null);
             }
 
@@ -188,6 +274,17 @@ namespace Microsoft.DotNet.Darc.Operations
             if (sourceBuildArcadeSDKDepBuild == null)
             {
                 Console.Write($"Could not find information (in BAR) about the build that produced Microsoft.DotNet.Arcade.Sdk version {sourceBuildArcadeSDKDependency.Version}.");
+                return (null, null);
+            }
+
+            var oldestSupportedArcadeSDKDate = new DateTimeOffset(2020, 01, 28, 0, 0, 0, new TimeSpan(0, 0, 0));
+            if (DateTimeOffset.Compare(sourceBuildArcadeSDKDepBuild.DateProduced, oldestSupportedArcadeSDKDate) < 0)
+            {
+                Console.WriteLine($"The target build uses an SDK released in {sourceBuildArcadeSDKDepBuild.DateProduced}");
+                Console.WriteLine($"The target build needs to use an Arcade SDK version released after {oldestSupportedArcadeSDKDate} otherwise " +
+                    $"you must inform the `source-branch` / `source-sha` parameters to point to a specific Arcade build.");
+                Console.Write($"You can also pass the `skip-assets-publishing` parameter if all you want is to " +
+                    $"assign the build to a channel. Note, though, that this will not publish the build assets.");
                 return (null, null);
             }
 

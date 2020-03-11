@@ -4,6 +4,7 @@
 
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.Services.Utility;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -266,7 +267,9 @@ namespace Microsoft.DotNet.Darc
         {
             try
             {
-                var dependencies = await remote.GetDependenciesAsync(repo, branch);
+                branch = GitHelpers.NormalizeBranchName(branch);
+
+                await remote.GetDependenciesAsync(repo, branch);
             }
             catch (DependencyFileNotFoundException)
             {

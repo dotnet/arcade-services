@@ -35,9 +35,13 @@ namespace Microsoft.DotNet.Darc.Operations
         /// </summary>
         public string SourceLocation { get; set; }
         /// <summary>
-        /// Target location where the asset was downloaded to.
+        /// Target location where the asset was downloaded to for the release style layout
         /// </summary>
-        public string TargetLocation { get; set; }
+        public string ReleaseLayoutTargetLocation { get; set; }
+        /// <summary>
+        /// Target location where the asset was downloaded to for the release style layout
+        /// </summary>
+        public string UnifiedLayoutTargetLocation { get; set; }
         /// <summary>
         /// True if the asset download was successful. If false, Asset is the only valid property
         /// </summary>
@@ -56,7 +60,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <summary>
         ///     Root output directory for this build.
         /// </summary>
-        public string OutputDirectory { get; set; }
+        public string ReleaseLayoutOutputDirectory { get; set; }
         /// <summary>
         ///     True if the output has any shipping assets.
         /// </summary>
@@ -90,6 +94,11 @@ namespace Microsoft.DotNet.Darc.Operations
         public const string AzDoNuGetFeedPattern =
             @"https://pkgs.dev.azure.com/(?<account>[a-zA-Z0-9]+)/(?<visibility>[a-zA-Z0-9-]+/)?_packaging/(?<feed>.+)/nuget/v3/index.json";
 
+        private static readonly List<(string repo, string sha)> DependenciesAlwaysMissingBuilds = new List<(string, string)>()
+        {
+            ("https://github.com/dotnet/corefx", "7ee84596d92e178bce54c986df31ccc52479e772"),
+            ("https://github.com/aspnet/xdt", "c01a538851a8ab1a1fbeb2e6243f391fff7587b4")
+        };
 
         public override async Task<int> ExecuteAsync()
         {
@@ -355,7 +364,7 @@ namespace Microsoft.DotNet.Darc.Operations
         public string GetFileShareLocationForReleaseJson(DownloadedBuild build)
         {
             // We only want to have shipping assets in the release json, so append that path
-            return Path.Combine(build.OutputDirectory, shippingSubPath);
+            return Path.Combine(build.ReleaseLayoutOutputDirectory, shippingSubPath);
         }
 
         private const string githubRepoPrefix = "https://github.com/";
@@ -452,7 +461,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// </remarks>
         private void CreateReleasePackageLayout(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
         {
-            if (_options.DryRun || !_options.ReleaseLayout)
+            if (_options.DryRun)
             {
                 return;
             }
@@ -493,10 +502,10 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         // Create the target directory
                         string targetFile = Path.Combine(nupkgDirectory, shortName,
-                            packagesSubDir, Path.GetFileName(asset.TargetLocation));
+                            packagesSubDir, Path.GetFileName(asset.ReleaseLayoutTargetLocation));
                         Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
 
-                        File.Copy(asset.TargetLocation, targetFile, true);
+                        File.Copy(asset.ReleaseLayoutTargetLocation, targetFile, true);
 
                         // Add the relative path to the various spots. Choose paths are relative to the root output dir
                         string relativePackagePath = Path.GetRelativePath(outputDirectory, targetFile);
@@ -516,17 +525,17 @@ namespace Microsoft.DotNet.Darc.Operations
                     else if (asset.Asset.Name.EndsWith(".symbols.nupkg"))
                     {
                         if (doNotListSymbolPackageFilenamePrefixes.Any(doNotListPrefix => 
-                            Path.GetFileName(asset.TargetLocation).StartsWith(doNotListPrefix)))
+                            Path.GetFileName(asset.ReleaseLayoutTargetLocation).StartsWith(doNotListPrefix)))
                         {
                             continue;
                         }
 
                         // Create the target directory
                         string targetFile = Path.Combine(sympkgsDirectory, shortName,
-                            symPackagesSubDir, Path.GetFileName(asset.TargetLocation));
+                            symPackagesSubDir, Path.GetFileName(asset.ReleaseLayoutTargetLocation));
                         Directory.CreateDirectory(Path.GetDirectoryName(targetFile));
 
-                        File.Copy(asset.TargetLocation, targetFile, true);
+                        File.Copy(asset.ReleaseLayoutTargetLocation, targetFile, true);
 
                         // Add the relative path to the sympkg list. Choose paths are relative to the root output dir
                         string relativeSymPackagePath = Path.GetRelativePath(outputDirectory, targetFile);
@@ -565,7 +574,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <returns>Async task</returns>
         private async Task WriteReleaseJson(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
         {
-            if (_options.DryRun || !_options.ReleaseLayout)
+            if (_options.DryRun)
             {
                 return;
             }
@@ -592,7 +601,7 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        ///     Write out a manifest of the items in the drop
+        ///     Write out a manifest of the items in the drop. Writes in json format.
         /// </summary>
         /// <returns></returns>
         private async Task WriteDropManifestAsync(List<DownloadedBuild> downloadedBuilds, string outputDirectory)
@@ -602,66 +611,8 @@ namespace Microsoft.DotNet.Darc.Operations
                 return;
             }
 
-            Directory.CreateDirectory(outputDirectory);
-            switch(_options.OutputFormat)
-            {
-                case DarcOutputType.text:
-                    await WriteYamlDropManifestAsync(downloadedBuilds, Path.Combine(outputDirectory, "manifest.yaml"));
-                    break;
-                case DarcOutputType.json:
-                    await WriteJsonDropManifestAsync(downloadedBuilds, Path.Combine(outputDirectory, "manifest.json"));
-                    break;
-                default:
-                    throw new NotImplementedException($"Darc output type {_options.OutputFormat} not supported in manifest generation");
-            }
-        }
+            string outputPath = Path.Combine(outputDirectory, "manifest.json");
 
-        /// <summary>
-        ///     Write the manifest in yaml format
-        /// </summary>
-        /// <param name="downloadedBuilds">List of downloaded builds in the manifest</param>
-        /// <param name="outputPath">Output file path of the manifest</param>
-        /// <returns>Async task</returns>
-        private async Task WriteYamlDropManifestAsync(List<DownloadedBuild> downloadedBuilds, string outputPath)
-        {
-            if (_options.Overwrite)
-            {
-                File.Delete(outputPath);
-            }
-
-            using (StreamWriter writer = new StreamWriter(outputPath))
-            {
-                await writer.WriteLineAsync($"Builds:");
-                foreach (DownloadedBuild build in downloadedBuilds)
-                {
-                    await writer.WriteLineAsync($"  - Repo:         {build.Build.GitHubRepository ?? build.Build.AzureDevOpsRepository}");
-                    await writer.WriteLineAsync($"    Commit:       {build.Build.Commit}");
-                    await writer.WriteLineAsync($"    Branch:       {build.Build.AzureDevOpsBranch}");
-                    await writer.WriteLineAsync($"    Produced:     {build.Build.DateProduced}");
-                    await writer.WriteLineAsync($"    Build Number: {build.Build.AzureDevOpsBuildNumber}");
-                    await writer.WriteLineAsync($"    BAR Build ID: {build.Build.Id}");
-                    await writer.WriteLineAsync($"    Assets:");
-                    foreach (DownloadedAsset asset in build.DownloadedAssets)
-                    {
-                        await writer.WriteLineAsync($"      - Name:          {asset.Asset.Name}");
-                        await writer.WriteLineAsync($"        Version:       {asset.Asset.Version}");
-                        await writer.WriteLineAsync($"        NonShipping:   {asset.Asset.NonShipping}");
-                        await writer.WriteLineAsync($"        Source:        {asset.SourceLocation}");
-                        await writer.WriteLineAsync($"        Target:        {asset.TargetLocation}");
-                        await writer.WriteLineAsync($"        BAR Asset ID:  {asset.Asset.Id}");
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        ///     Write the manifest in json format
-        /// </summary>
-        /// <param name="downloadedBuilds">List of downloaded builds in the manifest</param>
-        /// <param name="outputPath">Output file path of the manifest</param>
-        /// <returns>Async task</returns>
-        private async Task WriteJsonDropManifestAsync(List<DownloadedBuild> downloadedBuilds, string outputPath)
-        {
             // Construct an ad-hoc object with the necessary fields and use the json
             // serializer to write it to disk
 
@@ -683,7 +634,7 @@ namespace Microsoft.DotNet.Darc.Operations
                             version = asset.Asset.Version,
                             nonShipping = asset.Asset.NonShipping,
                             source = asset.SourceLocation,
-                            target = asset.TargetLocation,
+                            targets = new List<string> { asset.ReleaseLayoutTargetLocation, asset.UnifiedLayoutTargetLocation },
                             barAssetId = asset.Asset.Id
                         })
                     })
@@ -698,13 +649,13 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        /// Filter any released builds if the user specified --skip-released
+        /// Filter any released builds if the user did not specify --include-released
         /// </summary>
         /// <param name="inputBuilds">Input builds</param>
         /// <returns>Builds to download</returns>
         private IEnumerable<Build> FilterReleasedBuilds(IEnumerable<Build> builds)
         {
-            if (_options.SkipReleased)
+            if (!_options.IncludeReleased)
             {
                 var releasedBuilds = builds.Where(build => build.Released);
                 var nonReleasedBuilds = builds.Where(build => !build.Released);
@@ -792,50 +743,55 @@ namespace Microsoft.DotNet.Darc.Operations
                 NodeDiff = NodeDiff.None
             };
 
-            Dictionary<DependencyDetail, Build> dependencyCache =
-                new Dictionary<DependencyDetail, Build>(new DependencyDetailComparer());
-
             Console.WriteLine("Building graph of all dependencies under root builds...");
             foreach (Build rootBuild in rootBuilds)
             {
                 Console.WriteLine($"Building graph for {rootBuild.AzureDevOpsBuildNumber} of {rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository} @ {rootBuild.Commit}");
 
+                string rootBuildRepository = rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository;
                 DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                     remoteFactory,
-                    rootBuild.GitHubRepository ?? rootBuild.AzureDevOpsRepository,
+                    rootBuildRepository,
                     rootBuild.Commit,
                     buildOptions,
                     Logger);
 
-                // Cache this root build's assets
-                foreach (Asset buildAsset in rootBuild.Assets)
-                {
-                    dependencyCache.Add(
-                        new DependencyDetail
-                        {
-                            Name = buildAsset.Name,
-                            Version = buildAsset.Version,
-                            Commit = rootBuild.Commit,
-                        },
-                        rootBuild);
-                }
+                // Because the dependency graph starts the build from a repo+sha, it's possible
+                // that multiple unique builds of that root repo+sha were done. But we don't want those other builds.
+                // So as we walk the full list of contributing builds, filter those that are from rootBuild's repo + sha but not the
+                // same build id.
 
                 Console.WriteLine($"There are {graph.UniqueDependencies.Count()} unique dependencies in the graph.");
                 Console.WriteLine("Full set of builds in graph:");
                 foreach (var build in graph.ContributingBuilds)
                 {
+                    if ((build.GitHubRepository ?? build.AzureDevOpsRepository) == rootBuildRepository && 
+                        build.Commit == rootBuild.Commit &&
+                        build.Id != rootBuild.Id)
+                    {
+                        continue;
+                    }
+
                     Console.WriteLine($"  Build - {build.AzureDevOpsBuildNumber} of {build.GitHubRepository ?? build.AzureDevOpsRepository} @ {build.Commit}");
                     builds.Add(build);
                 }
 
-                var nodesWithNoContributingBuilds = graph.Nodes.Where(node => !node.ContributingBuilds.Any()).ToList();
+                // Figure out what is missing
+                // This is pretty common actually, and not an error. There are cases where very old versions of specific dependencies
+                // are referenced, typically pre-dependency flow. If we were to have to supply --continue-on-error to get past this,
+                // we'd always have it on and would probably miss some real errors. The good news is that this is basically always the
+                // same two nodes in the graph. Specifically exclude these known missing items
+
+                var nodesWithNoContributingBuilds = graph.Nodes.Where(node => !node.ContributingBuilds.Any() && 
+                    !DependenciesAlwaysMissingBuilds.Any(missingNode => node.Repository == missingNode.repo && node.Commit == missingNode.sha)).ToList();
                 if (nodesWithNoContributingBuilds.Any())
                 {
                     Console.WriteLine("Dependency graph nodes missing builds:");
                     foreach (var node in nodesWithNoContributingBuilds)
                     {
-                        Console.WriteLine($"  {node.Repository}@{node.Commit}");
+                        Console.WriteLine($"  {node.Repository} @ {node.Commit}");
                     }
+
                     if (!_options.ContinueOnError)
                     {
                         return new InputBuilds()
@@ -889,24 +845,24 @@ namespace Microsoft.DotNet.Darc.Operations
             IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
             bool success = true;
 
-            // If the drop is separated, calculate the directory name based on the last element of the build
+            string unifiedOutputDirectory = rootOutputDirectory;
+            Directory.CreateDirectory(unifiedOutputDirectory);
+
+            // Calculate the release directory name based on the last element of the build
             // repo uri plus the build number (to disambiguate overlapping builds)
-            string outputDirectory = rootOutputDirectory;
+            string releaseOutputDirectory = null;
             string repoUri = build.GitHubRepository ?? build.AzureDevOpsRepository;
-            if (_options.ReleaseLayout)
+            int lastSlash = repoUri.LastIndexOf("/");
+            if (lastSlash != -1 && lastSlash != repoUri.Length - 1)
             {
-                int lastSlash = repoUri.LastIndexOf("/");
-                if (lastSlash != -1 && lastSlash != repoUri.Length - 1)
-                {
-                    outputDirectory = Path.Combine(rootOutputDirectory, repoUri.Substring(lastSlash + 1), build.AzureDevOpsBuildNumber);
-                }
-                else
-                {
-                    // Might contain invalid path chars, this is currently unhandled.
-                    outputDirectory = Path.Combine(rootOutputDirectory, repoUri, build.AzureDevOpsBuildNumber);
-                }
-                Directory.CreateDirectory(outputDirectory);
+                releaseOutputDirectory = Path.Combine(rootOutputDirectory, repoUri.Substring(lastSlash + 1), build.AzureDevOpsBuildNumber);
             }
+            else
+            {
+                // Might contain invalid path chars, this is currently unhandled.
+                releaseOutputDirectory = Path.Combine(rootOutputDirectory, repoUri, build.AzureDevOpsBuildNumber);
+            }
+            Directory.CreateDirectory(releaseOutputDirectory);
 
             ConcurrentBag<DownloadedAsset> downloadedAssets = new ConcurrentBag<DownloadedAsset>();
             bool anyShipping = false;
@@ -928,7 +884,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                         try
                         {
-                            DownloadedAsset downloadedAsset = await DownloadAssetAsync(client, build, asset, outputDirectory);
+                            DownloadedAsset downloadedAsset = await DownloadAssetAsync(client, build, asset, releaseOutputDirectory, unifiedOutputDirectory);
                             if (downloadedAsset == null)
                             {
                                 // Do nothing, decided not to download.
@@ -962,37 +918,40 @@ namespace Microsoft.DotNet.Darc.Operations
                 Successful = success,
                 Build = build,
                 DownloadedAssets = downloadedAssets,
-                OutputDirectory = outputDirectory,
+                ReleaseLayoutOutputDirectory = releaseOutputDirectory,
                 AnyShippingAssets = anyShipping
             };
 
-            // If separated drop, generate a manifest per build
-            if (_options.ReleaseLayout)
-            {
-                await WriteDropManifestAsync(new List<DownloadedBuild>() { newBuild }, outputDirectory);
-            }
+            await WriteDropManifestAsync(new List<DownloadedBuild>() { newBuild }, releaseOutputDirectory);
 
             return newBuild;
         }
 
         /// <summary>
-        /// 
+        ///     Download a single asset
         /// </summary>
-        /// <param name="client"></param>
-        /// <param name="asset"></param>
-        /// <param name="rootOutputDirectory"></param>
+        /// <param name="client">Http client for use when downloading assets</param>
+        /// <param name="asset">Asset to download</param>
+        /// <param name="releaseOutputDirectory">Root output directory for the release layout</param>
+        /// <param name="unifiedOutputDirectory">Root output directory for the unified layout</param>
         /// <returns></returns>
         /// <remarks>
-        ///     Layout:
+        ///     Unified Layout:
         ///     {root dir}\shipping\assets - blobs
         ///     {root dir}\shipping\packages - packages
         ///     {root dir}\nonshipping\assets - blobs
         ///     {root dir}\nonshipping\packages - packages
+        ///     Release Layout:
+        ///     {root dir}\{repo}\{build id}\shipping\assets - blobs
+        ///     {root dir}\{repo}\{build id}\shipping\packages - blobs
+        ///     {root dir}\{repo}\{build id}\nonshipping\assets - blobs
+        ///     {root dir}\{repo}\{build id}\nonshipping\packages - blobs
         /// </remarks>
         private async Task<DownloadedAsset> DownloadAssetAsync(HttpClient client,
                                                                 Build build,
                                                                 Asset asset,
-                                                                string rootOutputDirectory)
+                                                                string releaseOutputDirectory,
+                                                                string unifiedOutputDirectory)
         {
             string assetNameAndVersion = GetAssetNameForLogging(asset);
             if (!_options.IncludeNonShipping && asset.NonShipping)
@@ -1058,11 +1017,11 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 if (_options.LatestLocation)
                 {
-                    downloadedAsset = await DownloadAssetFromLatestLocation(client, build, asset, assetLocations, rootOutputDirectory, errors, downloadOutput);
+                    downloadedAsset = await DownloadAssetFromLatestLocation(client, build, asset, assetLocations, releaseOutputDirectory, unifiedOutputDirectory, errors, downloadOutput);
                 }
                 else
                 {
-                    downloadedAsset = await DownloadAssetFromAnyLocationAsync(client, build, asset, assetLocations, rootOutputDirectory, errors, downloadOutput);
+                    downloadedAsset = await DownloadAssetFromAnyLocationAsync(client, build, asset, assetLocations, releaseOutputDirectory, unifiedOutputDirectory, errors, downloadOutput);
                 }
 
                 if (downloadedAsset.Successful)
@@ -1091,8 +1050,9 @@ namespace Microsoft.DotNet.Darc.Operations
         private async Task<DownloadedAsset> DownloadAssetFromAnyLocationAsync(HttpClient client,
                                                                             Build build, 
                                                                             Asset asset, 
-                                                                            List<AssetLocation> assetLocations, 
-                                                                            string rootOutputDirectory, 
+                                                                            List<AssetLocation> assetLocations,
+                                                                            string releaseOutputDirectory,
+                                                                            string unifiedOutputDirectory,
                                                                             List<string> errors,
                                                                             StringBuilder downloadOutput)
         {
@@ -1104,7 +1064,8 @@ namespace Microsoft.DotNet.Darc.Operations
                     build,
                     asset,
                     location,
-                    rootOutputDirectory,
+                    releaseOutputDirectory,
+                    unifiedOutputDirectory,
                     errors,
                     downloadOutput);
 
@@ -1128,7 +1089,8 @@ namespace Microsoft.DotNet.Darc.Operations
                                                                             Build build,
                                                                             Asset asset,
                                                                             List<AssetLocation> assetLocations,
-                                                                            string rootOutputDirectory,
+                                                                            string releaseOutputDirectory,
+                                                                            string unifiedOutputDirectory,
                                                                             List<string> errors,
                                                                             StringBuilder downloadOutput)
         {
@@ -1137,8 +1099,9 @@ namespace Microsoft.DotNet.Darc.Operations
             return await DownloadAssetFromLocation(client, 
                 build, 
                 asset, 
-                latestLocation, 
-                rootOutputDirectory, 
+                latestLocation,
+                releaseOutputDirectory,
+                unifiedOutputDirectory,
                 errors,
                 downloadOutput);
         }
@@ -1150,11 +1113,13 @@ namespace Microsoft.DotNet.Darc.Operations
                                                                             Build build,
                                                                             Asset asset,
                                                                             AssetLocation location,
-                                                                            string rootOutputDirectory,
+                                                                            string releaseOutputDirectory,
+                                                                            string unifiedOutputDirectory,
                                                                             List<string> errors,
                                                                             StringBuilder downloadOutput)
         {
-            var subPath = Path.Combine(rootOutputDirectory, asset.NonShipping ? nonShippingSubPath : shippingSubPath);
+            var releaseSubPath = Path.Combine(releaseOutputDirectory, asset.NonShipping ? nonShippingSubPath : shippingSubPath);
+            var unifiedSubPath = Path.Combine(unifiedOutputDirectory, asset.NonShipping ? nonShippingSubPath : shippingSubPath);
 
             var locationType = location.Type;
 
@@ -1178,9 +1143,9 @@ namespace Microsoft.DotNet.Darc.Operations
             switch (locationType)
             {
                 case LocationType.NugetFeed:
-                    return await DownloadNugetPackageAsync(client, build, asset, location, subPath, errors, downloadOutput);
+                    return await DownloadNugetPackageAsync(client, build, asset, location, releaseSubPath, unifiedSubPath, errors, downloadOutput);
                 case LocationType.Container:
-                    return await DownloadBlobAsync(client, asset, location, subPath, errors, downloadOutput);
+                    return await DownloadBlobAsync(client, asset, location, releaseSubPath, unifiedSubPath, errors, downloadOutput);
                 case LocationType.None:
                 default:
                     errors.Add($"Unexpected location type {locationType}");
@@ -1201,23 +1166,39 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="client">Http client for use in downloading</param>
         /// <param name="asset">Asset to download</param>
         /// <param name="assetLocation">Asset location</param>
-        /// <param name="subPath">Root path to download file to.</param>
+        /// <param name="releaseOutputDirectory">Directory in the release layout to download to</param>
+        /// <param name="unifiedOutputDirectory">Directory in the unified layout to download to</param>
         /// <returns>True if package could be downloaded, false otherwise.</returns>
         private async Task<DownloadedAsset> DownloadNugetPackageAsync(HttpClient client,
-                                                                    Build build,
-                                                                    Asset asset,
-                                                                    AssetLocation assetLocation,
-                                                                    string subPath,
-                                                                    List<string> errors,
-                                                                    StringBuilder downloadOutput)
+                                                                     Build build,
+                                                                     Asset asset,
+                                                                     AssetLocation assetLocation,
+                                                                     string releaseOutputDirectory,
+                                                                     string unifiedOutputDirectory,
+                                                                     List<string> errors,
+                                                                     StringBuilder downloadOutput)
         {
             // Attempt to figure out how to download this. If the location is a blob storage account, then
             // strip off index.json, append 'flatcontainer', the asset name (lower case), then the version,
             // then {asset name}.{version}.nupkg
 
-            string fullSubPath = Path.Combine(subPath, packagesSubPath);
+            string releaseFullSubPath = Path.Combine(releaseOutputDirectory, packagesSubPath);
+            string unifiedFullSubPath = Path.Combine(unifiedOutputDirectory, packagesSubPath);
+            string targetFileName = $"{asset.Name}.{asset.Version}.nupkg";
             // Construct the final path, using the correct casing rather than the blob feed casing.
-            string fullTargetPath = Path.Combine(fullSubPath, $"{asset.Name}.{asset.Version}.nupkg");
+            string releaseFullTargetPath = Path.Combine(releaseFullSubPath, targetFileName);
+            string unifiedFullTargetPath = Path.Combine(unifiedFullSubPath, targetFileName);
+
+            List<string> targetFilePaths = new List<string> { releaseFullTargetPath, unifiedFullTargetPath };
+
+            DownloadedAsset downloadedAsset = new DownloadedAsset()
+            {
+                Successful = false,
+                Asset = asset,
+                ReleaseLayoutTargetLocation = releaseFullTargetPath,
+                UnifiedLayoutTargetLocation = unifiedFullTargetPath,
+                LocationType = assetLocation.Type
+            };
 
             if (IsBlobFeedUrl(assetLocation.Location))
             {
@@ -1230,24 +1211,23 @@ namespace Microsoft.DotNet.Darc.Operations
                 using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
                 var cancellationToken = cancellationTokenSource.Token;
 
-                if (await DownloadFileAsync(client, finalUri, null, fullTargetPath, errors, downloadOutput, cancellationToken))
+                if (await DownloadFileAsync(client, finalUri, null, targetFilePaths, errors, downloadOutput, cancellationToken))
                 {
-                    return new DownloadedAsset()
-                    {
-                        Successful = true,
-                        Asset = asset,
-                        SourceLocation = finalUri,
-                        TargetLocation = fullTargetPath,
-                        LocationType = assetLocation.Type
-                    };
+                    downloadedAsset.Successful = true;
+                    downloadedAsset.SourceLocation = finalUri;
+                    return downloadedAsset;
                 }
             }
             else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out string feedAccount, out string feedVisibility, out string feedName))
             {
-                DownloadedAsset result =  await DownloadAssetFromAzureDevOpsFeedAsync(client, asset, assetLocation, feedAccount, feedVisibility, feedName, fullTargetPath, errors, downloadOutput);
-                if (result != null)
+                string packageContentUri = await DownloadAssetFromAzureDevOpsFeedAsync(client, asset, assetLocation,
+                    feedAccount, feedVisibility, feedName, targetFilePaths, errors, downloadOutput);
+
+                if (packageContentUri != null)
                 {
-                    return result;
+                    downloadedAsset.Successful = true;
+                    downloadedAsset.SourceLocation = packageContentUri;
+                    return downloadedAsset;
                 }
             }
             else
@@ -1263,20 +1243,16 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
             }
 
-            return new DownloadedAsset()
-            {
-                Successful = false,
-                Asset = asset
-            };
+            return downloadedAsset;
         }
 
-        private async Task<DownloadedAsset> DownloadAssetFromAzureDevOpsFeedAsync(HttpClient client,
+        private async Task<string> DownloadAssetFromAzureDevOpsFeedAsync(HttpClient client,
                                                                                 Asset asset,
                                                                                 AssetLocation assetLocation,
                                                                                 string feedAccount,
                                                                                 string feedVisibility,
                                                                                 string feedName,
-                                                                                string fullTargetPath,
+                                                                                IEnumerable<string> targetFilePaths,
                                                                                 List<string> errors,
                                                                                 StringBuilder downloadOutput)
         {
@@ -1311,16 +1287,9 @@ namespace Microsoft.DotNet.Darc.Operations
             using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
             var cancellationToken = cancellationTokenSource.Token;
 
-            if (await DownloadFileAsync(client, packageContentUrl, authHeader, fullTargetPath, errors, downloadOutput, cancellationToken))
+            if (await DownloadFileAsync(client, packageContentUrl, authHeader, targetFilePaths, errors, downloadOutput, cancellationToken))
             {
-                return new DownloadedAsset()
-                {
-                    Successful = true,
-                    Asset = asset,
-                    SourceLocation = packageContentUrl,
-                    TargetLocation = fullTargetPath,
-                    LocationType = assetLocation.Type
-                };
+                return packageContentUrl;
             }
             else
             {
@@ -1391,7 +1360,8 @@ namespace Microsoft.DotNet.Darc.Operations
         private async Task<DownloadedAsset> DownloadBlobAsync(HttpClient client,
                                                             Asset asset,
                                                             AssetLocation assetLocation,
-                                                            string subPath,
+                                                            string releaseOutputDirectory,
+                                                            string unifiedOutputDirectory,
                                                             List<string> errors,
                                                             StringBuilder downloadOutput)
         {
@@ -1404,13 +1374,20 @@ namespace Microsoft.DotNet.Darc.Operations
                 normalizedAssetName = asset.Name.Substring("assets/".Length);
             }
 
-            string fullTargetPath = Path.Combine(subPath, assetsSubPath, normalizedAssetName);
+            string releaseFullSubPath = Path.Combine(releaseOutputDirectory, assetsSubPath);
+            string unifiedFullSubPath = Path.Combine(unifiedOutputDirectory, assetsSubPath);
+            // Construct the final path, using the correct casing rather than the blob feed casing.
+            string releaseFullTargetPath = Path.Combine(releaseFullSubPath, normalizedAssetName);
+            string unifiedFullTargetPath = Path.Combine(unifiedFullSubPath, normalizedAssetName);
+
+            List<string> targetFilePaths = new List<string> { releaseFullTargetPath, unifiedFullTargetPath };
 
             DownloadedAsset downloadedAsset = new DownloadedAsset()
             {
                 Successful = false,
                 Asset = asset,
-                TargetLocation = fullTargetPath,
+                ReleaseLayoutTargetLocation = releaseFullTargetPath,
+                UnifiedLayoutTargetLocation = unifiedFullTargetPath,
                 LocationType = assetLocation.Type
             };
 
@@ -1430,13 +1407,13 @@ namespace Microsoft.DotNet.Darc.Operations
                 using var cancellationTokenSource1 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
                 using var cancellationTokenSource2 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
 
-                if (await DownloadFileAsync(client, finalUri1, null, fullTargetPath, errors, downloadOutput, cancellationTokenSource1.Token))
+                if (await DownloadFileAsync(client, finalUri1, null, targetFilePaths, errors, downloadOutput, cancellationTokenSource1.Token))
                 {
                     downloadedAsset.Successful = true;
                     downloadedAsset.SourceLocation = finalUri1;
                     return downloadedAsset;
                 }
-                if (await DownloadFileAsync(client, finalUri2, null, fullTargetPath, errors, downloadOutput, cancellationTokenSource2.Token))
+                if (await DownloadFileAsync(client, finalUri2, null, targetFilePaths, errors, downloadOutput, cancellationTokenSource2.Token))
                 {
                     downloadedAsset.Successful = true;
                     downloadedAsset.SourceLocation = finalUri2;
@@ -1450,7 +1427,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     string finalUri3 = $"{finalBaseUri}assets/assets/{asset.Name}";
                     using var cancellationTokenSource3 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
 
-                    if (await DownloadFileAsync(client, finalUri3, null, fullTargetPath, errors, downloadOutput, cancellationTokenSource3.Token))
+                    if (await DownloadFileAsync(client, finalUri3, null, targetFilePaths, errors, downloadOutput, cancellationTokenSource3.Token))
                     {
                         downloadedAsset.Successful = true;
                         downloadedAsset.SourceLocation = finalUri3;
@@ -1461,7 +1438,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     string finalUri4 = finalUri1.Replace("assets/", "", StringComparison.OrdinalIgnoreCase);
                     using var cancellationTokenSource4 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
 
-                    if (await DownloadFileAsync(client, finalUri4, null, fullTargetPath, errors, downloadOutput, cancellationTokenSource4.Token))
+                    if (await DownloadFileAsync(client, finalUri4, null, targetFilePaths, errors, downloadOutput, cancellationTokenSource4.Token))
                     {
                         downloadedAsset.Successful = true;
                         downloadedAsset.SourceLocation = finalUri4;
@@ -1496,27 +1473,22 @@ namespace Microsoft.DotNet.Darc.Operations
                     replacedVersion,
                     asset.Locations);
 
-                DownloadedAsset result = await DownloadAssetFromAzureDevOpsFeedAsync(client,
+                string packageContentUrl = await DownloadAssetFromAzureDevOpsFeedAsync(client,
                     mangledAsset,
                     assetLocation,
                     feedAccount,
                     feedVisibility,
                     feedName,
-                    fullTargetPath,
+                    targetFilePaths,
                     errors,
                     downloadOutput);
 
-                if (result != null)
+                if (packageContentUrl != null)
                 {
-                    return new DownloadedAsset
-                    {
-                        Asset = asset,
-                        LocationType = assetLocation.Type,
-                        SourceLocation = result.SourceLocation,
-                        Successful = result.Successful,
-                        TargetLocation = fullTargetPath
-                    };
+                    downloadedAsset.Successful = true;
+                    downloadedAsset.SourceLocation = packageContentUrl;
                 }
+
                 return downloadedAsset;
             }
             
@@ -1537,7 +1509,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// </summary>
         /// <param name="client">Http client</param>
         /// <param name="sourceUri">Source uri</param>
-        /// <param name="targetFile">Target file path. Directories are created.</param>
+        /// <param name="targetFilePaths">List of target paths to download to.</param>
         /// <param name="authHeader">Optional authentication header if necessary</param>
         /// <param name="downloadOutput">Console output for the download.</param>
         /// <param name="errors">List of errors. Append error messages to this list if there are failures.</param>
@@ -1545,23 +1517,49 @@ namespace Microsoft.DotNet.Darc.Operations
         private async Task<bool> DownloadFileAsync(HttpClient client, 
             string sourceUri, 
             AuthenticationHeaderValue authHeader, 
-            string targetFile, 
+            IEnumerable<string> targetFilePaths,
             List<string> errors, 
             StringBuilder downloadOutput,
             CancellationToken cancellationToken)
         {
             if (_options.DryRun)
             {
-                downloadOutput.AppendLine($"  {sourceUri} => {targetFile}.");
+                foreach (string targetFile in targetFilePaths)
+                {
+                    downloadOutput.AppendLine($"  {sourceUri} => {targetFile}.");
+                }
                 return true;
             }
 
-            if (_options.SkipExisting && File.Exists(targetFile))
+            // Check all existing locations for the target file. If one exists, copy to the others.
+            if (_options.SkipExisting)
             {
-                return true;
+                string existingFile = null;
+                foreach (string targetFile in targetFilePaths)
+                {
+                    try
+                    {
+                        if (File.Exists(targetFile))
+                        {
+                            existingFile = targetFile;
+                        }
+                        else if (existingFile != null)
+                        {
+                            File.Copy(existingFile, targetFile);
+                        }
+                    }
+                    catch (IOException e)
+                    {
+                        errors.Add($"Failed to check/copy for existing {targetFile}: {e.Message}");
+                    }
+                }
+                if (existingFile != null)
+                {
+                    return true;
+                }
             }
 
-            if (await DownloadFileImplAsync(client, sourceUri, authHeader, targetFile, errors, downloadOutput, cancellationToken))
+            if (await DownloadFileImplAsync(client, sourceUri, authHeader, targetFilePaths, errors, downloadOutput, cancellationToken))
             {
                 return true;
             }
@@ -1570,7 +1568,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Append and attempt to use the suffixes that were passed in to download from the uri
                 foreach (string sasSuffix in _options.SASSuffixes)
                 {
-                    if (await DownloadFileImplAsync(client, $"{sourceUri}{sasSuffix}", authHeader, targetFile, errors, downloadOutput, cancellationToken))
+                    if (await DownloadFileImplAsync(client, $"{sourceUri}{sasSuffix}", authHeader, targetFilePaths, errors, downloadOutput, cancellationToken))
                     {
                         return true;
                     }
@@ -1593,14 +1591,14 @@ namespace Microsoft.DotNet.Darc.Operations
         private async Task<bool> DownloadFileImplAsync(HttpClient client, 
             string sourceUri, 
             AuthenticationHeaderValue authHeader, 
-            string targetFile, 
+            IEnumerable<string> targetFiles,
             List<string> errors, 
             StringBuilder downloadOutput,
             CancellationToken cancellationToken)
         {
             // Use a temporary in progress file name so we don't end up with corrupted
-            // half downloaded files.
-            string temporaryFileName = $"{targetFile}.inProgress";
+            // half downloaded files. Use the first location as the
+            string temporaryFileName = $"{targetFiles.First()}.inProgress";
             if (File.Exists(temporaryFileName))
             {
                 File.Delete(temporaryFileName);
@@ -1610,8 +1608,11 @@ namespace Microsoft.DotNet.Darc.Operations
 
             try
             {
-                string directory = Path.GetDirectoryName(targetFile);
-                Directory.CreateDirectory(directory);
+                foreach (string targetFile in targetFiles)
+                {
+                    string directory = Path.GetDirectoryName(targetFile);
+                    Directory.CreateDirectory(directory);
+                }
 
                 if (authHeader != null)
                 {
@@ -1639,29 +1640,37 @@ namespace Microsoft.DotNet.Darc.Operations
 
                         using (var inStream = await response.Content.ReadAsStreamAsync())
                         {
-                            downloadOutput.Append($"  {sourceUri} => {targetFile}...");
+                            downloadOutput.AppendLine($"    {sourceUri} =>");
+                            foreach (string targetFile in targetFiles)
+                            {
+                                downloadOutput.AppendLine($"      {targetFile}");
+                            }
                             await inStream.CopyToAsync(outStream, cancellationToken);
-                            downloadOutput.AppendLine("Done");
                         }
                     }
                 }
 
-                // Rename file to the target file name.
-                File.Move(temporaryFileName, targetFile);
+                foreach (string targetFile in targetFiles)
+                {
+                    // Rename file to the target file name.
+                    File.Copy(temporaryFileName, targetFile);
+                }
+                File.Delete(temporaryFileName);
 
                 return true;
             }
             catch (IOException e)
             {
-                errors.Add($"Failed to write {targetFile}: {e.Message}");
+                errors.Add($"Failed to write output file: {e.Message}");
             }
             catch (HttpRequestException e)
             {
-                // Ensure we delete the file in this case, otherwise an attempt to download
-                // from a separate location will fail.
-                if (File.Exists(targetFile))
+                foreach (string targetFile in targetFiles)
                 {
-                    File.Delete(targetFile);
+                    if (File.Exists(targetFile))
+                    {
+                        File.Delete(targetFile);
+                    }
                 }
                 errors.Add($"Failed to download {sourceUri}: {e.Message}");
             }

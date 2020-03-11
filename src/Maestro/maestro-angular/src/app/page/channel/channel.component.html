@@ -4,9 +4,15 @@
       {{channel.name}}
     </ng-container>
   </h5>
+  <span class="form-check float-right">
+    <mc-switch [style]="" [(value)]="includeArcade" title="Include Arcade"></mc-switch>
+    <label class="form-check-label">
+      Include Arcade
+    </label>
+  </span>
   <div class="container-fluid" style="height: 100%;">
     <ng-container *stateful="let graph from graph$">
-      <mc-channel-graph [graph]="graph"></mc-channel-graph>
+      <mc-channel-graph [graph]="graph" [includeArcade]="includeArcade"></mc-channel-graph>
     </ng-container>
   </div>
 </div>

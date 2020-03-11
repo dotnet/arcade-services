@@ -5,6 +5,7 @@
 using Kusto.Data.Common;
 using Kusto.Data.Exceptions;
 using Maestro.Data;
+using Maestro.DataProviders;
 using Maestro.Web.Api.v2019_01_16.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
@@ -57,13 +58,13 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                 return NotFound();
             }
 
-            MultiProjectKustoQuery queries = Helpers.CreateBuildTimesQueries(defaultChannel.Repository, defaultChannel.Branch, days);
+            MultiProjectKustoQuery queries = SharedKustoQueries.CreateBuildTimesQueries(defaultChannel.Repository, defaultChannel.Branch, days);
 
             var results = await Task.WhenAll<IDataReader>(_kustoClientProvider.ExecuteKustoQueryAsync(queries.Internal), 
                 _kustoClientProvider.ExecuteKustoQueryAsync(queries.Public));
 
-            (int officialBuildId, TimeSpan officialBuildTime) = Helpers.ParseBuildTime(results[0]);
-            (int prBuildId, TimeSpan prBuildTime) = Helpers.ParseBuildTime(results[1]);
+            (int officialBuildId, TimeSpan officialBuildTime) = SharedKustoQueries.ParseBuildTime(results[0]);
+            (int prBuildId, TimeSpan prBuildTime) = SharedKustoQueries.ParseBuildTime(results[1]);
 
             double officialTime = 0;
             double prTime = 0;

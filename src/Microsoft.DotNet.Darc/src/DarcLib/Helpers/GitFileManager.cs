@@ -2,15 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
@@ -21,21 +19,6 @@ namespace Microsoft.DotNet.DarcLib
     {
         private readonly IGitRepo _gitClient;
         private readonly ILogger _logger;
-
-        private readonly string[] MaestroManagedFeedPatterns =
-        {
-            // Matches package feeds like
-            // https://dnceng.pkgs.visualstudio.com/public/_packaging/darc-pub-arcade-fd8184c3fcde81eb27ca4c061c6e171f418d753f-1/nuget/v3/index.json
-            @"https://(?<organization>\w+).pkgs.visualstudio.com/(public/){0,1}_packaging/darc-(?<type>(int|pub))-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)/nuget/v\d+/index.json",
-            // Matches package feeds like
-            // https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-wpf-8182abc8/nuget/v3/index.json
-            @"https://pkgs.dev.azure.com/(?<organization>\w+)/(public/){0,1}_packaging/darc-(?<type>(int|pub))-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)/nuget/v\d+/index.json"
-        };
-
-        // Matches package feeds like
-        // https://dotnet-feed-internal.azurewebsites.net/container/dotnet-core-internal/sig/dsdfasdfasdf234234s/se/2020-02-02/darc-int-dotnet-arcade-services-babababababe-08/index.json
-        private const string AzureStorageProxyFeedPattern =
-            @"https://([a-z-]+).azurewebsites.net/container/([^/]+)/sig/\w+/se/([0-9]{4}-[0-9]{2}-[0-9]{2})/darc-(?<type>int)-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)/index.json";
 
         private const string MaestroBeginComment =
             "Begin: Package sources managed by Dependency Flow automation. Do not edit the sources below.";
@@ -273,8 +256,8 @@ namespace Microsoft.DotNet.DarcLib
 
         private bool IsMaestroManagedFeed(string feed)
         {
-            return MaestroManagedFeedPatterns.Any(p => Regex.IsMatch(feed, p)) || 
-                Regex.IsMatch(feed, AzureStorageProxyFeedPattern);
+            return FeedConstants.MaestroManagedFeedPatterns.Any(p => Regex.IsMatch(feed, p)) || 
+                Regex.IsMatch(feed, FeedConstants.AzureStorageProxyFeedPattern);
         }
 
         public XmlDocument UpdatePackageSources(XmlDocument nugetConfig, HashSet<string> maestroManagedFeeds)
@@ -458,61 +441,81 @@ namespace Microsoft.DotNet.DarcLib
             string packageVersionAlternateElementName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(
                 dependency.Name);
 
-            // Select elements by local name, since the Project (DocumentElement) element often has a default
-            // xmlns set.
-            XmlNodeList propertyGroupNodes = versionProps.DocumentElement.SelectNodes($"//*[local-name()='PropertyGroup']");
-
-            bool addedPackageVersionElement = false;
-            // There can be more than one property group.  Find the appropriate one containing an existing element of
-            // the same type, and add it to the parent.
-            foreach (XmlNode propertyGroupNode in propertyGroupNodes)
+            // Attempt to find the element name or alternate element name under
+            // the property group nodes
+            XmlNode existingVersionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionElementName}' and parent::PropertyGroup]");
+            if (existingVersionNode == null)
             {
-                if (propertyGroupNode.HasChildNodes)
-                {
-                    foreach (XmlNode propertyNode in propertyGroupNode.ChildNodes)
-                    {
-                        if (!addedPackageVersionElement && propertyNode.Name.EndsWith(VersionFiles.VersionPropsVersionElementSuffix))
-                        {
-                            XmlNode newPackageVersionElement = versionProps.CreateElement(
-                                packageVersionElementName, 
-                                documentNamespaceUri);
-                            newPackageVersionElement.InnerText = dependency.Version;
-
-                            propertyGroupNode.AppendChild(newPackageVersionElement);
-                            addedPackageVersionElement = true;
-                            break;
-                        }
-                        // Test for alternate suffixes.  This will eventually be replaced by repo-level configuration:
-                        // https://github.com/dotnet/arcade/issues/1095
-                        else if (!addedPackageVersionElement && propertyNode.Name.EndsWith(
-                            VersionFiles.VersionPropsAlternateVersionElementSuffix))
-                        {
-                            XmlNode newPackageVersionElement = versionProps.CreateElement(
-                                packageVersionAlternateElementName, 
-                                documentNamespaceUri);
-                            newPackageVersionElement.InnerText = dependency.Version;
-
-                            propertyGroupNode.AppendChild(newPackageVersionElement);
-                            addedPackageVersionElement = true;
-                            break;
-                        }
-                    }
-                }
+                existingVersionNode = versionProps.DocumentElement.SelectSingleNode($"//*[local-name()='{packageVersionAlternateElementName}' and parent::PropertyGroup]");
             }
 
-            // Add the property groups if none were present
-            if (!addedPackageVersionElement)
+            if (existingVersionNode != null)
             {
-                // If the repository doesn't have any package version element, then
-                // use the non-alternate element name.
-                XmlNode newPackageVersionElement = versionProps.CreateElement(packageVersionElementName, documentNamespaceUri);
-                newPackageVersionElement.InnerText = dependency.Version;
+                existingVersionNode.InnerText = dependency.Version;
+            }
+            else
+            {
+                // Select elements by local name, since the Project (DocumentElement) element often has a default
+                // xmlns set.
+                XmlNodeList propertyGroupNodes = versionProps.DocumentElement.SelectNodes($"//*[local-name()='PropertyGroup']");
 
-                XmlNode propertyGroupElement = versionProps.CreateElement("PropertyGroup", documentNamespaceUri);
-                XmlNode propertyGroupCommentElement = versionProps.CreateComment("Package versions");
-                versionProps.DocumentElement.AppendChild(propertyGroupCommentElement);
-                versionProps.DocumentElement.AppendChild(propertyGroupElement);
-                propertyGroupElement.AppendChild(newPackageVersionElement);
+                bool addedPackageVersionElement = false;
+                // There can be more than one property group.  Find the appropriate one containing an existing element of
+                // the same type, and add it to the parent.
+                foreach (XmlNode propertyGroupNode in propertyGroupNodes)
+                {
+                    if (propertyGroupNode.HasChildNodes)
+                    {
+                        foreach (XmlNode propertyNode in propertyGroupNode.ChildNodes)
+                        {
+                            if (!addedPackageVersionElement && propertyNode.Name.EndsWith(VersionFiles.VersionPropsVersionElementSuffix))
+                            {
+                                XmlNode newPackageVersionElement = versionProps.CreateElement(
+                                    packageVersionElementName,
+                                    documentNamespaceUri);
+                                newPackageVersionElement.InnerText = dependency.Version;
+
+                                propertyGroupNode.AppendChild(newPackageVersionElement);
+                                addedPackageVersionElement = true;
+                                break;
+                            }
+                            // Test for alternate suffixes.  This will eventually be replaced by repo-level configuration:
+                            // https://github.com/dotnet/arcade/issues/1095
+                            else if (!addedPackageVersionElement && propertyNode.Name.EndsWith(
+                                VersionFiles.VersionPropsAlternateVersionElementSuffix))
+                            {
+                                XmlNode newPackageVersionElement = versionProps.CreateElement(
+                                    packageVersionAlternateElementName,
+                                    documentNamespaceUri);
+                                newPackageVersionElement.InnerText = dependency.Version;
+
+                                propertyGroupNode.AppendChild(newPackageVersionElement);
+                                addedPackageVersionElement = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (addedPackageVersionElement)
+                    {
+                        break;
+                    }
+                }
+
+                // Add the property groups if none were present
+                if (!addedPackageVersionElement)
+                {
+                    // If the repository doesn't have any package version element, then
+                    // use the non-alternate element name.
+                    XmlNode newPackageVersionElement = versionProps.CreateElement(packageVersionElementName, documentNamespaceUri);
+                    newPackageVersionElement.InnerText = dependency.Version;
+
+                    XmlNode propertyGroupElement = versionProps.CreateElement("PropertyGroup", documentNamespaceUri);
+                    XmlNode propertyGroupCommentElement = versionProps.CreateComment("Package versions");
+                    versionProps.DocumentElement.AppendChild(propertyGroupCommentElement);
+                    versionProps.DocumentElement.AppendChild(propertyGroupElement);
+                    propertyGroupElement.AppendChild(newPackageVersionElement);
+                }
             }
 
             // TODO: This should not be done here.  This should return some kind of generic file container to the caller,
@@ -963,11 +966,11 @@ namespace Microsoft.DotNet.DarcLib
 
                                 DependencyDetail dependencyDetail = new DependencyDetail
                                 {
-                                    Name = dependency.Attributes[VersionFiles.NameAttributeName].Value,
-                                    RepoUri = dependency.SelectSingleNode(VersionFiles.UriElementName).InnerText,
-                                    Commit = dependency.SelectSingleNode(VersionFiles.ShaElementName)?.InnerText,
-                                    Version = dependency.Attributes[VersionFiles.VersionAttributeName].Value,
-                                    CoherentParentDependencyName = dependency.Attributes[VersionFiles.CoherentParentAttributeName]?.Value,
+                                    Name = dependency.Attributes[VersionFiles.NameAttributeName].Value?.Trim(),
+                                    RepoUri = dependency.SelectSingleNode(VersionFiles.UriElementName).InnerText?.Trim(),
+                                    Commit = dependency.SelectSingleNode(VersionFiles.ShaElementName)?.InnerText?.Trim(),
+                                    Version = dependency.Attributes[VersionFiles.VersionAttributeName].Value?.Trim(),
+                                    CoherentParentDependencyName = dependency.Attributes[VersionFiles.CoherentParentAttributeName]?.Value?.Trim(),
                                     Pinned = isPinned,
                                     Type = type
                                 };
@@ -1049,7 +1052,7 @@ namespace Microsoft.DotNet.DarcLib
         private (string org, string repoName, string type, string sha, string subVersion) ParseMaestroManagedFeed(string feed)
         {
             Match match = null;
-            foreach (string pattern in MaestroManagedFeedPatterns)
+            foreach (string pattern in FeedConstants.MaestroManagedFeedPatterns)
             {
                 match = Regex.Match(feed, pattern);
                 if (match.Success)
@@ -1060,7 +1063,7 @@ namespace Microsoft.DotNet.DarcLib
 
             match = match.Success ? 
                 match : 
-                Regex.Match(feed, AzureStorageProxyFeedPattern);
+                Regex.Match(feed, FeedConstants.AzureStorageProxyFeedPattern);
 
             if (match.Success)
             {

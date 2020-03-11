@@ -15,7 +15,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
-using Microsoft.DotNet.Configuration.Extensions;
+using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Web.Authentication;
@@ -32,7 +33,7 @@ namespace DotNet.Status.Web
     {
         public Startup(IConfiguration configuration, IHostingEnvironment env)
         {
-            Configuration = KeyVaultMappedJsonConfigurationExtensions.CreateConfiguration(configuration, env, new AppTokenVaultProvider(), "appsettings{0}.json");
+            Configuration = configuration;
             Env = env;
         }
         
@@ -45,8 +46,7 @@ namespace DotNet.Status.Web
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<IKeyVaultProvider, AppTokenVaultProvider>();
-            
+            services.AddSingleton(Configuration);
             if (Env.IsDevelopment())
             {
                 services.AddDataProtection()
@@ -55,9 +55,9 @@ namespace DotNet.Status.Web
             else
             {
                 IConfigurationSection dpConfig = Configuration.GetSection("DataProtection");
-                AppTokenVaultProvider keyVaultProvider = new AppTokenVaultProvider();
-                KeyVaultClient kvClient = keyVaultProvider.CreateKeyVaultClient();
-                string vaultUri = Configuration["KeyVaultUri"];
+                var provider = new AzureServiceTokenProvider();
+                var kvClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(provider.KeyVaultTokenCallback));
+                string vaultUri = Configuration[ConfigurationConstants.KeyVaultUriConfigurationKey];
                 string keyVaultKeyIdentifierName = dpConfig["KeyIdentifier"];
                 KeyBundle key = kvClient.GetKeyAsync(vaultUri, keyVaultKeyIdentifierName).GetAwaiter().GetResult();
                 services.AddDataProtection()
@@ -76,6 +76,7 @@ namespace DotNet.Status.Web
             services.Configure<GitHubConnectionOptions>(Configuration.GetSection("GitHub").Bind);
             services.Configure<GrafanaOptions>(Configuration.GetSection("Grafana").Bind);
             services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth").Bind);
+            services.Configure<ZenHubOptions>(Configuration.GetSection("ZenHub").Bind);
 
             services.Configure<SimpleSigninOptions>(o => { o.ChallengeScheme = GitHubScheme; });
             services.ConfigureExternalCookie(options =>
@@ -128,7 +129,8 @@ namespace DotNet.Status.Web
                         .AllowAnonymousToPage("/Index")
                         .AllowAnonymousToPage("/Status")
                         .AllowAnonymousToPage("/Error")
-                    );
+                    )
+                .AddGitHubWebHooks();
             services.AddApplicationInsightsTelemetry(Configuration.GetSection("ApplicationInsights").Bind);
             services.Configure<LoggerFilterOptions>(o =>
             {
@@ -189,6 +191,8 @@ namespace DotNet.Status.Web
                 o.SelectScheme = p => p.StartsWithSegments("/api") ? "github-token" : IdentityConstants.ApplicationScheme;
             });
             services.AddSingleton<GitHubJwtFactory>();
+
+            services.AddSingleton<ZenHubClient>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

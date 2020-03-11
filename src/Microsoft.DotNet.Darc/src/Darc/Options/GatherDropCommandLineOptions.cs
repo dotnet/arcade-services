@@ -32,9 +32,6 @@ namespace Microsoft.DotNet.Darc.Options
         [Option('f', "full", HelpText = "Gather the full drop (build and all input builds).")]
         public bool Transitive { get; set; }
 
-        [Option("release", HelpText = "Generate a layout compatible with releasing the product (separated drop, generate release json).")]
-        public bool ReleaseLayout { get; set; }
-
         [Option("release-name", Default ="3.0.0-previewN", HelpText = "Name of release to use when generating release json.")]
         public string ReleaseName { get; set; }
 
@@ -71,8 +68,8 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("skip-existing", HelpText = "Skip files that already exist at the destination.")]
         public bool SkipExisting { get; set; }
 
-        [Option("skip-released", HelpText = "Skip builds that are marked as released")]
-        public bool SkipReleased { get; set; }
+        [Option("include-released", HelpText = "Include builds that are marked as released")]
+        public bool IncludeReleased { get; set; }
 
         [Option("latest-location", HelpText = "Download assets from their latest known location.")]
         public bool LatestLocation { get; set; }
