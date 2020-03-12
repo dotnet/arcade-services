@@ -259,20 +259,20 @@ namespace DependencyUpdateErrorProcessor
 
         private bool UpdateIssueCommentBody(RepositoryBranchUpdateHistoryEntry repositoryBranchUpdateHistory, string body)
         {
-            Dictionary<string, string> test = parseIssueCommentBody(body);
+            Dictionary<string, string> argumentParser = parseIssueCommentBody(body);
             // Check if the error for the method UpdateAssetsAsync exists 
-            if (string.Equals(test["method"], "UpdateAssetsAsync"))
+            if (string.Equals(argumentParser["method"], "UpdateAssetsAsync"))
             {
                 string subId = GetSubscriptionId(repositoryBranchUpdateHistory.Arguments);
-                if (string.Equals(test["subscriptionId"], subId) &&
-                    string.Equals(test["errorMessage"], repositoryBranchUpdateHistory.ErrorMessage))
+                if (string.Equals(argumentParser["subscriptionId"], subId) &&
+                    string.Equals(argumentParser["errorMessage"], repositoryBranchUpdateHistory.ErrorMessage))
                 {
                     return true;
                 }
             }
             // Check if the error for the method ProcessPendingUpdatesAsync exists 
-            if (string.Equals(test["method"], "ProcessPendingUpdatesAsync") &&
-                string.Equals(test["errorMessage"], repositoryBranchUpdateHistory.ErrorMessage))
+            if (string.Equals(argumentParser["method"], "ProcessPendingUpdatesAsync") &&
+                string.Equals(argumentParser["errorMessage"], repositoryBranchUpdateHistory.ErrorMessage))
             {
                 return true;
             }

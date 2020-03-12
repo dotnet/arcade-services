@@ -6,10 +6,9 @@ using System;
 using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.ApplicationInsights;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.Internal.Logging
 {
     // Fix for app insights issue https://github.com/Microsoft/ApplicationInsights-aspnetcore/issues/491
     public static class FixedApplicationInsightsLoggerFactoryExtensions
