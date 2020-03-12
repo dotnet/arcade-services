@@ -53,7 +53,7 @@ namespace Maestro.DataProviders
                 | project Repository, SourceBranch, DefinitionId, StartTime, FinishTime, Result, Project, Reason
                 | where Project == 'internal' 
                 | where Repository endswith _Repository
-                | where Reason == 'batchedCI' or Reason == 'individualCI'
+                | where Reason == 'batchedCI' or Reason == 'individualCI' or Reason == 'manual'
                 | where SourceBranch == _SourceBranch
                 {commonQueryText}";
 
