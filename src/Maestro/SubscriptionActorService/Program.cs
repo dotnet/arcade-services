@@ -63,13 +63,7 @@ namespace SubscriptionActorService
                                     .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                                     ?.InformationalVersion);
                             });
-                            services.Configure<GitHubTokenProviderOptions>(
-                                (options, provider) =>
-                                {
-                                    var config = provider.GetRequiredService<IConfiguration>();
-                                    IConfigurationSection section = config.GetSection("GitHub");
-                                    section.Bind(options);
-                                });
+                            services.Configure<GitHubTokenProviderOptions>("GitHub", (o,s) => s.Bind(o));
                             services.Configure<AzureDevOpsTokenProviderOptions>(
                                 (options, provider) =>
                                 {
