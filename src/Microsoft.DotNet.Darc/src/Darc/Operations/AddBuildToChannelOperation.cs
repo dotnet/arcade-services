@@ -213,20 +213,20 @@ namespace Microsoft.DotNet.Darc.Operations
                 if (!artifacts.Any(f => f.Name.Equals("AssetManifests")))
                 {
                     Console.Write("The build that you want to add to a new channel doesn't have a Build Manifest. That's required for publishing. Aborting.");
-                    return true;
+                    return false;
                 }
 
                 if ((_options.DoSigningValidation || _options.DoNuGetValidation || _options.DoSourcelinkValidation)
                     && !artifacts.Any(f => f.Name.Equals("PackageArtifacts")))
                 {
-                    Console.Write("The build that you want to add to a new channel doesn't have a list of package assets. That's required when running signing or NuGet validation. Aborting.");
-                    return true;
+                    Console.Write("The build that you want to add to a new channel doesn't have a list of package assets in the PackageArtifacts container. That's required when running signing or NuGet validation. Aborting.");
+                    return false;
                 }
 
                 if (_options.DoSourcelinkValidation && !artifacts.Any(f => f.Name.Equals("BlobArtifacts")))
                 {
-                    Console.Write("The build that you want to add to a new channel doesn't have a list of blob assets. That's required when running SourceLink validation. Aborting.");
-                    return true;
+                    Console.Write("The build that you want to add to a new channel doesn't have a list of blob assets in the BlobArtifacts container. That's required when running SourceLink validation. Aborting.");
+                    return false;
                 }
 
                 return true;
