@@ -345,11 +345,13 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{githubRepoPrefix}dotnet/coreclr", (coreRepoCategory, "coreclr") },
             { $"{githubRepoPrefix}dotnet/core-setup", (coreRepoCategory, "core-setup") },
             { $"{githubRepoPrefix}dotnet/runtime", (coreRepoCategory, "runtime") },
+            { $"{githubRepoPrefix}dotnet/windowsdesktop", (coreRepoCategory, "windowsdesktop") },
             // Internal
             { $"{azdoRepoPrefix}dotnet-corefx", (coreRepoCategory, "corefx") },
             { $"{azdoRepoPrefix}dotnet-coreclr", (coreRepoCategory, "coreclr") },
             { $"{azdoRepoPrefix}dotnet-core-setup", (coreRepoCategory, "core-setup") },
             { $"{azdoRepoPrefix}dotnet-runtime", (coreRepoCategory, "runtime") },
+            { $"{azdoRepoPrefix}dotnet-windowsdesktop", (coreRepoCategory, "windowsdesktop") },
 
             // ASPNET
 
