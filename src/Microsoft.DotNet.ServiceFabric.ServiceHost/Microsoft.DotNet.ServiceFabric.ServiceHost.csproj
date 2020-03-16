@@ -38,6 +38,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Monitoring\Microsoft.DotNet.Metrics\Microsoft.DotNet.Metrics.csproj" />
     <ProjectReference Include="..\Shared\MIcrosoft.DotNet.Internal.Logging\Microsoft.DotNet.Internal.Logging.csproj" />
   </ItemGroup>
 </Project>
