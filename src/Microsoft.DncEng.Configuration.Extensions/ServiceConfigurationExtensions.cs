@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 using Azure.Core;
 using Azure.Identity;
+using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 #if NETCOREAPP2_1
@@ -46,7 +49,7 @@ namespace Microsoft.DncEng.Configuration.Extensions
             IConfiguration bootstrapConfig = new ConfigurationBuilder()
                 .SetBasePath(hostEnvironment.ContentRootPath)
                 .AddJsonFile(rootConfigFile)
-                .AddJsonFile(envConfigFile)
+                .AddJsonFile(envConfigFile, optional: true)
                 .Build();
 
             string reloadTimeString = bootstrapConfig[ConfigurationConstants.ReloadTimeSecondsConfigurationKey];
@@ -64,10 +67,10 @@ namespace Microsoft.DncEng.Configuration.Extensions
 
             return builder
                 .AddMappedJsonFile(rootConfigFile, reloadTime, Mapper)
-                .AddMappedJsonFile(envConfigFile, reloadTime, Mapper);
+                .AddMappedJsonFile(envConfigFile, reloadTime, Mapper, optional: true);
         }
 
-        public static IConfigurationBuilder AddMappedJsonFile(this IConfigurationBuilder builder, string filePath, TimeSpan reloadTime, Func<string, string> mapFunc)
+        public static IConfigurationBuilder AddMappedJsonFile(this IConfigurationBuilder builder, string filePath, TimeSpan reloadTime, Func<string, string> mapFunc, bool optional = false)
         {
             if (builder == null)
             {
@@ -82,7 +85,7 @@ namespace Microsoft.DncEng.Configuration.Extensions
             var source = new MappedJsonConfigurationSource(reloadTime, mapFunc)
             {
                 Path = filePath,
-                Optional = false,
+                Optional = optional,
                 ReloadOnChange = false,
             };
             builder.Add(source);
@@ -95,6 +98,7 @@ namespace Microsoft.DncEng.Configuration.Extensions
             var credentials = new List<TokenCredential>
             {
                 new ManagedIdentityCredential(userAssignedIdentityId),
+                new AzureServiceTokenProviderCredential(ConfigurationConstants.MsftAdTenantId),
             };
             if (Debugger.IsAttached)
             {
@@ -102,6 +106,43 @@ namespace Microsoft.DncEng.Configuration.Extensions
             }
 
             return new ChainedTokenCredential(credentials.ToArray());
+        }
+    }
+
+    public class AzureServiceTokenProviderCredential : TokenCredential
+    {
+        private readonly AzureServiceTokenProvider _tokenProvider = new AzureServiceTokenProvider();
+
+        private readonly Func<string[], string> _scopesToResource = (Func<string[], string>)
+            typeof(DeviceCodeCredential).Assembly
+            .GetType("Azure.Identity.ScopeUtilities")!
+            .GetMethod("ScopesToResource")!
+            .CreateDelegate(typeof(Func<string[], string>));
+
+        private readonly string _tenantId;
+
+        public AzureServiceTokenProviderCredential(string tenantId)
+        {
+            _tenantId = tenantId;
+        }
+
+        public override async ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var resource = _scopesToResource(requestContext.Scopes);
+                var result = await _tokenProvider.GetAuthenticationResultAsync(resource, _tenantId, cancellationToken);
+                return new AccessToken(result.AccessToken, result.ExpiresOn);
+            }
+            catch (AzureServiceTokenProviderException ex)
+            {
+                throw new CredentialUnavailableException("AzureServiceTokenProviderCredential unable to authenticate", ex);
+            }
+        }
+
+        public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken)
+        {
+            return Task.Run(async () => await GetTokenAsync(requestContext, cancellationToken), cancellationToken).GetAwaiter().GetResult();
         }
     }
 }
