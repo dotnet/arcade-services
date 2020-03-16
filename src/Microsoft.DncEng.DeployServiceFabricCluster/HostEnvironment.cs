@@ -12,8 +12,8 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
         }
 
         public string EnvironmentName { get; set; }
-        public string ApplicationName { get; set; }
+        public string ApplicationName { get; set; } = "";
         public string ContentRootPath { get; set; }
-        public IFileProvider ContentRootFileProvider { get; set; }
+        public IFileProvider ContentRootFileProvider { get; set; } = null!;
     }
 }
