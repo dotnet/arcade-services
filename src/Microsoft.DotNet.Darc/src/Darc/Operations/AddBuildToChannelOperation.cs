@@ -17,9 +17,12 @@ namespace Microsoft.DotNet.Darc.Operations
 {
     internal class AddBuildToChannelOperation : Operation
     {
-        private const int BuildPromotionPipelineId = 750;
-        private const string BuildPromotionPipelineAccountName = "dnceng";
-        private const string BuildPromotionPipelineProjectName = "internal";
+        private static readonly Dictionary<string, (string project, int pipelineId)> BuildPromotionPipelinesForAccount =
+            new Dictionary<string, (string project, int pipelineId)>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "dnceng", ("internal", 750) },
+                { "devdiv", ("devdiv", 12603) }
+            };
 
         AddBuildToChannelCommandLineOptions _options;
         public AddBuildToChannelOperation(AddBuildToChannelCommandLineOptions options)
@@ -137,15 +140,24 @@ namespace Microsoft.DotNet.Darc.Operations
                 $"\"SDLValidationContinueOnError\": \"{ _options.SDLValidationContinueOnError }\", " +
                 $"}}";
 
-            var azdoBuildId = await azdoClient.StartNewBuildAsync(BuildPromotionPipelineAccountName, 
-                BuildPromotionPipelineProjectName, 
-                BuildPromotionPipelineId, 
+
+            if (!BuildPromotionPipelinesForAccount.TryGetValue(
+                build.AzureDevOpsAccount,
+                out (string project, int pipelineId) promotionPipelineInformation))
+            {
+                Console.WriteLine($"Promoting builds from AzureDevOps account {build.AzureDevOpsAccount} is not supported by this command.");
+                return Constants.ErrorCode;
+            }
+
+            int azdoBuildId = await azdoClient.StartNewBuildAsync(build.AzureDevOpsAccount,
+                promotionPipelineInformation.project,
+                promotionPipelineInformation.pipelineId,
                 arcadeSDKSourceBranch,
                 arcadeSDKSourceSHA,
                 queueTimeVariables)
                 .ConfigureAwait(false);
 
-            var promotionBuildUrl = $"https://{BuildPromotionPipelineAccountName}.visualstudio.com/{BuildPromotionPipelineProjectName}/_build/results?buildId={azdoBuildId}";
+            string promotionBuildUrl = $"https://{build.AzureDevOpsAccount}.visualstudio.com/{promotionPipelineInformation.project}/_build/results?buildId={azdoBuildId}";
 
             Console.WriteLine($"Build {build.Id} will be assigned to channel '{targetChannel.Name}' once this build finishes publishing assets: {promotionBuildUrl}");
 
@@ -164,7 +176,11 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     Console.WriteLine($"Waiting '{waitIntervalInSeconds.TotalSeconds}' seconds for promotion build to complete.");
                     await Task.Delay(waitIntervalInSeconds);
-                    promotionBuild = await azdoClient.GetBuildAsync(BuildPromotionPipelineAccountName, BuildPromotionPipelineProjectName, azdoBuildId);
+                    promotionBuild = await azdoClient.GetBuildAsync(
+                        build.AzureDevOpsAccount,
+                        promotionPipelineInformation.project,
+                        azdoBuildId);
+
                 } while (!promotionBuild.Status.Equals("completed", StringComparison.OrdinalIgnoreCase));
             }
             catch (Exception e)
