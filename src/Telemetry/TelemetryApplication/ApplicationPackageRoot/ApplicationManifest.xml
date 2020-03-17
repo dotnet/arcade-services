@@ -8,7 +8,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="AzureDevOpsTimelinePkg" ServiceManifestVersion="1.0.42" />
+    <ServiceManifestRef ServiceManifestName="AzureDevOpsTimelinePkg" ServiceManifestVersion="1.0.0" />
     <ConfigOverrides />
     <EnvironmentOverrides CodePackageRef="Code">
       <EnvironmentVariable Name="ASPNETCORE_ENVIRONMENT" Value="[Environment]" />

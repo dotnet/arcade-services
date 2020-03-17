@@ -31,6 +31,7 @@
       <EnvironmentVariable Name="ASPNETCORE_ENVIRONMENT" Value="[Environment]" />
     </EnvironmentOverrides>
   </ServiceManifestImport>
+  <ServiceManifestImport>
     <ServiceManifestRef ServiceManifestName="ReleasePipelineRunnerPkg" ServiceManifestVersion="1.0.42" />
     <ConfigOverrides />
     <EnvironmentOverrides CodePackageRef="Code">

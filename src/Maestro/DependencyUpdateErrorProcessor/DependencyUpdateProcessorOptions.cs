@@ -15,6 +15,5 @@ namespace DependencyUpdateErrorProcessor
         public string Owner { get; set; }
         public string Repository { get; set; }
         public string FyiHandle { get; set; }
-
     }
 }

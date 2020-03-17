@@ -25,8 +25,6 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.1.1" />
-    <PackageReference Include="Microsoft.Azure.KeyVault" Version="$(MicrosoftAzureKeyVaultVersion)" />
-    <PackageReference Include="Microsoft.DotNet.Git.IssueManager" Version="$(MicrosoftDotNetGitIssueManagerVersion)" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
     <PackageReference Include="Microsoft.ServiceFabric" Version="6.4.664" />
@@ -36,7 +34,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\DotNet.Status.Web\DotNet.Status.Web.csproj" />
     <ProjectReference Include="..\..\Microsoft.DncEng.Configuration.Extensions\Microsoft.DncEng.Configuration.Extensions.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
     <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
