@@ -6,10 +6,8 @@ using System.Reflection;
 using Maestro.AzureDevOps;
 using Maestro.Contracts;
 using Maestro.Data;
-using Maestro.MergePolicies;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.Dotnet.GitHub.Authentication;
-using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +15,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Octokit;
 
-namespace SubscriptionActorService
+namespace ReleasePipelineRunner
 {
     internal static class Program
     {
@@ -29,27 +27,11 @@ namespace SubscriptionActorService
             ServiceHost.Run(
                 host =>
                 {
-                    host.RegisterStatefulActorService<SubscriptionActor>("SubscriptionActor");
-                    host.RegisterStatefulActorService<PullRequestActor>("PullRequestActor");
-                    host.ConfigureContainer(
-                        builder =>
-                        {
-                            builder.AddServiceFabricActor<IPullRequestActor>();
-                            builder.AddServiceFabricActor<ISubscriptionActor>();
-                        });
+                    host.RegisterStatefulService<ReleasePipelineRunner>("ReleasePipelineRunnerType");
+                    host.ConfigureContainer(builder => { builder.AddServiceFabricService<IDependencyUpdater>("fabric:/MaestroApplication/DependencyUpdater"); });
                     host.ConfigureServices(
                         services =>
                         {
-                            services.AddSingleton<IActionRunner, ActionRunner>();
-                            services.AddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
-                            services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
-                            services.AddSingleton<TemporaryFiles>();
-                            services.AddGitHubTokenProvider();
-                            services.AddAzureDevOpsTokenProvider();
-                            // We do not use AddMemoryCache here. We use our own cache because we wish to
-                            // use a sized cache and some components, such as EFCore, do not implement their caching
-                            // in such a way that will work with sizing.
-                            services.AddSingleton<DarcRemoteMemoryCache>();
                             services.AddDefaultJsonConfiguration();
                             services.AddBuildAssetRegistry(
                                 (provider, options) =>
@@ -57,13 +39,7 @@ namespace SubscriptionActorService
                                     var config = provider.GetRequiredService<IConfiguration>();
                                     options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
                                 });
-                            services.Configure<GitHubClientOptions>(o =>
-                            {
-                                o.ProductHeader = new ProductHeaderValue("Maestro", Assembly.GetEntryAssembly()
-                                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                                    ?.InformationalVersion);
-                            });
-                            services.Configure<GitHubTokenProviderOptions>("GitHub", (o,s) => s.Bind(o));
+                            services.AddAzureDevOpsTokenProvider();
                             services.Configure<AzureDevOpsTokenProviderOptions>(
                                 (options, provider) =>
                                 {
@@ -74,8 +50,20 @@ namespace SubscriptionActorService
                                         options.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
                                     }
                                 });
-
-                            services.AddMergePolicies();
+                            services.AddGitHubTokenProvider();
+                            services.Configure<GitHubClientOptions>(o =>
+                            {
+                                o.ProductHeader = new ProductHeaderValue("Maestro", Assembly.GetEntryAssembly()
+                                    .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                                    ?.InformationalVersion);
+                            });
+                            services.Configure<GitHubTokenProviderOptions>(
+                                (options, provider) =>
+                                {
+                                    var config = provider.GetRequiredService<IConfiguration>();
+                                    IConfigurationSection section = config.GetSection("GitHub");
+                                    section.Bind(options);
+                                });
                         });
                 });
         }

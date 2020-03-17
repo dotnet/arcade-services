@@ -4,6 +4,9 @@
     <Parameter Name="DependencyUpdateErrorProcessor_MinReplicaSetSize" DefaultValue="3" />
     <Parameter Name="DependencyUpdateErrorProcessor_PartitionCount" DefaultValue="1" />
     <Parameter Name="DependencyUpdateErrorProcessor_TargetReplicaSetSize" DefaultValue="3" />
+    <Parameter Name="ReleasePipelineRunner_MinReplicaSetSize" DefaultValue="3" />
+    <Parameter Name="ReleasePipelineRunner_PartitionCount" DefaultValue="1" />
+    <Parameter Name="ReleasePipelineRunner_TargetReplicaSetSize" DefaultValue="3" />
     <Parameter Name="DependencyUpdater_MinReplicaSetSize" DefaultValue="3" />
     <Parameter Name="DependencyUpdater_PartitionCount" DefaultValue="1" />
     <Parameter Name="DependencyUpdater_TargetReplicaSetSize" DefaultValue="3" />
@@ -23,6 +26,12 @@
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
     <ServiceManifestRef ServiceManifestName="DependencyUpdateErrorProcessorPkg" ServiceManifestVersion="1.0.42" />
+    <ConfigOverrides />
+    <EnvironmentOverrides CodePackageRef="Code">
+      <EnvironmentVariable Name="ASPNETCORE_ENVIRONMENT" Value="[Environment]" />
+    </EnvironmentOverrides>
+  </ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="ReleasePipelineRunnerPkg" ServiceManifestVersion="1.0.42" />
     <ConfigOverrides />
     <EnvironmentOverrides CodePackageRef="Code">
       <EnvironmentVariable Name="ASPNETCORE_ENVIRONMENT" Value="[Environment]" />
@@ -72,6 +81,9 @@
     <Service Name="DependencyUpdateErrorProcessor" ServicePackageActivationMode="ExclusiveProcess">
       <StatefulService ServiceTypeName="DependencyUpdateErrorProcessorType" TargetReplicaSetSize="[DependencyUpdateErrorProcessor_TargetReplicaSetSize]" MinReplicaSetSize="[DependencyUpdateErrorProcessor_MinReplicaSetSize]">
         <UniformInt64Partition PartitionCount="[DependencyUpdateErrorProcessor_PartitionCount]" LowKey="-9223372036854775808" HighKey="9223372036854775807" />
+    <Service Name="ReleasePipelineRunner" ServicePackageActivationMode="ExclusiveProcess">
+      <StatefulService ServiceTypeName="ReleasePipelineRunnerType" TargetReplicaSetSize="[ReleasePipelineRunner_TargetReplicaSetSize]" MinReplicaSetSize="[ReleasePipelineRunner_MinReplicaSetSize]">
+        <SingletonPartition />
       </StatefulService>
     </Service>
     <Service Name="DependencyUpdater" ServicePackageActivationMode="ExclusiveProcess">

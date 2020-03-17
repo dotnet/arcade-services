@@ -99,21 +99,7 @@ namespace FeedCleanerService
                         catch (Exception ex)
                         {
                             Logger.LogError(ex, $"Something failed while trying to update the released packages in feed {feed.Name}");
-                        }
-
-                        if (IsFeedEmpty(feed))
-                        {
-                            try
-                            {
-                                Logger.LogInformation($"Deleting feed {feed.Name} since it doesn't contain any active package versions...");
-                                await azdoClient.DeleteFeedAsync(azdoAccount, feed.Project?.Id, feed.Name);
-                                Logger.LogInformation($"Successfully deleted feed {feed.Name}");
-                            }
-                            catch (HttpRequestException ex)
-                            {
-                                Logger.LogError(ex, $"Something failed when attempting to delete feed {feed.Name}");
-                            }
-                        }
+                        } 
                     }
                 }
             }
