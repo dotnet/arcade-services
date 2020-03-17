@@ -81,7 +81,9 @@
          The attribute ServiceTypeName below must match the name defined in the imported ServiceManifest.xml file. -->
     <Service Name="DependencyUpdateErrorProcessor" ServicePackageActivationMode="ExclusiveProcess">
       <StatefulService ServiceTypeName="DependencyUpdateErrorProcessorType" TargetReplicaSetSize="[DependencyUpdateErrorProcessor_TargetReplicaSetSize]" MinReplicaSetSize="[DependencyUpdateErrorProcessor_MinReplicaSetSize]">
-        <UniformInt64Partition PartitionCount="[DependencyUpdateErrorProcessor_PartitionCount]" LowKey="-9223372036854775808" HighKey="9223372036854775807" />
+        <SingletonPartition />
+      </StatefulService>
+    </Service>
     <Service Name="ReleasePipelineRunner" ServicePackageActivationMode="ExclusiveProcess">
       <StatefulService ServiceTypeName="ReleasePipelineRunnerType" TargetReplicaSetSize="[ReleasePipelineRunner_TargetReplicaSetSize]" MinReplicaSetSize="[ReleasePipelineRunner_MinReplicaSetSize]">
         <SingletonPartition />

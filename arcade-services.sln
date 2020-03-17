@@ -140,7 +140,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maestro.DataProviders", "sr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Internal.Logging", "src\Shared\MIcrosoft.DotNet.Internal.Logging\Microsoft.DotNet.Internal.Logging.csproj", "{2C7D3A7A-26E2-4A9D-97D6-9AF3812F6906}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DncEng.DeployServiceFabricCluster", "src\Microsoft.DncEng.DeployServiceFabricCluster\Microsoft.DncEng.DeployServiceFabricCluster.csproj", "{6307FF01-47DB-4EE6-86FF-9E78D8832D37}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DncEng.DeployServiceFabricCluster", "src\Microsoft.DncEng.DeployServiceFabricCluster\Microsoft.DncEng.DeployServiceFabricCluster.csproj", "{6307FF01-47DB-4EE6-86FF-9E78D8832D37}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
