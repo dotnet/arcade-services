@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-// These types must have public {get; set;} properties, those make nullable go crazy
+// These types must have public {get; set;} properties, those make nullable act weird
 #nullable disable
 
 namespace Microsoft.DncEng.DeployServiceFabricCluster
