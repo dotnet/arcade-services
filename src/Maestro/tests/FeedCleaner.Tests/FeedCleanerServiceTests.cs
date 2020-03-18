@@ -81,19 +81,6 @@ namespace FeedCleanerService.Tests
         }
 
         [Fact]
-        public async void DeletesFeedsWhenAllPackagesAreReleased()
-        {
-            FeedCleanerService cleaner = ConfigureFeedCleaner();
-            await cleaner.CleanManagedFeedsAsync();
-
-            Assert.Equal(3, Feeds.Count);
-            Assert.True(Feeds.ContainsKey(ReleaseFeedName));
-            Assert.True(Feeds.ContainsKey(UnmanagedFeedName));
-            Assert.True(Feeds.ContainsKey(FeedWithUnreleasedPackagesName));
-            Assert.False(Feeds.ContainsKey(FeedWithAllPackagesReleasedName));
-        }
-
-        [Fact]
         public async void OnlyDeletesReleasedPackagesFromManagedFeeds()
         {
             FeedCleanerService cleaner = ConfigureFeedCleaner();

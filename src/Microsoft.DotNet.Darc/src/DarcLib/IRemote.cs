@@ -240,6 +240,13 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Async task.</returns>
         Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest);
 
+        /// <summary>
+        ///     Delete a Pull Request branch
+        /// </summary>
+        /// <param name="pullRequestUri">URI of pull request to delete branch for</param>
+        /// <returns>Async task</returns>
+        Task DeletePullRequestBranchAsync(string pullRequestUri);
+
         #endregion
 
         #region Repo/Dependency Operations

@@ -14,6 +14,8 @@ using Autofac;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Internal;
+using Microsoft.DotNet.Internal.Logging;
+using Microsoft.DotNet.Metrics;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -242,6 +244,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     builder.AddDebug();
                     builder.AddFixedApplicationInsights(LogLevel.Information);
                 });
+            services.TryAddSingleton<IMetricTracker, ApplicationInsightsMetricTracker>();
         }
 
         private static HostingEnvironment InitializeEnvironment()
