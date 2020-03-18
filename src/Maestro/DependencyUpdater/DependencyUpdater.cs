@@ -258,9 +258,10 @@ namespace DependencyUpdater
 
                         Logger.LogInformation($"Will update {channel.Name} to best case time {lbp.BestCaseTimeInMinutes} and worst case time {lbp.WorstCaseTimeInMinutes}");
                         await Context.LongestBuildPaths.AddAsync(lbp);
-                        await Context.SaveChangesAsync();
                     }
                 }
+
+                await Context.SaveChangesAsync();
             }
         }
 
