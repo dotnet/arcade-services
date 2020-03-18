@@ -207,7 +207,7 @@ namespace DependencyUpdater
             }
         }
 
-        [CronSchedule("0 0/1 * * * ? *", TimeZones.PST)]
+        [CronSchedule("0 0 0 1/1 * ? *", TimeZones.PST)]
         public async Task UpdateLongestBuildPathAsync(CancellationToken cancellationToken)
         {
             using (Logger.BeginScope($"Updating Longest Build Path table"))
