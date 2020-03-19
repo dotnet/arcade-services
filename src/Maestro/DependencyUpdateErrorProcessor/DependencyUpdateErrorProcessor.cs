@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,7 +18,6 @@ using Microsoft.ServiceFabric.Data;
 using Microsoft.ServiceFabric.Data.Collections;
 using Newtonsoft.Json.Linq;
 using Octokit;
-using Org.BouncyCastle.Bcpg;
 
 namespace DependencyUpdateErrorProcessor
 {
@@ -36,9 +34,9 @@ namespace DependencyUpdateErrorProcessor
             )
         {
             _stateManager = stateManager;
-            Logger = logger;
-            Context = context;
+            _context = context;
             _options = options.Value;
+            Logger = logger;
         }
 
         private readonly IReliableStateManager _stateManager;
@@ -47,11 +45,12 @@ namespace DependencyUpdateErrorProcessor
 
         private ILogger<DependencyUpdateErrorProcessor> Logger { get; }
 
-        private BuildAssetRegistryContext Context { get; }
+        private readonly BuildAssetRegistryContext _context;
 
+        // captures (subscriptionId: 'a9f0536e-15cc-4d1f-79a4-08d79acf8bba', method: 'UpdateAssetsAsync', errorMessage: 'build: 14	Unexpected error processing action: Validation Failed')
+        // from the issue or comment body and divides into 2 groups
         private static readonly Regex CommentMarker = new Regex(@"(\w+): '([^,\n]+)'(?:, |\))");
 
-        //Runs every hour in staging for now, in production it will run once a day.
         [CronSchedule("0 0 0/1 1/1 * ? *", TimeZones.PST)]
         public async Task DependencyUpdateErrorProcessing()
         {
@@ -62,24 +61,23 @@ namespace DependencyUpdateErrorProcessor
             }
             await _options.ConfigurationRefresherEndPointUri.Refresh();
             if (bool.TryParse(_options.DynamicConfigs["FeatureManagement:DependencyUpdateErrorProcessor"],
-                    out var dependencyUpdateErrorProcessorFlag) && dependencyUpdateErrorProcessorFlag)
+                out var dependencyUpdateErrorProcessorFlag) && dependencyUpdateErrorProcessorFlag)
             {
-                IReliableDictionary<string, DateTimeOffset> update =
-                    await _stateManager.GetOrAddAsync<IReliableDictionary<string, DateTimeOffset>>("update");
+                IReliableDictionary<string, DateTimeOffset> checkpointEvaluator =
+                    await _stateManager.GetOrAddAsync<IReliableDictionary<string, DateTimeOffset>>("checkpointEvaluator");
                 try
                 {
                     DateTimeOffset checkpoint;
                     using (ITransaction tx = _stateManager.CreateTransaction())
                     {
-                         checkpoint = await update.GetOrAddAsync(
+                         checkpoint = await checkpointEvaluator.GetOrAddAsync(
                          tx,
-                         "update",
+                         "checkpointEvaluator",
                          DateTimeOffset.UtcNow 
-                         //new DateTime(2002, 10, 18)
                          );
                         await tx.CommitAsync();
                     }
-                    await CheckForErrorInRepositoryBranchHistoryTable(checkpoint, _options.GithubUrl, update);
+                    await CheckForErrorsInRepositoryBranchHistoryTableAsync(checkpoint, _options.GithubUrl, checkpointEvaluator);
                 }
                 catch (Exception ex)
                 {
@@ -88,63 +86,68 @@ namespace DependencyUpdateErrorProcessor
             }
         }
 
-        private async Task CheckForErrorInRepositoryBranchHistoryTable(DateTimeOffset checkPoint, string issueRepo,
-            IReliableDictionary<string, DateTimeOffset> update)
+        private async Task CheckForErrorsInRepositoryBranchHistoryTableAsync(DateTimeOffset checkPoint, string issueRepo,
+            IReliableDictionary<string, DateTimeOffset> checkpointEvaluator)
         {
             // Looking for errors from the RepositoryBranchHistory table
             var unprocessedHistoryEntries =
-                Context.RepositoryBranchUpdateHistory.Where(entry => entry.Success == false && entry.Timestamp > checkPoint.UtcDateTime)
+                _context.RepositoryBranchUpdateHistory.Where(entry => entry.Success == false && entry.Timestamp > checkPoint.UtcDateTime)
                 .OrderBy(entry => entry.Timestamp).ToList();
             if (!unprocessedHistoryEntries.Any())
             {
-                Logger.LogInformation("No errors found in the RepositoryBranchUpdateHistory table.");
+                Logger.LogInformation($"No errors found in the RepositoryBranchUpdateHistory table. The last checkpoint time was : '{checkPoint.DateTime}'");
                 return;
             }
             foreach (var error in unprocessedHistoryEntries)
             {
                 try
                 {
-                    await CreateOrUpdateGithubIssueAsync(error, issueRepo);
+                    await GetIssueDescription(error, issueRepo);
                     using (ITransaction tx = _stateManager.CreateTransaction())
                     {
-                        await update.SetAsync(
+                        await checkpointEvaluator.SetAsync(
                             tx,
-                            "update",
+                            "checkpointEvaluator",
                             error.Timestamp
                         );
                         await tx.CommitAsync();
                     }
                 }
+                catch (TimeoutException exe)
+                {
+                    Logger.LogError(exe, $"Unable to update the last processed error timestamp : '{error.Timestamp}");
+                }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex,$"Unable to create a github issue for error message : '{error.ErrorMessage}' for the repository : '{error.Repository}'");
+                    Logger.LogError(ex, $"Unable to create a github issue for error message : '{error.ErrorMessage}' for the repository : '{error.Repository}'");
                 }
             }
         }
 
         private async Task<GitHubClient> AuthenticateGitHubClient(string issueRepo)
         {
-            IGitHubTokenProvider gitHubTokenProvider = Context.GetService<IGitHubTokenProvider>();
-            var installationId = await Context.GetInstallationId(issueRepo);
-            var gitHubToken = await gitHubTokenProvider.GetTokenForInstallationAsync(installationId);
+            IGitHubTokenProvider gitHubTokenProvider = _context.GetService<IGitHubTokenProvider>();
+            long installationId = await _context.GetInstallationId(issueRepo);
+            string gitHubToken = await gitHubTokenProvider.GetTokenForInstallationAsync(installationId);
             Logger.LogInformation($"GitHub token acquired for '{issueRepo}'");
             var version = Assembly.GetExecutingAssembly()
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                 .InformationalVersion;
-            Octokit.ProductHeaderValue product = new Octokit.ProductHeaderValue("Maestro", version);
+            ProductHeaderValue product = new ProductHeaderValue("Maestro", version);
             return new GitHubClient(product)
             {
                 Credentials = new Credentials(gitHubToken),
             };
         }
 
-        private async Task CreateOrUpdateGithubIssueAsync(RepositoryBranchUpdateHistoryEntry updateHistoryError, string issueRepo)
+        private async Task CreateOrUpdateGithubIssueAsync(RepositoryBranchUpdateHistoryEntry updateHistoryError, 
+            string issueRepo, Func<string, string, bool> replaceDescription, string description)
         {
             Logger.LogInformation($"Error Message : '{updateHistoryError.ErrorMessage}' in repository :  '{updateHistoryError.Repository}'");
             var gitHubIssueEvaluator =
-                await _stateManager.GetOrAddAsync<IReliableDictionary<(string, string), int>>("gitHubIssueEvaluator");
-            var client = await AuthenticateGitHubClient(issueRepo);
-            var repo = await client.Repository.Get(_options.Owner, _options.Repository);
+                await _stateManager.GetOrAddAsync<IReliableDictionary<(string repository, string branch), int>>("gitHubIssueEvaluator");
+            GitHubClient client = await AuthenticateGitHubClient(issueRepo);
+            Repository repo = await client.Repository.Get(_options.Owner, _options.Repository);
             var issueNumber = new ConditionalValue<int>();
             using (ITransaction tx = _stateManager.CreateTransaction())
             {
@@ -154,147 +157,187 @@ namespace DependencyUpdateErrorProcessor
             }
             if (issueNumber.HasValue)
             {
-                Logger.LogInformation(
-                    $"Updating a gitHub issue number : '{issueNumber}' for the error : '{updateHistoryError.ErrorMessage}'"
-                    + $"for the repository : '{updateHistoryError.Repository}'");
                 var issue = await client.Issue.Get(repo.Id, issueNumber.Value);
-                var descriptionUpdateFlag = false;
-                var comments = await client.Issue.Comment.GetAllForIssue(repo.Id, issue.Number);
-                var updateIssueDescription = CreateOrUpdateDescription(updateHistoryError, issue.Body);
-                // check if the issue body has to be updated or comment body has to be updated.
-                if (updateIssueDescription.Item2)
+                // check if the issue is open only then update it else create a new issue and update the dictionary.
+                if (issue.State.Equals("Open"))
                 {
-                    // Issue body will be updated
-                    descriptionUpdateFlag = true;
-                    var issueUpdate = issue.ToUpdate();
-                    var bodyTitle = $"The following errors have been detected when attempting to update dependencies in " +
-                        $"'{updateHistoryError.Repository}' \n\n";
-                    issueUpdate.Body = bodyTitle + updateIssueDescription.Item1 + "\n\n**/FyiHandle :** " + _options.FyiHandle;
-                    issueUpdate.State = ItemState.Open;
-                    Logger.LogInformation($"Updating issue body for the issue :  '{issueNumber.Value}'");
-                    await client.Issue.Update(repo.Id, issueNumber.Value, issueUpdate);
+                    Logger.LogInformation(
+                        $"Updating a gitHub issue number : '{issueNumber}' for the error : '{updateHistoryError.ErrorMessage}'"
+                        + $"for the repository : '{updateHistoryError.Repository}'");
+                    await UpdateIssueAsync(client, updateHistoryError, replaceDescription,
+                        description, issue, repo.Id);
                 }
-                foreach (var comment in comments)
+                else
                 {
-                    descriptionUpdateFlag = false;
-                    var updateCommentDescription = CreateOrUpdateDescription(updateHistoryError, comment.Body);
-                    if (updateCommentDescription.Item2)
-                    {
-                        // Issue's comment body will be updated
-                        descriptionUpdateFlag = true;
-                        Logger.LogInformation($"Updating comment body for the issue : '{issueNumber.Value}'");
-                        await client.Issue.Comment.Update(repo.Id, comment.Id, updateCommentDescription.Item1);
-                        continue;
-                    }
-                }
-                // New error for the same repo-branch combination, so adding a new comment to it. 
-                if (!descriptionUpdateFlag && !string.IsNullOrEmpty(updateIssueDescription.Item1))
-                {
-                    Logger.LogInformation($"Creating a new comment for the issue : '{issueNumber.Value}'");
-                    await client.Issue.Comment.Create(repo.Id, issueNumber.Value, updateIssueDescription.Item1);
+                    // create a new issue for the existing repo-branch combo as the existing issue is closed.
+                    Logger.LogInformation(
+                        $"Older issue {issue.Number} is closed so creating a new gitHub issue. " +
+                        $"Creating a new gitHub issue for dependency Update Error, for the error message  '{updateHistoryError.ErrorMessage}'" +
+                        $"for the repository : '{updateHistoryError.Repository}'");
+                    await CreateIssueAsync(client, updateHistoryError, gitHubIssueEvaluator, description, repo.Id,
+                        issueRepo);
                 }
             }
             else
             {
                 // Create a new issue for the error
-                var labelName = "DependencyUpdateError";
                 Logger.LogInformation(
-                    $"Dependency Update Error, for the error message  '{updateHistoryError.ErrorMessage}'" +
+                    $"Creating a new gitHub issue for dependency Update Error, " +
+                    $"for the error message  '{updateHistoryError.ErrorMessage}'" +
                     $"for the repository : '{updateHistoryError.Repository}'");
-                var createIssue = new NewIssue("[Dependency Update] Errors during dependency updates to :" + updateHistoryError.Repository);
-                var bodyTitle = $"The following errors have been detected when attempting to update dependencies in " + 
-                    $"'{updateHistoryError.Repository}' \n\n";
-                var createIssueDescription = CreateOrUpdateDescription(updateHistoryError, "");
-                if (createIssueDescription.Item2)
+                await CreateIssueAsync(client, updateHistoryError, gitHubIssueEvaluator, description, repo.Id,
+                    issueRepo);
+            }
+        }
+
+        private async Task CreateIssueAsync(GitHubClient client, RepositoryBranchUpdateHistoryEntry updateHistoryError,
+            IReliableDictionary<(string repository, string branch),int> gitHubIssueEvaluator, string description, long repoId, string issueRepo)
+        {
+            var labelName = "DependencyUpdateError";
+            var newIssue = new NewIssue("[Dependency Update] Errors during dependency updates to :" +
+                updateHistoryError.Repository);
+            var bodyTitle = $"The following errors have been detected when attempting to update dependencies in " +
+                $"'{updateHistoryError.Repository}' \n\n";
+            if (!string.IsNullOrEmpty(description))
+            {
+                newIssue.Body = $"{bodyTitle} {description}  \n\n**/FyiHandle :** {_options.FyiHandle}";
+                newIssue.Labels.Add(labelName);
+                var issue = await client.Issue.Create(repoId, newIssue);
+                Logger.LogInformation($"Issue Number '{issue.Number}' was created in '{issueRepo}'");
+                // add or update the newly generated issue number in the reliable dictionary.
+                using (ITransaction tx = _stateManager.CreateTransaction())
                 {
-                    createIssue.Body = bodyTitle + createIssueDescription.Item1 + "\n\n**/FyiHandle :** " +
-                                       _options.FyiHandle;
-                    createIssue.Labels.Add(labelName);
-                    var issue = await client.Issue.Create(repo.Id, createIssue);
-                    Logger.LogInformation($"Issue Number '{issue.Number}' was created in '{issueRepo}'");
-                    // save the newly generated issue number in the reliable dictionary.
-                    using (ITransaction tx = _stateManager.CreateTransaction())
-                    {
-                        await gitHubIssueEvaluator.SetAsync(tx, (updateHistoryError.Repository, updateHistoryError.Branch),
-                            issue.Number);
-                        await tx.CommitAsync();
-                    }
+                    await gitHubIssueEvaluator.AddOrUpdateAsync(tx,
+                        (updateHistoryError.Repository, updateHistoryError.Branch),
+                        issue.Number,
+                        (key,value)=> issue.Number);
+                    await tx.CommitAsync();
                 }
             }
         }
 
-        private Tuple<string, bool> CreateOrUpdateDescription(RepositoryBranchUpdateHistoryEntry updateHistoryError , string body)
+        //Updates the issue body / comment body or creates a new comment
+        private async Task UpdateIssueAsync(GitHubClient client, RepositoryBranchUpdateHistoryEntry updateHistoryError,
+            Func<string, string, bool> replaceDescription, string description, Issue issue , long repoId)
         {
-            var description = new StringBuilder();
-            var genericDescription =
-                $"[marker]: <> (method: '{updateHistoryError.Method}', errorMessage: '{updateHistoryError.ErrorMessage}')"
-                + $"\n**Repository :** '{updateHistoryError.Repository}'"
-                + $"\n**Branch Name :** '{updateHistoryError.Branch}''"
-                + $"\n**Error Message :**  '{updateHistoryError.ErrorMessage}'"
-                + $"\n**Method :**   '{updateHistoryError.Method}'"
-                + $"\n**Action :**  '{updateHistoryError.Action}'"
-                + $"\n**Last seen :**  '{updateHistoryError.Timestamp}'";
+            bool descriptionUpdateFlag = false;
+            var comments = await client.Issue.Comment.GetAllForIssue(repoId, issue.Number);
+            // check if the issue body has to be updated or comment body has to be updated.
+            if (replaceDescription(updateHistoryError.Arguments, issue.Body))
+            {
+                // Issue body will be updated
+                descriptionUpdateFlag = true;
+                IssueUpdate issueUpdate = issue.ToUpdate();
+                var bodyTitle = $"The following errors have been detected when attempting to update dependencies in " +
+                    $"'{updateHistoryError.Repository}' \n\n";
+                issueUpdate.Body = $"{bodyTitle}  {description}  \n\n**/FyiHandle :** {_options.FyiHandle}";
+                Logger.LogInformation($"Updating issue body for the issue :  '{issue.Number}'");
+                await client.Issue.Update(repoId, issue.Number, issueUpdate);
+            }
+            // If issue body is replaced with newer description, then do not create a new comment with the same description.
+            if (!descriptionUpdateFlag)
+            {
+                foreach (var comment in comments)
+                {
+                    descriptionUpdateFlag = false;
+                    if (replaceDescription(updateHistoryError.Arguments, comment.Body))
+                    {
+                        // Issue's comment body will be updated
+                        descriptionUpdateFlag = true;
+                        Logger.LogInformation($"Updating comment body for the issue : '{issue.Number}'");
+                        await client.Issue.Comment.Update(repoId, comment.Id, description);
+                        continue;
+                    }
+                }
+            }
+            // New error for the same repo-branch combination, so adding a new comment to it. 
+            if (!descriptionUpdateFlag && !string.IsNullOrEmpty(description))
+            {
+                Logger.LogInformation($"Creating a new comment for the issue : '{issue.Number}'");
+                await client.Issue.Comment.Create(repoId, issue.Number, description);
+            }
+        }
+
+        // Builds description and creates a func to replace the description from existing issue body/ comment body. 
+        private Task GetIssueDescription(RepositoryBranchUpdateHistoryEntry updateHistoryError, string issueRepo)
+        {
+            var description = "";
+            Func<string, string, bool> replaceDesc = (argument, issueBody) => false;
             switch (updateHistoryError.Method)
             {
                 // Only UpdateAssetAsync method has subscriptionId as one of the parameters in the arguments column. Other methods do not have this info.
                 case "UpdateAssetsAsync":
                 {
-                    var updateAsync = ParseUpdateAssetsAsync(updateHistoryError);
-                    // If the body is empty then this is a new issue/comment. 
-                    // Append to the description only if the subscription is valid else do not create the issue
-                    if(string.IsNullOrEmpty(body))
+                    description = ParseUpdateAssetsAsync(updateHistoryError);
+                    if (!string.IsNullOrEmpty(description))
                     {
-                        if(!string.IsNullOrEmpty(updateAsync))
+                        replaceDesc = (argument, issueBody) =>
                         {
-                            return new Tuple<string, bool>(description.Append(updateAsync).ToString(), true);
-                        }
+                            if (!string.IsNullOrEmpty(issueBody))
+                            {
+                                var argumentParser = ParseIssueCommentBody(issueBody);
+                                var subId = GetSubscriptionId(updateHistoryError.Arguments);
+                                if (argumentParser.Count != 0 &&
+                                    string.Equals(argumentParser["subscriptionId"], subId) &&
+                                    string.Equals(argumentParser["errorMessage"], updateHistoryError.ErrorMessage))
+                                {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        };
+                    }
+                    else
+                    {
                         Logger.LogInformation(
                             "The subscriptionId is not valid so skipping UpdateAssetsAsync method.");
-                        return new Tuple<string, bool>(string.Empty, false);
                     }
-                    else
-                    {
-                        var argumentParser = ParseIssueCommentBody(body);
-                        var subId = GetSubscriptionId(updateHistoryError.Arguments);
-                            // if issue already for the same subscriptionId and errorMessage exists then append description 
-                            if (string.Equals(argumentParser["subscriptionId"], subId) &&
-                            string.Equals(argumentParser["errorMessage"], updateHistoryError.ErrorMessage))
-                        {
-                            return new Tuple<string, bool>(description.Append(updateAsync).ToString(), true);
-                        }
-                    }
-                    // issue/comment does not exists so just append to the description and create a new issue/ comment
-                    return new Tuple<string, bool>(description.Append(updateAsync).ToString(), false);
                 }
-                // since this is not really an error, skipping this method
+                    break;
                 case "SynchronizePullRequestAsync":
                     Logger.LogInformation("Skipping SynchronizePullRequestAsync method. Issue creation is not necessary for this method");
-                    return new Tuple<string, bool>(string.Empty, false);
-                // for all the other methods
+                    break;
                 case "ProcessPendingUpdatesAsync":
                 {
-                    // if body is empty then we are creating an Issue/ comment.
-                    if (string.IsNullOrEmpty(body))
+                    description = 
+                        $"[marker]: <> (method: '{updateHistoryError.Method}', errorMessage: '{updateHistoryError.ErrorMessage}')"
+                        + $"\n**Repository :** '{updateHistoryError.Repository}'"
+                        + $"\n**Branch Name :** '{updateHistoryError.Branch}''"
+                        + $"\n**Error Message :**  '{updateHistoryError.ErrorMessage}'"
+                        + $"\n**Method :**   '{updateHistoryError.Method}'"
+                        + $"\n**Action :**  '{updateHistoryError.Action}'"
+                        + $"\n**Last seen :**  '{updateHistoryError.Timestamp}'";
+                    replaceDesc = (argument, issueBody) =>
                     {
-                        return new Tuple<string, bool>(description.Append(genericDescription).ToString(), true);
-                    }
-                    // the issue already exists so preparing to update the issue/ comment.
-                    else
-                    {
-                        // Check if the error for the method ProcessPendingUpdatesAsync already exists 
-                        var argumentParser = ParseIssueCommentBody(body);
-                        if (string.Equals(argumentParser["method"], "ProcessPendingUpdatesAsync") &&
-                            string.Equals(argumentParser["errorMessage"], updateHistoryError.ErrorMessage))
+                        if (!string.IsNullOrEmpty(issueBody))
                         {
-                            return new Tuple<string, bool>(description.Append(genericDescription).ToString(), true);
+                            var argumentParser = ParseIssueCommentBody(issueBody);
+                            if (argumentParser.Count != 0 && 
+                                string.Equals(argumentParser["errorMessage"], updateHistoryError.ErrorMessage))
+                            {
+                                return true;
+                            }
                         }
-                    }
-                    // creates a new description body since the issue does not exists previously. 
-                    return new Tuple<string, bool>(description.Append(genericDescription).ToString(), false);
+                        return false;
+                    };
+                    break;
                 }
+                // for all other methods
                 default:
-                    return new Tuple<string, bool>(description.Append(genericDescription).ToString(), false);
+                {
+                    description =
+                        $"[marker]: <> (method: '{updateHistoryError.Method}', errorMessage: '{updateHistoryError.ErrorMessage}')"
+                        + $"\n**Repository :** '{updateHistoryError.Repository}'"
+                        + $"\n**Branch Name :** '{updateHistoryError.Branch}''"
+                        + $"\n**Error Message :**  '{updateHistoryError.ErrorMessage}'"
+                        + $"\n**Method :**   '{updateHistoryError.Method}'"
+                        + $"\n**Action :**  '{updateHistoryError.Action}'"
+                        + $"\n**Last seen :**  '{updateHistoryError.Timestamp}'";
+                    replaceDesc = (argument, issueBody) => true;
+                    break;
+                }
             }
+            return CreateOrUpdateGithubIssueAsync(updateHistoryError, issueRepo, replaceDesc, description);
         }
 
         /*      Eg: Body of Comment :
@@ -338,7 +381,7 @@ namespace DependencyUpdateErrorProcessor
             string subscriptionId = GetSubscriptionId(updateHistoryError.Arguments);
             Guid subscriptionGuid = GetSubscriptionGuid(subscriptionId); 
             var subscription = (from sub in
-                Context.Subscriptions
+                _context.Subscriptions
                 where sub.Id == subscriptionGuid
                 select sub).FirstOrDefault();
             // Subscription might be removed, so if the subscription does not exists then the error is no longer valid. So we can skip this error.
@@ -367,7 +410,6 @@ namespace DependencyUpdateErrorProcessor
             return subscriptionId;
         }
 
-        // Get the subscriptionIdGuid from the subscriptionId
         private static Guid GetSubscriptionGuid(string subscriptionId)
         {
             if (!Guid.TryParse(subscriptionId, out var subscriptionGuid))
