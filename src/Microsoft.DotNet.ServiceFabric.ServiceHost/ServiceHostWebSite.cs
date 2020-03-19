@@ -1,6 +1,5 @@
 #if NETCOREAPP3_1
 using System;
-using System.IO;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.DncEng.Configuration.Extensions;
@@ -13,7 +12,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
     {
         private static bool RunningInServiceFabric()
         {
-            string? fabricApplication = Environment.GetEnvironmentVariable("Fabric_ApplicationName");
+            string fabricApplication = Environment.GetEnvironmentVariable("Fabric_ApplicationName");
             return !string.IsNullOrEmpty(fabricApplication);
         }
 

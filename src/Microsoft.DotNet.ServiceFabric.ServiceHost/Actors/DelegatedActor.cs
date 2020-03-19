@@ -291,10 +291,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
 
         private class CustomNamingScope : NamingScope, INamingScope
         {
-            public static volatile string? SuggestedName;
-            public static volatile string? CurrentName;
+            public static volatile string SuggestedName;
+            public static volatile string CurrentName;
 
-            string? INamingScope.GetUniqueName(string suggestedName)
+            string INamingScope.GetUniqueName(string suggestedName)
             {
                 if (suggestedName == SuggestedName)
                 {
@@ -318,7 +318,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
             Action<IServiceCollection> configureServices,
             Action<ContainerBuilder> configureContainer,
             Func<ActorService, ActorId, ILifetimeScope, Action<ContainerBuilder>, ActorBase> actorFactory,
-            ActorServiceSettings? settings = null) : base(
+            ActorServiceSettings settings = null) : base(
             context,
             actorTypeInfo,
             ActorFactory,
@@ -331,7 +331,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
             _actorFactory = actorFactory;
         }
 
-        protected ILifetimeScope? Container { get; private set; }
+        protected ILifetimeScope Container { get; private set; }
 
         protected override async Task OnOpenAsync(ReplicaOpenMode openMode, CancellationToken cancellationToken)
         {

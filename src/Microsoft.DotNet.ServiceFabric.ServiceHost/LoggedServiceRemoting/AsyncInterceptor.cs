@@ -49,15 +49,15 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                         return (Task) invocation.ReturnValue;
                     });
             }
-            else if (IsTaskOfT(retType, out Type? t))
+            else if (IsTaskOfT(retType, out Type t))
             {
-                invocation.ReturnValue = s_interceptAsyncMethod.MakeGenericMethod(t!)
+                invocation.ReturnValue = s_interceptAsyncMethod.MakeGenericMethod(t)
                     .Invoke(
                         this,
                         new[]
                         {
                             invocation,
-                            s_makeCallAsyncMethodMethod.MakeGenericMethod(t!).Invoke(this, new object[] {invocation})
+                            s_makeCallAsyncMethodMethod.MakeGenericMethod(t).Invoke(this, new object[] {invocation})
                         });
             }
             else
@@ -74,7 +74,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             }
         }
 
-        private static bool IsTaskOfT(Type type, out Type? t)
+        private static bool IsTaskOfT(Type type, out Type t)
         {
             if (type.IsConstructedGenericType)
             {

@@ -20,7 +20,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
     {
         private static string GetApplicationInsightsKey()
         {
-            string? envVar = Environment.GetEnvironmentVariable("APPLICATION_INSIGHTS_KEY");
+            string envVar = Environment.GetEnvironmentVariable("APPLICATION_INSIGHTS_KEY");
             if (string.IsNullOrEmpty(envVar))
             {
                 // ReSharper disable once ImpureMethodCallOnReadonlyValueField

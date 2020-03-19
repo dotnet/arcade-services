@@ -39,7 +39,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             var impl = (IService) gen.CreateInterfaceProxyWithTargetInterface(
                 firstIface,
                 additionalIfaces,
-                (object?) null,
+                (object) null,
                 new InvokeInNewScopeInterceptor(container, typeof(TImplementation)),
                 new LoggingServiceInterceptor(context, client));
 
@@ -94,7 +94,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             Uri serviceUri,
             TelemetryClient telemetryClient,
             ServiceContext context,
-            ServicePartitionKey? partitionKey = null,
+            ServicePartitionKey partitionKey = null,
             TargetReplicaSelector targetReplicaSelector = TargetReplicaSelector.Default) where T : class, IService
         {
             T service = CreateFactory().CreateServiceProxy<T>(serviceUri, partitionKey, targetReplicaSelector);

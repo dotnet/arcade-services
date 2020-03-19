@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
     {
         private readonly Action<ContainerBuilder> _configureContainer;
         private readonly Action<IServiceCollection> _configureServices;
-        private ILifetimeScope? _container;
+        private ILifetimeScope _container;
 
         public DelegatedStatefulService(
             StatefulServiceContext context,

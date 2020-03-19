@@ -135,7 +135,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         private async Task RunAsync(CancellationToken cancellationToken)
         {
-            IScheduler? scheduler = null;
+            IScheduler scheduler = null;
             var name = Guid.NewGuid().ToString();
             try
             {

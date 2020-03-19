@@ -227,7 +227,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 builder => { builder.RegisterType<TActor>().As<TActor>().InstancePerDependency(); });
         }
 
-        public ServiceHost RegisterStatelessWebService<TStartup>(string serviceTypeName, Action<IWebHostBuilder>? configureWebHost = null) where TStartup : class
+        public ServiceHost RegisterStatelessWebService<TStartup>(string serviceTypeName, Action<IWebHostBuilder> configureWebHost = null) where TStartup : class
         {
             RegisterStatelessService(
                 serviceTypeName,
