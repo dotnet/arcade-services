@@ -25,7 +25,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         public ActivityServiceRemotingMessageDispatcher(
             ServiceContext serviceContext,
             IService serviceImplementation,
-            IServiceRemotingMessageBodyFactory serviceRemotingMessageBodyFactory) : base(
+            IServiceRemotingMessageBodyFactory? serviceRemotingMessageBodyFactory) : base(
             serviceContext,
             serviceImplementation,
             serviceRemotingMessageBodyFactory)
@@ -40,7 +40,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             if (headers.TryGetHeaderValue(ActivityServiceRemoting.OperationIdHeaderName, out byte[] operationIdBytes))
             {
                 string operationId = Encoding.UTF8.GetString(operationIdBytes);
-                Activity activity = null;
+                Activity? activity = null;
                 try
                 {
                     activity = new Activity("Microsoft.ServiceFabric.Remoting.RPCInvoke");

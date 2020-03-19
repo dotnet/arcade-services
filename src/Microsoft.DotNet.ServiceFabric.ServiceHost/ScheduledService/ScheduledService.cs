@@ -112,11 +112,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                         Task result;
                         if (parameters.Length == 1 && parameters[0].ParameterType == typeof(CancellationToken))
                         {
-                            result = (Task) method.Invoke(impl, new object[] {cancellationToken});
+                            result = (Task) method.Invoke(impl, new object[] {cancellationToken})!;
                         }
                         else
                         {
-                            result = (Task) method.Invoke(impl, Array.Empty<object>());
+                            result = (Task) method.Invoke(impl, Array.Empty<object>())!;
                         }
 
                         await result;
@@ -135,8 +135,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         private async Task RunAsync(CancellationToken cancellationToken)
         {
-            IScheduler scheduler = null;
-            string name = Guid.NewGuid().ToString();
+            IScheduler? scheduler = null;
+            var name = Guid.NewGuid().ToString();
             try
             {
                 DirectSchedulerFactory.Instance.CreateScheduler(name, name, new DefaultThreadPool(), new RAMJobStore());

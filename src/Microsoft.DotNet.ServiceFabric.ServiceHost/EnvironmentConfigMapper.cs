@@ -17,20 +17,20 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             _env = Environment.GetEnvironmentVariable("ENVIRONMENT_NAME") ?? "Local";
         }
 
-        public IServiceConfigSection this[string name] => new Section(_config[name], _config[$"{name}-{_env}"]);
+        public IServiceConfigSection? this[string name] => new Section(_config[name], _config[$"{name}-{_env}"]);
 
         public class Section : IServiceConfigSection
         {
-            private readonly IServiceConfigSection _baseSection;
-            private readonly IServiceConfigSection _specificSection;
+            private readonly IServiceConfigSection? _baseSection;
+            private readonly IServiceConfigSection? _specificSection;
 
-            public Section(IServiceConfigSection baseSection, IServiceConfigSection specificSection)
+            public Section(IServiceConfigSection? baseSection, IServiceConfigSection? specificSection)
             {
                 _baseSection = baseSection;
                 _specificSection = specificSection;
             }
 
-            public string this[string name] => _specificSection?[name] ?? _baseSection?[name];
+            public string this[string name] => _specificSection?[name] ?? _baseSection?[name] ?? "";
         }
     }
 }

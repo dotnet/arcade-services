@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             _configPackage = configPackage;
         }
 
-        public IServiceConfigSection this[string name] =>
+        public IServiceConfigSection? this[string name] =>
             _configPackage.Settings.Sections.Contains(name)
                 ? new ServiceFabricServiceConfigSection(_configPackage.Settings.Sections[name])
                 : null;

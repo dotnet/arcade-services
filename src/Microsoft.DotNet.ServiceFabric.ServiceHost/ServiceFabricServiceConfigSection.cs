@@ -15,7 +15,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             _section = section;
         }
 
-        public string this[string name]
+        public string? this[string name]
         {
             get
             {

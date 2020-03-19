@@ -11,10 +11,7 @@ using System.Threading.Tasks;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Castle.DynamicProxy.Internal;
-using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.ServiceFabric.Data;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Remoting;
 using Microsoft.ServiceFabric.Services.Runtime;
@@ -26,7 +23,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
     {
         private readonly Action<ContainerBuilder> _configureContainer;
         private readonly Action<IServiceCollection> _configureServices;
-        private ILifetimeScope _container;
+        private ILifetimeScope? _container;
 
         public DelegatedStatefulService(
             StatefulServiceContext context,
@@ -70,10 +67,15 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         protected override IEnumerable<ServiceReplicaListener> CreateServiceReplicaListeners()
         {
-            Type[] ifaces = typeof(TServiceImplementation).GetAllInterfaces()
+            if (_container == null)
+            {
+                throw new InvalidOperationException("CreateServiceReplicaListeners called before OnOpenAsync");
+            }
+
+            Type[] interfaces = typeof(TServiceImplementation).GetAllInterfaces()
                 .Where(iface => iface.IsAssignableTo<IService>())
                 .ToArray();
-            if (ifaces.Length == 0)
+            if (interfaces.Length == 0)
             {
                 return Enumerable.Empty<ServiceReplicaListener>();
             }
@@ -83,7 +85,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 new ServiceReplicaListener(
                     context => ServiceHostRemoting.CreateServiceRemotingListener<TServiceImplementation>(
                         context,
-                        ifaces,
+                        interfaces,
                         _container))
             };
         }
@@ -96,26 +98,33 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         private async Task RunAsyncLoop(CancellationToken cancellationToken)
         {
+            if (_container == null)
+            {
+                throw new InvalidOperationException("RunAsync called before OnOpenAsync");
+            }
             while (!cancellationToken.IsCancellationRequested)
             {
-                using (ILifetimeScope scope = _container.BeginLifetimeScope())
+                using ILifetimeScope scope = _container.BeginLifetimeScope();
+
+                TServiceImplementation impl = scope.Resolve<TServiceImplementation>();
+
+                TimeSpan shouldWaitFor = await impl.RunAsync(cancellationToken);
+
+                if (shouldWaitFor.Equals(TimeSpan.MaxValue))
                 {
-                    var impl = scope.Resolve<TServiceImplementation>();
-
-                    var shouldWaitFor = await impl.RunAsync(cancellationToken);
-
-                    if (shouldWaitFor.Equals(TimeSpan.MaxValue))
-                    {
-                        return;
-                    }
-
-                    await Task.Delay(shouldWaitFor, cancellationToken);
+                    return;
                 }
+
+                await Task.Delay(shouldWaitFor, cancellationToken);
             }
         }
 
         private async Task RunSchedule(CancellationToken cancellationToken)
         {
+            if (_container == null)
+            {
+                throw new InvalidOperationException("RunAsync called before OnOpenAsync");
+            }
             await ScheduledService<TServiceImplementation>.RunScheduleAsync(_container, cancellationToken);
         }
      }
