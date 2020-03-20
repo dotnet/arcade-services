@@ -28,7 +28,7 @@
 
   <ItemGroup>
     <PackageReference Include="LibGit2Sharp" Version="$(LibGit2SharpVersion)" />
-    <PackageReference Include="Microsoft.ServiceFabric.Actors" Version="3.3.664" />
+    <PackageReference Include="Microsoft.ServiceFabric.Actors" Version="3.4.677" />
   </ItemGroup>
 
   <ItemGroup>
