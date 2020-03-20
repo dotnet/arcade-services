@@ -1557,12 +1557,12 @@ namespace Microsoft.DotNet.Darc.Operations
             // Use a temporary in progress file name so we don't end up with corrupted
             // half downloaded files. Use the first location as the
             string temporaryFileName = $"{targetFiles.First()}.inProgress";
-            await DeleteFileWithRetryAsync(temporaryFileName);
-
             HttpRequestMessage requestMessage = null;
 
             try
             {
+                await DeleteFileWithRetryAsync(temporaryFileName).ConfigureAwait(false);
+
                 foreach (string targetFile in targetFiles)
                 {
                     string directory = Path.GetDirectoryName(targetFile);
@@ -1610,7 +1610,6 @@ namespace Microsoft.DotNet.Darc.Operations
                     // Rename file to the target file name.
                     File.Copy(temporaryFileName, targetFile);
                 }
-                await DeleteFileWithRetryAsync(temporaryFileName);
 
                 return true;
             }
@@ -1635,7 +1634,14 @@ namespace Microsoft.DotNet.Darc.Operations
             }
             finally
             {
-                await DeleteFileWithRetryAsync(temporaryFileName);
+                try
+                {
+                    await DeleteFileWithRetryAsync(temporaryFileName).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    errors.Add($"Failed to delete {temporaryFileName}: {e.Message}");
+                }
 
                 if (requestMessage != null)
                 {
