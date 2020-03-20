@@ -6,6 +6,7 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using Newtonsoft.Json;
@@ -1495,27 +1496,23 @@ namespace Microsoft.DotNet.Darc.Operations
             // Check all existing locations for the target file. If one exists, copy to the others.
             if (_options.SkipExisting)
             {
-                string existingFile = null;
-                foreach (string targetFile in targetFilePaths)
+                string existingFile = targetFilePaths.FirstOrDefault(targetFile => File.Exists(targetFile));
+                if (!string.IsNullOrEmpty(existingFile))
                 {
-                    try
+                    foreach (string targetFile in targetFilePaths)
                     {
-                        if (File.Exists(targetFile))
+                        try
                         {
-                            existingFile = targetFile;
+                            if (!File.Exists(targetFile))
+                            {
+                                File.Copy(existingFile, targetFile);
+                            }
                         }
-                        else if (existingFile != null)
+                        catch (IOException e)
                         {
-                            File.Copy(existingFile, targetFile);
+                            errors.Add($"Failed to check/copy for existing {targetFile}: {e.Message}");
                         }
                     }
-                    catch (IOException e)
-                    {
-                        errors.Add($"Failed to check/copy for existing {targetFile}: {e.Message}");
-                    }
-                }
-                if (existingFile != null)
-                {
                     return true;
                 }
             }
@@ -1560,15 +1557,12 @@ namespace Microsoft.DotNet.Darc.Operations
             // Use a temporary in progress file name so we don't end up with corrupted
             // half downloaded files. Use the first location as the
             string temporaryFileName = $"{targetFiles.First()}.inProgress";
-            if (File.Exists(temporaryFileName))
-            {
-                File.Delete(temporaryFileName);
-            }
-
             HttpRequestMessage requestMessage = null;
 
             try
             {
+                await DeleteFileWithRetryAsync(temporaryFileName).ConfigureAwait(false);
+
                 foreach (string targetFile in targetFiles)
                 {
                     string directory = Path.GetDirectoryName(targetFile);
@@ -1616,7 +1610,6 @@ namespace Microsoft.DotNet.Darc.Operations
                     // Rename file to the target file name.
                     File.Copy(temporaryFileName, targetFile);
                 }
-                File.Delete(temporaryFileName);
 
                 return true;
             }
@@ -1641,9 +1634,13 @@ namespace Microsoft.DotNet.Darc.Operations
             }
             finally
             {
-                if (File.Exists(temporaryFileName))
+                try
                 {
-                    File.Delete(temporaryFileName);
+                    await DeleteFileWithRetryAsync(temporaryFileName).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    errors.Add($"Failed to delete {temporaryFileName}: {e.Message}");
                 }
 
                 if (requestMessage != null)
@@ -1652,6 +1649,25 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
             }
             return false;
+        }
+
+        /// <summary>
+        /// Delete a file with retry. Sometimes when gathering a drop directly to a share
+        /// we can get occasional deletion failures. All of them seen so far are UnauthorizedAccessExceptions
+        /// </summary>
+        /// <param name="filePath">Full path to the file to delete.</param>
+        private static async Task DeleteFileWithRetryAsync(string filePath)
+        {
+            await ExponentialRetry.RetryAsync(
+                () =>
+                {
+                    if (File.Exists(filePath))
+                    {
+                        File.Delete(filePath);
+                    }
+                },
+                ex => Console.WriteLine($"Failed to delete {filePath}: {ex.Message}"),
+                ex => ex is UnauthorizedAccessException);
         }
     }
 }
