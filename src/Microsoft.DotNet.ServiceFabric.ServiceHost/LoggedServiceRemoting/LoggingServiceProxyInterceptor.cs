@@ -49,7 +49,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     op.Telemetry.Success = false;
                     if (ex is AggregateException ae && ae.InnerExceptions.Count == 1)
                     {
-                        ex = ae.InnerException;
+                        ex = ae.InnerExceptions[0];
                     }
 
                     TelemetryClient.TrackException(ex);

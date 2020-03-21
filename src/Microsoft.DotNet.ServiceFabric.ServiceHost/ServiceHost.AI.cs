@@ -112,9 +112,9 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         private static void ConfigureApplicationInsightsOptions(ApplicationInsightsServiceOptions options)
         {
-            options.ApplicationVersion = Assembly.GetEntryAssembly()
-                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                .InformationalVersion;
+            options.ApplicationVersion = Assembly.GetEntryAssembly()?
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion ?? "42.42.42.42";
             options.InstrumentationKey = GetApplicationInsightsKey();
             options.EnableQuickPulseMetricStream = false;
             options.EnableAdaptiveSampling = false;
