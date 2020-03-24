@@ -269,8 +269,7 @@ namespace Microsoft.DotNet.Darc
             {
                 branch = GitHelpers.NormalizeBranchName(branch);
 
-                var dependencies = await remote.GetDependenciesAsync(repo, branch);
-
+                await remote.GetDependenciesAsync(repo, branch);
             }
             catch (DependencyFileNotFoundException)
             {

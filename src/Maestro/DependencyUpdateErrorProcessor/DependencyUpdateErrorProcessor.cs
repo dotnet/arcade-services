@@ -35,28 +35,33 @@ namespace DependencyUpdateErrorProcessor
             _stateManager = stateManager;
             _context = context;
             _options = options.Value;
-            Logger = logger;
+            _logger = logger;
         }
 
         private readonly IReliableStateManager _stateManager;
 
         private readonly DependencyUpdateErrorProcessorOptions _options;
 
-        private ILogger<DependencyUpdateErrorProcessor> Logger { get; }
+        private readonly ILogger<DependencyUpdateErrorProcessor> _logger;
 
         private readonly BuildAssetRegistryContext _context;
 
-        /// captures [marker]: <> (subscriptionId: 'a9f0536e-15cc-4d1f-79a4-08d79acf8bba', method: 'UpdateAssetsAsync', errorMessage: 'testing one')
-        /// from the issue or comment body.
-        private static readonly Regex CommentMarker = new Regex(@"\[marker\]: <> \(subscriptionId: '(?<subscriptionId>[^,]*)', method: '(?<method>[^,]*)'(?:, errorMessage: '(?<errorMessage>[^,]*)')?\)");
+        // captures [marker]: <> (subscriptionId: 'a9f0536e-15cc-4d1f-79a4-08d79acf8bba', method: 'UpdateAssetsAsync', errorMessage: 'testing one')
+        // from the issue or comment body.
+        private static readonly Regex CommentMarker = 
+            new Regex(@"\[marker\]: <> \(subscriptionId: '(?<subscriptionId>[^,]*)', method: '(?<method>[^,]*)'(?:, errorMessage: '(?<errorMessage>[^,]*)')?\)");
 
+        // Parses the github url and gives back the repo owner and repoId.
+        // github url -> https://github.com/maestro-auth-test/maestro-test2  repo ->maestro-test2 owner -> maestro-auth-test2 
+        private static readonly Regex RepositoryUriPattern = new Regex(@"^/(?<owner>[^/]+)/(?<repo>[^/]+)/?$");
+        
         [CronSchedule("0 0 0/1 1/1 * ? *", TimeZones.PST)]
         public async Task ProcessDependencyUpdateErrorsAsync()
         {
             
             if (_options.ConfigurationRefresherEndPointUri == null && _options.DynamicConfigs == null)
             {
-                Logger.LogInformation("Dependency Update Error processor is disabled because no App Configuration was available.");
+                _logger.LogInformation("Dependency Update Error processor is disabled because no App Configuration was available.");
                 return;
             }
             await _options.ConfigurationRefresherEndPointUri.Refresh();
@@ -79,19 +84,23 @@ namespace DependencyUpdateErrorProcessor
                     }
                     await CheckForErrorsInRepositoryBranchHistoryTableAsync(checkpoint, _options.GithubUrl, checkpointEvaluator);
                 }
-                catch (Exception exe)
+                catch (TimeoutException exe)
                 {
-                    Logger.LogError(exe, "Failed to create github issue.");
+                    _logger.LogError(exe, "Unable to connect to reliable services.");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Unable to create a github issue.");
                 }
             }
         }
 
         /// <summary>
-        /// Looks for error in the Repository history table and process one record at a time.
+        /// Looks for error in the Repository history table and process one record at a time. Which is later processed and creates an issue/ updates existing issue.
         /// </summary>
-        /// <param name="checkPoint"></param>
-        /// <param name="issueRepo"></param>
-        /// <param name="checkpointEvaluator"></param>
+        /// <param name="checkPoint">The last record processed datetime.</param>
+        /// <param name="issueRepo">Repository where the gitHub issue has to be created.</param>
+        /// <param name="checkpointEvaluator">Reliable dictionary that holds the time the last record was processed.</param>
         /// <returns></returns>
         private async Task CheckForErrorsInRepositoryBranchHistoryTableAsync(DateTimeOffset checkPoint, string issueRepo,
             IReliableDictionary<string, DateTimeOffset> checkpointEvaluator)
@@ -103,7 +112,7 @@ namespace DependencyUpdateErrorProcessor
                 .OrderBy(entry => entry.Timestamp).ToList();
             if (!unprocessedHistoryEntries.Any())
             {
-                Logger.LogInformation($"No errors found in the RepositoryBranchUpdateHistory table. The last checkpoint time was : '{checkPoint}'");
+                _logger.LogInformation($"No errors found in the RepositoryBranchUpdateHistory table. The last checkpoint time was : '{checkPoint}'");
                 return;
             }
             foreach (var error in unprocessedHistoryEntries)
@@ -123,11 +132,11 @@ namespace DependencyUpdateErrorProcessor
                 }
                 catch (TimeoutException exe)
                 {
-                    Logger.LogError(exe, $"Unable to update the last processed error timestamp : '{error.Timestamp}");
+                    _logger.LogError(exe, $"Unable to update the last processed error timestamp : '{error.Timestamp}");
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, $"Unable to create a github issue for error message : '{error.ErrorMessage}' for the repository : '{error.Repository}'");
+                    _logger.LogError(ex, $"Unable to create a github issue for error message : '{error.ErrorMessage}' for the repository : '{error.Repository}' and branch : '{error.Branch}'");
                 }
             }
         }
@@ -135,14 +144,14 @@ namespace DependencyUpdateErrorProcessor
         /// <summary>
         /// Github authentication.
         /// </summary>
-        /// <param name="issueRepo"></param>
-        /// <returns></returns>
+        /// <param name="issueRepo">Repository where gitHub issue is created.</param>
+        /// <returns>Authenticated GithubClient</returns>
         private async Task<GitHubClient> AuthenticateGitHubClient(string issueRepo)
         {
             IGitHubTokenProvider gitHubTokenProvider = _context.GetService<IGitHubTokenProvider>();
             long installationId = await _context.GetInstallationId(issueRepo);
             string gitHubToken = await gitHubTokenProvider.GetTokenForInstallationAsync(installationId);
-            Logger.LogInformation($"GitHub token acquired for '{issueRepo}'");
+            _logger.LogInformation($"GitHub token acquired for '{issueRepo}'");
             string version = Assembly.GetExecutingAssembly()
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                 .InformationalVersion;
@@ -156,19 +165,20 @@ namespace DependencyUpdateErrorProcessor
         /// <summary>
         /// Creates/updates the github issue.
         /// </summary>
-        /// <param name="updateHistoryError"></param>
-        /// <param name="issueRepo"></param>
-        /// <param name="replaceDescription"></param>
-        /// <param name="description"></param>
+        /// <param name="updateHistoryError">Error info for which github issue has to be created</param>
+        /// <param name="issueRepo">Repository where the github issue is created</param>
+        /// <param name="shouldReplaceDescription">Func that carries info the description has to be replaced </param>
+        /// <param name="description">Description for the issue body / comment body</param>
         /// <returns></returns>
         private async Task CreateOrUpdateGithubIssueAsync(RepositoryBranchUpdateHistoryEntry updateHistoryError, 
-            string issueRepo, Func<string, string, bool> replaceDescription, string description)
+            string issueRepo, Func<string, string, bool> shouldReplaceDescription, string description)
         {
-            Logger.LogInformation($"Error Message : '{updateHistoryError.ErrorMessage}' in repository :  '{updateHistoryError.Repository}'");
+            _logger.LogInformation($"Error Message : '{updateHistoryError.ErrorMessage}' in repository :  '{updateHistoryError.Repository}'");
             IReliableDictionary<(string repository, string branch),int> gitHubIssueEvaluator =
                 await _stateManager.GetOrAddAsync<IReliableDictionary<(string repository, string branch), int>>("gitHubIssueEvaluator");
             GitHubClient client = await AuthenticateGitHubClient(issueRepo);
-            Octokit.Repository repo = await client.Repository.Get(_options.Owner, _options.Repository);
+            var parseRepoUri = ParseRepoUri(issueRepo);
+            Octokit.Repository repo = await client.Repository.Get(parseRepoUri.owner, parseRepoUri.repo);
             var issueNumber = new ConditionalValue<int>();
             using (ITransaction tx = _stateManager.CreateTransaction())
             {
@@ -176,50 +186,55 @@ namespace DependencyUpdateErrorProcessor
                     (updateHistoryError.Repository, updateHistoryError.Branch));
                 await tx.CommitAsync();
             }
+
             if (issueNumber.HasValue)
             {
-                var issue = await client.Issue.Get(repo.Id, issueNumber.Value);
+                Issue issue = await client.Issue.Get(repo.Id, issueNumber.Value);
                 // check if the issue is open only then update it else create a new issue and update the dictionary.
                 if (issue.State.Equals("Open"))
                 {
-                    Logger.LogInformation(
+                    _logger.LogInformation(
                         $@"Updating a gitHub issue number : '{issueNumber}' for the error : '{updateHistoryError.ErrorMessage}'
                          for the repository : '{updateHistoryError.Repository}'");
-                    await UpdateIssueAsync(client, updateHistoryError, replaceDescription,
+                    await UpdateIssueAsync(client, updateHistoryError, shouldReplaceDescription,
                         description, issue, repo.Id);
-                }
-                else
-                {
-                    // create a new issue for the existing repo-branch combo as the existing issue is closed.
-                    Logger.LogInformation(
-                        $@"Older issue {issue.Number} is closed so creating a new gitHub issue. 
-                        Creating a new gitHub issue for dependency Update Error, for the error message  '{updateHistoryError.ErrorMessage}'
-                        for the repository : '{updateHistoryError.Repository}'");
-                    await CreateIssueAsync(client, updateHistoryError, gitHubIssueEvaluator, description, repo.Id,
-                        issueRepo);
+                    return;
                 }
             }
-            else
-            {
-                // Create a new issue for the error
-                Logger.LogInformation(
+            // Create a new issue for the error if the issue is already closed or the issue does not exists.
+                _logger.LogInformation(
                     $@"Creating a new gitHub issue for dependency Update Error, 
                     for the error message  '{updateHistoryError.ErrorMessage}'
                     for the repository : '{updateHistoryError.Repository}'");
                 await CreateIssueAsync(client, updateHistoryError, gitHubIssueEvaluator, description, repo.Id,
                     issueRepo);
+        }
+
+        /// <summary>
+        ///     Parse out the owner and repo from a repository url
+        /// </summary>
+        /// <param name="uri">Github repository URL</param>
+        /// <returns>Tuple of owner and repo</returns>
+        public static (string owner, string repo) ParseRepoUri(string uri)
+        {
+            var u = new UriBuilder(uri);
+            Match match = RepositoryUriPattern.Match(u.Path);
+            if (!match.Success)
+            {
+                return default;
             }
+            return (match.Groups["owner"].Value, match.Groups["repo"].Value);
         }
 
         /// <summary>
         /// Creates a new github issue.
         /// </summary>
-        /// <param name="client"></param>
-        /// <param name="updateHistoryError"></param>
-        /// <param name="gitHubIssueEvaluator"></param>
-        /// <param name="description"></param>
-        /// <param name="repoId"></param>
-        /// <param name="issueRepo"></param>
+        /// <param name="client">Github client</param>
+        /// <param name="updateHistoryError">Error info for which github issue has to be created</param>
+        /// <param name="gitHubIssueEvaluator">Reliable service that holds the (key - repo-branch) and (value issueNumber)</param>
+        /// <param name="description">Description for the issue body or comment body</param>
+        /// <param name="repoId">Repository Id</param>
+        /// <param name="issueRepo">Repository where issue has to be created.</param>
         /// <returns></returns>
         private async Task CreateIssueAsync(GitHubClient client, RepositoryBranchUpdateHistoryEntry updateHistoryError,
             IReliableDictionary<(string repository, string branch),int> gitHubIssueEvaluator, string description, long repoId, string issueRepo)
@@ -235,8 +250,8 @@ namespace DependencyUpdateErrorProcessor
                 newIssue.Body = $@"{bodyTitle} {description}
                     **/FyiHandle :** {_options.FyiHandle}";
                 newIssue.Labels.Add(labelName);
-                var issue = await client.Issue.Create(repoId, newIssue);
-                Logger.LogInformation($"Issue Number '{issue.Number}' was created in '{issueRepo}'");
+                Issue issue = await client.Issue.Create(repoId, newIssue);
+                _logger.LogInformation($"Issue Number '{issue.Number}' was created in '{issueRepo}'");
                 // add or update the newly generated issue number in the reliable dictionary.
                 using (ITransaction tx = _stateManager.CreateTransaction())
                 {
@@ -252,12 +267,12 @@ namespace DependencyUpdateErrorProcessor
         /// <summary>
         /// Updates the issue body / comment body or creates a new comment for existing issue.
         /// </summary>
-        /// <param name="client"></param>
-        /// <param name="updateHistoryError"></param>
-        /// <param name="shouldReplaceDescription"></param>
-        /// <param name="description"></param>
-        /// <param name="issue"></param>
-        /// <param name="repoId"></param>
+        /// <param name="client">Github client</param>
+        /// <param name="updateHistoryError">Error info for which github issue has to be created</param>
+        /// <param name="shouldReplaceDescription">Func that carries info if the description in the issue has to be replaced or not.</param>
+        /// <param name="description">Description for the issue body or comment body</param>
+        /// <param name="issue">Already existing issue that has to be updated</param>
+        /// <param name="repoId">Repository Id of the repo where the issue has to be updated.</param>
         /// <returns></returns>
         private async Task UpdateIssueAsync(GitHubClient client, RepositoryBranchUpdateHistoryEntry updateHistoryError,
             Func<string, string, bool> shouldReplaceDescription, string description, Issue issue , long repoId)
@@ -272,7 +287,7 @@ namespace DependencyUpdateErrorProcessor
                      {Environment.NewLine}";
                 issueUpdate.Body = $@"{bodyTitle}  {description}
                     **/FyiHandle :** {_options.FyiHandle}";
-                Logger.LogInformation($"Updating issue body for the issue :  '{issue.Number}'");
+                _logger.LogInformation($"Updating issue body for the issue :  '{issue.Number}'");
                 await client.Issue.Update(repoId, issue.Number, issueUpdate);
                 return;
             }
@@ -283,7 +298,7 @@ namespace DependencyUpdateErrorProcessor
                 if (shouldReplaceDescription(updateHistoryError.Arguments, comment.Body))
                 {
                     // Issue's comment body will be updated
-                    Logger.LogInformation($"Updating comment body for the issue : '{issue.Number}'");
+                    _logger.LogInformation($"Updating comment body for the issue : '{issue.Number}'");
                     await client.Issue.Comment.Update(repoId, comment.Id, description);
                     return;
                 }
@@ -291,7 +306,7 @@ namespace DependencyUpdateErrorProcessor
             // New error for the same repo-branch combination, so adding a new comment to it. 
             if (!string.IsNullOrEmpty(description))
             {
-                Logger.LogInformation($"Creating a new comment for the issue : '{issue.Number}'");
+                _logger.LogInformation($"Creating a new comment for the issue : '{issue.Number}'");
                 await client.Issue.Comment.Create(repoId, issue.Number, description);
             }
         }
@@ -299,8 +314,8 @@ namespace DependencyUpdateErrorProcessor
         /// <summary>
         /// Builds description and creates a func to check if the existing description has to be replaced or not.
         /// </summary>
-        /// <param name="updateHistoryError"></param>
-        /// <param name="issueRepo"></param>
+        /// <param name="updateHistoryError">Error info for which github issue has to be created</param>
+        /// <param name="issueRepo">Repository where issue has to be created.</param>
         /// <returns></returns>
         private async Task IssueDescriptionEvaluator(RepositoryBranchUpdateHistoryEntry updateHistoryError, string issueRepo)
         {
@@ -332,14 +347,14 @@ namespace DependencyUpdateErrorProcessor
                     }
                     else
                     {
-                        Logger.LogInformation(
+                        _logger.LogInformation(
                             "The subscriptionId is not valid so skipping UpdateAssetsAsync method.");
                         shouldReplaceDescription = (argument, issueBody) => false;
                     }
                     break;
 
                 case "SynchronizePullRequestAsync":
-                    Logger.LogInformation("Skipping SynchronizePullRequestAsync method. Issue creation is not necessary for this method");
+                    _logger.LogInformation("Skipping SynchronizePullRequestAsync method. Issue creation is not necessary for this method");
                     shouldReplaceDescription = (argument, issueBody) => false;
                     break;
 
@@ -392,8 +407,8 @@ namespace DependencyUpdateErrorProcessor
         /// from the body of the issue/ comment. subscriptionId, errorMessage and method is extracted. 
         /// </example>
         /// </summary>
-        /// <param name="body"></param>
-        /// <returns></returns>
+        /// <param name="body">Issue body / comment body</param>
+        /// <returns>Tuple of subscriptionId, errorMessage and method</returns>
         private static (string subscriptionId, string errorMessage, string method) ParseIssueCommentBody(string body)
         {
             var match = CommentMarker.Match(body);
@@ -406,8 +421,8 @@ namespace DependencyUpdateErrorProcessor
         /// <summary>
         /// Parses arguments from UpdateAssetsAsync method and creates issue/ comment description.
         /// </summary>
-        /// <param name="updateHistoryError"></param>
-        /// <returns></returns>
+        /// <param name="updateHistoryError">Error info for which github issue has to be created</param>
+        /// <returns>Description for the issue body/ comment body for UpdateAssetsAsyncMethod</returns>
         private string ParseUpdateAssetsMethod(RepositoryBranchUpdateHistoryEntry updateHistoryError)
         {
             var description = "";
@@ -420,7 +435,7 @@ namespace DependencyUpdateErrorProcessor
             // Subscription might be removed, so if the subscription does not exist then the error is no longer valid. So we can skip this error.
             if (subscription == null)
             {
-                Logger.LogInformation("SubscriptionId:" + subscriptionId + " has been deleted for the repository : ");
+                _logger.LogInformation("SubscriptionId:" + subscriptionId + " has been deleted for the repository : ");
                 return string.Empty;
             }
             description =
@@ -447,7 +462,7 @@ namespace DependencyUpdateErrorProcessor
         /// Gets the SubscriptionIdGuid from subscriptionId
         /// </summary>
         /// <param name="subscriptionId"></param>
-        /// <returns></returns>
+        /// <returns>SubscriptionId Guid</returns>
         private static Guid GetSubscriptionGuid(string subscriptionId)
         {
             if (!Guid.TryParse(subscriptionId, out var subscriptionGuid))

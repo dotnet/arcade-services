@@ -39,17 +39,6 @@ namespace DependencyUpdateErrorProcessor
                                     var config = provider.GetRequiredService<IConfiguration>();
                                     options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
                                 });
-                            services.AddAzureDevOpsTokenProvider();
-                            services.Configure<AzureDevOpsTokenProviderOptions>(
-                                (options, provider) =>
-                                {
-                                    var config = provider.GetRequiredService<IConfiguration>();
-                                    var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
-                                    foreach (IConfigurationSection token in tokenMap)
-                                    {
-                                        options.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
-                                    }
-                                });
                             services.AddGitHubTokenProvider();
                             services.Configure<GitHubClientOptions>(o =>
                             {
@@ -88,8 +77,6 @@ namespace DependencyUpdateErrorProcessor
                                 });
                                 options.DynamicConfigs = builder.Build();
                                 options.GithubUrl = config["GithubUrl"];
-                                options.Owner = config["Owner"];
-                                options.Repository = config["Repository"];
                                 options.FyiHandle = config["FyiHandle"];
                             });
                         });

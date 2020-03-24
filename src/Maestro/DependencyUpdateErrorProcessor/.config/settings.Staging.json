@@ -2,7 +2,5 @@
   "KeyVaultUri": "https://maestroint.vault.azure.net/",
   "AppConfigurationUri": "https://maestroint.azconfig.io/",
   "GithubUrl": "https://github.com/maestro-auth-test/maestro-test2",
-  "Owner": "dotnet",
-  "Repository": "core-eng",
   "FyiHandle": "@epananth"
 }
