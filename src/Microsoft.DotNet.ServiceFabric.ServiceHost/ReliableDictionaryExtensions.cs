@@ -10,7 +10,7 @@ using JetBrains.Annotations;
 using Microsoft.ServiceFabric.Data;
 using Microsoft.ServiceFabric.Data.Collections;
 
-namespace Microsoft.Helix.ServiceHost
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
     public static class ReliableDictionaryExtensions
     {
@@ -25,7 +25,7 @@ namespace Microsoft.Helix.ServiceHost
                 return maybeValue.Value;
             }
 
-            return default;
+            return default!;
         }
 
         public static async Task ForEachAsync<TKey, TValue>(
@@ -61,8 +61,8 @@ namespace Microsoft.Helix.ServiceHost
         {
             var result = new List<KeyValuePair<TKey, TValue>>((int) await dict.GetCountAsync(tx));
 
-            IAsyncEnumerable<KeyValuePair<TKey, TValue>> enumerable = await dict.CreateEnumerableAsync(tx);
-            using (IAsyncEnumerator<KeyValuePair<TKey, TValue>> enumerator = enumerable.GetAsyncEnumerator())
+            Microsoft.ServiceFabric.Data.IAsyncEnumerable<KeyValuePair<TKey, TValue>> enumerable = await dict.CreateEnumerableAsync(tx);
+            using (Microsoft.ServiceFabric.Data.IAsyncEnumerator<KeyValuePair<TKey, TValue>> enumerator = enumerable.GetAsyncEnumerator())
             {
                 while (await enumerator.MoveNextAsync(CancellationToken.None))
                 {

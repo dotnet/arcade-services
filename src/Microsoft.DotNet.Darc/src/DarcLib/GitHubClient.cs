@@ -178,10 +178,28 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
+        /// <summary>
+        /// Deletes a branch in a repository
+        /// </summary>
+        /// <param name="repoUri">Repository URL</param>
+        /// <param name="branch">Branch to delete</param>
+        /// <returns>Async Task</returns>
         public async Task DeleteBranchAsync(string repoUri, string branch)
         {
             (string owner, string repo) = ParseRepoUri(repoUri);
 
+            await DeleteBranchAsync(owner, repo, branch);
+        }
+
+        /// <summary>
+        /// Deletes a branch in a repository
+        /// </summary>
+        /// <param name="owner">Repository owner</param>
+        /// <param name="repo">Repository name</param>
+        /// <param name="branch">Branch to delete</param>
+        /// <returns></returns>
+        private async Task DeleteBranchAsync(string owner, string repo, string branch)
+        {
             await Client.Git.Reference.Delete(owner, repo, $"heads/{branch}");
         }
 
@@ -982,6 +1000,18 @@ namespace Microsoft.DotNet.DarcLib
             catch (Exception) { }
 
             return false;
+        }
+
+        /// <summary>
+        /// Deletes the head branch for a pull request
+        /// </summary>
+        /// <param name="pullRequestUri">Pull request Uri</param>
+        /// <returns>Async task</returns>
+        public async Task DeletePullRequestBranchAsync(string pullRequestUri)
+        {
+            PullRequest pr = await GetPullRequestAsync(pullRequestUri);
+            (string owner, string repo, int id) prInfo = ParsePullRequestUri(pullRequestUri);
+            await DeleteBranchAsync(prInfo.owner, prInfo.repo, pr.HeadBranch);
         }
     }
 }

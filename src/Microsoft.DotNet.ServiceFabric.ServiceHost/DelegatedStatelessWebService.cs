@@ -10,27 +10,33 @@ using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Hosting.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
+
+#if !NETCOREAPP3_1
+using Microsoft.AspNetCore.Hosting.Internal;
+using IHostEnvironment = Microsoft.Extensions.Hosting.IHostingEnvironment;
+#else
+using Microsoft.Extensions.Hosting;
+#endif
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
     public class DelegatedStatelessWebService<TStartup> : StatelessService where TStartup : class
     {
         private readonly Action<ContainerBuilder> _configureContainer;
-        private readonly Action<IWebHostBuilder> _configureWebHost;
+        private readonly Action<IWebHostBuilder> _configureHost;
         private readonly Action<IServiceCollection> _configureServices;
 
         public DelegatedStatelessWebService(
             StatelessServiceContext context,
-            Action<IWebHostBuilder> configureWebHost,
+            Action<IWebHostBuilder> configureHost,
             Action<IServiceCollection> configureServices,
             Action<ContainerBuilder> configureContainer) : base(context)
         {
-            _configureWebHost = configureWebHost;
+            _configureHost = configureHost;
             _configureServices = configureServices;
             _configureContainer = configureContainer;
         }
@@ -47,11 +53,12 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                             "ServiceEndpoint",
                             (url, listener) =>
                             {
-                                var builder = new WebHostBuilder().UseHttpSys()
+                                var builder = new WebHostBuilder()
+                                    .UseHttpSys()
                                     .UseContentRoot(Directory.GetCurrentDirectory())
                                     .UseSetting(WebHostDefaults.ApplicationKey,
                                         typeof(TStartup).Assembly.GetName().Name);
-                                _configureWebHost(builder);
+                                _configureHost(builder);
 
                                 return builder.ConfigureServices(
                                         services =>
@@ -62,7 +69,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                                             services.AddSingleton<IStartup>(
                                                 provider =>
                                                 {
-                                                    var env = provider.GetRequiredService<IHostingEnvironment>();
+                                                    var env = provider.GetRequiredService<IHostEnvironment>();
                                                     return new DelegatedStatelessWebServiceStartup<TStartup>(
                                                         provider,
                                                         env,
@@ -85,18 +92,22 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         public DelegatedStatelessWebServiceStartup(
             IServiceProvider provider,
-            IHostingEnvironment env,
+            IHostEnvironment env,
             Action<IServiceCollection> configureServices)
         {
             _configureServices = configureServices;
             if (typeof(TStartup).IsAssignableTo<IStartup>())
             {
-                _startupImplementation = (IStartup) ActivatorUtilities.CreateInstance<TStartup>(provider);
+                _startupImplementation = (IStartup) ActivatorUtilities.CreateInstance<TStartup>(provider)!;
             }
             else
             {
-                StartupMethods methods = StartupLoader.LoadMethods(provider, typeof(TStartup), env.EnvironmentName);
+#if !NETCOREAPP3_1
+                var methods = StartupLoader.LoadMethods(provider, typeof(TStartup), env.EnvironmentName);
                 _startupImplementation = new ConventionBasedStartup(methods);
+#else
+                throw new InvalidOperationException($"Type '{typeof(TStartup).FullName}' must implement {typeof(IStartup).FullName}");
+#endif
             }
         }
 

@@ -400,6 +400,16 @@ namespace SubscriptionActorService
                         pr.MergePolicyResult,
                         prUrl);
                     await StateManager.RemoveStateAsync(PullRequest);
+
+                    // Also try to clean up the PR branch.
+                    try
+                    {
+                        await darc.DeletePullRequestBranchAsync(prUrl);
+                    }
+                    catch (DarcException e)
+                    {
+                        Logger.LogInformation(e, $"Failed to delete Branch associated with pull request {prUrl}");
+                    }
                     return ActionResult.Create(SynchronizePullRequestResult.Completed, $"PR Has been manually {status}");
                 default:
                     throw new NotImplementedException($"Unknown pr status '{status}'");

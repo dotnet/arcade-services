@@ -6,6 +6,7 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using Newtonsoft.Json;
@@ -165,35 +166,6 @@ namespace Microsoft.DotNet.Darc.Operations
         }
 
         /// <summary>
-        ///     Returns the repo uri if it's set explicity or one of the shorthand versions is used.
-        /// </summary>
-        /// <returns></returns>
-        private string GetRepoUri()
-        {
-            const string sdkUri = "https://github.com/dotnet/core-sdk";
-            const string runtimeUri = "https://github.com/dotnet/core-setup";
-            const string aspnetUri = "https://github.com/aspnet/AspNetCore";
-            string repoUri = _options.RepoUri;
-
-            if (string.IsNullOrEmpty(repoUri))
-            {
-                if (_options.DownloadSdk)
-                {
-                    repoUri = sdkUri;
-                }
-                else if (_options.DownloadRuntime)
-                {
-                    repoUri = runtimeUri;
-                }
-                else if (_options.DownloadAspNet)
-                {
-                    repoUri = aspnetUri;
-                }
-            }
-            return repoUri;
-        }
-
-        /// <summary>
         ///     Validate that the root build options are being used
         ///     properly.
         ///     
@@ -207,10 +179,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 if (!string.IsNullOrEmpty(_options.RepoUri) ||
                     !string.IsNullOrEmpty(_options.Channel) ||
-                    !string.IsNullOrEmpty(_options.Commit) ||
-                    _options.DownloadSdk ||
-                    _options.DownloadRuntime ||
-                    _options.DownloadAspNet)
+                    !string.IsNullOrEmpty(_options.Commit))
                 {
                     Console.WriteLine("--id should not be specified with other options.");
                     return false;
@@ -224,15 +193,6 @@ namespace Microsoft.DotNet.Darc.Operations
             }
             else
             {
-                // Should specify a repo uri or shorthand, and only one
-                if (!(!string.IsNullOrEmpty(_options.RepoUri) ^
-                    _options.DownloadSdk ^
-                    _options.DownloadRuntime ^
-                    _options.DownloadAspNet))
-                {
-                    Console.WriteLine("Please specify one of --id, --repo, --sdk, --runtime or --aspnet.");
-                    return false;
-                }
                 // Check that commit or channel was specified but not both
                 if (!(!string.IsNullOrEmpty(_options.Commit) ^
                     !string.IsNullOrEmpty(_options.Channel)))
@@ -252,7 +212,7 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
-            string repoUri = GetRepoUri();
+            string repoUri = _options.RepoUri;
 
             if (_options.RootBuildIds.Any())
             {
@@ -386,11 +346,13 @@ namespace Microsoft.DotNet.Darc.Operations
             { $"{githubRepoPrefix}dotnet/coreclr", (coreRepoCategory, "coreclr") },
             { $"{githubRepoPrefix}dotnet/core-setup", (coreRepoCategory, "core-setup") },
             { $"{githubRepoPrefix}dotnet/runtime", (coreRepoCategory, "runtime") },
+            { $"{githubRepoPrefix}dotnet/windowsdesktop", (coreRepoCategory, "windowsdesktop") },
             // Internal
             { $"{azdoRepoPrefix}dotnet-corefx", (coreRepoCategory, "corefx") },
             { $"{azdoRepoPrefix}dotnet-coreclr", (coreRepoCategory, "coreclr") },
             { $"{azdoRepoPrefix}dotnet-core-setup", (coreRepoCategory, "core-setup") },
             { $"{azdoRepoPrefix}dotnet-runtime", (coreRepoCategory, "runtime") },
+            { $"{azdoRepoPrefix}dotnet-windowsdesktop", (coreRepoCategory, "windowsdesktop") },
 
             // ASPNET
 
@@ -1534,27 +1496,23 @@ namespace Microsoft.DotNet.Darc.Operations
             // Check all existing locations for the target file. If one exists, copy to the others.
             if (_options.SkipExisting)
             {
-                string existingFile = null;
-                foreach (string targetFile in targetFilePaths)
+                string existingFile = targetFilePaths.FirstOrDefault(targetFile => File.Exists(targetFile));
+                if (!string.IsNullOrEmpty(existingFile))
                 {
-                    try
+                    foreach (string targetFile in targetFilePaths)
                     {
-                        if (File.Exists(targetFile))
+                        try
                         {
-                            existingFile = targetFile;
+                            if (!File.Exists(targetFile))
+                            {
+                                File.Copy(existingFile, targetFile);
+                            }
                         }
-                        else if (existingFile != null)
+                        catch (IOException e)
                         {
-                            File.Copy(existingFile, targetFile);
+                            errors.Add($"Failed to check/copy for existing {targetFile}: {e.Message}");
                         }
                     }
-                    catch (IOException e)
-                    {
-                        errors.Add($"Failed to check/copy for existing {targetFile}: {e.Message}");
-                    }
-                }
-                if (existingFile != null)
-                {
                     return true;
                 }
             }
@@ -1599,15 +1557,12 @@ namespace Microsoft.DotNet.Darc.Operations
             // Use a temporary in progress file name so we don't end up with corrupted
             // half downloaded files. Use the first location as the
             string temporaryFileName = $"{targetFiles.First()}.inProgress";
-            if (File.Exists(temporaryFileName))
-            {
-                File.Delete(temporaryFileName);
-            }
-
             HttpRequestMessage requestMessage = null;
 
             try
             {
+                await DeleteFileWithRetryAsync(temporaryFileName).ConfigureAwait(false);
+
                 foreach (string targetFile in targetFiles)
                 {
                     string directory = Path.GetDirectoryName(targetFile);
@@ -1655,7 +1610,6 @@ namespace Microsoft.DotNet.Darc.Operations
                     // Rename file to the target file name.
                     File.Copy(temporaryFileName, targetFile);
                 }
-                File.Delete(temporaryFileName);
 
                 return true;
             }
@@ -1680,9 +1634,13 @@ namespace Microsoft.DotNet.Darc.Operations
             }
             finally
             {
-                if (File.Exists(temporaryFileName))
+                try
                 {
-                    File.Delete(temporaryFileName);
+                    await DeleteFileWithRetryAsync(temporaryFileName).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    errors.Add($"Failed to delete {temporaryFileName}: {e.Message}");
                 }
 
                 if (requestMessage != null)
@@ -1691,6 +1649,25 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
             }
             return false;
+        }
+
+        /// <summary>
+        /// Delete a file with retry. Sometimes when gathering a drop directly to a share
+        /// we can get occasional deletion failures. All of them seen so far are UnauthorizedAccessExceptions
+        /// </summary>
+        /// <param name="filePath">Full path to the file to delete.</param>
+        private static async Task DeleteFileWithRetryAsync(string filePath)
+        {
+            await ExponentialRetry.RetryAsync(
+                () =>
+                {
+                    if (File.Exists(filePath))
+                    {
+                        File.Delete(filePath);
+                    }
+                },
+                ex => Console.WriteLine($"Failed to delete {filePath}: {ex.Message}"),
+                ex => ex is UnauthorizedAccessException);
         }
     }
 }

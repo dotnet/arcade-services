@@ -5,6 +5,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -26,16 +27,30 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             }
 
             var tcs = new TaskCompletionSource<bool>();
-            cancellationToken.Register(s => ((TaskCompletionSource<bool>) s).SetResult(true), tcs);
+            cancellationToken.Register(s => ((TaskCompletionSource<bool>) s!).SetResult(true), tcs);
             return tcs.Task;
         }
-
+        
         public static IServiceCollection Configure<TOptions>(
             this IServiceCollection services,
             Action<TOptions, IServiceProvider> configure) where TOptions : class
         {
             return services.AddSingleton<IConfigureOptions<TOptions>>(
                 provider => new ConfigureOptions<TOptions>(options => configure(options, provider)));
+        }
+
+        public static IServiceCollection Configure<TOptions>(
+            this IServiceCollection services,
+            string sectionName,
+            Action<TOptions, IConfiguration> configure) where TOptions : class
+        {
+            return services.AddSingleton<IConfigureOptions<TOptions>>(
+                provider => new ConfigureOptions<TOptions>(
+                    options => configure(options,
+                        provider.GetRequiredService<IConfiguration>().GetSection(sectionName)
+                    )
+                )
+            );
         }
     }
 }

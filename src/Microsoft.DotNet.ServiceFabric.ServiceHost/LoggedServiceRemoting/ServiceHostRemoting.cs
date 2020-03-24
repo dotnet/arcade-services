@@ -97,7 +97,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             ServicePartitionKey partitionKey = null,
             TargetReplicaSelector targetReplicaSelector = TargetReplicaSelector.Default) where T : class, IService
         {
-            var service = CreateFactory().CreateServiceProxy<T>(serviceUri, partitionKey, targetReplicaSelector);
+            T service = CreateFactory().CreateServiceProxy<T>(serviceUri, partitionKey, targetReplicaSelector);
             T proxy = Generator.CreateInterfaceProxyWithTargetInterface(
                 service,
                 new LoggingServiceProxyInterceptor(telemetryClient, context, serviceUri.ToString()));

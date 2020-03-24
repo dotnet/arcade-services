@@ -7,14 +7,13 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.ServiceFabric.Data;
 
-namespace Microsoft.Helix.ServiceHost
+namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
     public static class AsyncEnumerableExtensions
     {
         public static async Task ForEach<TKey, TValue>(
-            [NotNull] this IAsyncEnumerable<KeyValuePair<TKey, TValue>> enumerable,
+            [NotNull] this Microsoft.ServiceFabric.Data.IAsyncEnumerable<KeyValuePair<TKey, TValue>> enumerable,
             CancellationToken token,
             [NotNull] [InstantHandle] Action<TKey, TValue> block)
         {
@@ -28,7 +27,7 @@ namespace Microsoft.Helix.ServiceHost
                 throw new ArgumentNullException(nameof(block));
             }
 
-            using (IAsyncEnumerator<KeyValuePair<TKey, TValue>> enumerator = enumerable.GetAsyncEnumerator())
+            using (Microsoft.ServiceFabric.Data.IAsyncEnumerator<KeyValuePair<TKey, TValue>> enumerator = enumerable.GetAsyncEnumerator())
             {
                 while (await enumerator.MoveNextAsync(token))
                 {
@@ -39,7 +38,7 @@ namespace Microsoft.Helix.ServiceHost
         }
 
         public static async Task ForEach<TKey, TValue>(
-            [NotNull] this IAsyncEnumerable<KeyValuePair<TKey, TValue>> enumerable,
+            [NotNull] this Microsoft.ServiceFabric.Data.IAsyncEnumerable<KeyValuePair<TKey, TValue>> enumerable,
             CancellationToken token,
             [NotNull] [InstantHandle] Func<TKey, TValue, Task> block)
         {
@@ -53,7 +52,7 @@ namespace Microsoft.Helix.ServiceHost
                 throw new ArgumentNullException(nameof(block));
             }
 
-            using (IAsyncEnumerator<KeyValuePair<TKey, TValue>> enumerator = enumerable.GetAsyncEnumerator())
+            using (Microsoft.ServiceFabric.Data.IAsyncEnumerator<KeyValuePair<TKey, TValue>> enumerator = enumerable.GetAsyncEnumerator())
             {
                 while (await enumerator.MoveNextAsync(token))
                 {
@@ -64,7 +63,7 @@ namespace Microsoft.Helix.ServiceHost
         }
 
         public static async Task ForEach<T>(
-            [NotNull] this IAsyncEnumerable<T> enumerable,
+            [NotNull] this Microsoft.ServiceFabric.Data.IAsyncEnumerable<T> enumerable,
             CancellationToken token,
             [NotNull] [InstantHandle] Action<T> block)
         {
@@ -78,7 +77,7 @@ namespace Microsoft.Helix.ServiceHost
                 throw new ArgumentNullException(nameof(block));
             }
 
-            using (IAsyncEnumerator<T> enumerator = enumerable.GetAsyncEnumerator())
+            using (Microsoft.ServiceFabric.Data.IAsyncEnumerator<T> enumerator = enumerable.GetAsyncEnumerator())
             {
                 while (await enumerator.MoveNextAsync(token))
                 {
