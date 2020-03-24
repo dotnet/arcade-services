@@ -12,7 +12,7 @@ namespace Maestro.ScenarioTests
 
         public ScenarioTests_Channels()
         {
-            branchName = _random.Next(int.MaxValue).ToString();
+            branchName = "ChannelTestBranch";
             branchNameWithRefsHeads = $"refs/heads/{branchName}";
         }
 
@@ -20,7 +20,7 @@ namespace Maestro.ScenarioTests
         public async Task ArcadeChannels_EndToEnd()
         {
             // Create a new channel
-            string testChannelName = "Test Channel " + _random.Next(int.MaxValue);
+            string testChannelName = "Test Channel End to End";
 
             await using (AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false))
             {
@@ -32,9 +32,8 @@ namespace Maestro.ScenarioTests
                 await DeleteTestChannelAsync(testChannelName).ConfigureAwait(false);
 
                 // Get the channel and make sure it was deleted
-                returnedChannel = "";
-                returnedChannel = await GetTestChannelsAsync().ConfigureAwait(false);
-                StringAssert.DoesNotContain(testChannelName, returnedChannel);
+                string returnedChannel2 = await GetTestChannelsAsync().ConfigureAwait(false);
+                StringAssert.DoesNotContain(testChannelName, returnedChannel2);
             }
         }
 
@@ -43,8 +42,8 @@ namespace Maestro.ScenarioTests
         {
             string repoUrl = GetRepoUrl(repoName);
 
-            string testChannelName1 = "Test Channel " + _random.Next(int.MaxValue);
-            string testChannelName2 = "Test Channel " + _random.Next(int.MaxValue);
+            string testChannelName1 = "Test Channel Default 1";
+            string testChannelName2 = "Test Channel Default 2";
 
             await using (AsyncDisposableValue<string> channel1 = await CreateTestChannelAsync(testChannelName1).ConfigureAwait(false))
             {
