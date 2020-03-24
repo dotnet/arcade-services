@@ -117,6 +117,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 return Constants.ErrorCode;
             }
+
             AzureDevOpsClient azdoClient = new AzureDevOpsClient(gitExecutable: null, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null);
 
             var targetAzdoBuildStatus = await ValidateAzDOBuildAsync(azdoClient, build.AzureDevOpsAccount, build.AzureDevOpsProject, build.AzureDevOpsBuildId.Value)
@@ -126,7 +127,6 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 return Constants.ErrorCode;
             }
-
 
             var queueTimeVariables = $"{{" +
                 $"\"BARBuildId\": \"{ build.Id }\", " +
@@ -238,8 +238,8 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="build">Build for which the Arcade SDK dependency build will be inferred.</param>
         private async Task<(string sourceBranch, string sourceVersion)> GetSourceBranchInfoAsync(Build build)
         {
-            var hasSourceBranch = !string.IsNullOrEmpty(_options.SourceBranch);
-            var hasSourceSHA = !string.IsNullOrEmpty(_options.SourceSHA);
+            bool hasSourceBranch = !string.IsNullOrEmpty(_options.SourceBranch);
+            bool hasSourceSHA = !string.IsNullOrEmpty(_options.SourceSHA);
 
             if (hasSourceBranch)
             {
