@@ -10,7 +10,7 @@
 [string]$azdoProject = if (-not $azdoProject) { "internal" } else { $azdoProject }
 [string]$azdoApiVersion = if (-not $azdoApiVersion) { "5.0-preview.1" } else { $azdoApiVersion }
 [string]$darcPackageSource = if (-not $darcPackageSource) {""} else { $darcPackageSource }
-[string]$barApiVersion = "2019-01-16"
+[string]$barApiVersion = "2020-02-20"
 $global:gitHubPRsToClose = @()
 $global:githubBranchesToDelete = @()
 $global:azdoPRsToClose = @()
@@ -18,8 +18,6 @@ $global:azdoBranchesToDelete = @()
 $global:subscriptionsToDelete = @()
 $global:channelsToDelete = @()
 $global:defaultChannelsToDelete = @()
-$global:pipelinesToDelete = @()
-$global:channelPipelinesToDelete = @{}
 
 # Get a temporary directory for a test root. Use the agent work folder if running under azdo, use the temp path if not.
 $testRootBase = if ($env:AGENT_WORKFOLDER) { $env:AGENT_WORKFOLDER } else { $([System.IO.Path]::GetTempPath()) }
@@ -77,20 +75,6 @@ function Teardown() {
         }
     }
 
-    Write-Host "Cleaning $($global:channelPipelinesToDelete.Count) channel-pipeline mappings"
-    foreach ($channelId in $global:channelPipelinesToDelete.Keys) {
-        $pipelineIds = $global:channelPipelinesToDelete[$channelId]
-        foreach ($pipelineId in $pipelineIds) {
-            try {
-                Write-Host "Removing pipeline: $pipelineId from channel: $channelId"
-                Remove-Pipeline-From-Channel $channelId $pipelineId
-            } catch {
-                Write-Warning "Failed to remove pipeline $pipelineId from channel $channelId"
-                Write-Warning $_
-            }
-        }
-    }
-
     Write-Host "Cleaning $($global:channelsToDelete.Count) channels"
     foreach ($channel in $global:channelsToDelete) {
         try {
@@ -98,17 +82,6 @@ function Teardown() {
             Darc-Command delete-channel --name "$channel"
         } catch {
             Write-Warning "Failed to delete channel $channel"
-            Write-Warning $_
-        }
-    }
-
-    Write-Host "Cleaning $($global:pipelinesToDelete.Count) pipelines"
-    foreach ($pipeline in $global:pipelinesToDelete) {
-        try {
-            Write-Host "Deleting pipeline $pipeline"
-            Delete-Pipeline $pipeline
-        } catch {
-            Write-Warning "Failed to delete pipeline $pipeline"
             Write-Warning $_
         }
     }
@@ -423,57 +396,6 @@ function Git-Command($repoName) {
     }
 }
 
-function Create-Pipeline($releasePipelineId) {
-    $headers = Get-Bar-Headers 'text/plain'
-
-    $uri = "$maestroInstallation/api/pipelines?pipelineIdentifier=$releasePipelineId&organization=dnceng&project=internal&api-version=$barApiVersion"
-
-    Write-Host "Creating a new pipeline in the Build Asset Registry..."
-
-    $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Post | ConvertFrom-Json
-    write-host $response
-    $pipelineId = $response.id
-    Write-Host "Created Pipeline with id $pipelineId"
-    $global:pipelinesToDelete += $pipelineId
-    return $pipelineId
-}
-
-function Delete-Pipeline($barPipelineId) {
-    $headers = Get-Bar-Headers 'text/plain'
-
-    $uri = "$maestroInstallation/api/pipelines/${barPipelineId}?api-version=$barApiVersion"
-
-    Write-Host "Deleting Pipeline $barPipelineId from the Build Asset Registry..."
-
-    Invoke-WebRequest -Uri $uri -Headers $headers -Method Delete | Out-Null
-}
-
-function Add-Pipeline-To-Channel($channelName, $pipelineId) {
-    $channelId = Get-ChannelId $channelName
-
-    $headers = Get-Bar-Headers 'text/plain'
-
-    $uri = "$maestroInstallation/api/channels/${channelId}/pipelines/${pipelineId}?api-version=$barApiVersion"
-
-    Write-Host "Adding pipeline ${pipelineId} to channel ${channelId} in the Build Asset Registry..."
-
-    Invoke-WebRequest -Uri $uri -Headers $headers -Method Post
-
-    $global:channelPipelinesToDelete[$channelName] += $pipelineId
-}
-
-function Remove-Pipeline-From-Channel($channelName, $pipelineId) {
-    $channelId = Get-ChannelId $channelName
-
-    $headers = Get-Bar-Headers 'text/plain'
-
-    $uri = "$maestroInstallation/api/channels/${channelId}/pipelines/${pipelineId}?api-version=$barApiVersion"
-
-    Write-Host "Removing pipeline ${pipelineId} from channel ${channelId} in the Build Asset Registry..."
-
-    Invoke-WebRequest -Uri $uri -Headers $headers -Method Delete | Out-Null
-}
-
 #
 # Azure DevOps specific functionality
 #
@@ -672,45 +594,6 @@ function Get-AzDO-Headers() {
     $base64authinfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":${azdoPAT}"))
     $headers = @{"Authorization"="Basic $base64authinfo"}
     return $headers
-}
-
-# Release API only works with Oauth2 Authentication. For now we can only run these functions inside an AzDo environment,
-# so that the SYSTEM_ACCESSTOKEN variable is available.
-function Get-AzDO-Releases($releaseDefinitionId, $count) {
-    if (-not $env:SYSTEM_ACCESSTOKEN) {
-        throw "env:SYSTEM_ACCESSTOKEN is not set. Is the script running within Azure DevOps?"
-    }
-    $uri = "https://vsrm.dev.azure.com/${azdoAccount}/${azdoProject}/_apis/release/releases?definitionId=${releaseDefinitionId}&api-version=${azdoApiVersion}&`$top=${count}"
-    $headers = @{"Authorization"="Bearer $env:SYSTEM_ACCESSTOKEN"}
-    $response = Invoke-WebRequest -Uri $uri -Headers $headers -Method Get
-    $jsonResponse = ($response | ConvertFrom-Json).Value
-    return $jsonResponse
-}
-
-function Get-AzDO-Release($releaseId) {
-    if (-not $env:SYSTEM_ACCESSTOKEN) {
-        throw "env:SYSTEM_ACCESSTOKEN is not set. Is the script running within Azure DevOps?"
-    }
-    $uri = "https://vsrm.dev.azure.com/${azdoAccount}/${azdoProject}/_apis/release/releases/${releaseId}?api-version=${azdoApiVersion}"
-    $headers = @{"Authorization"="Bearer $env:SYSTEM_ACCESSTOKEN"}
-    Invoke-WebRequest -Uri $uri -Headers $headers -Method Get | ConvertFrom-Json
-}
-
-function Find-BuildId-In-AzDO-Release($releaseDefinitionId, $barBuildId)
-{
-    write-host "attempting to find a release with BarBuildId: $barBuildId in release pipeline $releaseDefinitionId"
-    $found = $False
-    $releases = Get-AzDO-Releases $releaseDefinitionId 5
-    foreach ($release in $releases) {
-        $release = Get-AzDO-Release $release.Id
-        write-host $release
-        $releaseBarBuildId = $release.Variables.BarBuildId.value
-        if ($releaseBarBuildId -and ($releaseBarBuildId -eq $barBuildId)) {
-            $found = $True
-            break
-        }
-    }
-    return $found
 }
 
 #
