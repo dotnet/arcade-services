@@ -114,6 +114,8 @@ stages:
     steps:
     - download: current
       artifact: MaestroApplication
+    - download: current
+      artifact: ReleaseUtilities
     - task: ServiceFabricPowerShell@1
       displayName: Refresh Service Fabric Services (Maestro)
       inputs:
@@ -137,6 +139,8 @@ stages:
     steps:
     - download: current
       artifact: TelemetryApplication
+    - download: current
+      artifact: ReleaseUtilities
     - task: ServiceFabricPowerShell@1
       displayName: Refresh Service Fabric Services (Telemetry)
       inputs:
