@@ -4,19 +4,19 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client.Models;
+using NUnit.Framework;
 using Octokit;
-using Xunit;
-using Xunit.Abstractions;
 
 namespace Maestro.ScenarioTests
 {
+    [TestFixture]
     public class ScenarioTests_SdkUpdate : MaestroScenarioTestBase
     {
-        public ScenarioTests_SdkUpdate(ITestOutputHelper output) : base(output)
+        public ScenarioTests_SdkUpdate() : base()
         {
         }
 
-        [Fact]
+        [Test]
         public async Task ArcadeSdkUpdate()
         {
             string testChannelName = "Test Channel " + _random.Next(int.MaxValue);
@@ -52,13 +52,13 @@ namespace Maestro.ScenarioTests
 
                 PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
 
-                Assert.Equal($"[{targetBranch}] Update dependencies from dotnet/arcade", pr.Title);
+                StringAssert.AreEqualIgnoringCase($"[{targetBranch}] Update dependencies from dotnet/arcade", pr.Title);
 
                 await CheckoutRemoteRefAsync(pr.MergeCommitSha);
 
                 string dependencies = await RunDarcAsync("get-dependencies");
                 string[] dependencyLines = dependencies.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
-                Assert.Equal(new[]
+                Assert.AreEqual(new[]
                 {
                     "Name:             Microsoft.DotNet.Arcade.Sdk",
                     "Version:          2.1.0",
@@ -83,8 +83,8 @@ namespace Maestro.ScenarioTests
                     .Select(s => s.Substring(repo.Directory.Length))
                     .ToHashSet();
 
-                Assert.Empty(arcadeFiles.Except(repoFiles));
-                Assert.Empty(repoFiles.Except(arcadeFiles));
+                Assert.IsEmpty(arcadeFiles.Except(repoFiles));
+                Assert.IsEmpty(repoFiles.Except(arcadeFiles));
             }
         }
     }

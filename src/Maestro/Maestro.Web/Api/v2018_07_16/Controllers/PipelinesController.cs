@@ -40,7 +40,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [HttpGet]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<ReleasePipeline>), Description = "The list of ReleasePipelines")]
         [ValidateModelState]
-        public IActionResult List(int? pipelineIdentifier = null, string organization = null, string project = null)
+        public virtual IActionResult List(int? pipelineIdentifier = null, string organization = null, string project = null)
         {
             IQueryable<Data.Models.ReleasePipeline> query = _context.ReleasePipelines;
 
@@ -70,7 +70,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [HttpGet("{id}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(ReleasePipeline), Description = "The requested ReleasePipeline")]
         [ValidateModelState]
-        public async Task<IActionResult> GetPipeline(int id)
+        public virtual async Task<IActionResult> GetPipeline(int id)
         {
             Data.Models.ReleasePipeline pipeline = await _context.ReleasePipelines.Where(c => c.Id == id).FirstOrDefaultAsync();
 
@@ -89,7 +89,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [HttpDelete("{id}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(ReleasePipeline), Description = "ReleasePipeline successfully deleted")]
         [ValidateModelState]
-        public async Task<IActionResult> DeletePipeline(int id)
+        public virtual async Task<IActionResult> DeletePipeline(int id)
         {
             bool isPipelineInUse = await _context.ChannelReleasePipelines.AnyAsync(crp => crp.ReleasePipelineId == id);
 
@@ -120,7 +120,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="project">The Azure DevOps project</param>
         [HttpPost]
         [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(ReleasePipeline), Description = "ReleasePipeline successfully created")]
-        public async Task<IActionResult> CreatePipeline([Required] int pipelineIdentifier, [Required] string organization, [Required] string project)
+        public virtual async Task<IActionResult> CreatePipeline([Required] int pipelineIdentifier, [Required] string organization, [Required] string project)
         {
             Data.Models.ReleasePipeline pipeline = await _context.ReleasePipelines
                 .FirstOrDefaultAsync(rp => 

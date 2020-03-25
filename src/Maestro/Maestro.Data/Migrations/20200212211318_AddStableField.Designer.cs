@@ -4,14 +4,16 @@ using Maestro.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Maestro.Data.Migrations
 {
     [DbContext(typeof(BuildAssetRegistryContext))]
-    partial class BuildAssetRegistryContextModelSnapshot : ModelSnapshot
+    [Migration("20200212211318_AddStableField")]
+    partial class AddStableField
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -320,29 +322,6 @@ namespace Maestro.Data.Migrations
                     b.HasIndex("ChannelId");
 
                     b.ToTable("GoalTime");
-                });
-
-            modelBuilder.Entity("Maestro.Data.Models.LongestBuildPath", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
-
-                    b.Property<double>("BestCaseTimeInMinutes");
-
-                    b.Property<int>("ChannelId");
-
-                    b.Property<string>("ContributingRepositories");
-
-                    b.Property<DateTimeOffset>("ReportDate");
-
-                    b.Property<double>("WorstCaseTimeInMinutes");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ChannelId");
-
-                    b.ToTable("LongestBuildPaths");
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.ReleasePipeline", b =>
@@ -746,14 +725,6 @@ namespace Maestro.Data.Migrations
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.GoalTime", b =>
-                {
-                    b.HasOne("Maestro.Data.Models.Channel", "Channel")
-                        .WithMany()
-                        .HasForeignKey("ChannelId")
-                        .OnDelete(DeleteBehavior.Cascade);
-                });
-
-            modelBuilder.Entity("Maestro.Data.Models.LongestBuildPath", b =>
                 {
                     b.HasOne("Maestro.Data.Models.Channel", "Channel")
                         .WithMany()
