@@ -337,6 +337,23 @@ namespace Microsoft.DotNet.DarcLib
             return _gitClient.UpdatePullRequestAsync(pullRequestUri, pullRequest);
         }
 
+        /// <summary>
+        ///     Delete a Pull Request branch
+        /// </summary>
+        /// <param name="pullRequestUri">URI of pull request to delete branch for</param>
+        /// <returns>Async task</returns>
+        public async Task DeletePullRequestBranchAsync(string pullRequestUri)
+        {
+            try
+            {
+                await _gitClient.DeletePullRequestBranchAsync(pullRequestUri);
+            }
+            catch (Exception e)
+            {
+                throw new DarcException("Failed to delete head branch for pull request {pullRequestUri}", e);
+            }
+        }
+
         public async Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
         {
             CheckForValidGitClient();

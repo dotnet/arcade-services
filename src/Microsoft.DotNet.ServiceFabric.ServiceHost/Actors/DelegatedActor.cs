@@ -374,7 +374,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
 
         private ActorBase CreateActor(ActorId actorId)
         {
-            return _actorFactory(this, actorId, Container, builder => { });
+            return _actorFactory(this, actorId, Container ?? throw new InvalidOperationException("Actor created before OnOpenAsync"), builder => { });
         }
 
         private static ActorBase ActorFactory(ActorService service, ActorId actorId)

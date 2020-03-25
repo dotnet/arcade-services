@@ -4,11 +4,11 @@
 
 using System;
 using Microsoft.ApplicationInsights;
-using Microsoft.Extensions.Logging;
 using Microsoft.ApplicationInsights.AspNetCore.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.DotNet.ServiceFabric.ServiceHost
+namespace Microsoft.DotNet.Internal.Logging
 {
     [ProviderAlias("FixedApplicationInsights")]
     public class FixedApplicationInsightsLoggerProvider : ILoggerProvider

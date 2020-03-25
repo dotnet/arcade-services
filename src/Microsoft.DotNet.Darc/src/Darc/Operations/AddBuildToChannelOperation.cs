@@ -12,14 +12,18 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Generic;
 using System.Net.Http;
+using Microsoft.DotNet.Services.Utility;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
     internal class AddBuildToChannelOperation : Operation
     {
-        private const int BuildPromotionPipelineId = 750;
-        private const string BuildPromotionPipelineAccountName = "dnceng";
-        private const string BuildPromotionPipelineProjectName = "internal";
+        private static readonly Dictionary<string, (string project, int pipelineId)> BuildPromotionPipelinesForAccount =
+            new Dictionary<string, (string project, int pipelineId)>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "dnceng", ("internal", 750) },
+                { "devdiv", ("devdiv", 12603) }
+            };
 
         AddBuildToChannelCommandLineOptions _options;
         public AddBuildToChannelOperation(AddBuildToChannelCommandLineOptions options)
@@ -107,21 +111,22 @@ namespace Microsoft.DotNet.Darc.Operations
                 return Constants.ErrorCode;
             }
 
+            var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build).ConfigureAwait(false);
+
+            // This condition can happen when for some reason we failed to determine the source branch/sha 
+            // of the build that produced the used Arcade SDK or when the user specify an invalid combination
+            // of source-sha/branch parameters.
+            if (arcadeSDKSourceBranch == null && arcadeSDKSourceSHA == null)
+            {
+                return Constants.ErrorCode;
+            }
+
             AzureDevOpsClient azdoClient = new AzureDevOpsClient(gitExecutable: null, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null);
 
             var targetAzdoBuildStatus = await ValidateAzDOBuildAsync(azdoClient, build.AzureDevOpsAccount, build.AzureDevOpsProject, build.AzureDevOpsBuildId.Value)
                 .ConfigureAwait(false);
 
             if (!targetAzdoBuildStatus)
-            {
-                return Constants.ErrorCode;
-            }
-
-            var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build).ConfigureAwait(false);
-
-            // This condition can happen when for some reason we failed to determine the source branch/sha 
-            // of the build that produced the used Arcade SDK
-            if (arcadeSDKSourceBranch == null || arcadeSDKSourceSHA == null)
             {
                 return Constants.ErrorCode;
             }
@@ -137,15 +142,24 @@ namespace Microsoft.DotNet.Darc.Operations
                 $"\"SDLValidationContinueOnError\": \"{ _options.SDLValidationContinueOnError }\", " +
                 $"}}";
 
-            var azdoBuildId = await azdoClient.StartNewBuildAsync(BuildPromotionPipelineAccountName, 
-                BuildPromotionPipelineProjectName, 
-                BuildPromotionPipelineId, 
+
+            if (!BuildPromotionPipelinesForAccount.TryGetValue(
+                build.AzureDevOpsAccount,
+                out (string project, int pipelineId) promotionPipelineInformation))
+            {
+                Console.WriteLine($"Promoting builds from AzureDevOps account {build.AzureDevOpsAccount} is not supported by this command.");
+                return Constants.ErrorCode;
+            }
+
+            int azdoBuildId = await azdoClient.StartNewBuildAsync(build.AzureDevOpsAccount,
+                promotionPipelineInformation.project,
+                promotionPipelineInformation.pipelineId,
                 arcadeSDKSourceBranch,
                 arcadeSDKSourceSHA,
                 queueTimeVariables)
                 .ConfigureAwait(false);
 
-            var promotionBuildUrl = $"https://{BuildPromotionPipelineAccountName}.visualstudio.com/{BuildPromotionPipelineProjectName}/_build/results?buildId={azdoBuildId}";
+            string promotionBuildUrl = $"https://{build.AzureDevOpsAccount}.visualstudio.com/{promotionPipelineInformation.project}/_build/results?buildId={azdoBuildId}";
 
             Console.WriteLine($"Build {build.Id} will be assigned to channel '{targetChannel.Name}' once this build finishes publishing assets: {promotionBuildUrl}");
 
@@ -164,7 +178,11 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     Console.WriteLine($"Waiting '{waitIntervalInSeconds.TotalSeconds}' seconds for promotion build to complete.");
                     await Task.Delay(waitIntervalInSeconds);
-                    promotionBuild = await azdoClient.GetBuildAsync(BuildPromotionPipelineAccountName, BuildPromotionPipelineProjectName, azdoBuildId);
+                    promotionBuild = await azdoClient.GetBuildAsync(
+                        build.AzureDevOpsAccount,
+                        promotionPipelineInformation.project,
+                        azdoBuildId);
+
                 } while (!promotionBuild.Status.Equals("completed", StringComparison.OrdinalIgnoreCase));
             }
             catch (Exception e)
@@ -197,20 +215,20 @@ namespace Microsoft.DotNet.Darc.Operations
                 if (!artifacts.Any(f => f.Name.Equals("AssetManifests")))
                 {
                     Console.Write("The build that you want to add to a new channel doesn't have a Build Manifest. That's required for publishing. Aborting.");
-                    return true;
+                    return false;
                 }
 
                 if ((_options.DoSigningValidation || _options.DoNuGetValidation || _options.DoSourcelinkValidation)
                     && !artifacts.Any(f => f.Name.Equals("PackageArtifacts")))
                 {
-                    Console.Write("The build that you want to add to a new channel doesn't have a list of package assets. That's required when running signing or NuGet validation. Aborting.");
-                    return true;
+                    Console.Write("The build that you want to add to a new channel doesn't have a list of package assets in the PackageArtifacts container. That's required when running signing or NuGet validation. Aborting.");
+                    return false;
                 }
 
                 if (_options.DoSourcelinkValidation && !artifacts.Any(f => f.Name.Equals("BlobArtifacts")))
                 {
-                    Console.Write("The build that you want to add to a new channel doesn't have a list of blob assets. That's required when running SourceLink validation. Aborting.");
-                    return true;
+                    Console.Write("The build that you want to add to a new channel doesn't have a list of blob assets in the BlobArtifacts container. That's required when running SourceLink validation. Aborting.");
+                    return false;
                 }
 
                 return true;
@@ -236,9 +254,26 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="build">Build for which the Arcade SDK dependency build will be inferred.</param>
         private async Task<(string sourceBranch, string sourceVersion)> GetSourceBranchInfoAsync(Build build)
         {
-            if (!string.IsNullOrEmpty(_options.SourceBranch) && !string.IsNullOrEmpty(_options.SourceSHA))
+            bool hasSourceBranch = !string.IsNullOrEmpty(_options.SourceBranch);
+            bool hasSourceSHA = !string.IsNullOrEmpty(_options.SourceSHA);
+
+            if (hasSourceBranch)
+            {
+                _options.SourceBranch = GitHelpers.NormalizeBranchName(_options.SourceBranch);
+            }
+
+            if (hasSourceBranch && hasSourceSHA)
             {
                 return (_options.SourceBranch, _options.SourceSHA);
+            }
+            else if (hasSourceSHA && !hasSourceBranch)
+            {
+                Console.WriteLine("The `source-sha` parameter needs to be specified together with `source-branch`.");
+                return (null, null);
+            }
+            else if (hasSourceBranch)
+            {
+                return (_options.SourceBranch, null);
             }
 
             string sourceBuildRepo = string.IsNullOrEmpty(build.GitHubRepository) ?

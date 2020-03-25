@@ -30,7 +30,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 _specificSection = specificSection;
             }
 
-            public string this[string name] => _specificSection?[name] ?? _baseSection?[name];
+            public string this[string name] => _specificSection?[name] ?? _baseSection?[name] ?? "";
         }
     }
 }

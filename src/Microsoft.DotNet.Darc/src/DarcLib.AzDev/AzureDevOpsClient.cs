@@ -185,10 +185,29 @@ namespace Microsoft.DotNet.DarcLib
                 body);
         }
 
+        /// <summary>
+        /// Deletes a branch in a repository
+        /// </summary>
+        /// <param name="repoUri">Repository Uri</param>
+        /// <param name="branch">Branch to delete</param>
+        /// <returns>Async task</returns>
         public async Task DeleteBranchAsync(string repoUri, string branch)
         {
             (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
 
+            await DeleteBranchAsync(accountName, projectName, repoName, branch);
+        }
+
+        /// <summary>
+        /// Deletes a branch in a repository
+        /// </summary>
+        /// <param name="accountName">Azure DevOps Account</param>
+        /// <param name="projectName">Azure DevOps project</param>
+        /// <param name="repoName">Name of the repository</param>
+        /// <param name="branch">Brach to delete</param>
+        /// <returns>Async Task</returns>
+        private async Task DeleteBranchAsync(string accountName, string projectName, string repoName, string branch)
+        {
             string latestSha = await GetLastCommitShaAsync(accountName, projectName, repoName, branch);
 
             var azureDevOpsRefs = new List<AzureDevOpsRef>();
@@ -1088,7 +1107,12 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="queueTimeVariables">A string in JSON format containing the queue time variables to be used.</param>
         public async Task<int> StartNewBuildAsync(string accountName, string projectName, int azdoDefinitionId, string sourceBranch, string sourceVersion, string queueTimeVariables = null)
         {
-            var body = $"{{ \"definition\": {{ \"id\": \"{azdoDefinitionId}\" }}, \"sourceBranch\": \"{sourceBranch}\", \"sourceVersion\": \"{sourceVersion}\", \"parameters\": '{queueTimeVariables}'  }}";
+            var body = $"{{ \"definition\": " +
+                $"{{ \"id\": \"{azdoDefinitionId}\" }}, " +
+                $"\"sourceBranch\": \"{sourceBranch}\", " +
+                (sourceVersion != null ? $"\"sourceVersion\": \"{sourceVersion}\", " : string.Empty) +
+                $"\"parameters\": '{queueTimeVariables}' " +
+                $"}}";
 
             JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Post,
@@ -1401,6 +1425,18 @@ namespace Microsoft.DotNet.DarcLib
             catch (Exception) { }
 
             return false;
+        }
+
+        /// <summary>
+        /// Deletes the head branch for a pull request
+        /// </summary>
+        /// <param name="pullRequestUri">Pull request Uri</param>
+        /// <returns>Async task</returns>
+        public async Task DeletePullRequestBranchAsync(string pullRequestUri)
+        {
+            PullRequest pr = await GetPullRequestAsync(pullRequestUri);
+            (string account, string project, string repo, int id) prInfo = ParsePullRequestUri(pullRequestUri);
+            await DeleteBranchAsync(prInfo.account, prInfo.project, prInfo.repo, pr.HeadBranch);
         }
     }
 }

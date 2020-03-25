@@ -13,21 +13,45 @@ using System.Threading.Tasks;
 using Autofac;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Hosting.Internal;
+using Microsoft.DotNet.Internal.Logging;
+using Microsoft.DotNet.Metrics;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 using Newtonsoft.Json;
-using IHostingEnvironment = Microsoft.Extensions.Hosting.IHostingEnvironment;
+
+#if !NETCOREAPP3_1
+using IWebHostEnvironment = Microsoft.AspNetCore.Hosting.IHostingEnvironment;
+using IHostEnvironment = Microsoft.Extensions.Hosting.IHostingEnvironment;
+#else
+using Microsoft.Extensions.Hosting;
+#endif
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
+    public class HostEnvironment : IWebHostEnvironment, IHostEnvironment
+    {
+        public HostEnvironment(string environmentName, string applicationName, string contentRootPath, IFileProvider contentRootFileProvider)
+        {
+            EnvironmentName = environmentName;
+            ApplicationName = applicationName;
+            ContentRootPath = contentRootPath;
+            ContentRootFileProvider = contentRootFileProvider;
+        }
+
+        public string EnvironmentName { get; set; }
+        public string ApplicationName { get; set; }
+        public string ContentRootPath { get; set; }
+        public IFileProvider ContentRootFileProvider { get; set; }
+        public string WebRootPath { get; set; } = null!;
+        public IFileProvider WebRootFileProvider { get; set; } = null!;
+    }
+
     /// <summary>
     ///     A Service Fabric service host that supports activating services via dependency injection.
     /// </summary>
@@ -170,7 +194,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                         typeof(Func<StatefulServiceContext, ActorTypeInformation, ActorService>),
                         typeof(TimeSpan),
                         typeof(CancellationToken)
-                    })
+                    })!
                 .MakeGenericMethod(actorType);
             _serviceCallbacks.Add(
                 () => (Task) registerActorAsyncMethod.Invoke(
@@ -181,7 +205,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                             ctor(context, info, actorFactory)),
                         default(TimeSpan),
                         default(CancellationToken)
-                    }));
+                    })!);
         }
 
         public ServiceHost RegisterStatefulActorService<
@@ -233,8 +257,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             services.AddOptions();
             services.SetupConfiguration();
             services.TryAddSingleton(InitializeEnvironment());
-            services.TryAddSingleton(b => (Microsoft.Extensions.Hosting.IHostingEnvironment) b.GetService<HostingEnvironment>());
-            services.TryAddSingleton(b => (Microsoft.AspNetCore.Hosting.IHostingEnvironment) b.GetService<HostingEnvironment>());
+            services.TryAddSingleton(b => (IHostEnvironment) b.GetService<HostEnvironment>());
+            services.TryAddSingleton(b => (IWebHostEnvironment) b.GetService<HostEnvironment>());
             ConfigureApplicationInsights(services);
             services.AddLogging(
                 builder =>
@@ -242,45 +266,22 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     builder.AddDebug();
                     builder.AddFixedApplicationInsights(LogLevel.Information);
                 });
+            services.TryAddSingleton<IMetricTracker, ApplicationInsightsMetricTracker>();
         }
 
-        private static HostingEnvironment InitializeEnvironment()
+        public static HostEnvironment InitializeEnvironment()
         {
-            IConfiguration config = new ConfigurationBuilder().AddEnvironmentVariables("ASPNETCORE_").Build();
-            var options = new WebHostOptions(config, GetApplicationName());
-            var env = new HostingEnvironment();
-            env.Initialize(AppContext.BaseDirectory, options);
-            return env;
+            string environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
+                              Environment.GetEnvironmentVariable("ENVIRONMENT") ??
+                              throw new InvalidOperationException("Could Not find environment.");
+            string contentRoot = AppContext.BaseDirectory;
+            var contentRootFileProvider = new PhysicalFileProvider(contentRoot);
+            return new HostEnvironment(environment, GetApplicationName(), contentRoot, contentRootFileProvider);
         }
 
         private static string GetApplicationName()
         {
-            return Environment.GetEnvironmentVariable("Fabric_ApplicationName");
-        }
-    }
-
-    public static class ServiceHostConfiguration
-    {
-        public static string GetAzureServiceTokenProviderConnectionString(IHostingEnvironment env)
-        {
-            if (env.IsDevelopment() && RunningInServiceFabric())
-            {
-                var tenantId = "72f988bf-86f1-41af-91ab-2d7cd011db47";
-                var appId = "388be541-91ed-4771-8473-5791e071ed14";
-                var certThumbprint = "C4DFDCC47D95C1C64B55B42946CCEFDDF9E46FAB";
-
-                string connectionString =
-                    $"RunAs=App;AppId={appId};TenantId={tenantId};CertificateThumbprint={certThumbprint};CertificateStoreLocation=LocalMachine";
-                return connectionString;
-            }
-
-            return null;
-        }
-
-        public static bool RunningInServiceFabric()
-        {
-            string fabricApplication = Environment.GetEnvironmentVariable("Fabric_ApplicationName");
-            return !string.IsNullOrEmpty(fabricApplication);
+            return Environment.GetEnvironmentVariable("Fabric_ApplicationName") ?? Assembly.GetEntryAssembly()?.GetName().Name ?? "Unknown";
         }
     }
 }
