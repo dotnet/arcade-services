@@ -7,17 +7,14 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using NUnit.Framework;
 using Octokit;
-using Xunit;
-using Xunit.Abstractions;
-using Xunit.Sdk;
 
 namespace Maestro.ScenarioTests
 {
-    public class MaestroScenarioTestBase : IAsyncLifetime
+    public class MaestroScenarioTestBase
     {
         private TestParameters _parameters;
-        private readonly ITestOutputHelper _output;
 
         internal readonly Random _random = new Random();
 
@@ -25,22 +22,23 @@ namespace Maestro.ScenarioTests
 
         public GitHubClient GitHubApi => _parameters.GitHubApi;
 
-        public MaestroScenarioTestBase(ITestOutputHelper output)
+        public MaestroScenarioTestBase()
         {
             _parameters = null!;
-            _output = output;
         }
 
+        [OneTimeSetUp]
         public async Task InitializeAsync()
         {
-            _parameters = await TestParameters.GetAsync(_output);
+            _parameters = await TestParameters.GetAsync();
         }
 
+        [OneTimeTearDown]
         public Task DisposeAsync()
         {
             _parameters.Dispose();
             return Task.CompletedTask;
-        }  
+        }
 
         public async Task<PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
         {
@@ -59,13 +57,13 @@ namespace Maestro.ScenarioTests
                 }
                 if (prs.Count > 1)
                 {
-                    throw new XunitException($"More than one pull request found in {targetRepo} targeting {targetBranch}");
+                    throw new MaestroTestException($"More than one pull request found in {targetRepo} targeting {targetBranch}");
                 }
 
                 await Task.Delay(60 * 1000).ConfigureAwait(false);
             }
 
-            throw new XunitException($"No pull request was created in {targetRepo} targeting {targetBranch}");
+            throw new MaestroTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
         }
 
         public async Task<IAsyncDisposable> PushGitBranchAsync(string remote, string branch)
@@ -73,7 +71,7 @@ namespace Maestro.ScenarioTests
             await RunGitAsync("push", remote, branch);
             return AsyncDisposable.Create(async () =>
             {
-                _output.WriteLine($"Cleaning up Remote branch {branch}");
+                TestContext.WriteLine($"Cleaning up Remote branch {branch}");
                 await RunGitAsync("push", remote, "--delete", branch);
             });
         }
@@ -100,7 +98,7 @@ namespace Maestro.ScenarioTests
 
         public Task<string> RunDarcAsync(params string[] args)
         {
-            return TestHelpers.RunExecutableAsync(_output, _parameters.DarcExePath, args.Concat(new[]
+            return TestHelpers.RunExecutableAsync(_parameters.DarcExePath, args.Concat(new[]
             {
                 "-p", _parameters.MaestroToken,
                 "--bar-uri", _parameters.MaestroBaseUri,
@@ -110,7 +108,7 @@ namespace Maestro.ScenarioTests
 
         public Task<string> RunGitAsync(params string[] args)
         {
-            return TestHelpers.RunExecutableAsync(_output, _parameters.GitExePath, args);
+            return TestHelpers.RunExecutableAsync(_parameters.GitExePath, args);
         }
 
         public async Task<AsyncDisposableValue<string>> CreateTestChannelAsync(string testChannelName)
@@ -119,7 +117,7 @@ namespace Maestro.ScenarioTests
             {
                 await RunDarcAsync("delete-channel", "--name", testChannelName).ConfigureAwait(false);
             }
-            catch (XunitException)
+            catch (MaestroTestException)
             {
                 // Ignore failures from delete-channel, its just a pre-cleanup that isn't really part of the test
             }
@@ -128,9 +126,42 @@ namespace Maestro.ScenarioTests
 
             return AsyncDisposableValue.Create(testChannelName, async () =>
             {
-                _output.WriteLine($"Cleaning up Test Channel {testChannelName}");
-                await RunDarcAsync("delete-channel", "--name", testChannelName).ConfigureAwait(false);
+                TestContext.WriteLine($"Cleaning up Test Channel {testChannelName}");
+                try
+                {
+                    string doubleDelete = await RunDarcAsync("delete-channel", "--name", testChannelName).ConfigureAwait(false);
+                }
+                catch (MaestroTestException)
+                {
+                    // Ignore failures from delete-channel, this delete is here to ensure that the channel is deleted
+                    // even if the test does not do an explicit delete as part of the test
+                }
             });
+        }
+
+        public async Task<string> GetTestChannelsAsync()
+        {
+            return await RunDarcAsync("get-channels").ConfigureAwait(false);
+        }
+
+        public async Task DeleteTestChannelAsync(string testChannelName)
+        {
+            await RunDarcAsync("delete-channel", "--name", testChannelName).ConfigureAwait(false);
+        }
+
+        public async Task<string> AddDefaultTestChannelAsync(string testChannelName, string repoUri, string branchName)
+        {
+            return await RunDarcAsync("add-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branchName, "-q").ConfigureAwait(false);
+        }
+
+        public async Task<string> GetDefaultTestChannelsAsync(string repoUri, string branch)
+        {
+            return await RunDarcAsync("get-default-channels", "--source-repo", repoUri, "--branch", branch).ConfigureAwait(false);
+        }
+
+        public async Task DeleteDefaultTestChannelAsync(string testChannelName, string repoUri, string branch)
+        {
+            await RunDarcAsync("delete-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branch).ConfigureAwait(false);
         }
 
         public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string sourceChannelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency)
@@ -148,12 +179,12 @@ namespace Maestro.ScenarioTests
                 string subscriptionId = match.Groups[1].Value;
                 return AsyncDisposableValue.Create(subscriptionId, async () =>
                 {
-                    _output.WriteLine($"Cleaning up Test Subscription {subscriptionId}");
+                    TestContext.WriteLine($"Cleaning up Test Subscription {subscriptionId}");
                     await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet").ConfigureAwait(false);
                 });
             }
 
-            throw new XunitException("Unable to create subscription.");
+            throw new MaestroTestException("Unable to create subscription.");
         }
 
         public Task<int> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets)
@@ -194,7 +225,7 @@ namespace Maestro.ScenarioTests
             await RunDarcAsync("add-build-to-channel", "--id", buildId.ToString(), "--channel", channelName, "--skip-assets-publishing");
             return AsyncDisposable.Create(async () =>
             {
-                _output.WriteLine($"Removing build {buildId} from channel {channelName}");
+                TestContext.WriteLine($"Removing build {buildId} from channel {channelName}");
                 await RunDarcAsync("delete-build-from-channel", "--id", buildId.ToString(), "--channel", channelName);
             });
         }
@@ -202,11 +233,11 @@ namespace Maestro.ScenarioTests
         public IDisposable ChangeDirectory(string directory)
         {
             string old = Directory.GetCurrentDirectory();
-            _output.WriteLine($"Switching to directory {directory}");
+            TestContext.WriteLine($"Switching to directory {directory}");
             Directory.SetCurrentDirectory(directory);
             return Disposable.Create(() =>
             {
-                _output.WriteLine($"Switching back to directory {old}");
+                TestContext.WriteLine($"Switching back to directory {old}");
                 Directory.SetCurrentDirectory(old);
             });
         }
