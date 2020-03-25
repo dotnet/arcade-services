@@ -143,6 +143,7 @@ stages:
           - powershell: |
               robocopy src/Maestro/MaestroApplication/PublishProfiles $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\PublishProfiles /S *.xml
               robocopy src/Maestro/MaestroApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationParameters /S *.xml
+              robocopy src/Maestro/MaestroApplication/ApplicationPackageRoot $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationPackageRoot /S *.xml
               exit 0
             displayName: Copy Maestro Project Artifacts
 
@@ -157,6 +158,7 @@ stages:
           - powershell: |
               robocopy src/Telemetry/TelemetryApplication/PublishProfiles $(Build.ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication\projectartifacts\PublishProfiles /S *.xml
               robocopy src/Telemetry/TelemetryApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication\projectartifacts\ApplicationParameters /S *.xml
+              robocopy src/Telemetry/TelemetryApplication/ApplicationPackageRoot $(Build.ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication\projectartifacts\ApplicationPackageRoot /S *.xml
               exit 0
             displayName: Copy Telemetry Project Artifacts
 
