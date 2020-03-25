@@ -9,15 +9,15 @@ param(
 function Get-ServiceTypes() {
     $serviceTypes = @()
     [xml]$appManifest = Get-Content $ApplicationManifestPath 
-    $manifestsNames = $appManifest.ApplicationManifest.ServiceManifestImport.ServiceManifestRef.ServiceManifestName | Select-Object $_
+    $manifestsNames = $appManifest.ApplicationManifest.ServiceManifestImport.ServiceManifestRef.ServiceManifestName
 
     foreach ($manifestName in $manifestsNames) {
         $serviceName = $manifestName -replace "Pkg" 
         $manifestPath = "${ServicesSourceFolder}${serviceName}\PackageRoot\ServiceManifest.xml"
 
         [xml]$serviceManifest = Get-Content $manifestPath
-        $serviceTypes += $serviceManifest.ServiceManifest.ServiceTypes.StatefulServiceType.ServiceTypeName | Select-Object $_
-        $serviceTypes += $serviceManifest.ServiceManifest.ServiceTypes.StatelessServiceType.ServiceTypeName | Select-Object $_
+        $serviceTypes += $serviceManifest.ServiceManifest.ServiceTypes.StatefulServiceType.ServiceTypeName | Where-Object { $_ }
+        $serviceTypes += $serviceManifest.ServiceManifest.ServiceTypes.StatelessServiceType.ServiceTypeName | Where-Object { $_ }
     }
 
     Write-Host "Service types found: "
