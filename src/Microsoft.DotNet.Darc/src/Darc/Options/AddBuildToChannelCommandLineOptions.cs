@@ -16,7 +16,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("channel", Required = true, HelpText = "Channel to assign build to.")]
         public string Channel { get; set; }
 
-        [Option("source-branch", HelpText = "Branch that should be used as base for the promotion build.")]
+        [Option("source-branch", HelpText = "Branch that should be used as base for the promotion build. Required if source-sha is specified.")]
         public string SourceBranch { get; set; }
 
         [Option("source-sha", HelpText = "SHA that should be used as base for the promotion build.")]
