@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -111,7 +112,36 @@ namespace Microsoft.DotNet.Services.Utility
                 attempt++;
             }
         }
-        
+
+        public static async Task RetryAsync(
+            Action function,
+            Action<Exception> logRetry,
+            Func<Exception, bool> isRetryable)
+        {
+            int attempt = 0;
+            int maxAttempt = RetryCount;
+            while (true)
+            {
+                try
+                {
+                    function();
+                    return;
+                }
+                catch (Exception ex) when (isRetryable(ex))
+                {
+                    if (attempt >= maxAttempt)
+                    {
+                        throw;
+                    }
+
+                    logRetry(ex);
+                }
+
+                await Task.Delay(GetRetryDelay(attempt));
+                attempt++;
+            }
+        }
+
         public static async Task RetryAsync(
             Func<CancellationToken, Task> function,
             Action<Exception> logRetry,
