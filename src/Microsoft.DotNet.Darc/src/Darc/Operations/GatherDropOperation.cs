@@ -1659,12 +1659,13 @@ namespace Microsoft.DotNet.Darc.Operations
         private static async Task DeleteFileWithRetryAsync(string filePath)
         {
             await ExponentialRetry.RetryAsync(
-                async () =>
+                () =>
                 {
                     if (File.Exists(filePath))
                     {
                         File.Delete(filePath);
                     }
+                    return Task.CompletedTask;
                 },
                 ex => Console.WriteLine($"Failed to delete {filePath}: {ex.Message}"),
                 ex => ex is UnauthorizedAccessException);
