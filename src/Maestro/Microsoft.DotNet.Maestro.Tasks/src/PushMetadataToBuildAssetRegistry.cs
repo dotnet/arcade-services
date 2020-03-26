@@ -39,6 +39,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         public string RepoRoot { get; set; }
 
+        [Output]
+        public int BuildId { get; set; }
+
         private const string SearchPattern = "*.xml";
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
 
@@ -93,6 +96,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     finalBuild.Dependencies = deps;
 
                     Client.Models.Build recordedBuild = await client.Builds.CreateAsync(finalBuild, cancellationToken);
+                    BuildId = recordedBuild.Id;
 
                     Log.LogMessage(MessageImportance.High, $"Metadata has been pushed. Build id in the Build Asset Registry is '{recordedBuild.Id}'");
 
