@@ -128,6 +128,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Monitoring
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maestro.ScenarioTests", "src\Maestro\tests\Maestro.ScenarioTests\Maestro.ScenarioTests.csproj", "{5C7B6C2F-9173-4729-9BEC-A7B055312D5F}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyUpdateErrorProcessor", "src\Maestro\DependencyUpdateErrorProcessor\DependencyUpdateErrorProcessor.csproj", "{7D7E290E-7A94-4F7B-AA05-27156C4A3CAC}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DncEng.Configuration.Extensions", "src\Microsoft.DncEng.Configuration.Extensions\Microsoft.DncEng.Configuration.Extensions.csproj", "{72D673DF-6D05-4501-B7E5-921D424A46C4}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FeedCleanerService.Tests", "src\Maestro\tests\FeedCleaner.Tests\FeedCleanerService.Tests.csproj", "{93D3662A-65AB-4010-AA96-22AA54F56416}"
@@ -138,7 +140,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Maestro.DataProviders", "sr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Internal.Logging", "src\Shared\MIcrosoft.DotNet.Internal.Logging\Microsoft.DotNet.Internal.Logging.csproj", "{2C7D3A7A-26E2-4A9D-97D6-9AF3812F6906}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DncEng.DeployServiceFabricCluster", "src\Microsoft.DncEng.DeployServiceFabricCluster\Microsoft.DncEng.DeployServiceFabricCluster.csproj", "{6307FF01-47DB-4EE6-86FF-9E78D8832D37}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DncEng.DeployServiceFabricCluster", "src\Microsoft.DncEng.DeployServiceFabricCluster\Microsoft.DncEng.DeployServiceFabricCluster.csproj", "{6307FF01-47DB-4EE6-86FF-9E78D8832D37}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -606,6 +608,18 @@ Global
 		{5C7B6C2F-9173-4729-9BEC-A7B055312D5F}.Release|x64.Build.0 = Release|Any CPU
 		{5C7B6C2F-9173-4729-9BEC-A7B055312D5F}.Release|x86.ActiveCfg = Release|Any CPU
 		{5C7B6C2F-9173-4729-9BEC-A7B055312D5F}.Release|x86.Build.0 = Release|Any CPU
+		{7D7E290E-7A94-4F7B-AA05-27156C4A3CAC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D7E290E-7A94-4F7B-AA05-27156C4A3CAC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D7E290E-7A94-4F7B-AA05-27156C4A3CAC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7D7E290E-7A94-4F7B-AA05-27156C4A3CAC}.Debug|x64.Build.0 = Debug|Any CPU
+		{7D7E290E-7A94-4F7B-AA05-27156C4A3CAC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7D7E290E-7A94-4F7B-AA05-27156C4A3CAC}.Debug|x86.Build.0 = Debug|Any CPU
+		{7D7E290E-7A94-4F7B-AA05-27156C4A3CAC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D7E290E-7A94-4F7B-AA05-27156C4A3CAC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7D7E290E-7A94-4F7B-AA05-27156C4A3CAC}.Release|x64.ActiveCfg = Release|Any CPU
+		{7D7E290E-7A94-4F7B-AA05-27156C4A3CAC}.Release|x64.Build.0 = Release|Any CPU
+		{7D7E290E-7A94-4F7B-AA05-27156C4A3CAC}.Release|x86.ActiveCfg = Release|Any CPU
+		{7D7E290E-7A94-4F7B-AA05-27156C4A3CAC}.Release|x86.Build.0 = Release|Any CPU
 		{72D673DF-6D05-4501-B7E5-921D424A46C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{72D673DF-6D05-4501-B7E5-921D424A46C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{72D673DF-6D05-4501-B7E5-921D424A46C4}.Debug|x64.ActiveCfg = Debug|Any CPU
@@ -716,6 +730,7 @@ Global
 		{A2B7789F-0CDF-4209-9DB9-164497E3C891} = {09C0DC50-2819-48D1-A7B6-ADC9C99EE226}
 		{0F3B5969-0890-441A-8A3A-6F9E07F92645} = {09C0DC50-2819-48D1-A7B6-ADC9C99EE226}
 		{5C7B6C2F-9173-4729-9BEC-A7B055312D5F} = {AE791E26-78E1-4936-BCF4-1BF5152CBBD6}
+		{7D7E290E-7A94-4F7B-AA05-27156C4A3CAC} = {AE791E26-78E1-4936-BCF4-1BF5152CBBD6}
 		{93D3662A-65AB-4010-AA96-22AA54F56416} = {AE791E26-78E1-4936-BCF4-1BF5152CBBD6}
 		{C7E8C999-F8AE-427D-B748-6BCF7202B476} = {AE791E26-78E1-4936-BCF4-1BF5152CBBD6}
 		{AD4D66B9-6CAB-4729-A5D1-57A859E06801} = {AE791E26-78E1-4936-BCF4-1BF5152CBBD6}
