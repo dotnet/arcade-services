@@ -4,9 +4,6 @@
     <Parameter Name="DependencyUpdateErrorProcessor_MinReplicaSetSize" Value="3" />
     <Parameter Name="DependencyUpdateErrorProcessor_PartitionCount" Value="1" />
     <Parameter Name="DependencyUpdateErrorProcessor_TargetReplicaSetSize" Value="3" />
-    <Parameter Name="ReleasePipelineRunner_PartitionCount" Value="1" />
-    <Parameter Name="ReleasePipelineRunner_MinReplicaSetSize" Value="3" />
-    <Parameter Name="ReleasePipelineRunner_TargetReplicaSetSize" Value="3" />
     <Parameter Name="DependencyUpdater_PartitionCount" Value="1" />
     <Parameter Name="DependencyUpdater_MinReplicaSetSize" Value="3" />
     <Parameter Name="DependencyUpdater_TargetReplicaSetSize" Value="3" />
