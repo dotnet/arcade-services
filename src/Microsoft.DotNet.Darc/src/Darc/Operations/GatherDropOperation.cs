@@ -1659,7 +1659,7 @@ namespace Microsoft.DotNet.Darc.Operations
         private static async Task DeleteFileWithRetryAsync(string filePath)
         {
             await ExponentialRetry.RetryAsync(
-                () =>
+                async () =>
                 {
                     if (File.Exists(filePath))
                     {
