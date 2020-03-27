@@ -56,11 +56,16 @@ namespace Microsoft.DotNet.DarcLib
 
         public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoUri, string branch)
         {
-            string fullPath = Path.Combine(repoUri, relativeFilePath);
-            using (var streamReader = new StreamReader(fullPath))
+            if (string.IsNullOrEmpty(branch))
             {
-                return await streamReader.ReadToEndAsync();
+                string fullPath = Path.Combine(repoUri, relativeFilePath);
+                using (var streamReader = new StreamReader(fullPath))
+                {
+                    return await streamReader.ReadToEndAsync();
+                }
             }
+
+            throw new NotImplementedException();
         }
 
         public Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message)

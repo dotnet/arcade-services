@@ -4,34 +4,34 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.DotNet.DarcLib;
 
-namespace Microsoft.DotNet.Darc.Operations.Clone
+namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
-    internal class StrippedDependency
+    public class StrippedDependency
     {
-        internal string RepoUri { get; set; }
-        internal string Commit { get; set; }
+        public string RepoUri { get; set; }
+        public string Commit { get; set; }
         private bool Visited { get; set; }
-        internal HashSet<StrippedDependency> Dependencies { get; set; }
-        internal static HashSet<StrippedDependency> AllDependencies;
+
+        public HashSet<StrippedDependency> Dependencies { get; set; }
+        public static HashSet<StrippedDependency> AllDependencies;
 
         static StrippedDependency()
         {
             AllDependencies = new HashSet<StrippedDependency>();
         }
 
-        internal static StrippedDependency GetDependency(DependencyDetail d)
+        public static StrippedDependency GetDependency(DependencyDetail d)
         {
             return GetDependency(d.RepoUri, d.Commit);
         }
 
-        internal static StrippedDependency GetDependency(StrippedDependency d)
+        public static StrippedDependency GetDependency(StrippedDependency d)
         {
             return GetDependency(d.RepoUri, d.Commit);
         }
 
-        internal static StrippedDependency GetDependency(string repoUrl, string commit)
+        public static StrippedDependency GetDependency(string repoUrl, string commit)
         {
             StrippedDependency dep;
             dep = AllDependencies.SingleOrDefault(d => d.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant() && d.Commit.ToLowerInvariant() == commit.ToLowerInvariant());
@@ -57,7 +57,7 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
 
         private StrippedDependency(DependencyDetail d) : this(d.RepoUri, d.Commit) { }
 
-        internal void AddDependency(StrippedDependency dep)
+        public void AddDependency(StrippedDependency dep)
         {
             StrippedDependency other = GetDependency(dep);
             if (this.Dependencies.Any(d => d.RepoUri.ToLowerInvariant() == other.RepoUri.ToLowerInvariant()))
@@ -71,12 +71,12 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
             }
         }
 
-        internal void AddDependency(DependencyDetail dep)
+        public void AddDependency(DependencyDetail dep)
         {
             this.AddDependency(GetDependency(dep));
         }
 
-        internal bool HasDependencyOn(string repoUrl)
+        public bool HasDependencyOn(string repoUrl)
         {
             bool hasDep = false;
             lock (AllDependencies)
@@ -107,12 +107,12 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
             return hasDep;
         }
 
-        internal bool HasDependencyOn(StrippedDependency dep)
+        public bool HasDependencyOn(StrippedDependency dep)
         {
             return HasDependencyOn(dep.RepoUri);
         }
 
-        internal bool HasDependencyOn(DependencyDetail dep)
+        public bool HasDependencyOn(DependencyDetail dep)
         {
             return HasDependencyOn(dep.RepoUri);
         }
