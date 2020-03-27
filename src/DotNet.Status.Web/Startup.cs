@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using DotNet.Status.Web.Controllers;
 using GitHubJwt;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
@@ -77,6 +78,7 @@ namespace DotNet.Status.Web
             services.Configure<GrafanaOptions>(Configuration.GetSection("Grafana").Bind);
             services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth").Bind);
             services.Configure<ZenHubOptions>(Configuration.GetSection("ZenHub").Bind);
+            services.Configure<BuildMonitorOptions>(Configuration.GetSection("BuildMonitor").Bind);
 
             services.Configure<SimpleSigninOptions>(o => { o.ChallengeScheme = GitHubScheme; });
             services.ConfigureExternalCookie(options =>
@@ -193,6 +195,7 @@ namespace DotNet.Status.Web
             services.AddSingleton<GitHubJwtFactory>();
 
             services.AddSingleton<ZenHubClient>();
+            services.AddSingleton<GitHubClientFactory>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
