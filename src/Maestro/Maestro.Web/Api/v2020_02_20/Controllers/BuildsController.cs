@@ -283,5 +283,50 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 },
                 new Models.Build(buildModel));
         }
+
+        /// <summary>
+        ///   Adds a new <see cref="v2018_07_16.Models.AssetLocation"/> to all existing <see cref="v2018_07_16.Models.Asset"/> of a build.
+        /// </summary>
+        /// <param name="buildId">The id of the <see cref="Build"/> which the assets will receive a new <see cref="v2018_07_16.Models.AssetLocation"/>.</param>
+        /// <param name="location">The location to add to the Asset.</param>
+        /// <param name="assetLocationType">The type of the location.</param>
+        [HttpPost("{buildId}/add-location-to-all-assets")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Description = "AssetLocation successfully added to assets.")]
+        public async Task<IActionResult> AddAssetLocationToAllAssets(int buildId, [Required] string location, [Required] v2018_07_16.Models.LocationType assetLocationType)
+        {
+            Maestro.Data.Models.Build build = await _context.Builds
+                .Include(b => b.Assets)
+                .ThenInclude(a => a.Locations)
+                .Where(b => b.Id == buildId)
+                .SingleOrDefaultAsync();
+
+            if (build == null)
+            {
+                return NotFound(new ApiError($"The build with id '{buildId}' was not found."));
+            }
+
+            foreach (var asset in build.Assets)
+            {
+                var assetLocation = new Data.Models.AssetLocation
+                {
+                    Location = location,
+                    Type = (Maestro.Data.Models.LocationType)assetLocationType,
+                };
+
+                // If asset location is already in asset, nothing to do
+                if (asset.Locations != null &&
+                    asset.Locations.Any(existing => existing.Location.Equals(assetLocation.Location, StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+
+                asset.Locations = asset.Locations ?? new List<Data.Models.AssetLocation>();
+                asset.Locations.Add(assetLocation);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return StatusCode((int)HttpStatusCode.OK);
+        }
     }
 }
