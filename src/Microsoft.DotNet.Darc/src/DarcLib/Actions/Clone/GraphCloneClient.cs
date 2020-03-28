@@ -34,11 +34,13 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             var accumulatedDependencies = new HashSet<StrippedDependency>(rootDependencies);
 
             var allDependencies = new List<StrippedDependency>(accumulatedDependencies);
+            var allDependenciesLock = new SemaphoreSlim(1);
 
             // At the end of each depth level, the accumulated deps are moved to this queue to be cloned.
             var dependenciesToClone = new Queue<StrippedDependency>();
 
-            var cloning = new Dictionary<string, SemaphoreSlim>();
+            var cloningTasks = new Dictionary<string, Task>();
+            var cloningTasksLock = new SemaphoreSlim(1);
 
             while (accumulatedDependencies.Any())
             {
@@ -68,39 +70,19 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                                 Logger.LogWarning($"Skipping non-GitHub repo {repo.RepoUri}");
                                 return;
                             }
+
                             IRemote repoRemote = await RemoteFactory.GetRemoteAsync(repo.RepoUri, Logger);
-                            SemaphoreSlim semaphore = null;
-                            bool waiting;
 
-                            lock (cloning)
-                            {
-                                if (cloning.TryGetValue(masterRepoGitDirPath, out semaphore))
-                                {
-                                    waiting = true;
-                                }
-                                else
-                                {
-                                    waiting = false;
-                                    semaphore = new SemaphoreSlim(0);
-                                    cloning[masterRepoGitDirPath] = semaphore;
-                                }
-
-                            }
-
-                            if (waiting)
-                            {
-                                await semaphore.WaitAsync();
-                                semaphore.Release();
-                            }
-                            else
-                            {
-                                await Task.Run(() =>
+                            var cloneTask = await GetOrCreateCloneTaskAsync(
+                                cloningTasks,
+                                cloningTasksLock,
+                                masterRepoGitDirPath,
+                                () =>
                                 {
                                     repoRemote.Clone(repo.RepoUri, null, null, masterRepoGitDirPath);
                                 });
 
-                                semaphore.Release();
-                            }
+                            await cloneTask;
                         }
                         catch (Exception)
                         {
@@ -126,41 +108,42 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                             Logger.LogDebug($"Filtered toolset dependencies. Now {deps.Count()} dependencies");
                         }
 
-                        lock (allDependencies)
+                        await allDependenciesLock.WaitAsync();
+
+                        foreach (DependencyDetail d in deps)
                         {
-                            foreach (DependencyDetail d in deps)
+                            StrippedDependency dep = StrippedDependency.GetOrAddDependency(allDependencies, d);
+
+                            // Remove self-dependency. E.g. arcade depends on previous versions of itself to build, so this would go on forever.
+                            if (d.RepoUri == repo.RepoUri)
                             {
-                                StrippedDependency dep = StrippedDependency.GetOrAddDependency(allDependencies, d);
+                                Logger.LogDebug($"Skipping self-dependency in {repo.RepoUri} ({repo.Commit} => {d.Commit})");
+                            }
+                            // Remove circular dependencies that have different hashes, e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
+                            else if (dep.HasDependencyOn(repo))
+                            {
+                                Logger.LogDebug($"Skipping already-seen circular dependency from {repo.RepoUri} to {d.RepoUri}");
+                            }
+                            else if (ignoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                Logger.LogDebug($"Skipping ignored repo {d.RepoUri} (at {d.Commit})");
+                            }
+                            else if (string.IsNullOrWhiteSpace(d.Commit))
+                            {
+                                Logger.LogWarning($"Skipping dependency from {repo.RepoUri}@{repo.Commit} to {d.RepoUri}: Missing commit.");
+                            }
+                            else
+                            {
+                                StrippedDependency stripped = StrippedDependency.GetOrAddDependency(allDependencies, d);
 
-                                // Remove self-dependency. E.g. arcade depends on previous versions of itself to build, so this would go on forever.
-                                if (d.RepoUri == repo.RepoUri)
-                                {
-                                    Logger.LogDebug($"Skipping self-dependency in {repo.RepoUri} ({repo.Commit} => {d.Commit})");
-                                }
-                                // Remove circular dependencies that have different hashes, e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
-                                else if (dep.HasDependencyOn(repo))
-                                {
-                                    Logger.LogDebug($"Skipping already-seen circular dependency from {repo.RepoUri} to {d.RepoUri}");
-                                }
-                                else if (ignoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
-                                {
-                                    Logger.LogDebug($"Skipping ignored repo {d.RepoUri} (at {d.Commit})");
-                                }
-                                else if (string.IsNullOrWhiteSpace(d.Commit))
-                                {
-                                    Logger.LogWarning($"Skipping dependency from {repo.RepoUri}@{repo.Commit} to {d.RepoUri}: Missing commit.");
-                                }
-                                else
-                                {
-                                    StrippedDependency stripped = StrippedDependency.GetOrAddDependency(allDependencies, d);
+                                Logger.LogDebug($"Adding new dependency {stripped.RepoUri}@{stripped.Commit}");
 
-                                    Logger.LogDebug($"Adding new dependency {stripped.RepoUri}@{stripped.Commit}");
-
-                                    repo.AddDependency(allDependencies, dep);
-                                    accumulatedDependencies.Add(stripped);
-                                }
+                                repo.AddDependency(allDependencies, dep);
+                                accumulatedDependencies.Add(stripped);
                             }
                         }
+
+                        allDependenciesLock.Release();
 
                         Logger.LogDebug($"done looking for dependencies in {masterRepoGitDirPath} at {repo.Commit}");
                     }
@@ -196,6 +179,23 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         public async Task CreateWorkTreesAsync(object graph, string optionsReposFolder)
         {
 
+        }
+
+        private static async Task<Task> GetOrCreateCloneTaskAsync(
+            Dictionary<string, Task> map,
+            SemaphoreSlim mapLock,
+            string path,
+            Action cloneAction)
+        {
+            await mapLock.WaitAsync();
+
+            var cloneTask = map.TryGetValue(path, out var task)
+                ? task
+                : map[path] = Task.Run(cloneAction);
+
+            mapLock.Release();
+
+            return cloneTask;
         }
 
         private static async Task SetupMasterCopyAsync(IRemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath, ILogger log)
