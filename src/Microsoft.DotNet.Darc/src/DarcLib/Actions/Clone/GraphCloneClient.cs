@@ -4,9 +4,11 @@
 
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
@@ -36,6 +38,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             // At the end of each depth level, the accumulated deps are moved to this queue to be cloned.
             var dependenciesToClone = new Queue<StrippedDependency>();
 
+            var cloning = new Dictionary<string, SemaphoreSlim>();
+
             while (accumulatedDependencies.Any())
             {
                 // add this level's dependencies to the queue and clear it for the next level
@@ -47,14 +51,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 accumulatedDependencies.Clear();
 
                 // this will do one level of clones at a time
-                while (dependenciesToClone.Any())
+                await Task.WhenAll(dependenciesToClone.Select(async repo =>
                 {
-                    StrippedDependency repo = dependenciesToClone.Dequeue();
-                    //// the folder for the specific repo-hash we are cloning.  these will be orphaned from the .gitdir.
-                    //string repoPath = GetRepoDirectory(ReposDir, repo.RepoUri, repo.Commit);
-                    //// the "master" folder, which continues to be linked to the .git directory
-                    //string masterGitRepoPath = GetMasterGitRepoPath(ReposDir, repo.RepoUri);
-                    // the .gitdir that is shared among all repo-hashes (temporarily, before they are orphaned)
+                    // The bare .git dir.
                     string masterRepoGitDirPath = GetMasterGitDirPath(repo.RepoUri);
 
                     // Create the bare repo clone.
@@ -62,15 +61,46 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     {
                         try
                         {
-                            if (IgnoreNonGitHub && 
-                                Uri.TryCreate(repo.RepoUri, UriKind.Absolute, out Uri parsedUri) && 
+                            if (IgnoreNonGitHub &&
+                                Uri.TryCreate(repo.RepoUri, UriKind.Absolute, out Uri parsedUri) &&
                                 parsedUri.Host != "github.com")
                             {
                                 Logger.LogWarning($"Skipping non-GitHub repo {repo.RepoUri}");
-                                continue;
+                                return;
                             }
                             IRemote repoRemote = await RemoteFactory.GetRemoteAsync(repo.RepoUri, Logger);
-                            repoRemote.Clone(repo.RepoUri, null, null, masterRepoGitDirPath);
+                            SemaphoreSlim semaphore = null;
+                            bool waiting;
+
+                            lock (cloning)
+                            {
+                                if (cloning.TryGetValue(masterRepoGitDirPath, out semaphore))
+                                {
+                                    waiting = true;
+                                }
+                                else
+                                {
+                                    waiting = false;
+                                    semaphore = new SemaphoreSlim(0);
+                                    cloning[masterRepoGitDirPath] = semaphore;
+                                }
+
+                            }
+
+                            if (waiting)
+                            {
+                                await semaphore.WaitAsync();
+                                semaphore.Release();
+                            }
+                            else
+                            {
+                                await Task.Run(() =>
+                                {
+                                    repoRemote.Clone(repo.RepoUri, null, null, masterRepoGitDirPath);
+                                });
+
+                                semaphore.Release();
+                            }
                         }
                         catch (Exception)
                         {
@@ -96,36 +126,39 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                             Logger.LogDebug($"Filtered toolset dependencies. Now {deps.Count()} dependencies");
                         }
 
-                        foreach (DependencyDetail d in deps)
+                        lock (allDependencies)
                         {
-                            StrippedDependency dep = StrippedDependency.GetOrAddDependency(allDependencies, d);
+                            foreach (DependencyDetail d in deps)
+                            {
+                                StrippedDependency dep = StrippedDependency.GetOrAddDependency(allDependencies, d);
 
-                            // Remove self-dependency. E.g. arcade depends on previous versions of itself to build, so this would go on forever.
-                            if (d.RepoUri == repo.RepoUri)
-                            {
-                                Logger.LogDebug($"Skipping self-dependency in {repo.RepoUri} ({repo.Commit} => {d.Commit})");
-                            }
-                            // Remove circular dependencies that have different hashes, e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
-                            else if (dep.HasDependencyOn(repo))
-                            {
-                                Logger.LogDebug($"Skipping already-seen circular dependency from {repo.RepoUri} to {d.RepoUri}");
-                            }
-                            else if (ignoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
-                            {
-                                Logger.LogDebug($"Skipping ignored repo {d.RepoUri} (at {d.Commit})");
-                            }
-                            else if (string.IsNullOrWhiteSpace(d.Commit))
-                            {
-                                Logger.LogWarning($"Skipping dependency from {repo.RepoUri}@{repo.Commit} to {d.RepoUri}: Missing commit.");
-                            }
-                            else
-                            {
-                                StrippedDependency stripped = StrippedDependency.GetOrAddDependency(allDependencies, d);
+                                // Remove self-dependency. E.g. arcade depends on previous versions of itself to build, so this would go on forever.
+                                if (d.RepoUri == repo.RepoUri)
+                                {
+                                    Logger.LogDebug($"Skipping self-dependency in {repo.RepoUri} ({repo.Commit} => {d.Commit})");
+                                }
+                                // Remove circular dependencies that have different hashes, e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
+                                else if (dep.HasDependencyOn(repo))
+                                {
+                                    Logger.LogDebug($"Skipping already-seen circular dependency from {repo.RepoUri} to {d.RepoUri}");
+                                }
+                                else if (ignoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    Logger.LogDebug($"Skipping ignored repo {d.RepoUri} (at {d.Commit})");
+                                }
+                                else if (string.IsNullOrWhiteSpace(d.Commit))
+                                {
+                                    Logger.LogWarning($"Skipping dependency from {repo.RepoUri}@{repo.Commit} to {d.RepoUri}: Missing commit.");
+                                }
+                                else
+                                {
+                                    StrippedDependency stripped = StrippedDependency.GetOrAddDependency(allDependencies, d);
 
-                                Logger.LogDebug($"Adding new dependency {stripped.RepoUri}@{stripped.Commit}");
+                                    Logger.LogDebug($"Adding new dependency {stripped.RepoUri}@{stripped.Commit}");
 
-                                repo.AddDependency(allDependencies, dep);
-                                accumulatedDependencies.Add(stripped);
+                                    repo.AddDependency(allDependencies, dep);
+                                    accumulatedDependencies.Add(stripped);
+                                }
                             }
                         }
 
@@ -139,8 +172,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                             $"Dependency chain is broken here. " + Environment.NewLine +
                             $"(Inner exception: {ex})");
                     }
-                }
-
+                }));
 
                 if (cloneDepth == 0 && accumulatedDependencies.Any())
                 {
