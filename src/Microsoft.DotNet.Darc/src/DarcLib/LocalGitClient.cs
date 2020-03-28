@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using LibGit2Sharp;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 
@@ -65,7 +66,32 @@ namespace Microsoft.DotNet.DarcLib
                 }
             }
 
-            throw new NotImplementedException();
+            using (var localRepo = new Repository(repoUri))
+            {
+                var commit = localRepo.Lookup<LibGit2Sharp.Commit>(branch);
+                if (commit == null)
+                {
+                    throw new ArgumentException(
+                        $"Object-ish expression '{branch}' does not resolve to a commit.",
+                        nameof(branch));
+                }
+
+                var treeEntry = commit[relativeFilePath];
+                if (treeEntry == null)
+                {
+                    throw new DependencyFileNotFoundException(
+                        $"Tree entry at '{relativeFilePath}' does not exist.");
+                }
+
+                var blob = treeEntry.Target as Blob;
+                if (blob == null)
+                {
+                    throw new DependencyFileNotFoundException(
+                        $"Tree entry at '{relativeFilePath}' is not a blob.");
+                }
+
+                return blob.GetContentText();
+            }
         }
 
         public Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message)

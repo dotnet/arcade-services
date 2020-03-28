@@ -34,14 +34,14 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             string repoUrl,
             string commit)
         {
-            StrippedDependency dep = allDependencies.SingleOrDefault(d =>
+            StrippedDependency dep = allDependencies?.SingleOrDefault(d =>
                 string.Equals(d.RepoUri, repoUrl, StringComparison.InvariantCultureIgnoreCase) &&
                 string.Equals(d.Commit, commit, StringComparison.InvariantCultureIgnoreCase));
 
             if (dep == null)
             {
                 dep = new StrippedDependency(repoUrl, commit);
-                allDependencies.Add(dep);
+                allDependencies?.Add(dep);
             }
             return dep;
         }

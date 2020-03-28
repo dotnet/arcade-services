@@ -20,6 +20,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         public ILogger Logger { get; set; }
         public IRemoteFactory RemoteFactory { get; set; }
 
+        public bool IgnoreNonGitHub { get; set; } = true;
+
         public async Task<object> GetGraphAsync(
             IEnumerable<StrippedDependency> rootDependencies,
             IEnumerable<string> ignoredRepos,
@@ -28,6 +30,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             uint cloneDepth)
         {
             var accumulatedDependencies = new HashSet<StrippedDependency>(rootDependencies);
+
+            var allDependencies = new List<StrippedDependency>(accumulatedDependencies);
 
             // At the end of each depth level, the accumulated deps are moved to this queue to be cloned.
             var dependenciesToClone = new Queue<StrippedDependency>();
@@ -56,13 +60,30 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     // Create the bare repo clone.
                     if (!Directory.Exists(masterRepoGitDirPath))
                     {
-                        IRemote repoRemote = await RemoteFactory.GetRemoteAsync(repo.RepoUri, Logger);
-                        repoRemote.Clone(repo.RepoUri, null, null, masterRepoGitDirPath);
+                        try
+                        {
+                            if (IgnoreNonGitHub && 
+                                Uri.TryCreate(repo.RepoUri, UriKind.Absolute, out Uri parsedUri) && 
+                                parsedUri.Host != "github.com")
+                            {
+                                Logger.LogWarning($"Skipping non-GitHub repo {repo.RepoUri}");
+                                continue;
+                            }
+                            IRemote repoRemote = await RemoteFactory.GetRemoteAsync(repo.RepoUri, Logger);
+                            repoRemote.Clone(repo.RepoUri, null, null, masterRepoGitDirPath);
+                        }
+                        catch (Exception)
+                        {
+                            Logger.LogError($"Failed to create bare clone of '{repo.RepoUri}' at '{masterRepoGitDirPath}'");
+                            throw;
+                        }
                     }
 
                     Logger.LogDebug($"Starting to look for dependencies in {masterRepoGitDirPath}");
                     try
                     {
+                        var local = new Local(Logger, masterRepoGitDirPath);
+
                         IEnumerable<DependencyDetail> deps =
                             (await local.GetDependenciesAsync(branch: repo.Commit)).ToArray();
 
@@ -77,7 +98,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
                         foreach (DependencyDetail d in deps)
                         {
-                            StrippedDependency dep = StrippedDependency.GetOrAddDependency(d);
+                            StrippedDependency dep = StrippedDependency.GetOrAddDependency(allDependencies, d);
+
                             // Remove self-dependency. E.g. arcade depends on previous versions of itself to build, so this would go on forever.
                             if (d.RepoUri == repo.RepoUri)
                             {
@@ -98,44 +120,29 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                             }
                             else
                             {
-                                StrippedDependency stripped = StrippedDependency.GetOrAddDependency(d);
+                                StrippedDependency stripped = StrippedDependency.GetOrAddDependency(allDependencies, d);
+
                                 Logger.LogDebug($"Adding new dependency {stripped.RepoUri}@{stripped.Commit}");
-                                repo.AddDependency(dep);
+
+                                repo.AddDependency(allDependencies, dep);
                                 accumulatedDependencies.Add(stripped);
                             }
                         }
 
-                        Logger.LogDebug($"done looking for dependencies in {repoPath} at {repo.Commit}");
+                        Logger.LogDebug($"done looking for dependencies in {masterRepoGitDirPath} at {repo.Commit}");
                     }
-                    catch (DirectoryNotFoundException)
+                    catch (DependencyFileNotFoundException ex)
                     {
-                        Logger.LogWarning($"Repo {repoPath} appears to have no '/eng' directory at commit {repo.Commit}.  Dependency chain is broken here.");
+                        Logger.LogWarning(
+                            $"Repo {masterRepoGitDirPath} appears to have no " +
+                            $"'/eng/Version.Details.xml' file at commit {repo.Commit}. " +
+                            $"Dependency chain is broken here. " + Environment.NewLine +
+                            $"(Inner exception: {ex})");
                     }
-                    catch (FileNotFoundException)
-                    {
-                        Logger.LogWarning($"Repo {repoPath} appears to have no '/eng/Version.Details.xml' file at commit {repo.Commit}.  Dependency chain is broken here.");
-                    }
-                    finally
-                    {
-                        // delete the .gitdir redirect to orphan the repo.
-                        // we want to do this because otherwise all of these folder will show as dirty in Git,
-                        // and any operations on them will affect the master copy and all the others, which
-                        // could be confusing.
-                        string repoGitRedirectPath = Path.Combine(repoPath, ".git");
-                        if (File.Exists(repoGitRedirectPath))
-                        {
-                            Logger.LogDebug($"Deleting .gitdir redirect {repoGitRedirectPath}");
-                            File.Delete(repoGitRedirectPath);
-                        }
-                        else
-                        {
-                            Logger.LogDebug($"No .gitdir redirect found at {repoGitRedirectPath}");
-                        }
-                    }
-                } // end inner while(dependenciesToClone.Any())
+                }
 
 
-                if (_options.CloneDepth == 0 && accumulatedDependencies.Any())
+                if (cloneDepth == 0 && accumulatedDependencies.Any())
                 {
                     Logger.LogInformation($"Reached clone depth limit, aborting with {accumulatedDependencies.Count} dependencies remaining");
                     foreach (StrippedDependency d in accumulatedDependencies)
@@ -145,13 +152,11 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
                     break;
                 }
-                else
-                {
-                    _options.CloneDepth--;
-                    Logger.LogDebug($"Clone depth remaining: {_options.CloneDepth}");
-                    Logger.LogDebug($"Dependencies remaining: {accumulatedDependencies.Count}");
-                }
-            } // end outer while(accumulatedDependencies.Any())
+
+                cloneDepth--;
+                Logger.LogDebug($"Clone depth remaining: {cloneDepth}");
+                Logger.LogDebug($"Dependencies remaining: {accumulatedDependencies.Count}");
+            }
 
             return null;
         }

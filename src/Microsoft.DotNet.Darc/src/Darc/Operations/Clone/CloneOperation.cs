@@ -90,8 +90,11 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                 if (string.IsNullOrWhiteSpace(_options.RepoUri))
                 {
                     Local local = new Local(Logger);
+
                     IEnumerable<DependencyDetail>  rootDependencies = await local.GetDependenciesAsync();
-                    IEnumerable<StrippedDependency> stripped = rootDependencies.Select(d => StrippedDependency.GetOrAddDependency(d));
+                    IEnumerable<StrippedDependency> stripped = rootDependencies
+                        .Select(d => StrippedDependency.GetOrAddDependency(null, d));
+
                     foreach (StrippedDependency d in stripped)
                     {
                         if (_options.IgnoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
@@ -108,7 +111,11 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                 else
                 {
                     // Start with the root repo we were asked to clone
-                    StrippedDependency rootDep = StrippedDependency.GetDependency(_options.RepoUri, _options.Version);
+                    StrippedDependency rootDep = StrippedDependency.GetOrAddDependency(
+                        null,
+                        _options.RepoUri,
+                        _options.Version);
+
                     accumulatedDependencies.Add(rootDep);
                     Logger.LogInformation($"Starting deep clone of {rootDep.RepoUri}@{rootDep.Commit}");
                 }
@@ -146,7 +153,7 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
             {
                 log.LogDebug($"Setting up {repoPath} with .gitdir redirect");
                 Directory.CreateDirectory(repoPath);
-                File.WriteAllText(Path.Combine(repoPath, ".git"), GetGitDirRedirectString(masterRepoGitDirPath));
+                //File.WriteAllText(Path.Combine(repoPath, ".git"), GetGitDirRedirectString(masterRepoGitDirPath));
                 log.LogInformation($"Checking out {commit} in {repoPath}");
                 local = new Local(log, repoPath);
                 local.Checkout(commit, true);
