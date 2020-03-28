@@ -16,7 +16,6 @@ namespace Microsoft.DotNet.Darc.Tests.Operations
         {
             CloneOperation op = new CloneOperation(null);
             var opm = new Mock<CloneOperation>(MockBehavior.Strict);
-            opm.Setup(o => o.A()).
         }
     }
 }

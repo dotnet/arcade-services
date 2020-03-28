@@ -137,7 +137,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="repoUri">Repository uri to clone</param>
         /// <param name="commit">Branch, commit, or tag to checkout</param>
-        /// <param name="targetDirectory">Target directory to clone to</param>
+        /// <param name="targetDirectory">Target directory to clone to, or null for a bare clone</param>
         /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
         /// <returns></returns>
         protected void Clone(string repoUri, string commit, string targetDirectory, ILogger _logger, string pat, string gitDirectory)
@@ -153,8 +153,16 @@ namespace Microsoft.DotNet.DarcLib
                     // will be ignored.
                     Username = dotnetMaestro,
                     Password = pat
-                },
+                }
             };
+
+            if (targetDirectory == null)
+            {
+                cloneOptions.IsBare = true;
+                targetDirectory = gitDirectory;
+                gitDirectory = null;
+            }
+
             using (_logger.BeginScope("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory))
             {
                 try
@@ -164,6 +172,12 @@ namespace Microsoft.DotNet.DarcLib
                         repoUri,
                         targetDirectory,
                         cloneOptions);
+
+                    if (cloneOptions.IsBare)
+                    {
+                        _logger.LogDebug("Bare repo cloned. Skipping checkout.");
+                        return;
+                    }
 
                     LibGit2Sharp.CheckoutOptions checkoutOptions = new LibGit2Sharp.CheckoutOptions
                     {

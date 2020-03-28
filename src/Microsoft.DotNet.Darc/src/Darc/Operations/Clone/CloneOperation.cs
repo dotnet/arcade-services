@@ -91,7 +91,7 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                 {
                     Local local = new Local(Logger);
                     IEnumerable<DependencyDetail>  rootDependencies = await local.GetDependenciesAsync();
-                    IEnumerable<StrippedDependency> stripped = rootDependencies.Select(d => StrippedDependency.GetDependency(d));
+                    IEnumerable<StrippedDependency> stripped = rootDependencies.Select(d => StrippedDependency.GetOrAddDependency(d));
                     foreach (StrippedDependency d in stripped)
                     {
                         if (_options.IgnoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
@@ -190,35 +190,6 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
             // commit could actually be a branch or tag, make it filename-safe
             commit = commit.Replace('/', '-').Replace('\\', '-').Replace('?', '-').Replace('*', '-').Replace(':', '-').Replace('|', '-').Replace('"', '-').Replace('<', '-').Replace('>', '-');
             return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}.{commit}");
-        }
-
-        private static string GetDefaultMasterGitDirPath(string reposFolder, string repoUri)
-        {
-            if (repoUri.EndsWith(".git"))
-            {
-                repoUri = repoUri.Substring(0, repoUri.Length - ".git".Length);
-            }
-
-            return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}", ".git");
-        }
-
-        private static string GetMasterGitRepoPath(string reposFolder, string repoUri)
-        {
-            if (repoUri.EndsWith(".git"))
-            {
-                repoUri = repoUri.Substring(0, repoUri.Length - ".git".Length);
-            }
-            return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}");
-        }
-
-        private static IEnumerable<DependencyDetail> FilterToolsetDependencies(IEnumerable<DependencyDetail> dependencies, bool includeToolset, ILogger log)
-        {
-            if (!includeToolset)
-            {
-                log.LogInformation($"Removing toolset dependencies...");
-                return dependencies.Where(dependency => dependency.Type != DependencyType.Toolset);
-            }
-            return dependencies;
         }
     }
 }

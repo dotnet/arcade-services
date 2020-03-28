@@ -53,38 +53,42 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     // the .gitdir that is shared among all repo-hashes (temporarily, before they are orphaned)
                     string masterRepoGitDirPath = GetMasterGitDirPath(repo.RepoUri);
 
-                    // Scenarios we handle: no/existing/orphaned master folder cross no/existing .gitdir
-                    await SetupMasterCopyAsync(RemoteFactory, repo.RepoUri, masterGitRepoPath, masterRepoGitDirPath, Logger);
-
-                    // if using the default .gitdir path, get that for use in the specific clone.
-                    if (masterRepoGitDirPath == null)
+                    // Create the bare repo clone.
+                    if (!Directory.Exists(masterRepoGitDirPath))
                     {
-                        masterRepoGitDirPath = GetDefaultMasterGitDirPath(ReposDir, repo.RepoUri);
+                        IRemote repoRemote = await RemoteFactory.GetRemoteAsync(repo.RepoUri, Logger);
+                        repoRemote.Clone(repo.RepoUri, null, null, masterRepoGitDirPath);
                     }
 
-                    // Used to create for the specific-commit version of the repo
-                    Local local = HandleRepoAtSpecificHash(repoPath, repo.Commit, masterRepoGitDirPath, Logger);
-
-                    Logger.LogDebug($"Starting to look for dependencies in {repoPath}");
+                    Logger.LogDebug($"Starting to look for dependencies in {masterRepoGitDirPath}");
                     try
                     {
-                        IEnumerable<DependencyDetail> deps = await local.GetDependenciesAsync();
-                        IEnumerable<DependencyDetail> filteredDeps = FilterToolsetDependencies(deps, _options.IncludeToolset, Logger);
-                        Logger.LogDebug($"Got {deps.Count()} dependencies and filtered to {filteredDeps.Count()} dependencies");
-                        foreach (DependencyDetail d in filteredDeps)
+                        IEnumerable<DependencyDetail> deps =
+                            (await local.GetDependenciesAsync(branch: repo.Commit)).ToArray();
+
+                        Logger.LogDebug($"Got {deps.Count()} dependencies.");
+
+                        if (!includeToolset)
                         {
-                            StrippedDependency dep = StrippedDependency.GetDependency(d);
-                            // e.g. arcade depends on previous versions of itself to build, so this would go on forever
+                            Logger.LogInformation($"Removing toolset dependencies...");
+                            deps = deps.Where(dependency => dependency.Type != DependencyType.Toolset);
+                            Logger.LogDebug($"Filtered toolset dependencies. Now {deps.Count()} dependencies");
+                        }
+
+                        foreach (DependencyDetail d in deps)
+                        {
+                            StrippedDependency dep = StrippedDependency.GetOrAddDependency(d);
+                            // Remove self-dependency. E.g. arcade depends on previous versions of itself to build, so this would go on forever.
                             if (d.RepoUri == repo.RepoUri)
                             {
                                 Logger.LogDebug($"Skipping self-dependency in {repo.RepoUri} ({repo.Commit} => {d.Commit})");
                             }
-                            // circular dependencies that have different hashes, e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
+                            // Remove circular dependencies that have different hashes, e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
                             else if (dep.HasDependencyOn(repo))
                             {
                                 Logger.LogDebug($"Skipping already-seen circular dependency from {repo.RepoUri} to {d.RepoUri}");
                             }
-                            else if (IgnoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
+                            else if (ignoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
                             {
                                 Logger.LogDebug($"Skipping ignored repo {d.RepoUri} (at {d.Commit})");
                             }
@@ -94,7 +98,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                             }
                             else
                             {
-                                StrippedDependency stripped = StrippedDependency.GetDependency(d);
+                                StrippedDependency stripped = StrippedDependency.GetOrAddDependency(d);
                                 Logger.LogDebug($"Adding new dependency {stripped.RepoUri}@{stripped.Commit}");
                                 repo.AddDependency(dep);
                                 accumulatedDependencies.Add(stripped);
@@ -307,6 +311,25 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             }
 
             return Path.Combine(GitDir, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}.git");
+        }
+
+        private static string GetDefaultMasterGitDirPath(string reposFolder, string repoUri)
+        {
+            if (repoUri.EndsWith(".git"))
+            {
+                repoUri = repoUri.Substring(0, repoUri.Length - ".git".Length);
+            }
+
+            return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}", ".git");
+        }
+
+        private static string GetMasterGitRepoPath(string reposFolder, string repoUri)
+        {
+            if (repoUri.EndsWith(".git"))
+            {
+                repoUri = repoUri.Substring(0, repoUri.Length - ".git".Length);
+            }
+            return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}");
         }
 
         private static string GetGitDirRedirectString(string gitDir)

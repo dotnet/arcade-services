@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -11,38 +12,36 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
     {
         public string RepoUri { get; set; }
         public string Commit { get; set; }
-        private bool Visited { get; set; }
 
         public HashSet<StrippedDependency> Dependencies { get; set; }
-        public static HashSet<StrippedDependency> AllDependencies;
 
-        static StrippedDependency()
+        public static StrippedDependency GetOrAddDependency(
+            List<StrippedDependency> allDependencies,
+            DependencyDetail d)
         {
-            AllDependencies = new HashSet<StrippedDependency>();
+            return GetOrAddDependency(allDependencies, d.RepoUri, d.Commit);
         }
 
-        public static StrippedDependency GetDependency(DependencyDetail d)
+        public static StrippedDependency GetOrAddDependency(
+            List<StrippedDependency> allDependencies,
+            StrippedDependency d)
         {
-            return GetDependency(d.RepoUri, d.Commit);
+            return GetOrAddDependency(allDependencies, d.RepoUri, d.Commit);
         }
 
-        public static StrippedDependency GetDependency(StrippedDependency d)
+        public static StrippedDependency GetOrAddDependency(
+            List<StrippedDependency> allDependencies,
+            string repoUrl,
+            string commit)
         {
-            return GetDependency(d.RepoUri, d.Commit);
-        }
+            StrippedDependency dep = allDependencies.SingleOrDefault(d =>
+                string.Equals(d.RepoUri, repoUrl, StringComparison.InvariantCultureIgnoreCase) &&
+                string.Equals(d.Commit, commit, StringComparison.InvariantCultureIgnoreCase));
 
-        public static StrippedDependency GetDependency(string repoUrl, string commit)
-        {
-            StrippedDependency dep;
-            dep = AllDependencies.SingleOrDefault(d => d.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant() && d.Commit.ToLowerInvariant() == commit.ToLowerInvariant());
             if (dep == null)
             {
                 dep = new StrippedDependency(repoUrl, commit);
-                foreach (StrippedDependency previousDep in AllDependencies.Where(d => d.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant()).SelectMany(d => d.Dependencies))
-                {
-                    dep.AddDependency(previousDep);
-                }
-                AllDependencies.Add(dep);
+                allDependencies.Add(dep);
             }
             return dep;
         }
@@ -57,50 +56,53 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         private StrippedDependency(DependencyDetail d) : this(d.RepoUri, d.Commit) { }
 
-        public void AddDependency(StrippedDependency dep)
+        public void AddDependency(
+            List<StrippedDependency> allDependencies,
+            StrippedDependency dep)
         {
-            StrippedDependency other = GetDependency(dep);
+            StrippedDependency other = GetOrAddDependency(allDependencies, dep);
             if (this.Dependencies.Any(d => d.RepoUri.ToLowerInvariant() == other.RepoUri.ToLowerInvariant()))
             {
                 return;
             }
             this.Dependencies.Add(other);
-            foreach (StrippedDependency sameUrl in AllDependencies.Where(d => d.RepoUri.ToLowerInvariant() == this.RepoUri.ToLowerInvariant()))
+            foreach (StrippedDependency sameUrl in allDependencies.Where(d => d.RepoUri.ToLowerInvariant() == this.RepoUri.ToLowerInvariant()))
             {
                 sameUrl.Dependencies.Add(other);
             }
         }
 
-        public void AddDependency(DependencyDetail dep)
+        public void AddDependency(
+            List<StrippedDependency> allDependencies,
+            DependencyDetail dep)
         {
-            this.AddDependency(GetDependency(dep));
+            this.AddDependency(allDependencies, GetOrAddDependency(allDependencies, dep));
         }
 
         public bool HasDependencyOn(string repoUrl)
         {
             bool hasDep = false;
-            lock (AllDependencies)
+
+            var visited = new HashSet<StrippedDependency>();
+
+            foreach (StrippedDependency dep in this.Dependencies)
             {
-                foreach (StrippedDependency dep in this.Dependencies)
+                if (visited.Contains(dep))
                 {
-                    if (dep.Visited)
-                    {
-                        return false;
-                    }
-                    if (dep.RepoUri.ToLowerInvariant() == this.RepoUri.ToLowerInvariant())
-                    {
-                        return false;
-                    }
-                    dep.Visited = true;
-                    hasDep = hasDep || dep.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant() || dep.HasDependencyOn(repoUrl);
-                    if (hasDep)
-                    {
-                        break;
-                    }
+                    return false;
                 }
-                foreach (StrippedDependency dep in AllDependencies)
+
+                if (dep.RepoUri.ToLowerInvariant() == this.RepoUri.ToLowerInvariant())
                 {
-                    dep.Visited = false;
+                    return false;
+                }
+
+                visited.Add(dep);
+
+                hasDep = hasDep || dep.RepoUri.ToLowerInvariant() == repoUrl.ToLowerInvariant() || dep.HasDependencyOn(repoUrl);
+                if (hasDep)
+                {
+                    break;
                 }
             }
 
