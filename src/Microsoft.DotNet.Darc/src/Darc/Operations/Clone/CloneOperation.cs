@@ -84,18 +84,18 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
             {
                 EnsureOptionsCompatibility(_options);
                 // Use a set to accumulate dependencies as we go for the next iteration.
-                HashSet<StrippedDependency> accumulatedDependencies = new HashSet<StrippedDependency>();
+                HashSet<SourceBuildIdentity> accumulatedDependencies = new HashSet<SourceBuildIdentity>();
 
                 // Seed the dependency set with initial dependencies from args.
                 if (string.IsNullOrWhiteSpace(_options.RepoUri))
                 {
                     Local local = new Local(Logger);
 
-                    IEnumerable<DependencyDetail>  rootDependencies = await local.GetDependenciesAsync();
-                    IEnumerable<StrippedDependency> stripped = rootDependencies
-                        .Select(d => StrippedDependency.GetOrAddDependency(null, d));
+                    IEnumerable<DependencyDetail> rootDependencies = await local.GetDependenciesAsync();
+                    IEnumerable<SourceBuildIdentity> stripped = rootDependencies
+                        .Select(d => new SourceBuildIdentity(d.RepoUri, d.Commit));
 
-                    foreach (StrippedDependency d in stripped)
+                    foreach (SourceBuildIdentity d in stripped)
                     {
                         if (_options.IgnoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
                         {
@@ -111,13 +111,10 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                 else
                 {
                     // Start with the root repo we were asked to clone
-                    StrippedDependency rootDep = StrippedDependency.GetOrAddDependency(
-                        null,
-                        _options.RepoUri,
-                        _options.Version);
+                    var rootDep = new SourceBuildIdentity(_options.RepoUri, _options.Version);
 
                     accumulatedDependencies.Add(rootDep);
-                    Logger.LogInformation($"Starting deep clone of {rootDep.RepoUri}@{rootDep.Commit}");
+                    Logger.LogInformation($"Starting deep clone of {rootDep}");
                 }
 
                 var graph = await _cloneClient.GetGraphAsync(

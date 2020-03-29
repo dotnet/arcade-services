@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,145 +25,172 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public bool IgnoreNonGitHub { get; set; } = true;
 
-        public async Task<object> GetGraphAsync(
-            IEnumerable<StrippedDependency> rootDependencies,
+        public async Task<SourceBuildGraph> GetGraphAsync(
+            IEnumerable<SourceBuildIdentity> rootDependencies,
             IEnumerable<string> ignoredRepos,
             bool includeToolset,
             bool forceCoherence,
             uint cloneDepth)
         {
-            var accumulatedDependencies = new HashSet<StrippedDependency>(rootDependencies);
+            var nextLevelDependencies = rootDependencies
+                .Distinct(SourceBuildIdentity.CaseInsensitiveComparer)
+                .ToArray();
 
-            var allDependencies = new List<StrippedDependency>(accumulatedDependencies);
-            var allDependenciesLock = new SemaphoreSlim(1);
-
-            // At the end of each depth level, the accumulated deps are moved to this queue to be cloned.
-            var dependenciesToClone = new Queue<StrippedDependency>();
+            var allUpstreams = new Dictionary<SourceBuildIdentity, SourceBuildIdentity[]>(SourceBuildIdentity.CaseInsensitiveComparer);
 
             var cloningTasks = new Dictionary<string, Task>();
             var cloningTasksLock = new SemaphoreSlim(1);
 
-            while (accumulatedDependencies.Any())
+            while (nextLevelDependencies.Any())
             {
-                // add this level's dependencies to the queue and clear it for the next level
-                foreach (StrippedDependency d in accumulatedDependencies)
-                {
-                    dependenciesToClone.Enqueue(d);
-                }
-
-                accumulatedDependencies.Clear();
-
-                // this will do one level of clones at a time
-                await Task.WhenAll(dependenciesToClone.Select(async repo =>
-                {
-                    // The bare .git dir.
-                    string masterRepoGitDirPath = GetMasterGitDirPath(repo.RepoUri);
-
-                    // Create the bare repo clone.
-                    if (!Directory.Exists(masterRepoGitDirPath))
+                // Do one level of clones at a time.
+                var discoveredUpstreamsRaw =
+                    await Task.WhenAll(nextLevelDependencies.Select(async repo =>
                     {
+                        // The bare .git dir.
+                        string masterRepoGitDirPath = GetMasterGitDirPath(repo.RepoUri);
+
+                        // Create the bare repo clone.
+                        if (!Directory.Exists(masterRepoGitDirPath))
+                        {
+                            try
+                            {
+                                if (IgnoreNonGitHub &&
+                                    Uri.TryCreate(repo.RepoUri, UriKind.Absolute, out Uri parsedUri) &&
+                                    parsedUri.Host != "github.com")
+                                {
+                                    Logger.LogWarning($"Skipping non-GitHub repo {repo.RepoUri}");
+                                    return (repo, Array.Empty<SourceBuildIdentity>());
+                                }
+
+                                IRemote repoRemote = await RemoteFactory.GetRemoteAsync(repo.RepoUri, Logger);
+
+                                var cloneTask = await GetOrCreateCloneTaskAsync(
+                                    cloningTasks,
+                                    cloningTasksLock,
+                                    masterRepoGitDirPath,
+                                    () =>
+                                    {
+                                        repoRemote.Clone(repo.RepoUri, null, null, masterRepoGitDirPath);
+                                    });
+
+                                await cloneTask;
+                            }
+                            catch (Exception)
+                            {
+                                Logger.LogError($"Failed to create bare clone of '{repo.RepoUri}' at '{masterRepoGitDirPath}'");
+                                throw;
+                            }
+                        }
+
+                        Logger.LogDebug($"Starting to look for dependencies in {masterRepoGitDirPath}");
                         try
                         {
-                            if (IgnoreNonGitHub &&
-                                Uri.TryCreate(repo.RepoUri, UriKind.Absolute, out Uri parsedUri) &&
-                                parsedUri.Host != "github.com")
+                            var local = new Local(Logger, masterRepoGitDirPath);
+
+                            IEnumerable<DependencyDetail> deps =
+                                await local.GetDependenciesAsync(branch: repo.Commit);
+
+                            Logger.LogDebug($"Got {deps.Count()} dependencies.");
+
+                            if (!includeToolset)
                             {
-                                Logger.LogWarning($"Skipping non-GitHub repo {repo.RepoUri}");
-                                return;
+                                Logger.LogInformation($"Removing toolset dependencies...");
+                                deps = deps.Where(dependency => dependency.Type != DependencyType.Toolset);
+                                Logger.LogDebug($"Filtered toolset dependencies. Now {deps.Count()} dependencies");
                             }
 
-                            IRemote repoRemote = await RemoteFactory.GetRemoteAsync(repo.RepoUri, Logger);
+                            var upstreamDependencies = deps
+                                .Select(d => new SourceBuildIdentity(d.RepoUri, d.Commit))
+                                .Distinct(SourceBuildIdentity.CaseInsensitiveComparer)
+                                .ToArray();
 
-                            var cloneTask = await GetOrCreateCloneTaskAsync(
-                                cloningTasks,
-                                cloningTasksLock,
-                                masterRepoGitDirPath,
-                                () =>
-                                {
-                                    repoRemote.Clone(repo.RepoUri, null, null, masterRepoGitDirPath);
-                                });
+                            foreach (var newIdentity in upstreamDependencies)
+                            {
+                                Logger.LogDebug($"Adding new dependency {newIdentity}");
+                            }
 
-                            await cloneTask;
+                            Logger.LogDebug($"done looking for dependencies in {masterRepoGitDirPath} at {repo.Commit}");
+
+                            return (repo, upstreamDependencies);
                         }
-                        catch (Exception)
+                        catch (DependencyFileNotFoundException ex)
                         {
-                            Logger.LogError($"Failed to create bare clone of '{repo.RepoUri}' at '{masterRepoGitDirPath}'");
-                            throw;
+                            Logger.LogWarning(
+                                $"Repo {masterRepoGitDirPath} appears to have no " +
+                                $"'/eng/Version.Details.xml' file at commit {repo.Commit}. " +
+                                $"Dependency chain is broken here. " + Environment.NewLine +
+                                $"(Inner exception: {ex})");
+
+                            return (repo, Array.Empty<SourceBuildIdentity>());
                         }
-                    }
+                    }));
 
-                    Logger.LogDebug($"Starting to look for dependencies in {masterRepoGitDirPath}");
-                    try
-                    {
-                        var local = new Local(Logger, masterRepoGitDirPath);
+                Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> discoveredUpstreams =
+                    discoveredUpstreamsRaw
+                        .ToDictionary(u => u.repo, u => u.Item2, SourceBuildIdentity.CaseInsensitiveComparer);
 
-                        IEnumerable<DependencyDetail> deps =
-                            (await local.GetDependenciesAsync(branch: repo.Commit)).ToArray();
-
-                        Logger.LogDebug($"Got {deps.Count()} dependencies.");
-
-                        if (!includeToolset)
-                        {
-                            Logger.LogInformation($"Removing toolset dependencies...");
-                            deps = deps.Where(dependency => dependency.Type != DependencyType.Toolset);
-                            Logger.LogDebug($"Filtered toolset dependencies. Now {deps.Count()} dependencies");
-                        }
-
-                        await allDependenciesLock.WaitAsync();
-
-                        foreach (DependencyDetail d in deps)
-                        {
-                            StrippedDependency dep = StrippedDependency.GetOrAddDependency(allDependencies, d);
-
-                            // Remove self-dependency. E.g. arcade depends on previous versions of itself to build, so this would go on forever.
-                            if (d.RepoUri == repo.RepoUri)
-                            {
-                                Logger.LogDebug($"Skipping self-dependency in {repo.RepoUri} ({repo.Commit} => {d.Commit})");
-                            }
-                            // Remove circular dependencies that have different hashes, e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
-                            else if (dep.HasDependencyOn(repo))
-                            {
-                                Logger.LogDebug($"Skipping already-seen circular dependency from {repo.RepoUri} to {d.RepoUri}");
-                            }
-                            else if (ignoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
-                            {
-                                Logger.LogDebug($"Skipping ignored repo {d.RepoUri} (at {d.Commit})");
-                            }
-                            else if (string.IsNullOrWhiteSpace(d.Commit))
-                            {
-                                Logger.LogWarning($"Skipping dependency from {repo.RepoUri}@{repo.Commit} to {d.RepoUri}: Missing commit.");
-                            }
-                            else
-                            {
-                                StrippedDependency stripped = StrippedDependency.GetOrAddDependency(allDependencies, d);
-
-                                Logger.LogDebug($"Adding new dependency {stripped.RepoUri}@{stripped.Commit}");
-
-                                repo.AddDependency(allDependencies, dep);
-                                accumulatedDependencies.Add(stripped);
-                            }
-                        }
-
-                        allDependenciesLock.Release();
-
-                        Logger.LogDebug($"done looking for dependencies in {masterRepoGitDirPath} at {repo.Commit}");
-                    }
-                    catch (DependencyFileNotFoundException ex)
-                    {
-                        Logger.LogWarning(
-                            $"Repo {masterRepoGitDirPath} appears to have no " +
-                            $"'/eng/Version.Details.xml' file at commit {repo.Commit}. " +
-                            $"Dependency chain is broken here. " + Environment.NewLine +
-                            $"(Inner exception: {ex})");
-                    }
-                }));
-
-                if (cloneDepth == 0 && accumulatedDependencies.Any())
+                foreach (var entry in discoveredUpstreams)
                 {
-                    Logger.LogInformation($"Reached clone depth limit, aborting with {accumulatedDependencies.Count} dependencies remaining");
-                    foreach (StrippedDependency d in accumulatedDependencies)
+                    if (allUpstreams.ContainsKey(entry.Key))
                     {
-                        Logger.LogDebug($"Abandoning dependency {d.RepoUri}@{d.Commit}");
+                        Logger.LogError($"Upstream mapping already contained entry for {entry.Key}. Replacing.");
+                    }
+
+                    allUpstreams[entry.Key] = entry.Value;
+                }
+
+                var graph = SourceBuildGraph.Create(allUpstreams);
+
+                bool ShouldSearchRepo(SourceBuildIdentity up, SourceBuildIdentity repo)
+                {
+                    // Remove self-dependency. E.g. arcade depends on previous versions of itself to
+                    // build, so this would go on forever.
+                    if (string.Equals(repo.RepoUri, up.RepoUri, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Logger.LogDebug($"Skipping self-dependency in {up.RepoUri} ({up.Commit} => {repo.Commit})");
+                        return false;
+                    }
+                    // Remove circular dependencies that have different hashes.
+                    // e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
+                    // We are working our way upstream, so this check checks all downstreams we've
+                    // seen so far to see if any have this repo name. (We can't simply check if
+                    // we've seen the repo name before: other branches may have the same repo name
+                    // dependency, but in a non-circular way.)
+                    if (graph.GetAllDownstreams(repo).Any(
+                        d => string.Equals(d.RepoUri, up.RepoUri, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        Logger.LogDebug($"Skipping already-seen circular dependency from {up.RepoUri} to {repo.RepoUri}");
+                        return false;
+                    }
+                    // Remove repos specifically ignored by the caller.
+                    if (ignoredRepos.Any(r => r.Equals(repo.RepoUri, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        Logger.LogDebug($"Skipping ignored repo {repo.RepoUri} (at {repo.Commit})");
+                        return false;
+                    }
+                    // Remove repos with invalid dependency info: missing commit.
+                    if (string.IsNullOrWhiteSpace(repo.Commit))
+                    {
+                        Logger.LogWarning($"Skipping dependency from {up} to {repo.RepoUri}: Missing commit.");
+                        return false;
+                    }
+
+                    // Search this downstream repo on the next iteration.
+                    return true;
+                }
+
+                nextLevelDependencies = discoveredUpstreams
+                    .SelectMany(entry => entry.Value.Where(down => ShouldSearchRepo(entry.Key, down)))
+                    .Distinct(SourceBuildIdentity.CaseInsensitiveComparer)
+                    .ToArray();
+
+                if (cloneDepth == 0 && nextLevelDependencies.Any())
+                {
+                    Logger.LogInformation($"Reached clone depth limit, aborting with {nextLevelDependencies.Length} dependencies remaining");
+                    foreach (var d in nextLevelDependencies)
+                    {
+                        Logger.LogDebug($"Abandoning dependency {d}");
                     }
 
                     break;
@@ -170,10 +198,10 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
                 cloneDepth--;
                 Logger.LogDebug($"Clone depth remaining: {cloneDepth}");
-                Logger.LogDebug($"Dependencies remaining: {accumulatedDependencies.Count}");
+                Logger.LogDebug($"Dependencies remaining: {nextLevelDependencies.Length}");
             }
 
-            return null;
+            return SourceBuildGraph.Create(allUpstreams);
         }
 
         public async Task CreateWorkTreesAsync(object graph, string optionsReposFolder)
