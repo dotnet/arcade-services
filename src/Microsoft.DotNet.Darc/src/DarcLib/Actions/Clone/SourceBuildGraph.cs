@@ -4,6 +4,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
@@ -44,13 +45,44 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             Downstreams = downstreams;
         }
 
+        public string CreateGraphVizString()
+        {
+            var sb = new StringBuilder("digraph G { rankdir=LR;");
+
+            foreach (var n in Nodes)
+            {
+                sb.Append("\"");
+                sb.Append(n);
+                sb.Append("\"");
+
+                if (Upstreams.TryGetValue(n, out var upstreams))
+                {
+                    sb.Append(" -> {");
+                    foreach (var u in upstreams)
+                    {
+                        sb.Append("\"");
+                        sb.Append(u);
+                        sb.Append("\"");
+                        sb.Append(";");
+                    }
+                    sb.Append("}");
+                }
+
+                sb.AppendLine();
+            }
+
+            sb.AppendLine("}");
+
+            return sb.ToString();
+        }
+
         public IEnumerable<SourceBuildIdentity> GetAllDownstreams(SourceBuildIdentity node) =>
             GetTraverseListCore(node, Downstreams);
 
         public IEnumerable<SourceBuildIdentity> GetAllUpstreams(SourceBuildIdentity node) =>
             GetTraverseListCore(node, Upstreams);
 
-        public IEnumerable<SourceBuildIdentity> GetTraverseListCore(
+        private IEnumerable<SourceBuildIdentity> GetTraverseListCore(
             SourceBuildIdentity start,
             Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> links)
         {
