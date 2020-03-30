@@ -8,8 +8,11 @@ using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -35,15 +38,50 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         [SwaggerApiResponse(HttpStatusCode.Created, Description = "AssetLocation successfully added")]
         public async Task<IActionResult> BulkAddLocations([Required, FromBody] IEnumerable<AssetAndLocation> updates)
         {
-            foreach (AssetAndLocation update in updates)
-            {
-                IActionResult result = await AddAssetLocationToAsset(update.AssetId, update.Location, update.LocationType);
+            var errorsToReport = new List<string>();
+            var groupsOfAssetsToUpdate = updates.GroupBy(upd => upd.AssetId);
 
-                if (result is NotFoundResult)
+            foreach (var assetToUpdate in groupsOfAssetsToUpdate)
+            {
+                var asset = await _context.Assets
+                    .Include(a => a.Locations)
+                    .Where(a => a.Id == assetToUpdate.Key)
+                    .SingleOrDefaultAsync();
+
+                if (asset == null)
                 {
-                    return NotFound(new ApiError($"The asset with id '{update.AssetId}' was not found."));
+                    errorsToReport.Add($"The asset with id '{assetToUpdate.Key}' was not found.");
+                    continue;
+                }
+
+                foreach (var assetNewLocations in assetToUpdate)
+                {
+                    var assetLocation = new Data.Models.AssetLocation
+                    {
+                        Location = assetNewLocations.Location,
+                        Type = (Data.Models.LocationType)assetNewLocations.LocationType,
+                    };
+
+                    // If asset location is already in the asset skip to next asset location
+                    if (asset.Locations != null &&
+                        asset.Locations.Any(existing => existing.Location.Equals(assetLocation.Location, StringComparison.OrdinalIgnoreCase) &&
+                        existing.Type == assetLocation.Type))
+                    {
+                        continue;
+                    }
+
+                    asset.Locations = asset.Locations ?? new List<Data.Models.AssetLocation>();
+                    asset.Locations.Add(assetLocation);
+                    _context.Assets.Update(asset);
                 }
             }
+
+            if (errorsToReport.Any())
+            {
+                return NotFound(new ApiError("Error adding asset locations.", errorsToReport));
+            }
+
+            await _context.SaveChangesAsync();
 
             return StatusCode((int)HttpStatusCode.Created);
         }
