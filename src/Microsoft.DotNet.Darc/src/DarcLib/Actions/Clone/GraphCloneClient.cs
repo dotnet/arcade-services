@@ -154,13 +154,13 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                         Logger.LogDebug($"Skipping self-dependency in {source.RepoUri} ({source.Commit} => {upstream.Commit})");
                         return false;
                     }
-                    /// Remove circular dependencies that have different hashes. That is, detect
-                    /// circular-by-name-only dependencies.
-                    /// e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
-                    /// We are working our way upstream, so this check walks all downstreams we've
-                    /// seen so far to see if any have this potential repo name. (We can't simply
-                    /// check if we've seen the repo name before: other branches may have the same
-                    /// repo name dependency but not as part of a circular dependency.)
+                    // Remove circular dependencies that have different hashes. That is, detect
+                    // circular-by-name-only dependencies.
+                    // e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
+                    // We are working our way upstream, so this check walks all downstreams we've
+                    // seen so far to see if any have this potential repo name. (We can't simply
+                    // check if we've seen the repo name before: other branches may have the same
+                    // repo name dependency but not as part of a circular dependency.)
                     if (graph.GetAllDownstreams(upstream).Any(
                         d => string.Equals(d.RepoUri, source.RepoUri, StringComparison.OrdinalIgnoreCase)))
                     {
@@ -220,15 +220,18 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             string path,
             Action cloneAction)
         {
-            await mapLock.WaitAsync();
+            try
+            {
+                await mapLock.WaitAsync();
 
-            var cloneTask = map.TryGetValue(path, out var task)
-                ? task
-                : map[path] = Task.Run(cloneAction);
-
-            mapLock.Release();
-
-            return cloneTask;
+                return map.TryGetValue(path, out var task)
+                    ? task
+                    : map[path] = Task.Run(cloneAction);
+            }
+            finally
+            {
+                mapLock.Release();
+            }
         }
 
         private static async Task SetupMasterCopyAsync(IRemoteFactory remoteFactory, string repoUrl, string masterGitRepoPath, string masterRepoGitDirPath, ILogger log)
