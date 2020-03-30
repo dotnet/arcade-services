@@ -28,7 +28,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
     [ApiVersion("2018-07-16")]
     public class AssetsController : Controller
     {
-        private readonly BuildAssetRegistryContext _context;
+        protected readonly BuildAssetRegistryContext _context;
 
         public AssetsController(BuildAssetRegistryContext context)
         {
