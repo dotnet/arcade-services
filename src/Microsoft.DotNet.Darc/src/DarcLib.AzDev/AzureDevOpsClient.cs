@@ -1395,6 +1395,14 @@ namespace Microsoft.DotNet.DarcLib
         /// <summary>
         ///     Does not apply to remote repositories.
         /// </summary>
+        public void AddWorktree(string repoPath, string path, string name, string commitish, bool locked)
+        {
+            throw new NotImplementedException($"Cannot create worktree in a remote repo.");
+        }
+
+        /// <summary>
+        ///     Does not apply to remote repositories.
+        /// </summary>
         /// <param name="repoDir">Ignored</param>
         /// <param name="repoUrl">Ignored</param>
         public void AddRemoteIfMissing(string repoDir, string repoUrl)

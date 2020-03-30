@@ -172,6 +172,16 @@ namespace Microsoft.DotNet.DarcLib
         void Checkout(string repoPath, string commit, bool force);
 
         /// <summary>
+        ///     Create worktree in a given path and checkout the given commit-ish into it. 
+        /// </summary>
+        /// <param name="repoPath">Path to the local repository.</param>
+        /// <param name="path">Path to create the worktree under.</param>
+        /// <param name="name">Name of the worktree.</param>
+        /// <param name="commitish">Commit-ish to checkout into the worktree.</param>
+        /// <param name="locked">Locks the worktree if set.</param>
+        void AddWorktree(string repoPath, string path, string name, string commitish, bool locked);
+
+        /// <summary>
         ///     Add a remote to local repo if it does not already exist, and attempt to fetch commits.
         /// </summary>
         /// <param name="repoDir">The local repo directory</param>

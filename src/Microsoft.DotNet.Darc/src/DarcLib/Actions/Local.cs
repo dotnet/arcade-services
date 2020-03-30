@@ -100,7 +100,7 @@ namespace Microsoft.DotNet.DarcLib
                         }
                     }
                 }
-                catch (Exception exc) when 
+                catch (Exception exc) when
                 (exc.Message == "Not Found")
                 {
                     _logger.LogWarning("Could not update 'eng/common'. Most likely this is a scenario " +
@@ -148,6 +148,14 @@ namespace Microsoft.DotNet.DarcLib
         public void Checkout(string commit, bool force = false)
         {
             _gitClient.Checkout(_repo, commit, force);
+        }
+
+        /// <summary>
+        /// Create worktree in a given path and checkout the given commit-ish into it. 
+        /// </summary>
+        public void AddWorktree(string commitish, string name, string path, bool locked)
+        {
+            _gitClient.AddWorktree(_repo, commitish, name, path, locked);
         }
 
         /// <summary>

@@ -2,16 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using LibGit2Sharp;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using LibGit2Sharp;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -391,6 +392,52 @@ namespace Microsoft.DotNet.DarcLib
                 catch (Exception exc)
                 {
                     throw new Exception($"Something went wrong when checking out {commit} in {repoDir}", exc);
+                }
+            }
+        }
+
+        public void AddWorktree(
+            string repoDir,
+            string commitish,
+            string name,
+            string path,
+            bool locked)
+        {
+            string description =
+                $"From {repoDir}, creating worktree '{name}' at '{path}' checking out {commitish}";
+
+            using (_logger.BeginScope(description))
+            {
+                try
+                {
+                    // Don't use libgit2 here. It doesn't yet support long paths on Windows, which
+                    // are common during "darc clone". Git.exe does work with long paths, if
+                    // configured correctly. The following code would be the libgit2sharp way, but
+                    // it fails:
+                    //using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoDir))
+                    //localRepo.Worktrees.Add(commitish, name, path, locked);
+
+                    // Add the worktree. Use "--quiet" to avoid stdout clutter. Use "--force" to
+                    // override a previously created worktree if necessary.
+                    Process process = Process.Start(
+                        new ProcessStartInfo
+                        {
+                            FileName = _gitExecutable,
+                            Arguments = $"worktree add --quiet --force \"{path}\" \"{commitish}\"",
+                            WorkingDirectory = repoDir,
+                            UseShellExecute = false
+                        });
+
+                    process.WaitForExit();
+
+                    if (process.ExitCode != 0)
+                    {
+                        throw new Exception($"'git worktree add ...' command exit code nonzero.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"Failure while adding worktree. {description}", ex);
                 }
             }
         }
