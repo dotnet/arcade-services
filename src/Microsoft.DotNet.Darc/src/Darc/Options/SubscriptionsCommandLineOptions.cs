@@ -129,14 +129,12 @@ namespace Microsoft.DotNet.Darc.Options
                 return inputParameter.Equals(subscriptionProperty, StringComparison.OrdinalIgnoreCase);
             }
 
-            if (RegexMatch && Regex.IsMatch(subscriptionProperty, inputParameter, RegexOptions.IgnoreCase))
+            if (RegexMatch)
             {
-                return true;
+                return Regex.IsMatch(subscriptionProperty, inputParameter, RegexOptions.IgnoreCase);
             }
-            else
-            {
-                return subscriptionProperty.Contains(inputParameter, StringComparison.OrdinalIgnoreCase);
-            }
+
+            return subscriptionProperty.Contains(inputParameter, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
