@@ -33,10 +33,4 @@
     <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
     <PackageReference Include="YamlDotNet.Signed" Version="5.3.0" />
   </ItemGroup>
-
-  <ItemGroup>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>Microsoft.DotNet.Darc.Tests</_Parameter1>
-    </AssemblyAttribute>
-  </ItemGroup>
 </Project>
