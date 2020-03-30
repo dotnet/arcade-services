@@ -2,12 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using NuGet.Versioning;
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
-using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
@@ -114,6 +113,16 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
             return sb.ToString();
         }
+
+        public IEnumerable<SourceBuildIdentity> GetDownstreams(SourceBuildIdentity node) =>
+            Downstreams.TryGetValue(node, out var values)
+                ? values
+                : Enumerable.Empty<SourceBuildIdentity>();
+
+        public IEnumerable<SourceBuildIdentity> GetUpstreams(SourceBuildIdentity node) =>
+            Upstreams.TryGetValue(node, out var values)
+                ? values
+                : Enumerable.Empty<SourceBuildIdentity>();
 
         public IEnumerable<SourceBuildIdentity> GetAllDownstreams(SourceBuildIdentity node) =>
             GetTraverseListCore(node, Downstreams);
