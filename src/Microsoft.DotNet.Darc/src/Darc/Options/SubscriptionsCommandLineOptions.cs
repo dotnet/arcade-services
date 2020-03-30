@@ -122,12 +122,14 @@ namespace Microsoft.DotNet.Darc.Options
             {
                 return true;
             }
+
             // Compare properties ignoring case because branch, repo, etc. names cannot differ only by case.
-            else if (ExactMatch && inputParameter.Equals(subscriptionProperty, StringComparison.OrdinalIgnoreCase))
+            if (ExactMatch)
             {
-                return true;
+                return inputParameter.Equals(subscriptionProperty, StringComparison.OrdinalIgnoreCase);
             }
-            else if (RegexMatch && Regex.IsMatch(subscriptionProperty, inputParameter, RegexOptions.IgnoreCase))
+
+            if (RegexMatch && Regex.IsMatch(subscriptionProperty, inputParameter, RegexOptions.IgnoreCase))
             {
                 return true;
             }
