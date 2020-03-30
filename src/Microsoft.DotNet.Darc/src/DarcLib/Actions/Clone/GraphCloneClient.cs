@@ -99,7 +99,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                             }
 
                             var upstreamDependencies = deps
-                                .Select(d => new SourceBuildIdentity(d.RepoUri, d.Commit))
+                                .Select(d => new SourceBuildIdentity(d.RepoUri, d.Commit, d))
                                 .Distinct(SourceBuildIdentity.CaseInsensitiveComparer)
                                 .ToArray();
 

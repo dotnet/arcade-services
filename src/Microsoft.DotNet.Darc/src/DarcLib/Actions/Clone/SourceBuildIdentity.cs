@@ -18,10 +18,19 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         public string RepoUri { get; }
         public string Commit { get; }
 
-        public SourceBuildIdentity(string repoUri, string commit)
+        /// <summary>
+        /// The source of this identity, or null if this didn't come from a DarcLib dependency.
+        /// </summary>
+        public DependencyDetail Source { get; }
+
+        public SourceBuildIdentity(
+            string repoUri,
+            string commit,
+            DependencyDetail source)
         {
             RepoUri = repoUri;
             Commit = commit;
+            Source = source;
         }
 
         public override string ToString() => $"{RepoUri}@{Commit}";
