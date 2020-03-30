@@ -27,7 +27,6 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             IEnumerable<SourceBuildIdentity> rootDependencies,
             IEnumerable<string> ignoredRepos,
             bool includeToolset,
-            bool forceCoherence,
             uint cloneDepth)
         {
             var nextLevelDependencies = rootDependencies

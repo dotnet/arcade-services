@@ -117,14 +117,24 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                     Logger.LogInformation($"Starting deep clone of {rootDep}");
                 }
 
-                var graph = await _cloneClient.GetGraphAsync(
+                SourceBuildGraph graph = await _cloneClient.GetGraphAsync(
                     accumulatedDependencies,
                     _options.IgnoredRepos,
                     _options.IncludeToolset,
-                    _options.ForceCoherence,
                     _options.CloneDepth);
 
-                await _cloneClient.CreateWorkTreesAsync(
+                if (_options.ForceCoherence)
+                {
+                    var newGraph = graph.CreateArtificiallyCoherentGraph();
+
+                    Logger.LogInformation(
+                        $"Artificially forcing coherence. Node count {graph.Nodes.Count} -> " +
+                        $"{newGraph.Nodes.Count} ({newGraph.Nodes.Count - graph.Nodes.Count}) ");
+
+                    graph = newGraph;
+                }
+
+                await _cloneClient.CreateWorktreesAsync(
                     graph,
                     _options.ReposFolder);
 

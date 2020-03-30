@@ -4,8 +4,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
+using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
@@ -26,7 +28,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
             return new SourceBuildGraph(
                 downstreamMap.Keys
-                    .Union(upstreamMap.Keys, SourceBuildIdentity.CaseInsensitiveComparer).ToArray(),
+                    .Union(upstreamMap.Keys, SourceBuildIdentity.CaseInsensitiveComparer)
+                    .OrderBy(n => n.RepoUri, StringComparer.Ordinal)
+                    .ToArray(),
                 upstreamMap,
                 downstreamMap);
         }
@@ -46,9 +50,39 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             Downstreams = downstreams;
         }
 
+        /// <summary>
+        /// Create an artificially coherent graph: only keep one commit of each repo by name. For
+        /// each identity node, the latest version is kept and dependenices on all versions are
+        /// redirected to the kept version.
+        ///
+        /// If a node has no version information (no DependencyDetail) we assume it is the latest.
+        /// This should only be the case when the user manually passes in a url and commit hash. If
+        /// multiple nodes with the same name lack version information, throws an exception.
+        /// </summary>
         public SourceBuildGraph CreateArtificiallyCoherentGraph()
         {
-            throw new NotImplementedException();
+            // Map old node => new node.
+            Dictionary<SourceBuildIdentity, SourceBuildIdentity> newNodes = Nodes
+                .GroupBy(n => n, SourceBuildIdentity.RepoNameOnlyComparer)
+                .Select(group =>
+                    group.SingleOrDefault(g => g.Source == null) ??
+                    group.OrderByDescending(n => NuGetVersion.Parse(n.Source.Version)).First())
+                .ToDictionary(
+                    n => n,
+                    n => n,
+                    SourceBuildIdentity.RepoNameOnlyComparer);
+
+            Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> newUpstreamMap = Upstreams
+                .GroupBy(
+                    pair => newNodes[pair.Key],
+                    // Transform all upstream nodes into the merged node, and dedup.
+                    pair => pair.Value.Select(u => newNodes[u]).Distinct().ToArray())
+                .ToDictionary(
+                    group => group.Key,
+                    // Combine all upstream lists for this merged node, and dedup.
+                    group => group.SelectMany(upstreams => upstreams).Distinct().ToArray());
+
+            return Create(newUpstreamMap);
         }
 
         public string ToGraphVizString()
