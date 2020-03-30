@@ -4,6 +4,7 @@ using Azure;
 using Azure.Core;
 using Azure.Data.AppConfiguration;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DncEng.Configuration.Extensions
 {
@@ -24,7 +25,18 @@ namespace Microsoft.DncEng.Configuration.Extensions
             {
                 try
                 {
+                    const string featureManagementPrefix = "FeatureManagement:";
+                    if (key.StartsWith(featureManagementPrefix))
+                    {
+                        key = key.Substring(featureManagementPrefix.Length);
+                        var featureFlagData = JObject.Parse(client.GetConfigurationSetting(".appconfig.featureflag/" + key).Value.Value);
+                        if (featureFlagData.Value<bool>("enabled"))
+                        {
+                            return "true";
+                        }
 
+                        return "false";
+                    }
                     return client.GetConfigurationSetting(key).Value.Value;
                 }
                 catch (RequestFailedException)
