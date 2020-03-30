@@ -4,11 +4,9 @@
 
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,6 +22,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         public IRemoteFactory RemoteFactory { get; set; }
 
         public bool IgnoreNonGitHub { get; set; } = true;
+
+        public List<Func<PotentialGraphContinuation, bool>> CustomContinuationFilters { get; } =
+            new List<Func<PotentialGraphContinuation, bool>>();
 
         public async Task<SourceBuildGraph> GetGraphAsync(
             IEnumerable<SourceBuildIdentity> rootDependencies,
@@ -134,54 +135,56 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 {
                     if (allUpstreams.ContainsKey(entry.Key))
                     {
-                        Logger.LogError($"Upstream mapping already contained entry for {entry.Key}. Replacing.");
+                        Logger.LogError($"Upstream mapping already contains entry for {entry.Key}.");
                     }
 
-                    allUpstreams[entry.Key] = entry.Value;
+                    allUpstreams.Add(entry.Key, entry.Value);
                 }
 
                 var graph = SourceBuildGraph.Create(allUpstreams);
 
-                bool ShouldSearchRepo(SourceBuildIdentity up, SourceBuildIdentity repo)
+                bool ShouldSearchRepo(PotentialGraphContinuation potential)
                 {
-                    // Remove self-dependency. E.g. arcade depends on previous versions of itself to
-                    // build, so this would go on forever.
-                    if (string.Equals(repo.RepoUri, up.RepoUri, StringComparison.OrdinalIgnoreCase))
+                    SourceBuildIdentity source = potential.Source;
+                    SourceBuildIdentity upstream = potential.Upstream;
+
+                    // Remove repo we've already scanned before.
+                    if (allUpstreams.ContainsKey(upstream))
                     {
-                        Logger.LogDebug($"Skipping self-dependency in {up.RepoUri} ({up.Commit} => {repo.Commit})");
                         return false;
                     }
-                    // Remove circular dependencies that have different hashes.
-                    // e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
-                    // We are working our way upstream, so this check checks all downstreams we've
-                    // seen so far to see if any have this repo name. (We can't simply check if
-                    // we've seen the repo name before: other branches may have the same repo name
-                    // dependency, but in a non-circular way.)
-                    if (graph.GetAllDownstreams(repo).Any(
-                        d => string.Equals(d.RepoUri, up.RepoUri, StringComparison.OrdinalIgnoreCase)))
+                    // Remove self-dependency. E.g. arcade depends on previous versions of itself to
+                    // build, so this tends to go on essentially forever.
+                    if (string.Equals(upstream.RepoUri, source.RepoUri, StringComparison.OrdinalIgnoreCase))
                     {
-                        Logger.LogDebug($"Skipping already-seen circular dependency from {up.RepoUri} to {repo.RepoUri}");
+                        Logger.LogDebug($"Skipping self-dependency in {source.RepoUri} ({source.Commit} => {upstream.Commit})");
                         return false;
                     }
                     // Remove repos specifically ignored by the caller.
-                    if (ignoredRepos.Any(r => r.Equals(repo.RepoUri, StringComparison.OrdinalIgnoreCase)))
+                    if (ignoredRepos.Any(r => r.Equals(upstream.RepoUri, StringComparison.OrdinalIgnoreCase)))
                     {
-                        Logger.LogDebug($"Skipping ignored repo {repo.RepoUri} (at {repo.Commit})");
+                        Logger.LogDebug($"Skipping ignored repo {upstream.RepoUri} (at {upstream.Commit})");
                         return false;
                     }
                     // Remove repos with invalid dependency info: missing commit.
-                    if (string.IsNullOrWhiteSpace(repo.Commit))
+                    if (string.IsNullOrWhiteSpace(upstream.Commit))
                     {
-                        Logger.LogWarning($"Skipping dependency from {up} to {repo.RepoUri}: Missing commit.");
+                        Logger.LogWarning($"Skipping dependency from {source} to {upstream.RepoUri}: Missing commit.");
                         return false;
                     }
 
-                    // Search this downstream repo on the next iteration.
-                    return true;
+                    // Check custom filters. If all pass, scan this upstream in the next pass.
+                    return CustomContinuationFilters.All(filter => filter(potential));
                 }
 
                 nextLevelDependencies = discoveredUpstreams
-                    .SelectMany(entry => entry.Value.Where(down => ShouldSearchRepo(entry.Key, down)))
+                    .SelectMany(
+                        repoToUpstream => repoToUpstream.Value
+                            .Where(
+                                upstream => ShouldSearchRepo(new PotentialGraphContinuation(
+                                    upstream,
+                                    repoToUpstream.Key,
+                                    graph))))
                     .Distinct(SourceBuildIdentity.CaseInsensitiveComparer)
                     .ToArray();
 
@@ -204,9 +207,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             return SourceBuildGraph.Create(allUpstreams);
         }
 
-        public async Task CreateWorkTreesAsync(object graph, string optionsReposFolder)
+        public async Task CreateWorkTreesAsync(SourceBuildGraph graph, string reposFolder)
         {
-
         }
 
         private static async Task<Task> GetOrCreateCloneTaskAsync(

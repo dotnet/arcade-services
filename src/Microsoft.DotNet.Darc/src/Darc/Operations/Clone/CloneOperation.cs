@@ -74,7 +74,11 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
             {
                 GitDir = _options.GitDirFolder,
                 RemoteFactory = new RemoteFactory(_options),
-                Logger = Logger
+                Logger = Logger,
+                CustomContinuationFilters =
+                {
+                    PotentialGraphContinuation.HasNoCircularDependencyDisregardingCommit
+                }
             };
         }
 
