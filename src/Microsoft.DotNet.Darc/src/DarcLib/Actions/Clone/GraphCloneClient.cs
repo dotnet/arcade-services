@@ -23,9 +23,6 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public bool IgnoreNonGitHub { get; set; } = true;
 
-        public List<Func<PotentialGraphContinuation, bool>> CustomContinuationFilters { get; } =
-            new List<Func<PotentialGraphContinuation, bool>>();
-
         public async Task<SourceBuildGraph> GetGraphAsync(
             IEnumerable<SourceBuildIdentity> rootDependencies,
             IEnumerable<string> ignoredRepos,
@@ -143,11 +140,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
                 var graph = SourceBuildGraph.Create(allUpstreams);
 
-                bool ShouldSearchRepo(PotentialGraphContinuation potential)
+                bool ShouldSearchRepo(SourceBuildIdentity upstream, SourceBuildIdentity source)
                 {
-                    SourceBuildIdentity source = potential.Source;
-                    SourceBuildIdentity upstream = potential.Upstream;
-
                     // Remove repo we've already scanned before.
                     if (allUpstreams.ContainsKey(upstream))
                     {
@@ -158,6 +152,19 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     if (string.Equals(upstream.RepoUri, source.RepoUri, StringComparison.OrdinalIgnoreCase))
                     {
                         Logger.LogDebug($"Skipping self-dependency in {source.RepoUri} ({source.Commit} => {upstream.Commit})");
+                        return false;
+                    }
+                    /// Remove circular dependencies that have different hashes. That is, detect
+                    /// circular-by-name-only dependencies.
+                    /// e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
+                    /// We are working our way upstream, so this check walks all downstreams we've
+                    /// seen so far to see if any have this potential repo name. (We can't simply
+                    /// check if we've seen the repo name before: other branches may have the same
+                    /// repo name dependency but not as part of a circular dependency.)
+                    if (graph.GetAllDownstreams(upstream).Any(
+                        d => string.Equals(d.RepoUri, source.RepoUri, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        Logger.LogDebug($"Skipping already-seen circular dependency from {source.RepoUri} to {upstream.RepoUri}");
                         return false;
                     }
                     // Remove repos specifically ignored by the caller.
@@ -173,18 +180,14 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                         return false;
                     }
 
-                    // Check custom filters. If all pass, scan this upstream in the next pass.
-                    return CustomContinuationFilters.All(filter => filter(potential));
+                    // Scan this upstream in the next pass.
+                    return true;
                 }
 
                 nextLevelDependencies = discoveredUpstreams
                     .SelectMany(
                         repoToUpstream => repoToUpstream.Value
-                            .Where(
-                                upstream => ShouldSearchRepo(new PotentialGraphContinuation(
-                                    upstream,
-                                    repoToUpstream.Key,
-                                    graph))))
+                            .Where(upstream => ShouldSearchRepo(upstream, repoToUpstream.Key)))
                     .Distinct(SourceBuildIdentity.CaseInsensitiveComparer)
                     .ToArray();
 
