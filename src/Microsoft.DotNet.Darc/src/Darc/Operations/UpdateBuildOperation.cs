@@ -43,7 +43,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 Build updatedBuild = await remote.UpdateBuildAsync(_options.Id, new BuildUpdate { Released = _options.Released });
 
                 Console.WriteLine($"Updated build {_options.Id} with new information.");
-                Console.WriteLine(UxHelpers.GetBuildDescription(updatedBuild));
+                Console.WriteLine(UxHelpers.GetTextBuildDescription(updatedBuild));
             }
             catch (Exception e)
             {

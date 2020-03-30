@@ -36,7 +36,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 Build build = await remote.GetBuildAsync(_options.Id);
                 if (build != null)
                 {
-                    Console.Write(UxHelpers.GetBuildDescription(build));
+                    Console.Write(UxHelpers.GetTextBuildDescription(build));
                 }
                 else
                 {
