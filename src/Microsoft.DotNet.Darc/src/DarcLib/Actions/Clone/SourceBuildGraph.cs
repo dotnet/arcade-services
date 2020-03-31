@@ -148,7 +148,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
             return JObject.FromObject(new
             {
-                Nodes,
+                Nodes = Nodes.Select(n => n.ToJObject()).ToArray(),
                 Upstreams = Upstreams
                     .Select(pair => new
                     {
