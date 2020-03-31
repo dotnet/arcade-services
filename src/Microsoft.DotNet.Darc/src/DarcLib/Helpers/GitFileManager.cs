@@ -758,7 +758,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="versionProps">Xml object representing MSBuild properties file.</param>
         /// <returns>True if there are no duplicated properties.</returns>
-        private Task<bool> VerifyNoDuplicatedProperties(XmlDocument versionProps)
+        public Task<bool> VerifyNoDuplicatedProperties(XmlDocument versionProps)
         {
             bool hasNoDuplicatedProperties = true;
             HashSet<string> existingProperties = new HashSet<string>();
