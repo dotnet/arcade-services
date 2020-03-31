@@ -16,10 +16,10 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
         [Fact]
         public void IncoherentSiblingsMerge()
         {
-            var root = CreateId("root", "0");
+            var root = new SourceBuildIdentity("root", "0", null);
             // The siblings should merge into the higher-versioned one.
-            var a = CreateId("sibling", "0", new DependencyDetail { Version = "1.0.0" });
-            var b = CreateId("sibling", "1", new DependencyDetail { Version = "1.0.1" });
+            var a = new SourceBuildIdentity("sibling", "0", new DependencyDetail { Version = "1.0.0" });
+            var b = new SourceBuildIdentity("sibling", "1", new DependencyDetail { Version = "1.0.1" });
 
             var incoherent = SourceBuildGraph.Create(new Dictionary<SourceBuildIdentity, SourceBuildIdentity[]>
             {
@@ -49,11 +49,11 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
             // to
             //   root => a => cousinB
             //       \=> b ===^
-            var root = CreateId("root", "0");
-            var a = CreateId("a", "0");
-            var b = CreateId("b", "0");
-            var cousinA = CreateId("cousin", "0", new DependencyDetail { Version = "5.0.0-beta.0" });
-            var cousinB = CreateId("cousin", "1", new DependencyDetail { Version = "5.0.0-beta.1" });
+            var root = new SourceBuildIdentity("root", "0", null);
+            var a = new SourceBuildIdentity("a", "0", null);
+            var b = new SourceBuildIdentity("b", "0", null);
+            var cousinA = new SourceBuildIdentity("cousin", "0", new DependencyDetail { Version = "5.0.0-beta.0" });
+            var cousinB = new SourceBuildIdentity("cousin", "1", new DependencyDetail { Version = "5.0.0-beta.1" });
 
             var incoherent = SourceBuildGraph.Create(new Dictionary<SourceBuildIdentity, SourceBuildIdentity[]>
             {
@@ -75,13 +75,13 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
         [Fact]
         public void CommitDateBreaksVersionTies()
         {
-            var root = CreateId("root", "0");
+            var root = new SourceBuildIdentity("root", "0", null);
             // When building stable, we may build the same version multiple times. This results in
             // only the commit hash changing. Commit hashes don't sort, so we need to break the tie
             // somehow. The current algorithm uses commit date as a reasonable-seeming heuristic.
-            var a = CreateId("sibling", "0", new DependencyDetail { Version = "1.0.0" });
-            var b = CreateId("sibling", "1", new DependencyDetail { Version = "1.0.0" });
-            var c = CreateId("sibling", "2", new DependencyDetail { Version = "1.0.0" });
+            var a = new SourceBuildIdentity("sibling", "0", new DependencyDetail { Version = "1.0.0" });
+            var b = new SourceBuildIdentity("sibling", "1", new DependencyDetail { Version = "1.0.0" });
+            var c = new SourceBuildIdentity("sibling", "2", new DependencyDetail { Version = "1.0.0" });
 
             var incoherent = SourceBuildGraph.Create(new Dictionary<SourceBuildIdentity, SourceBuildIdentity[]>
             {
@@ -105,19 +105,6 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
             return new GraphCloneClient().CreateArtificiallyCoherentGraph(
                 graph,
                 node => commitDateMap?[node] ?? DateTimeOffset.MinValue);
-        }
-
-        private SourceBuildIdentity CreateId(
-            string name,
-            string commit,
-            DependencyDetail detail = null)
-        {
-            return new SourceBuildIdentity
-            {
-                RepoUri = name,
-                Commit = commit,
-                Source = detail
-            };
         }
 
         private static void AssertEquivalentSet<T>(

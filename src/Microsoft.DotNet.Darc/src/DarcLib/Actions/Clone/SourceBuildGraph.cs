@@ -24,21 +24,29 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 .GroupBy(v => v.Downstream, v => v.Repo, SourceBuildIdentity.CaseInsensitiveComparer)
                 .ToDictionary(v => v.Key, v => v.ToArray());
 
-            return new SourceBuildGraph
-            {
-                Nodes = downstreamMap.Keys
+            return new SourceBuildGraph(
+                downstreamMap.Keys
                     .Union(upstreamMap.Keys, SourceBuildIdentity.CaseInsensitiveComparer)
                     .OrderBy(n => n.RepoUri, StringComparer.Ordinal)
                     .ToArray(),
-                Upstreams = upstreamMap,
-                Downstreams = downstreamMap
-            };
+                upstreamMap,
+                downstreamMap);
         }
 
-        public IReadOnlyList<SourceBuildIdentity> Nodes { get; set; }
+        public IReadOnlyList<SourceBuildIdentity> Nodes { get; }
 
-        public Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> Upstreams { get; set; }
-        public Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> Downstreams { get; set; }
+        public Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> Upstreams { get; }
+        public Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> Downstreams { get; }
+
+        private SourceBuildGraph(
+            IReadOnlyList<SourceBuildIdentity> nodes,
+            Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> upstreams,
+            Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> downstreams)
+        {
+            Nodes = nodes;
+            Upstreams = upstreams;
+            Downstreams = downstreams;
+        }
 
         public string ToGraphVizString()
         {
