@@ -3,12 +3,14 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.Extensions.Logging;
+using NuGet.Versioning;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Models;
 
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
@@ -243,6 +245,69 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                         false);
                 });
             }));
+        }
+
+        /// <summary>
+        /// Create an artificially coherent graph: only keep one commit of each repo by name. For
+        /// each identity node, the latest version is kept and dependenices on all versions are
+        /// redirected to the kept version.
+        ///
+        /// If a node has no version information (no DependencyDetail) we assume it is the latest.
+        /// This should only be the case when the user manually passes in a url and commit hash. If
+        /// multiple nodes with the same name lack version information, throws an exception.
+        /// </summary>
+        public SourceBuildGraph CreateArtificiallyCoherentGraph(
+            SourceBuildGraph source,
+            Func<SourceBuildIdentity, DateTimeOffset> getCommitDate = null)
+        {
+            getCommitDate = getCommitDate ?? GetCachedCommitDateFunc();
+
+            // Map old node => new node.
+            Dictionary<SourceBuildIdentity, SourceBuildIdentity> newNodes = source.Nodes
+                .GroupBy(n => n, SourceBuildIdentity.RepoNameOnlyComparer)
+                .Select(group =>
+                    group.SingleOrDefault(g => g.Source == null) ??
+                    group.OrderByDescending(n => NuGetVersion.Parse(n.Source.Version))
+                        .ThenByDescending(getCommitDate)
+                        .First())
+                .ToDictionary(
+                    n => n,
+                    n => n,
+                    SourceBuildIdentity.RepoNameOnlyComparer);
+
+            Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> newUpstreamMap = source.Upstreams
+                .GroupBy(
+                    pair => newNodes[pair.Key],
+                    // Transform all upstream nodes into the merged node, and dedup.
+                    pair => pair.Value.Select(u => newNodes[u]).Distinct().ToArray())
+                .ToDictionary(
+                    group => group.Key,
+                    // Combine all upstream lists for this merged node, and dedup.
+                    group => group.SelectMany(upstreams => upstreams).Distinct().ToArray());
+
+            return SourceBuildGraph.Create(newUpstreamMap);
+        }
+
+        private Func<SourceBuildIdentity, DateTimeOffset> GetCachedCommitDateFunc()
+        {
+            var gitClient = new LocalGitClient(null, Logger);
+            var extraCommitData = new Dictionary<SourceBuildIdentity, DateTimeOffset>();
+
+            return repo =>
+            {
+                if (IsRepoNonGitHubAndIgnored(repo) || string.IsNullOrEmpty(repo.Commit))
+                {
+                    return DateTimeOffset.MinValue;
+                }
+
+                if (extraCommitData.TryGetValue(repo, out var data))
+                {
+                    return data;
+                }
+
+                Commit commit = gitClient.GetCommit(GetMasterGitDirPath(repo.RepoUri), repo.Commit);
+                return extraCommitData[repo] = commit.Committer.When;
+            };
         }
 
         private bool IsRepoNonGitHubAndIgnored(SourceBuildIdentity repo)

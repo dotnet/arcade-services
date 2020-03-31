@@ -125,7 +125,7 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
 
                 if (_options.ForceCoherence)
                 {
-                    var newGraph = graph.CreateArtificiallyCoherentGraph();
+                    var newGraph = _cloneClient.CreateArtificiallyCoherentGraph(graph);
 
                     Logger.LogInformation(
                         $"Artificially forcing coherence. Node count {graph.Nodes.Count} -> " +

@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Commit = Microsoft.DotNet.DarcLib.Models.Commit;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -92,6 +93,22 @@ namespace Microsoft.DotNet.DarcLib
                 }
 
                 return blob.GetContentText();
+            }
+        }
+
+        public Commit GetCommit(string repoUri, string objectish)
+        {
+            using (var localRepo = new Repository(repoUri))
+            {
+                var commit = localRepo.Lookup<LibGit2Sharp.Commit>(objectish);
+                if (commit == null)
+                {
+                    throw new ArgumentException(
+                        $"Object-ish expression '{objectish}' does not resolve to a commit.",
+                        nameof(objectish));
+                }
+
+                return Commit.Create(commit);
             }
         }
 
