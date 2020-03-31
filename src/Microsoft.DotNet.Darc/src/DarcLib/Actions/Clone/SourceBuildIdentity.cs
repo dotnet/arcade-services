@@ -15,23 +15,13 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         public static IEqualityComparer<SourceBuildIdentity> RepoNameOnlyComparer { get; } =
             new RepoNameOnlyComparerImplementation();
 
-        public string RepoUri { get; }
-        public string Commit { get; }
+        public string RepoUri { get; set; }
+        public string Commit { get; set; }
 
         /// <summary>
         /// The source of this identity, or null if this didn't come from a DarcLib dependency.
         /// </summary>
-        public DependencyDetail Source { get; }
-
-        public SourceBuildIdentity(
-            string repoUri,
-            string commit,
-            DependencyDetail source)
-        {
-            RepoUri = repoUri;
-            Commit = commit;
-            Source = source;
-        }
+        public DependencyDetail Source { get; set;  }
 
         public override string ToString() => $"{RepoUri}@{Commit}";
 
