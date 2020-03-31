@@ -23,6 +23,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public bool IgnoreNonGitHub { get; set; } = true;
 
+        private Dictionary<string, Task> _cloningTasks = new Dictionary<string, Task>();
+        private SemaphoreSlim _cloningTasksLock = new SemaphoreSlim(1);
+
         public async Task<SourceBuildGraph> GetGraphAsync(
             IEnumerable<SourceBuildIdentity> rootDependencies,
             IEnumerable<string> ignoredRepos,
@@ -35,53 +38,25 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
             var allUpstreams = new Dictionary<SourceBuildIdentity, SourceBuildIdentity[]>(SourceBuildIdentity.CaseInsensitiveComparer);
 
-            var cloningTasks = new Dictionary<string, Task>();
-            var cloningTasksLock = new SemaphoreSlim(1);
-
             while (nextLevelDependencies.Any())
             {
                 // Do one level of clones at a time.
                 var discoveredUpstreamsRaw =
                     await Task.WhenAll(nextLevelDependencies.Select(async repo =>
                     {
-                        // The bare .git dir.
-                        string masterRepoGitDirPath = GetMasterGitDirPath(repo.RepoUri);
-
-                        // Create the bare repo clone.
-                        if (!Directory.Exists(masterRepoGitDirPath))
+                        if (IsRepoNonGitHubAndIgnored(repo))
                         {
-                            try
-                            {
-                                if (IsRepoNonGitHubAndIgnored(repo))
-                                {
-                                    Logger.LogWarning($"Skipping non-GitHub repo {repo.RepoUri}");
-                                    return (repo, Array.Empty<SourceBuildIdentity>());
-                                }
-
-                                IRemote repoRemote = await RemoteFactory.GetRemoteAsync(repo.RepoUri, Logger);
-
-                                var cloneTask = await GetOrCreateCloneTaskAsync(
-                                    cloningTasks,
-                                    cloningTasksLock,
-                                    masterRepoGitDirPath,
-                                    () =>
-                                    {
-                                        repoRemote.Clone(repo.RepoUri, null, null, masterRepoGitDirPath);
-                                    });
-
-                                await cloneTask;
-                            }
-                            catch (Exception)
-                            {
-                                Logger.LogError($"Failed to create bare clone of '{repo.RepoUri}' at '{masterRepoGitDirPath}'");
-                                throw;
-                            }
+                            Logger.LogWarning($"Skipping non-GitHub repo {repo.RepoUri}");
+                            return (repo, Array.Empty<SourceBuildIdentity>());
                         }
 
-                        Logger.LogDebug($"Starting to look for dependencies in {masterRepoGitDirPath}");
+                        // The bare .git dir.
+                        string bareRepoDir = await GetInitializedBareRepoDirAsync(repo);
+
+                        Logger.LogDebug($"Starting to look for dependencies in {bareRepoDir}");
                         try
                         {
-                            var local = new Local(Logger, masterRepoGitDirPath);
+                            var local = new Local(Logger, bareRepoDir);
 
                             IEnumerable<DependencyDetail> deps =
                                 await local.GetDependenciesAsync(branch: repo.Commit);
@@ -105,14 +80,14 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                                 Logger.LogDebug($"Adding new dependency {newIdentity}");
                             }
 
-                            Logger.LogDebug($"done looking for dependencies in {masterRepoGitDirPath} at {repo.Commit}");
+                            Logger.LogDebug($"done looking for dependencies in {bareRepoDir} at {repo.Commit}");
 
                             return (repo, upstreamDependencies);
                         }
                         catch (DependencyFileNotFoundException ex)
                         {
                             Logger.LogWarning(
-                                $"Repo {masterRepoGitDirPath} appears to have no " +
+                                $"Repo {bareRepoDir} appears to have no " +
                                 $"'/eng/Version.Details.xml' file at commit {repo.Commit}. " +
                                 $"Dependency chain is broken here. " + Environment.NewLine +
                                 $"(Inner exception: {ex})");
@@ -223,16 +198,21 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     return;
                 }
 
-                string masterRepoGitDirPath = GetMasterGitDirPath(repo.RepoUri);
+                string bareRepoDir = await GetInitializedBareRepoDirAsync(repo);
                 string path = GetWorktreePath(reposFolder, repo);
+                string inProgressPath = $"{path}~~~";
 
                 if (Directory.Exists(path))
                 {
                     Logger.LogWarning($"Worktree already exists: '{path}'. Skipping.");
                     return;
                 }
+                if (Directory.Exists(inProgressPath))
+                {
+                    Directory.Delete(inProgressPath, true);
+                }
 
-                Local local = new Local(Logger, masterRepoGitDirPath);
+                Local local = new Local(Logger, bareRepoDir);
 
                 Logger.LogInformation($"Creating worktree for {repo} at '{path}'...");
 
@@ -241,8 +221,10 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     local.AddWorktree(
                         repo.Commit,
                         Path.GetFileName(path) + DateTime.UtcNow.ToString("s").Replace(":", "."),
-                        path,
+                        inProgressPath,
                         false);
+
+                    Directory.Move(inProgressPath, path);
                 });
             }));
         }
@@ -305,7 +287,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     return data;
                 }
 
-                Commit commit = gitClient.GetCommit(GetMasterGitDirPath(repo.RepoUri), repo.Commit);
+                Commit commit = gitClient.GetCommit(GetBareRepoDir(repo.RepoUri), repo.Commit);
                 return extraCommitData[repo] = commit.Committer.When;
             };
         }
@@ -317,27 +299,55 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 parsedUri.Host != "github.com";
         }
 
-        private static async Task<Task> GetOrCreateCloneTaskAsync(
-            Dictionary<string, Task> map,
-            SemaphoreSlim mapLock,
-            string path,
-            Action cloneAction)
+        private async Task<string> GetInitializedBareRepoDirAsync(SourceBuildIdentity repo)
         {
+            string gitDir = GetBareRepoDir(repo.RepoUri);
+            string inProgressGitDir = $"{gitDir}~~~";
+
+            Task cloneTask;
+
+            await _cloningTasksLock.WaitAsync();
+
             try
             {
-                await mapLock.WaitAsync();
+                if (!_cloningTasks.TryGetValue(gitDir, out cloneTask))
+                {
+                    cloneTask = _cloningTasks[gitDir] = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            if (Directory.Exists(gitDir))
+                            {
+                                return;
+                            }
+                            if (Directory.Exists(inProgressGitDir))
+                            {
+                                Directory.Delete(inProgressGitDir, true);
+                            }
 
-                return map.TryGetValue(path, out var task)
-                    ? task
-                    : map[path] = Task.Run(cloneAction);
+                            IRemote repoRemote = await RemoteFactory.GetRemoteAsync(repo.RepoUri, Logger);
+                            repoRemote.Clone(repo.RepoUri, null, null, inProgressGitDir);
+                            Directory.Move(inProgressGitDir, gitDir);
+                        }
+                        catch (Exception)
+                        {
+                            Logger.LogError($"Failed to create bare clone of '{repo.RepoUri}' at '{gitDir}'");
+                            throw;
+                        }
+                    });
+                }
             }
             finally
             {
-                mapLock.Release();
+                _cloningTasksLock.Release();
             }
+
+            await cloneTask;
+
+            return gitDir;
         }
 
-        private string GetMasterGitDirPath(string repoUri)
+        private string GetBareRepoDir(string repoUri)
         {
             if (string.IsNullOrEmpty(GitDir))
             {
@@ -349,7 +359,11 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 repoUri = repoUri.Substring(0, repoUri.Length - ".git".Length);
             }
 
-            return Path.Combine(GitDir, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}.git");
+            var lastSegment = repoUri
+                .Substring(repoUri.LastIndexOf("/", StringComparison.Ordinal) + 1)
+                .ToLowerInvariant();
+
+            return Path.Combine(GitDir, $"{lastSegment}.git");
         }
 
         private static string GetWorktreePath(string reposFolder, SourceBuildIdentity repo)
@@ -361,9 +375,11 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 uri = uri.Substring(0, uri.Length - ".git".Length);
             }
 
-            var lastSegment = uri.Substring(uri.LastIndexOf("/", StringComparison.Ordinal) + 1);
+            var lastSegment = uri
+                .Substring(uri.LastIndexOf("/", StringComparison.Ordinal) + 1)
+                .ToLowerInvariant();
 
-            return Path.Combine(reposFolder, $"{lastSegment}.{repo.Commit.Substring(0, 8)}");
+            return Path.Combine(reposFolder, $"{lastSegment}.{repo.ShortCommit}");
         }
     }
 }

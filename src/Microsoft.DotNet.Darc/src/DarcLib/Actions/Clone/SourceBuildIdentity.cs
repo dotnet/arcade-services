@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
@@ -33,7 +34,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             Source = source;
         }
 
-        public override string ToString() => $"{RepoUri}@{Commit}";
+        public override string ToString() => $"{RepoUri}@{ShortCommit}";
+
+        public string ShortCommit => string.IsNullOrEmpty(Commit) ? "" : Commit.Substring(0, 8);
 
         private class CaseInsensitiveComparerImplementation : IEqualityComparer<SourceBuildIdentity>
         {
@@ -75,6 +78,24 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             }
 
             public int GetHashCode(SourceBuildIdentity obj) => obj.RepoUri.GetHashCode();
+        }
+
+        public static SourceBuildIdentity Create(JObject obj)
+        {
+            return new SourceBuildIdentity(
+                obj.Value<string>(nameof(RepoUri)),
+                obj.Value<string>(nameof(Commit)),
+                obj[nameof(Source)].ToObject<DependencyDetail>());
+        }
+
+        public JObject ToJObject()
+        {
+            return JObject.FromObject(new
+            {
+                RepoUri,
+                Commit,
+                Source
+            });
         }
     }
 }

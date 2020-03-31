@@ -6,6 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
@@ -122,6 +124,39 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     next.Enqueue(linkedNode);
                 }
             }
+        }
+
+        public static SourceBuildGraph Create(JObject obj)
+        {
+            var nodes = obj[nameof(Nodes)].Values<JObject>().Select(SourceBuildIdentity.Create).ToArray();
+            var upstreams = obj["Upstreams"].Values<JObject>()
+                .Select(o => new
+                {
+                    Key = o.Value<int>("Key"),
+                    Values = o["Values"].ToObject<int[]>()
+                })
+                .ToDictionary(
+                    p => nodes[p.Key],
+                    p => p.Values.Select(i => nodes[i]).ToArray());
+
+            return Create(upstreams);
+        }
+
+        public JObject ToJObject()
+        {
+            int GetIndex(SourceBuildIdentity node) => Nodes.TakeWhile(n => n != node).Count();
+
+            return JObject.FromObject(new
+            {
+                Nodes,
+                Upstreams = Upstreams
+                    .Select(pair => new
+                    {
+                        Key = GetIndex(pair.Key),
+                        Values = pair.Value.Select(GetIndex).ToArray()
+                    })
+                    .ToArray()
+            });
         }
     }
 }

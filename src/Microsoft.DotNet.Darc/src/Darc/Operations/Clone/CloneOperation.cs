@@ -12,6 +12,7 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Actions.Clone;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Operations.Clone
 {
@@ -123,6 +124,11 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                     _options.IncludeToolset,
                     _options.CloneDepth);
 
+                // Keep some metadata for later debugging or unit test setup if necessary.
+                WriteGraphDebugInfoToFiles(
+                    Path.Combine(_options.ReposFolder, ".darc-clone-debug", "graph"),
+                    graph);
+
                 if (_options.ForceCoherence)
                 {
                     var newGraph = _cloneClient.CreateArtificiallyCoherentGraph(graph);
@@ -132,6 +138,10 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                         $"{newGraph.Nodes.Count} ({newGraph.Nodes.Count - graph.Nodes.Count}) ");
 
                     graph = newGraph;
+
+                    WriteGraphDebugInfoToFiles(
+                        Path.Combine(_options.ReposFolder, ".darc-clone-debug", "coherent-graph"),
+                        graph);
                 }
 
                 await _cloneClient.CreateWorktreesAsync(
@@ -147,26 +157,17 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
             }
         }
 
-        private static Local HandleRepoAtSpecificHash(string repoPath, string commit, string masterRepoGitDirPath, ILogger log)
+        private static void WriteGraphDebugInfoToFiles(string path, SourceBuildGraph graph)
         {
-            Local local;
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
 
-            if (Directory.Exists(repoPath))
-            {
-                log.LogDebug($"Repo path {repoPath} already exists, assuming we cloned already and skipping");
-                local = new Local(log, repoPath);
-            }
-            else
-            {
-                log.LogDebug($"Setting up {repoPath} with .gitdir redirect");
-                Directory.CreateDirectory(repoPath);
-                //File.WriteAllText(Path.Combine(repoPath, ".git"), GetGitDirRedirectString(masterRepoGitDirPath));
-                log.LogInformation($"Checking out {commit} in {repoPath}");
-                local = new Local(log, repoPath);
-                local.Checkout(commit, true);
-            }
+            File.WriteAllText(
+                $"{path}.json",
+                graph.ToJObject().ToString(Formatting.Indented));
 
-            return local;
+            File.WriteAllText(
+                $"{path}.dot",
+                graph.ToGraphVizString());
         }
 
         private static void EnsureOptionsCompatibility(CloneCommandLineOptions options)
@@ -192,18 +193,6 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
             {
                 Directory.CreateDirectory(options.GitDirFolder);
             }
-        }
-
-        private static string GetRepoDirectory(string reposFolder, string repoUri, string commit)
-        {
-            if (repoUri.EndsWith(".git"))
-            {
-                repoUri = repoUri.Substring(0, repoUri.Length - ".git".Length);
-            }
-
-            // commit could actually be a branch or tag, make it filename-safe
-            commit = commit.Replace('/', '-').Replace('\\', '-').Replace('?', '-').Replace('*', '-').Replace(':', '-').Replace('|', '-').Replace('"', '-').Replace('<', '-').Replace('>', '-');
-            return Path.Combine(reposFolder, $"{repoUri.Substring(repoUri.LastIndexOf("/") + 1)}.{commit}");
         }
     }
 }
