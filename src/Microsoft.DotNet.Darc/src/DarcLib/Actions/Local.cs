@@ -159,6 +159,14 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        /// Fetch all refs.
+        /// </summary>
+        public void Fetch()
+        {
+            _gitClient.Fetch(_repo);
+        }
+
+        /// <summary>
         /// Add a remote to the local repo if it does not already exist, and attempt to fetch new commits.
         /// </summary>
         /// <param name="repoDir">The directory of the local repo</param>

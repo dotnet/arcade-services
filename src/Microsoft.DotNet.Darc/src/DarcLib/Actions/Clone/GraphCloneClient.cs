@@ -346,6 +346,11 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                         {
                             if (Directory.Exists(gitDir))
                             {
+                                // Ensure repo is up to date. This task runs once per lifetime of
+                                // the client, on first use, so this is a nice place to do it.
+                                Local local = new Local(Logger, gitDir);
+                                local.Fetch();
+
                                 return;
                             }
                             if (Directory.Exists(inProgressGitDir))

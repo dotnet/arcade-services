@@ -457,6 +457,21 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
+        public void Fetch(string repoDir)
+        {
+            using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoDir))
+            {
+                try
+                {
+                    LibGit2SharpHelpers.FetchRepo(localRepo, _logger);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"Failure while fetching remotes in '{repoDir}'", ex);
+                }
+            }
+        }
+
         private static void CleanRepoAndSubmodules(LibGit2Sharp.Repository repo, ILogger log)
         {
             using (log.BeginScope($"Beginning clean of {repo.Info.WorkingDirectory} and {repo.Submodules.Count()} submodules"))

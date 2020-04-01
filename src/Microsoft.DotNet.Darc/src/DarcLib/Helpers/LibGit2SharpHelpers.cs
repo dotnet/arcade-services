@@ -110,7 +110,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             repo.Index.Add(fileBlob, file.FilePath, fileMode);
         }
 
-        private static void FetchRepo(Repository repo, ILogger log)
+        internal static void FetchRepo(Repository repo, ILogger log)
         {
             foreach (LibGit2Sharp.Remote remote in repo.Network.Remotes)
             {

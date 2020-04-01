@@ -182,6 +182,12 @@ namespace Microsoft.DotNet.DarcLib
         void AddWorktree(string repoPath, string path, string name, string commitish, bool locked);
 
         /// <summary>
+        ///     Fetch all refs.
+        /// </summary>
+        /// <param name="repoPath">Path to the local repository.</param>
+        void Fetch(string repoPath);
+
+        /// <summary>
         ///     Add a remote to local repo if it does not already exist, and attempt to fetch commits.
         /// </summary>
         /// <param name="repoDir">The local repo directory</param>
