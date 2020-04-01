@@ -1,11 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
-using System;
 using System.Reflection;
-using Azure.Core;
-using Azure.Identity;
-using Maestro.AzureDevOps;
 using Maestro.Data;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.Dotnet.GitHub.Authentication;
@@ -58,24 +54,7 @@ namespace DependencyUpdateErrorProcessor
                                 (options, provider) =>
                             {
                                 var config = provider.GetRequiredService<IConfiguration>();
-                                
-                                string apiEndPointUri = config["AppConfigurationUri"];
-                                ConfigurationBuilder builder = new ConfigurationBuilder();
-                                TokenCredential credential = apiEndPointUri.Contains("maestrolocal") ?
-                                    new DefaultAzureCredential() :
-                                    (TokenCredential)new ManagedIdentityCredential();
-                                builder.AddAzureAppConfiguration(o =>
-                                {
-                                    o.Connect(new Uri(apiEndPointUri), credential)
-                                    .ConfigureRefresh(refresh =>
-                                        {
-                                            refresh.Register(".appconfig.featureflag/DependencyUpdateErrorProcessor")
-                                                .SetCacheExpiration(TimeSpan.FromSeconds(1));
-                                        }).UseFeatureFlags();
-
-                                    options.ConfigurationRefresherEndPointUri = o.GetRefresher();
-                                });
-                                options.DynamicConfigs = builder.Build();
+                                options.IsEnabled = bool.Parse(config["EnableDependencyUpdateErrorProcessor"]);
                                 options.GithubUrl = config["GithubUrl"];
                                 options.FyiHandle = config["FyiHandle"];
                             });

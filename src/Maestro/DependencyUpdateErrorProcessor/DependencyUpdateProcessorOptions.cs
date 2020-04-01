@@ -7,11 +7,10 @@ using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 
 namespace DependencyUpdateErrorProcessor
 {
-    class DependencyUpdateErrorProcessorOptions
+    public class DependencyUpdateErrorProcessorOptions
     {
-        public IConfigurationRefresher ConfigurationRefresherEndPointUri { get; set; }
-        public IConfiguration DynamicConfigs { get; set; }
         public string GithubUrl { get; set; }
         public string FyiHandle { get; set; }
+        public bool IsEnabled { get; set; }
     }
 }
