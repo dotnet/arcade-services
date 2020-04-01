@@ -436,20 +436,18 @@ namespace Microsoft.DotNet.DarcLib
 
                     // Add the worktree. Use "--quiet" to avoid stdout clutter. Use "--force" to
                     // override a previously created worktree if necessary.
-                    Process process = Process.Start(
-                        new ProcessStartInfo
-                        {
-                            FileName = _gitExecutable,
-                            Arguments = $"worktree add --quiet --force \"{path}\" \"{commitish}\"",
-                            WorkingDirectory = repoDir,
-                            UseShellExecute = false
-                        });
+                    var (exitCode, stdout, stderr) = LocalHelpers.ExecuteCommandFullCapture(
+                        _gitExecutable,
+                        $"worktree add --quiet --force \"{path}\" \"{commitish}\"",
+                        _logger,
+                        repoDir);
 
-                    process.WaitForExit();
-
-                    if (process.ExitCode != 0)
+                    if (exitCode != 0)
                     {
-                        throw new Exception($"'git worktree add ...' command exit code nonzero.");
+                        throw new Exception(
+                            $"Worktree add failed, exit code '{exitCode}'.\n" +
+                            $"Standard output: {stdout}\n" +
+                            $"Standard error: {stderr}");
                     }
                 }
                 catch (Exception ex)

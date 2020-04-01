@@ -4,10 +4,10 @@
 
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Microsoft.DotNet.DarcLib.Helpers
 {
@@ -154,12 +154,32 @@ namespace Microsoft.DotNet.DarcLib.Helpers
 
         public static string ExecuteCommand(string command, string arguments, ILogger logger, string workingDirectory = null)
         {
+            var (_, stdout, _) = ExecuteCommandFullCapture(
+                command,
+                arguments,
+                logger,
+                workingDirectory,
+                captureStderr: false);
+
+            return stdout;
+        }
+
+        public static (int? exitCode, string stdout, string stderr) ExecuteCommandFullCapture(
+            string command,
+            string arguments,
+            ILogger logger,
+            string workingDirectory = null,
+            bool captureStdout = true,
+            bool captureStderr = true)
+        {
             if (string.IsNullOrEmpty(command))
             {
                 throw new ArgumentException("Executable command must be non-empty");
             }
 
-            string output = null;
+            int? exitCode = null;
+            StringBuilder stdOutput = null;
+            StringBuilder stdError = null;
 
             try
             {
@@ -179,9 +199,39 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                     process.StartInfo.Arguments = arguments;
                     process.Start();
 
-                    output = process.StandardOutput.ReadToEnd().Trim();
+                    if (captureStdout)
+                    {
+                        stdOutput = new StringBuilder();
+
+                        process.OutputDataReceived += (sender, evt) =>
+                        {
+                            if (evt.Data != null)
+                            {
+                                stdOutput.AppendLine(evt.Data);
+                            }
+                        };
+
+                        process.BeginOutputReadLine();
+                    }
+
+                    if (captureStderr)
+                    {
+                        stdError = new StringBuilder();
+
+                        process.ErrorDataReceived += (sender, evt) =>
+                        {
+                            if (evt.Data != null)
+                            {
+                                stdError.AppendLine(evt.Data);
+                            }
+                        };
+
+                        process.BeginErrorReadLine();
+                    }
 
                     process.WaitForExit();
+
+                    exitCode = process.ExitCode;
                 }
             }
             catch (Exception exc)
@@ -189,7 +239,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
                 logger.LogWarning($"Something failed while trying to execute '{command} {arguments}'. Exception: {exc.Message}");
             }
 
-            return output;
+            return (exitCode, stdOutput?.ToString().TrimEnd(), stdError?.ToString().TrimEnd());
         }
 
         /// <summary>
