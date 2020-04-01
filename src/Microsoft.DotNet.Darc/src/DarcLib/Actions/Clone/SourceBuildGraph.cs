@@ -53,6 +53,15 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         {
             var sb = new StringBuilder("digraph G { rankdir=LR;\n");
 
+            sb.Append("root -> {");
+            foreach (var n in Nodes.Where(n => !GetDownstreams(n).Any()))
+            {
+                sb.Append("\"");
+                sb.Append(n);
+                sb.Append("\";");
+            }
+            sb.AppendLine("}");
+
             foreach (var n in Nodes)
             {
                 sb.Append("\"");

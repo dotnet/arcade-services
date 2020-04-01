@@ -103,9 +103,8 @@ namespace Microsoft.DotNet.DarcLib
                 var commit = localRepo.Lookup<LibGit2Sharp.Commit>(objectish);
                 if (commit == null)
                 {
-                    throw new ArgumentException(
-                        $"Object-ish expression '{objectish}' does not resolve to a commit.",
-                        nameof(objectish));
+                    throw new CommitNotFoundException(
+                        $"Object-ish expression '{objectish}' does not resolve to a commit.");
                 }
 
                 return Commit.Create(commit);

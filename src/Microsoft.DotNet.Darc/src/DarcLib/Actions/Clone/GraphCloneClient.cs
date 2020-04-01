@@ -33,7 +33,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             uint cloneDepth)
         {
             var nextLevelDependencies = rootDependencies
-                .Distinct(SourceBuildIdentity.CaseInsensitiveComparer)
+                .GroupBy(d => d, SourceBuildIdentity.CaseInsensitiveComparer)
+                .Select(g => HighestVersionedDistinctIdentity(g))
                 .ToArray();
 
             var allUpstreams = new Dictionary<SourceBuildIdentity, SourceBuildIdentity[]>(SourceBuildIdentity.CaseInsensitiveComparer);
@@ -72,7 +73,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
                             var upstreamDependencies = deps
                                 .Select(d => new SourceBuildIdentity(d.RepoUri, d.Commit, d))
-                                .Distinct(SourceBuildIdentity.CaseInsensitiveComparer)
+                                .GroupBy(d => d, SourceBuildIdentity.CaseInsensitiveComparer)
+                                .Select(g => HighestVersionedDistinctIdentity(g))
                                 .ToArray();
 
                             foreach (var newIdentity in upstreamDependencies)
@@ -132,11 +134,17 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
                 bool ShouldSearchRepo(SourceBuildIdentity upstream, SourceBuildIdentity source)
                 {
-                    // Remove repo we've already scanned before.
-                    if (allUpstreams.ContainsKey(upstream))
+                    if (allUpstreams.ContainsKey(upstream) ||
+                        discoveredUpstreams.ContainsKey(upstream))
                     {
                         return false;
                     }
+                    // Scan this upstream in the next pass.
+                    return true;
+                }
+
+                bool ShouldIncludeDependency(SourceBuildIdentity upstream, SourceBuildIdentity source)
+                {
                     // Remove self-dependency. E.g. arcade depends on previous versions of itself to
                     // build, so this tends to go on essentially forever.
                     if (string.Equals(upstream.RepoUri, source.RepoUri, StringComparison.OrdinalIgnoreCase))
@@ -170,14 +178,13 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                         return false;
                     }
 
-                    // Scan this upstream in the next pass.
                     return true;
                 }
 
                 var upstreamAssocToConsider = discoveredUpstreams
                     .SelectMany(
                         repoToUpstream => repoToUpstream.Value
-                            .Where(upstream => ShouldSearchRepo(upstream, repoToUpstream.Key))
+                            .Where(upstream => ShouldIncludeDependency(upstream, repoToUpstream.Key))
                             .Select(upstream => new { sourceRepo = repoToUpstream.Key, upstream }))
                     .ToArray();
 
@@ -188,8 +195,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     allUpstreams.Add(entry.Key, entry.ToArray());
                 }
 
-                nextLevelDependencies = discoveredUpstreams
-                    .SelectMany(mapping => mapping.Value)
+                nextLevelDependencies = upstreamAssocToConsider
+                    .Where(mapping => ShouldSearchRepo(mapping.upstream, mapping.sourceRepo))
+                    .Select(mapping => mapping.upstream)
                     .Distinct(SourceBuildIdentity.CaseInsensitiveComparer)
                     .ToArray();
 
@@ -268,18 +276,12 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         /// </summary>
         public SourceBuildGraph CreateArtificiallyCoherentGraph(
             SourceBuildGraph source,
-            Func<SourceBuildIdentity, DateTimeOffset> getCommitDate = null)
+            Func<SourceBuildIdentity, DateTimeOffset?> getCommitDate = null)
         {
-            getCommitDate = getCommitDate ?? GetCachedCommitDateFunc();
-
             // Map old node => new node.
             Dictionary<SourceBuildIdentity, SourceBuildIdentity> newNodes = source.Nodes
                 .GroupBy(n => n, SourceBuildIdentity.RepoNameOnlyComparer)
-                .Select(group =>
-                    group.SingleOrDefault(g => g.Source == null) ??
-                    group.OrderByDescending(n => NuGetVersion.Parse(n.Source.Version))
-                        .ThenByDescending(getCommitDate)
-                        .First())
+                .Select(group => HighestVersionedDistinctIdentity(group, getCommitDate))
                 .ToDictionary(
                     n => n,
                     n => n,
@@ -298,16 +300,37 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             return SourceBuildGraph.Create(newUpstreamMap);
         }
 
-        private Func<SourceBuildIdentity, DateTimeOffset> GetCachedCommitDateFunc()
+        private SourceBuildIdentity HighestVersionedDistinctIdentity(
+            IGrouping<SourceBuildIdentity, SourceBuildIdentity> group,
+            Func<SourceBuildIdentity, DateTimeOffset?> getCommitDate = null)
+        {
+            getCommitDate = getCommitDate ?? GetCachedCommitDateFunc();
+
+            // If the repo has no source, it's likely a darc clone argument, and takes priority.
+            if (group.SingleOrDefault(repo => repo.Source == null) is SourceBuildIdentity result)
+            {
+                return result;
+            }
+
+            return group
+                // Use asset version as primary order. Pick the highest.
+                .OrderByDescending(repo => NuGetVersion.Parse(repo.Source.Version))
+                // Break ties using commit date. If the commit doesn't exist to check, this means
+                // the remote doesn't have it: assume other choices are better.
+                .ThenByDescending(repo => getCommitDate(repo) ?? DateTimeOffset.MinValue)
+                .First();
+        }
+
+        private Func<SourceBuildIdentity, DateTimeOffset?> GetCachedCommitDateFunc()
         {
             var gitClient = new LocalGitClient(null, Logger);
-            var extraCommitData = new Dictionary<SourceBuildIdentity, DateTimeOffset>();
+            var extraCommitData = new Dictionary<SourceBuildIdentity, DateTimeOffset?>();
 
             return repo =>
             {
                 if (IsRepoNonGitHubAndIgnored(repo) || string.IsNullOrEmpty(repo.Commit))
                 {
-                    return DateTimeOffset.MinValue;
+                    return null;
                 }
 
                 if (extraCommitData.TryGetValue(repo, out var data))
@@ -315,8 +338,15 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     return data;
                 }
 
-                Commit commit = gitClient.GetCommit(GetBareRepoDir(repo.RepoUri), repo.Commit);
-                return extraCommitData[repo] = commit.Committer.When;
+                try
+                {
+                    Commit commit = gitClient.GetCommit(GetBareRepoDir(repo.RepoUri), repo.Commit);
+                    return extraCommitData[repo] = commit.Committer.When;
+                }
+                catch (CommitNotFoundException)
+                {
+                    return extraCommitData[repo] = null;
+                }
             };
         }
 
