@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.DotNet.DarcLib.Models;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
 using System;
@@ -10,7 +11,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.DarcLib.Models;
 
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
@@ -96,21 +96,39 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                         }
                     }));
 
-                Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> discoveredUpstreams =
-                    discoveredUpstreamsRaw
-                        .ToDictionary(u => u.repo, u => u.Item2, SourceBuildIdentity.CaseInsensitiveComparer);
-
-                foreach (var entry in discoveredUpstreams)
+                // Exit early (before evaluating dependencies) if we have hit clone depth.
+                if (cloneDepth == 0)
                 {
-                    if (allUpstreams.ContainsKey(entry.Key))
+                    Logger.LogInformation($"Reached clone depth limit, aborting with {nextLevelDependencies.Length} dependencies remaining");
+
+                    foreach (var d in nextLevelDependencies)
                     {
-                        Logger.LogError($"Upstream mapping already contains entry for {entry.Key}.");
+                        Logger.LogDebug($"Abandoning dependency {d}");
+                        // Ensure the just-evaluated nodes end up in the graph, even though we're
+                        // abandoning their upstreams.
+                        allUpstreams[d] = Array.Empty<SourceBuildIdentity>();
                     }
 
-                    allUpstreams.Add(entry.Key, entry.Value);
+                    break;
                 }
 
-                var graph = SourceBuildGraph.Create(allUpstreams);
+                cloneDepth--;
+                Logger.LogDebug($"Clone depth remaining: {cloneDepth}");
+
+                Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> discoveredUpstreams =
+                    discoveredUpstreamsRaw.ToDictionary(
+                        u => u.repo,
+                        u => u.Item2,
+                        SourceBuildIdentity.CaseInsensitiveComparer);
+
+                // Create a temp graph that includes all potential nodes to evaluate next. We use
+                // this graph to evaluate whether to evaluate each node.
+                var graph = SourceBuildGraph.Create(
+                    allUpstreams
+                        .Concat(discoveredUpstreams)
+                        .ToDictionary(
+                            p => p.Key,
+                            p => p.Value));
 
                 bool ShouldSearchRepo(SourceBuildIdentity upstream, SourceBuildIdentity source)
                 {
@@ -156,26 +174,25 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     return true;
                 }
 
-                nextLevelDependencies = discoveredUpstreams
+                var upstreamAssocToConsider = discoveredUpstreams
                     .SelectMany(
                         repoToUpstream => repoToUpstream.Value
-                            .Where(upstream => ShouldSearchRepo(upstream, repoToUpstream.Key)))
+                            .Where(upstream => ShouldSearchRepo(upstream, repoToUpstream.Key))
+                            .Select(upstream => new { sourceRepo = repoToUpstream.Key, upstream }))
+                    .ToArray();
+
+                // Add only the upstreams that we're going to evaluate to the accumulated dependency
+                // map. Don't include entries that were discarded.
+                foreach (var entry in upstreamAssocToConsider.GroupBy(m => m.sourceRepo, m => m.upstream))
+                {
+                    allUpstreams.Add(entry.Key, entry.ToArray());
+                }
+
+                nextLevelDependencies = discoveredUpstreams
+                    .SelectMany(mapping => mapping.Value)
                     .Distinct(SourceBuildIdentity.CaseInsensitiveComparer)
                     .ToArray();
 
-                if (cloneDepth == 0 && nextLevelDependencies.Any())
-                {
-                    Logger.LogInformation($"Reached clone depth limit, aborting with {nextLevelDependencies.Length} dependencies remaining");
-                    foreach (var d in nextLevelDependencies)
-                    {
-                        Logger.LogDebug($"Abandoning dependency {d}");
-                    }
-
-                    break;
-                }
-
-                cloneDepth--;
-                Logger.LogDebug($"Clone depth remaining: {cloneDepth}");
                 Logger.LogDebug($"Dependencies remaining: {nextLevelDependencies.Length}");
             }
 
@@ -235,7 +252,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
                     Directory.Move(inProgressPath, path);
 
-                    Logger.LogDebug($"Completed adding worktree: {path} ...");
+                    Logger.LogDebug($"Completed adding worktree: {path}");
                 });
             }));
         }
@@ -347,8 +364,6 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                                     Directory.Delete(inProgressGitDir, true);
                                 }
                             }
-
-                            Logger.LogDebug($"Beginning bare clone into: {inProgressGitDir}");
 
                             IRemote repoRemote = await RemoteFactory.GetRemoteAsync(repo.RepoUri, Logger);
                             repoRemote.Clone(repo.RepoUri, null, null, inProgressGitDir);
