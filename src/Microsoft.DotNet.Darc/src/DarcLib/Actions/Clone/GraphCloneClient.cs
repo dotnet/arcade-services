@@ -159,16 +159,20 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     // seen so far to see if any have this potential repo name. (We can't simply
                     // check if we've seen the repo name before: other branches may have the same
                     // repo name dependency but not as part of a circular dependency.)
-                    if (graph.GetAllDownstreams(upstream).Any(
+                    var allDownstreams = graph.GetAllDownstreams(source).ToArray();
+                    if (allDownstreams.Any(
                         d => string.Equals(d.RepoUri, source.RepoUri, StringComparison.OrdinalIgnoreCase)))
                     {
-                        Logger.LogDebug($"Skipping already-seen circular dependency from {source.RepoUri} to {upstream.RepoUri}");
+                        Logger.LogDebug(
+                            $"Skipping already-seen circular dependency from {source} to {upstream}\n" +
+                            string.Join(" -> ", allDownstreams.Select(d => d.ToString()))
+                            );
                         return false;
                     }
                     // Remove repos specifically ignored by the caller.
                     if (ignoredRepos.Any(r => r.Equals(upstream.RepoUri, StringComparison.OrdinalIgnoreCase)))
                     {
-                        Logger.LogDebug($"Skipping ignored repo {upstream.RepoUri} (at {upstream.Commit})");
+                        Logger.LogDebug($"Skipping ignored repo {upstream}");
                         return false;
                     }
                     // Remove repos with invalid dependency info: missing commit.
