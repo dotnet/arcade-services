@@ -41,7 +41,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="enabled">True if the default channel should be initially enabled or disabled.</param>
         [HttpGet]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(List<DefaultChannel>), Description = "The list of DefaultChannels")]
-        public IActionResult List(string repository = null, string branch = null, int? channelId = null, bool? enabled = null)
+        public virtual IActionResult List(string repository = null, string branch = null, int? channelId = null, bool? enabled = null)
         {
             IQueryable<Data.Models.DefaultChannel> query = _context.DefaultChannels.Include(dc => dc.Channel)
                 .AsNoTracking();
@@ -81,7 +81,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [SwaggerApiResponse(HttpStatusCode.Conflict, Description = "A DefaultChannel matching the data already exists")]
         [ValidateModelState]
         [HandleDuplicateKeyRows("A default channel with the same (repository, branch, channel) already exists.")]
-        public async Task<IActionResult> Create([FromBody, Required] DefaultChannel.DefaultChannelCreateData data)
+        public virtual async Task<IActionResult> Create([FromBody, Required] DefaultChannel.DefaultChannelCreateData data)
         {
             int channelId = data.ChannelId;
             Channel channel = await _context.Channels.FindAsync(channelId);
@@ -119,7 +119,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [SwaggerApiResponse(HttpStatusCode.NotFound, Description = "The existing default channel does not exist.")]
         [SwaggerApiResponse(HttpStatusCode.Conflict, Description = "A DefaultChannel matching the data already exists")]
         [ValidateModelState]
-        public async Task<IActionResult> Update(int id, [FromBody] DefaultChannel.DefaultChannelUpdateData update)
+        public virtual async Task<IActionResult> Update(int id, [FromBody] DefaultChannel.DefaultChannelUpdateData update)
         {
             Data.Models.DefaultChannel defaultChannel = await _context.DefaultChannels.FindAsync(id);
             if (defaultChannel == null)
@@ -176,7 +176,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [HttpGet("{id}")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(DefaultChannel), Description = "The requested DefaultChannel")]
         [ValidateModelState]
-        public async Task<IActionResult> Get(int id)
+        public virtual async Task<IActionResult> Get(int id)
         {
             Data.Models.DefaultChannel defaultChannel = await _context.DefaultChannels.FindAsync(id);
             if (defaultChannel == null)

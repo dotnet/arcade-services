@@ -8,7 +8,6 @@ using Microsoft.DotNet.Maestro.Client;
 using Microsoft.Extensions.Configuration;
 using Octokit;
 using Octokit.Internal;
-using Xunit.Abstractions;
 
 namespace Maestro.ScenarioTests
 {
@@ -16,7 +15,7 @@ namespace Maestro.ScenarioTests
     {
         private readonly TemporaryDirectory _dir;
 
-        public static async Task<TestParameters> GetAsync(ITestOutputHelper testOutput)
+        public static async Task<TestParameters> GetAsync()
         {
             IConfiguration userSecrets = new ConfigurationBuilder()
                 .AddUserSecrets<TestParameters>()
@@ -34,7 +33,7 @@ namespace Maestro.ScenarioTests
                 : ApiFactory.GetAuthenticated(maestroBaseUri, maestroToken);
 
             string darcVersion = await maestroApi.Assets.GetDarcVersionAsync();
-            string dotnetExe = await TestHelpers.Which(testOutput, "dotnet");
+            string dotnetExe = await TestHelpers.Which("dotnet");
 
             var toolInstallArgs = new List<string>
             {
@@ -48,7 +47,7 @@ namespace Maestro.ScenarioTests
                 toolInstallArgs.Add("--add-source");
                 toolInstallArgs.Add(darcPackageSource);
             }
-            await TestHelpers.RunExecutableAsync(testOutput, dotnetExe, toolInstallArgs.ToArray());
+            await TestHelpers.RunExecutableAsync(dotnetExe, toolInstallArgs.ToArray());
 
             string darcExe = Path.Join(testDir.Peek()!.Directory, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
 
@@ -58,7 +57,7 @@ namespace Maestro.ScenarioTests
                     new ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
                     new InMemoryCredentialStore(new Credentials(githubToken)));
 
-            return new TestParameters(darcExe, await TestHelpers.Which(testOutput, "git"), maestroBaseUri, maestroToken!, githubToken, maestroApi, githubApi, testDir.TryTake()!);
+            return new TestParameters(darcExe, await TestHelpers.Which("git"), maestroBaseUri, maestroToken!, githubToken, maestroApi, githubApi, testDir.TryTake()!);
         }
 
         private TestParameters(string darcExePath, string gitExePath, string maestroBaseUri, string maestroToken, string gitHubToken, IMaestroApi maestroApi, GitHubClient gitHubApi, TemporaryDirectory dir)

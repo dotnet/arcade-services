@@ -93,7 +93,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         [HttpGet("{id}/graph")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(BuildGraph), Description = "The tree of build dependencies")]
         [ValidateModelState]
-        public async Task<IActionResult> GetBuildGraph(int id)
+        public virtual async Task<IActionResult> GetBuildGraph(int id)
         {
             Data.Models.Build build = await _context.Builds.FirstOrDefaultAsync(b => b.Id == id);
 
@@ -187,7 +187,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         [HttpPost]
         [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Build), Description = "The created build")]
         [ValidateModelState]
-        public async Task<IActionResult> Create([FromBody, Required] BuildData build)
+        public virtual async Task<IActionResult> Create([FromBody, Required] BuildData build)
         {
             Data.Models.Build buildModel = build.ToDb();
             buildModel.DateProduced = DateTimeOffset.UtcNow;

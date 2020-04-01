@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Text;
@@ -43,6 +44,12 @@ namespace Microsoft.DotNet.DarcLib
             // Add a bit of randomness to the retry delay.
             var rng = new Random();
 
+            HttpStatusCode[] stopRetriesHttpStatusCodes = new HttpStatusCode[] {
+                HttpStatusCode.NotFound,
+                HttpStatusCode.BadRequest,
+                HttpStatusCode.Unauthorized,
+                HttpStatusCode.Forbidden };
+
             while (true)
             {
                 try
@@ -56,21 +63,19 @@ namespace Microsoft.DotNet.DarcLib
 
                         HttpResponseMessage response = await _client.SendAsync(message);
 
-                        if (response.StatusCode == HttpStatusCode.NotFound)
-                        {
-                            if (_logFailure)
-                            {
-                                _logger.LogError("A 404 (Not Found) was returned. We'll set the retries amount to 0.");
-                            }
-
-                            retriesRemaining = 0;
-                        }
-                        else if (response.StatusCode == HttpStatusCode.BadRequest)
+                        if (stopRetriesHttpStatusCodes.Contains(response.StatusCode))
                         {
                             if (_logFailure)
                             {
                                 var errorDetails = await response.Content.ReadAsStringAsync();
-                                _logger.LogError($"A bad request response was returned from AzDO: {errorDetails}");
+
+                                if (!string.IsNullOrEmpty(errorDetails))
+                                {
+                                    errorDetails = $"Error details: {errorDetails}";
+                                }
+
+                                _logger.LogError($"A '{(int)response.StatusCode} - {response.StatusCode}' status was returned for a HTTP request. " +
+                                    $"We'll set the retries amount to 0. {errorDetails}");
                             }
 
                             retriesRemaining = 0;
