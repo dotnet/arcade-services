@@ -184,7 +184,14 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public async Task CreateWorktreesAsync(SourceBuildGraph graph, string reposFolder)
         {
-            await Task.WhenAll(graph.Nodes.Select(async repo =>
+            var nodesWithDistinctWorktree = graph.Nodes
+                .Select(repo => new { repo, path = GetWorktreePath(reposFolder, repo) })
+                .GroupBy(r => r.path)
+                .Select(g => g.First().repo)
+                .OrderBy(r => r.ToString())
+                .ToArray();
+
+            await Task.WhenAll(nodesWithDistinctWorktree.Select(async repo =>
             {
                 if (IsRepoNonGitHubAndIgnored(repo))
                 {
@@ -218,6 +225,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
                 await Task.Run(() =>
                 {
+                    Logger.LogDebug($"Starting adding worktree: {inProgressPath}");
+
                     local.AddWorktree(
                         repo.Commit,
                         Path.GetFileName(path) + DateTime.UtcNow.ToString("s").Replace(":", "."),
@@ -225,6 +234,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                         false);
 
                     Directory.Move(inProgressPath, path);
+
+                    Logger.LogDebug($"Completed adding worktree: {path} ...");
                 });
             }));
         }
@@ -322,12 +333,28 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                             }
                             if (Directory.Exists(inProgressGitDir))
                             {
-                                Directory.Delete(inProgressGitDir, true);
+                                Logger.LogDebug($"Found existing in-progress dir to delete: {inProgressGitDir}");
+                                try
+                                {
+                                    Directory.Delete(inProgressGitDir, true);
+                                }
+                                catch (UnauthorizedAccessException)
+                                {
+                                    // Some files may be readonly and unable to be removed by
+                                    // Directory.Delete. Try again after normalizing the attributes.
+                                    // https://github.com/libgit2/libgit2sharp/issues/769
+                                    GitFileManager.NormalizeAttributes(inProgressGitDir);
+                                    Directory.Delete(inProgressGitDir, true);
+                                }
                             }
+
+                            Logger.LogDebug($"Beginning bare clone into: {inProgressGitDir}");
 
                             IRemote repoRemote = await RemoteFactory.GetRemoteAsync(repo.RepoUri, Logger);
                             repoRemote.Clone(repo.RepoUri, null, null, inProgressGitDir);
                             Directory.Move(inProgressGitDir, gitDir);
+
+                            Logger.LogDebug($"Completed bare clone into: {gitDir}");
                         }
                         catch (Exception)
                         {
