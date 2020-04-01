@@ -2,17 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.Actions.Clone;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations.Clone
 {
@@ -118,6 +118,8 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                     Logger.LogInformation($"Starting deep clone of {rootDep}");
                 }
 
+                var timeBeforeGraph = DateTimeOffset.UtcNow;
+
                 SourceBuildGraph graph = await _cloneClient.GetGraphAsync(
                     accumulatedDependencies,
                     _options.IgnoredRepos,
@@ -144,9 +146,18 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                         graph);
                 }
 
+                var timeBeforeWorktrees = DateTimeOffset.UtcNow;
+
                 await _cloneClient.CreateWorktreesAsync(
                     graph,
                     _options.ReposFolder);
+
+                var timeWhenComplete = DateTimeOffset.UtcNow;
+
+                Logger.LogInformation(
+                    $"Done in {timeWhenComplete - timeBeforeGraph}. " +
+                    $"Cloned and discovered graph in {timeBeforeWorktrees - timeBeforeGraph}. " +
+                    $"Created worktrees in {timeWhenComplete - timeBeforeWorktrees}.");
 
                 return Constants.SuccessCode;
             }
