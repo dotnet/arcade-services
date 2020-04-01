@@ -11,7 +11,7 @@ namespace DependencyUpdateErrorProcessor.Tests
     public class CreateGithubIssueTest :DependencyUpdateErrorProcessorTests
     {
         [Fact]
-        public async Task CreateGitHubIssuesTest()
+        public async Task UseInMemoryDatabaseTest()
         {
             var options = new DbContextOptionsBuilder<BuildAssetRegistryContext>()
                 .UseInMemoryDatabase(databaseName: "testDb")
