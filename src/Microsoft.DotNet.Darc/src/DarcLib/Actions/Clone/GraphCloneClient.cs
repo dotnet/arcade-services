@@ -278,6 +278,10 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             SourceBuildGraph source,
             Func<SourceBuildIdentity, DateTimeOffset?> getCommitDate = null)
         {
+            // Not good enough. We need to be able to override this graph anyway, probably... giving
+            // it direct guidance is likely good to make this comprehensible anyway and not rely on
+            // heuristics!
+
             // Map old node => new node.
             Dictionary<SourceBuildIdentity, SourceBuildIdentity> newNodes = source.Nodes
                 .GroupBy(n => n, SourceBuildIdentity.RepoNameOnlyComparer)
