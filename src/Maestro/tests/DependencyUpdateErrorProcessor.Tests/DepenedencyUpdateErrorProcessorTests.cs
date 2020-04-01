@@ -39,7 +39,7 @@ namespace DependencyUpdateErrorProcessor.Tests
                     var configuration = new Mock<IConfiguration>();
                     var configurationSection = new Mock<IConfigurationSection>();
                     configurationSection.Setup(a => a.Value).Returns("github");
-                    configuration.Setup(a => a.GetSection("TestValueKey")).Returns(configurationSection.Object);
+                    configuration.Setup(a => a.GetSection("GitHub")).Returns(configurationSection.Object);
                     configurationSection.Object.Bind(options);
                 }
             );
@@ -47,11 +47,7 @@ namespace DependencyUpdateErrorProcessor.Tests
             services.Configure<DependencyUpdateErrorProcessorOptions>(
                 (options) =>
                 {
-                    ConfigurationBuilder builder = new ConfigurationBuilder();
                     var configuration = new Mock<IConfiguration>();
-                    var configurationSection = new Mock<IConfigurationSection>();
-                    configurationSection.Setup(a => a.Value).Returns("testvalue");
-                    configuration.Setup(a => a.GetSection("TestValueKey")).Returns(configurationSection.Object);
                     options.IsEnabled = true;
                     options.FyiHandle = "@epananth";
                     options.GithubUrl = "https://github.com/maestro-auth-test/maestro-test2";
