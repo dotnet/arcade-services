@@ -6,6 +6,7 @@ using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Data;
 using Moq;
 using ServiceFabricMocks;
@@ -32,22 +33,20 @@ namespace DependencyUpdateErrorProcessor.Tests
             services.AddLogging();
             services.AddDbContext<BuildAssetRegistryContext>(
                 options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
-            Provider = services.BuildServiceProvider();
+            Provider = services.BuildServiceProvider(); 
             services.Configure<GitHubTokenProviderOptions>(
                 (options) =>
                 {
                     var configuration = new Mock<IConfiguration>();
                     var configurationSection = new Mock<IConfigurationSection>();
-                    configurationSection.Setup(a => a.Value).Returns("github");
+                    configurationSection.Setup(a => a.Value).Returns("testValue");
                     configuration.Setup(a => a.GetSection("GitHub")).Returns(configurationSection.Object);
                     configurationSection.Object.Bind(options);
                 }
             );
-            Provider = services.BuildServiceProvider();
             services.Configure<DependencyUpdateErrorProcessorOptions>(
                 (options) =>
                 {
-                    var configuration = new Mock<IConfiguration>();
                     options.IsEnabled = true;
                     options.FyiHandle = "@epananth";
                     options.GithubUrl = "https://github.com/maestro-auth-test/maestro-test2";
