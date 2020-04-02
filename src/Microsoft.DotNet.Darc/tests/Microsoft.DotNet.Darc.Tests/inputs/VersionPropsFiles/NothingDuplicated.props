@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <FooBarVersion>1.2.3</FooBarVersion>
+    <FooBar2Version>1.2.4</FooBar2Version>
+    <FooBar3Version>1.2.4</FooBar3Version>
+    <ExistingDependencyVersion>1.2.3</ExistingDependencyVersion>
+  </PropertyGroup>
+</Project>
