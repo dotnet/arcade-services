@@ -58,24 +58,7 @@ namespace DependencyUpdateErrorProcessor
                                 (options, provider) =>
                             {
                                 var config = provider.GetRequiredService<IConfiguration>();
-                                
-                                string apiEndPointUri = config["AppConfigurationUri"];
-                                ConfigurationBuilder builder = new ConfigurationBuilder();
-                                TokenCredential credential = apiEndPointUri.Contains("maestrolocal") ?
-                                    new DefaultAzureCredential() :
-                                    (TokenCredential)new ManagedIdentityCredential();
-                                builder.AddAzureAppConfiguration(o =>
-                                {
-                                    o.Connect(new Uri(apiEndPointUri), credential)
-                                    .ConfigureRefresh(refresh =>
-                                        {
-                                            refresh.Register(".appconfig.featureflag/DependencyUpdateErrorProcessor")
-                                                .SetCacheExpiration(TimeSpan.FromSeconds(1));
-                                        }).UseFeatureFlags();
-
-                                    options.ConfigurationRefresherEndPointUri = o.GetRefresher();
-                                });
-                                options.DynamicConfigs = builder.Build();
+                                options.IsEnabled = bool.Parse(config["EnableDependencyUpdateErrorProcessor"]);
                                 options.GithubUrl = config["GithubUrl"];
                                 options.FyiHandle = config["FyiHandle"];
                             });
