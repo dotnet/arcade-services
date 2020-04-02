@@ -140,6 +140,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Internal.L
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DncEng.DeployServiceFabricCluster", "src\Microsoft.DncEng.DeployServiceFabricCluster\Microsoft.DncEng.DeployServiceFabricCluster.csproj", "{6307FF01-47DB-4EE6-86FF-9E78D8832D37}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DncEng.Configuration.Bootstrap", "src\Microsoft.DncEng.Configuration.Bootstrap\Microsoft.DncEng.Configuration.Bootstrap.csproj", "{2D72FBB5-9F29-40D5-9206-92A814DF47EC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -678,6 +680,18 @@ Global
 		{6307FF01-47DB-4EE6-86FF-9E78D8832D37}.Release|x64.Build.0 = Release|Any CPU
 		{6307FF01-47DB-4EE6-86FF-9E78D8832D37}.Release|x86.ActiveCfg = Release|Any CPU
 		{6307FF01-47DB-4EE6-86FF-9E78D8832D37}.Release|x86.Build.0 = Release|Any CPU
+		{2D72FBB5-9F29-40D5-9206-92A814DF47EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D72FBB5-9F29-40D5-9206-92A814DF47EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D72FBB5-9F29-40D5-9206-92A814DF47EC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2D72FBB5-9F29-40D5-9206-92A814DF47EC}.Debug|x64.Build.0 = Debug|Any CPU
+		{2D72FBB5-9F29-40D5-9206-92A814DF47EC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2D72FBB5-9F29-40D5-9206-92A814DF47EC}.Debug|x86.Build.0 = Debug|Any CPU
+		{2D72FBB5-9F29-40D5-9206-92A814DF47EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D72FBB5-9F29-40D5-9206-92A814DF47EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2D72FBB5-9F29-40D5-9206-92A814DF47EC}.Release|x64.ActiveCfg = Release|Any CPU
+		{2D72FBB5-9F29-40D5-9206-92A814DF47EC}.Release|x64.Build.0 = Release|Any CPU
+		{2D72FBB5-9F29-40D5-9206-92A814DF47EC}.Release|x86.ActiveCfg = Release|Any CPU
+		{2D72FBB5-9F29-40D5-9206-92A814DF47EC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
