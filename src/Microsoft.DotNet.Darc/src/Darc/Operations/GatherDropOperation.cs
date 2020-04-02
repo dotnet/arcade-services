@@ -927,6 +927,13 @@ namespace Microsoft.DotNet.Darc.Operations
             StringBuilder downloadOutput = new StringBuilder();
             downloadOutput.AppendLine($"  Downloading asset {assetNameAndVersion}");
 
+            // Don't attempt downloads if the DryRun flag is set
+            if (_options.DryRun)
+            {
+                Console.Write(downloadOutput.ToString());
+                return null;
+            }
+
             DownloadedAsset downloadedAsset = new DownloadedAsset()
             {
                 Successful = false,
