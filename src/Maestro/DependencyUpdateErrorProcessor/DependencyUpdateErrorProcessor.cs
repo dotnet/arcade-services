@@ -55,18 +55,11 @@ namespace DependencyUpdateErrorProcessor
             _logger = logger;
         }
 
-        [CronSchedule("0 0 0/1 1/1 * ? *", TimeZones.PST)]
+       // [CronSchedule("0 0 0/1 1/1 * ? *", TimeZones.PST)]
+        [CronSchedule("0 0/1 * 1/1 * ? *", TimeZones.PST)]
         public async Task ProcessDependencyUpdateErrorsAsync()
         {
-            if (_options.ConfigurationRefresherEndPointUri == null && _options.DynamicConfigs == null)
-            {
-                _logger.LogInformation("Dependency Update Error processor is disabled because no App Configuration was available.");
-                return;
-            }
-            await _options.ConfigurationRefresherEndPointUri.Refresh();
-            if (bool.TryParse(_options.DynamicConfigs["FeatureManagement:DependencyUpdateErrorProcessor"],
-                out var dependencyUpdateErrorProcessorFlag) &&
-                dependencyUpdateErrorProcessorFlag)
+            if (_options.IsEnabled)
             {
                 IReliableDictionary<string, DateTimeOffset> checkpointEvaluator =
                     await _stateManager.GetOrAddAsync<IReliableDictionary<string, DateTimeOffset>>("checkpointEvaluator");
