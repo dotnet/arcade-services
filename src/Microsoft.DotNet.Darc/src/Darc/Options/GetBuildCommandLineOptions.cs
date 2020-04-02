@@ -16,10 +16,10 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("uri", HelpText = "Uri of the build.")]
         public string BuildUri { get; set; }
 
-        [Option("repo", HelpText = "Repository")]
+        [Option("repo", HelpText = "Full url of the repository that was built")]
         public string Repo { get; set; }
 
-        [Option("commit", HelpText = "Commit")]
+        [Option("commit", HelpText = "Full commit sha that was built")]
         public string Commit { get; set; }
 
         public override Operation GetOperation()

@@ -34,7 +34,7 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
-                IEnumerable<Build> matchingBuilds = null;
+                List<Build> matchingBuilds = null;
                 if (_options.Id != 0)
                 {
                     if (!string.IsNullOrEmpty(_options.BuildUri) ||
@@ -71,7 +71,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         return Constants.ErrorCode;
                     }
 
-                    matchingBuilds = await remote.GetBuildsAsync(_options.Repo, _options.Commit);
+                    matchingBuilds = (await remote.GetBuildsAsync(_options.Repo, _options.Commit)).ToList();
                 }
                 else
                 {
