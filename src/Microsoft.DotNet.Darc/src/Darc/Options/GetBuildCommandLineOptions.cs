@@ -10,8 +10,17 @@ namespace Microsoft.DotNet.Darc.Options
     [Verb("get-build", HelpText = "Retrieves a specific build of a repository")]
     internal class GetBuildCommandLineOptions : CommandLineOptions
     {
-        [Option("id", Required = true, HelpText = "Build id.")]
+        [Option("id", HelpText = "Build id.")]
         public int Id { get; set; }
+
+        [Option("uri", HelpText = "Uri of the build.")]
+        public string BuildUri { get; set; }
+
+        [Option("repo", HelpText = "Repository")]
+        public string Repo { get; set; }
+
+        [Option("commit", HelpText = "Commit")]
+        public string Commit { get; set; }
 
         public override Operation GetOperation()
         {
