@@ -23,7 +23,7 @@ namespace DependencyUpdateErrorProcessor
     /// <summary>
     /// An instance of this class is created for each service replica by the Service Fabric runtime.
     /// </summary>
-    public sealed class DependencyUpdateErrorProcessor : IServiceImplementation
+    internal sealed class DependencyUpdateErrorProcessor : IServiceImplementation
     {
         private readonly IReliableStateManager _stateManager;
 
@@ -58,7 +58,15 @@ namespace DependencyUpdateErrorProcessor
         [CronSchedule("0 0 0/1 1/1 * ? *", TimeZones.PST)]
         public async Task ProcessDependencyUpdateErrorsAsync()
         {
-            if(_options.IsEnabled)
+            if (_options.ConfigurationRefresherEndPointUri == null && _options.DynamicConfigs == null)
+            {
+                _logger.LogInformation("Dependency Update Error processor is disabled because no App Configuration was available.");
+                return;
+            }
+            await _options.ConfigurationRefresherEndPointUri.Refresh();
+            if (bool.TryParse(_options.DynamicConfigs["FeatureManagement:DependencyUpdateErrorProcessor"],
+                out var dependencyUpdateErrorProcessorFlag) &&
+                dependencyUpdateErrorProcessorFlag)
             {
                 IReliableDictionary<string, DateTimeOffset> checkpointEvaluator =
                     await _stateManager.GetOrAddAsync<IReliableDictionary<string, DateTimeOffset>>("checkpointEvaluator");
@@ -276,6 +284,7 @@ namespace DependencyUpdateErrorProcessor
                     (key, value) => issue.Number);
                 await tx.CommitAsync();
             }
+
         }
 
         /// <summary>
@@ -346,7 +355,7 @@ namespace DependencyUpdateErrorProcessor
         /// <param name="updateHistoryError">Error info for which github issue has to be created</param>
         /// <param name="issueRepo">Repository where issue has to be created.</param>
         /// <returns></returns>
-        public async Task IssueDescriptionEvaluator(RepositoryBranchUpdateHistoryEntry updateHistoryError, string issueRepo)
+        private async Task IssueDescriptionEvaluator(RepositoryBranchUpdateHistoryEntry updateHistoryError, string issueRepo)
         {
             var description = "";
             Func<string, string, bool> shouldReplaceDescription;
