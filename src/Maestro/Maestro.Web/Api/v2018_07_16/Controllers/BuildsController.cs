@@ -34,10 +34,13 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <summary>
         ///   Gets a paged list of all <see cref="Build"/>s that match the given search criteria.
         /// </summary>
-        /// <param name="repository"></param>
-        /// <param name="commit"></param>
-        /// <param name="buildNumber"></param>
-        /// <param name="channelId"></param>
+        /// <param name="repository">Repository</param>
+        /// <param name="commit">Commit</param>
+        /// <param name="buildNumber">Build number</param>
+        /// <param name="channelId">Id of the channel to which the build applies</param>
+        /// <param name="azdoAccount">Name of the Azure DevOps account</param>
+        /// <param name="azdoBuildId">ID of the Azure DevOps build</param>
+        /// <param name="azdoProject">Name of the Azure DevOps project</param>
         /// <param name="notBefore">Don't return <see cref="Build"/>s that happened before this time.</param>
         /// <param name="notAfter">Don't return <see cref="Build"/>s that happened after this time.</param>
         /// <param name="loadCollections">**true** to include the <see cref="Channel"/>, <see cref="Asset"/>, and dependent <see cref="Build"/> data with the response; **false** otherwise.</param>
@@ -49,6 +52,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             string repository,
             string commit,
             string buildNumber,
+            int? azdoBuildId,
+            string azdoAccount,
+            string azdoProject,
             int? channelId,
             DateTimeOffset? notBefore,
             DateTimeOffset? notAfter,
@@ -58,6 +64,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 repository,
                 commit,
                 buildNumber,
+                azdoBuildId,
+                azdoAccount,
+                azdoProject,
                 channelId,
                 notBefore,
                 notAfter,
@@ -69,6 +78,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             string repository,
             string commit,
             string buildNumber,
+            int? azdoBuildId,
+            string azdoAccount,
+            string azdoProject,
             int? channelId,
             DateTimeOffset? notBefore,
             DateTimeOffset? notAfter,
@@ -88,6 +100,21 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             if (!string.IsNullOrEmpty(buildNumber))
             {
                 query = query.Where(b => b.AzureDevOpsBuildNumber == buildNumber);
+            }
+
+            if (azdoBuildId.HasValue)
+            {
+                query = query.Where(b => b.AzureDevOpsBuildId == azdoBuildId);
+            }
+
+            if (!string.IsNullOrEmpty(azdoAccount))
+            {
+                query = query.Where(b => b.AzureDevOpsAccount == azdoAccount);
+            }
+
+            if (!string.IsNullOrEmpty(azdoProject))
+            {
+                query = query.Where(b => b.AzureDevOpsProject == azdoProject);
             }
 
             if (notBefore.HasValue)
@@ -165,6 +192,9 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 repository,
                 commit,
                 buildNumber,
+                null,
+                null,
+                null,
                 channelId,
                 notBefore,
                 notAfter,
