@@ -12,9 +12,10 @@ using Octokit;
 
 namespace Maestro.ScenarioTests
 {
+    [SetUpFixture]
     public class MaestroScenarioTestBase
     {
-        private TestParameters _parameters;
+        internal TestParameters _parameters;
 
         internal readonly Random _random = new Random();
 
@@ -187,12 +188,12 @@ namespace Maestro.ScenarioTests
             throw new MaestroTestException("Unable to create subscription.");
         }
 
-        public Task<int> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets)
+        public Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets)
         {
             return CreateBuildAsync(repositoryUrl, branch, commit, buildNumber, assets, ImmutableList<BuildRef>.Empty);
         }
 
-        public async Task<int> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets, IImmutableList<BuildRef> dependencies)
+        public async Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets, IImmutableList<BuildRef> dependencies)
         {
             Build build = await MaestroApi.Builds.CreateAsync(new BuildData(
                 commit: commit,
@@ -212,7 +213,31 @@ namespace Maestro.ScenarioTests
                 Dependencies = dependencies,
             });
 
-            return build.Id;
+            return build;
+        }
+
+        public async Task<string> GetDarcBuildAsync(int buildId)
+        {
+            string buildString = await RunDarcAsync("get-build", "--id", buildId.ToString());
+            return buildString;
+        }
+
+        public async Task<string> UpdateBuildAsync(int buildId, string updateParams)
+        {
+            string buildString = await RunDarcAsync("update-build", "--id", buildId.ToString(), updateParams);
+            return buildString;
+        }
+
+        public async Task<string> GatherDrop(int buildId, string outputDir, bool includeReleased)
+        {
+            if (includeReleased)
+            {
+               return await RunDarcAsync("gather-drop", "--id", buildId.ToString(), "--dry-run", "--include-released", "--output-dir", outputDir);
+            }
+            else
+            {
+                return await RunDarcAsync("gather-drop", "--id", buildId.ToString(), "--dry-run", "--output-dir", outputDir);
+            }
         }
 
         public async Task TriggerSubscriptionAsync(string subscriptionId)
@@ -271,6 +296,50 @@ namespace Maestro.ScenarioTests
         {
             await RunGitAsync("fetch", "origin", commit);
             await RunGitAsync("checkout", commit);
+        }
+
+        internal IImmutableList<AssetData> GetAssetData(string asset1Name, string asset1Version, string asset2Name, string asset2Version)
+        {
+            ImmutableList<AssetData> sourceAssets = ImmutableList<AssetData>.Empty;
+            AssetData asset1 = new AssetData(false)
+            {
+                Name = asset1Name,
+                Version = asset1Version,
+                Locations = ImmutableList<AssetLocationData>.Empty
+            };
+            asset1.Locations.Add(new AssetLocationData(LocationType.NugetFeed)
+            { Location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json" });
+            sourceAssets = sourceAssets.Add(asset1);
+
+            AssetData asset2 = new AssetData(false)
+            {
+                Name = asset2Name,
+                Version = asset2Version,
+                Locations = ImmutableList<AssetLocationData>.Empty
+            };
+            asset2.Locations.Add(new AssetLocationData(LocationType.NugetFeed)
+            { Location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json" });
+            sourceAssets = sourceAssets.Add(asset2);
+
+            return sourceAssets;
+        }
+
+        public async Task SetRepositoryPolicies(string repoUri, string branchName, string[] policyParams = null)
+        {
+            policyParams = policyParams?? new string[]{""};
+            string[] commandParams = { "set-repository-policies", "-q", "--repo", repoUri, "--branch", branchName };
+
+            if (policyParams != null)
+            {
+                commandParams = commandParams.Concat(policyParams).ToArray();
+            }
+
+            await RunDarcAsync(commandParams);
+        }
+
+        public async Task<string> GetRepositoryPolicies(string repoUri, string branchName)
+        {
+            return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
         }
     }
 }
