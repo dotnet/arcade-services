@@ -4,6 +4,7 @@
 
 using Maestro.Contracts;
 using NuGet.Versioning;
+using System;
 using System.Threading.Tasks;
 
 namespace Maestro.MergePolicies
@@ -20,13 +21,20 @@ namespace Maestro.MergePolicies
 
         internal static void EvaluateDowngrades(IMergePolicyEvaluationContext context)
         {
-            if (HasAnyDowngrade(context.PullRequest))
+            try
             {
-                context.Fail("Some dependency updates are downgrades. Aborting auto-merge.");
+                if (HasAnyDowngrade(context.PullRequest))
+                {
+                    context.Fail("Some dependency updates are downgrades. Aborting auto-merge.");
+                }
+                else
+                {
+                    context.Succeed("No version downgrade detected.");
+                }
             }
-            else
+            catch (Exception e)
             {
-                context.Succeed("No version downgrade detected.");
+                context.Fail($"Failed to check version downgrades. Aborting auto-merge. {e.Message}");
             }
         }
 
@@ -34,8 +42,15 @@ namespace Maestro.MergePolicies
         {
             foreach (var dependency in pr.RequiredUpdates)
             {
-                SemanticVersion.TryParse(dependency.FromVersion, out var fromVersion);
-                SemanticVersion.TryParse(dependency.ToVersion, out var toVersion);
+                if (!SemanticVersion.TryParse(dependency.FromVersion, out var fromVersion))
+                {
+                    throw new ArgumentException($"Could not parse '{dependency.FromVersion}' as a Semantic Version string.");
+                }
+
+                if (!SemanticVersion.TryParse(dependency.ToVersion, out var toVersion))
+                {
+                    throw new ArgumentException($"Could not parse '{dependency.ToVersion}' as a Semantic Version string.");
+                }
 
                 if (fromVersion.CompareTo(toVersion) > 0)
                 {
