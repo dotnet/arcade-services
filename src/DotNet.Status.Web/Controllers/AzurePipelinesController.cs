@@ -9,6 +9,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.AzureDevOpsTimeline;
 using Microsoft.Extensions.Logging;
@@ -44,13 +45,13 @@ namespace DotNet.Status.Web.Controllers
 
         private AzureDevOpsClient BuildAzureDevOpsClient()
         {
-            AzurePipelinesMonitorOptions o = _options.Value.Monitor;
+            BuildMonitorOptions.AzurePipelinesOptions o = _options.Value.Monitor;
             return new AzureDevOpsClient(o.BaseUrl, o.Organization, o.MaxParallelRequests, o.AccessToken);
         }
 
         private async Task<Dictionary<string, string>> GetProjectMappingInternal()
         {
-            var projects = await Client.ListProjects();
+            var projects = await Client.ListProjectsAsync();
             return projects.ToDictionary(p => p.Id, p => p.Name);
         }
 
@@ -82,13 +83,10 @@ namespace DotNet.Status.Web.Controllers
             _logger.LogInformation("Resolved build '{buildId}' for project '{project}, fetching build details",
                 buildEvent.Resource.Id,
                 projectName);
-            Build build = await Client.GetBuild(projectName, buildEvent.Resource.Id);
-            if (IsIgnoredReason(build))
-            {
-                return NoContent();
-            }
+            Build build = await Client.GetBuildAsync(projectName, buildEvent.Resource.Id);
 
-            if (IsIgnoredStatus(build))
+            if (IsIgnoredReason(build) ||
+                IsIgnoredStatus(build))
             {
                 return NoContent();
             }
@@ -147,10 +145,14 @@ namespace DotNet.Status.Web.Controllers
             foreach (var monitor in _options.Value.Monitor.Builds)
             {
                 if (!string.Equals(build.Project.Name, monitor.Project, StringComparison.OrdinalIgnoreCase))
+                {
                     continue;
+                }
 
                 if (!string.Equals(monitor.DefinitionPath, $"{build.Definition.Path}\\{build.Definition.Name}", StringComparison.OrdinalIgnoreCase))
+                {
                     continue;
+                }
 
                 if (monitor.Branches.All(mb => !string.Equals($"{fullBranchPrefix}{mb}",
                     build.SourceBranch,
@@ -178,7 +180,7 @@ namespace DotNet.Status.Web.Controllers
                 _logger.LogInformation("Fetching changes messages...");
                 string changesMessage = await BuildChangesMessage(build);
 
-                BuildMonitorIssuesOptions repo = _options.Value.Issues;
+                BuildMonitorOptions.IssuesOptions repo = _options.Value.Issues;
                 IGitHubClient github = await _gitHubClientFactory.CreateGitHubClientAsync(repo.Owner, repo.Name);
                 
                 DateTimeOffset? finishTime = DateTimeOffset.TryParse(build.FinishTime, out var parsedFinishTime) ?parsedFinishTime: (DateTimeOffset?) null;
@@ -240,9 +242,9 @@ namespace DotNet.Status.Web.Controllers
 
         private async Task<string> BuildChangesMessage(Build build)
         {
-            (BuildChanges[] changes, int more) = await Client.GetBuildChangesAsync(build.Project.Name, build.Id, CancellationToken.None);
+            (BuildChange[] changes, int truncatedChangeCount) = await Client.GetBuildChangesAsync(build.Project.Name, build.Id, CancellationToken.None);
             StringBuilder b = new StringBuilder();
-            foreach (BuildChanges change in changes.OrEmpty())
+            foreach (BuildChange change in changes.OrEmpty())
             {
                 string url = change.DisplayUri;
 
@@ -275,10 +277,10 @@ namespace DotNet.Status.Web.Controllers
                 b.AppendLine(change.Message);
             }
 
-            if (more > 0)
+            if (truncatedChangeCount > 0)
             {
                 b.Append("- ... and ");
-                b.Append(more);
+                b.Append(truncatedChangeCount);
                 b.AppendLine(" more ...");
             }
 

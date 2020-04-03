@@ -97,25 +97,26 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             return buildList.ToArray();
         }
 
-        public async Task<AzureDevOpsProject[]> ListProjects(CancellationToken cancellationToken = default)
+        public async Task<AzureDevOpsProject[]> ListProjectsAsync(CancellationToken cancellationToken = default)
         {
             JsonResult result = await GetJsonResult($"{_baseUrl}/{_organization}/_apis/projects?api-version=5.1", cancellationToken);
             return JsonConvert.DeserializeObject<AzureDevOpsArrayOf<AzureDevOpsProject>>(result.Body).Value;
         }
 
-        public async Task<Build> GetBuild(string project, long buildId, CancellationToken cancellationToken = default)
+        public async Task<Build> GetBuildAsync(string project, long buildId, CancellationToken cancellationToken = default)
         {
             StringBuilder builder = GetProjectApiRootBuilder(project);
             builder.Append($"/build/builds/{buildId}?api-version=5.1");
             JsonResult jsonResult = await GetJsonResult(builder.ToString(), cancellationToken);
             return JsonConvert.DeserializeObject<Build>(jsonResult.Body);
         }
-        public async Task<(BuildChanges[] changes, int more)> GetBuildChangesAsync(string project, long buildId, CancellationToken cancellationToken = default)
+
+        public async Task<(BuildChange[] changes, int truncatedChangeCount)> GetBuildChangesAsync(string project, long buildId, CancellationToken cancellationToken = default)
         {
             StringBuilder builder = GetProjectApiRootBuilder(project);
             builder.Append($"/build/builds/{buildId}/changes?$top=10&api-version=5.1");
             JsonResult jsonResult = await GetJsonResult(builder.ToString(), cancellationToken);
-            var arrayOf = JsonConvert.DeserializeObject<AzureDevOpsArrayOf<BuildChanges>>(jsonResult.Body);
+            var arrayOf = JsonConvert.DeserializeObject<AzureDevOpsArrayOf<BuildChange>>(jsonResult.Body);
             return (arrayOf.Value, arrayOf.Count - arrayOf.Value.Length);
         }
 
@@ -190,9 +191,9 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         public BuildLinks Links { get; set; }
     }
 
-    public class BuildChanges
+    public class BuildChange
     {
-        public BuildChanges(string id, IdentityRef author, string message, string type, string displayUri, string location)
+        public BuildChange(string id, IdentityRef author, string message, string type, string displayUri, string location)
         {
             Id = id;
             Author = author;

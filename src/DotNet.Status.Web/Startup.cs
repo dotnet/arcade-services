@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using DotNet.Status.Web.Controllers;
+using DotNet.Status.Web.Options;
 using GitHubJwt;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
