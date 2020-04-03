@@ -322,6 +322,14 @@ namespace SubscriptionActorService.Tests
                             SubscriptionId = Subscription.Id
                         }
                     },
+                    RequiredUpdates = forBuild.Assets.Select(
+                                d => new DependencyUpdateSummary
+                                {
+                                    DependencyName = d.Name,
+                                    FromVersion = d.Version,
+                                    ToVersion = d.Version
+                                })
+                    .ToList(),
                     Url = PrUrl
                 });
         }
