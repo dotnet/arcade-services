@@ -19,6 +19,7 @@ namespace Microsoft.DotNet.DarcLib
         public const string VersionPropsAlternateVersionElementSuffix = "Version";
         public const string ShaElementName = "Sha";
         public const string UriElementName = "Uri";
+        public const string CoherentProductElementName = "CoherentProduct";
         public const string DependencyElementName = "Dependency";
         public const string DependenciesElementName = "Dependencies";
         public const string NameAttributeName = "Name";

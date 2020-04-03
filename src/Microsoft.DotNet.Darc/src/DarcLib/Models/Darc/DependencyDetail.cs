@@ -2,16 +2,88 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.DotNet.Maestro.Client.Models;
-using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Xml;
 
 namespace Microsoft.DotNet.DarcLib
 {
     public class DependencyDetail
     {
+        public static IEnumerable<DependencyDetail> ParseAll(XmlDocument document, bool includePinned = true)
+        {
+            List<DependencyDetail> dependencyDetails = new List<DependencyDetail>();
+
+            BuildDependencies(document.DocumentElement.SelectNodes("//Dependency"));
+
+            void BuildDependencies(XmlNodeList dependencies)
+            {
+                if (dependencies.Count > 0)
+                {
+                    foreach (XmlNode dependency in dependencies)
+                    {
+                        if (dependency.NodeType != XmlNodeType.Comment && dependency.NodeType != XmlNodeType.Whitespace)
+                        {
+                            DependencyType type;
+                            switch (dependency.ParentNode.Name)
+                            {
+                                case "ProductDependencies":
+                                    type = DependencyType.Product;
+                                    break;
+                                case "ToolsetDependencies":
+                                    type = DependencyType.Toolset;
+                                    break;
+                                default:
+                                    throw new DarcException($"Unknown dependency type '{dependency.ParentNode.Name}'");
+                            }
+
+                            bool isPinned = false;
+
+                            // If the 'Pinned' attribute does not exist or if it is set to false we just not update it 
+                            if (dependency.Attributes[VersionFiles.PinnedAttributeName] != null)
+                            {
+                                if (!bool.TryParse(dependency.Attributes[VersionFiles.PinnedAttributeName].Value, out isPinned))
+                                {
+                                    throw new DarcException($"The '{VersionFiles.PinnedAttributeName}' attribute is set but the value " +
+                                        $"'{dependency.Attributes[VersionFiles.PinnedAttributeName].Value}' " +
+                                        $"is not a valid boolean...");
+                                }
+                            }
+
+                            DependencyDetail dependencyDetail = new DependencyDetail
+                            {
+                                Name = dependency.Attributes[VersionFiles.NameAttributeName].Value?.Trim(),
+                                RepoUri = dependency.SelectSingleNode(VersionFiles.UriElementName).InnerText?.Trim(),
+                                Commit = dependency.SelectSingleNode(VersionFiles.ShaElementName)?.InnerText?.Trim(),
+                                Version = dependency.Attributes[VersionFiles.VersionAttributeName].Value?.Trim(),
+                                CoherentParentDependencyName = dependency.Attributes[VersionFiles.CoherentParentAttributeName]?.Value?.Trim(),
+                                CoherentProducts = dependency
+                                    .SelectNodes(VersionFiles.CoherentProductElementName)
+                                    .OfType<XmlNode>()
+                                    .Select(x => x.InnerText.Trim())
+                                    .ToArray(),
+                                Pinned = isPinned,
+                                Type = type
+                            };
+
+                            dependencyDetails.Add(dependencyDetail);
+                        }
+                    }
+                }
+            }
+
+            if (includePinned)
+            {
+                return dependencyDetails;
+            }
+
+            return dependencyDetails.Where(d => !d.Pinned);
+
+        }
+
         public DependencyDetail()
         {
+            CoherentProducts = new List<string>();
             Locations = new List<string>();
         }
 
@@ -24,6 +96,7 @@ namespace Microsoft.DotNet.DarcLib
             Pinned = other.Pinned;
             Type = other.Type;
             CoherentParentDependencyName = other.CoherentParentDependencyName;
+            CoherentProducts = other.CoherentProducts;
             Locations = other.Locations;
         }
 
@@ -90,6 +163,19 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// 
         public string CoherentParentDependencyName { get; set; }
+
+        /// <summary>
+        /// The products that end up taking a dependency on the version of this dependency. As of
+        /// writing, the only product is "SDK". In a transitive source-build repository graph
+        /// building the SDK, there must be one DependencyDetail per target RepoUri that defines SDK
+        /// as a product. This allows "darc clone" to create a synthetically coherent graph by
+        /// choosing dependencies that declare SDK in Products, rather than other dependencies that
+        /// may be in the graph erroneously.
+        ///
+        /// The goal is similar to a coherent parent dependency, but the result is not stored in the
+        /// repo and artificial coherency does not apply to Microsoft builds.
+        /// </summary>
+        public IEnumerable<string> CoherentProducts { get; set; }
 
         /// <summary>
         /// Asset locations for the dependency

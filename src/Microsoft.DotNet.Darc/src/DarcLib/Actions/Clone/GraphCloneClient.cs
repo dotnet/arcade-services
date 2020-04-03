@@ -11,6 +11,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
@@ -59,8 +61,12 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                         {
                             var local = new Local(Logger, bareRepoDir);
 
-                            IEnumerable<DependencyDetail> deps =
-                                await local.GetDependenciesAsync(branch: repo.Commit);
+                            XmlDocument file = await local
+                                .GetDependencyFileXmlContentAsync(repo.Commit);
+
+                            IEnumerable<DependencyDetail> deps = DependencyDetail.ParseAll(file);
+
+                            var overrides = DarcCloneOverrideDetail.ParseAll(file.DocumentElement);
 
                             Logger.LogDebug($"Got {deps.Count()} dependencies.");
 

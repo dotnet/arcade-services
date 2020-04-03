@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Xml;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -139,6 +140,15 @@ namespace Microsoft.DotNet.DarcLib
         public IEnumerable<DependencyDetail> GetDependenciesFromFileContents(string fileContents, bool includePinned = true)
         {
             return _fileManager.ParseVersionDetailsXml(fileContents, includePinned);
+        }
+
+        /// <summary>
+        /// Gets the dependency file content as XML. For use when more than the DependencyDetail
+        /// entries are required.
+        /// </summary>
+        public async Task<XmlDocument> GetDependencyFileXmlContentAsync(string branch = null)
+        {
+            return await _fileManager.ReadVersionDetailsXmlAsync(_repo, branch);
         }
 
         /// <summary>
