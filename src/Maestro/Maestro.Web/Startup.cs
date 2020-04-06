@@ -45,6 +45,7 @@ using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.OpenApi.Models;
 
 namespace Maestro.Web
 {
@@ -311,19 +312,19 @@ namespace Maestro.Web
             app.UseSwagger(
                 options =>
                 {
+                    options.SerializeAsV2 = true;
                     options.RouteTemplate = "api/{documentName}/swagger.json";
                     options.PreSerializeFilters.Add(
                         (doc, req) =>
                         {
-                            doc.Host = req.Host.Value;
-                            if (HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric())
+                            bool http = HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric();
+                            doc.Servers = new List<OpenApiServer>
                             {
-                                doc.Schemes = new List<string> { "http" };
-                            }
-                            else
-                            {
-                                doc.Schemes = new List<string> { "https" };
-                            }
+                                new OpenApiServer
+                                {
+                                    Url = $"{(http ? "http" : "https")}://{req.Host.Value}/",
+                                },
+                            };
 
                             req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
                         });
