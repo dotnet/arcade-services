@@ -8,6 +8,7 @@
     <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <SignAssembly>false</SignAssembly>
     <LangVersion>7.1</LangVersion>
+    <DebugType>Full</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,25 +18,28 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Azure.KeyVault" Version="$(MicrosoftAzureKeyVaultVersion)" />
-    <PackageReference Include="Microsoft.DotNet.Git.IssueManager" Version="$(MicrosoftDotNetGitIssueManagerVersion)" />
+    <PackageReference Include="Azure.Identity" Version="1.1.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
     <PackageReference Include="Microsoft.ServiceFabric" Version="6.5.677" />
     <PackageReference Include="Microsoft.ServiceFabric.Services" Version="3.4.677" />
     <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" Version="3.4.677" />
-    <PackageReference Include="Microsoft.Rest.ClientRuntime" Version="2.3.18" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.AzureAppConfiguration" Version="3.0.0-preview-011100001-1152" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Microsoft.DncEng.Configuration.Extensions\Microsoft.DncEng.Configuration.Extensions.csproj" />
-    <ProjectReference Include="..\..\Microsoft.DotNet.Darc\src\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" />
-    <ProjectReference Include="..\..\Microsoft.DotNet.Darc\src\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
-    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
     <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
-    <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include=".config\settings.Development.json" />
+    <None Include=".config\settings.json" />
+    <None Include=".config\settings.Production.json" />
+    <None Include=".config\settings.Staging.json" />
   </ItemGroup>
 
 </Project>

@@ -5,6 +5,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Maestro.Contracts;
 using Maestro.Data.Models;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
@@ -24,11 +25,11 @@ namespace SubscriptionActorService
         public ILogger<MergePolicyEvaluator> Logger { get; }
 
         public async Task<MergePolicyEvaluationResult> EvaluateAsync(
-            string prUrl,
+            IPullRequest pr,
             IRemote darc,
             IReadOnlyList<MergePolicyDefinition> policyDefinitions)
         {
-            var context = new MergePolicyEvaluationContext(prUrl, darc);
+            var context = new MergePolicyEvaluationContext(pr, darc);
             foreach (MergePolicyDefinition definition in policyDefinitions)
             {
                 if (MergePolicies.TryGetValue(definition.Name, out MergePolicy policy))

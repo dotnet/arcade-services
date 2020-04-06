@@ -55,7 +55,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 Console.WriteLine($"Deleting the following build from channel '{targetChannel.Name}':");
                 Console.WriteLine();
-                Console.Write(UxHelpers.GetBuildDescription(build));
+                Console.Write(UxHelpers.GetTextBuildDescription(build));
 
                 await remote.DeleteBuildFromChannelAsync(_options.Id, targetChannel.Id);
 

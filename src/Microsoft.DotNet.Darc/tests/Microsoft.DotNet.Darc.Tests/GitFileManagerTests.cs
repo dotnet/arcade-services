@@ -17,6 +17,7 @@ namespace Microsoft.DotNet.Darc.Tests
     {
         const string TestInputsRootDir = "inputs";
         const string ConfigFilesInput = "NugetConfigFiles";
+        const string VersionPropsFilesInput = "VersionPropsFiles";
         const string InputNugetConfigFile = "NuGet.input.config";
         const string OutputNugetConfigFile = "NuGet.output.config";
 
@@ -53,7 +54,7 @@ namespace Microsoft.DotNet.Darc.Tests
             string inputXmlContent = await File.ReadAllTextAsync(inputNugetPath);
             var inputNuGetConfigFile = GitFileManager.ReadXmlFile(inputXmlContent);
 
-            XmlDocument updatedConfigFile = 
+            XmlDocument updatedConfigFile =
                 gitFileManager.UpdatePackageSources(inputNuGetConfigFile, new HashSet<string>(managedFeeds));
 
             var outputNugetPath = Path.Combine(
@@ -73,5 +74,30 @@ namespace Microsoft.DotNet.Darc.Tests
 
             Assert.Equal(expectedOutputText, file.Content);
         }
+
+        [Theory]
+        [InlineData("SimpleDuplicated.props", true)]
+        [InlineData("DuplicatedSameConditions.props", true)]
+        [InlineData("AlternateNamesDuplicated.props", true)]
+        [InlineData("NothingDuplicated.props", false)]
+        [InlineData("NoDuplicatedDifferentConditions.props", false)]
+        public void VerifyNoDuplicatedPropertiesTests(string inputFileName, bool hasDuplicatedProps)
+        {
+            GitFileManager gitFileManager = new GitFileManager(null, NullLogger.Instance);
+
+            string inputVersionPropsPath = Path.Combine(
+                Environment.CurrentDirectory,
+                TestInputsRootDir,
+                VersionPropsFilesInput,
+                inputFileName);
+
+            string propsFileContent = File.ReadAllText(inputVersionPropsPath);
+
+            XmlDocument propsFile = GitFileManager.GetXmlDocument(propsFileContent);
+
+            Assert.Equal(!hasDuplicatedProps, 
+                gitFileManager.VerifyNoDuplicatedProperties(propsFile).Result);
+        }
+
     }
 }

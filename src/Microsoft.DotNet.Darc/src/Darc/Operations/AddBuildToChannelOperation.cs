@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Generic;
 using System.Net.Http;
+using Microsoft.DotNet.Services.Utility;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -63,7 +64,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 Console.WriteLine($"Assigning the following build to channel '{targetChannel.Name}':");
                 Console.WriteLine();
-                Console.Write(UxHelpers.GetBuildDescription(build));
+                Console.Write(UxHelpers.GetTextBuildDescription(build));
 
                 // Queues a build of the Build Promotion pipeline that will takes care of making sure
                 // that the build assets are published to the right location and also promoting the build
@@ -110,6 +111,16 @@ namespace Microsoft.DotNet.Darc.Operations
                 return Constants.ErrorCode;
             }
 
+            var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build).ConfigureAwait(false);
+
+            // This condition can happen when for some reason we failed to determine the source branch/sha 
+            // of the build that produced the used Arcade SDK or when the user specify an invalid combination
+            // of source-sha/branch parameters.
+            if (arcadeSDKSourceBranch == null && arcadeSDKSourceSHA == null)
+            {
+                return Constants.ErrorCode;
+            }
+
             AzureDevOpsClient azdoClient = new AzureDevOpsClient(gitExecutable: null, _options.AzureDevOpsPat, Logger, temporaryRepositoryPath: null);
 
             var targetAzdoBuildStatus = await ValidateAzDOBuildAsync(azdoClient, build.AzureDevOpsAccount, build.AzureDevOpsProject, build.AzureDevOpsBuildId.Value)
@@ -120,24 +131,19 @@ namespace Microsoft.DotNet.Darc.Operations
                 return Constants.ErrorCode;
             }
 
-            var (arcadeSDKSourceBranch, arcadeSDKSourceSHA) = await GetSourceBranchInfoAsync(build).ConfigureAwait(false);
-
-            // This condition can happen when for some reason we failed to determine the source branch/sha 
-            // of the build that produced the used Arcade SDK
-            if (arcadeSDKSourceBranch == null || arcadeSDKSourceSHA == null)
-            {
-                return Constants.ErrorCode;
-            }
-
             var queueTimeVariables = $"{{" +
                 $"\"BARBuildId\": \"{ build.Id }\", " +
                 $"\"PromoteToMaestroChannelId\": \"{ targetChannel.Id }\", " +
                 $"\"EnableSigningValidation\": \"{ _options.DoSigningValidation }\", " +
+                $"\"SigningValidationAdditionalParameters\": \"{ _options.SigningValidationAdditionalParameters }\", " +
                 $"\"EnableNugetValidation\": \"{ _options.DoNuGetValidation }\", " +
                 $"\"EnableSourceLinkValidation\": \"{ _options.DoSourcelinkValidation }\", " +
                 $"\"EnableSDLValidation\": \"{ _options.DoSDLValidation }\", " +
                 $"\"SDLValidationCustomParams\": \"{ _options.SDLValidationParams }\", " +
                 $"\"SDLValidationContinueOnError\": \"{ _options.SDLValidationContinueOnError }\", " +
+                $"\"PublishInstallersAndChecksums\": \"{ _options.PublishInstallersAndChecksums }\", " +
+                $"\"SymbolPublishingAdditionalParameters\": \"{ _options.SymbolPublishingAdditionalParameters }\", " +
+                $"\"ArtifactsPublishingAdditionalParameters\": \"{ _options.ArtifactPublishingAdditionalParameters }\", " +
                 $"}}";
 
 
@@ -252,9 +258,26 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="build">Build for which the Arcade SDK dependency build will be inferred.</param>
         private async Task<(string sourceBranch, string sourceVersion)> GetSourceBranchInfoAsync(Build build)
         {
-            if (!string.IsNullOrEmpty(_options.SourceBranch) && !string.IsNullOrEmpty(_options.SourceSHA))
+            bool hasSourceBranch = !string.IsNullOrEmpty(_options.SourceBranch);
+            bool hasSourceSHA = !string.IsNullOrEmpty(_options.SourceSHA);
+
+            if (hasSourceBranch)
+            {
+                _options.SourceBranch = GitHelpers.NormalizeBranchName(_options.SourceBranch);
+            }
+
+            if (hasSourceBranch && hasSourceSHA)
             {
                 return (_options.SourceBranch, _options.SourceSHA);
+            }
+            else if (hasSourceSHA && !hasSourceBranch)
+            {
+                Console.WriteLine("The `source-sha` parameter needs to be specified together with `source-branch`.");
+                return (null, null);
+            }
+            else if (hasSourceBranch)
+            {
+                return (_options.SourceBranch, null);
             }
 
             string sourceBuildRepo = string.IsNullOrEmpty(build.GitHubRepository) ?

@@ -4,18 +4,18 @@
 
 using System.Runtime.Serialization;
 
-namespace ReleasePipelineRunner
+namespace Maestro.Contracts
 {
     [DataContract]
-    public sealed class ReleasePipelineRunnerItem
+    public class DependencyUpdateSummary
     {
         [DataMember]
-        public int BuildId { get; set; }
+        public string DependencyName { get; set; }
 
         [DataMember]
-        public int ChannelId { get; set; }
+        public string FromVersion { get; set; }
 
         [DataMember]
-        public int NumberOfRetriesMade { get; set; }
+        public string ToVersion { get; set; }
     }
 }

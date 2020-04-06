@@ -5,6 +5,7 @@
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.Services.Utility;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -79,11 +80,48 @@ namespace Microsoft.DotNet.Darc
         }
 
         /// <summary>
+        /// Get a link to the build in AzDO, or null if it cannot be constructed.
+        /// </summary>
+        /// <param name="build">Build</param>
+        /// <returns>Link to the build in AzDO</returns>
+        private static string GetBuildLink(Build build)
+        {
+            if (!string.IsNullOrEmpty(build.AzureDevOpsAccount) &&
+                !string.IsNullOrEmpty(build.AzureDevOpsProject) &&
+                build.AzureDevOpsBuildId.HasValue)
+            {
+                return $"https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId.Value}";
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Get the build description as a JObject.
+        /// </summary>
+        /// <param name="build">Build</param>
+        /// <returns>JObject</returns>
+        public static JObject GetJsonBuildDescription(Build build)
+        {
+            return JObject.FromObject(new
+            {
+                id = build.Id,
+                repository = build.GitHubRepository ?? build.AzureDevOpsRepository,
+                branch = build.GitHubBranch ?? build.AzureDevOpsBranch,
+                commit = build.Commit,
+                buildNumber = build.AzureDevOpsBuildNumber,
+                dateProduced = build.DateProduced.ToLocalTime().ToString("g"),
+                buildLink = GetBuildLink(build),
+                released = build.Released,
+                channels = build.Channels.Select(channel => channel.Name)
+            });
+        }
+
+        /// <summary>
         ///     Get a string description of a build.
         /// </summary>
         /// <param name="build">Build</param>
         /// <returns>Description</returns>
-        public static string GetBuildDescription(Build build)
+        public static string GetTextBuildDescription(Build build)
         {
             StringBuilder builder = new StringBuilder();
             builder.AppendLine($"Repository:    {build.GitHubRepository ?? build.AzureDevOpsRepository}");
@@ -91,13 +129,7 @@ namespace Microsoft.DotNet.Darc
             builder.AppendLine($"Commit:        {build.Commit}");
             builder.AppendLine($"Build Number:  {build.AzureDevOpsBuildNumber}");
             builder.AppendLine($"Date Produced: {build.DateProduced.ToLocalTime().ToString("g")}");
-            if (!string.IsNullOrEmpty(build.AzureDevOpsAccount) &&
-                !string.IsNullOrEmpty(build.AzureDevOpsProject) &&
-                build.AzureDevOpsBuildId.HasValue)
-            {
-                string azdoLink = $"https://dev.azure.com/{build.AzureDevOpsAccount}/{build.AzureDevOpsProject}/_build/results?buildId={build.AzureDevOpsBuildId.Value}";
-                builder.AppendLine($"Build Link:    {azdoLink}");
-            }
+            builder.AppendLine($"Build Link:    {GetBuildLink(build) ?? "N/A"}");
             builder.AppendLine($"BAR Build Id:  {build.Id}");
             builder.AppendLine($"Released:      {build.Released}");
             if (build.Channels != null)

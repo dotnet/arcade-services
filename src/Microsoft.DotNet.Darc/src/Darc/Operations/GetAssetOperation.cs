@@ -7,6 +7,7 @@ using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -48,58 +49,44 @@ namespace Microsoft.DotNet.Darc.Operations
                     (await remote.GetAssetsAsync(name: _options.Name, version: _options.Version)).ToList();
 
                 string queryDescriptionString =
-                    $"name '{_options.Name}'{(!string.IsNullOrEmpty(_options.Version) ? $" and version '{_options.Version}'" : "")}" +
-                    $"{(targetChannel != null ? $" on channel '{targetChannel.Name}'" : "")} in the last {_options.MaxAgeInDays} days";
+                        $"name '{_options.Name}'{(!string.IsNullOrEmpty(_options.Version) ? $" and version '{_options.Version}'" : "")}" +
+                        $"{(targetChannel != null ? $" on channel '{targetChannel.Name}'" : "")} in the last {_options.MaxAgeInDays} days";
 
-                Console.WriteLine($"Looking up assets with {queryDescriptionString}");
+                // Only print the lookup string if the output type is text.
+                if (_options.OutputFormat == DarcOutputType.text)
+                {
+                    Console.WriteLine($"Looking up assets with {queryDescriptionString}");
+                }
 
                 // Walk the assets and look up the corresponding builds, potentially filtering based on channel
                 // if there is a target channel
-                bool foundMatching = false;
                 int maxAgeInDays = _options.MaxAgeInDays;
                 var now = DateTimeOffset.Now;
                 int checkedAssets = 0;
 
-                foreach (var asset in matchingAssets)
-                {
-                    checkedAssets++;
+                List<(Asset asset, Build build)> matchingAssetsAfterDate = new List<(Asset, Build)>();
 
+                foreach (Asset asset in matchingAssets)
+                {
                     // Get build info for asset
                     Build buildInfo = await remote.GetBuildAsync(asset.BuildId);
-
-                    if (targetChannel != null && !buildInfo.Channels.Any(c => c.Id == targetChannel.Id))
-                    {
-                        continue;
-                    }
 
                     if (now.Subtract(buildInfo.DateProduced).TotalDays > maxAgeInDays)
                     {
                         break;
                     }
 
-                    foundMatching = true;
+                    checkedAssets++;
 
-                    Console.WriteLine($"{asset.Name} @ {asset.Version}");
-                    Console.Write(UxHelpers.GetBuildDescription(buildInfo));
-                    Console.WriteLine("Locations:");
-                    if (asset.Locations.Any())
+                    if (targetChannel != null && !buildInfo.Channels.Any(c => c.Id == targetChannel.Id))
                     {
-                        foreach (var location in asset.Locations)
-                        {
-                            if (location.IsValid)
-                            {
-                                Console.WriteLine($"- {location.Location} ({location.Type})");
-                            }
-                        }
+                        continue;
                     }
-                    else
-                    {
-                        Console.WriteLine("- None");
-                    }
-                    Console.WriteLine();
+
+                    matchingAssetsAfterDate.Add((asset, buildInfo));
                 }
 
-                if (!foundMatching)
+                if (!matchingAssetsAfterDate.Any())
                 {
                     Console.WriteLine($"No assets found with {queryDescriptionString}");
                     int remaining = matchingAssets.Count - checkedAssets;
@@ -107,6 +94,48 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         Console.WriteLine($"Skipping build lookup for {remaining} assets. Consider increasing --max-age to check the rest.");
                     }
+
+                    return Constants.ErrorCode;
+                }
+
+                switch (_options.OutputFormat)
+                {
+                    case DarcOutputType.text:
+                        foreach ((Asset asset, Build build) in matchingAssetsAfterDate)
+                        {
+                            Console.WriteLine($"{asset.Name} @ {asset.Version}");
+                            Console.Write(UxHelpers.GetTextBuildDescription(build));
+                            Console.WriteLine("Locations:");
+                            if (asset.Locations.Any())
+                            {
+                                foreach (var location in asset.Locations)
+                                {
+                                    if (location.IsValid)
+                                    {
+                                        Console.WriteLine($"- {location.Location} ({location.Type})");
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine("- None");
+                            }
+                            Console.WriteLine();
+                        }
+                        break;
+                    case DarcOutputType.json:
+                        var assets = matchingAssetsAfterDate.Select(assetAndBuild =>
+                        {
+                            return new
+                            {
+                                name = assetAndBuild.asset.Name,
+                                version = assetAndBuild.asset.Version,
+                                build = UxHelpers.GetJsonBuildDescription(assetAndBuild.build),
+                                locations = assetAndBuild.asset.Locations.Select(location => location.Location)
+                            };
+                        });
+                        Console.WriteLine(JsonConvert.SerializeObject(assets, Formatting.Indented));
+                        break;
                 }
 
                 return Constants.SuccessCode;

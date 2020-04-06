@@ -33,10 +33,13 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         /// <summary>
         ///   Gets a paged list of all <see cref="Build"/>s that match the given search criteria.
         /// </summary>
-        /// <param name="repository"></param>
-        /// <param name="commit"></param>
-        /// <param name="buildNumber"></param>
-        /// <param name="channelId"></param>
+        /// <param name="repository">Repository</param>
+        /// <param name="commit">Commit</param>
+        /// <param name="buildNumber">Build number</param>
+        /// <param name="channelId">Id of the channel to which the build applies</param>
+        /// <param name="azdoAccount">Name of the Azure DevOps account</param>
+        /// <param name="azdoBuildId">ID of the Azure DevOps build</param>
+        /// <param name="azdoProject">Name of the Azure DevOps project</param>
         /// <param name="notBefore">Don't return <see cref="Build"/>s that happened before this time.</param>
         /// <param name="notAfter">Don't return <see cref="Build"/>s that happened after this time.</param>
         /// <param name="loadCollections">**true** to include the <see cref="v2018_07_16.Models.Channel"/>, <see cref="v2018_07_16.Models.Asset"/>, and dependent <see cref="Build"/> data with the response; **false** otherwise.</param>
@@ -48,6 +51,9 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             string repository,
             string commit,
             string buildNumber,
+            int? azdoBuildId,
+            string azdoAccount,
+            string azdoProject,
             int? channelId,
             DateTimeOffset? notBefore,
             DateTimeOffset? notAfter,
@@ -57,6 +63,9 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                 repository,
                 commit,
                 buildNumber,
+                azdoBuildId,
+                azdoAccount,
+                azdoProject,
                 channelId,
                 notBefore,
                 notAfter,
@@ -93,7 +102,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         [HttpGet("{id}/graph")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(BuildGraph), Description = "The tree of build dependencies")]
         [ValidateModelState]
-        public async Task<IActionResult> GetBuildGraph(int id)
+        public virtual async Task<IActionResult> GetBuildGraph(int id)
         {
             Data.Models.Build build = await _context.Builds.FirstOrDefaultAsync(b => b.Id == id);
 
@@ -133,6 +142,9 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                 repository,
                 commit,
                 buildNumber,
+                null,
+                null,
+                null,
                 channelId,
                 notBefore,
                 notAfter,
@@ -187,7 +199,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         [HttpPost]
         [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(Build), Description = "The created build")]
         [ValidateModelState]
-        public async Task<IActionResult> Create([FromBody, Required] BuildData build)
+        public virtual async Task<IActionResult> Create([FromBody, Required] BuildData build)
         {
             Data.Models.Build buildModel = build.ToDb();
             buildModel.DateProduced = DateTimeOffset.UtcNow;
