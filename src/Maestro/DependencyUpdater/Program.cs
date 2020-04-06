@@ -15,7 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace DependencyUpdater
 {
-    internal static class Program
+    public static class Program
     {
         /// <summary>
         ///     This is the entry point of the service host process.
@@ -27,26 +27,25 @@ namespace DependencyUpdater
                 {
                     host.RegisterStatefulService<DependencyUpdater>("DependencyUpdaterType");
                     host.ConfigureContainer(builder => { builder.AddServiceFabricActor<ISubscriptionActor>(); });
-                    host.ConfigureServices(
-                        services =>
-                        {
-                            services.AddDefaultJsonConfiguration();
-                            services.AddBuildAssetRegistry(
-                                (provider, options) =>
-                                {
-                                    var config = provider.GetRequiredService<IConfiguration>();
-                                    options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
-                                });
-                            services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
-                            services.AddKustoClientProvider(
-                                (provider, options) =>
-                                {
-                                    var config = provider.GetRequiredService<IConfiguration>();
-                                    IConfigurationSection section = config.GetSection("Kusto");
-                                    section.Bind(options);
-                                });
-                        });
+                    host.ConfigureServices(Configure);
                 });
+        }
+
+        public static void Configure(IServiceCollection services)
+        {
+            services.AddDefaultJsonConfiguration();
+            services.AddBuildAssetRegistry((provider, options) =>
+            {
+                var config = provider.GetRequiredService<IConfiguration>();
+                options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
+            });
+            services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
+            services.AddKustoClientProvider((provider, options) =>
+            {
+                var config = provider.GetRequiredService<IConfiguration>();
+                IConfigurationSection section = config.GetSection("Kusto");
+                section.Bind(options);
+            });
         }
     }
 }
