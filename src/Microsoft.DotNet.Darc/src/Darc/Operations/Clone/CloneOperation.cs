@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 
 namespace Microsoft.DotNet.Darc.Operations.Clone
 {
@@ -84,15 +85,23 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
             try
             {
                 EnsureOptionsCompatibility(_options);
-                // Use a set to accumulate dependencies as we go for the next iteration.
-                HashSet<SourceBuildIdentity> accumulatedDependencies = new HashSet<SourceBuildIdentity>();
+                // Accumulate root info.
+                var accumulatedDependencies = new HashSet<SourceBuildIdentity>();
+                var overrides = new List<DarcCloneOverrideDetail>();
 
                 // Seed the dependency set with initial dependencies from args.
                 if (string.IsNullOrWhiteSpace(_options.RepoUri))
                 {
                     Local local = new Local(Logger);
 
-                    IEnumerable<DependencyDetail> rootDependencies = await local.GetDependenciesAsync();
+                    var rootDependencyXml = await local.GetDependencyFileXmlContentAsync();
+
+                    overrides.AddRange(
+                        DarcCloneOverrideDetail.ParseAll(rootDependencyXml.DocumentElement));
+
+                    IEnumerable<DependencyDetail> rootDependencies =
+                        DependencyDetail.ParseAll(rootDependencyXml);
+
                     IEnumerable<SourceBuildIdentity> stripped = rootDependencies
                         .Select(d => new SourceBuildIdentity(d.RepoUri, d.Commit, d));
 
@@ -122,6 +131,7 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
 
                 SourceBuildGraph graph = await _cloneClient.GetGraphAsync(
                     accumulatedDependencies,
+                    overrides,
                     _options.IgnoredRepos,
                     _options.IncludeToolset,
                     _options.CloneDepth);
