@@ -135,11 +135,15 @@ namespace Microsoft.DotNet.Darc.Operations
                 $"\"BARBuildId\": \"{ build.Id }\", " +
                 $"\"PromoteToMaestroChannelId\": \"{ targetChannel.Id }\", " +
                 $"\"EnableSigningValidation\": \"{ _options.DoSigningValidation }\", " +
+                $"\"SigningValidationAdditionalParameters\": \"{ _options.SigningValidationAdditionalParameters }\", " +
                 $"\"EnableNugetValidation\": \"{ _options.DoNuGetValidation }\", " +
                 $"\"EnableSourceLinkValidation\": \"{ _options.DoSourcelinkValidation }\", " +
                 $"\"EnableSDLValidation\": \"{ _options.DoSDLValidation }\", " +
                 $"\"SDLValidationCustomParams\": \"{ _options.SDLValidationParams }\", " +
                 $"\"SDLValidationContinueOnError\": \"{ _options.SDLValidationContinueOnError }\", " +
+                $"\"PublishInstallersAndChecksums\": \"{ _options.PublishInstallersAndChecksums }\", " +
+                $"\"SymbolPublishingAdditionalParameters\": \"{ _options.SymbolPublishingAdditionalParameters }\", " +
+                $"\"ArtifactsPublishingAdditionalParameters\": \"{ _options.ArtifactPublishingAdditionalParameters }\", " +
                 $"}}";
 
 

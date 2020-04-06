@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
+using Maestro.Contracts;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 
@@ -10,10 +11,10 @@ namespace SubscriptionActorService
 {
     public class MergePolicyEvaluationContext : IMergePolicyEvaluationContext
     {
-        public MergePolicyEvaluationContext(string pullRequestUrl, IRemote darc)
+        public MergePolicyEvaluationContext(IPullRequest pr, IRemote darc)
         {
-            PullRequestUrl = pullRequestUrl;
             Darc = darc;
+            PullRequest = pr;
         }
 
         public MergePolicyEvaluationResult Result => new MergePolicyEvaluationResult(PolicyResults);
@@ -23,7 +24,8 @@ namespace SubscriptionActorService
 
         internal MergePolicy CurrentPolicy { get; set; }
 
-        public string PullRequestUrl { get; }
+        public IPullRequest PullRequest { get; }
+
         public IRemote Darc { get; }
 
         public void Pending(string message)

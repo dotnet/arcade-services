@@ -25,6 +25,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("validate-signing", HelpText = "Perform signing validation.")]
         public bool DoSigningValidation { get; set; }
 
+        [Option("signing-validation-parameters", HelpText = "Additional (MSBuild) properties to be passed to signing validation.")]
+        public string SigningValidationAdditionalParameters { get; set; }
+
         [Option("validate-nuget", HelpText = "Perform NuGet metadata validation.")]
         public bool DoNuGetValidation { get; set; }
 
@@ -39,6 +42,15 @@ namespace Microsoft.DotNet.Darc.Options
 
         [Option("sdl-validation-continue-on-error", HelpText = "Ignore SDL validation errors.")]
         public string SDLValidationContinueOnError { get; set; }
+
+        [Option("symbol-publishing-parameters", HelpText = "Additional (MSBuild) properties to be passed to symbol publishing")]
+        public string SymbolPublishingAdditionalParameters { get; set; }
+
+        [Option("artifact-publishing-parameters", HelpText = "Additional (MSBuild) properties to be passed to asset publishing.")]
+        public string ArtifactPublishingAdditionalParameters { get; set; }
+
+        [Option("publish-installers-and-checksums", HelpText = "Whether installers and checksums should be published.")]
+        public bool PublishInstallersAndChecksums { get; set; }
 
         [Option("skip-assets-publishing", HelpText = "Add the build to the channel without publishing assets to the channel's feeds.")]
         public bool SkipAssetsPublishing { get; set; }
