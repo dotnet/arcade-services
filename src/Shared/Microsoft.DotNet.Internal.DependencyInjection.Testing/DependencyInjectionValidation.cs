@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Fabric;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using Autofac;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Caching.Memory;
@@ -53,7 +54,6 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
                     continue;
                 }
 
-                bool foundConstructable = false;
                 ConstructorInfo[] constructors = service.ImplementationType
                     .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
                     .OrderBy(c => c.GetParameters().Length)
@@ -67,7 +67,15 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
 
                 foreach (ConstructorInfo ctor in constructors)
                 {
-                    bool ctorWorks = true;
+                    bool resolvedAllParameters = true;
+                    StringBuilder msgBuilder = null;
+                    if (errorMessage == null)
+                    {
+                        msgBuilder = new StringBuilder();
+                        msgBuilder.Append("Type ");
+                        msgBuilder.Append(service.ImplementationType.FullName);
+                        msgBuilder.Append(" could not find registered definition for parameter(s): ");
+                    }
 
                     foreach (ParameterInfo p in ctor.GetParameters())
                     {
@@ -80,24 +88,25 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
                         // Save the first error message, since it's likely to be the most useful
                         if (errorMessage == null)
                         {
-                            errorMessage = $"Type {service.ImplementationType.FullName} could not find registered definition for parameter {p.Name} of type {p.ParameterType}";
+                            if (msgBuilder != null)
+                            {
+                                if (!resolvedAllParameters)
+                                {
+                                    msgBuilder.Append(", ");
+                                }
+                                msgBuilder.Append(p.Name);
+                                msgBuilder.Append(" of type ");
+                                msgBuilder.Append(p.ParameterType.Name);
+                            }
                         }
 
-                        ctorWorks = false;
-                        break;
+                        resolvedAllParameters = false;
                     }
 
-                    if (ctorWorks)
+                    if (resolvedAllParameters)
                     {
-                        foundConstructable = true;
-                        break;
+                        return true;
                     }
-                }
-
-
-                if (!foundConstructable)
-                {
-                    return false;
                 }
             }
 
@@ -111,7 +120,8 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
             {
                 Type parameterRoot = parameterType.GetGenericTypeDefinition();
                 if (parameterRoot == typeof(IOptions<>) ||
-                    parameterRoot == typeof(IOptionsMonitor<>))
+                    parameterRoot == typeof(IOptionsMonitor<>) ||
+                    parameterRoot == typeof(IOptionsSnapshot<>))
                 {
                     if (!serviceType.IsConstructedGenericType) return false;
 
