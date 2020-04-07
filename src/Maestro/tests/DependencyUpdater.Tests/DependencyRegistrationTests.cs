@@ -1,4 +1,6 @@
+using System;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
+using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Xunit;
 
 namespace DependencyUpdater.Tests
@@ -8,7 +10,14 @@ namespace DependencyUpdater.Tests
         [Fact]
         public void AreDependenciesRegistered()
         {
-            Assert.True(DependencyInjectionValidation.IsDependencyResolutionCoherent(Program.Configure, true, out string message), message);
+            Assert.True(DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
+                    {
+                        Environment.SetEnvironmentVariable("ENVIRONMENT", "XUNIT");
+                        ServiceHost.ConfigureDefaultServices(s);
+                        Program.Configure(s);
+                    },
+                    out string message),
+                message);
         }
     }
 }

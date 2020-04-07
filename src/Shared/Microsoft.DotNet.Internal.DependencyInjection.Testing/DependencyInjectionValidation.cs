@@ -1,34 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Fabric;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using Autofac;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 
 namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
 {
     public static class DependencyInjectionValidation
     {
-        private static readonly ImmutableList<Type> s_exemptTypes = ImmutableList.Create(
-            typeof(ServiceContext),
-            // IConfigure options is a strange type, and built into the options framework, no need to validation
-            typeof(IConfigureOptions<>),
-            // ILifetimeScope comes from Autofac, and we are only checking the ASP.NET half of this
-            typeof(ILifetimeScope),
-            typeof(MemoryCacheOptions)
+        private static readonly ImmutableList<string> s_exemptTypes = ImmutableList.Create<string>(
+            "System.Fabric.ServiceContext",
+            "Microsoft.Extensions.Options.IConfigureOptions`1",
+            "Microsoft.Extensions.Caching.Memory.MemoryCacheOptions",
+            "Autofac.ILifetimeScope"
         );
 
         private static readonly ImmutableList<string> s_exemptNamespaces = ImmutableList.Create(
             "Microsoft.ApplicationInsights.AspNetCore"
         );
 
-        public static bool IsDependencyResolutionCoherent(Action<ServiceCollection> register, bool includeServiceHost, out string errorMessage)
+        public static bool IsDependencyResolutionCoherent(Action<ServiceCollection> register, out string errorMessage)
         {
             errorMessage = null;
 
@@ -36,11 +30,6 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
             allErrors.Append("The following types are not resolvable:");
 
             var services = new ServiceCollection();
-            if (includeServiceHost)
-            {
-                Environment.SetEnvironmentVariable("ENVIRONMENT", "XUNIT");
-                ServiceHost.ConfigureDefaultServices(services);
-            }
 
             register(services);
 
@@ -165,9 +154,7 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
             if (parameterType.IsConstructedGenericType)
             {
                 Type parameterRoot = parameterType.GetGenericTypeDefinition();
-                if (parameterRoot == typeof(IOptions<>) ||
-                    parameterRoot == typeof(IOptionsMonitor<>) ||
-                    parameterRoot == typeof(IOptionsSnapshot<>))
+                if (IsOptionsType(parameterRoot))
                 {
                     if (!serviceType.IsConstructedGenericType) return false;
 
@@ -177,7 +164,7 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
                         return true;
 
                     Type serviceRoot = serviceType.GetGenericTypeDefinition();
-                    return serviceRoot == typeof(IConfigureOptions<>) &&
+                    return serviceRoot.FullName == "Microsoft.Extensions.Options.IConfigureOptions`1" &&
                         serviceType.GenericTypeArguments[0] == optionType;
                 }
             }
@@ -199,12 +186,25 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
             return serviceType == def;
         }
 
+        private static bool IsOptionsType(Type parameterRoot)
+        {
+            switch (parameterRoot.FullName)
+            {
+                case "Microsoft.Extensions.Options.IOptions`1":
+                case "Microsoft.Extensions.Options.IOptionsMonitor`1":
+                case "Microsoft.Extensions.Options.IOptionsSnapshot`1":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         private static bool IsExemptType(Type type)
         {
             if (type.IsConstructedGenericType)
                 return IsExemptType(type.GetGenericTypeDefinition());
 
-            return s_exemptTypes.Contains(type) || s_exemptNamespaces.Any(n => type.FullName.StartsWith(n));
+            return s_exemptTypes.Contains(type.FullName) || s_exemptNamespaces.Any(n => type.FullName.StartsWith(n));
         }
     }
 }
