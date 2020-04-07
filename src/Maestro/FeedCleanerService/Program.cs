@@ -12,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace FeedCleanerService
 {
-    internal static class Program
+    public static class Program
     {
         /// <summary>
         ///     This is the entry point of the service host process.
@@ -23,50 +23,44 @@ namespace FeedCleanerService
                 host =>
                 {
                     host.RegisterStatelessService<FeedCleanerService>("FeedCleanerServiceType");
-                    host.ConfigureServices(
-                        services =>
-                        {
-                            services.Configure<FeedCleanerOptions>(
-                                (options, provider) =>
-                                {
-                                    var config = provider.GetRequiredService<IConfiguration>();
-                                    options.Enabled = config.GetSection("FeedCleaner").GetValue<bool>("Enabled");
-                                    var releaseFeedsTokenMap = config.GetSection("FeedCleaner:ReleasePackageFeeds").GetChildren();
-                                    foreach (IConfigurationSection token in releaseFeedsTokenMap)
-                                    {
-                                        options.ReleasePackageFeeds.Add((
-                                            token.GetValue<string>("Account"),
-                                            token.GetValue<string>("Project"),
-                                            token.GetValue<string>("Name")));
-                                    }
-
-                                    var azdoAccountTokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
-                                    foreach (IConfigurationSection token in azdoAccountTokenMap)
-                                    {
-                                        options.AzdoAccounts.Add(token.GetValue<string>("Account"));
-                                    }
-                                }
-                                );
-                            services.AddDefaultJsonConfiguration();
-                            services.AddBuildAssetRegistry(
-                                (provider, options) =>
-                                {
-                                    var config = provider.GetRequiredService<IConfiguration>();
-                                    options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
-                                });
-                            services.AddAzureDevOpsTokenProvider();
-                            services.Configure<AzureDevOpsTokenProviderOptions>(
-                                (options, provider) =>
-                                {
-                                    var config = provider.GetRequiredService<IConfiguration>();
-                                    var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
-                                    foreach (IConfigurationSection token in tokenMap)
-                                    {
-                                        options.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
-                                    }
-                                });
-                        });
+                    host.ConfigureServices(Configure);
                 });
+        }
+
+        public static void Configure(IServiceCollection services)
+        {
+            services.Configure<FeedCleanerOptions>((options, provider) =>
+            {
+                var config = provider.GetRequiredService<IConfiguration>();
+                options.Enabled = config.GetSection("FeedCleaner").GetValue<bool>("Enabled");
+                var releaseFeedsTokenMap = config.GetSection("FeedCleaner:ReleasePackageFeeds").GetChildren();
+                foreach (IConfigurationSection token in releaseFeedsTokenMap)
+                {
+                    options.ReleasePackageFeeds.Add((token.GetValue<string>("Account"), token.GetValue<string>("Project"), token.GetValue<string>("Name")));
+                }
+
+                var azdoAccountTokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
+                foreach (IConfigurationSection token in azdoAccountTokenMap)
+                {
+                    options.AzdoAccounts.Add(token.GetValue<string>("Account"));
+                }
+            });
+            services.AddDefaultJsonConfiguration();
+            services.AddBuildAssetRegistry((provider, options) =>
+            {
+                var config = provider.GetRequiredService<IConfiguration>();
+                options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
+            });
+            services.AddAzureDevOpsTokenProvider();
+            services.Configure<AzureDevOpsTokenProviderOptions>((options, provider) =>
+            {
+                var config = provider.GetRequiredService<IConfiguration>();
+                var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
+                foreach (IConfigurationSection token in tokenMap)
+                {
+                    options.Tokens.Add(token.GetValue<string>("Account"), token.GetValue<string>("Token"));
+                }
+            });
         }
     }
 }
