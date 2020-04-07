@@ -37,7 +37,10 @@ namespace Microsoft.DotNet.DarcLib.Models.Darc
                 ?.OfType<XmlNode>()
                 .Select(n =>
                 {
-                    var r = new DarcCloneOverrideFindDependency();
+                    var r = new DarcCloneOverrideFindDependency
+                    {
+                        Name = n.Attributes[nameof(Name)].Value?.Trim(),
+                    };
 
                     if (n.Attributes[nameof(ProductCritical)] is XmlAttribute attr &&
                         bool.TryParse(attr.Value?.Trim(), out bool productCritical))
@@ -49,6 +52,8 @@ namespace Microsoft.DotNet.DarcLib.Models.Darc
                 })
                 ?? Enumerable.Empty<DarcCloneOverrideFindDependency>();
         }
+
+        public string Name { get; set; }
 
         public bool? ProductCritical { get; set; }
     }

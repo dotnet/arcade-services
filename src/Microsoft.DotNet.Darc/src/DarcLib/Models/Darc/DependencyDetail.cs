@@ -57,11 +57,10 @@ namespace Microsoft.DotNet.DarcLib
                                 Commit = dependency.SelectSingleNode(VersionFiles.ShaElementName)?.InnerText?.Trim(),
                                 Version = dependency.Attributes[VersionFiles.VersionAttributeName].Value?.Trim(),
                                 CoherentParentDependencyName = dependency.Attributes[VersionFiles.CoherentParentAttributeName]?.Value?.Trim(),
-                                CoherentProducts = dependency
-                                    .SelectNodes(VersionFiles.CoherentProductElementName)
-                                    .OfType<XmlNode>()
-                                    .Select(x => x.InnerText.Trim())
-                                    .ToArray(),
+                                ProductCritical = bool.TryParse(
+                                    dependency.SelectSingleNode(VersionFiles.ProductCriticalElementName)?.InnerText.Trim(),
+                                    out bool b)
+                                    && b,
                                 Pinned = isPinned,
                                 Type = type
                             };
@@ -83,7 +82,6 @@ namespace Microsoft.DotNet.DarcLib
 
         public DependencyDetail()
         {
-            CoherentProducts = new List<string>();
             Locations = new List<string>();
         }
 
@@ -96,7 +94,7 @@ namespace Microsoft.DotNet.DarcLib
             Pinned = other.Pinned;
             Type = other.Type;
             CoherentParentDependencyName = other.CoherentParentDependencyName;
-            CoherentProducts = other.CoherentProducts;
+            ProductCritical = other.ProductCritical;
             Locations = other.Locations;
         }
 
@@ -165,17 +163,16 @@ namespace Microsoft.DotNet.DarcLib
         public string CoherentParentDependencyName { get; set; }
 
         /// <summary>
-        /// The products that end up taking a dependency on the version of this dependency. As of
-        /// writing, the only product is "SDK". In a transitive source-build repository graph
-        /// building the SDK, there must be one DependencyDetail per target RepoUri that defines SDK
-        /// as a product. This allows "darc clone" to create a synthetically coherent graph by
-        /// choosing dependencies that declare SDK in Products, rather than other dependencies that
-        /// may be in the graph erroneously.
+        /// Indicates a product ends up taking a dependency on the version of this dependency. In a
+        /// transitive source-build repository graph building the SDK, there must be one
+        /// DependencyDetail per target RepoUri that is product critical. This allows "darc clone"
+        /// to create a synthetically coherent graph by choosing dependencies that declare being
+        /// critical.
         ///
-        /// The goal is similar to a coherent parent dependency, but the result is not stored in the
-        /// repo and artificial coherency does not apply to Microsoft builds.
+        /// The goal is similar to a coherent parent dependency, but the result is not persisted in
+        /// the repo, and artificial coherency does not apply to Microsoft builds.
         /// </summary>
-        public IEnumerable<string> CoherentProducts { get; set; }
+        public bool ProductCritical { get; set; }
 
         /// <summary>
         /// Asset locations for the dependency

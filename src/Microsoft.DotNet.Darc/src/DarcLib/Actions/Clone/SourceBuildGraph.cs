@@ -2,7 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Newtonsoft.Json.Linq;
+using Microsoft.DotNet.DarcLib.Helpers;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,40 +14,99 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
     public class SourceBuildGraph
     {
         public static SourceBuildGraph Create(
-            Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> upstreamMap)
+            IEnumerable<SourceBuildNode> nodes,
+            IEnumerable<DarcCloneOverrideDetail> globalOverrides)
         {
-            // Flip the upstream graph for ascending lookups.
-            var downstreamMap = upstreamMap
-                .SelectMany(entry => entry.Value.Select(dep => new
-                {
-                    Repo = entry.Key,
-                    Downstream = dep
-                }))
-                .GroupBy(v => v.Downstream, v => v.Repo, SourceBuildIdentity.CaseInsensitiveComparer)
-                .ToDictionary(v => v.Key, v => v.ToArray());
+            var graph = new SourceBuildGraph
+            {
+                GlobalOverrides = globalOverrides.NullAsEmpty().ToArray()
+            };
 
-            return new SourceBuildGraph(
-                downstreamMap.Keys
-                    .Union(upstreamMap.Keys, SourceBuildIdentity.CaseInsensitiveComparer)
-                    .OrderBy(n => n.RepoUri, StringComparer.Ordinal)
-                    .ToArray(),
-                upstreamMap,
-                downstreamMap);
+            graph.SetNodes(nodes.ToArray());
+
+            graph.UnexploredIdentities = graph.Nodes
+                .SelectMany(
+                    n => n.Upstreams
+                        .Where(u => !graph.IdentityNodes.ContainsKey(u))
+                        .Select(u => new SourceBuildNode { Identity = u }))
+                .Distinct(SourceBuildNode.CaseInsensitiveComparer)
+                .ToArray();
+
+            if (graph.UnexploredIdentities.Any())
+            {
+                // Generate nodes if any are missing to make graph operations simpler.
+                graph.SetNodes(graph.Nodes.Concat(graph.UnexploredIdentities).ToArray());
+            }
+
+            // Flip the upstream graph for ascending lookups.
+            graph.Downstreams = graph.Nodes
+                .SelectMany(
+                    node => node.Upstreams.NullAsEmpty()
+                        .Select(
+                            upstream => new
+                            {
+                                Node = graph.IdentityNodes[upstream],
+                                Downstream = node
+                            }))
+                .GroupBy(p => p.Node.Identity, SourceBuildIdentity.CaseInsensitiveComparer)
+                .ToDictionary(g => g.First().Node, g => g.Select(n => n.Downstream).ToArray());
+
+            return graph;
         }
 
-        public IReadOnlyList<SourceBuildIdentity> Nodes { get; }
+        public IReadOnlyList<SourceBuildNode> Nodes { get; set; }
 
-        public Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> Upstreams { get; }
-        public Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> Downstreams { get; }
+        public Dictionary<SourceBuildIdentity, SourceBuildNode> IdentityNodes { get; set; }
 
-        private SourceBuildGraph(
-            IReadOnlyList<SourceBuildIdentity> nodes,
-            Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> upstreams,
-            Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> downstreams)
+        public Dictionary<SourceBuildNode, SourceBuildNode[]> Downstreams { get; set; }
+
+        public IReadOnlyList<DarcCloneOverrideDetail> GlobalOverrides { get; set; }
+
+        /// <summary>
+        /// Some identities were intentionally unexplored. Keep track here, to display later if
+        /// necessary for diagnostics.
+        /// </summary>
+        public IReadOnlyList<SourceBuildNode> UnexploredIdentities { get; set; }
+
+        private void SetNodes(IReadOnlyList<SourceBuildNode> nodes)
         {
             Nodes = nodes;
-            Upstreams = upstreams;
-            Downstreams = downstreams;
+            IdentityNodes = Nodes.ToDictionary(
+                n => n.Identity,
+                n => n,
+                SourceBuildIdentity.CaseInsensitiveComparer);
+        }
+
+        /// <summary>
+        /// Returns all nodes where the node has a dependency detail with ProductCritical = true,
+        /// taking into account the global overrides. Overrides in each node are not considered:
+        /// there may be multiple paths to each node that conflict without a clear way to resolve
+        /// them. This means Core-SDK needs to store all overrides for the graph, which seems fine.
+        /// </summary>
+        public IEnumerable<SourceBuildNode> GetProductCriticalNodes()
+        {
+            var globalOverrideMap = GlobalOverrides
+                .ToDictionary(
+                    o => o.Repo,
+                    o => o.FindDependencies.ToDictionary(
+                        f => f.Name,
+                        f => f.ProductCritical,
+                        StringComparer.OrdinalIgnoreCase),
+                    StringComparer.OrdinalIgnoreCase);
+
+            return Nodes.Where(n => n.Identity.Sources.NullAsEmpty().Any(s =>
+            {
+                // If any dependency that led to this node is critical, node critical.
+                if (s.ProductCritical)
+                {
+                    return true;
+                }
+
+                // If the dependency is overridden to be critical, node critical.
+                return globalOverrideMap.TryGetValue(n.Identity.RepoUri, out var depMap) &&
+                    depMap.TryGetValue(s.Name, out bool? critical) &&
+                    critical == true;
+            }));
         }
 
         public string ToGraphVizString()
@@ -57,7 +117,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             foreach (var n in Nodes.Where(n => !GetDownstreams(n).Any()))
             {
                 sb.Append("\"");
-                sb.Append(n);
+                sb.Append(n.Identity);
                 sb.Append("\";");
             }
             sb.AppendLine("}");
@@ -65,17 +125,23 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             foreach (var n in Nodes)
             {
                 sb.Append("\"");
-                sb.Append(n);
+                sb.Append(n.Identity);
                 sb.Append("\"");
 
-                if (Upstreams.TryGetValue(n, out var upstreams))
+                SourceBuildNode[] upstreams = GetUpstreams(n).ToArray();
+                if (upstreams.Any())
                 {
                     sb.Append(" -> {");
                     foreach (var u in upstreams)
                     {
                         sb.Append("\"");
-                        sb.Append(u);
-                        sb.Append("\";");
+                        sb.Append(u.Identity);
+                        sb.Append("\"");
+                        if (UnexploredIdentities.Contains(u))
+                        {
+                            sb.Append("[color=red]");
+                        }
+                        sb.Append(";");
                     }
                     sb.Append("}");
                 }
@@ -88,40 +154,43 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             return sb.ToString();
         }
 
-        public IEnumerable<SourceBuildIdentity> GetDownstreams(SourceBuildIdentity node) =>
-            Downstreams.TryGetValue(node, out var values)
-                ? values
-                : Enumerable.Empty<SourceBuildIdentity>();
+        public IEnumerable<SourceBuildNode> GetDownstreams(SourceBuildNode node) =>
+            Downstreams.GetOrDefault(node).NullAsEmpty();
 
-        public IEnumerable<SourceBuildIdentity> GetUpstreams(SourceBuildIdentity node) =>
-            Upstreams.TryGetValue(node, out var values)
-                ? values
-                : Enumerable.Empty<SourceBuildIdentity>();
+        public IEnumerable<SourceBuildNode> GetDownstreams(SourceBuildIdentity node) =>
+            GetDownstreams(IdentityNodes[node]);
 
-        public IEnumerable<SourceBuildIdentity> GetAllDownstreams(SourceBuildIdentity node) =>
-            GetTraverseListCore(node, Downstreams);
+        public IEnumerable<SourceBuildNode> GetUpstreams(SourceBuildNode node) =>
+            node.Upstreams.NullAsEmpty().Select(u => IdentityNodes[u]);
 
-        public IEnumerable<SourceBuildIdentity> GetAllUpstreams(SourceBuildIdentity node) =>
-            GetTraverseListCore(node, Upstreams);
+        public IEnumerable<SourceBuildNode> GetUpstreams(SourceBuildIdentity node) =>
+            GetUpstreams(IdentityNodes[node]);
 
-        private IEnumerable<SourceBuildIdentity> GetTraverseListCore(
-            SourceBuildIdentity start,
-            Dictionary<SourceBuildIdentity, SourceBuildIdentity[]> links)
+        public IEnumerable<SourceBuildNode> GetAllDownstreams(SourceBuildNode node) =>
+            GetTraverseListCore(node, GetDownstreams);
+
+        public IEnumerable<SourceBuildNode> GetAllDownstreams(SourceBuildIdentity node) =>
+            GetAllDownstreams(IdentityNodes[node]);
+
+        public IEnumerable<SourceBuildNode> GetAllUpstreams(SourceBuildNode node) =>
+            GetTraverseListCore(node, GetUpstreams);
+
+        public IEnumerable<SourceBuildNode> GetAllUpstreams(SourceBuildIdentity node) =>
+            GetAllUpstreams(IdentityNodes[node]);
+
+        private IEnumerable<SourceBuildNode> GetTraverseListCore(
+            SourceBuildNode start,
+            Func<SourceBuildNode, IEnumerable<SourceBuildNode>> links)
         {
-            var visited = new HashSet<SourceBuildIdentity>(SourceBuildIdentity.CaseInsensitiveComparer);
-            var next = new Queue<SourceBuildIdentity>();
+            var visited = new HashSet<SourceBuildNode>();
+            var next = new Queue<SourceBuildNode>();
             next.Enqueue(start);
 
             while (next.Any())
             {
-                SourceBuildIdentity node = next.Dequeue();
+                SourceBuildNode node = next.Dequeue();
 
-                if (!links.TryGetValue(node, out var linkedNodes))
-                {
-                    continue;
-                }
-
-                foreach (var linkedNode in linkedNodes)
+                foreach (var linkedNode in links(node))
                 {
                     if (!visited.Add(linkedNode))
                     {
@@ -132,39 +201,6 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     next.Enqueue(linkedNode);
                 }
             }
-        }
-
-        public static SourceBuildGraph Create(JObject obj)
-        {
-            var nodes = obj[nameof(Nodes)].Values<JObject>().Select(SourceBuildIdentity.Create).ToArray();
-            var upstreams = obj["Upstreams"].Values<JObject>()
-                .Select(o => new
-                {
-                    Key = o.Value<int>("Key"),
-                    Values = o["Values"].ToObject<int[]>()
-                })
-                .ToDictionary(
-                    p => nodes[p.Key],
-                    p => p.Values.Select(i => nodes[i]).ToArray());
-
-            return Create(upstreams);
-        }
-
-        public JObject ToJObject()
-        {
-            int GetIndex(SourceBuildIdentity node) => Nodes.TakeWhile(n => n != node).Count();
-
-            return JObject.FromObject(new
-            {
-                Nodes = Nodes.Select(n => n.ToJObject()).ToArray(),
-                Upstreams = Upstreams
-                    .Select(pair => new
-                    {
-                        Key = GetIndex(pair.Key),
-                        Values = pair.Value.Select(GetIndex).ToArray()
-                    })
-                    .ToArray()
-            });
         }
     }
 }

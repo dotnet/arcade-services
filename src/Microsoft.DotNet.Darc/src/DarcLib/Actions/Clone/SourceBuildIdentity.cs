@@ -2,12 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
+    /// <summary>
+    /// The identity of a repo that must be evaluated to form a darc clone graph. This comes from a
+    /// dependency, so there is limited information.
+    /// </summary>
     public class SourceBuildIdentity
     {
         public static IEqualityComparer<SourceBuildIdentity> CaseInsensitiveComparer { get; } =
@@ -16,27 +19,19 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         public static IEqualityComparer<SourceBuildIdentity> RepoNameOnlyComparer { get; } =
             new RepoNameOnlyComparerImplementation();
 
-        public string RepoUri { get; }
-        public string Commit { get; }
+        public string RepoUri { get; set; }
+        public string Commit { get; set; }
 
         /// <summary>
-        /// The source of this identity, or null if this didn't come from a DarcLib dependency.
+        /// The sources of this identity, or null if this didn't come from a DarcLib dependency.
         /// </summary>
-        public DependencyDetail Source { get; }
-
-        public SourceBuildIdentity(
-            string repoUri,
-            string commit,
-            DependencyDetail source)
-        {
-            RepoUri = repoUri;
-            Commit = commit;
-            Source = source;
-        }
+        public IEnumerable<DependencyDetail> Sources { get; set; }
 
         public override string ToString() => $"{RepoUri}@{ShortCommit}";
 
-        public string ShortCommit => string.IsNullOrEmpty(Commit) ? "" : Commit.Substring(0, 8);
+        public string ShortCommit => string.IsNullOrEmpty(Commit)
+            ? ""
+            : Commit.Substring(0, Math.Min(Commit.Length, 8));
 
         private class CaseInsensitiveComparerImplementation : IEqualityComparer<SourceBuildIdentity>
         {
@@ -78,24 +73,6 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             }
 
             public int GetHashCode(SourceBuildIdentity obj) => obj.RepoUri.GetHashCode();
-        }
-
-        public static SourceBuildIdentity Create(JObject obj)
-        {
-            return new SourceBuildIdentity(
-                obj.Value<string>(nameof(RepoUri)),
-                obj.Value<string>(nameof(Commit)),
-                obj[nameof(Source)].ToObject<DependencyDetail>());
-        }
-
-        public JObject ToJObject()
-        {
-            return JObject.FromObject(new
-            {
-                RepoUri,
-                Commit,
-                Source
-            });
         }
     }
 }

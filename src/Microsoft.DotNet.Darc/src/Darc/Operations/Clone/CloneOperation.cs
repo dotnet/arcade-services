@@ -103,7 +103,12 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                         DependencyDetail.ParseAll(rootDependencyXml);
 
                     IEnumerable<SourceBuildIdentity> stripped = rootDependencies
-                        .Select(d => new SourceBuildIdentity(d.RepoUri, d.Commit, d));
+                        .Select(d => new SourceBuildIdentity
+                        {
+                            RepoUri = d.RepoUri,
+                            Commit = d.Commit,
+                            Sources = new[] { d }
+                        });
 
                     foreach (SourceBuildIdentity d in stripped)
                     {
@@ -121,7 +126,11 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                 else
                 {
                     // Start with the root repo we were asked to clone
-                    var rootDep = new SourceBuildIdentity(_options.RepoUri, _options.Version, null);
+                    var rootDep = new SourceBuildIdentity
+                    {
+                        RepoUri = _options.RepoUri,
+                        Commit = _options.Version
+                    };
 
                     accumulatedDependencies.Add(rootDep);
                     Logger.LogInformation($"Starting deep clone of {rootDep}");
@@ -181,10 +190,6 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
         private static void WriteGraphDebugInfoToFiles(string path, SourceBuildGraph graph)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-
-            File.WriteAllText(
-                $"{path}.json",
-                graph.ToJObject().ToString(Formatting.Indented));
 
             File.WriteAllText(
                 $"{path}.dot",

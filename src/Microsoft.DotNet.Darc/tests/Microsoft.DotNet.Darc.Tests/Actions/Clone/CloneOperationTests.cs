@@ -16,27 +16,29 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
         [Fact]
         public void IncoherentSiblingsMerge()
         {
-            var root = new SourceBuildIdentity("root", "0", null);
+            var root = CreateIdentity("root", "0", null);
             // The siblings should merge into the higher-versioned one.
-            var a = new SourceBuildIdentity("sibling", "0", new DependencyDetail { Version = "1.0.0" });
-            var b = new SourceBuildIdentity("sibling", "1", new DependencyDetail { Version = "1.0.1" });
+            var a = CreateIdentity("sibling", "0", new DependencyDetail { Version = "1.0.0" });
+            var b = CreateIdentity("sibling", "1", new DependencyDetail { Version = "1.0.1" });
 
-            var incoherent = SourceBuildGraph.Create(new Dictionary<SourceBuildIdentity, SourceBuildIdentity[]>
+            var incoherent = SourceBuildGraph.Create(new[]
             {
-                [root] = new[] { a, b }
-            });
+                new SourceBuildNode{Identity = root, Upstreams = new [] {a, b}},
+                new SourceBuildNode{Identity = a},
+                new SourceBuildNode{Identity = b}
+            }, null);
 
             var coherent = MakeCoherent(incoherent);
 
             AssertEquivalentSet(
                 new[] { root, b },
-                coherent.Nodes);
+                coherent.Nodes.Select(n => n.Identity));
 
-            Assert.Equal(b, coherent.GetUpstreams(root).Single());
+            Assert.Equal(b, coherent.GetUpstreams(root).Single().Identity);
             Assert.Empty(coherent.GetDownstreams(root));
 
             Assert.Empty(coherent.GetUpstreams(b));
-            Assert.Equal(root, coherent.GetDownstreams(b).Single());
+            Assert.Equal(root, coherent.GetDownstreams(b).Single().Identity);
         }
 
         [Fact]
@@ -49,44 +51,51 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
             // to
             //   root => a => cousinB
             //       \=> b ===^
-            var root = new SourceBuildIdentity("root", "0", null);
-            var a = new SourceBuildIdentity("a", "0", null);
-            var b = new SourceBuildIdentity("b", "0", null);
-            var cousinA = new SourceBuildIdentity("cousin", "0", new DependencyDetail { Version = "5.0.0-beta.0" });
-            var cousinB = new SourceBuildIdentity("cousin", "1", new DependencyDetail { Version = "5.0.0-beta.1" });
+            var root = CreateIdentity("root", "0", null);
+            var a = CreateIdentity("a", "0", null);
+            var b = CreateIdentity("b", "0", null);
+            var cousinA = CreateIdentity("cousin", "0", new DependencyDetail { Version = "5.0.0-beta.0" });
+            var cousinB = CreateIdentity("cousin", "1", new DependencyDetail { Version = "5.0.0-beta.1" });
 
-            var incoherent = SourceBuildGraph.Create(new Dictionary<SourceBuildIdentity, SourceBuildIdentity[]>
+            var incoherent = SourceBuildGraph.Create(new[]
             {
-                [root] = new[] { a, b },
-                [a] = new[] { cousinA },
-                [b] = new[] { cousinB }
-            });
+                new SourceBuildNode{Identity = root, Upstreams = new [] {a, b}},
+                new SourceBuildNode{Identity = a, Upstreams = new [] {cousinA}},
+                new SourceBuildNode{Identity = b, Upstreams = new [] {cousinB}},
+                new SourceBuildNode{Identity = cousinA},
+                new SourceBuildNode{Identity = cousinB}
+            }, null);
 
             var coherent = MakeCoherent(incoherent);
 
-            AssertEquivalentSet(new[] { a, b }, coherent.GetDownstreams(cousinB));
+            AssertEquivalentSet(
+                new[] { a, b },
+                coherent.GetDownstreams(cousinB).Select(n => n.Identity));
 
-            Assert.Equal(cousinB, coherent.GetUpstreams(a).Single());
-            Assert.Equal(cousinB, coherent.GetUpstreams(b).Single());
+            Assert.Equal(cousinB, coherent.GetUpstreams(a).Single().Identity);
+            Assert.Equal(cousinB, coherent.GetUpstreams(b).Single().Identity);
 
-            Assert.DoesNotContain(cousinA, coherent.Nodes);
+            Assert.DoesNotContain(cousinA, coherent.Nodes.Select(n => n.Identity));
         }
 
         [Fact]
         public void CommitDateBreaksVersionTies()
         {
-            var root = new SourceBuildIdentity("root", "0", null);
+            var root = CreateIdentity("root", "0", null);
             // When building stable, we may build the same version multiple times. This results in
             // only the commit hash changing. Commit hashes don't sort, so we need to break the tie
             // somehow. The current algorithm uses commit date as a reasonable-seeming heuristic.
-            var a = new SourceBuildIdentity("sibling", "0", new DependencyDetail { Version = "1.0.0" });
-            var b = new SourceBuildIdentity("sibling", "1", new DependencyDetail { Version = "1.0.0" });
-            var c = new SourceBuildIdentity("sibling", "2", new DependencyDetail { Version = "1.0.0" });
+            var a = CreateIdentity("sibling", "0", new DependencyDetail { Version = "1.0.0" });
+            var b = CreateIdentity("sibling", "1", new DependencyDetail { Version = "1.0.0" });
+            var c = CreateIdentity("sibling", "2", new DependencyDetail { Version = "1.0.0" });
 
-            var incoherent = SourceBuildGraph.Create(new Dictionary<SourceBuildIdentity, SourceBuildIdentity[]>
+            var incoherent = SourceBuildGraph.Create(new[]
             {
-                [root] = new[] { a, b, c }
-            });
+                new SourceBuildNode{Identity = root, Upstreams = new [] {a, b, c}},
+                new SourceBuildNode{Identity = a},
+                new SourceBuildNode{Identity = b},
+                new SourceBuildNode{Identity = c}
+            }, null);
 
             var coherent = MakeCoherent(incoherent, new Dictionary<SourceBuildIdentity, DateTimeOffset>
             {
@@ -95,16 +104,32 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
                 [c] = DateTimeOffset.FromUnixTimeSeconds(3000)
             });
 
-            AssertEquivalentSet(new[] { root, b }, coherent.Nodes);
+            AssertEquivalentSet(new[] { root, b }, coherent.Nodes.Select(n => n.Identity));
+        }
+
+        private SourceBuildIdentity CreateIdentity(
+            string repoUri,
+            string commit,
+            DependencyDetail detail)
+        {
+            return new SourceBuildIdentity
+            {
+                RepoUri = repoUri,
+                Commit = commit,
+                Sources = detail == null ? null : new[] { detail }
+            };
         }
 
         private SourceBuildGraph MakeCoherent(
             SourceBuildGraph graph,
             Dictionary<SourceBuildIdentity, DateTimeOffset> commitDateMap = null)
         {
-            return new GraphCloneClient().CreateArtificiallyCoherentGraph(
-                graph,
-                node => commitDateMap?[node] ?? DateTimeOffset.MinValue);
+            var client = new GraphCloneClient
+            {
+                GetCommitDate = node => commitDateMap?[node] ?? DateTimeOffset.MinValue
+            };
+
+            return client.CreateArtificiallyCoherentGraph(graph);
         }
 
         private static void AssertEquivalentSet<T>(
