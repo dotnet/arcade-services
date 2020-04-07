@@ -1,7 +1,7 @@
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Xunit;
 
-namespace DependencyUpdater.Tests
+namespace FeedCleanerService.Tests
 {
     public class DependencyRegistrationTests
     {

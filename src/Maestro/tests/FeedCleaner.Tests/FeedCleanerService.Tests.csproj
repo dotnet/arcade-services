@@ -18,6 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Shared\Microsoft.DotNet.Internal.DependencyInjection.Testing\Microsoft.DotNet.Internal.DependencyInjection.Testing.csproj" />
     <ProjectReference Include="..\..\FeedCleanerService\FeedCleanerService.csproj" />
     <ProjectReference Include="..\..\ServiceFabricMocks\ServiceFabricMocks.csproj" />
   </ItemGroup>

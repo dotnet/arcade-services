@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using Autofac;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -18,21 +19,26 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
             // IConfigure options is a strange type, and built into the options framework, no need to validation
             typeof(IConfigureOptions<>),
             // ILifetimeScope comes from Autofac, and we are only checking the ASP.NET half of this
-            typeof(ILifetimeScope)
+            typeof(ILifetimeScope),
+            typeof(MemoryCacheOptions)
         );
 
         private static readonly ImmutableList<string> s_exemptNamespaces = ImmutableList.Create(
             "Microsoft.ApplicationInsights.AspNetCore"
         );
 
-        public static bool IsDependencyResolutionCoherent(Action<ServiceCollection> register, out string errorMessage)
+        public static bool IsDependencyResolutionCoherent(Action<ServiceCollection> register, bool includeServiceHost, out string errorMessage)
         {
             errorMessage = null;
 
-            Environment.SetEnvironmentVariable("ENVIRONMENT", "XUNIT");
 
             var services = new ServiceCollection();
-            ServiceHost.ConfigureDefaultServices(services);
+            if (includeServiceHost)
+            {
+                Environment.SetEnvironmentVariable("ENVIRONMENT", "XUNIT");
+                ServiceHost.ConfigureDefaultServices(services);
+            }
+
             register(services);
 
             foreach (ServiceDescriptor service in services)
@@ -110,6 +116,10 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
                     if (!serviceType.IsConstructedGenericType) return false;
 
                     Type optionType = parameterType.GenericTypeArguments[0];
+
+                    if (IsExemptType(optionType))
+                        return true;
+
                     Type serviceRoot = serviceType.GetGenericTypeDefinition();
                     return serviceRoot == typeof(IConfigureOptions<>) &&
                         serviceType.GenericTypeArguments[0] == optionType;

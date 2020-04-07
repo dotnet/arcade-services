@@ -1,7 +1,7 @@
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Xunit;
 
-namespace DependencyUpdater.Tests
+namespace SubscriptionActorService.Tests
 {
     public class DependencyRegistrationTests
     {
