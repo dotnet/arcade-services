@@ -32,6 +32,8 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
         {
             errorMessage = null;
 
+            StringBuilder allErrors = new StringBuilder();
+            allErrors.Append("The following types are not resolvable:");
 
             var services = new ServiceCollection();
             if (includeServiceHost)
@@ -41,6 +43,8 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
             }
 
             register(services);
+
+            bool allResolved = true;
 
             foreach (ServiceDescriptor service in services)
             {
@@ -54,63 +58,105 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
                     continue;
                 }
 
-                ConstructorInfo[] constructors = service.ImplementationType
-                    .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
-                    .OrderBy(c => c.GetParameters().Length)
-                    .ToArray();
-
-                if (constructors.Length == 0)
+                if (!IsTypeResolvable(service.ImplementationType, services, allErrors))
                 {
-                    // zero constructor things are implicitly constructable
-                    continue;
-                }
-
-                foreach (ConstructorInfo ctor in constructors)
-                {
-                    bool resolvedAllParameters = true;
-                    StringBuilder msgBuilder = null;
-                    if (errorMessage == null)
-                    {
-                        msgBuilder = new StringBuilder();
-                        msgBuilder.Append("Type ");
-                        msgBuilder.Append(service.ImplementationType.FullName);
-                        msgBuilder.Append(" could not find registered definition for parameter(s): ");
-                    }
-
-                    foreach (ParameterInfo p in ctor.GetParameters())
-                    {
-                        ServiceDescriptor parameterService = services.FirstOrDefault(s => IsMatchingServiceRegistration(s.ServiceType, p.ParameterType));
-                        if (parameterService != null)
-                        {
-                            continue;
-                        }
-
-                        // Save the first error message, since it's likely to be the most useful
-                        if (errorMessage == null)
-                        {
-                            if (msgBuilder != null)
-                            {
-                                if (!resolvedAllParameters)
-                                {
-                                    msgBuilder.Append(", ");
-                                }
-                                msgBuilder.Append(p.Name);
-                                msgBuilder.Append(" of type ");
-                                msgBuilder.Append(p.ParameterType.Name);
-                            }
-                        }
-
-                        resolvedAllParameters = false;
-                    }
-
-                    if (resolvedAllParameters)
-                    {
-                        return true;
-                    }
+                    allResolved = false;
                 }
             }
 
-            return true;
+            if (!allResolved)
+                errorMessage = allErrors.ToString();
+
+            return allResolved;
+        }
+
+        private static bool IsTypeResolvable(Type type, ServiceCollection services, StringBuilder msgBuilder)
+        {
+            ConstructorInfo[] constructors = type
+                .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+                .OrderBy(c => c.GetParameters().Length)
+                .ToArray();
+
+            if (constructors.Length == 0)
+            {
+                // zero constructor things are implicitly constructable
+                return true;
+            }
+
+            string errorMessage = null;
+            foreach (ConstructorInfo ctor in constructors)
+            {
+                if (IsConstructorResolvable(ctor, services, errorMessage == null, out string ctorMsg))
+                {
+                    return true;
+                }
+
+                errorMessage = ctorMsg;
+            }
+            
+            msgBuilder.AppendLine();
+            msgBuilder.AppendLine();
+            msgBuilder.AppendLine(errorMessage);
+
+            return false;
+        }
+
+        private static bool IsConstructorResolvable(ConstructorInfo ctor, ServiceCollection services, bool recordErrors, out string errorMessage)
+        {
+            errorMessage = null;
+            bool resolvedAllParameters = true;
+            StringBuilder msgBuilder = null;
+            if (recordErrors)
+            {
+                msgBuilder = new StringBuilder();
+                msgBuilder.Append("Type ");
+                msgBuilder.Append(ctor.DeclaringType.FullName);
+                msgBuilder.Append(" could not find registered definition for parameter(s): ");
+            }
+
+            foreach (ParameterInfo p in ctor.GetParameters())
+            {
+                ServiceDescriptor parameterService = services.FirstOrDefault(s => IsMatchingServiceRegistration(s.ServiceType, p.ParameterType));
+                if (parameterService != null)
+                {
+                    continue;
+                }
+
+                // Save the first error message, since it's likely to be the most useful
+                if (recordErrors)
+                {
+                    if (!resolvedAllParameters)
+                    {
+                        msgBuilder.Append(", ");
+                    }
+
+                    msgBuilder.Append(p.Name);
+                    msgBuilder.Append(" of type ");
+                    msgBuilder.Append(GetDisplayName(p.ParameterType));
+                }
+
+                resolvedAllParameters = false;
+            }
+
+            if (recordErrors && !resolvedAllParameters)
+            {
+                errorMessage = msgBuilder.ToString();
+            }
+
+            return resolvedAllParameters;
+        }
+
+        private static string GetDisplayName(Type type)
+        {
+            if (type.IsConstructedGenericType)
+            {
+                // The name of IOptions<Pizza> is "IOptions`1"
+                // The full name has the other types, but they are all fully qualified (and also still have the `1 on them)
+                string baseName = type.Name.Split('`')[0];
+                return $"{baseName}<{string.Join(",", type.GetGenericArguments().Select(GetDisplayName))}>";
+            }
+
+            return type.Name;
         }
 
         private static bool IsMatchingServiceRegistration(Type serviceType, Type parameterType)
