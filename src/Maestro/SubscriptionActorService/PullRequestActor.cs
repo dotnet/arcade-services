@@ -813,7 +813,9 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     dependenciesToCommit.AddRange(coherencyUpdate.deps);
                 }
 
-                await darc.CommitUpdatesAsync(targetRepository, newBranchName, dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
+                List<GitFile> commitedFiles = await darc.CommitUpdatesAsync(targetRepository, newBranchName, dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
+
+                UpdatePRDescriptionDueConfigFiles(commitedFiles, description);
             }
 
             // If the coherency update wasn't combined, then
@@ -823,7 +825,48 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 var message = new StringBuilder();
                 await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
                 await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, description);
-                await darc.CommitUpdatesAsync(targetRepository, newBranchName, coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
+
+                List<GitFile> commitedFiles = await darc.CommitUpdatesAsync(targetRepository, newBranchName, coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
+
+                UpdatePRDescriptionDueConfigFiles(commitedFiles, description);
+            }
+        }
+
+        private void UpdatePRDescriptionDueConfigFiles(List<GitFile> commitedFiles, StringBuilder description)
+        {
+            GitFile globalJsonFile = commitedFiles.
+                Where(gf => gf.FilePath.Equals("global.json", StringComparison.OrdinalIgnoreCase)).
+                FirstOrDefault();
+
+            if (globalJsonFile != null)
+            {
+                bool hasSdkVersionUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.SdkVersionUpdate);
+                bool hasToolsDotnetUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.ToolsDotNetUpdate);
+
+                string globalJsonSectionStartMarker = $"[marker]: <> (Begin:GlobalJson Updates)";
+                string globalJsonSectionEndMarker = $"[marker]: <> (End:GlobalJson Updates)";
+                int sectionStartIndex = RemovePRDescriptionSection(globalJsonSectionStartMarker, globalJsonSectionEndMarker, ref description);
+                StringBuilder globalJsonSection = new StringBuilder();
+
+                globalJsonSection.AppendLine(globalJsonSectionStartMarker);
+                globalJsonSection.AppendLine("- **Updates to global.json:**");
+                globalJsonSection.AppendLine();
+
+                if (hasSdkVersionUpdate)
+                {
+                    globalJsonSection.AppendLine($"  - Updates the version of .NET SDK used to " +
+                        $"{globalJsonFile.Metadata[GitFileMetadataName.SdkVersionUpdate]}");
+                }
+
+                if (hasToolsDotnetUpdate)
+                {
+                    globalJsonSection.AppendLine($"  - Updates the version of .NET Runtime used to " +
+                        $"{globalJsonFile.Metadata[GitFileMetadataName.ToolsDotNetUpdate]}");
+                }
+
+                globalJsonSection.AppendLine();
+                globalJsonSection.AppendLine(globalJsonSectionEndMarker);
+                description.Insert(sectionStartIndex, globalJsonSection.ToString());
             }
         }
 
@@ -868,7 +911,6 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         /// </remarks>
         private async Task CalculatePRDescription(UpdateAssetsParameters update, List<DependencyUpdate> deps, StringBuilder description)
         {
-
             //Find the Coherency section of the PR description
             if (update.IsCoherencyUpdate)
             {
