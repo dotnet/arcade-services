@@ -150,25 +150,28 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     allNodes.Concat(discoveredUpstreams),
                     rootOverrides);
 
-                bool ShouldSearchRepo(SourceBuildIdentity upstream, SourceBuildIdentity source)
+                SkipDependencyExplorationExplanation ReasonToSkipDependency(
+                    SourceBuildIdentity upstream,
+                    SourceBuildIdentity source)
                 {
                     if (graph.Nodes.Any(n =>
                         SourceBuildIdentity.CaseInsensitiveComparer.Equals(n.Identity, upstream)))
                     {
-                        return false;
+                        return new SkipDependencyExplorationExplanation
+                        {
+                            Reason = SkipDependencyExplorationReason.AlreadyVisited
+                        };
                     }
-                    // Scan this upstream in the next pass.
-                    return true;
-                }
 
-                bool ShouldIncludeDependency(SourceBuildIdentity upstream, SourceBuildIdentity source)
-                {
                     // Remove self-dependency. E.g. arcade depends on previous versions of itself to
                     // build, so this tends to go on essentially forever.
                     if (string.Equals(upstream.RepoUri, source.RepoUri, StringComparison.OrdinalIgnoreCase))
                     {
                         Logger.LogDebug($"Skipping self-dependency in {source.RepoUri} ({source.Commit} => {upstream.Commit})");
-                        return false;
+                        return new SkipDependencyExplorationExplanation
+                        {
+                            Reason = SkipDependencyExplorationReason.SelfDependency
+                        };
                     }
                     // Remove circular dependencies that have different hashes. That is, detect
                     // circular-by-name-only dependencies.
@@ -185,41 +188,64 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                             $"Skipping already-seen circular dependency from {source} to {upstream}\n" +
                             string.Join(" -> ", allDownstreams.Select(d => d.ToString()))
                             );
-                        return false;
+                        return new SkipDependencyExplorationExplanation
+                        {
+                            Reason = SkipDependencyExplorationReason.CircularWhenOnlyConsideringName
+                        };
                     }
                     // Remove repos specifically ignored by the caller.
                     if (ignoredRepos.Any(r => r.Equals(upstream.RepoUri, StringComparison.OrdinalIgnoreCase)))
                     {
                         Logger.LogDebug($"Skipping ignored repo {upstream}");
-                        return false;
+                        return new SkipDependencyExplorationExplanation
+                        {
+                            Reason = SkipDependencyExplorationReason.Ignored
+                        };
                     }
                     // Remove repos with invalid dependency info: missing commit.
                     if (string.IsNullOrWhiteSpace(upstream.Commit))
                     {
                         Logger.LogWarning($"Skipping dependency from {source} to {upstream.RepoUri}: Missing commit.");
-                        return false;
+                        return new SkipDependencyExplorationExplanation
+                        {
+                            Reason = SkipDependencyExplorationReason.DependencyDetailMissingCommit
+                        };
                     }
 
-                    return true;
+                    return null;
                 }
 
-                var upstreamAssocToConsider = discoveredUpstreams
+                var upstreamIdentityToConsider = discoveredUpstreams
                     .SelectMany(
-                        repoToUpstream => repoToUpstream.Upstreams
+                        source => source.Upstreams
                             .NullAsEmpty()
-                            .Where(upstream => ShouldIncludeDependency(upstream, repoToUpstream.Identity))
-                            .Select(upstream => new { sourceRepo = repoToUpstream, upstream }))
+                            .Select(upstream =>
+                            {
+                                var skipReason = ReasonToSkipDependency(upstream, source.Identity);
+
+                                if (skipReason != null)
+                                {
+                                    source.UpstreamSkipReasons[upstream] = skipReason;
+                                }
+
+                                return new
+                                {
+                                    SkipReason = skipReason,
+                                    Source = source,
+                                    Upstream = upstream
+                                };
+                            }))
                     .ToArray();
 
                 allNodes.AddRange(
-                    upstreamAssocToConsider
-                        .Select(c => c.sourceRepo)
+                    upstreamIdentityToConsider
+                        .Select(c => c.Source)
                         .Except(allNodes, SourceBuildNode.CaseInsensitiveComparer)
                         .ToArray());
 
-                nextLevelDependencies = upstreamAssocToConsider
-                    .Where(mapping => ShouldSearchRepo(mapping.upstream, mapping.sourceRepo.Identity))
-                    .Select(mapping => mapping.upstream)
+                nextLevelDependencies = upstreamIdentityToConsider
+                    .Where(u => u.SkipReason == null)
+                    .Select(u => u.Upstream)
                     .Distinct(SourceBuildIdentity.CaseInsensitiveComparer)
                     .ToArray();
 

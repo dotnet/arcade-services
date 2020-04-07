@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using System.Collections.Generic;
 
@@ -21,6 +20,11 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         public IEnumerable<DarcCloneOverrideDetail> Overrides { get; set; }
 
         public IEnumerable<SourceBuildIdentity> Upstreams { get; set; }
+
+        public SkipDependencyExplorationExplanation SkippedReason { get; set; }
+
+        public Dictionary<SourceBuildIdentity, SkipDependencyExplorationExplanation> UpstreamSkipReasons { get; } =
+            new Dictionary<SourceBuildIdentity, SkipDependencyExplorationExplanation>();
 
         public override string ToString() => $"Node {Identity}";
 

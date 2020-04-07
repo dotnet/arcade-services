@@ -6,6 +6,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -24,11 +25,18 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
             graph.SetNodes(nodes.ToArray());
 
+            // Some nodes have upstreams that we can't find nodes for.
             graph.UnexploredIdentities = graph.Nodes
                 .SelectMany(
                     n => n.Upstreams
                         .Where(u => !graph.IdentityNodes.ContainsKey(u))
-                        .Select(u => new SourceBuildNode { Identity = u }))
+                        .Select(u => new SourceBuildNode
+                        {
+                            Identity = u,
+                            SkippedReason = n.UpstreamSkipReasons.TryGetValue(u, out var reason)
+                                ? reason
+                                : null
+                        }))
                 .Distinct(SourceBuildNode.CaseInsensitiveComparer)
                 .ToArray();
 
@@ -111,39 +119,77 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public string ToGraphVizString()
         {
-            var sb = new StringBuilder("digraph G { rankdir=LR;\n");
+            var sb = new StringBuilder("digraph G {\n");
+
+            sb.AppendLine("rankdir=LR");
+            sb.AppendLine("node [shape=box color=\"lightsteelblue1\" style=filled]");
+
+            IEnumerable<string> GetNodeAttributes(SourceBuildNode node)
+            {
+                if (node.SkippedReason?.ToGraphVizColor() is string color)
+                {
+                    yield return $"color=\"{color}\"";
+                    yield return $"fillcolor=\"{color}\"";
+                }
+            }
+
+            IEnumerable<string> GetEdgeAttributes(SourceBuildNode node)
+            {
+                if (node.SkippedReason != null)
+                {
+                    yield return "style=dotted";
+                }
+                if (node.SkippedReason?.ToGraphVizColor() is string color)
+                {
+                    yield return $"color=\"{color}\"";
+                }
+            }
+
+            void AppendAttributes(IEnumerable<string> attrs)
+            {
+                var attrsArray = attrs.ToArray();
+                if (attrsArray.Any())
+                {
+                    sb.Append("[");
+                    sb.Append(string.Join(",", attrsArray));
+                    sb.Append("]");
+                }
+            }
+
+            void AppendNode(SourceBuildNode n)
+            {
+                sb.Append("\"");
+                sb.Append(n.Identity);
+                sb.Append("\"");
+            }
 
             sb.Append("root -> {");
             foreach (var n in Nodes.Where(n => !GetDownstreams(n).Any()))
             {
-                sb.Append("\"");
-                sb.Append(n.Identity);
-                sb.Append("\";");
+                AppendNode(n);
+                sb.Append(";");
             }
             sb.AppendLine("}");
 
             foreach (var n in Nodes)
             {
-                sb.Append("\"");
-                sb.Append(n.Identity);
-                sb.Append("\"");
+                AppendNode(n);
+                AppendAttributes(GetNodeAttributes(n));
 
                 SourceBuildNode[] upstreams = GetUpstreams(n).ToArray();
                 if (upstreams.Any())
                 {
-                    sb.Append(" -> {");
                     foreach (var u in upstreams)
                     {
+                        // Don't use grouping (A -> { B C }) so that we can apply attributes to each
+                        // individual link.
+                        sb.AppendLine();
                         sb.Append("\"");
-                        sb.Append(u.Identity);
-                        sb.Append("\"");
-                        if (UnexploredIdentities.Contains(u))
-                        {
-                            sb.Append("[color=red]");
-                        }
-                        sb.Append(";");
+                        sb.Append(n.Identity);
+                        sb.Append("\" -> ");
+                        AppendNode(u);
+                        AppendAttributes(GetEdgeAttributes(u));
                     }
-                    sb.Append("}");
                 }
 
                 sb.AppendLine();
