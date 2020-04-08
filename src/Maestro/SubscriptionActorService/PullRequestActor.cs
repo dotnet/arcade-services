@@ -804,18 +804,16 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 var message = new StringBuilder();
                 List<DependencyUpdate> dependenciesToCommit = deps;
                 await CalculateCommitMessage(update, deps, message);
-                await CalculatePRDescription(update, deps, description);
 
                 if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
                 {
                     await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                    await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, description);
+                    await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description);
                     dependenciesToCommit.AddRange(coherencyUpdate.deps);
                 }
 
-                List<GitFile> commitedFiles = await darc.CommitUpdatesAsync(targetRepository, newBranchName, dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
-
-                UpdatePRDescriptionDueConfigFiles(commitedFiles, description);
+                List<GitFile> committedFiles = await darc.CommitUpdatesAsync(targetRepository, newBranchName, dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
+                await CalculatePRDescription(update, deps, committedFiles, description);
             }
 
             // If the coherency update wasn't combined, then
@@ -824,17 +822,15 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             {
                 var message = new StringBuilder();
                 await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, description);
+                await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description);
 
-                List<GitFile> commitedFiles = await darc.CommitUpdatesAsync(targetRepository, newBranchName, coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
-
-                UpdatePRDescriptionDueConfigFiles(commitedFiles, description);
+                await darc.CommitUpdatesAsync(targetRepository, newBranchName, coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
             }
         }
 
-        private void UpdatePRDescriptionDueConfigFiles(List<GitFile> commitedFiles, StringBuilder description)
+        private void UpdatePRDescriptionDueConfigFiles(List<GitFile> commitedFiles, StringBuilder globalJsonSection)
         {
-            GitFile globalJsonFile = commitedFiles.
+            GitFile globalJsonFile = commitedFiles?.
                 Where(gf => gf.FilePath.Equals("global.json", StringComparison.OrdinalIgnoreCase)).
                 FirstOrDefault();
 
@@ -843,30 +839,21 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 bool hasSdkVersionUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.SdkVersionUpdate);
                 bool hasToolsDotnetUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.ToolsDotNetUpdate);
 
-                string globalJsonSectionStartMarker = $"[marker]: <> (Begin:GlobalJson Updates)";
-                string globalJsonSectionEndMarker = $"[marker]: <> (End:GlobalJson Updates)";
-                int sectionStartIndex = RemovePRDescriptionSection(globalJsonSectionStartMarker, globalJsonSectionEndMarker, ref description);
-                StringBuilder globalJsonSection = new StringBuilder();
-
-                globalJsonSection.AppendLine(globalJsonSectionStartMarker);
-                globalJsonSection.AppendLine("- **Updates to global.json:**");
-                globalJsonSection.AppendLine();
+                globalJsonSection.AppendLine("- **Updates to .NET SDKs:**");
 
                 if (hasSdkVersionUpdate)
                 {
-                    globalJsonSection.AppendLine($"  - Updates the version of .NET SDK used to " +
+                    globalJsonSection.AppendLine($"  - Updates sdk.version to " +
                         $"{globalJsonFile.Metadata[GitFileMetadataName.SdkVersionUpdate]}");
                 }
 
                 if (hasToolsDotnetUpdate)
                 {
-                    globalJsonSection.AppendLine($"  - Updates the version of .NET Runtime used to " +
+                    globalJsonSection.AppendLine($"  - Updates the tools.dotnet to " +
                         $"{globalJsonFile.Metadata[GitFileMetadataName.ToolsDotNetUpdate]}");
                 }
 
                 globalJsonSection.AppendLine();
-                globalJsonSection.AppendLine(globalJsonSectionEndMarker);
-                description.Insert(sectionStartIndex, globalJsonSection.ToString());
             }
         }
 
@@ -909,7 +896,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         ///     Because PRs tend to be live for short periods of time, we can put more information
         ///     in the description than the commit message without worrying that links will go stale.
         /// </remarks>
-        private async Task CalculatePRDescription(UpdateAssetsParameters update, List<DependencyUpdate> deps, StringBuilder description)
+        private async Task CalculatePRDescription(UpdateAssetsParameters update, List<DependencyUpdate> deps, List<GitFile> committedFiles, StringBuilder description)
         {
             //Find the Coherency section of the PR description
             if (update.IsCoherencyUpdate)
@@ -963,6 +950,9 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 {
                     subscriptionSection.AppendLine($"  - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version}");
                 }
+
+                UpdatePRDescriptionDueConfigFiles(committedFiles, description);
+
                 subscriptionSection.AppendLine();
                 subscriptionSection.AppendLine(sectionEndMarker);
                 description.Insert(sectionStartIndex, subscriptionSection.ToString());
