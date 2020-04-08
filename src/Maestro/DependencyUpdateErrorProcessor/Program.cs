@@ -2,6 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 using System.Reflection;
+using System.Threading.Tasks;
+using Autofac;
 using Maestro.Data;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.Dotnet.GitHub.Authentication;
@@ -10,6 +12,7 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using NuGet.Packaging;
 using Octokit;
 
 namespace DependencyUpdateErrorProcessor
@@ -49,16 +52,36 @@ namespace DependencyUpdateErrorProcessor
                                     IConfigurationSection section = config.GetSection("GitHub");
                                     section.Bind(options);
                                 });
-
                             services.Configure<DependencyUpdateErrorProcessorOptions>(
                                 (options, provider) =>
-                            {
-                                var config = provider.GetRequiredService<IConfiguration>();
-                                options.IsEnabled = bool.Parse(config["EnableDependencyUpdateErrorProcessor"]);
-                                options.GithubUrl = config["GithubUrl"];
-                                options.FyiHandle = config["FyiHandle"];
-                            });
+                                {
+                                    var config = provider.GetRequiredService<IConfiguration>();
+                                    options.IsEnabled = bool.Parse(config["EnableDependencyUpdateErrorProcessor"]);
+                                    options.GithubUrl = config["GithubUrl"];
+                                    options.FyiHandle = config["FyiHandle"];
+                                });
                         });
+                    host.ConfigureContainer(builder => builder.Register((c, p) =>
+                    {
+                        var repo = p.TypedAs<string>();
+                        var context = c.Resolve<BuildAssetRegistryContext>();
+                        var gitHubTokenProvider = c.Resolve<IGitHubTokenProvider>();
+                        long installationId = Task
+                            .Run(async () => 
+                                await context.GetInstallationId(repo)).GetAwaiter().GetResult();
+                        string gitHubToken = Task
+                            .Run(async () => 
+                                await gitHubTokenProvider.GetTokenForInstallationAsync(installationId)).GetAwaiter().GetResult();
+                        string version = Assembly
+                            .GetExecutingAssembly()
+                            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                            .InformationalVersion;
+                        ProductHeaderValue product = new ProductHeaderValue("Maestro", version);
+                        return new GitHubClient(product)
+                        {
+                            Credentials = new Credentials(gitHubToken),
+                        };
+                    }).As<GitHubClient>().InstancePerDependency());
                 });
         }
     }

@@ -3,14 +3,11 @@
 // See the LICENSE file in the project root for more information.
 using System;
 using System.Linq;
-using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Maestro.Data;
-using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.ServiceFabric.Data;
@@ -23,7 +20,7 @@ namespace DependencyUpdateErrorProcessor
     /// <summary>
     /// An instance of this class is created for each service replica by the Service Fabric runtime.
     /// </summary>
-    internal sealed class DependencyUpdateErrorProcessor : IServiceImplementation
+    public sealed class DependencyUpdateErrorProcessor : IServiceImplementation
     {
         private readonly IReliableStateManager _stateManager;
 
@@ -42,31 +39,27 @@ namespace DependencyUpdateErrorProcessor
         // github url -> https://github.com/maestro-auth-test/maestro-test2  repo ->maestro-test2 owner -> maestro-auth-test2 
         private static readonly Regex RepositoryUriPattern = new Regex(@"^/(?<owner>[^/]+)/(?<repo>[^/]+)/?$");
 
+        public Func<string , GitHubClient> AuthenticateGitHubClient { get; }
+
         public DependencyUpdateErrorProcessor(
             IReliableStateManager stateManager,
             ILogger<DependencyUpdateErrorProcessor> logger,
             BuildAssetRegistryContext context,
-            IOptions<DependencyUpdateErrorProcessorOptions> options
+            IOptions<DependencyUpdateErrorProcessorOptions> options,
+            Func<string, GitHubClient> authenticateGithubClient
             )
         {
             _stateManager = stateManager;
             _context = context;
             _options = options.Value;
             _logger = logger;
+            AuthenticateGitHubClient = authenticateGithubClient;
         }
 
-        [CronSchedule("0 0 0/1 1/1 * ? *", TimeZones.PST)]
-        public async Task ProcessDependencyUpdateErrorsAsync()
+       [CronSchedule("0 0 0/1 1/1 * ? *", TimeZones.PST)]
+       public async Task ProcessDependencyUpdateErrorsAsync()
         {
-            if (_options.ConfigurationRefresherEndPointUri == null && _options.DynamicConfigs == null)
-            {
-                _logger.LogInformation("Dependency Update Error processor is disabled because no App Configuration was available.");
-                return;
-            }
-            await _options.ConfigurationRefresherEndPointUri.Refresh();
-            if (bool.TryParse(_options.DynamicConfigs["FeatureManagement:DependencyUpdateErrorProcessor"],
-                out var dependencyUpdateErrorProcessorFlag) &&
-                dependencyUpdateErrorProcessorFlag)
+            if (_options.IsEnabled)
             {
                 IReliableDictionary<string, DateTimeOffset> checkpointEvaluator =
                     await _stateManager.GetOrAddAsync<IReliableDictionary<string, DateTimeOffset>>("checkpointEvaluator");
@@ -149,27 +142,6 @@ namespace DependencyUpdateErrorProcessor
         }
 
         /// <summary>
-        /// Github authentication.
-        /// </summary>
-        /// <param name="issueRepo">Repository where gitHub issue is created.</param>
-        /// <returns>Authenticated GithubClient</returns>
-        private async Task<GitHubClient> AuthenticateGitHubClient(string issueRepo)
-        {
-            IGitHubTokenProvider gitHubTokenProvider = _context.GetService<IGitHubTokenProvider>();
-            long installationId = await _context.GetInstallationId(issueRepo);
-            string gitHubToken = await gitHubTokenProvider.GetTokenForInstallationAsync(installationId);
-            _logger.LogInformation($"GitHub token acquired for '{issueRepo}'");
-            string version = Assembly.GetExecutingAssembly()
-                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
-                .InformationalVersion;
-            ProductHeaderValue product = new ProductHeaderValue("Maestro", version);
-            return new GitHubClient(product)
-            {
-                Credentials = new Credentials(gitHubToken),
-            };
-        }
-
-        /// <summary>
         /// Creates/updates the github issue.
         /// </summary>
         /// <param name="updateHistoryError">Error info for which github issue has to be created</param>
@@ -186,7 +158,7 @@ namespace DependencyUpdateErrorProcessor
             _logger.LogInformation($"Error Message : '{updateHistoryError.ErrorMessage}' in repository :  '{updateHistoryError.Repository}'");
             IReliableDictionary<(string repository, string branch),int> gitHubIssueEvaluator =
                 await _stateManager.GetOrAddAsync<IReliableDictionary<(string repository, string branch), int>>("gitHubIssueEvaluator");
-            GitHubClient client = await AuthenticateGitHubClient(issueRepo);
+            GitHubClient client = AuthenticateGitHubClient(issueRepo);
             var parseRepoUri = ParseRepoUri(issueRepo);
             Octokit.Repository repo = await client.Repository.Get(
                 parseRepoUri.owner, 

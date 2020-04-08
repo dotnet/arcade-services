@@ -18,6 +18,7 @@ using Microsoft.DotNet.EntityFrameworkCore.Extensions;
 using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Maestro.Data
 {
@@ -76,9 +77,6 @@ namespace Maestro.Data
         public DbSet<DependencyFlowEvent> DependencyFlowEvents { get; set; }
         public DbSet<GoalTime> GoalTime { get; set; }
         public DbSet<LongestBuildPath> LongestBuildPaths { get; set; }
-        // This is for testing purpose only. Instead of adding records to the db, this will let us add 
-        // record to the list.
-        public List<RepositoryBranchUpdateHistoryEntry> RepoBranchUpdateInMemory { get; set; }
 
         public override Task<int> SaveChangesAsync(
             bool acceptAllChangesOnSuccess,
@@ -261,37 +259,29 @@ FOR SYSTEM_TIME ALL
                                 Arguments = u.Arguments,
                                 Timestamp = EF.Property<DateTime>(u, "SysStartTime")
                             }));
-            if (Database.IsSqlServer())
-            {
-                builder.Query<RepositoryBranchUpdateHistoryEntry>()
-                    .ToQuery(
-                        () => RepositoryBranchUpdates.FromSql(
-                                @"
+
+            builder.Query<RepositoryBranchUpdateHistoryEntry>()
+                .ToQuery(
+                    () => RepositoryBranchUpdates.FromSql(
+                            @"
 SELECT * FROM [RepositoryBranchUpdates]
 FOR SYSTEM_TIME ALL
 ")
-                            .Select(
-                                u => new RepositoryBranchUpdateHistoryEntry
-                                {
-                                    Repository = u.RepositoryName,
-                                    Branch = u.BranchName,
-                                    Action = u.Action,
-                                    Success = u.Success,
-                                    ErrorMessage = u.ErrorMessage,
-                                    Method = u.Method,
-                                    Arguments = u.Arguments,
-                                    Timestamp = EF.Property<DateTime>(u, "SysStartTime")
-                                }));
-            }
-            else
-            {
-                builder.Query<RepositoryBranchUpdateHistoryEntry>()
-                    .ToQuery(
-                        () => RepoBranchUpdateInMemory.AsQueryable());
-            }
+                        .Select(
+                            u => new RepositoryBranchUpdateHistoryEntry
+                            {
+                                Repository = u.RepositoryName,
+                                Branch = u.BranchName,
+                                Action = u.Action,
+                                Success = u.Success,
+                                ErrorMessage = u.ErrorMessage,
+                                Method = u.Method,
+                                Arguments = u.Arguments,
+                                Timestamp = EF.Property<DateTime>(u, "SysStartTime")
+                            }));
         }
 
-        public Task<long> GetInstallationId(string repositoryUrl)
+        public virtual Task<long> GetInstallationId(string repositoryUrl)
         {
             return Repositories.Where(r => r.RepositoryName == repositoryUrl)
                 .Select(r => r.InstallationId)
