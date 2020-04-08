@@ -25,5 +25,6 @@
     <ProjectReference Include="..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
     <ProjectReference Include="..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
     <ProjectReference Include="..\shared\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj" />
+    <ProjectReference Include="..\Telemetry\AzureDevOpsTimeline\AzureDevOpsTimeline.csproj" />
   </ItemGroup>
 </Project>
