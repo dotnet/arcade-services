@@ -125,6 +125,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             sb.AppendLine("rankdir=LR");
             sb.AppendLine("node [shape=box color=\"lightsteelblue1\" style=filled]");
 
+            var productCritical = new HashSet<SourceBuildNode>(GetProductCriticalNodes());
+
             IEnumerable<string> GetNodeAttributes(SourceBuildNode node)
             {
                 if (node.SkippedReason != null)
@@ -140,17 +142,26 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
             IEnumerable<string> GetEdgeAttributes(SourceBuildNode source, SourceBuildNode node)
             {
+                if (productCritical.Contains(node))
+                {
+                    yield return "color=\"green\"";
+                    yield return "penwidth=3";
+                }
+                else
+                {
+                    if (node.SkippedReason == null)
+                    {
+                        yield return "penwidth=2";
+                    }
+                    if (node.SkippedReason?.ToGraphVizColor() is string color)
+                    {
+                        yield return $"color=\"{color}\"";
+                    }
+                }
+
                 if (!source.FirstDiscovererOfUpstreams.Contains(node.Identity))
                 {
                     yield return "style=dashed";
-                }
-                if (node.SkippedReason == null)
-                {
-                    yield return "penwidth=2";
-                }
-                if (node.SkippedReason?.ToGraphVizColor() is string color)
-                {
-                    yield return $"color=\"{color}\"";
                 }
             }
 

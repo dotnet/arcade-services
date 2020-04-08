@@ -19,24 +19,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public IEnumerable<DarcCloneOverrideDetail> Overrides { get; set; }
 
-        public IEnumerable<SourceBuildIdentity> Upstreams { get; set; }
-
-        /// <summary>
-        /// Subset of Upstreams that this node discovered in the first wave where it existed. That
-        /// is, these nodes weren't already in the graph when this node saw it. This influences skip
-        /// check behavior, so is useful to show in diagnostic output.
-        ///
-        /// For example, circular-by-name-only dependencies are checked for each node only when that
-        /// node first enters a graph, so another circle might show up later that we "miss". (This
-        /// check is a heuristic for performance, so it isn't a problem.)
-        /// </summary>
-        public ISet<SourceBuildIdentity> FirstDiscovererOfUpstreams { get; set; } =
-            new HashSet<SourceBuildIdentity>(SourceBuildIdentity.CaseInsensitiveComparer);
-
-        public SkipDependencyExplorationExplanation SkippedReason { get; set; }
-
-        public Dictionary<SourceBuildIdentity, SkipDependencyExplorationExplanation> UpstreamSkipReasons { get; } =
-            new Dictionary<SourceBuildIdentity, SkipDependencyExplorationExplanation>();
+        public IEnumerable<SourceBuildEdge> UpstreamEdges { get; set; }
 
         public override string ToString() => $"Node {Identity}";
 
