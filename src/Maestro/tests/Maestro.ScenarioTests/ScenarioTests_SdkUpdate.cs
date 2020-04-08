@@ -12,8 +12,25 @@ namespace Maestro.ScenarioTests
     [TestFixture]
     public class ScenarioTests_SdkUpdate : MaestroScenarioTestBase
     {
-        public ScenarioTests_SdkUpdate() : base()
+        private TestParameters _parameters;
+        private Random _random = new Random();
+
+        public ScenarioTests_SdkUpdate()
         {
+        }
+
+        [SetUp]
+        public async Task InitializeAsync()
+        {
+            _parameters = await TestParameters.GetAsync();
+            SetTestParameters(_parameters);
+        }
+
+        [TearDown]
+        public Task DisposeAsync()
+        {
+            _parameters.Dispose();
+            return Task.CompletedTask;
         }
 
         [Test]

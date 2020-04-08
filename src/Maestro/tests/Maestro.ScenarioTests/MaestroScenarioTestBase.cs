@@ -12,12 +12,9 @@ using Octokit;
 
 namespace Maestro.ScenarioTests
 {
-    [SetUpFixture]
     public class MaestroScenarioTestBase
     {
-        internal TestParameters _parameters;
-
-        internal readonly Random _random = new Random();
+        private TestParameters _parameters;
 
         public IMaestroApi MaestroApi => _parameters.MaestroApi;
 
@@ -25,20 +22,11 @@ namespace Maestro.ScenarioTests
 
         public MaestroScenarioTestBase()
         {
-            _parameters = null!;
         }
 
-        [OneTimeSetUp]
-        public async Task InitializeAsync()
+        public void SetTestParameters(TestParameters parameters)
         {
-            _parameters = await TestParameters.GetAsync();
-        }
-
-        [OneTimeTearDown]
-        public Task DisposeAsync()
-        {
-            _parameters.Dispose();
-            return Task.CompletedTask;
+            _parameters = parameters;
         }
 
         public async Task<PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
@@ -230,14 +218,14 @@ namespace Maestro.ScenarioTests
 
         public async Task<string> GatherDrop(int buildId, string outputDir, bool includeReleased)
         {
+            string[] args = new[] { "gather-drop", "--id", buildId.ToString(), "--dry-run", "--output-dir", outputDir };
+
             if (includeReleased)
             {
-               return await RunDarcAsync("gather-drop", "--id", buildId.ToString(), "--dry-run", "--include-released", "--output-dir", outputDir);
+                args = args.Append("--include-released").ToArray();
             }
-            else
-            {
-                return await RunDarcAsync("gather-drop", "--id", buildId.ToString(), "--dry-run", "--output-dir", outputDir);
-            }
+
+            return await RunDarcAsync(args);
         }
 
         public async Task TriggerSubscriptionAsync(string subscriptionId)
@@ -300,33 +288,27 @@ namespace Maestro.ScenarioTests
 
         internal IImmutableList<AssetData> GetAssetData(string asset1Name, string asset1Version, string asset2Name, string asset2Version)
         {
-            ImmutableList<AssetData> sourceAssets = ImmutableList<AssetData>.Empty;
             AssetData asset1 = new AssetData(false)
             {
                 Name = asset1Name,
                 Version = asset1Version,
-                Locations = ImmutableList<AssetLocationData>.Empty
+                Locations = ImmutableList.Create(new AssetLocationData(LocationType.NugetFeed)
+                { Location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json" })
             };
-            asset1.Locations.Add(new AssetLocationData(LocationType.NugetFeed)
-            { Location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json" });
-            sourceAssets = sourceAssets.Add(asset1);
 
             AssetData asset2 = new AssetData(false)
             {
                 Name = asset2Name,
                 Version = asset2Version,
-                Locations = ImmutableList<AssetLocationData>.Empty
+                Locations = ImmutableList.Create(new AssetLocationData(LocationType.NugetFeed)
+                { Location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json" })
             };
-            asset2.Locations.Add(new AssetLocationData(LocationType.NugetFeed)
-            { Location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json" });
-            sourceAssets = sourceAssets.Add(asset2);
 
-            return sourceAssets;
+            return ImmutableList.Create(asset1, asset2);
         }
 
         public async Task SetRepositoryPolicies(string repoUri, string branchName, string[] policyParams = null)
         {
-            policyParams = policyParams?? new string[]{""};
             string[] commandParams = { "set-repository-policies", "-q", "--repo", repoUri, "--branch", branchName };
 
             if (policyParams != null)

@@ -15,11 +15,26 @@ namespace Maestro.ScenarioTests
         private readonly string sourceBuildNumber = "654321";
         private readonly string sourceCommit = "123456";
         private readonly string sourceBranch = "master";
-        private readonly IImmutableList<AssetData> sourceAssets = ImmutableList<AssetData>.Empty;
+        private readonly IImmutableList<AssetData> sourceAssets;
+        private TestParameters _parameters;
 
         public ScenarioTests_Builds()
         {
             sourceAssets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
+        }
+
+        [SetUp]
+        public async Task InitializeAsync()
+        {
+            _parameters = await TestParameters.GetAsync();
+            SetTestParameters(_parameters);
+        }
+
+        [TearDown]
+        public Task DisposeAsync()
+        {
+            _parameters.Dispose();
+            return Task.CompletedTask;
         }
 
         // Create a new build and check some of the metadata. Then mark as released and check again
@@ -33,63 +48,45 @@ namespace Maestro.ScenarioTests
             // Create a build for the source repo
             Build build = await CreateBuildAsync(repoUrl, sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
             Build retrievedBuild = await MaestroApi.Builds.GetBuildAsync(build.Id);
-            Assert.IsFalse(retrievedBuild.Released);
+            Assert.IsFalse(retrievedBuild.Released, "Retrieved build has Released set to true when it should be false");
 
             //Release the build
             Build updatedBuild = await MaestroApi.Builds.UpdateAsync(new BuildUpdate() { Released = true }, build.Id);
-            Assert.IsTrue(updatedBuild.Released);
+            Assert.IsTrue(updatedBuild.Released, "Retrieved build has Released set to false when it should be true");
 
             // Gather a drop with release included
-            string gatherWithReleasedDir = Path.Combine(base._parameters._dir + "gather-with-released");
+            string gatherWithReleasedDir = Path.Combine(_parameters._dir + "gather-with-released");
             string dropOutput = "";
-            try
-            {
-                dropOutput = await GatherDrop(build.Id, gatherWithReleasedDir, true);
-            }
-            catch (MaestroTestException)
-            {
-                // Expect an exception for the downloads because they don't exist
-                StringAssert.Contains($"Gathering drop for build {sourceBuildNumber}", dropOutput);
-                StringAssert.Contains("Downloading asset Bar@2.1.0", dropOutput);
-                StringAssert.Contains("Downloading asset Foo@1.1.0", dropOutput);
-            }
 
-            TestContext.WriteLine(gatherWithReleasedDir);
+            TestContext.WriteLine("Starting 'Gather with released 1' using folder " + gatherWithReleasedDir);
+
+            dropOutput = await GatherDrop(build.Id, gatherWithReleasedDir, true);
+
+            StringAssert.Contains($"Gathering drop for build {sourceBuildNumber}", dropOutput, "Gather with released 1");
+            StringAssert.Contains("Downloading asset Bar@2.1.0", dropOutput, "Gather with released 1");
+            StringAssert.Contains("Downloading asset Foo@1.1.0", dropOutput, "Gather with released 1");
 
             // Gather with release excluded (default behavior). Gather-drop should throw an error.
-            string noReleaseDropOutput = "";
+            TestContext.WriteLine("Starting 'Gather with release excluded' - gather-drop should throw an error.");
 
-            try
-            {
-                string gatherWithNoReleasedDir = Path.Combine(base._parameters._dir + "gather-no-released");
-                noReleaseDropOutput = await GatherDrop(build.Id, gatherWithNoReleasedDir, false);
-                throw new MaestroTestException("Expected an execption from gather-drop with --released=false because all builds are released.");
-            }
-            catch (MaestroTestException)
-            {
-                StringAssert.Contains($"Skipping download of released build {sourceBuildNumber}", noReleaseDropOutput);
-                StringAssert.DoesNotContain("Downloading asset Bar@2.1.0", noReleaseDropOutput);
-                StringAssert.DoesNotContain("Downloading asset Foo@1.1.0", noReleaseDropOutput);
-            }
-            TestContext.WriteLine(noReleaseDropOutput);
+            string gatherWithNoReleasedDir = Path.Combine(_parameters._dir + "gather-no-released");
+            Assert.ThrowsAsync<MaestroTestException>(async () => await GatherDrop(build.Id, gatherWithNoReleasedDir, false), "Gather with release excluded");
 
             // Unrelease the build
             Build unreleaseBuild = await MaestroApi.Builds.UpdateAsync(new BuildUpdate() { Released = false }, build.Id);
             Assert.IsFalse(unreleaseBuild.Released);
 
             // Gather with release excluded again (default behavior)
-            string gatherWithReleased2Dir = Path.Combine(base._parameters._dir + "gather-no-released-2");
+            string gatherWithNoReleased2Dir = Path.Combine(_parameters._dir + "gather-no-released-2");
             string gatherDropOutput = "";
-            try
-            {
-                gatherDropOutput = await GatherDrop(build.Id, gatherWithReleased2Dir, false);
-            }
-            catch (MaestroTestException)
-            {
-                StringAssert.Contains($"Gathering drop for build {sourceBuildNumber}", gatherDropOutput);
-                StringAssert.Contains("Downloading asset Bar@2.1.0", dropOutput);
-                StringAssert.Contains("Downloading asset Foo@1.1.0", dropOutput);
-            }
+
+            TestContext.WriteLine("Starting 'Gather unreleased with release excluded' using folder " + gatherWithNoReleased2Dir);
+
+            gatherDropOutput = await GatherDrop(build.Id, gatherWithNoReleased2Dir, false);
+
+            StringAssert.Contains($"Gathering drop for build {sourceBuildNumber}", gatherDropOutput, "Gather unreleased with release excluded");
+            StringAssert.Contains("Downloading asset Bar@2.1.0", dropOutput, "Gather unreleased with release excluded");
+            StringAssert.Contains("Downloading asset Foo@1.1.0", dropOutput, "Gather unreleased with release excluded");
         }
     }
 }
