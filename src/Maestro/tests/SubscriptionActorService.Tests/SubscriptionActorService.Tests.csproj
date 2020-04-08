@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Shared\Microsoft.DotNet.Internal.DependencyInjection.Testing\Microsoft.DotNet.Internal.DependencyInjection.Testing.csproj" />
     <ProjectReference Include="..\..\ServiceFabricMocks\ServiceFabricMocks.csproj" />
     <ProjectReference Include="..\..\SubscriptionActorService\SubscriptionActorService.csproj" />
   </ItemGroup>

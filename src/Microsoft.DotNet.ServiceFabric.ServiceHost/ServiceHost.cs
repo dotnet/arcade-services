@@ -252,7 +252,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         {
         }
 
-        private static void ConfigureDefaultServices(IServiceCollection services)
+        public static void ConfigureDefaultServices(IServiceCollection services)
         {
             services.AddOptions();
             services.SetupConfiguration();
