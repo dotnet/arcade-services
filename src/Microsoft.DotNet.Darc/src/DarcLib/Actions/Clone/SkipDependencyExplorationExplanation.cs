@@ -23,9 +23,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 case SkipDependencyExplorationReason.SelfDependency:
                     return "goldenrod";
                 case SkipDependencyExplorationReason.CircularWhenOnlyConsideringName:
-                    return "purple";
+                    return "mediumpurple1";
                 case SkipDependencyExplorationReason.Ignored:
-                    return "gray";
+                    return "gray69";
                 case SkipDependencyExplorationReason.DependencyDetailMissingCommit:
                     return "rosybrown1";
                 default:

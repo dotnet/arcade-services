@@ -180,9 +180,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     // seen so far to see if any have this potential repo name. (We can't simply
                     // check if we've seen the repo name before: other branches may have the same
                     // repo name dependency but not as part of a circular dependency.)
-                    var allDownstreams = graph.GetAllDownstreams(source).ToArray();
+                    var allDownstreams = graph.GetAllDownstreams(upstream).ToArray();
                     if (allDownstreams.Any(
-                        d => string.Equals(d.Identity.RepoUri, source.RepoUri, StringComparison.OrdinalIgnoreCase)))
+                        d => SourceBuildIdentity.RepoNameOnlyComparer.Equals(d.Identity, upstream)))
                     {
                         Logger.LogDebug(
                             $"Skipping already-seen circular dependency from {source} to {upstream}\n" +
@@ -221,6 +221,11 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     foreach (var upstream in node.Upstreams.NullAsEmpty())
                     {
                         var skipReason = ReasonToSkipDependency(upstream, node.Identity);
+
+                        if (skipReason?.Reason != SkipDependencyExplorationReason.AlreadyVisited)
+                        {
+                            node.FirstDiscovererOfUpstreams.Add(upstream);
+                        }
 
                         if (skipReason != null)
                         {

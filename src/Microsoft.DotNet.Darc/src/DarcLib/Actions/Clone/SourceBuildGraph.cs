@@ -138,11 +138,15 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 }
             }
 
-            IEnumerable<string> GetEdgeAttributes(SourceBuildNode node)
+            IEnumerable<string> GetEdgeAttributes(SourceBuildNode source, SourceBuildNode node)
             {
-                if (node.SkippedReason != null)
+                if (!source.FirstDiscovererOfUpstreams.Contains(node.Identity))
                 {
-                    yield return "style=dotted";
+                    yield return "style=dashed";
+                }
+                if (node.SkippedReason == null)
+                {
+                    yield return "penwidth=2";
                 }
                 if (node.SkippedReason?.ToGraphVizColor() is string color)
                 {
@@ -168,7 +172,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 sb.Append("\"");
             }
 
-            sb.Append("root -> {");
+            sb.Append("root[shape=circle fillcolor=\"chartreuse\"]\nroot -> {");
             foreach (var n in Nodes.Where(n => !GetDownstreams(n).Any()))
             {
                 AppendNode(n);
@@ -193,7 +197,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                         sb.Append(n.Identity);
                         sb.Append("\" -> ");
                         AppendNode(u);
-                        AppendAttributes(GetEdgeAttributes(u));
+                        AppendAttributes(GetEdgeAttributes(n, u));
                     }
                 }
 
@@ -243,13 +247,11 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
                 foreach (var linkedNode in links(node))
                 {
-                    if (!visited.Add(linkedNode))
+                    if (visited.Add(linkedNode))
                     {
-                        continue;
+                        yield return linkedNode;
+                        next.Enqueue(linkedNode);
                     }
-
-                    yield return linkedNode;
-                    next.Enqueue(linkedNode);
                 }
             }
         }
