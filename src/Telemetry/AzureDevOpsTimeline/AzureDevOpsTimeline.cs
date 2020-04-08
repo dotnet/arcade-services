@@ -430,7 +430,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
         private class AugmentedTimelineIssue
         {
-            public AugmentedTimelineIssue(int buildId, string recordId, int index, Issue raw)
+            public AugmentedTimelineIssue(int buildId, string recordId, int index, TimelineIssue raw)
             {
                 BuildId = buildId;
                 RecordId = recordId;
@@ -441,7 +441,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             public int BuildId { get; }
             public string RecordId { get; }
             public int Index { get; }
-            public Issue Raw { get; }
+            public TimelineIssue Raw { get; }
             public string AugmentedIndex { get; set; }
             public string Bucket { get; set; }
         }
