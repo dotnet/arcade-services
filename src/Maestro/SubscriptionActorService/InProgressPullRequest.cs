@@ -6,11 +6,12 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.Serialization;
 using Maestro.Contracts;
+using Microsoft.DotNet.DarcLib;
 
 namespace SubscriptionActorService
 {
     [DataContract]
-    public class InProgressPullRequest
+    public class InProgressPullRequest : IPullRequest
     {
         [DataMember]
         public string Url { get; set; }
@@ -23,6 +24,9 @@ namespace SubscriptionActorService
 
         [DataMember]
         public List<SubscriptionPullRequestUpdate> Contained { get; set; }
+
+        [DataMember]
+        public List<DependencyUpdateSummary> RequiredUpdates { get; set; }
     }
 
     [DataContract]
