@@ -712,6 +712,7 @@ namespace Microsoft.DotNet.DarcLib
 
             List<Task<bool>> verificationTasks = new List<Task<bool>>()
             {
+                VerifyNoDuplicatedProperties(await versionProps),
                 VerifyNoDuplicatedDependencies(await dependencyDetails),
                 VerifyMatchingVersionProps(
                     await dependencyDetails, 
@@ -750,6 +751,45 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             File.SetAttributes(directoryPath, FileAttributes.Normal);
+        }
+
+        /// <summary>
+        ///     Ensure that there is a unique propertyName + condition on the list.
+        /// </summary>
+        /// <param name="versionProps">Xml object representing MSBuild properties file.</param>
+        /// <returns>True if there are no duplicated properties.</returns>
+        public Task<bool> VerifyNoDuplicatedProperties(XmlDocument versionProps)
+        {
+            bool hasNoDuplicatedProperties = true;
+            HashSet<string> existingProperties = new HashSet<string>();
+
+            XmlNodeList propertyGroups = versionProps.GetElementsByTagName("PropertyGroup");
+            foreach (XmlNode propertyGroup in propertyGroups)
+            {
+                foreach (var property in propertyGroup.ChildNodes)
+                {
+                    if (property is XmlElement)
+                    {
+                        var element = property as XmlElement;
+                        var propertyName = element.Name;
+
+                        propertyName = Regex.Replace(propertyName, @"PackageVersion$", String.Empty);
+                        propertyName = Regex.Replace(propertyName, @"Version$", String.Empty);
+
+                        propertyName += element.GetAttribute("Condition");
+                        propertyName += element.GetAttribute("condition");
+
+                        if (existingProperties.Contains(propertyName))
+                        {
+                            hasNoDuplicatedProperties = false;
+                        }
+
+                        existingProperties.Add(propertyName);
+                    }
+                }
+            }
+
+            return Task.FromResult(hasNoDuplicatedProperties);
         }
 
         /// <summary>

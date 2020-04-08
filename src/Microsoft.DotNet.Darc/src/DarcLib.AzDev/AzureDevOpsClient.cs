@@ -1107,7 +1107,12 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="queueTimeVariables">A string in JSON format containing the queue time variables to be used.</param>
         public async Task<int> StartNewBuildAsync(string accountName, string projectName, int azdoDefinitionId, string sourceBranch, string sourceVersion, string queueTimeVariables = null)
         {
-            var body = $"{{ \"definition\": {{ \"id\": \"{azdoDefinitionId}\" }}, \"sourceBranch\": \"{sourceBranch}\", \"sourceVersion\": \"{sourceVersion}\", \"parameters\": '{queueTimeVariables}'  }}";
+            var body = $"{{ \"definition\": " +
+                $"{{ \"id\": \"{azdoDefinitionId}\" }}, " +
+                $"\"sourceBranch\": \"{sourceBranch}\", " +
+                (sourceVersion != null ? $"\"sourceVersion\": \"{sourceVersion}\", " : string.Empty) +
+                $"\"parameters\": '{queueTimeVariables}' " +
+                $"}}";
 
             JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Post,

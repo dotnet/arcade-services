@@ -34,10 +34,10 @@
     <None Include="ApplicationInsights.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\DependencyUpdateErrorProcessor\DependencyUpdateErrorProcessor.csproj" />
     <ProjectReference Include="..\DependencyUpdater\DependencyUpdater.csproj" />
     <ProjectReference Include="..\FeedCleanerService\FeedCleanerService.csproj" />
     <ProjectReference Include="..\Maestro.Web\Maestro.Web.csproj" />
-    <ProjectReference Include="..\ReleasePipelineRunner\ReleasePipelineRunner.csproj" />
     <ProjectReference Include="..\SubscriptionActorService\SubscriptionActorService.csproj" />
   </ItemGroup>
   <ItemGroup>

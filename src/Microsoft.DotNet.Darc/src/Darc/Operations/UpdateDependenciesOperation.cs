@@ -112,8 +112,11 @@ namespace Microsoft.DotNet.Darc.Operations
                             await NonCoherencyUpdatesForBuildAsync(specificBuild, barOnlyRemote, currentDependencies, dependenciesToUpdate)
                                 .ConfigureAwait(false);
 
+                            string sourceRepo = specificBuild.GitHubRepository ?? specificBuild.AzureDevOpsRepository;
+                            string sourceBranch = specificBuild.GitHubBranch ?? specificBuild.AzureDevOpsBranch;
+
                             finalMessage = $"Local dependencies updated based on build with BAR id {_options.BARBuildId} " +
-                                $"({specificBuild.AzureDevOpsBuildNumber} from {specificBuild.GitHubRepository}@{specificBuild.GitHubBranch})";
+                                $"({specificBuild.AzureDevOpsBuildNumber} from {sourceRepo}@{sourceBranch})";
                         }
 
                         await CoherencyUpdatesAsync(barOnlyRemote, remoteFactory, currentDependencies, dependenciesToUpdate)
@@ -237,9 +240,11 @@ namespace Microsoft.DotNet.Darc.Operations
                     Version = a.Version
                 });
 
+            string repository = build.GitHubRepository ?? build.AzureDevOpsRepository;
+
             // Now determine what needs to be updated.
             List<DependencyUpdate> updates = await barOnlyRemote.
-                GetRequiredNonCoherencyUpdatesAsync(build.GitHubRepository, build.Commit, assetData, currentDependencies);
+                GetRequiredNonCoherencyUpdatesAsync(repository, build.Commit, assetData, currentDependencies);
 
             foreach (DependencyUpdate update in updates)
             {
@@ -248,7 +253,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // Print out what we are going to do.	
                 Console.WriteLine($"Updating '{from.Name}': '{from.Version}' => '{to.Version}'"
-                    + $" (from build '{build.AzureDevOpsBuildNumber}' of '{build.GitHubRepository}')");
+                    + $" (from build '{build.AzureDevOpsBuildNumber}' of '{repository}')");
 
                 // Replace in the current dependencies list so the correct data can be used in coherency updates.
                 currentDependencies.Remove(from);

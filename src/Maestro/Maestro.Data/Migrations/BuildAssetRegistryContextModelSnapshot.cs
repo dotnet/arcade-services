@@ -172,6 +172,8 @@ namespace Maestro.Data.Migrations
 
                     b.Property<bool>("Released");
 
+                    b.Property<bool>("Stable");
+
                     b.HasKey("Id");
 
                     b.ToTable("Builds");
