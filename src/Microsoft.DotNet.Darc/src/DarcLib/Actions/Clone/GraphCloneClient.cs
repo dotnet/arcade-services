@@ -66,7 +66,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 }
 
                 // Do one level of clones at a time.
-                var discoveredUpstreams =
+                var discoveredNodes =
                     await Task.WhenAll(nextLevelDependencies.Select(async repo =>
                     {
                         var result = new SourceBuildNode { Identity = repo };
@@ -147,15 +147,15 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 // Create a temp graph that includes all potential nodes to evaluate next. We use
                 // this graph to evaluate whether to evaluate each node.
                 var graph = SourceBuildGraph.Create(
-                    allNodes.Concat(discoveredUpstreams),
+                    allNodes.Concat(discoveredNodes),
                     rootOverrides);
 
                 SkipDependencyExplorationExplanation ReasonToSkipDependency(
                     SourceBuildIdentity upstream,
                     SourceBuildIdentity source)
                 {
-                    if (graph.Nodes.Any(n =>
-                        SourceBuildIdentity.CaseInsensitiveComparer.Equals(n.Identity, upstream)))
+                    if (allNodes.Concat(discoveredNodes)
+                        .Any(n => SourceBuildIdentity.CaseInsensitiveComparer.Equals(n.Identity, upstream)))
                     {
                         return new SkipDependencyExplorationExplanation
                         {
@@ -215,33 +215,40 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     return null;
                 }
 
-                var upstreamIdentityToConsider = discoveredUpstreams
+                // Fill in each discovered node's reasons to skip dependencies (if exist).
+                foreach (var node in discoveredNodes)
+                {
+                    foreach (var upstream in node.Upstreams.NullAsEmpty())
+                    {
+                        var skipReason = ReasonToSkipDependency(upstream, node.Identity);
+
+                        if (skipReason != null)
+                        {
+                            node.UpstreamSkipReasons[upstream] = skipReason;
+                        }
+                    }
+                }
+
+                var upstreamIdentityToConsider = discoveredNodes
                     .SelectMany(
                         source => source.Upstreams
                             .NullAsEmpty()
-                            .Select(upstream =>
-                            {
-                                var skipReason = ReasonToSkipDependency(upstream, source.Identity);
-
-                                if (skipReason != null)
+                            .Select(
+                                upstream => new
                                 {
-                                    source.UpstreamSkipReasons[upstream] = skipReason;
-                                }
-
-                                return new
-                                {
-                                    SkipReason = skipReason,
+                                    SkipReason = source.UpstreamSkipReasons.GetOrDefault(upstream),
                                     Source = source,
                                     Upstream = upstream
-                                };
-                            }))
+                                }))
                     .ToArray();
 
-                allNodes.AddRange(
-                    upstreamIdentityToConsider
-                        .Select(c => c.Source)
-                        .Except(allNodes, SourceBuildNode.CaseInsensitiveComparer)
-                        .ToArray());
+                allNodes.AddRange(discoveredNodes);
+
+                //allNodes.AddRange(
+                //    upstreamIdentityToConsider
+                //        .Select(c => c.Source)
+                //        .Except(allNodes, SourceBuildNode.CaseInsensitiveComparer)
+                //        .ToArray());
 
                 nextLevelDependencies = upstreamIdentityToConsider
                     .Where(u => u.SkipReason == null)

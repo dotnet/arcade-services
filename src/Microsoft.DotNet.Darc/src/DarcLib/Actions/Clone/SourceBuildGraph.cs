@@ -29,6 +29,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             graph.UnexploredIdentities = graph.Nodes
                 .SelectMany(
                     n => n.Upstreams
+                        .NullAsEmpty()
                         .Where(u => !graph.IdentityNodes.ContainsKey(u))
                         .Select(u => new SourceBuildNode
                         {
@@ -126,6 +127,10 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
             IEnumerable<string> GetNodeAttributes(SourceBuildNode node)
             {
+                if (node.SkippedReason != null)
+                {
+                    yield return $"label=\"{node.Identity}\\n{node.SkippedReason.Reason}\"";
+                }
                 if (node.SkippedReason?.ToGraphVizColor() is string color)
                 {
                     yield return $"color=\"{color}\"";
