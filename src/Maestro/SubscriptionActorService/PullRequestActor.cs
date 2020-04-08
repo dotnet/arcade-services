@@ -852,8 +852,6 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     globalJsonSection.AppendLine($"  - Updates the tools.dotnet to " +
                         $"{globalJsonFile.Metadata[GitFileMetadataName.ToolsDotNetUpdate]}");
                 }
-
-                globalJsonSection.AppendLine();
             }
         }
 
@@ -951,7 +949,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     subscriptionSection.AppendLine($"  - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version}");
                 }
 
-                UpdatePRDescriptionDueConfigFiles(committedFiles, description);
+                UpdatePRDescriptionDueConfigFiles(committedFiles, subscriptionSection);
 
                 subscriptionSection.AppendLine();
                 subscriptionSection.AppendLine(sectionEndMarker);
