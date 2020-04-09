@@ -8,39 +8,36 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using LibGit2Sharp;
 
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
     public class SourceBuildGraph
     {
-        public static SourceBuildGraph Create(
-            IEnumerable<SourceBuildNode> nodes,
-            IEnumerable<DarcCloneOverrideDetail> globalOverrides)
+        public static SourceBuildGraph Create(IEnumerable<SourceBuildNode> nodes)
         {
             var graph = new SourceBuildGraph
             {
-                GlobalOverrides = globalOverrides.NullAsEmpty().ToArray()
             };
 
             graph.SetNodes(nodes.ToArray());
 
             // Some nodes have upstreams that we can't find nodes for.
-            graph.UnexploredIdentities = graph.Nodes
+            graph.IdentitiesWithoutNodes = graph.Nodes
                 .SelectMany(
                     n => n.UpstreamEdges.NullAsEmpty()
                         .Where(u => !graph.IdentityNodes.ContainsKey(u.Upstream))
                         .Select(u => new SourceBuildNode
                         {
-                            Identity = u.Upstream
+                            Identity = u.Upstream,
+                            UpstreamEdges = Enumerable.Empty<SourceBuildEdge>()
                         }))
                 .Distinct(SourceBuildNode.CaseInsensitiveComparer)
                 .ToArray();
 
-            if (graph.UnexploredIdentities.Any())
+            if (graph.IdentitiesWithoutNodes.Any())
             {
                 // Generate nodes if any are missing to make graph operations simpler.
-                graph.SetNodes(graph.Nodes.Concat(graph.UnexploredIdentities).ToArray());
+                graph.SetNodes(graph.Nodes.Concat(graph.IdentitiesWithoutNodes).ToArray());
             }
 
             return graph;
@@ -48,7 +45,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public IReadOnlyList<SourceBuildNode> Nodes { get; set; }
 
-        public IEnumerable<SourceBuildEdge> AllEdges => Nodes.SelectMany(n => n.UpstreamEdges);
+        public IEnumerable<SourceBuildEdge> AllEdges => Nodes.SelectMany(n => n.UpstreamEdges.NullAsEmpty());
 
         public Dictionary<SourceBuildIdentity, SourceBuildNode> IdentityNodes { get; set; }
 
@@ -56,15 +53,13 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         /// Keep a fast lookup of all edges that have a specified identity as its downstream. You
         /// can get from a node to all of its upstream edges, and this allows the opposite.
         /// </summary>
-        public Dictionary<SourceBuildIdentity, SourceBuildEdge[]> DownstreamEdges { get; set; }
-
-        public IReadOnlyList<DarcCloneOverrideDetail> GlobalOverrides { get; set; }
+        public Dictionary<SourceBuildIdentity, SourceBuildEdge[]> EdgesWithUpstream { get; set; }
 
         /// <summary>
         /// Some identities were intentionally unexplored. Keep track here, to display later if
         /// necessary for diagnostics.
         /// </summary>
-        public IReadOnlyList<SourceBuildNode> UnexploredIdentities { get; set; }
+        public IReadOnlyList<SourceBuildNode> IdentitiesWithoutNodes { get; set; }
 
         private void SetNodes(IReadOnlyList<SourceBuildNode> nodes)
         {
@@ -75,9 +70,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 n => n,
                 SourceBuildIdentity.CaseInsensitiveComparer);
 
-            DownstreamEdges = Nodes
-                .SelectMany(n => n.UpstreamEdges)
-                .GroupBy(e => e.Downstream)
+            EdgesWithUpstream = Nodes
+                .SelectMany(n => n.UpstreamEdges.NullAsEmpty())
+                .GroupBy(e => e.Upstream)
                 .ToDictionary(
                     e => e.Key,
                     e => e.ToArray());
@@ -164,7 +159,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 SourceBuildNode[] upstreams = GetUpstreams(n.Identity).ToArray();
                 if (upstreams.Any())
                 {
-                    foreach (var u in upstreams)
+                    foreach (var u in upstreams.Select(u => u.Identity).Distinct(SourceBuildIdentity.CaseInsensitiveComparer))
                     {
                         // Don't use grouping (A -> { B C }) so that we can apply attributes to each
                         // individual link.
@@ -172,8 +167,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                         sb.Append("\"");
                         sb.Append(n.Identity);
                         sb.Append("\" -> ");
-                        AppendNode(u);
-                        AppendAttributes(GetEdgeAttributes(n, u));
+                        AppendNode(IdentityNodes[u]);
+                        AppendAttributes(GetEdgeAttributes(n, IdentityNodes[u]));
                     }
                 }
 
@@ -186,7 +181,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         }
 
         public IEnumerable<SourceBuildNode> GetDownstreams(SourceBuildIdentity node) =>
-            DownstreamEdges.TryGetValue(node, out var edges)
+            EdgesWithUpstream.TryGetValue(node, out var edges)
             ? edges.Select(e => IdentityNodes[e.Upstream])
             : Enumerable.Empty<SourceBuildNode>();
 

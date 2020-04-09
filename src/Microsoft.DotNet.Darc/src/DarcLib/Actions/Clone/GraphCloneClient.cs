@@ -136,7 +136,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
                             Logger.LogDebug(
                                 $"Adding {result.UpstreamEdges.Count()} new edges from {repo}\n" +
-                                string.Join("\n", result.UpstreamEdges.Select(e => e.ToString())));
+                                string.Join("\n", result.UpstreamEdges.Select(e => e.ToString()).Distinct()));
 
                             Logger.LogDebug($"done looking for dependencies in {bareRepoDir} at {repo.Commit}");
                         }
@@ -178,10 +178,10 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     // build, so this tends to go on essentially forever.
                     if (string.Equals(upstream.RepoUri, source.RepoUri, StringComparison.OrdinalIgnoreCase))
                     {
-                        Logger.LogDebug($"Skipping self-dependency in {source.RepoUri} ({source.Commit} => {upstream.Commit})");
                         return new SkipDependencyExplorationExplanation
                         {
-                            Reason = SkipDependencyExplorationReason.SelfDependency
+                            Reason = SkipDependencyExplorationReason.SelfDependency,
+                            Details = $"Skipping self-dependency in {source.RepoUri} ({source.Commit} => {upstream.Commit})"
                         };
                     }
                     // Remove circular dependencies that have different hashes. That is, detect
@@ -195,31 +195,30 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     if (allDownstreams.Any(
                         d => SourceBuildIdentity.RepoNameOnlyComparer.Equals(d.Identity, upstream)))
                     {
-                        Logger.LogDebug(
-                            $"Skipping already-seen circular dependency from {source} to {upstream}\n" +
-                            string.Join(" -> ", allDownstreams.Select(d => d.ToString()))
-                            );
                         return new SkipDependencyExplorationExplanation
                         {
-                            Reason = SkipDependencyExplorationReason.CircularWhenOnlyConsideringName
+                            Reason = SkipDependencyExplorationReason.CircularWhenOnlyConsideringName,
+                            Details =
+                                $"Skipping already-seen circular dependency from {source} to {upstream}\n" +
+                                string.Join(" -> ", allDownstreams.Select(d => d.ToString()))
                         };
                     }
                     // Remove repos specifically ignored by the caller.
                     if (ignoredRepos.Any(r => r.Equals(upstream.RepoUri, StringComparison.OrdinalIgnoreCase)))
                     {
-                        Logger.LogDebug($"Skipping ignored repo {upstream}");
                         return new SkipDependencyExplorationExplanation
                         {
-                            Reason = SkipDependencyExplorationReason.Ignored
+                            Reason = SkipDependencyExplorationReason.Ignored,
+                            Details = $"Skipping ignored repo {upstream}"
                         };
                     }
                     // Remove repos with invalid dependency info: missing commit.
                     if (string.IsNullOrWhiteSpace(upstream.Commit))
                     {
-                        Logger.LogWarning($"Skipping dependency from {source} to {upstream.RepoUri}: Missing commit.");
                         return new SkipDependencyExplorationExplanation
                         {
-                            Reason = SkipDependencyExplorationReason.DependencyDetailMissingCommit
+                            Reason = SkipDependencyExplorationReason.DependencyDetailMissingCommit,
+                            Details = $"Skipping dependency from {source} to {upstream.RepoUri}: Missing commit."
                         };
                     }
 
@@ -339,9 +338,21 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             // simplify this, we visit one node at a time. Breadth-first, simply because it is
             // likely to resolve common .NET build graphs sooner.
 
-            var next = new Queue<SourceBuildNode>(source.GetRootNodes());
+            var toVisit = new Queue<SourceBuildNode>(source.GetRootNodes());
             var visited = new HashSet<SourceBuildIdentity>(SourceBuildIdentity.CaseInsensitiveComparer);
 
+            var newGraph = SourceBuildGraph.Create(Enumerable.Empty<SourceBuildNode>());
+
+            while (toVisit.Any())
+            {
+                SourceBuildNode next = toVisit.Dequeue();
+
+                // Is this node a repo that already exists in the graph? If so, see if ours is a
+                // better fit. Add the new node or remove the old and redo dependencies to match.
+
+                // If this is a new repo, just add it.
+                newGraph = SourceBuildGraph.Create(newGraph.Nodes.Concat(new[] { next }));
+            }
 
             var edgesWithUpstreamNodeByName = source.AllEdges
                 .GroupBy(edge => edge.Upstream, SourceBuildIdentity.RepoNameOnlyComparer)
@@ -359,16 +370,23 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     {
                         SourceBuildEdge pickedEdge;
 
-                        if (edgesWithUpstreamNodeByName.TryGetValue(g.Key, out var edges) &&
-                            edges.FirstOrDefault(e => e.ProductCritical) is SourceBuildEdge criticalEdge)
+                        if (edgesWithUpstreamNodeByName.TryGetValue(g.Key, out var edges))
                         {
-                            // If any edge that points at this RepoName is critical, pick that.
-                            pickedEdge = criticalEdge;
+                            if (edges.FirstOrDefault(e => e.ProductCritical) is SourceBuildEdge criticalEdge)
+                            {
+                                // If any edge that points at this RepoName is critical, pick that.
+                                pickedEdge = criticalEdge;
+                            }
+                            else
+                            {
+                                // If no edges are critical, use heuristic.
+                                pickedEdge = HighestVersionedDistinctIdentity(edges);
+                            }
                         }
                         else
                         {
-                            // If no edges are critical (or there are no edges at all), use heuristic.
-                            pickedEdge = HighestVersionedDistinctIdentity(edges);
+                            // If no edges exist...
+                            return null;
                         }
 
                         SourceBuildNode upstreamNode = source.IdentityNodes[pickedEdge.Upstream];
@@ -384,6 +402,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             // Fix up upstreams. Now that we know the full set of merged nodes, repoint and dedup.
             foreach (var m in newMergedNodeData.Values)
             {
+                if (m == null)
+                    continue;
                 m.UpstreamEdges = m.UpstreamEdges.NullAsEmpty()
                     .Select(edge => new SourceBuildEdge
                     {
