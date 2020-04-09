@@ -849,7 +849,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
 
                 if (hasToolsDotnetUpdate)
                 {
-                    globalJsonSection.AppendLine($"  - Updates the tools.dotnet to " +
+                    globalJsonSection.AppendLine($"  - Updates tools.dotnet to " +
                         $"{globalJsonFile.Metadata[GitFileMetadataName.ToolsDotNetUpdate]}");
                 }
             }
