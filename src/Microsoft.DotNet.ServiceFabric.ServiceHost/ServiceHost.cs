@@ -158,11 +158,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         private void RegisterStatefulActorService<TActor>(
             string actorName,
             Func<StatefulServiceContext, ActorTypeInformation, Func<ActorService, ActorId, IServiceScopeFactory, Action<IServiceProvider>, ActorBase>, ActorService> ctor)
-            where TActor : IActor
+            where TActor : IActor, IStatefulActor
         {
             (Type actorType,
                     Func<ActorService, ActorId, IServiceScopeFactory, Action<IServiceProvider>, ActorBase> actorFactory) =
-                DelegatedActor.CreateActorTypeAndFactory(actorName, typeof(TActor));
+                DelegatedActor.CreateActorTypeAndFactory<TActor>(actorName);
             // ReSharper disable once PossibleNullReferenceException
             // The method search parameters are hard coded
             MethodInfo registerActorAsyncMethod = typeof(ActorRuntime).GetMethod(
@@ -188,7 +188,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         public ServiceHost RegisterStatefulActorService<
             [MeansImplicitUse(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
-            TActor>(string actorName) where TActor : class, IActor
+            TActor>(string actorName) where TActor : class, IActor, IStatefulActor
         {
             RegisterStatefulActorService<TActor>(
                 actorName,
@@ -238,7 +238,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 });
             services.TryAddSingleton<IMetricTracker, ApplicationInsightsMetricTracker>();
             services.TryAddSingleton(typeof(IActorLookup<>), typeof(ActorLookup<>));
-            services.AddScoped(typeof(Scoped<>));
         }
 
         public static HostEnvironment InitializeEnvironment()

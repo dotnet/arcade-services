@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Maestro.Data;
@@ -42,13 +43,16 @@ namespace SubscriptionActorService.Tests
 
         public SubscriptionOrPullRequestActorTests()
         {
-            HostingEnvironment = CreateMock<IHostingEnvironment>();
-            Builder.AddSingleton(HostingEnvironment.Object);
-
             ActionRunner = CreateMock<IActionRunner>();
-            Builder.AddSingleton(ActionRunner.Object);
+            HostingEnvironment = CreateMock<IHostingEnvironment>();
+        }
 
-            Builder.AddBuildAssetRegistry(options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
+        protected override void RegisterServices(IServiceCollection services)
+        {
+            services.AddSingleton(HostingEnvironment.Object);
+            services.AddSingleton(ActionRunner.Object);
+            services.AddBuildAssetRegistry(options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
+            base.RegisterServices(services);
         }
 
         protected override async Task BeforeExecute(IServiceProvider context)

@@ -14,7 +14,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         private readonly TelemetryClient _telemetryClient;
         private readonly ServiceContext _serviceContext;
 
-        public ActorLookup(TelemetryClient telemetryClient, ServiceContext serviceContext)
+        public ActorLookup(TelemetryClient telemetryClient = null, ServiceContext serviceContext = null)
         {
             _telemetryClient = telemetryClient;
             _serviceContext = serviceContext;

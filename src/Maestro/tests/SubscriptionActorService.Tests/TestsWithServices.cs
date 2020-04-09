@@ -4,18 +4,17 @@
 
 using System;
 using System.Threading.Tasks;
+using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace SubscriptionActorService.Tests
 {
     public class TestsWithServices : TestsWithMocks
     {
-        public TestsWithServices()
+        protected virtual void RegisterServices(IServiceCollection services)
         {
-            Builder = new ServiceCollection();
         }
-
-        protected ServiceCollection Builder { get; }
 
         protected virtual Task BeforeExecute(IServiceProvider serviceScope)
         {
@@ -24,7 +23,11 @@ namespace SubscriptionActorService.Tests
 
         protected async Task Execute(Func<IServiceProvider, Task> run)
         {
-            using (ServiceProvider container = Builder.BuildServiceProvider())
+            var services = new ServiceCollection();
+            Environment.SetEnvironmentVariable("ENVIRONMENT", "XUNIT");
+            services.TryAddSingleton(typeof(IActorLookup<>), typeof(ActorLookup<>));
+            RegisterServices(services);
+            using (ServiceProvider container = services.BuildServiceProvider())
             using (IServiceScope scope = container.GetRequiredService<IServiceScopeFactory>().CreateScope())
             {
                 await BeforeExecute(scope.ServiceProvider);

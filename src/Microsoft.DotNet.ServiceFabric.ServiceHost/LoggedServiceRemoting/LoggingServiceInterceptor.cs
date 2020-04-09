@@ -23,26 +23,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         private ServiceContext Context { get; }
         private TelemetryClient TelemetryClient { get; }
 
-        protected override async Task InterceptAsync(IInvocation invocation, Func<Task> call)
-        {
-            string url = $"{Context.ServiceName}/{invocation.Method?.DeclaringType?.Name}/{invocation.Method?.Name}";
-            using (IOperationHolder<RequestTelemetry> op =
-                TelemetryClient.StartOperation<RequestTelemetry>($"RPC {url}"))
-            {
-                try
-                {
-                    op.Telemetry.Url = new Uri(url);
-                    await call();
-                }
-                catch (Exception ex)
-                {
-                    op.Telemetry.Success = false;
-                    TelemetryClient.TrackException(ex);
-                    throw;
-                }
-            }
-        }
-
         protected override async Task<T> InterceptAsync<T>(IInvocation invocation, Func<Task<T>> call)
         {
             string url = $"{Context.ServiceName}/{invocation.Method?.DeclaringType?.Name}/{invocation.Method?.Name}";
@@ -53,26 +33,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 {
                     op.Telemetry.Url = new Uri(url);
                     return await call();
-                }
-                catch (Exception ex)
-                {
-                    op.Telemetry.Success = false;
-                    TelemetryClient.TrackException(ex);
-                    throw;
-                }
-            }
-        }
-
-        protected override T Intercept<T>(IInvocation invocation, Func<T> call)
-        {
-            string url = $"{Context.ServiceName}/{invocation.Method?.DeclaringType?.Name}/{invocation.Method?.Name}";
-            using (IOperationHolder<RequestTelemetry> op =
-                TelemetryClient.StartOperation<RequestTelemetry>($"RPC {url}"))
-            {
-                try
-                {
-                    op.Telemetry.Url = new Uri(url);
-                    return call();
                 }
                 catch (Exception ex)
                 {

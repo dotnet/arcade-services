@@ -76,12 +76,12 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
         }
 
         public static (Type, Func<ActorService, ActorId, IServiceScopeFactory, Action<IServiceProvider>, ActorBase>)
-            CreateActorTypeAndFactory(string actorName, Type actorType)
+            CreateActorTypeAndFactory<TActor>(string actorName) where TActor : IStatefulActor
         {
             Type type = Generator.CreateClassProxyType(
                 actorName,
                 typeof(DelegatedActor),
-                actorType.GetAllInterfaces()
+                typeof(TActor).GetAllInterfaces()
                     .Where(i => typeof(IActor).IsAssignableFrom(i) || i == typeof(IRemindable))
                     .ToArray(),
                 ProxyGenerationOptions.Default);
@@ -97,38 +97,26 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
                     type,
                     ProxyGenerationOptions.Default,
                     args,
-                    new ActorMethodInterceptor(outerScope, actorType));
+                    new ActorMethodInterceptor<TActor>(outerScope));
             }
 
             return (type, Factory);
         }
     }
 
-    internal class ActorMethodInterceptor : AsyncInterceptor
+    internal class ActorMethodInterceptor<TActor> : AsyncInterceptor where TActor : IStatefulActor
     {
-        private readonly Type _implementationType;
         private readonly IServiceScopeFactory _outerScope;
 
-        public ActorMethodInterceptor(IServiceScopeFactory outerScope, Type implementationType)
+        public ActorMethodInterceptor(IServiceScopeFactory outerScope)
         {
             _outerScope = outerScope;
-            _implementationType = implementationType;
         }
 
         protected override void Proceed(IInvocation invocation)
         {
             MethodInfo method = invocation.Method;
             invocation.ReturnValue = method.Invoke(invocation.ReturnValue, invocation.Arguments);
-        }
-
-        private void ConfigureScope(Actor actor, IServiceProvider provider)
-        {
-            provider.GetRequiredService<Scoped<IActorStateManager>>().Initialize(actor.StateManager);
-            provider.GetRequiredService<Scoped<ActorId>>().Initialize(actor.Id);
-            if (actor is IReminderManager manager)
-            {
-                provider.GetRequiredService<Scoped<IReminderManager>>().Initialize(manager);
-            }
         }
 
         private bool ShouldIntercept(IInvocation invocation)
@@ -148,41 +136,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
             base.Intercept(invocation);
         }
 
-        protected override async Task InterceptAsync(IInvocation invocation, Func<Task> call)
-        {
-            var actor = (Actor) invocation.Proxy;
-            using (IServiceScope scope = _outerScope.CreateScope())
-            {
-                var client = scope.ServiceProvider.GetRequiredService<TelemetryClient>();
-                var context = scope.ServiceProvider.GetRequiredService<ServiceContext>();
-                ActorId id = actor.Id;
-                string url =
-                    $"{context.ServiceName}/{id}/{invocation.Method?.DeclaringType?.Name}/{invocation.Method?.Name}";
-                using (IOperationHolder<RequestTelemetry> op = client.StartOperation<RequestTelemetry>($"RPC {url}"))
-                {
-                    try
-                    {
-                        op.Telemetry.Url = new Uri(url);
-
-                        invocation.ReturnValue = scope.ServiceProvider.GetRequiredService(_implementationType);
-                        await call();
-                    }
-                    catch (Exception ex)
-                    {
-                        op.Telemetry.Success = false;
-                        client.TrackException(ex);
-                        throw;
-                    }
-                }
-            }
-        }
-
         protected override async Task<T> InterceptAsync<T>(IInvocation invocation, Func<Task<T>> call)
         {
             var actor = (Actor) invocation.Proxy;
             using (IServiceScope scope = _outerScope.CreateScope())
             {
-                ConfigureScope(actor, scope.ServiceProvider);
                 var client = scope.ServiceProvider.GetRequiredService<TelemetryClient>();
                 var context = scope.ServiceProvider.GetRequiredService<ServiceContext>();
                 ActorId id = actor.Id;
@@ -193,39 +151,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
                     try
                     {
                         op.Telemetry.Url = new Uri(url);
-
-                        invocation.ReturnValue = scope.ServiceProvider.GetRequiredService(_implementationType);
+                        
+                        TActor a = scope.ServiceProvider.GetRequiredService<TActor>();
+                        a.InitializeActorState(actor.Id, actor.StateManager, actor as IReminderManager);
+                        invocation.ReturnValue = actor;
                         return await call();
-                    }
-                    catch (Exception ex)
-                    {
-                        op.Telemetry.Success = false;
-                        client.TrackException(ex);
-                        throw;
-                    }
-                }
-            }
-        }
-
-        protected override T Intercept<T>(IInvocation invocation, Func<T> call)
-        {
-            var actor = (Actor) invocation.Proxy;
-            using (IServiceScope scope = _outerScope.CreateScope())
-            {
-                ConfigureScope(actor, scope.ServiceProvider);
-                var client = scope.ServiceProvider.GetRequiredService<TelemetryClient>();
-                var context = scope.ServiceProvider.GetRequiredService<ServiceContext>();
-                ActorId id = actor.Id;
-                string url =
-                    $"{context.ServiceName}/{id}/{invocation.Method?.DeclaringType?.Name}/{invocation.Method?.Name}";
-                using (IOperationHolder<RequestTelemetry> op = client.StartOperation<RequestTelemetry>($"RPC {url}"))
-                {
-                    try
-                    {
-                        op.Telemetry.Url = new Uri(url);
-
-                        invocation.ReturnValue = scope.ServiceProvider.GetRequiredService(_implementationType);
-                        return call();
                     }
                     catch (Exception ex)
                     {

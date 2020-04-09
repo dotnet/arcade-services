@@ -10,6 +10,7 @@ using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
+using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -57,33 +58,32 @@ namespace SubscriptionActorService
         }
     }
 
-    public class SubscriptionActor : ISubscriptionActor, IActionTracker
+    public class SubscriptionActor : ISubscriptionActor, IActionTracker, IStatefulActor
     {
         public SubscriptionActor(
-            Scoped<IActorStateManager> stateManager,
-            Scoped<ActorId> id,
             BuildAssetRegistryContext context,
             ILogger<SubscriptionActor> logger,
             IActionRunner actionRunner,
             IActorLookup<IPullRequestActor> pullRequestActorFactory)
         {
-            StateManager = stateManager.Value;
-            Id = id.Value;
             Context = context;
             Logger = logger;
             ActionRunner = actionRunner;
             PullRequestActorFactory = pullRequestActorFactory;
         }
 
-
-        public IActorStateManager StateManager { get; }
-        public ActorId Id { get; }
+        public ActorId Id { get; private set; }
         public BuildAssetRegistryContext Context { get; }
         public ILogger<SubscriptionActor> Logger { get; }
         public IActionRunner ActionRunner { get; }
         public IActorLookup<IPullRequestActor> PullRequestActorFactory { get; }
 
         public Guid SubscriptionId => Id.GetGuidId();
+
+        public void InitializeActorState(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
+        {
+            Id = actorId;
+        }
 
         public async Task TrackSuccessfulAction(string action, string result)
         {

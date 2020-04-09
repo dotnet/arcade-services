@@ -4,9 +4,6 @@
 
 using System.Collections.Generic;
 using FluentAssertions;
-using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.ServiceFabric.Actors.Runtime;
 using ServiceFabricMocks;
 
 namespace SubscriptionActorService.Tests
@@ -21,13 +18,10 @@ namespace SubscriptionActorService.Tests
         protected readonly MockReminderManager Reminders;
         protected readonly MockActorStateManager StateManager;
 
-        public ActorTests()
+        protected ActorTests()
         {
             StateManager = new MockActorStateManager();
             Reminders = new MockReminderManager();
-
-            Builder.AddSingleton<IActorStateManager>(StateManager);
-            Builder.AddSingleton<IReminderManager>(Reminders);
         }
 
         public override void Dispose()

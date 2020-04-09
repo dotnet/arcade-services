@@ -40,7 +40,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 firstIface,
                 additionalIfaces,
                 (object) null,
-                new InvokeInNewScopeInterceptor(container, typeof(TImplementation)),
+                new InvokeInNewScopeInterceptor<TImplementation>(container),
                 new LoggingServiceInterceptor(context, client));
 
             return new FabricTransportServiceRemotingListener(
@@ -105,63 +105,29 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         }
     }
 
-    internal class InvokeInNewScopeInterceptor : AsyncInterceptor
+    internal class InvokeInNewScopeInterceptor<TService> : AsyncInterceptor
     {
-        private readonly Action<IServiceProvider> _configureScope;
-        private readonly Type _implementationType;
+        private readonly Action<TService> _configureScope;
         private readonly IServiceProvider _outerScope;
 
-        public InvokeInNewScopeInterceptor(IServiceProvider outerScope, Type implementationType) : this(
+        public InvokeInNewScopeInterceptor(IServiceProvider outerScope) : this(
             outerScope,
-            implementationType,
             builder => { })
         {
         }
 
         public InvokeInNewScopeInterceptor(
             IServiceProvider outerScope,
-            Type implementationType,
-            Action<IServiceProvider> configureScope)
+            Action<TService> configureScope)
         {
             _outerScope = outerScope;
-            _implementationType = implementationType;
             _configureScope = configureScope;
-        }
-
-        protected override async Task InterceptAsync(IInvocation invocation, Func<Task> call)
-        {
-            using (IServiceScope scope = _outerScope.CreateScope())
-            {
-                _configureScope(scope.ServiceProvider);
-                var client = scope.ServiceProvider.GetRequiredService<TelemetryClient>();
-                var context = scope.ServiceProvider.GetRequiredService<ServiceContext>();
-                string url =
-                    $"{context.ServiceName}/{invocation.Method?.DeclaringType?.Name}/{invocation.Method?.Name}";
-                using (IOperationHolder<RequestTelemetry> op = client.StartOperation<RequestTelemetry>($"RPC {url}"))
-                {
-                    try
-                    {
-                        op.Telemetry.Url = new Uri(url);
-
-                        object instance = scope.ServiceProvider.GetRequiredService(_implementationType);
-                        ((IChangeProxyTarget) invocation).ChangeInvocationTarget(instance);
-                        await call();
-                    }
-                    catch (Exception ex)
-                    {
-                        op.Telemetry.Success = false;
-                        client.TrackException(ex);
-                        throw;
-                    }
-                }
-            }
         }
 
         protected override async Task<T> InterceptAsync<T>(IInvocation invocation, Func<Task<T>> call)
         {
             using (IServiceScope scope = _outerScope.CreateScope())
             {
-                _configureScope(scope.ServiceProvider);
                 var client = scope.ServiceProvider.GetRequiredService<TelemetryClient>();
                 var context = scope.ServiceProvider.GetRequiredService<ServiceContext>();
                 string url =
@@ -172,38 +138,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     {
                         op.Telemetry.Url = new Uri(url);
                         
-                        object instance = scope.ServiceProvider.GetRequiredService(_implementationType);
+                        var instance = scope.ServiceProvider.GetRequiredService<TService>();
+                        _configureScope(instance);
                         ((IChangeProxyTarget) invocation).ChangeInvocationTarget(instance);
                         return await call();
-                    }
-                    catch (Exception ex)
-                    {
-                        op.Telemetry.Success = false;
-                        client.TrackException(ex);
-                        throw;
-                    }
-                }
-            }
-        }
-
-        protected override T Intercept<T>(IInvocation invocation, Func<T> call)
-        {
-            using (IServiceScope scope = _outerScope.CreateScope())
-            {
-                _configureScope(scope.ServiceProvider);
-                var client = scope.ServiceProvider.GetRequiredService<TelemetryClient>();
-                var context = scope.ServiceProvider.GetRequiredService<ServiceContext>();
-                string url =
-                    $"{context.ServiceName}/{invocation.Method?.DeclaringType?.Name}/{invocation.Method?.Name}";
-                using (IOperationHolder<RequestTelemetry> op = client.StartOperation<RequestTelemetry>($"RPC {url}"))
-                {
-                    try
-                    {
-                        op.Telemetry.Url = new Uri(url);
-                        
-                        object instance = scope.ServiceProvider.GetRequiredService(_implementationType);
-                        ((IChangeProxyTarget) invocation).ChangeInvocationTarget(instance);
-                        return call();
                     }
                     catch (Exception ex)
                     {

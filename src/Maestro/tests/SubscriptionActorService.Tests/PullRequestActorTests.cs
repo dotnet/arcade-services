@@ -45,6 +45,12 @@ namespace SubscriptionActorService.Tests
 
         public PullRequestActorTests()
         {
+            MergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
+            RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
+        }
+
+        protected override void RegisterServices(IServiceCollection services)
+        {
             var lookup = new Mock<IActorLookup<ISubscriptionActor>>();
             lookup.Setup(l => l.Lookup(It.IsAny<ActorId>()))
                 .Returns((ActorId actorId) =>
@@ -55,17 +61,17 @@ namespace SubscriptionActorService.Tests
                     return mock.Object;
                 });
 
-            Builder.AddSingleton(lookup.Object);
+            services.AddSingleton(lookup.Object);
 
-            MergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
-            Builder.AddSingleton(MergePolicyEvaluator.Object);
+            services.AddSingleton(MergePolicyEvaluator.Object);
 
-            RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
             RemoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
                 .ReturnsAsync(
                     (string repo, ILogger logger) =>
                         DarcRemotes.GetOrAddValue(repo, CreateMock<IRemote>).Object);
-            Builder.AddSingleton(RemoteFactory.Object);
+            services.AddSingleton(RemoteFactory.Object);
+
+            base.RegisterServices(services);
         }
 
         protected override Task BeforeExecute(IServiceProvider context)
@@ -371,7 +377,9 @@ namespace SubscriptionActorService.Tests
                 actorId = new ActorId(Subscription.Id);
             }
 
-            return ActivatorUtilities.CreateInstance<PullRequestActor>(context, actorId);
+            var actor = ActivatorUtilities.CreateInstance<PullRequestActor>(context);
+            actor.InitializeActorState(actorId, StateManager, Reminders);
+            return actor;
         }
 
         public class ProcessPendingUpdatesAsync : PullRequestActorTests

@@ -13,8 +13,7 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
         private static readonly ImmutableList<string> s_exemptTypes = ImmutableList.Create(
             "System.Fabric.ServiceContext",
             "Microsoft.Extensions.Options.IConfigureOptions`1",
-            "Microsoft.Extensions.Caching.Memory.MemoryCacheOptions",
-            "System.IServiceProvider"
+            "Microsoft.Extensions.Caching.Memory.MemoryCacheOptions"
         );
 
         private static readonly ImmutableList<string> s_exemptNamespaces = ImmutableList.Create(

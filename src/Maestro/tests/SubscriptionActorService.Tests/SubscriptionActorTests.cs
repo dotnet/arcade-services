@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Maestro.Contracts;
 using Maestro.Data.Models;
+using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
@@ -20,20 +21,23 @@ namespace SubscriptionActorService.Tests
 {
     public class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
     {
-        public SubscriptionActorTests()
+        private readonly Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors =
+            new Dictionary<ActorId, Mock<IPullRequestActor>>();
+        
+        protected override void RegisterServices(IServiceCollection services)
         {
-            Builder.AddSingleton(
-                (Func<ActorId, IPullRequestActor>) (actorId =>
+            var lookup = new Mock<IActorLookup<IPullRequestActor>>();
+            lookup.Setup(l => l.Lookup(It.IsAny<ActorId>()))
+                .Returns((ActorId actorId) =>
                 {
                     Mock<IPullRequestActor> mock = PullRequestActors.GetOrAddValue(
                         actorId,
                         CreateMock<IPullRequestActor>);
                     return mock.Object;
-                }));
+                });
+            services.AddSingleton(lookup.Object);
+            base.RegisterServices(services);
         }
-
-        private readonly Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors =
-            new Dictionary<ActorId, Mock<IPullRequestActor>>();
 
         internal async Task WhenUpdateAsyncIsCalled(Subscription forSubscription, Build andForBuild)
         {
@@ -41,7 +45,8 @@ namespace SubscriptionActorService.Tests
                 async provider =>
                 {
                     var actorId = new ActorId(forSubscription.Id);
-                    var actor = ActivatorUtilities.CreateInstance<SubscriptionActor>(provider, actorId);
+                    var actor = ActivatorUtilities.CreateInstance<SubscriptionActor>(provider);
+                    actor.InitializeActorState(actorId, StateManager, Reminders);
                     await actor.UpdateAsync(andForBuild.Id);
                 });
         }
