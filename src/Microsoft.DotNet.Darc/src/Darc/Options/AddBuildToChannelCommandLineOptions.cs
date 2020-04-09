@@ -13,8 +13,11 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("id", Required = true, HelpText = "BAR id of build to assign to channel.")]
         public int Id { get; set; }
 
-        [Option("channel", Required = true, HelpText = "Channel to assign build to.")]
+        [Option("channel", HelpText = "Channel to assign build to. Required if --default-channels is not informed.")]
         public string Channel { get; set; }
+
+        [Option("default-channels", HelpText = "Assign build to all default channels. Required if --channel is not specified.")]
+        public bool AddToDefaultChannels { get; set; }
 
         [Option("source-branch", HelpText = "Branch that should be used as base for the promotion build. Required if source-sha is specified.")]
         public string SourceBranch { get; set; }
