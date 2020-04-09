@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using DotNet.Status.Web.Controllers;
 using Maestro.Data;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Logging;
@@ -39,14 +40,14 @@ namespace DependencyUpdateErrorProcessor
         // github url -> https://github.com/maestro-auth-test/maestro-test2  repo ->maestro-test2 owner -> maestro-auth-test2 
         private static readonly Regex RepositoryUriPattern = new Regex(@"^/(?<owner>[^/]+)/(?<repo>[^/]+)/?$");
 
-        public Func<string , GitHubClient> AuthenticateGitHubClient { get; }
+        public GitHubClientFactory AuthenticateGitHubClient { get; }
 
         public DependencyUpdateErrorProcessor(
             IReliableStateManager stateManager,
             ILogger<DependencyUpdateErrorProcessor> logger,
             BuildAssetRegistryContext context,
             IOptions<DependencyUpdateErrorProcessorOptions> options,
-            Func<string, GitHubClient> authenticateGithubClient
+            GitHubClientFactory authenticateGithubClient
             )
         {
             _stateManager = stateManager;
@@ -158,8 +159,8 @@ namespace DependencyUpdateErrorProcessor
             _logger.LogInformation($"Error Message : '{updateHistoryError.ErrorMessage}' in repository :  '{updateHistoryError.Repository}'");
             IReliableDictionary<(string repository, string branch),int> gitHubIssueEvaluator =
                 await _stateManager.GetOrAddAsync<IReliableDictionary<(string repository, string branch), int>>("gitHubIssueEvaluator");
-            GitHubClient client = AuthenticateGitHubClient(issueRepo);
             var parseRepoUri = ParseRepoUri(issueRepo);
+            IGitHubClient client = await AuthenticateGitHubClient.CreateGitHubClientAsync(parseRepoUri.owner, parseRepoUri.repo);
             Octokit.Repository repo = await client.Repository.Get(
                 parseRepoUri.owner, 
                 parseRepoUri.repo);
@@ -227,7 +228,7 @@ namespace DependencyUpdateErrorProcessor
         /// <param name="issueRepo">Repository where issue has to be created.</param>
         /// <returns></returns>
         private async Task CreateIssueAsync(
-            GitHubClient client,
+            IGitHubClient client,
             RepositoryBranchUpdateHistoryEntry updateHistoryError,
             IReliableDictionary<(string repository, string branch), int> gitHubIssueEvaluator,
             string description,
@@ -270,7 +271,7 @@ namespace DependencyUpdateErrorProcessor
         /// <param name="repoId">Repository Id of the repo where the issue has to be updated.</param>
         /// <returns></returns>
         private async Task UpdateIssueAsync(
-            GitHubClient client, 
+            IGitHubClient client, 
             RepositoryBranchUpdateHistoryEntry updateHistoryError,
             Func<string, string, bool> shouldReplaceDescription, 
             string description,

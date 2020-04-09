@@ -3,10 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
-using Maestro.Data;
+using DotNet.Status.Web.Controllers;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Data;
@@ -23,24 +21,24 @@ namespace DependencyUpdateErrorProcessor.Tests
         protected readonly ServiceProvider Provider;
         protected readonly IServiceScope Scope;
         protected readonly MockReliableStateManager StateManager;
-        protected readonly Mock<GitHubClient> GithubClient;
+        protected readonly Mock<IGitHubClient> GithubClient;
+        protected readonly Mock<GitHubClientFactory> GithubClientFactory;
 
         public DependencyUpdateErrorProcessorTests()
         {
             var services = new ServiceCollection();
             StateManager = new MockReliableStateManager();
             Env = new Mock<IHostingEnvironment>(MockBehavior.Strict);
-            GithubClient = new Mock<GitHubClient>(null);
+            GithubClient = new Mock<IGitHubClient>();
+            GithubClientFactory = new Mock<GitHubClientFactory>(null, null);
+            GithubClientFactory.Setup(x => x.CreateGitHubClientAsync("Owner", "Repo"))
+                .ReturnsAsync(GithubClient.Object);
             services.AddSingleton(Env.Object);
             services.AddSingleton<IReliableStateManager>(StateManager);
             services.AddLogging();
             services.AddDbContext<TestBuildAssetRegistryContext>(
                 options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
-            services.AddSingleton<Func<string,GitHubClient>>(
-             repo =>
-             {
-                 return GithubClient.Object;
-             });
+            services.AddSingleton(GithubClientFactory.Object);
             services.Configure<DependencyUpdateErrorProcessorOptions>(
                 (options) =>
                 {
@@ -51,7 +49,6 @@ namespace DependencyUpdateErrorProcessor.Tests
             Provider = services.BuildServiceProvider();
             Scope = Provider.CreateScope();
             _context = new Lazy<TestBuildAssetRegistryContext>(GetContext);
-            SetUp();
         }
 
         public TestBuildAssetRegistryContext Context => _context.Value;
@@ -67,28 +64,5 @@ namespace DependencyUpdateErrorProcessor.Tests
             Scope.Dispose();
             Provider.Dispose();
         }
-
-        public void SetUp()
-        {
-            var repositoryBranchUpdate = new RepositoryBranchUpdateHistoryEntry()
-            {
-                Repository = "https://github.com/maestro-auth-test/maestro-test2",
-                Branch = "38",
-                Method = "ProcessPendingUpdatesAsync",
-                Success = false,
-                Timestamp = new DateTime(2021, 04, 01)
-            };
-
-            var installationId = Context.GetInstallationId("TestValue");
-            string token = "TestToken";
-            Mock<GitHubAppTokenProvider> githubProvider = new Mock<GitHubAppTokenProvider>();
-            githubProvider.Setup(x => x.GetAppToken()).Returns(token);
-            Context.RepoBranchUpdateInMemory = new List<RepositoryBranchUpdateHistoryEntry>
-                {repositoryBranchUpdate};
-            DependencyUpdateErrorProcessor errorProcessor =
-                ActivatorUtilities.CreateInstance<DependencyUpdateErrorProcessor>(Scope.ServiceProvider,
-                    Context);
-        }
-
     }
 }
