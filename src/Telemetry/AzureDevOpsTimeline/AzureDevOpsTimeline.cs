@@ -14,6 +14,7 @@ using Kusto.Data.Common;
 using Kusto.Data.Exceptions;
 using Kusto.Data.Net.Client;
 using Kusto.Ingest;
+using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.Services.Utility;
