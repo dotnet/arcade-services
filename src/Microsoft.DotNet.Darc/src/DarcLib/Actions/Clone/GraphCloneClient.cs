@@ -103,22 +103,34 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                             }
 
                             result.UpstreamEdges = deps
-                                .Select(d => new
+                                .Select(d =>
                                 {
-                                    Identity = new SourceBuildIdentity
+                                    var identity = new SourceBuildIdentity
                                     {
                                         RepoUri = d.RepoUri,
                                         Commit = d.Commit,
-                                    },
-                                    Detail = d
-                                })
-                                // Keep all contributing dependency details.
-                                .GroupBy(d => d.Identity, SourceBuildIdentity.CaseInsensitiveComparer)
-                                .Select(g => new SourceBuildEdge
-                                {
-                                    Upstream = g.Key,
-                                    Downstream = repo,
-                                    Sources = g.Select(d => d.Detail).ToArray()
+                                    };
+
+                                    bool? critical = null;
+
+                                    foreach (var rootOverride in rootOverrides)
+                                    {
+                                        if (string.Equals(rootOverride.Repo, identity.RepoUri))
+                                        {
+                                            foreach (var find in rootOverride.FindDependencies)
+                                            {
+                                                critical = find?.ProductCritical ?? critical;
+                                            }
+                                        }
+                                    }
+
+                                    return new SourceBuildEdge
+                                    {
+                                        Upstream = identity,
+                                        Downstream = repo,
+                                        Source = d,
+                                        ProductCritical = critical ?? false
+                                    };
                                 })
                                 .ToArray();
 
@@ -314,17 +326,22 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         }
 
         /// <summary>
-        /// Create an artificially coherent graph: only keep one commit of each repo by name. For
-        /// each identity node, the latest version is kept and dependenices on all versions are
-        /// redirected to the kept version.
-        ///
-        /// If a node has no version information (no DependencyDetail) we assume it is the latest.
-        /// This should only be the case when the user manually passes in a url and commit hash. If
-        /// multiple nodes with the same name lack version information, throws an exception.
+        /// Create an artificially coherent graph: only keep one commit of each repo by name.
         /// </summary>
         public SourceBuildGraph CreateArtificiallyCoherentGraph(SourceBuildGraph source)
         {
-            var criticalNodes = new HashSet<SourceBuildNode>(source.GetProductCriticalNodes());
+            // Re-walk the source graph to form a graph based on product critical edges. We can't
+            // simply take all critical edges, because there may be duplicates that exist in the
+            // graph but aren't reachable. For example, repo A at commit 1 and commit 2 would have
+            // similar dependencies, including criticality. However, A1 and A2 will be resolved so
+            // only one is present in the graph. To determine which one, though, we need to know
+            // which edges point to them, and which of those edges are reachable in the graph. To
+            // simplify this, we visit one node at a time. Breadth-first, simply because it is
+            // likely to resolve common .NET build graphs sooner.
+
+            var next = new Queue<SourceBuildNode>(source.GetRootNodes());
+            var visited = new HashSet<SourceBuildIdentity>(SourceBuildIdentity.CaseInsensitiveComparer);
+
 
             var edgesWithUpstreamNodeByName = source.AllEdges
                 .GroupBy(edge => edge.Upstream, SourceBuildIdentity.RepoNameOnlyComparer)
@@ -388,8 +405,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         {
             var getCommitDate = GetCommitDate ?? GetCachedCommitDateFunc();
 
-            // If the repo has no source, it's likely a darc clone argument, and takes priority.
-            if (edges.SingleOrDefault(edge => edge.Sources?.Any() != true)
+            // If an edge has no source, it's likely a darc clone argument, and takes priority.
+            if (edges.FirstOrDefault(edge => edge.Source == null)
                 is SourceBuildEdge result)
             {
                 return result;
@@ -399,9 +416,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 .Select(edge => new
                 {
                     edge,
-                    version = edge.Sources
-                        .Select(source => NuGetVersion.Parse(source.Version))
-                        .Max()
+                    version = NuGetVersion.Parse(edge.Source.Version)
                 })
                 // If there are multiple versions of the same commit, take the highest.
                 // Otherwise, we'd check every single one with the later ThenByDescending.

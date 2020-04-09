@@ -107,7 +107,8 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                         {
                             RepoUri = d.RepoUri,
                             Commit = d.Commit,
-                            Sources = new[] { d }
+                            // Save the dependencydetail somewhere (make a root node?)
+                            //Sources = new[] { d }
                         });
 
                     foreach (SourceBuildIdentity d in stripped)

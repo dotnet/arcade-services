@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
 
             var incoherent = SourceBuildGraph.Create(new[]
             {
-                new SourceBuildNode{Identity = root, Upstreams = new [] {a, b}},
+                //new SourceBuildNode{Identity = root, Upstream = new [] {a, b}},
                 new SourceBuildNode{Identity = a},
                 new SourceBuildNode{Identity = b}
             }, null);
@@ -59,9 +59,9 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
 
             var incoherent = SourceBuildGraph.Create(new[]
             {
-                new SourceBuildNode{Identity = root, Upstreams = new [] {a, b}},
-                new SourceBuildNode{Identity = a, Upstreams = new [] {cousinA}},
-                new SourceBuildNode{Identity = b, Upstreams = new [] {cousinB}},
+                //new SourceBuildNode{Identity = root, Upstreams = new [] {a, b}},
+                //new SourceBuildNode{Identity = a, Upstreams = new [] {cousinA}},
+                //new SourceBuildNode{Identity = b, Upstreams = new [] {cousinB}},
                 new SourceBuildNode{Identity = cousinA},
                 new SourceBuildNode{Identity = cousinB}
             }, null);
@@ -91,7 +91,7 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
 
             var incoherent = SourceBuildGraph.Create(new[]
             {
-                new SourceBuildNode{Identity = root, Upstreams = new [] {a, b, c}},
+                //new SourceBuildNode{Identity = root, Upstreams = new [] {a, b, c}},
                 new SourceBuildNode{Identity = a},
                 new SourceBuildNode{Identity = b},
                 new SourceBuildNode{Identity = c}
@@ -116,7 +116,7 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
             {
                 RepoUri = repoUri,
                 Commit = commit,
-                Sources = detail == null ? null : new[] { detail }
+                //Sources = detail == null ? null : new[] { detail }
             };
         }
 

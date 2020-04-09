@@ -19,9 +19,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         public SourceBuildIdentity Downstream { get; set; }
 
         /// <summary>
-        /// The sources of this identity, or null if this didn't come from a DarcLib dependency.
+        /// The source of this identity, or null if this didn't come from a DarcLib dependency.
         /// </summary>
-        public IEnumerable<DependencyDetail> Sources { get; set; }
+        public DependencyDetail Source { get; set; }
 
         public bool ProductCritical { get; set; }
 
