@@ -2,10 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using Newtonsoft.Json;
 
-namespace Microsoft.DotNet.AzureDevOpsTimeline
+namespace Microsoft.DotNet.Internal.AzureDevOps
 {
     /// <summary>
     ///     https://docs.microsoft.com/en-us/rest/api/azure/devops/build/builds/list?view=azure-devops-rest-5.0#build

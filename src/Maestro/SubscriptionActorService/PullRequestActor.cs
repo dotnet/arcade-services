@@ -804,16 +804,16 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 var message = new StringBuilder();
                 List<DependencyUpdate> dependenciesToCommit = deps;
                 await CalculateCommitMessage(update, deps, message);
-                await CalculatePRDescription(update, deps, description);
 
                 if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
                 {
                     await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                    await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, description);
+                    await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description);
                     dependenciesToCommit.AddRange(coherencyUpdate.deps);
                 }
 
-                await darc.CommitUpdatesAsync(targetRepository, newBranchName, dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
+                List<GitFile> committedFiles = await darc.CommitUpdatesAsync(targetRepository, newBranchName, dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
+                await CalculatePRDescription(update, deps, committedFiles, description);
             }
 
             // If the coherency update wasn't combined, then
@@ -822,8 +822,36 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             {
                 var message = new StringBuilder();
                 await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, description);
+                await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description);
+
                 await darc.CommitUpdatesAsync(targetRepository, newBranchName, coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
+            }
+        }
+
+        private void UpdatePRDescriptionDueConfigFiles(List<GitFile> commitedFiles, StringBuilder globalJsonSection)
+        {
+            GitFile globalJsonFile = commitedFiles?.
+                Where(gf => gf.FilePath.Equals("global.json", StringComparison.OrdinalIgnoreCase)).
+                FirstOrDefault();
+
+            if (globalJsonFile != null)
+            {
+                bool hasSdkVersionUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.SdkVersionUpdate);
+                bool hasToolsDotnetUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.ToolsDotNetUpdate);
+
+                globalJsonSection.AppendLine("- **Updates to .NET SDKs:**");
+
+                if (hasSdkVersionUpdate)
+                {
+                    globalJsonSection.AppendLine($"  - Updates sdk.version to " +
+                        $"{globalJsonFile.Metadata[GitFileMetadataName.SdkVersionUpdate]}");
+                }
+
+                if (hasToolsDotnetUpdate)
+                {
+                    globalJsonSection.AppendLine($"  - Updates tools.dotnet to " +
+                        $"{globalJsonFile.Metadata[GitFileMetadataName.ToolsDotNetUpdate]}");
+                }
             }
         }
 
@@ -866,9 +894,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         ///     Because PRs tend to be live for short periods of time, we can put more information
         ///     in the description than the commit message without worrying that links will go stale.
         /// </remarks>
-        private async Task CalculatePRDescription(UpdateAssetsParameters update, List<DependencyUpdate> deps, StringBuilder description)
+        private async Task CalculatePRDescription(UpdateAssetsParameters update, List<DependencyUpdate> deps, List<GitFile> committedFiles, StringBuilder description)
         {
-
             //Find the Coherency section of the PR description
             if (update.IsCoherencyUpdate)
             {
@@ -921,6 +948,9 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 {
                     subscriptionSection.AppendLine($"  - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version}");
                 }
+
+                UpdatePRDescriptionDueConfigFiles(committedFiles, subscriptionSection);
+
                 subscriptionSection.AppendLine();
                 subscriptionSection.AppendLine(sectionEndMarker);
                 description.Insert(sectionStartIndex, subscriptionSection.ToString());
