@@ -9,20 +9,17 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Autofac;
-using Autofac.Extensions.DependencyInjection;
 using Castle.DynamicProxy;
 using Castle.DynamicProxy.Generators;
 using Castle.DynamicProxy.Internal;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
-using Microsoft.ServiceFabric.Services.Remoting;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
 {
@@ -78,22 +75,22 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
             }
         }
 
-        public static (Type, Func<ActorService, ActorId, ILifetimeScope, Action<ContainerBuilder>, ActorBase>)
+        public static (Type, Func<ActorService, ActorId, IServiceScopeFactory, Action<IServiceProvider>, ActorBase>)
             CreateActorTypeAndFactory(string actorName, Type actorType)
         {
             Type type = Generator.CreateClassProxyType(
                 actorName,
                 typeof(DelegatedActor),
                 actorType.GetAllInterfaces()
-                    .Where(i => i.IsAssignableTo<IActor>() || i == typeof(IRemindable))
+                    .Where(i => typeof(IActor).IsAssignableFrom(i) || i == typeof(IRemindable))
                     .ToArray(),
                 ProxyGenerationOptions.Default);
 
             ActorBase Factory(
                 ActorService service,
                 ActorId id,
-                ILifetimeScope outerScope,
-                Action<ContainerBuilder> configureScope)
+                IServiceScopeFactory outerScope,
+                Action<IServiceProvider> configueScope)
             {
                 var args = new object[] {service, id};
                 return (ActorBase) Generator.CreateProxyFromProxyType(
@@ -110,9 +107,9 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
     internal class ActorMethodInterceptor : AsyncInterceptor
     {
         private readonly Type _implementationType;
-        private readonly ILifetimeScope _outerScope;
+        private readonly IServiceScopeFactory _outerScope;
 
-        public ActorMethodInterceptor(ILifetimeScope outerScope, Type implementationType)
+        public ActorMethodInterceptor(IServiceScopeFactory outerScope, Type implementationType)
         {
             _outerScope = outerScope;
             _implementationType = implementationType;
@@ -124,11 +121,14 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
             invocation.ReturnValue = method.Invoke(invocation.ReturnValue, invocation.Arguments);
         }
 
-        private void ConfigureScope(Actor actor, ContainerBuilder builder)
+        private void ConfigureScope(Actor actor, IServiceProvider provider)
         {
-            builder.RegisterInstance(actor.StateManager).As<IActorStateManager>();
-            builder.RegisterInstance(actor.Id).As<ActorId>();
-            builder.RegisterInstance(actor).As<IReminderManager>();
+            provider.GetRequiredService<Scoped<IActorStateManager>>().Initialize(actor.StateManager);
+            provider.GetRequiredService<Scoped<ActorId>>().Initialize(actor.Id);
+            if (actor is IReminderManager manager)
+            {
+                provider.GetRequiredService<Scoped<IReminderManager>>().Initialize(manager);
+            }
         }
 
         private bool ShouldIntercept(IInvocation invocation)
@@ -151,10 +151,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
         protected override async Task InterceptAsync(IInvocation invocation, Func<Task> call)
         {
             var actor = (Actor) invocation.Proxy;
-            using (ILifetimeScope scope = _outerScope.BeginLifetimeScope(builder => ConfigureScope(actor, builder)))
+            using (IServiceScope scope = _outerScope.CreateScope())
             {
-                var client = scope.Resolve<TelemetryClient>();
-                var context = scope.Resolve<ServiceContext>();
+                var client = scope.ServiceProvider.GetRequiredService<TelemetryClient>();
+                var context = scope.ServiceProvider.GetRequiredService<ServiceContext>();
                 ActorId id = actor.Id;
                 string url =
                     $"{context.ServiceName}/{id}/{invocation.Method?.DeclaringType?.Name}/{invocation.Method?.Name}";
@@ -164,7 +164,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
                     {
                         op.Telemetry.Url = new Uri(url);
 
-                        invocation.ReturnValue = scope.Resolve(_implementationType);
+                        invocation.ReturnValue = scope.ServiceProvider.GetRequiredService(_implementationType);
                         await call();
                     }
                     catch (Exception ex)
@@ -180,10 +180,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
         protected override async Task<T> InterceptAsync<T>(IInvocation invocation, Func<Task<T>> call)
         {
             var actor = (Actor) invocation.Proxy;
-            using (ILifetimeScope scope = _outerScope.BeginLifetimeScope(builder => ConfigureScope(actor, builder)))
+            using (IServiceScope scope = _outerScope.CreateScope())
             {
-                var client = scope.Resolve<TelemetryClient>();
-                var context = scope.Resolve<ServiceContext>();
+                ConfigureScope(actor, scope.ServiceProvider);
+                var client = scope.ServiceProvider.GetRequiredService<TelemetryClient>();
+                var context = scope.ServiceProvider.GetRequiredService<ServiceContext>();
                 ActorId id = actor.Id;
                 string url =
                     $"{context.ServiceName}/{id}/{invocation.Method?.DeclaringType?.Name}/{invocation.Method?.Name}";
@@ -193,7 +194,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
                     {
                         op.Telemetry.Url = new Uri(url);
 
-                        invocation.ReturnValue = scope.Resolve(_implementationType);
+                        invocation.ReturnValue = scope.ServiceProvider.GetRequiredService(_implementationType);
                         return await call();
                     }
                     catch (Exception ex)
@@ -209,10 +210,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
         protected override T Intercept<T>(IInvocation invocation, Func<T> call)
         {
             var actor = (Actor) invocation.Proxy;
-            using (ILifetimeScope scope = _outerScope.BeginLifetimeScope(builder => ConfigureScope(actor, builder)))
+            using (IServiceScope scope = _outerScope.CreateScope())
             {
-                var client = scope.Resolve<TelemetryClient>();
-                var context = scope.Resolve<ServiceContext>();
+                ConfigureScope(actor, scope.ServiceProvider);
+                var client = scope.ServiceProvider.GetRequiredService<TelemetryClient>();
+                var context = scope.ServiceProvider.GetRequiredService<ServiceContext>();
                 ActorId id = actor.Id;
                 string url =
                     $"{context.ServiceName}/{id}/{invocation.Method?.DeclaringType?.Name}/{invocation.Method?.Name}";
@@ -222,7 +224,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
                     {
                         op.Telemetry.Url = new Uri(url);
 
-                        invocation.ReturnValue = scope.Resolve(_implementationType);
+                        invocation.ReturnValue = scope.ServiceProvider.GetRequiredService(_implementationType);
                         return call();
                     }
                     catch (Exception ex)
@@ -308,16 +310,14 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
 
     public class DelegatedActorService<TActorImplementation> : ActorService
     {
-        private readonly Func<ActorService, ActorId, ILifetimeScope, Action<ContainerBuilder>, ActorBase> _actorFactory;
-        private readonly Action<ContainerBuilder> _configureContainer;
+        private readonly Func<ActorService, ActorId, IServiceScopeFactory, Action<IServiceProvider>, ActorBase> _actorFactory;
         private readonly Action<IServiceCollection> _configureServices;
 
         public DelegatedActorService(
             StatefulServiceContext context,
             ActorTypeInformation actorTypeInfo,
             Action<IServiceCollection> configureServices,
-            Action<ContainerBuilder> configureContainer,
-            Func<ActorService, ActorId, ILifetimeScope, Action<ContainerBuilder>, ActorBase> actorFactory,
+            Func<ActorService, ActorId, IServiceScopeFactory, Action<IServiceProvider>, ActorBase> actorFactory,
             ActorServiceSettings settings = null) : base(
             context,
             actorTypeInfo,
@@ -327,11 +327,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
             settings)
         {
             _configureServices = configureServices;
-            _configureContainer = configureContainer;
             _actorFactory = actorFactory;
         }
 
-        protected ILifetimeScope Container { get; private set; }
+        private ServiceProvider Container { get; set; }
 
         protected override async Task OnOpenAsync(ReplicaOpenMode openMode, CancellationToken cancellationToken)
         {
@@ -341,13 +340,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
             services.AddSingleton<ServiceContext>(Context);
             services.AddSingleton(Context);
             _configureServices(services);
-            var builder = new ContainerBuilder();
-            builder.Populate(services);
-            _configureContainer(builder);
-            Container = builder.Build();
+            Container = services.BuildServiceProvider();
 
             // This requires the ServiceContext up a few lines, so we can't inject it in the constructor
-            Container.ResolveOptional<TemporaryFiles>()?.Initialize();
+            Container.GetService<TemporaryFiles>()?.Initialize();
         }
 
         protected override async Task OnCloseAsync(CancellationToken cancellationToken)
@@ -374,7 +370,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
 
         private ActorBase CreateActor(ActorId actorId)
         {
-            return _actorFactory(this, actorId, Container ?? throw new InvalidOperationException("Actor created before OnOpenAsync"), builder => { });
+            return _actorFactory(this, actorId, Container.GetService<IServiceScopeFactory>() ?? throw new InvalidOperationException("Actor created before OnOpenAsync"), builder => { });
         }
 
         private static ActorBase ActorFactory(ActorService service, ActorId actorId)

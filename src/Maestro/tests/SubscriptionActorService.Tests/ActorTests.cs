@@ -3,9 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
-using Autofac;
 using FluentAssertions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using ServiceFabricMocks;
 
@@ -26,8 +26,8 @@ namespace SubscriptionActorService.Tests
             StateManager = new MockActorStateManager();
             Reminders = new MockReminderManager();
 
-            Builder.RegisterInstance(StateManager).As<IActorStateManager>();
-            Builder.RegisterInstance(Reminders).As<IReminderManager>();
+            Builder.AddSingleton<IActorStateManager>(StateManager);
+            Builder.AddSingleton<IReminderManager>(Reminders);
         }
 
         public override void Dispose()

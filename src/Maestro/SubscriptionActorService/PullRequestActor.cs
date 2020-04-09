@@ -14,6 +14,7 @@ using Maestro.Data.Models;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions.Internal;
@@ -70,9 +71,9 @@ namespace SubscriptionActorService
         ///     repository and branch.
         /// </param>
         /// <param name="provider"></param>
-        public PullRequestActor(ActorId id, IServiceProvider provider)
+        public PullRequestActor(Scoped<ActorId> id, IServiceProvider provider)
         {
-            Id = id;
+            Id = id.Value;
             if (Id.Kind == ActorIdKind.Guid)
             {
                 Implementation =

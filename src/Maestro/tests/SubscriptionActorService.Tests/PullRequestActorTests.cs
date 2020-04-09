@@ -7,18 +7,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
-using Autofac;
-using Autofac.Extensions.DependencyInjection;
 using FluentAssertions;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
-using Microsoft.VisualStudio.Services.Zeus;
 using Moq;
 using Xunit;
 using Asset = Maestro.Contracts.Asset;
@@ -47,29 +45,32 @@ namespace SubscriptionActorService.Tests
 
         public PullRequestActorTests()
         {
-            Builder.RegisterInstance(
-                (Func<ActorId, ISubscriptionActor>) (actorId =>
+            var lookup = new Mock<IActorLookup<ISubscriptionActor>>();
+            lookup.Setup(l => l.Lookup(It.IsAny<ActorId>()))
+                .Returns((ActorId actorId) =>
                 {
                     Mock<ISubscriptionActor> mock = SubscriptionActors.GetOrAddValue(
                         actorId,
                         CreateMock<ISubscriptionActor>);
                     return mock.Object;
-                }));
+                });
+
+            Builder.AddSingleton(lookup.Object);
 
             MergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
-            Builder.RegisterInstance(MergePolicyEvaluator.Object);
+            Builder.AddSingleton(MergePolicyEvaluator.Object);
 
             RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
             RemoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
                 .ReturnsAsync(
                     (string repo, ILogger logger) =>
                         DarcRemotes.GetOrAddValue(repo, CreateMock<IRemote>).Object);
-            Builder.RegisterInstance(RemoteFactory.Object);
+            Builder.AddSingleton(RemoteFactory.Object);
         }
 
-        protected override Task BeforeExecute(IComponentContext context)
+        protected override Task BeforeExecute(IServiceProvider context)
         {
-            var dbContext = context.Resolve<BuildAssetRegistryContext>();
+            var dbContext = context.GetRequiredService<BuildAssetRegistryContext>();
             dbContext.Repositories.Add(
                 new Repository
                 {
@@ -358,9 +359,8 @@ namespace SubscriptionActorService.Tests
                 });
         }
 
-        private PullRequestActor CreateActor(IComponentContext context)
+        private PullRequestActor CreateActor(IServiceProvider context)
         {
-            var provider = new AutofacServiceProvider(context);
             ActorId actorId;
             if (Subscription.PolicyObject.Batchable)
             {
@@ -371,7 +371,7 @@ namespace SubscriptionActorService.Tests
                 actorId = new ActorId(Subscription.Id);
             }
 
-            return ActivatorUtilities.CreateInstance<PullRequestActor>(provider, actorId);
+            return ActivatorUtilities.CreateInstance<PullRequestActor>(context, actorId);
         }
 
         public class ProcessPendingUpdatesAsync : PullRequestActorTests

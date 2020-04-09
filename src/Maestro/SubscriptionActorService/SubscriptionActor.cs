@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Microsoft.DotNet.ServiceFabric.ServiceHost;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
@@ -58,15 +60,15 @@ namespace SubscriptionActorService
     public class SubscriptionActor : ISubscriptionActor, IActionTracker
     {
         public SubscriptionActor(
-            IActorStateManager stateManager,
-            ActorId id,
+            Scoped<IActorStateManager> stateManager,
+            Scoped<ActorId> id,
             BuildAssetRegistryContext context,
             ILogger<SubscriptionActor> logger,
             IActionRunner actionRunner,
-            Func<ActorId, IPullRequestActor> pullRequestActorFactory)
+            IActorLookup<IPullRequestActor> pullRequestActorFactory)
         {
-            StateManager = stateManager;
-            Id = id;
+            StateManager = stateManager.Value;
+            Id = id.Value;
             Context = context;
             Logger = logger;
             ActionRunner = actionRunner;
@@ -79,7 +81,7 @@ namespace SubscriptionActorService
         public BuildAssetRegistryContext Context { get; }
         public ILogger<SubscriptionActor> Logger { get; }
         public IActionRunner ActionRunner { get; }
-        public Func<ActorId, IPullRequestActor> PullRequestActorFactory { get; }
+        public IActorLookup<IPullRequestActor> PullRequestActorFactory { get; }
 
         public Guid SubscriptionId => Id.GetGuidId();
 
@@ -208,7 +210,7 @@ namespace SubscriptionActorService
 
             Logger.LogInformation($"Creating pull request actor for '{pullRequestActorId}'");
 
-            IPullRequestActor pullRequestActor = PullRequestActorFactory(pullRequestActorId);
+            IPullRequestActor pullRequestActor = PullRequestActorFactory.Lookup(pullRequestActorId);
 
             List<Asset> assets = build.Assets.Select(
                     a => new Asset

@@ -6,13 +6,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Autofac;
-using Autofac.Extensions.DependencyInjection;
 using FluentAssertions;
 using Maestro.Contracts;
-using Maestro.Data;
 using Maestro.Data.Models;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
@@ -26,7 +22,7 @@ namespace SubscriptionActorService.Tests
     {
         public SubscriptionActorTests()
         {
-            Builder.RegisterInstance(
+            Builder.AddSingleton(
                 (Func<ActorId, IPullRequestActor>) (actorId =>
                 {
                     Mock<IPullRequestActor> mock = PullRequestActors.GetOrAddValue(
@@ -42,9 +38,8 @@ namespace SubscriptionActorService.Tests
         internal async Task WhenUpdateAsyncIsCalled(Subscription forSubscription, Build andForBuild)
         {
             await Execute(
-                async context =>
+                async provider =>
                 {
-                    var provider = new AutofacServiceProvider(context);
                     var actorId = new ActorId(forSubscription.Id);
                     var actor = ActivatorUtilities.CreateInstance<SubscriptionActor>(provider, actorId);
                     await actor.UpdateAsync(andForBuild.Id);

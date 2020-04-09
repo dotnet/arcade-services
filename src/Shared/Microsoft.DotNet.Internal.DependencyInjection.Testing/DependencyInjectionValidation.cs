@@ -10,11 +10,11 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
 {
     public static class DependencyInjectionValidation
     {
-        private static readonly ImmutableList<string> s_exemptTypes = ImmutableList.Create<string>(
+        private static readonly ImmutableList<string> s_exemptTypes = ImmutableList.Create(
             "System.Fabric.ServiceContext",
             "Microsoft.Extensions.Options.IConfigureOptions`1",
             "Microsoft.Extensions.Caching.Memory.MemoryCacheOptions",
-            "Autofac.ILifetimeScope"
+            "System.IServiceProvider"
         );
 
         private static readonly ImmutableList<string> s_exemptNamespaces = ImmutableList.Create(

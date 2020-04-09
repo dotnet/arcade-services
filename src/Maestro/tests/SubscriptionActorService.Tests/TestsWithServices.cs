@@ -4,7 +4,7 @@
 
 using System;
 using System.Threading.Tasks;
-using Autofac;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace SubscriptionActorService.Tests
 {
@@ -12,23 +12,23 @@ namespace SubscriptionActorService.Tests
     {
         public TestsWithServices()
         {
-            Builder = new ContainerBuilder();
+            Builder = new ServiceCollection();
         }
 
-        protected ContainerBuilder Builder { get; }
+        protected ServiceCollection Builder { get; }
 
-        protected virtual Task BeforeExecute(IComponentContext context)
+        protected virtual Task BeforeExecute(IServiceProvider serviceScope)
         {
             return Task.CompletedTask;
         }
 
-        protected async Task Execute(Func<IComponentContext, Task> run)
+        protected async Task Execute(Func<IServiceProvider, Task> run)
         {
-            using (IContainer container = Builder.Build())
-            using (ILifetimeScope scope = container.BeginLifetimeScope())
+            using (ServiceProvider container = Builder.BuildServiceProvider())
+            using (IServiceScope scope = container.GetRequiredService<IServiceScopeFactory>().CreateScope())
             {
-                await BeforeExecute(scope);
-                await run(scope);
+                await BeforeExecute(scope.ServiceProvider);
+                await run(scope.ServiceProvider);
             }
         }
     }
