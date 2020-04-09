@@ -22,11 +22,6 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         public string RepoUri { get; set; }
         public string Commit { get; set; }
 
-        /// <summary>
-        /// The sources of this identity, or null if this didn't come from a DarcLib dependency.
-        /// </summary>
-        public IEnumerable<DependencyDetail> Sources { get; set; }
-
         public override string ToString() => $"{RepoUri}@{ShortCommit}";
 
         public string ShortCommit => string.IsNullOrEmpty(Commit)

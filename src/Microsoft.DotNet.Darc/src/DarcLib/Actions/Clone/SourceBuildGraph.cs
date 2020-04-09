@@ -6,7 +6,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models.Darc;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -64,6 +63,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         }
 
         public IReadOnlyList<SourceBuildNode> Nodes { get; set; }
+
+        public IEnumerable<SourceBuildEdge> AllEdges => Nodes.SelectMany(n => n.UpstreamEdges);
 
         public Dictionary<SourceBuildIdentity, SourceBuildNode> IdentityNodes { get; set; }
 

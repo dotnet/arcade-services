@@ -2,19 +2,28 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Collections.Generic;
+
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
     public class SourceBuildEdge
     {
         /// <summary>
-        /// The downstream identity, the "parent" in dependency terms.
+        /// The upstream identity, the dependency.
+        /// </summary>
+        public SourceBuildIdentity Upstream { get; set; }
+
+        /// <summary>
+        /// The downstream identity, the parent in dependency terms.
         /// </summary>
         public SourceBuildIdentity Downstream { get; set; }
 
         /// <summary>
-        /// The upstream identity, the dependency.
+        /// The sources of this identity, or null if this didn't come from a DarcLib dependency.
         /// </summary>
-        public SourceBuildIdentity Upstream { get; set; }
+        public IEnumerable<DependencyDetail> Sources { get; set; }
+
+        public bool ProductCritical { get; set; }
 
         /// <summary>
         /// Marks this link was discovered in the first wave where the target node existed. That is,
@@ -28,5 +37,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         public bool FirstDiscoverer { get; set; }
 
         public SkipDependencyExplorationExplanation SkippedReason { get; set; }
+
+        public override string ToString() => $"-> {Upstream}";
     }
 }

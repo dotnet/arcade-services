@@ -98,34 +98,33 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
                             if (!includeToolset)
                             {
-                                Logger.LogInformation($"Removing toolset dependencies...");
                                 deps = deps.Where(dependency => dependency.Type != DependencyType.Toolset);
                                 Logger.LogDebug($"Filtered toolset dependencies. Now {deps.Count()} dependencies");
                             }
 
-                            var upstreamDependencies = deps
-                                .Select(d => new SourceBuildIdentity()
+                            result.UpstreamEdges = deps
+                                .Select(d => new
                                 {
-                                    RepoUri = d.RepoUri,
-                                    Commit = d.Commit,
-                                    Sources = new[] { d }
+                                    Identity = new SourceBuildIdentity
+                                    {
+                                        RepoUri = d.RepoUri,
+                                        Commit = d.Commit,
+                                    },
+                                    Detail = d
                                 })
                                 // Keep all contributing dependency details.
-                                .GroupBy(d => d, SourceBuildIdentity.CaseInsensitiveComparer)
-                                .Select(g => new SourceBuildIdentity
+                                .GroupBy(d => d.Identity, SourceBuildIdentity.CaseInsensitiveComparer)
+                                .Select(g => new SourceBuildEdge
                                 {
-                                    RepoUri = g.Key.RepoUri,
-                                    Commit = g.Key.Commit,
-                                    Sources = g.SelectMany(d => d.Sources).ToArray()
+                                    Upstream = g.Key,
+                                    Downstream = repo,
+                                    Sources = g.Select(d => d.Detail).ToArray()
                                 })
                                 .ToArray();
 
-                            result.Upstreams = upstreamDependencies;
-
-                            foreach (var newIdentity in upstreamDependencies)
-                            {
-                                Logger.LogDebug($"Adding new dependency {newIdentity}");
-                            }
+                            Logger.LogDebug(
+                                $"Adding {result.UpstreamEdges.Count()} new edges from {repo}\n" +
+                                string.Join("\n", result.UpstreamEdges.Select(e => e.ToString())));
 
                             Logger.LogDebug($"done looking for dependencies in {bareRepoDir} at {repo.Commit}");
                         }
@@ -218,46 +217,34 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 // Fill in each discovered node's reasons to skip dependencies (if exist).
                 foreach (var node in discoveredNodes)
                 {
-                    foreach (var upstream in node.Upstreams.NullAsEmpty())
+                    foreach (var edge in node.UpstreamEdges.NullAsEmpty())
                     {
-                        var skipReason = ReasonToSkipDependency(upstream, node.Identity);
+                        edge.SkippedReason = ReasonToSkipDependency(edge.Upstream, node.Identity);
 
-                        if (skipReason?.Reason != SkipDependencyExplorationReason.AlreadyVisited)
+                        if (edge.SkippedReason?.Reason != SkipDependencyExplorationReason.AlreadyVisited)
                         {
-                            node.FirstDiscovererOfUpstreams.Add(upstream);
-                        }
-
-                        if (skipReason != null)
-                        {
-                            node.UpstreamSkipReasons[upstream] = skipReason;
+                            edge.FirstDiscoverer = true;
                         }
                     }
                 }
 
-                var upstreamIdentityToConsider = discoveredNodes
+                var upstreamEdgeToConsider = discoveredNodes
                     .SelectMany(
-                        source => source.Upstreams
-                            .NullAsEmpty()
+                        source => source.UpstreamEdges.NullAsEmpty()
                             .Select(
-                                upstream => new
+                                edge => new
                                 {
-                                    SkipReason = source.UpstreamSkipReasons.GetOrDefault(upstream),
+                                    SkipReason = edge.SkippedReason,
                                     Source = source,
-                                    Upstream = upstream
+                                    Edge = edge
                                 }))
                     .ToArray();
 
                 allNodes.AddRange(discoveredNodes);
 
-                //allNodes.AddRange(
-                //    upstreamIdentityToConsider
-                //        .Select(c => c.Source)
-                //        .Except(allNodes, SourceBuildNode.CaseInsensitiveComparer)
-                //        .ToArray());
-
-                nextLevelDependencies = upstreamIdentityToConsider
+                nextLevelDependencies = upstreamEdgeToConsider
                     .Where(u => u.SkipReason == null)
-                    .Select(u => u.Upstream)
+                    .Select(u => u.Edge.Upstream)
                     .Distinct(SourceBuildIdentity.CaseInsensitiveComparer)
                     .ToArray();
 
@@ -339,21 +326,40 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         {
             var criticalNodes = new HashSet<SourceBuildNode>(source.GetProductCriticalNodes());
 
-            // Create mapping of old node identities into new proto-nodes.
+            var edgesWithUpstreamNodeByName = source.AllEdges
+                .GroupBy(edge => edge.Upstream, SourceBuildIdentity.RepoNameOnlyComparer)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.ToArray(),
+                    SourceBuildIdentity.RepoNameOnlyComparer);
+
+            // Pick which node to keep, and create mapping of old node identities into new nodes.
             var newMergedNodeData = source.Nodes
                 .GroupBy(n => n.Identity, SourceBuildIdentity.RepoNameOnlyComparer)
                 .ToDictionary(
                     g => g.Key,
                     g =>
                     {
-                        var newIdentity = g.FirstOrDefault(criticalNodes.Contains)
-                            ?? source.IdentityNodes[
-                                HighestVersionedDistinctIdentity(g.Select(n => n.Identity))];
+                        SourceBuildEdge pickedEdge;
+
+                        if (edgesWithUpstreamNodeByName.TryGetValue(g.Key, out var edges) &&
+                            edges.FirstOrDefault(e => e.ProductCritical) is SourceBuildEdge criticalEdge)
+                        {
+                            // If any edge that points at this RepoName is critical, pick that.
+                            pickedEdge = criticalEdge;
+                        }
+                        else
+                        {
+                            // If no edges are critical (or there are no edges at all), use heuristic.
+                            pickedEdge = HighestVersionedDistinctIdentity(edges);
+                        }
+
+                        SourceBuildNode upstreamNode = source.IdentityNodes[pickedEdge.Upstream];
 
                         return new SourceBuildNode
                         {
-                            Identity = newIdentity.Identity,
-                            Upstreams = newIdentity.Upstreams
+                            Identity = upstreamNode.Identity,
+                            UpstreamEdges = upstreamNode.UpstreamEdges,
                         };
                     },
                     SourceBuildIdentity.RepoNameOnlyComparer);
@@ -361,47 +367,53 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             // Fix up upstreams. Now that we know the full set of merged nodes, repoint and dedup.
             foreach (var m in newMergedNodeData.Values)
             {
-                m.Upstreams = m.Upstreams
-                    .NullAsEmpty()
-                    .Select(u => newMergedNodeData[u].Identity)
-                    .Distinct()
+                m.UpstreamEdges = m.UpstreamEdges.NullAsEmpty()
+                    .Select(edge => new SourceBuildEdge
+                    {
+                        Upstream = newMergedNodeData[edge.Upstream].Identity,
+                        Downstream = newMergedNodeData[edge.Downstream].Identity,
+                        FirstDiscoverer = edge.FirstDiscoverer,
+                        SkippedReason = null,
+                    })
+                    .GroupBy(edge => edge.Upstream, SourceBuildIdentity.CaseInsensitiveComparer)
+                    .Select(edge => edge.First())
                     .ToArray();
             }
 
             return SourceBuildGraph.Create(newMergedNodeData.Values, source.GlobalOverrides);
         }
 
-        private SourceBuildIdentity HighestVersionedDistinctIdentity(
-            IEnumerable<SourceBuildIdentity> identities)
+        private SourceBuildEdge HighestVersionedDistinctIdentity(
+            IEnumerable<SourceBuildEdge> edges)
         {
             var getCommitDate = GetCommitDate ?? GetCachedCommitDateFunc();
 
             // If the repo has no source, it's likely a darc clone argument, and takes priority.
-            if (identities.SingleOrDefault(repo => !repo.Sources.NullAsEmpty().Any())
-                is SourceBuildIdentity result)
+            if (edges.SingleOrDefault(edge => edge.Sources?.Any() != true)
+                is SourceBuildEdge result)
             {
                 return result;
             }
 
-            return identities
-                .Select(repo => new
+            return edges
+                .Select(edge => new
                 {
-                    repo,
-                    version = repo.Sources
+                    edge,
+                    version = edge.Sources
                         .Select(source => NuGetVersion.Parse(source.Version))
                         .Max()
                 })
                 // If there are multiple versions of the same commit, take the highest.
                 // Otherwise, we'd check every single one with the later ThenByDescending.
-                .GroupBy(d => d.repo.Commit)
+                .GroupBy(d => d.edge.Upstream.Commit)
                 .Select(g => g.OrderByDescending(d => d.version).First())
                 // Use asset version as primary order. Pick the highest.
                 .OrderByDescending(d => d.version)
                 // Break ties using commit date. If the commit doesn't exist to check, this means
                 // the remote doesn't have it: assume other choices are better.
-                .ThenByDescending(d => getCommitDate(d.repo) ?? DateTimeOffset.MinValue)
+                .ThenByDescending(d => getCommitDate(d.edge.Upstream) ?? DateTimeOffset.MinValue)
                 .FirstOrDefault()
-                ?.repo;
+                ?.edge;
         }
 
         private Func<SourceBuildIdentity, DateTimeOffset?> GetCachedCommitDateFunc()
