@@ -94,11 +94,32 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         {
             invocation.Proceed();
         }
-
-        protected abstract Task InterceptAsync(IInvocation invocation, Func<Task> call);
-
-
+        
         protected abstract Task<T> InterceptAsync<T>(IInvocation invocation, Func<Task<T>> call);
+        
+        protected Task InterceptAsync(IInvocation invocation, Func<Task> call)
+        {
+            return InterceptAsync(invocation,
+                async () =>
+                {
+                    await call();
+                    // return ignored answer for overload
+                    return 0;
+                }
+            );
+        }
+
+        protected T Intercept<T>(IInvocation invocation, Func<T> call)
+        {
+            // The only asny thing in the code above is the away to this callback
+            Task<T> task = InterceptAsync(invocation, () => Task.FromResult(call()));
+            if (!task.IsCompleted)
+            {
+                throw new InvalidOperationException("InterceptAsync did not complete synchronously");
+            }
+
+            return task.GetAwaiter().GetResult();
+        }
 
         private Func<Task<T>> MakeCallAsyncMethod<T>(IInvocation invocation)
         {
@@ -108,8 +129,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 return (Task<T>) invocation.ReturnValue;
             };
         }
-
-        protected abstract T Intercept<T>(IInvocation invocation, Func<T> call);
 
         private Func<T> MakeCallMethod<T>(IInvocation invocation)
         {

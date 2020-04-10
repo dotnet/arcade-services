@@ -6,13 +6,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Autofac;
-using Autofac.Extensions.DependencyInjection;
 using FluentAssertions;
 using Maestro.Contracts;
-using Maestro.Data;
 using Maestro.Data.Models;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
@@ -24,29 +21,32 @@ namespace SubscriptionActorService.Tests
 {
     public class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
     {
-        public SubscriptionActorTests()
+        private readonly Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors =
+            new Dictionary<ActorId, Mock<IPullRequestActor>>();
+        
+        protected override void RegisterServices(IServiceCollection services)
         {
-            Builder.RegisterInstance(
-                (Func<ActorId, IPullRequestActor>) (actorId =>
+            var proxyFactory = new Mock<IActorProxyFactory<IPullRequestActor>>();
+            proxyFactory.Setup(l => l.Lookup(It.IsAny<ActorId>()))
+                .Returns((ActorId actorId) =>
                 {
                     Mock<IPullRequestActor> mock = PullRequestActors.GetOrAddValue(
                         actorId,
                         CreateMock<IPullRequestActor>);
                     return mock.Object;
-                }));
+                });
+            services.AddSingleton(proxyFactory.Object);
+            base.RegisterServices(services);
         }
-
-        private readonly Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors =
-            new Dictionary<ActorId, Mock<IPullRequestActor>>();
 
         internal async Task WhenUpdateAsyncIsCalled(Subscription forSubscription, Build andForBuild)
         {
             await Execute(
-                async context =>
+                async provider =>
                 {
-                    var provider = new AutofacServiceProvider(context);
                     var actorId = new ActorId(forSubscription.Id);
-                    var actor = ActivatorUtilities.CreateInstance<SubscriptionActor>(provider, actorId);
+                    var actor = ActivatorUtilities.CreateInstance<SubscriptionActor>(provider);
+                    actor.Initialize(actorId, StateManager, Reminders);
                     await actor.UpdateAsync(andForBuild.Id);
                 });
         }

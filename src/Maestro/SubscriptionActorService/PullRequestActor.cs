@@ -13,7 +13,9 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions.Internal;
@@ -56,8 +58,15 @@ namespace SubscriptionActorService
     ///     A service fabric actor implementation that is responsible for creating and updating pull requests for dependency
     ///     updates.
     /// </summary>
-    public class PullRequestActor : IPullRequestActor, IRemindable, IActionTracker
+    public class PullRequestActor : IPullRequestActor, IRemindable, IActionTracker, IActorImplementation
     {
+        private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
+        private readonly BuildAssetRegistryContext _context;
+        private readonly IRemoteFactory _darcFactory;
+        private readonly ILoggerFactory _loggerFactory;
+        private readonly IActionRunner _actionRunner;
+        private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
+
         /// <summary>
         ///     Creates a new PullRequestActor
         /// </summary>
@@ -70,42 +79,76 @@ namespace SubscriptionActorService
         ///     repository and branch.
         /// </param>
         /// <param name="provider"></param>
-        public PullRequestActor(ActorId id, IServiceProvider provider)
+        public PullRequestActor(
+            IMergePolicyEvaluator mergePolicyEvaluator,
+            BuildAssetRegistryContext context,
+            IRemoteFactory darcFactory,
+            ILoggerFactory loggerFactory,
+            IActionRunner actionRunner,
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
         {
-            Id = id;
-            if (Id.Kind == ActorIdKind.Guid)
+            _mergePolicyEvaluator = mergePolicyEvaluator;
+            _context = context;
+            _darcFactory = darcFactory;
+            _loggerFactory = loggerFactory;
+            _actionRunner = actionRunner;
+            _subscriptionActorFactory = subscriptionActorFactory;
+        }
+
+        public void Initialize(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
+        {
+            Implementation = GetImplementation(actorId, stateManager, reminderManager);
+        }
+
+        private PullRequestActorImplementation GetImplementation(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
+        {
+            switch (actorId.Kind)
             {
-                Implementation =
-                    ActivatorUtilities.CreateInstance<NonBatchedPullRequestActorImplementation>(provider, id);
-            }
-            else if (Id.Kind == ActorIdKind.String)
-            {
-                Implementation = ActivatorUtilities.CreateInstance<BatchedPullRequestActorImplementation>(provider, id);
+                case ActorIdKind.Guid:
+                    return new NonBatchedPullRequestActorImplementation(actorId,
+                        reminderManager,
+                        stateManager,
+                        _mergePolicyEvaluator,
+                        _context,
+                        _darcFactory,
+                        _loggerFactory,
+                        _actionRunner,
+                        _subscriptionActorFactory);
+                case ActorIdKind.String:
+                    return new BatchedPullRequestActorImplementation(actorId,
+                        reminderManager,
+                        stateManager,
+                        _mergePolicyEvaluator,
+                        _context,
+                        _darcFactory,
+                        _loggerFactory,
+                        _actionRunner,
+                        _subscriptionActorFactory);
+                default:
+                    throw new NotSupportedException("Only actorId's of type Guid and String are supported");
             }
         }
 
-        public PullRequestActorImplementation Implementation { get; }
-
-        public ActorId Id { get; }
+        public PullRequestActorImplementation Implementation { get; private set; }
 
         public Task TrackSuccessfulAction(string action, string result)
         {
-            return ((IActionTracker) Implementation).TrackSuccessfulAction(action, result);
+            return Implementation.TrackSuccessfulAction(action, result);
         }
 
         public Task TrackFailedAction(string action, string result, string method, string arguments)
         {
-            return ((IActionTracker) Implementation).TrackFailedAction(action, result, method, arguments);
+            return Implementation.TrackFailedAction(action, result, method, arguments);
         }
 
         public Task<string> RunActionAsync(string method, string arguments)
         {
-            return ((IPullRequestActor) Implementation).RunActionAsync(method, arguments);
+            return Implementation.RunActionAsync(method, arguments);
         }
 
         public Task UpdateAssetsAsync(Guid subscriptionId, int buildId, string sourceRepo, string sourceSha, List<Asset> assets)
         {
-            return ((IPullRequestActor) Implementation).UpdateAssetsAsync(subscriptionId, buildId, sourceRepo, sourceSha, assets);
+            return Implementation.UpdateAssetsAsync(subscriptionId, buildId, sourceRepo, sourceSha, assets);
         }
 
         public async Task ReceiveReminderAsync(string reminderName, byte[] state, TimeSpan dueTime, TimeSpan period)
@@ -140,7 +183,7 @@ namespace SubscriptionActorService
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
-            Func<ActorId, ISubscriptionActor> subscriptionActorFactory)
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
         {
             Id = id;
             Reminders = reminders;
@@ -161,7 +204,7 @@ namespace SubscriptionActorService
         public BuildAssetRegistryContext Context { get; }
         public IRemoteFactory DarcRemoteFactory { get; }
         public IActionRunner ActionRunner { get; }
-        public Func<ActorId, ISubscriptionActor> SubscriptionActorFactory { get; }
+        public IActorProxyFactory<ISubscriptionActor> SubscriptionActorFactory { get; }
 
         public async Task TrackSuccessfulAction(string action, string result)
         {
@@ -511,7 +554,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         {
             foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
             {
-                ISubscriptionActor actor = SubscriptionActorFactory(new ActorId(update.SubscriptionId));
+                ISubscriptionActor actor = SubscriptionActorFactory.Lookup(new ActorId(update.SubscriptionId));
                 if (!await actor.UpdateForMergedPullRequestAsync(update.BuildId))
                 {
                     Logger.LogInformation($"Failed to update subscription {update.SubscriptionId} for merged PR.");
@@ -532,7 +575,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             
             foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
             {
-                ISubscriptionActor actor = SubscriptionActorFactory(new ActorId(update.SubscriptionId));
+                ISubscriptionActor actor = SubscriptionActorFactory.Lookup(new ActorId(update.SubscriptionId));
                 if (!await actor.AddDependencyFlowEventAsync(update.BuildId, flowEvent, reason, policy, "PR", prUrl))
                 {
                     Logger.LogInformation($"Failed to add dependency flow event for {update.SubscriptionId}.");
@@ -1215,7 +1258,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
-            Func<ActorId, ISubscriptionActor> subscriptionActorFactory) : base(
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory) : base(
             id,
             reminders,
             stateManager,
@@ -1291,7 +1334,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
-            Func<ActorId, ISubscriptionActor> subscriptionActorFactory) : base(
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory) : base(
             id,
             reminders,
             stateManager,
