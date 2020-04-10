@@ -31,6 +31,12 @@ namespace SubscriptionActorService
                 {
                     host.RegisterStatefulActorService<SubscriptionActor>("SubscriptionActor");
                     host.RegisterStatefulActorService<PullRequestActor>("PullRequestActor");
+                    host.ConfigureContainer(
+                        builder =>
+                        {
+                            builder.AddServiceFabricActor<IPullRequestActor>();
+                            builder.AddServiceFabricActor<ISubscriptionActor>();
+                        });
                     host.ConfigureServices(Configure);
                 });
         }

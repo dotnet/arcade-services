@@ -26,6 +26,7 @@ namespace DependencyUpdater
                 host =>
                 {
                     host.RegisterStatefulService<DependencyUpdater>("DependencyUpdaterType");
+                    host.ConfigureContainer(builder => { builder.AddServiceFabricActor<ISubscriptionActor>(); });
                     host.ConfigureServices(Configure);
                 });
         }
