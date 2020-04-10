@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Maestro.Data.Migrations
 {
@@ -7,7 +7,7 @@ namespace Maestro.Data.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<string>(
-                name: "Incoherency",
+                name: "Incoherencies",
                 table: "Builds",
                 nullable: true);
         }
@@ -15,7 +15,7 @@ namespace Maestro.Data.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "Incoherency",
+                name: "Incoherencies",
                 table: "Builds");
         }
     }

@@ -156,7 +156,7 @@ namespace Maestro.Data.Models
         /// JSON string containing incoherency properties & nodes for the subtree
         /// starting at this build.
         /// </summary>
-        public string Incoherency { get; set; }
+        public string Incoherencies { get; set; }
 
         [NotMapped]
         public int Staleness { get; set; }

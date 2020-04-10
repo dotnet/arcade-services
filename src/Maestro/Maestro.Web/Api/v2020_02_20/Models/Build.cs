@@ -36,7 +36,7 @@ namespace Maestro.Web.Api.v2020_02_20.Models
                 .ToList();
             Assets = other.Assets?.Select(a => new v2018_07_16.Models.Asset(a)).ToList();
             Dependencies = other.DependentBuildIds?.Select(d => new BuildRef(d.DependentBuildId, d.IsProduct, d.TimeToInclusionInMinutes)).ToList();
-            Incoherency = other.Incoherency;
+            Incoherencies = other.Incoherencies;
             Staleness = other.Staleness;
             Released = other.Released;
             Stable = other.Stable;
@@ -72,7 +72,7 @@ namespace Maestro.Web.Api.v2020_02_20.Models
 
         public List<BuildRef> Dependencies { get; }
 
-        public string Incoherency { get; }
+        public string Incoherencies { get; }
 
         public int Staleness { get; }
 
