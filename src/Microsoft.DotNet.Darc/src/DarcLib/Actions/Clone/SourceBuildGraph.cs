@@ -169,7 +169,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
                     if (edge.SkippedReason != null)
                     {
-                        sb.AppendLine($"// {edge.SkippedReason.Reason} {edge.SkippedReason.Details}");
+                        sb.AppendLine($"/* {edge.SkippedReason.Reason} {edge.SkippedReason.Details} */");
                     }
 
                     // Don't use grouping (A -> { B C }) so that we can apply attributes to each
