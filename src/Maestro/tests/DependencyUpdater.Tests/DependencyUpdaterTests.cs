@@ -7,7 +7,6 @@ using Maestro.Contracts;
 using Maestro.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Actors;
@@ -39,15 +38,13 @@ namespace DependencyUpdater.Tests
             services.AddLogging();
             services.AddDbContext<BuildAssetRegistryContext>(
                 options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
-            var proxyFactory = new Mock<IActorProxyFactory<ISubscriptionActor>>();
-            proxyFactory.Setup(l => l.Lookup(It.IsAny<ActorId>()))
-                .Returns((ActorId id) =>
+            services.AddSingleton<Func<ActorId, ISubscriptionActor>>(
+                id =>
                 {
                     ActorId = id;
                     return SubscriptionActor.Object;
                 });
-            services.AddSingleton(proxyFactory.Object);
-            services.AddSingleton(RemoteFactory.Object);
+            services.AddSingleton<IRemoteFactory>(RemoteFactory.Object);
             Provider = services.BuildServiceProvider();
             Scope = Provider.CreateScope();
 

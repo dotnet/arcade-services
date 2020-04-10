@@ -41,7 +41,7 @@ namespace DependencyUpdater
             ILogger<DependencyUpdater> logger,
             BuildAssetRegistryContext context,
             IRemoteFactory factory,
-            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
+            Func<ActorId, ISubscriptionActor> subscriptionActorFactory)
         {
             StateManager = stateManager;
             Logger = logger;
@@ -54,7 +54,7 @@ namespace DependencyUpdater
         public ILogger<DependencyUpdater> Logger { get; }
         public BuildAssetRegistryContext Context { get; }
         public IRemoteFactory RemoteFactory { get; }
-        public IActorProxyFactory<ISubscriptionActor> SubscriptionActorFactory { get; }
+        public Func<ActorId, ISubscriptionActor> SubscriptionActorFactory { get; }
 
         public async Task StartUpdateDependenciesAsync(int buildId, int channelId)
         {
@@ -298,7 +298,7 @@ namespace DependencyUpdater
             {
                 try
                 {
-                    ISubscriptionActor actor = SubscriptionActorFactory.Lookup(new ActorId(subscriptionId));
+                    ISubscriptionActor actor = SubscriptionActorFactory(new ActorId(subscriptionId));
                     await actor.UpdateAsync(buildId);
                 }
                 catch (Exception e)

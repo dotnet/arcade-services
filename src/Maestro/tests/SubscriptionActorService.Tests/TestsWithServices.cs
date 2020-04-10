@@ -4,34 +4,31 @@
 
 using System;
 using System.Threading.Tasks;
-using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+using Autofac;
 
 namespace SubscriptionActorService.Tests
 {
     public class TestsWithServices : TestsWithMocks
     {
-        protected virtual void RegisterServices(IServiceCollection services)
+        public TestsWithServices()
         {
+            Builder = new ContainerBuilder();
         }
 
-        protected virtual Task BeforeExecute(IServiceProvider serviceScope)
+        protected ContainerBuilder Builder { get; }
+
+        protected virtual Task BeforeExecute(IComponentContext context)
         {
             return Task.CompletedTask;
         }
 
-        protected async Task Execute(Func<IServiceProvider, Task> run)
+        protected async Task Execute(Func<IComponentContext, Task> run)
         {
-            var services = new ServiceCollection();
-            Environment.SetEnvironmentVariable("ENVIRONMENT", "XUNIT");
-            services.TryAddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
-            RegisterServices(services);
-            using (ServiceProvider container = services.BuildServiceProvider())
-            using (IServiceScope scope = container.GetRequiredService<IServiceScopeFactory>().CreateScope())
+            using (IContainer container = Builder.Build())
+            using (ILifetimeScope scope = container.BeginLifetimeScope())
             {
-                await BeforeExecute(scope.ServiceProvider);
-                await run(scope.ServiceProvider);
+                await BeforeExecute(scope);
+                await run(scope);
             }
         }
     }

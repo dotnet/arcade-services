@@ -7,6 +7,8 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using Autofac;
+using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
@@ -18,16 +20,16 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
     internal class ScheduledService<TService>
     {
         public ILogger<ScheduledService<TService>> Logger { get; }
-        public IServiceScope Scope { get; }
+        public ILifetimeScope Scope { get; }
 
-        public static async Task RunScheduleAsync(ServiceProvider container, CancellationToken cancellationToken)
+        public static async Task RunScheduleAsync(ILifetimeScope container, CancellationToken cancellationToken)
         {
-            var provider = container.GetRequiredService<IServiceProvider>();
+            var provider = container.Resolve<IServiceProvider>();
             var scheduler = ActivatorUtilities.CreateInstance<ScheduledService<TService>>(provider);
             await scheduler.RunAsync(cancellationToken);
         }
 
-        public ScheduledService(ILogger<ScheduledService<TService>> logger, IServiceScope scope)
+        public ScheduledService(ILogger<ScheduledService<TService>> logger, ILifetimeScope scope)
         {
             Logger = logger;
             Scope = scope;
@@ -103,9 +105,9 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             {
                 try
                 {
-                    using (IServiceScope scope = Scope.ServiceProvider.CreateScope())
+                    using (ILifetimeScope scope = Scope.BeginLifetimeScope())
                     {
-                        var impl = scope.ServiceProvider.GetService<TService>();
+                        var impl = scope.Resolve<TService>();
                         var parameters = method.GetParameters();
                         Task result;
                         if (parameters.Length == 1 && parameters[0].ParameterType == typeof(CancellationToken))
