@@ -41,7 +41,7 @@ namespace DependencyUpdateErrorProcessor
         // github url -> https://github.com/maestro-auth-test/maestro-test2  repo ->maestro-test2 owner -> maestro-auth-test2 
         private static readonly Regex RepositoryUriPattern = new Regex(@"^/(?<owner>[^/]+)/(?<repo>[^/]+)/?$");
 
-        private IGitHubClientFactory AuthenticateGitHubClient { get; }
+        private readonly IGitHubClientFactory _authenticateGitHubClient;
 
         public DependencyUpdateErrorProcessor(
             IReliableStateManager stateManager,
@@ -55,7 +55,7 @@ namespace DependencyUpdateErrorProcessor
             _context = context;
             _options = options.Value;
             _logger = logger;
-            AuthenticateGitHubClient = authenticateGithubClient;
+            _authenticateGitHubClient = authenticateGithubClient;
         }
 
        [CronSchedule("0 0 0/1 1/1 * ? *", TimeZones.PST)]
@@ -161,7 +161,7 @@ namespace DependencyUpdateErrorProcessor
             IReliableDictionary<(string repository, string branch),int> gitHubIssueEvaluator =
                 await _stateManager.GetOrAddAsync<IReliableDictionary<(string repository, string branch), int>>("gitHubIssueEvaluator");
             var parseRepoUri = ParseRepoUri(issueRepo);
-            IGitHubClient client = await AuthenticateGitHubClient.CreateGitHubClientAsync(parseRepoUri.owner, parseRepoUri.repo);
+            IGitHubClient client = await _authenticateGitHubClient.CreateGitHubClientAsync(parseRepoUri.owner, parseRepoUri.repo);
             Octokit.Repository repo = await client.Repository.Get(
                 parseRepoUri.owner, 
                 parseRepoUri.repo);
