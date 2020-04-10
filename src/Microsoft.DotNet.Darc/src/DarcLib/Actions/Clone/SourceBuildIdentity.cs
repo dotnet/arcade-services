@@ -42,12 +42,14 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     return false;
                 }
 
-                return string.Equals(x.RepoUri, y.RepoUri, StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(x.Commit, y.Commit, StringComparison.OrdinalIgnoreCase);
+                return string.Equals(x.RepoUri, y.RepoUri, StringComparison.InvariantCultureIgnoreCase) &&
+                    string.Equals(x.Commit, y.Commit, StringComparison.InvariantCultureIgnoreCase);
             }
 
-            public int GetHashCode(SourceBuildIdentity obj) =>
-                (obj.RepoUri, obj.Commit).GetHashCode();
+            public int GetHashCode(SourceBuildIdentity obj) => (
+                obj.RepoUri.ToLowerInvariant(),
+                obj.Commit?.ToLowerInvariant())
+                .GetHashCode();
         }
 
         private class RepoNameOnlyComparerImplementation : IEqualityComparer<SourceBuildIdentity>
@@ -64,10 +66,11 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     return false;
                 }
 
-                return string.Equals(x.RepoUri, y.RepoUri, StringComparison.OrdinalIgnoreCase);
+                return string.Equals(x.RepoUri, y.RepoUri, StringComparison.InvariantCultureIgnoreCase);
             }
 
-            public int GetHashCode(SourceBuildIdentity obj) => obj.RepoUri.GetHashCode();
+            public int GetHashCode(SourceBuildIdentity obj) =>
+                obj.RepoUri.ToLowerInvariant().GetHashCode();
         }
     }
 }

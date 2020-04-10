@@ -79,10 +79,11 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
             EdgesWithUpstream = Nodes
                 .SelectMany(n => n.UpstreamEdges.NullAsEmpty())
-                .GroupBy(e => e.Upstream)
+                .GroupBy(e => e.Upstream, SourceBuildIdentity.CaseInsensitiveComparer)
                 .ToDictionary(
                     e => e.Key,
-                    e => e.ToArray());
+                    e => e.ToArray(),
+                    SourceBuildIdentity.CaseInsensitiveComparer);
         }
 
         public string ToGraphVizString()
