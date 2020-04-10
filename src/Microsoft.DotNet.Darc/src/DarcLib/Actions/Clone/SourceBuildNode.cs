@@ -23,6 +23,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public override string ToString() => $"Node {Identity}";
 
+        public SourceBuildNode CreateShallowCopy() => (SourceBuildNode)MemberwiseClone();
+
         private class CaseInsensitiveComparerImplementation : IEqualityComparer<SourceBuildNode>
         {
             public bool Equals(SourceBuildNode x, SourceBuildNode y)

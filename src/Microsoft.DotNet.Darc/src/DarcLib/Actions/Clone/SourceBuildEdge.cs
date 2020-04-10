@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Collections.Generic;
-
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
     public class SourceBuildEdge
@@ -38,6 +36,10 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public SkipDependencyExplorationExplanation SkippedReason { get; set; }
 
+        public SourceBuildIdentity OveriddenUpstreamForCoherency { get; set; }
+
         public override string ToString() => $"-> {Upstream}";
+
+        public SourceBuildEdge CreateShallowCopy() => (SourceBuildEdge)MemberwiseClone();
     }
 }

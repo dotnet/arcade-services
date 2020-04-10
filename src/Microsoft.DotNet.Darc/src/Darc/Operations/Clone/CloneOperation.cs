@@ -76,7 +76,8 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
             {
                 GitDir = _options.GitDirFolder,
                 RemoteFactory = new RemoteFactory(_options),
-                Logger = Logger
+                Logger = Logger,
+                IncludeToolset = _options.IncludeToolset,
             };
         }
 
@@ -86,8 +87,7 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
             {
                 EnsureOptionsCompatibility(_options);
                 // Accumulate root info.
-                var accumulatedDependencies = new HashSet<SourceBuildIdentity>();
-                var overrides = new List<DarcCloneOverrideDetail>();
+                var accumulatedDependencies = new HashSet<SourceBuildNode>();
 
                 // Seed the dependency set with initial dependencies from args.
                 if (string.IsNullOrWhiteSpace(_options.RepoUri))
@@ -96,54 +96,60 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
 
                     var rootDependencyXml = await local.GetDependencyFileXmlContentAsync();
 
-                    overrides.AddRange(
-                        DarcCloneOverrideDetail.ParseAll(rootDependencyXml.DocumentElement));
+                    _cloneClient.RootOverrides =
+                        DarcCloneOverrideDetail.ParseAll(rootDependencyXml.DocumentElement);
 
-                    IEnumerable<DependencyDetail> rootDependencies =
-                        DependencyDetail.ParseAll(rootDependencyXml);
+                    var node = _cloneClient.ParseNode(
+                        new SourceBuildIdentity { RepoUri = "root" },
+                        rootDependencyXml);
 
-                    IEnumerable<SourceBuildIdentity> stripped = rootDependencies
-                        .Select(d => new SourceBuildIdentity
-                        {
-                            RepoUri = d.RepoUri,
-                            Commit = d.Commit,
-                            // Save the dependencydetail somewhere (make a root node?)
-                            //Sources = new[] { d }
-                        });
-
-                    foreach (SourceBuildIdentity d in stripped)
+                    if (_options.IgnoredRepos.Any(r => r.Equals(node.Identity.RepoUri, StringComparison.OrdinalIgnoreCase)))
                     {
-                        if (_options.IgnoredRepos.Any(r => r.Equals(d.RepoUri, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            Logger.LogDebug($"Skipping ignored repo {d.RepoUri} (at {d.Commit})");
-                        }
-                        else
-                        {
-                            accumulatedDependencies.Add(d);
-                        }
+                        Logger.LogDebug($"Skipping ignored repo {node}");
                     }
-                    Logger.LogInformation($"Found {rootDependencies.Count()} local dependencies.  Starting deep clone...");
+                    else
+                    {
+                        accumulatedDependencies.Add(node);
+                    }
+
+                    Logger.LogInformation($"Found {node.UpstreamEdges} local dependency edges.  Starting deep clone...");
                 }
                 else
                 {
                     // Start with the root repo we were asked to clone
-                    var rootDep = new SourceBuildIdentity
+                    var targetIdentity = new SourceBuildIdentity
                     {
                         RepoUri = _options.RepoUri,
                         Commit = _options.Version
                     };
 
-                    accumulatedDependencies.Add(rootDep);
-                    Logger.LogInformation($"Starting deep clone of {rootDep}");
+                    var root = new SourceBuildIdentity
+                    {
+                        RepoUri = "root"
+                    };
+
+                    accumulatedDependencies.Add(
+                        new SourceBuildNode
+                        {
+                            Identity = root,
+                            UpstreamEdges = new []
+                            {
+                                new SourceBuildEdge
+                                {
+                                    Downstream = root,
+                                    Upstream = targetIdentity
+                                }
+                            }
+                        });
+
+                    Logger.LogInformation($"Starting deep clone of {targetIdentity}");
                 }
 
                 var timeBeforeGraph = DateTimeOffset.UtcNow;
 
                 SourceBuildGraph graph = await _cloneClient.GetGraphAsync(
                     accumulatedDependencies,
-                    overrides,
                     _options.IgnoredRepos,
-                    _options.IncludeToolset,
                     _options.CloneDepth);
 
                 // Keep some metadata for later debugging or unit test setup if necessary.

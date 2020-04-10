@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models.Darc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,34 +12,16 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
     public class SourceBuildGraph
     {
-        public static SourceBuildGraph Create(IEnumerable<SourceBuildNode> nodes)
+        public static SourceBuildGraph CreateWithMissingLeafNodes(IEnumerable<SourceBuildNode> nodes)
         {
-            var graph = new SourceBuildGraph
-            {
-            };
-
-            graph.SetNodes(nodes.ToArray());
-
-            // Some nodes have upstreams that we can't find nodes for.
-            graph.IdentitiesWithoutNodes = graph.Nodes
-                .SelectMany(
-                    n => n.UpstreamEdges.NullAsEmpty()
-                        .Where(u => !graph.IdentityNodes.ContainsKey(u.Upstream))
-                        .Select(u => new SourceBuildNode
-                        {
-                            Identity = u.Upstream,
-                            UpstreamEdges = Enumerable.Empty<SourceBuildEdge>()
-                        }))
-                .Distinct(SourceBuildNode.CaseInsensitiveComparer)
-                .ToArray();
-
-            if (graph.IdentitiesWithoutNodes.Any())
-            {
-                // Generate nodes if any are missing to make graph operations simpler.
-                graph.SetNodes(graph.Nodes.Concat(graph.IdentitiesWithoutNodes).ToArray());
-            }
-
+            var graph = new SourceBuildGraph(nodes);
+            graph.AddMissingLeafNodes();
             return graph;
+        }
+
+        public SourceBuildGraph(IEnumerable<SourceBuildNode> nodes)
+        {
+            SetNodes(nodes.ToArray());
         }
 
         public IReadOnlyList<SourceBuildNode> Nodes { get; set; }
@@ -60,6 +41,32 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         /// necessary for diagnostics.
         /// </summary>
         public IReadOnlyList<SourceBuildNode> IdentitiesWithoutNodes { get; set; }
+
+        /// <summary>
+        /// Create sentinel nodes for identities that have no nodes. This allows for easier graph
+        /// traversal but makes it harder to spot partially completed nodes during graph buildup.
+        /// </summary>
+        public void AddMissingLeafNodes()
+        {
+            // Some nodes have upstreams that we can't find nodes for.
+            IdentitiesWithoutNodes = Nodes
+                .SelectMany(
+                    n => n.UpstreamEdges.NullAsEmpty()
+                        .Where(u => !IdentityNodes.ContainsKey(u.Upstream))
+                        .Select(u => new SourceBuildNode
+                        {
+                            Identity = u.Upstream,
+                            UpstreamEdges = Enumerable.Empty<SourceBuildEdge>()
+                        }))
+                .Distinct(SourceBuildNode.CaseInsensitiveComparer)
+                .ToArray();
+
+            if (IdentitiesWithoutNodes.Any())
+            {
+                // Generate sentinel values for identities without nodes to make graph operations simpler.
+                SetNodes(Nodes.Concat(IdentitiesWithoutNodes).ToArray());
+            }
+        }
 
         private void SetNodes(IReadOnlyList<SourceBuildNode> nodes)
         {
@@ -87,42 +94,45 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
             IEnumerable<string> GetNodeAttributes(SourceBuildNode node)
             {
-                yield break;
-                //if (node.SkippedReason != null)
-                //{
-                //    yield return $"label=\"{node.Identity}\\n{node.SkippedReason.Reason}\"";
-                //}
-                //if (node.SkippedReason?.ToGraphVizColor() is string color)
-                //{
-                //    yield return $"color=\"{color}\"";
-                //    yield return $"fillcolor=\"{color}\"";
-                //}
+                var incoming = GetEdgesWithUpstream(node.Identity).ToArray();
+                foreach (var edge in incoming)
+                {
+                    if (edge.SkippedReason != null)
+                    {
+                        yield return $"label=\"{node.Identity}\\n{edge.SkippedReason.Reason}\"";
+
+                        if (edge.SkippedReason?.ToGraphVizColor() is string color)
+                        {
+                            yield return $"color=\"{color}\"";
+                            yield return $"fillcolor=\"{color}\"";
+                        }
+                    }
+                }
             }
 
-            IEnumerable<string> GetEdgeAttributes(SourceBuildNode source, SourceBuildNode node)
+            IEnumerable<string> GetEdgeAttributes(SourceBuildEdge edge)
             {
-                yield break;
-                //if (productCritical.Contains(node))
-                //{
-                //    yield return "color=\"green\"";
-                //    yield return "penwidth=3";
-                //}
-                //else
-                //{
-                //    if (node.SkippedReason == null)
-                //    {
-                //        yield return "penwidth=2";
-                //    }
-                //    if (node.SkippedReason?.ToGraphVizColor() is string color)
-                //    {
-                //        yield return $"color=\"{color}\"";
-                //    }
-                //}
+                if (edge.ProductCritical)
+                {
+                    yield return "color=\"green\"";
+                    yield return "penwidth=3";
+                }
+                else
+                {
+                    if (edge.SkippedReason == null)
+                    {
+                        yield return "penwidth=2";
+                    }
+                    if (edge.SkippedReason?.ToGraphVizColor() is string color)
+                    {
+                        yield return $"color=\"{color}\"";
+                    }
+                }
 
-                //if (!source.FirstDiscovererOfUpstreams.Contains(node.Identity))
-                //{
-                //    yield return "style=dashed";
-                //}
+                if (!edge.FirstDiscoverer)
+                {
+                    yield return "style=dashed";
+                }
             }
 
             void AppendAttributes(IEnumerable<string> attrs)
@@ -143,33 +153,33 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 sb.Append("\"");
             }
 
-            sb.Append("root[shape=circle fillcolor=\"chartreuse\"]\nroot -> {");
-            foreach (var n in Nodes.Where(n => !GetDownstreams(n.Identity).Any()))
+            // If the graph doesn't have its own single root, make a fake one.
+            if (GetRootNodes().Count() != 1)
             {
-                AppendNode(n);
-                sb.Append(";");
+                sb.Append("root[shape=circle fillcolor=\"chartreuse\"]\nroot -> {");
+                foreach (var n in Nodes.Where(n => !GetDownstreams(n.Identity).Any()))
+                {
+                    AppendNode(n);
+                    sb.Append(";");
+                }
+                sb.AppendLine("}");
             }
-            sb.AppendLine("}");
 
             foreach (var n in Nodes)
             {
                 AppendNode(n);
                 AppendAttributes(GetNodeAttributes(n));
 
-                SourceBuildNode[] upstreams = GetUpstreams(n.Identity).ToArray();
-                if (upstreams.Any())
+                foreach (var edge in n.UpstreamEdges.NullAsEmpty())
                 {
-                    foreach (var u in upstreams.Select(u => u.Identity).Distinct(SourceBuildIdentity.CaseInsensitiveComparer))
-                    {
-                        // Don't use grouping (A -> { B C }) so that we can apply attributes to each
-                        // individual link.
-                        sb.AppendLine();
-                        sb.Append("\"");
-                        sb.Append(n.Identity);
-                        sb.Append("\" -> ");
-                        AppendNode(IdentityNodes[u]);
-                        AppendAttributes(GetEdgeAttributes(n, IdentityNodes[u]));
-                    }
+                    // Don't use grouping (A -> { B C }) so that we can apply attributes to each
+                    // individual link.
+                    sb.AppendLine();
+                    sb.Append("\"");
+                    sb.Append(n.Identity);
+                    sb.Append("\" -> ");
+                    AppendNode(IdentityNodes[edge.Upstream]);
+                    AppendAttributes(GetEdgeAttributes(edge));
                 }
 
                 sb.AppendLine();
@@ -180,10 +190,11 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             return sb.ToString();
         }
 
+        public IEnumerable<SourceBuildEdge> GetEdgesWithUpstream(SourceBuildIdentity node) =>
+            EdgesWithUpstream.GetOrDefault(node).NullAsEmpty();
+
         public IEnumerable<SourceBuildNode> GetDownstreams(SourceBuildIdentity node) =>
-            EdgesWithUpstream.TryGetValue(node, out var edges)
-            ? edges.Select(e => IdentityNodes[e.Upstream])
-            : Enumerable.Empty<SourceBuildNode>();
+            GetEdgesWithUpstream(node).Select(e => IdentityNodes[e.Downstream]);
 
         public IEnumerable<SourceBuildNode> GetUpstreams(SourceBuildIdentity node) =>
             IdentityNodes[node].UpstreamEdges.NullAsEmpty().Select(e => IdentityNodes[e.Upstream]);

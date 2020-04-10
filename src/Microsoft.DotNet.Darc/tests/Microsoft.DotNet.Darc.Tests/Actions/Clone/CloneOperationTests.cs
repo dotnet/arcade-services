@@ -21,12 +21,12 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
             var a = CreateIdentity("sibling", "0", new DependencyDetail { Version = "1.0.0" });
             var b = CreateIdentity("sibling", "1", new DependencyDetail { Version = "1.0.1" });
 
-            var incoherent = SourceBuildGraph.Create(new[]
+            var incoherent = SourceBuildGraph.CreateWithMissingLeafNodes(new[]
             {
                 //new SourceBuildNode{Identity = root, Upstream = new [] {a, b}},
                 new SourceBuildNode{Identity = a},
                 new SourceBuildNode{Identity = b}
-            }, null);
+            });
 
             var coherent = MakeCoherent(incoherent);
 
@@ -57,14 +57,14 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
             var cousinA = CreateIdentity("cousin", "0", new DependencyDetail { Version = "5.0.0-beta.0" });
             var cousinB = CreateIdentity("cousin", "1", new DependencyDetail { Version = "5.0.0-beta.1" });
 
-            var incoherent = SourceBuildGraph.Create(new[]
+            var incoherent = SourceBuildGraph.CreateWithMissingLeafNodes(new[]
             {
                 //new SourceBuildNode{Identity = root, Upstreams = new [] {a, b}},
                 //new SourceBuildNode{Identity = a, Upstreams = new [] {cousinA}},
                 //new SourceBuildNode{Identity = b, Upstreams = new [] {cousinB}},
                 new SourceBuildNode{Identity = cousinA},
                 new SourceBuildNode{Identity = cousinB}
-            }, null);
+            });
 
             var coherent = MakeCoherent(incoherent);
 
@@ -89,13 +89,13 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
             var b = CreateIdentity("sibling", "1", new DependencyDetail { Version = "1.0.0" });
             var c = CreateIdentity("sibling", "2", new DependencyDetail { Version = "1.0.0" });
 
-            var incoherent = SourceBuildGraph.Create(new[]
+            var incoherent = SourceBuildGraph.CreateWithMissingLeafNodes(new[]
             {
                 //new SourceBuildNode{Identity = root, Upstreams = new [] {a, b, c}},
                 new SourceBuildNode{Identity = a},
                 new SourceBuildNode{Identity = b},
                 new SourceBuildNode{Identity = c}
-            }, null);
+            });
 
             var coherent = MakeCoherent(incoherent, new Dictionary<SourceBuildIdentity, DateTimeOffset>
             {

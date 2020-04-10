@@ -24,7 +24,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         public ILogger Logger { get; set; }
         public IRemoteFactory RemoteFactory { get; set; }
 
+        public bool IncludeToolset { get; set; }
         public bool IgnoreNonGitHub { get; set; } = true;
+        public IEnumerable<DarcCloneOverrideDetail> RootOverrides { get; set; }
 
         /// <summary>
         /// Custom function to get commit date. If null, use a git client on the local clone.
@@ -34,18 +36,77 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         private Dictionary<string, Task> _cloningTasks = new Dictionary<string, Task>();
         private SemaphoreSlim _cloningTasksLock = new SemaphoreSlim(1);
 
-        public async Task<SourceBuildGraph> GetGraphAsync(
-            IEnumerable<SourceBuildIdentity> rootDependencies,
-            IEnumerable<DarcCloneOverrideDetail> rootOverrides,
-            IEnumerable<string> ignoredRepos,
-            bool includeToolset,
-            uint cloneDepth)
+        public SourceBuildNode ParseNode(
+            SourceBuildIdentity sourceRepo,
+            XmlDocument versionDetailsXml)
         {
-            var nextLevelDependencies = rootDependencies
-                .Distinct(SourceBuildIdentity.CaseInsensitiveComparer)
+            var result = new SourceBuildNode { Identity = sourceRepo };
+
+            IEnumerable<DependencyDetail> deps = DependencyDetail.ParseAll(versionDetailsXml);
+
+            result.Overrides = DarcCloneOverrideDetail.ParseAll(versionDetailsXml.DocumentElement);
+
+            Logger.LogDebug(
+                $"Got {deps.Count()} dependencies and " +
+                $"{result.Overrides.Count()} overrides.");
+
+            if (!IncludeToolset)
+            {
+                deps = deps.Where(dependency => dependency.Type != DependencyType.Toolset);
+                Logger.LogDebug($"Filtered toolset dependencies. Now {deps.Count()} dependencies");
+            }
+
+            result.UpstreamEdges = deps
+                .Select(d =>
+                {
+                    var identity = new SourceBuildIdentity
+                    {
+                        RepoUri = d.RepoUri,
+                        Commit = d.Commit,
+                    };
+
+                    bool? critical = null;
+
+                    foreach (var rootOverride in RootOverrides)
+                    {
+                        if (string.Equals(rootOverride.Repo, identity.RepoUri))
+                        {
+                            foreach (var find in rootOverride.FindDependencies)
+                            {
+                                critical = find?.ProductCritical ?? critical;
+                            }
+                        }
+                    }
+
+                    return new SourceBuildEdge
+                    {
+                        Upstream = identity,
+                        Downstream = sourceRepo,
+                        Source = d,
+                        ProductCritical = critical ?? false
+                    };
+                })
                 .ToArray();
 
-            var allNodes = new List<SourceBuildNode>();
+            Logger.LogDebug(
+                $"Adding {result.UpstreamEdges.Count()} new edges from {result.Identity}\n" +
+                string.Join("\n", result.UpstreamEdges.Select(e => e.ToString()).Distinct()));
+
+            return result;
+        }
+
+        public async Task<SourceBuildGraph> GetGraphAsync(
+            IEnumerable<SourceBuildNode> rootDependencies,
+            IEnumerable<string> ignoredRepos,
+            uint cloneDepth)
+        {
+            var allNodes = new List<SourceBuildNode>(
+                rootDependencies.Distinct(SourceBuildNode.CaseInsensitiveComparer));
+
+            var nextLevelDependencies = allNodes
+                .SelectMany(r => r.UpstreamEdges.Select(e => e.Upstream))
+                .Distinct(SourceBuildIdentity.CaseInsensitiveComparer)
+                .ToArray();
 
             while (nextLevelDependencies.Any())
             {
@@ -88,55 +149,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                             XmlDocument file = await local
                                 .GetDependencyFileXmlContentAsync(repo.Commit);
 
-                            IEnumerable<DependencyDetail> deps = DependencyDetail.ParseAll(file);
-
-                            result.Overrides = DarcCloneOverrideDetail.ParseAll(file.DocumentElement);
-
-                            Logger.LogDebug(
-                                $"Got {deps.Count()} dependencies and " +
-                                $"{result.Overrides.Count()} overrides.");
-
-                            if (!includeToolset)
-                            {
-                                deps = deps.Where(dependency => dependency.Type != DependencyType.Toolset);
-                                Logger.LogDebug($"Filtered toolset dependencies. Now {deps.Count()} dependencies");
-                            }
-
-                            result.UpstreamEdges = deps
-                                .Select(d =>
-                                {
-                                    var identity = new SourceBuildIdentity
-                                    {
-                                        RepoUri = d.RepoUri,
-                                        Commit = d.Commit,
-                                    };
-
-                                    bool? critical = null;
-
-                                    foreach (var rootOverride in rootOverrides)
-                                    {
-                                        if (string.Equals(rootOverride.Repo, identity.RepoUri))
-                                        {
-                                            foreach (var find in rootOverride.FindDependencies)
-                                            {
-                                                critical = find?.ProductCritical ?? critical;
-                                            }
-                                        }
-                                    }
-
-                                    return new SourceBuildEdge
-                                    {
-                                        Upstream = identity,
-                                        Downstream = repo,
-                                        Source = d,
-                                        ProductCritical = critical ?? false
-                                    };
-                                })
-                                .ToArray();
-
-                            Logger.LogDebug(
-                                $"Adding {result.UpstreamEdges.Count()} new edges from {repo}\n" +
-                                string.Join("\n", result.UpstreamEdges.Select(e => e.ToString()).Distinct()));
+                            result = ParseNode(repo, file);
 
                             Logger.LogDebug($"done looking for dependencies in {bareRepoDir} at {repo.Commit}");
                         }
@@ -157,9 +170,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
                 // Create a temp graph that includes all potential nodes to evaluate next. We use
                 // this graph to evaluate whether to evaluate each node.
-                var graph = SourceBuildGraph.Create(
-                    allNodes.Concat(discoveredNodes),
-                    rootOverrides);
+                var graph = SourceBuildGraph.CreateWithMissingLeafNodes(
+                    allNodes.Concat(discoveredNodes));
 
                 SkipDependencyExplorationExplanation ReasonToSkipDependency(
                     SourceBuildIdentity upstream,
@@ -262,7 +274,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 Logger.LogDebug($"Dependencies remaining: {nextLevelDependencies.Length}");
             }
 
-            return SourceBuildGraph.Create(allNodes, rootOverrides);
+            return SourceBuildGraph.CreateWithMissingLeafNodes(allNodes);
         }
 
         public async Task CreateWorktreesAsync(SourceBuildGraph graph, string reposFolder)
@@ -338,86 +350,131 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             // simplify this, we visit one node at a time. Breadth-first, simply because it is
             // likely to resolve common .NET build graphs sooner.
 
-            var toVisit = new Queue<SourceBuildNode>(source.GetRootNodes());
-            var visited = new HashSet<SourceBuildIdentity>(SourceBuildIdentity.CaseInsensitiveComparer);
+            var rootNodes = source.GetRootNodes().ToArray();
+            if (rootNodes.Length != 1)
+            {
+                throw new ArgumentException($"Expected one root node, got {rootNodes.Length}");
+            }
 
-            var newGraph = SourceBuildGraph.Create(Enumerable.Empty<SourceBuildNode>());
+            var toVisit = new Queue<SourceBuildEdge>(rootNodes.SelectMany(n => n.UpstreamEdges));
+
+            var visited = new HashSet<SourceBuildEdge>();
+
+            var newGraph = new SourceBuildGraph(rootNodes);
+
+            void TryVisitEdges(IEnumerable<SourceBuildEdge> edges)
+            {
+                foreach (var edge in edges.NullAsEmpty())
+                {
+                    if (visited.Add(edge))
+                    {
+                        toVisit.Enqueue(edge);
+                    }
+                }
+            }
 
             while (toVisit.Any())
             {
-                SourceBuildNode next = toVisit.Dequeue();
+                SourceBuildEdge next = toVisit.Dequeue();
+
+                // If the parent isn't in the graph anymore (because it was removed when a better
+                // choice was found), stop evaluating that branch.
+                if (!newGraph.IdentityNodes.ContainsKey(next.Downstream))
+                {
+                    continue;
+                }
 
                 // Is this node a repo that already exists in the graph? If so, see if ours is a
                 // better fit. Add the new node or remove the old and redo dependencies to match.
+                var existingUpstream = newGraph.Nodes
+                    .SingleOrDefault(n => SourceBuildIdentity.RepoNameOnlyComparer.Equals(n.Identity, next.Upstream));
 
-                // If this is a new repo, just add it.
-                newGraph = SourceBuildGraph.Create(newGraph.Nodes.Concat(new[] { next }));
+                if (existingUpstream != null)
+                {
+                    var bestEdge = HighestVersionedDistinctIdentity(
+                        newGraph.GetEdgesWithUpstream(existingUpstream.Identity).Append(next));
+
+                    // Is the existing node still the best?
+                    if (SourceBuildIdentity.CaseInsensitiveComparer.Equals(
+                        bestEdge.Upstream,
+                        existingUpstream.Identity))
+                    {
+                        // Yes. Instead of adding this next edge, add an edge from the source to the
+                        // node that we're keeping.
+                        var newEdge = next.CreateShallowCopy();
+                        newEdge.OveriddenUpstreamForCoherency = newEdge.Upstream;
+
+                        //var sourceNode = newGraph.IdentityNodes[newEdge.Downstream];
+                        //sourceNode.UpstreamEdges = sourceNode.UpstreamEdges
+                        //    .Select(edge => edge == next ? newEdge : edge)
+                        //    .ToArray();
+                    }
+                    else
+                    {
+                        // No. Now replace the old node.
+                        var newNode = source.IdentityNodes[next.Upstream].CreateShallowCopy();
+
+                        newGraph = new SourceBuildGraph(
+                            newGraph.Nodes.Select(n => n == existingUpstream ? newNode : n));
+
+                        // And plan to visit upstreams of the new node.
+                        TryVisitEdges(newNode.UpstreamEdges);
+                    }
+
+                    // Now newGraph contains all the nodes we want to keep. Fix up edges so that any
+                    // that point to nodes we just removed now point to the ones we're keeping. Keep
+                    // track of the change in each edge for diagnosis later.
+                    foreach (var node in newGraph.Nodes)
+                    {
+                        node.UpstreamEdges = node.UpstreamEdges.NullAsEmpty()
+                            .Select(edge =>
+                            {
+                                if (newGraph.IdentityNodes.ContainsKey(edge.Upstream))
+                                {
+                                    // This edge's upstream is still in the graph. It's ok.
+                                    return edge;
+                                }
+
+                                var newUpstream =
+                                    newGraph.Nodes
+                                    .SingleOrDefault(n => SourceBuildIdentity.RepoNameOnlyComparer
+                                        .Equals(n.Identity, edge.Upstream))
+                                    ?.Identity;
+
+                                if (newUpstream == null)
+                                {
+                                    // Couldn't find a replacement for this edge's upstream: it has
+                                    // probably not been evaluated yet at all. Leave it.
+                                    return edge;
+                                }
+
+                                var newEdge = edge.CreateShallowCopy();
+
+                                newEdge.OveriddenUpstreamForCoherency = edge.Upstream;
+                                newEdge.Upstream = newUpstream;
+
+                                return newEdge;
+                            })
+                            .ToArray();
+                    }
+
+                    // We changed some edges, invalidating internal structure. Regen.
+                    newGraph = new SourceBuildGraph(newGraph.Nodes);
+                }
+                else
+                {
+                    // If this is a new repo, just add it. Clone so that we can change properties.
+                    var newNode = source.IdentityNodes[next.Upstream].CreateShallowCopy();
+
+                    newGraph = new SourceBuildGraph(newGraph.Nodes.Append(newNode));
+
+                    TryVisitEdges(newNode.UpstreamEdges);
+                }
             }
 
-            var edgesWithUpstreamNodeByName = source.AllEdges
-                .GroupBy(edge => edge.Upstream, SourceBuildIdentity.RepoNameOnlyComparer)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.ToArray(),
-                    SourceBuildIdentity.RepoNameOnlyComparer);
+            newGraph.AddMissingLeafNodes();
 
-            // Pick which node to keep, and create mapping of old node identities into new nodes.
-            var newMergedNodeData = source.Nodes
-                .GroupBy(n => n.Identity, SourceBuildIdentity.RepoNameOnlyComparer)
-                .ToDictionary(
-                    g => g.Key,
-                    g =>
-                    {
-                        SourceBuildEdge pickedEdge;
-
-                        if (edgesWithUpstreamNodeByName.TryGetValue(g.Key, out var edges))
-                        {
-                            if (edges.FirstOrDefault(e => e.ProductCritical) is SourceBuildEdge criticalEdge)
-                            {
-                                // If any edge that points at this RepoName is critical, pick that.
-                                pickedEdge = criticalEdge;
-                            }
-                            else
-                            {
-                                // If no edges are critical, use heuristic.
-                                pickedEdge = HighestVersionedDistinctIdentity(edges);
-                            }
-                        }
-                        else
-                        {
-                            // If no edges exist...
-                            return null;
-                        }
-
-                        SourceBuildNode upstreamNode = source.IdentityNodes[pickedEdge.Upstream];
-
-                        return new SourceBuildNode
-                        {
-                            Identity = upstreamNode.Identity,
-                            UpstreamEdges = upstreamNode.UpstreamEdges,
-                        };
-                    },
-                    SourceBuildIdentity.RepoNameOnlyComparer);
-
-            // Fix up upstreams. Now that we know the full set of merged nodes, repoint and dedup.
-            foreach (var m in newMergedNodeData.Values)
-            {
-                if (m == null)
-                    continue;
-                m.UpstreamEdges = m.UpstreamEdges.NullAsEmpty()
-                    .Select(edge => new SourceBuildEdge
-                    {
-                        Upstream = newMergedNodeData[edge.Upstream].Identity,
-                        Downstream = newMergedNodeData[edge.Downstream].Identity,
-                        FirstDiscoverer = edge.FirstDiscoverer,
-                        SkippedReason = null,
-                    })
-                    .GroupBy(edge => edge.Upstream, SourceBuildIdentity.CaseInsensitiveComparer)
-                    .Select(edge => edge.First())
-                    .ToArray();
-            }
-
-            return SourceBuildGraph.Create(newMergedNodeData.Values, source.GlobalOverrides);
+            return newGraph;
         }
 
         private SourceBuildEdge HighestVersionedDistinctIdentity(
@@ -425,11 +482,18 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         {
             var getCommitDate = GetCommitDate ?? GetCachedCommitDateFunc();
 
+            // If an edge is critical, it is first priority.
+            if (edges.FirstOrDefault(edge => edge.ProductCritical)
+                is SourceBuildEdge critical)
+            {
+                return critical;
+            }
+
             // If an edge has no source, it's likely a darc clone argument, and takes priority.
             if (edges.FirstOrDefault(edge => edge.Source == null)
-                is SourceBuildEdge result)
+                is SourceBuildEdge fromArg)
             {
-                return result;
+                return fromArg;
             }
 
             return edges
