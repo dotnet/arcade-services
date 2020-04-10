@@ -91,36 +91,43 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             var sb = new StringBuilder("digraph G {\n");
 
             sb.AppendLine("rankdir=LR");
-            sb.AppendLine("node [shape=box color=\"lightsteelblue1\" style=filled]");
+            sb.AppendLine("node [" +
+                "shape=rect " +
+                "width=0 height=0 margin=0.04 " +
+                "color=\"lightsteelblue1\" " +
+                "style=filled " +
+                "fontsize=11]");
 
             IEnumerable<string> GetNodeAttributes(SourceBuildNode node)
             {
                 if (GetEdgesWithUpstream(node.Identity).Any(e => e.ProductCritical))
                 {
-                    yield return "color=\"green\"";
+                    yield return "color=\"#76C272\"";
                 }
             }
 
-            IEnumerable<string> GetEdgeAttributes(SourceBuildEdge edge)
+            IEnumerable<string> GetEdgeAttributes(IEnumerable<SourceBuildEdge> edges)
             {
-                if (edge.ProductCritical)
+                if (edges.Any(e => e.ProductCritical))
                 {
-                    yield return "color=\"green\"";
+                    yield return "color=\"#00E22D\"";
                     yield return "penwidth=3";
                 }
                 else
                 {
-                    if (edge.SkippedReason == null)
+                    if (edges.Any(e => e.SkippedReason == null))
                     {
                         yield return "penwidth=2";
                     }
-                    if (edge.SkippedReason?.ToGraphVizColor() is string color)
+                    if (edges.Select(e => e.SkippedReason?.ToGraphVizAttributes())
+                        .FirstOrDefault(c => c != null) is string skipAttributes)
                     {
-                        yield return $"color=\"{color}\"";
+                        yield return skipAttributes;
                     }
                 }
 
-                if (!edge.FirstDiscoverer)
+                // These edges were all checked on the same cycle, so they should share this value.
+                if (!edges.All(e => e.FirstDiscoverer))
                 {
                     yield return "style=dashed";
                 }
@@ -132,7 +139,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 if (attrsArray.Any())
                 {
                     sb.Append("[");
-                    sb.Append(string.Join(",", attrsArray));
+                    sb.Append(string.Join(" ", attrsArray));
                     sb.Append("]");
                 }
             }
@@ -161,15 +168,17 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 AppendNode(n);
                 AppendAttributes(GetNodeAttributes(n));
 
-                foreach (var edge in n.UpstreamEdges.NullAsEmpty()
-                    .GroupBy(e => e, SourceBuildEdge.InOutComparer)
-                    .Select(e => e.First()))
+                foreach (var edges in n.UpstreamEdges.NullAsEmpty()
+                    .GroupBy(e => e, SourceBuildEdge.InOutComparer))
                 {
                     sb.AppendLine();
 
-                    if (edge.SkippedReason != null)
+                    foreach (var message in edges
+                        .Where(e => e.SkippedReason != null)
+                        .Select(e => $"/* {e.SkippedReason.Reason} {e.SkippedReason.Details} */")
+                        .Distinct())
                     {
-                        sb.AppendLine($"/* {edge.SkippedReason.Reason} {edge.SkippedReason.Details} */");
+                        sb.AppendLine(message);
                     }
 
                     // Don't use grouping (A -> { B C }) so that we can apply attributes to each
@@ -177,10 +186,34 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     sb.Append("\"");
                     sb.Append(n.Identity);
                     sb.Append("\" -> ");
-                    AppendNode(IdentityNodes[edge.Upstream]);
-                    AppendAttributes(GetEdgeAttributes(edge));
+                    AppendNode(IdentityNodes[edges.Key.Upstream]);
+                    AppendAttributes(GetEdgeAttributes(edges));
                 }
 
+                sb.AppendLine();
+            }
+
+            // Add something similar to a legend.
+            sb.AppendLine("\"Legend\" -> \"ordinary\"");
+
+            sb.Append("\"Legend\" -> \"Target node already existed in graph from earlier cycle\\n(Combines with other styles)\"");
+            AppendAttributes(GetEdgeAttributes(new[] { new SourceBuildEdge { FirstDiscoverer = false } }));
+
+            sb.Append("\"Legend\" -> \"ProductCritical\"");
+            AppendAttributes(GetEdgeAttributes(new[] { new SourceBuildEdge { ProductCritical = true, FirstDiscoverer = true} }));
+
+            foreach (SkipDependencyExplorationReason reason in
+                Enum.GetValues(typeof(SkipDependencyExplorationReason)))
+            {
+                var explanation = new SkipDependencyExplorationExplanation
+                {
+                    Reason = reason
+                };
+
+                sb.Append("\"Legend\" -> \"");
+                sb.Append(reason);
+                sb.Append("\"");
+                AppendAttributes(explanation.ToGraphVizAttributes().Split(' '));
                 sb.AppendLine();
             }
 

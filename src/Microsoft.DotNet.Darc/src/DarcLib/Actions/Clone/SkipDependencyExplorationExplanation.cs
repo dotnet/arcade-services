@@ -2,8 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
     public class SkipDependencyExplorationExplanation
@@ -14,20 +12,20 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public override string ToString() => $"{Reason}: {Details}";
 
-        public string ToGraphVizColor()
+        public string ToGraphVizAttributes()
         {
             switch (Reason)
             {
                 case SkipDependencyExplorationReason.AlreadyVisited:
-                    return "#69725E";
+                    return "color=\"#69725E\" arrowhead=empty";
                 case SkipDependencyExplorationReason.SelfDependency:
-                    return "#66A2A4";
+                    return "color=\"#D29900\" arrowhead=diamond";
                 case SkipDependencyExplorationReason.CircularWhenOnlyConsideringName:
-                    return "#227084";
+                    return "color=\"#BBB422\" arrowhead=ediamond";
                 case SkipDependencyExplorationReason.Ignored:
-                    return "#354362";
+                    return "color=\"#41BAB8\" arrowhead=odot";
                 case SkipDependencyExplorationReason.DependencyDetailMissingCommit:
-                    return "#D15838";
+                    return "color=\"#F53C3C\"";
                 default:
                     return null;
             }
