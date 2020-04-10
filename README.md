@@ -12,8 +12,6 @@ These are the services that drive several of the tools behind the [Arcade](//git
 
 - [Issues](https://github.com/dotnet/arcade/issues)
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).  For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
 Information about Maestro [README.md](src/Maestro/Readme.md)
 
 Please follow our [Validation Process](https://github.com/dotnet/core-eng/blob/master/Documentation/Validation/README.md) for including tests to go with new or changed functionality.
