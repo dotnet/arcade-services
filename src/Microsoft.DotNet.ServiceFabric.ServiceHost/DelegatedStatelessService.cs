@@ -8,6 +8,8 @@ using System.Fabric;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
 using Castle.DynamicProxy.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
@@ -19,24 +21,30 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
     public class DelegatedStatelessService<TServiceImplementation> : StatelessService
         where TServiceImplementation : IServiceImplementation
     {
+        private readonly Action<ContainerBuilder> _configureContainer;
         private readonly Action<IServiceCollection> _configureServices;
-        private ServiceProvider _container;
+        private ILifetimeScope _container;
 
         public DelegatedStatelessService(
             StatelessServiceContext context,
-            Action<IServiceCollection> configureServices) : base(context)
+            Action<IServiceCollection> configureServices,
+            Action<ContainerBuilder> configureContainer) : base(context)
         {
             _configureServices = configureServices;
+            _configureContainer = configureContainer;
 
             var services = new ServiceCollection();
             services.AddSingleton<ServiceContext>(Context);
             services.AddSingleton(Context);
             _configureServices(services);
-
-            _container = services.BuildServiceProvider();
+            
+            var builder = new ContainerBuilder();
+            builder.Populate(services);
+            _configureContainer(builder);
+            _container = builder.Build();
 
             // This requires the ServiceContext up a few lines, so we can't inject it in the constructor
-            _container.GetRequiredService<TemporaryFiles>()?.Initialize();
+            _container.ResolveOptional<TemporaryFiles>()?.Initialize();
         }
 
         protected override Task OnCloseAsync(CancellationToken cancellationToken)
@@ -53,7 +61,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         protected override IEnumerable<ServiceInstanceListener> CreateServiceInstanceListeners()
         {
             Type[] ifaces = typeof(TServiceImplementation).GetAllInterfaces()
-                .Where(iface => typeof(IService).IsAssignableFrom(iface))
+                .Where(iface => TypeExtensions.IsAssignableTo<IService>(iface))
                 .ToArray();
             if (ifaces.Length == 0)
             {
@@ -80,9 +88,9 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                using (IServiceScope scope = _container.CreateScope())
+                using (ILifetimeScope scope = _container.BeginLifetimeScope())
                 {
-                    var impl = scope.ServiceProvider.GetService<TServiceImplementation>();
+                    var impl = scope.Resolve<TServiceImplementation>();
 
                     var shouldWaitFor = await impl.RunAsync(cancellationToken);
 

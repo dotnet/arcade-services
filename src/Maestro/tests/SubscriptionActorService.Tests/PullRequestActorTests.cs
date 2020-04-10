@@ -7,16 +7,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
 using FluentAssertions;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
+using Microsoft.VisualStudio.Services.Zeus;
 using Moq;
 using Xunit;
 using Asset = Maestro.Contracts.Asset;
@@ -45,38 +47,29 @@ namespace SubscriptionActorService.Tests
 
         public PullRequestActorTests()
         {
-            MergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
-            RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
-        }
-
-        protected override void RegisterServices(IServiceCollection services)
-        {
-            var proxyFactory = new Mock<IActorProxyFactory<ISubscriptionActor>>();
-            proxyFactory.Setup(l => l.Lookup(It.IsAny<ActorId>()))
-                .Returns((ActorId actorId) =>
+            Builder.RegisterInstance(
+                (Func<ActorId, ISubscriptionActor>) (actorId =>
                 {
                     Mock<ISubscriptionActor> mock = SubscriptionActors.GetOrAddValue(
                         actorId,
                         CreateMock<ISubscriptionActor>);
                     return mock.Object;
-                });
+                }));
 
-            services.AddSingleton(proxyFactory.Object);
+            MergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
+            Builder.RegisterInstance(MergePolicyEvaluator.Object);
 
-            services.AddSingleton(MergePolicyEvaluator.Object);
-
+            RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
             RemoteFactory.Setup(f => f.GetRemoteAsync(It.IsAny<string>(), It.IsAny<ILogger>()))
                 .ReturnsAsync(
                     (string repo, ILogger logger) =>
                         DarcRemotes.GetOrAddValue(repo, CreateMock<IRemote>).Object);
-            services.AddSingleton(RemoteFactory.Object);
-
-            base.RegisterServices(services);
+            Builder.RegisterInstance(RemoteFactory.Object);
         }
 
-        protected override Task BeforeExecute(IServiceProvider context)
+        protected override Task BeforeExecute(IComponentContext context)
         {
-            var dbContext = context.GetRequiredService<BuildAssetRegistryContext>();
+            var dbContext = context.Resolve<BuildAssetRegistryContext>();
             dbContext.Repositories.Add(
                 new Repository
                 {
@@ -365,8 +358,9 @@ namespace SubscriptionActorService.Tests
                 });
         }
 
-        private PullRequestActor CreateActor(IServiceProvider context)
+        private PullRequestActor CreateActor(IComponentContext context)
         {
+            var provider = new AutofacServiceProvider(context);
             ActorId actorId;
             if (Subscription.PolicyObject.Batchable)
             {
@@ -377,9 +371,7 @@ namespace SubscriptionActorService.Tests
                 actorId = new ActorId(Subscription.Id);
             }
 
-            var actor = ActivatorUtilities.CreateInstance<PullRequestActor>(context);
-            actor.Initialize(actorId, StateManager, Reminders);
-            return actor;
+            return ActivatorUtilities.CreateInstance<PullRequestActor>(provider, actorId);
         }
 
         public class ProcessPendingUpdatesAsync : PullRequestActorTests

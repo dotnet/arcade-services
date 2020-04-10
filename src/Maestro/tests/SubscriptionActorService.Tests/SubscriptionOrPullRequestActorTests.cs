@@ -4,9 +4,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.AspNetCore.Hosting;
@@ -43,21 +44,21 @@ namespace SubscriptionActorService.Tests
 
         public SubscriptionOrPullRequestActorTests()
         {
-            ActionRunner = CreateMock<IActionRunner>();
             HostingEnvironment = CreateMock<IHostingEnvironment>();
+            Builder.RegisterInstance(HostingEnvironment.Object);
+
+            ActionRunner = CreateMock<IActionRunner>();
+            Builder.RegisterInstance(ActionRunner.Object);
+
+            var services = new ServiceCollection();
+            services.AddBuildAssetRegistry(
+                options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
+            Builder.Populate(services);
         }
 
-        protected override void RegisterServices(IServiceCollection services)
+        protected override async Task BeforeExecute(IComponentContext context)
         {
-            services.AddSingleton(HostingEnvironment.Object);
-            services.AddSingleton(ActionRunner.Object);
-            services.AddBuildAssetRegistry(options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
-            base.RegisterServices(services);
-        }
-
-        protected override async Task BeforeExecute(IServiceProvider context)
-        {
-            var dbContext = context.GetRequiredService<BuildAssetRegistryContext>();
+            var dbContext = context.Resolve<BuildAssetRegistryContext>();
             foreach (Action<BuildAssetRegistryContext> update in ContextUpdates)
             {
                 update(dbContext);
