@@ -94,19 +94,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
             IEnumerable<string> GetNodeAttributes(SourceBuildNode node)
             {
-                var incoming = GetEdgesWithUpstream(node.Identity).ToArray();
-                foreach (var edge in incoming)
+                if (GetEdgesWithUpstream(node.Identity).Any(e => e.ProductCritical))
                 {
-                    if (edge.SkippedReason != null)
-                    {
-                        yield return $"label=\"{node.Identity}\\n{edge.SkippedReason.Reason}\"";
-
-                        if (edge.SkippedReason?.ToGraphVizColor() is string color)
-                        {
-                            yield return $"color=\"{color}\"";
-                            yield return $"fillcolor=\"{color}\"";
-                        }
-                    }
+                    yield return "color=\"green\"";
                 }
             }
 
@@ -170,11 +160,19 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 AppendNode(n);
                 AppendAttributes(GetNodeAttributes(n));
 
-                foreach (var edge in n.UpstreamEdges.NullAsEmpty())
+                foreach (var edge in n.UpstreamEdges.NullAsEmpty()
+                    .GroupBy(e => e, SourceBuildEdge.InOutComparer)
+                    .Select(e => e.First()))
                 {
+                    sb.AppendLine();
+
+                    if (edge.SkippedReason != null)
+                    {
+                        sb.AppendLine($"// {edge.SkippedReason.Reason} {edge.SkippedReason.Details}");
+                    }
+
                     // Don't use grouping (A -> { B C }) so that we can apply attributes to each
                     // individual link.
-                    sb.AppendLine();
                     sb.Append("\"");
                     sb.Append(n.Identity);
                     sb.Append("\" -> ");

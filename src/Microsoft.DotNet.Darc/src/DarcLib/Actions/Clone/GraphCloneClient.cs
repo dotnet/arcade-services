@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -65,15 +66,18 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                         Commit = d.Commit,
                     };
 
-                    bool? critical = null;
+                    bool? critical = d.ProductCritical;
 
                     foreach (var rootOverride in RootOverrides)
                     {
-                        if (string.Equals(rootOverride.Repo, identity.RepoUri))
+                        if (string.Equals(rootOverride.Repo, sourceRepo.RepoUri, StringComparison.OrdinalIgnoreCase))
                         {
                             foreach (var find in rootOverride.FindDependencies)
                             {
-                                critical = find?.ProductCritical ?? critical;
+                                if (string.Equals(find.Name, d.Name, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    critical = find.ProductCritical ?? critical;
+                                }
                             }
                         }
                     }
@@ -83,7 +87,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                         Upstream = identity,
                         Downstream = sourceRepo,
                         Source = d,
-                        ProductCritical = critical ?? false
+                        ProductCritical = critical ?? false,
+                        FirstDiscoverer = true
                     };
                 })
                 .ToArray();
@@ -244,9 +249,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     {
                         edge.SkippedReason = ReasonToSkipDependency(edge.Upstream, node.Identity);
 
-                        if (edge.SkippedReason?.Reason != SkipDependencyExplorationReason.AlreadyVisited)
+                        if (edge.SkippedReason?.Reason == SkipDependencyExplorationReason.AlreadyVisited)
                         {
-                            edge.FirstDiscoverer = true;
+                            edge.FirstDiscoverer = false;
                         }
                     }
                 }
@@ -357,7 +362,6 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             }
 
             var toVisit = new Queue<SourceBuildEdge>(rootNodes.SelectMany(n => n.UpstreamEdges));
-
             var visited = new HashSet<SourceBuildEdge>();
 
             var newGraph = new SourceBuildGraph(rootNodes);
@@ -403,11 +407,6 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                         // node that we're keeping.
                         var newEdge = next.CreateShallowCopy();
                         newEdge.OveriddenUpstreamForCoherency = newEdge.Upstream;
-
-                        //var sourceNode = newGraph.IdentityNodes[newEdge.Downstream];
-                        //sourceNode.UpstreamEdges = sourceNode.UpstreamEdges
-                        //    .Select(edge => edge == next ? newEdge : edge)
-                        //    .ToArray();
                     }
                     else
                     {
@@ -450,7 +449,10 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
                                 var newEdge = edge.CreateShallowCopy();
 
-                                newEdge.OveriddenUpstreamForCoherency = edge.Upstream;
+                                // Keep track of the original place this edge pointed, for diag.
+                                newEdge.OveriddenUpstreamForCoherency =
+                                    newEdge.OveriddenUpstreamForCoherency ?? edge.Upstream;
+
                                 newEdge.Upstream = newUpstream;
 
                                 return newEdge;
@@ -473,6 +475,35 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             }
 
             newGraph.AddMissingLeafNodes();
+
+            var conflictingProductCriticalEdges = newGraph.AllEdges
+                .Where(e => e.ProductCritical)
+                .GroupBy(e => e.Upstream, SourceBuildIdentity.CaseInsensitiveComparer)
+                .Where(g => g.Count() > 1)
+                .ToArray();
+
+            if (conflictingProductCriticalEdges.Any())
+            {
+                var error = new StringBuilder();
+                error.AppendLine(
+                    "Unable to create synthetic coherency: multiple edges pointing at the same" +
+                    "upstream are marked ProductCritical. This cannot be automatically resolved. " +
+                    "Add DarcCloneOverrides to the root repo or fix the ProductCritical " +
+                    "attributes in the parent repositories.");
+
+                foreach (var g in conflictingProductCriticalEdges)
+                {
+                    error.AppendLine(g.Key.ToString());
+
+                    foreach (var edge in g)
+                    {
+                        error.Append("  ");
+                        error.AppendLine(edge.ToConflictExplanationString());
+                    }
+                }
+
+                throw new Exception(error.ToString());
+            }
 
             return newGraph;
         }

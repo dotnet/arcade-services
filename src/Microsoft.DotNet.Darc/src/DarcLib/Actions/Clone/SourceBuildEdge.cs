@@ -2,10 +2,15 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.Collections.Generic;
+
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
     public class SourceBuildEdge
     {
+        public static IEqualityComparer<SourceBuildEdge> InOutComparer { get; } =
+            new InOutComparerImplementation();
+
         /// <summary>
         /// The upstream identity, the dependency.
         /// </summary>
@@ -40,6 +45,34 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public override string ToString() => $"-> {Upstream}";
 
+        public string ToConflictExplanationString() => $"-> {Upstream} for '{Source?.Name}' '{Source?.Version}'";
+
         public SourceBuildEdge CreateShallowCopy() => (SourceBuildEdge)MemberwiseClone();
+
+        private class InOutComparerImplementation : IEqualityComparer<SourceBuildEdge>
+        {
+            public bool Equals(SourceBuildEdge x, SourceBuildEdge y)
+            {
+                if (ReferenceEquals(x, y))
+                {
+                    return true;
+                }
+
+                if (x == null || y == null)
+                {
+                    return false;
+                }
+
+                return 
+                    SourceBuildIdentity.CaseInsensitiveComparer.Equals(x.Upstream, y.Upstream) &&
+                    SourceBuildIdentity.CaseInsensitiveComparer.Equals(x.Downstream, y.Downstream);
+            }
+
+            public int GetHashCode(SourceBuildEdge obj) =>
+                (
+                    SourceBuildIdentity.CaseInsensitiveComparer.GetHashCode(obj.Upstream),
+                    SourceBuildIdentity.CaseInsensitiveComparer.GetHashCode(obj.Downstream)
+                ).GetHashCode();
+        }
     }
 }

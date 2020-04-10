@@ -19,15 +19,15 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             switch (Reason)
             {
                 case SkipDependencyExplorationReason.AlreadyVisited:
-                    return "lightslategrey";
+                    return "#69725E";
                 case SkipDependencyExplorationReason.SelfDependency:
-                    return "goldenrod";
+                    return "#66A2A4";
                 case SkipDependencyExplorationReason.CircularWhenOnlyConsideringName:
-                    return "mediumpurple1";
+                    return "#227084";
                 case SkipDependencyExplorationReason.Ignored:
-                    return "gray69";
+                    return "#354362";
                 case SkipDependencyExplorationReason.DependencyDetailMissingCommit:
-                    return "rosybrown1";
+                    return "#D15838";
                 default:
                     return null;
             }
