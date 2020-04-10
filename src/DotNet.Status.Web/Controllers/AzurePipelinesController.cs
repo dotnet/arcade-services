@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.AzureDevOps;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -23,14 +24,14 @@ namespace DotNet.Status.Web.Controllers
     [Route("api/azp")]
     public class AzurePipelinesController : ControllerBase
     {
-        private readonly GitHubClientFactory _gitHubClientFactory;
+        private readonly IGitHubClientFactory _gitHubClientFactory;
         private readonly IOptions<BuildMonitorOptions> _options;
         private readonly ILogger<AzurePipelinesController> _logger;
         private readonly Lazy<AzureDevOpsClient> _clientLazy;
         private readonly Lazy<Task<Dictionary<string, string>>> _projectMapping;
 
         public AzurePipelinesController(
-            GitHubClientFactory gitHubClientFactory,
+            IGitHubClientFactory gitHubClientFactory,
             IOptions<BuildMonitorOptions> options,
             ILogger<AzurePipelinesController> logger)
         {

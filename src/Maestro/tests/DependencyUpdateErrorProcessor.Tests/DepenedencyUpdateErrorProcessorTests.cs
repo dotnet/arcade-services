@@ -3,11 +3,11 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using DotNet.Status.Web.Controllers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Data;
+using Microsoft.DotNet.GitHub.Authentication;
 using Moq;
 using Octokit;
 using ServiceFabricMocks;
@@ -22,7 +22,7 @@ namespace DependencyUpdateErrorProcessor.Tests
         protected readonly IServiceScope Scope;
         protected readonly MockReliableStateManager StateManager;
         protected readonly Mock<IGitHubClient> GithubClient;
-        protected readonly Mock<GitHubClientFactory> GithubClientFactory;
+        protected readonly Mock<IGitHubClientFactory> GithubClientFactory;
 
         public DependencyUpdateErrorProcessorTests()
         {
@@ -30,8 +30,8 @@ namespace DependencyUpdateErrorProcessor.Tests
             StateManager = new MockReliableStateManager();
             Env = new Mock<IHostingEnvironment>(MockBehavior.Strict);
             GithubClient = new Mock<IGitHubClient>();
-            GithubClientFactory = new Mock<GitHubClientFactory>(null, null);
-            GithubClientFactory.Setup(x => x.CreateGitHubClientAsync("Owner", "Repo"))
+            GithubClientFactory = new Mock<IGitHubClientFactory>();
+            GithubClientFactory.Setup(x => x.CreateGitHubClientAsync(It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(GithubClient.Object);
             services.AddSingleton(Env.Object);
             services.AddSingleton<IReliableStateManager>(StateManager);

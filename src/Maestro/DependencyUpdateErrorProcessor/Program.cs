@@ -10,7 +10,6 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using DotNet.Status.Web.Controllers;
 using Octokit;
 
 namespace DependencyUpdateErrorProcessor
@@ -54,7 +53,7 @@ namespace DependencyUpdateErrorProcessor
                     options.GithubUrl = config["GithubUrl"];
                     options.FyiHandle = config["FyiHandle"];
                 });
-            services.AddSingleton<GitHubClientFactory>();
+            services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         }
     }
 }

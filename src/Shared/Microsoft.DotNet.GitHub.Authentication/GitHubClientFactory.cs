@@ -3,14 +3,13 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Threading.Tasks;
-using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Options;
 using Octokit;
 
-namespace DotNet.Status.Web.Controllers
+namespace Microsoft.Dotnet.GitHub.Authentication
 {
-    public class GitHubClientFactory
+    public class GitHubClientFactory : IGitHubClientFactory
     {
         private readonly IOptions<GitHubClientOptions> _githubClientOptions;
         private readonly IGitHubTokenProvider _tokenProvider;
@@ -21,7 +20,7 @@ namespace DotNet.Status.Web.Controllers
             _tokenProvider = tokenProvider;
         }
 
-        public virtual async Task<IGitHubClient> CreateGitHubClientAsync(string owner, string repo)
+        public async Task<IGitHubClient> CreateGitHubClientAsync(string owner, string repo)
         {
             return new GitHubClient(_githubClientOptions.Value.ProductHeader)
             {

@@ -6,8 +6,9 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using DotNet.Status.Web.Controllers;
 using Maestro.Data;
+using Microsoft.Dotnet.GitHub.Authentication;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -40,14 +41,14 @@ namespace DependencyUpdateErrorProcessor
         // github url -> https://github.com/maestro-auth-test/maestro-test2  repo ->maestro-test2 owner -> maestro-auth-test2 
         private static readonly Regex RepositoryUriPattern = new Regex(@"^/(?<owner>[^/]+)/(?<repo>[^/]+)/?$");
 
-        public GitHubClientFactory AuthenticateGitHubClient { get; }
+        private IGitHubClientFactory AuthenticateGitHubClient { get; }
 
         public DependencyUpdateErrorProcessor(
             IReliableStateManager stateManager,
             ILogger<DependencyUpdateErrorProcessor> logger,
             BuildAssetRegistryContext context,
             IOptions<DependencyUpdateErrorProcessorOptions> options,
-            GitHubClientFactory authenticateGithubClient
+            IGitHubClientFactory authenticateGithubClient
             )
         {
             _stateManager = stateManager;
