@@ -3,8 +3,8 @@ using Microsoft.ServiceFabric.Actors.Runtime;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
 {
-    public interface IStatefulActor
+    public interface IActorImplementation
     {
-        void InitializeActorState(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager);
+        void Initialize(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager);
     }
 }

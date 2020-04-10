@@ -46,7 +46,7 @@ namespace SubscriptionActorService.Tests
                 {
                     var actorId = new ActorId(forSubscription.Id);
                     var actor = ActivatorUtilities.CreateInstance<SubscriptionActor>(provider);
-                    actor.InitializeActorState(actorId, StateManager, Reminders);
+                    actor.Initialize(actorId, StateManager, Reminders);
                     await actor.UpdateAsync(andForBuild.Id);
                 });
         }

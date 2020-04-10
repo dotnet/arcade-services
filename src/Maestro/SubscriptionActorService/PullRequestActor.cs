@@ -58,7 +58,7 @@ namespace SubscriptionActorService
     ///     A service fabric actor implementation that is responsible for creating and updating pull requests for dependency
     ///     updates.
     /// </summary>
-    public class PullRequestActor : IPullRequestActor, IRemindable, IActionTracker, IStatefulActor
+    public class PullRequestActor : IPullRequestActor, IRemindable, IActionTracker, IActorImplementation
     {
         private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
         private readonly BuildAssetRegistryContext _context;
@@ -95,7 +95,7 @@ namespace SubscriptionActorService
             _subscriptionActorFactory = subscriptionActorFactory;
         }
 
-        public void InitializeActorState(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
+        public void Initialize(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
         {
             Implementation = GetImplementation(actorId, stateManager, reminderManager);
         }

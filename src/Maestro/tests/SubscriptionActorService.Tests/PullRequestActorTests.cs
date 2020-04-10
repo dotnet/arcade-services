@@ -378,7 +378,7 @@ namespace SubscriptionActorService.Tests
             }
 
             var actor = ActivatorUtilities.CreateInstance<PullRequestActor>(context);
-            actor.InitializeActorState(actorId, StateManager, Reminders);
+            actor.Initialize(actorId, StateManager, Reminders);
             return actor;
         }
 

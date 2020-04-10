@@ -158,7 +158,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         private void RegisterStatefulActorService<TActor>(
             string actorName,
             Func<StatefulServiceContext, ActorTypeInformation, Func<ActorService, ActorId, IServiceScopeFactory, Action<IServiceProvider>, ActorBase>, ActorService> ctor)
-            where TActor : IActor, IStatefulActor
+            where TActor : IActor, IActorImplementation
         {
             (Type actorType,
                     Func<ActorService, ActorId, IServiceScopeFactory, Action<IServiceProvider>, ActorBase> actorFactory) =
@@ -188,7 +188,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         public ServiceHost RegisterStatefulActorService<
             [MeansImplicitUse(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
-            TActor>(string actorName) where TActor : class, IActor, IStatefulActor
+            TActor>(string actorName) where TActor : class, IActor, IActorImplementation
         {
             RegisterStatefulActorService<TActor>(
                 actorName,

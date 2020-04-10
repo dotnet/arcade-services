@@ -76,7 +76,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
         }
 
         public static (Type, Func<ActorService, ActorId, IServiceScopeFactory, Action<IServiceProvider>, ActorBase>)
-            CreateActorTypeAndFactory<TActor>(string actorName) where TActor : IStatefulActor
+            CreateActorTypeAndFactory<TActor>(string actorName) where TActor : IActorImplementation
         {
             Type type = Generator.CreateClassProxyType(
                 actorName,
@@ -104,7 +104,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
         }
     }
 
-    internal class ActorMethodInterceptor<TActor> : AsyncInterceptor where TActor : IStatefulActor
+    internal class ActorMethodInterceptor<TActor> : AsyncInterceptor where TActor : IActorImplementation
     {
         private readonly IServiceScopeFactory _outerScope;
 
@@ -153,7 +153,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
                         op.Telemetry.Url = new Uri(url);
                         
                         TActor a = scope.ServiceProvider.GetRequiredService<TActor>();
-                        a.InitializeActorState(actor.Id, actor.StateManager, actor as IReminderManager);
+                        a.Initialize(actor.Id, actor.StateManager, actor as IReminderManager);
                         invocation.ReturnValue = actor;
                         return await call();
                     }

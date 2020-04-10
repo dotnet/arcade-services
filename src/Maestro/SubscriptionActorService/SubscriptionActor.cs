@@ -58,7 +58,7 @@ namespace SubscriptionActorService
         }
     }
 
-    public class SubscriptionActor : ISubscriptionActor, IActionTracker, IStatefulActor
+    public class SubscriptionActor : ISubscriptionActor, IActionTracker, IActorImplementation
     {
         public SubscriptionActor(
             BuildAssetRegistryContext context,
@@ -80,7 +80,7 @@ namespace SubscriptionActorService
 
         public Guid SubscriptionId => Id.GetGuidId();
 
-        public void InitializeActorState(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
+        public void Initialize(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
         {
             Id = actorId;
         }
