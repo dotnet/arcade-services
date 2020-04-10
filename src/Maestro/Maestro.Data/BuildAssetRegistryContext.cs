@@ -281,7 +281,7 @@ FOR SYSTEM_TIME ALL
                             }));
         }
 
-        public Task<long> GetInstallationId(string repositoryUrl)
+        public virtual Task<long> GetInstallationId(string repositoryUrl)
         {
             return Repositories.Where(r => r.RepositoryName == repositoryUrl)
                 .Select(r => r.InstallationId)

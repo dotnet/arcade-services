@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebHooks;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
@@ -21,11 +22,11 @@ namespace DotNet.Status.Web.Controllers
         private readonly Lazy<Task> _ensureLabels;
         private readonly IOptions<GitHubConnectionOptions> _githubOptions;
         private readonly ILogger<GitHubHookController> _logger;
-        private readonly GitHubClientFactory _gitHubClientFactory;
+        private readonly IGitHubClientFactory _gitHubClientFactory;
 
         public GitHubHookController(
             IOptions<GitHubConnectionOptions> githubOptions,
-            GitHubClientFactory gitHubClientFactory,
+            IGitHubClientFactory gitHubClientFactory,
             ILogger<GitHubHookController> logger)
         {
             _githubOptions = githubOptions;
