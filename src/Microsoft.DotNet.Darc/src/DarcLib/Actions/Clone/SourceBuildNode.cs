@@ -21,7 +21,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public IEnumerable<SourceBuildEdge> UpstreamEdges { get; set; }
 
-        public override string ToString() => $"Node {Identity}";
+        public override string ToString() => Identity.ToString();
 
         public SourceBuildNode CreateShallowCopy() => (SourceBuildNode)MemberwiseClone();
 

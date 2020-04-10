@@ -86,7 +86,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     SourceBuildIdentity.CaseInsensitiveComparer);
         }
 
-        public string ToGraphVizString()
+        public string ToGraphVizString(
+            bool includeLegend = true,
+            bool includeCoherencyRedirects = true)
         {
             var sb = new StringBuilder("digraph G {\n");
 
@@ -98,11 +100,13 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 "style=filled " +
                 "fontsize=11]");
 
+            string productCriticalNodeColor = "color=\"#76C272\"";
+
             IEnumerable<string> GetNodeAttributes(SourceBuildNode node)
             {
                 if (GetEdgesWithUpstream(node.Identity).Any(e => e.ProductCritical))
                 {
-                    yield return "color=\"#76C272\"";
+                    yield return productCriticalNodeColor;
                 }
             }
 
@@ -193,31 +197,82 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 sb.AppendLine();
             }
 
-            // Add something similar to a legend.
-            sb.AppendLine("\"Legend\" -> \"ordinary\"");
-
-            sb.Append("\"Legend\" -> \"Target node already existed in graph from earlier cycle\\n(Combines with other styles)\"");
-            AppendAttributes(GetEdgeAttributes(new[] { new SourceBuildEdge { FirstDiscoverer = false } }));
-
-            sb.Append("\"Legend\" -> \"ProductCritical\"");
-            AppendAttributes(GetEdgeAttributes(new[] { new SourceBuildEdge { ProductCritical = true, FirstDiscoverer = true} }));
-
-            foreach (SkipDependencyExplorationReason reason in
-                Enum.GetValues(typeof(SkipDependencyExplorationReason)))
+            if (includeCoherencyRedirects)
             {
-                var explanation = new SkipDependencyExplorationExplanation
+                // Show how nodes were resolved while creating synthetic coherency, if applicable.
+                foreach (var overrideGroup in AllEdges
+                    .Where(e => e.OveriddenUpstreamForCoherency != null)
+                    .GroupBy(e => e.Upstream, SourceBuildIdentity.CaseInsensitiveComparer))
                 {
-                    Reason = reason
-                };
+                    string nodeName =
+                        $"\"Used {overrideGroup.Key}\\n" +
+                        string.Join(
+                            "\\n",
+                            GetEdgesWithUpstream(overrideGroup.Key)
+                                .Where(e => e.OveriddenUpstreamForCoherency == null)
+                                .Select(e => e.Source?.Version)
+                                .Where(v => v != null)
+                                .Distinct()
+                                .OrderBy(v => v)) +
+                        $"\"";
 
-                sb.Append("\"Legend\" -> \"");
-                sb.Append(reason);
-                sb.Append("\"");
-                AppendAttributes(explanation.ToGraphVizAttributes().Split(' '));
-                sb.AppendLine();
+                    sb.Append(nodeName);
+                    AppendAttributes(GetNodeAttributes(IdentityNodes[overrideGroup.Key]));
+                    sb.AppendLine();
+
+                    sb.Append(nodeName);
+                    sb.Append(" -> { ");
+
+                    foreach (var overridden in overrideGroup
+                        .GroupBy(g => g.OveriddenUpstreamForCoherency, SourceBuildIdentity.CaseInsensitiveComparer))
+                    {
+                        sb.Append("\"Instead of ");
+                        sb.Append(overridden.Key);
+                        sb.Append("\\n");
+                        sb.Append(string.Join(
+                            "\\n",
+                            overridden
+                                .Select(e => e.Source?.Version)
+                                .Where(v => v != null)
+                                .Distinct()
+                                .OrderBy(v => v)));
+                        sb.Append("\" ");
+                    }
+
+                    sb.AppendLine("}");
+                }
             }
 
-            sb.AppendLine("}");
+            if (includeLegend)
+            {
+                sb.AppendLine("\"Legend\" -> \"ordinary\"");
+
+                sb.Append("\"Legend\" -> \"Target node already existed in graph from earlier cycle\\n(Combines with other styles)\"");
+                AppendAttributes(GetEdgeAttributes(new[] { new SourceBuildEdge { FirstDiscoverer = false } }));
+                sb.AppendLine();
+
+                sb.AppendLine($"\"ProductCritical\"[{productCriticalNodeColor}]");
+                sb.Append("\"Legend\" -> \"ProductCritical\"");
+                AppendAttributes(GetEdgeAttributes(new[] { new SourceBuildEdge { ProductCritical = true, FirstDiscoverer = true } }));
+                sb.AppendLine();
+
+                foreach (SkipDependencyExplorationReason reason in
+                    Enum.GetValues(typeof(SkipDependencyExplorationReason)))
+                {
+                    var explanation = new SkipDependencyExplorationExplanation
+                    {
+                        Reason = reason
+                    };
+
+                    sb.Append("\"Legend\" -> \"");
+                    sb.Append(reason);
+                    sb.Append("\"");
+                    AppendAttributes(explanation.ToGraphVizAttributes().Split(' '));
+                    sb.AppendLine();
+                }
+
+                sb.AppendLine("}");
+            }
 
             return sb.ToString();
         }
