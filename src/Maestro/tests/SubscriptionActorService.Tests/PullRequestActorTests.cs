@@ -51,8 +51,8 @@ namespace SubscriptionActorService.Tests
 
         protected override void RegisterServices(IServiceCollection services)
         {
-            var lookup = new Mock<IActorLookup<ISubscriptionActor>>();
-            lookup.Setup(l => l.Lookup(It.IsAny<ActorId>()))
+            var proxyFactory = new Mock<IActorProxyFactory<ISubscriptionActor>>();
+            proxyFactory.Setup(l => l.Lookup(It.IsAny<ActorId>()))
                 .Returns((ActorId actorId) =>
                 {
                     Mock<ISubscriptionActor> mock = SubscriptionActors.GetOrAddValue(
@@ -61,7 +61,7 @@ namespace SubscriptionActorService.Tests
                     return mock.Object;
                 });
 
-            services.AddSingleton(lookup.Object);
+            services.AddSingleton(proxyFactory.Object);
 
             services.AddSingleton(MergePolicyEvaluator.Object);
 

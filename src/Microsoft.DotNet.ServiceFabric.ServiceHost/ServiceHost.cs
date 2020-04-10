@@ -237,7 +237,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     builder.AddFixedApplicationInsights(LogLevel.Information);
                 });
             services.TryAddSingleton<IMetricTracker, ApplicationInsightsMetricTracker>();
-            services.TryAddSingleton(typeof(IActorLookup<>), typeof(ActorLookup<>));
+            services.TryAddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
         }
 
         public static HostEnvironment InitializeEnvironment()

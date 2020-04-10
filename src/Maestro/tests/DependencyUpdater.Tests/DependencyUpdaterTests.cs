@@ -39,14 +39,14 @@ namespace DependencyUpdater.Tests
             services.AddLogging();
             services.AddDbContext<BuildAssetRegistryContext>(
                 options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
-            var lookupMock = new Mock<IActorLookup<ISubscriptionActor>>();
-            lookupMock.Setup(l => l.Lookup(It.IsAny<ActorId>()))
+            var proxyFactory = new Mock<IActorProxyFactory<ISubscriptionActor>>();
+            proxyFactory.Setup(l => l.Lookup(It.IsAny<ActorId>()))
                 .Returns((ActorId id) =>
                 {
                     ActorId = id;
                     return SubscriptionActor.Object;
                 });
-            services.AddSingleton(lookupMock.Object);
+            services.AddSingleton(proxyFactory.Object);
             services.AddSingleton(RemoteFactory.Object);
             Provider = services.BuildServiceProvider();
             Scope = Provider.CreateScope();

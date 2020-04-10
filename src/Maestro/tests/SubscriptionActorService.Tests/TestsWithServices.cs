@@ -25,7 +25,7 @@ namespace SubscriptionActorService.Tests
         {
             var services = new ServiceCollection();
             Environment.SetEnvironmentVariable("ENVIRONMENT", "XUNIT");
-            services.TryAddSingleton(typeof(IActorLookup<>), typeof(ActorLookup<>));
+            services.TryAddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
             RegisterServices(services);
             using (ServiceProvider container = services.BuildServiceProvider())
             using (IServiceScope scope = container.GetRequiredService<IServiceScopeFactory>().CreateScope())

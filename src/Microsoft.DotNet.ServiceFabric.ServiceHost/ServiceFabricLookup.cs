@@ -4,17 +4,17 @@ using Microsoft.ServiceFabric.Actors;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
-    public interface IActorLookup<out TActor>
+    public interface IActorProxyFactory<out TActor>
     {
         TActor Lookup(ActorId id);
     }
 
-    public class ActorLookup<TActor> : IActorLookup<TActor> where TActor : class, IActor
+    public class ActorProxyFactory<TActor> : IActorProxyFactory<TActor> where TActor : class, IActor
     {
         private readonly TelemetryClient _telemetryClient;
         private readonly ServiceContext _serviceContext;
 
-        public ActorLookup(TelemetryClient telemetryClient = null, ServiceContext serviceContext = null)
+        public ActorProxyFactory(TelemetryClient telemetryClient = null, ServiceContext serviceContext = null)
         {
             _telemetryClient = telemetryClient;
             _serviceContext = serviceContext;

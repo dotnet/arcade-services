@@ -64,7 +64,7 @@ namespace SubscriptionActorService
             BuildAssetRegistryContext context,
             ILogger<SubscriptionActor> logger,
             IActionRunner actionRunner,
-            IActorLookup<IPullRequestActor> pullRequestActorFactory)
+            IActorProxyFactory<IPullRequestActor> pullRequestActorFactory)
         {
             Context = context;
             Logger = logger;
@@ -76,7 +76,7 @@ namespace SubscriptionActorService
         public BuildAssetRegistryContext Context { get; }
         public ILogger<SubscriptionActor> Logger { get; }
         public IActionRunner ActionRunner { get; }
-        public IActorLookup<IPullRequestActor> PullRequestActorFactory { get; }
+        public IActorProxyFactory<IPullRequestActor> PullRequestActorFactory { get; }
 
         public Guid SubscriptionId => Id.GetGuidId();
 
