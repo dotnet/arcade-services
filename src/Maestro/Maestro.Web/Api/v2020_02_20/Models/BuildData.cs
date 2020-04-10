@@ -45,6 +45,8 @@ namespace Maestro.Web.Api.v2020_02_20.Models
 
         public bool Stable { get; set; }
 
+        public string Incoherency { get; set; }
+
         public Data.Models.Build ToDb()
         {
             return new Data.Models.Build
@@ -61,7 +63,8 @@ namespace Maestro.Web.Api.v2020_02_20.Models
                 Commit = Commit,
                 Assets = Assets?.Select(a => a.ToDb()).ToList(),
                 Released = Released,
-                Stable = Stable
+                Stable = Stable,
+                Incoherency = Incoherency
             };
         }
     }
