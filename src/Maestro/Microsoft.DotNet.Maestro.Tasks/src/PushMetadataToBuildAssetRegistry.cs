@@ -308,7 +308,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         azureDevOpsBuildNumber: manifest.AzureDevOpsBuildNumber ?? GetAzDevBuildNumber(),
                         azureDevOpsRepository: manifest.AzureDevOpsRepository ?? GetAzDevRepository(),
                         azureDevOpsBranch: manifest.AzureDevOpsBranch ?? GetAzDevBranch(),
-                        publishUsingPipelines: PublishUsingPipelines,
+                        stable: IsStableBuild,
                         released: false)
                     {
                         Assets = assets.ToImmutableList(),

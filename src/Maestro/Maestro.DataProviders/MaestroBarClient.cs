@@ -127,13 +127,7 @@ namespace Maestro.DataProviders
             return new Channel(
                 other.Id, 
                 other.Name, 
-                other.Classification, 
-                other.ChannelReleasePipelines?.Select(rp => ToClientModelReleasePipeline(rp)).ToImmutableList());
-        }
-
-        private ReleasePipeline ToClientModelReleasePipeline(Maestro.Data.Models.ChannelReleasePipeline other)
-        {
-            return new ReleasePipeline(other.ChannelId, other.ReleasePipelineId);
+                other.Classification);
         }
 
         public Task<Build> GetLatestBuildAsync(string repoUri, int channelId)

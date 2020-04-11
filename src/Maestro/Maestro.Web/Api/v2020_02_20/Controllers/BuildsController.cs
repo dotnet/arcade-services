@@ -8,7 +8,9 @@ using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -25,9 +27,16 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
     [ApiVersion("2020-02-20")]
     public class BuildsController : v2019_01_16.Controllers.BuildsController
     {
-        public BuildsController(BuildAssetRegistryContext context)
+        public ILogger<BuildsController> Logger { get; }
+        private IRemoteFactory RemoteFactory { get; }
+
+        public BuildsController(BuildAssetRegistryContext context,
+                                IRemoteFactory factory,
+                                ILogger<BuildsController> logger)
             : base(context)
         {
+            RemoteFactory = factory;
+            Logger = logger;
         }
 
         /// <summary>
@@ -209,6 +218,15 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         {
             Data.Models.Build buildModel = build.ToDb();
             buildModel.DateProduced = DateTimeOffset.UtcNow;
+
+            if (buildModel.BuildIncoherenciesObject == null)
+            {
+                buildModel.BuildIncoherenciesObject = await 
+                    GetBuildIncoherencyInfoAsync(
+                        buildModel.GitHubRepository ?? buildModel.AzureDevOpsRepository, 
+                        buildModel.Commit);
+            }
+
             if (build.Dependencies != null)
             {
                 // For each Dependency, update the time to Inclusion.
@@ -294,6 +312,48 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                     id = buildModel.Id
                 },
                 new Models.Build(buildModel));
+        }
+
+        private async Task<Data.Models.BuildIncoherence> GetBuildIncoherencyInfoAsync(string repositoryUri, string commit)
+        {
+            DependencyGraphBuildOptions graphBuildOptions = new DependencyGraphBuildOptions()
+            {
+                IncludeToolset = false,
+                LookupBuilds = false,
+                NodeDiff = NodeDiff.None
+            };
+
+            DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
+                RemoteFactory,
+                repositoryUri,
+                commit,
+                graphBuildOptions,
+                Logger);
+
+            var deps = new List<Data.Models.IncoherentDependency>();
+            var nodes = new List<Data.Models.IncoherentNode>();
+
+            foreach (var item in graph.IncoherentDependencies)
+            {
+                deps.Add(new Data.Models.IncoherentDependency
+                {
+                    Name = item.Name,
+                    Version = item.Version,
+                    Repository = item.RepoUri,
+                    Commit = item.Commit
+                });
+            }
+
+            foreach (var item in graph.IncoherentNodes)
+            {
+                nodes.Add(new Data.Models.IncoherentNode
+                {
+                    Repository = item.Repository,
+                    Commit = item.Commit
+                });
+            }
+
+            return new Data.Models.BuildIncoherence(deps, nodes);
         }
     }
 }

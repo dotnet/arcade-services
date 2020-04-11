@@ -1,8 +1,8 @@
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Maestro.Data.Migrations
 {
-    public partial class AddBuildIncoherencyField : Migration
+    public partial class AddBuildIncoherenciesField : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {

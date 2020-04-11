@@ -6,7 +6,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class BuildData
     {
-        public BuildData(string commit, string azureDevOpsAccount, string azureDevOpsProject, string azureDevOpsBuildNumber, string azureDevOpsRepository, string azureDevOpsBranch, bool publishUsingPipelines, bool released)
+        public BuildData(string commit, string azureDevOpsAccount, string azureDevOpsProject, string azureDevOpsBuildNumber, string azureDevOpsRepository, string azureDevOpsBranch, bool released, bool stable)
         {
             Commit = commit;
             AzureDevOpsAccount = azureDevOpsAccount;
@@ -14,8 +14,8 @@ namespace Microsoft.DotNet.Maestro.Client.Models
             AzureDevOpsBuildNumber = azureDevOpsBuildNumber;
             AzureDevOpsRepository = azureDevOpsRepository;
             AzureDevOpsBranch = azureDevOpsBranch;
-            PublishUsingPipelines = publishUsingPipelines;
             Released = released;
+            Stable = stable;
         }
 
         [JsonProperty("commit")]
@@ -54,11 +54,14 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         [JsonProperty("gitHubBranch")]
         public string GitHubBranch { get; set; }
 
-        [JsonProperty("publishUsingPipelines")]
-        public bool PublishUsingPipelines { get; set; }
-
         [JsonProperty("released")]
         public bool Released { get; set; }
+
+        [JsonProperty("stable")]
+        public bool Stable { get; set; }
+
+        [JsonProperty("incoherencies")]
+        public Models.BuildIncoherence Incoherencies { get; set; }
 
         [JsonIgnore]
         public bool IsValid

@@ -8,7 +8,7 @@
 
     <SwaggerOutputDirectory>$(MSBuildProjectDirectory)\Generated</SwaggerOutputDirectory>
     <SwaggerClientName>MaestroApi</SwaggerClientName>
-    <SwaggerDocumentUri>https://maestro-int.westus2.cloudapp.azure.com/api/swagger.json</SwaggerDocumentUri>
+    <SwaggerDocumentUri>https://localhost:4430/api/2020-02-20/swagger.json</SwaggerDocumentUri>
   </PropertyGroup>
 
   <ItemGroup>

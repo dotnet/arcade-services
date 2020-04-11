@@ -201,8 +201,8 @@ namespace Maestro.ScenarioTests
                 azureDevOpsBuildNumber: buildNumber,
                 azureDevOpsRepository: repositoryUrl,
                 azureDevOpsBranch: branch,
-                publishUsingPipelines: false,
-                released: false)
+                released: false,
+                stable: false)
             {
                 AzureDevOpsBuildId = _parameters.AzureDevOpsBuildId,
                 AzureDevOpsBuildDefinitionId = _parameters.AzureDevOpsBuildDefinitionId,
