@@ -18,7 +18,7 @@ namespace DotNet.Status.Web
 {
     public class InMemoryCacheInstallationLookup : IInstallationLookup
     {
-        private readonly GitHubAppTokenProvider _tokens;
+        private readonly IGitHubAppTokenProvider _tokens;
         private readonly IOptions<GitHubClientOptions> _options;
         private readonly ILogger<InMemoryCacheInstallationLookup> _log;
         private readonly SemaphoreSlim _sem = new SemaphoreSlim(1, 1);
@@ -27,7 +27,7 @@ namespace DotNet.Status.Web
         private DateTimeOffset _lastCached = DateTimeOffset.MinValue;
 
         public InMemoryCacheInstallationLookup(
-            GitHubAppTokenProvider tokens,
+            IGitHubAppTokenProvider tokens,
             IOptions<GitHubClientOptions> options,
             ILogger<InMemoryCacheInstallationLookup> log)
         {
