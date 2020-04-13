@@ -7,6 +7,5 @@ namespace Microsoft.DotNet.GitHub.Authentication
     public interface IGitHubAppTokenProvider 
     {
         string GetAppToken();
-        string GetAppTokenFromEnvironmentVariableBase64(int gitHubAppId, string environmentVariableName);
     }
 }
