@@ -84,11 +84,12 @@ namespace Microsoft.DotNet.Darc.Operations
                 IEnumerable<Channel> currentChannels = build.Channels.Where(ch => targetChannels.Any(tc => tc.Id == ch.Id));
                 if (currentChannels.Any())
                 {
-                    Console.WriteLine($"The build '{build.Id}' is already on the following channel(s):");
+                    Console.WriteLine($"The build '{build.Id}' is already on these target channel(s):");
 
                     foreach (var channel in currentChannels)
                     {
                         Console.WriteLine($"\t{channel.Name}");
+                        targetChannels.RemoveAll(tch => tch.Id == channel.Id);
                     }
                 }
 
