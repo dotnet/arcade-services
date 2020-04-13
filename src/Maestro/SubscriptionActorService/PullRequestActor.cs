@@ -834,16 +834,11 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 Where(gf => gf.FilePath.Equals("global.json", StringComparison.OrdinalIgnoreCase)).
                 FirstOrDefault();
 
-            if (globalJsonFile != null)
+            // The list of committedFiles can contain the `global.json` file (and others) 
+            // even though no actual change was made to the file and therefore there is no 
+            // metadata for it.
+            if (globalJsonFile?.Metadata != null)
             {
-                // The list of committedFiles can contain the `global.json` file even though we
-                // actually didn't do any change to the file and therefore didn't create any
-                // metadata for it.
-                if (globalJsonFile.Metadata == null)
-                {
-                    return;
-                }
-
                 bool hasSdkVersionUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.SdkVersionUpdate);
                 bool hasToolsDotnetUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.ToolsDotNetUpdate);
 
