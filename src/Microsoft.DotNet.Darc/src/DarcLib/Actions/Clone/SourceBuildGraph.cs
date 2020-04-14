@@ -100,13 +100,18 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 "style=filled " +
                 "fontsize=11]");
 
-            string productCriticalNodeColor = "color=\"#76C272\"";
+            string productCriticalNodeColorAttribute = "color=\"#76C272\"";
 
             IEnumerable<string> GetNodeAttributes(SourceBuildNode node)
             {
                 if (GetEdgesWithUpstream(node.Identity).Any(e => e.ProductCritical))
                 {
-                    yield return productCriticalNodeColor;
+                    yield return productCriticalNodeColorAttribute;
+                }
+
+                if (node.Identity.RepoUri.StartsWith("https://github.com/"))
+                {
+                    yield return $"URL=\"{node.Identity.RepoUri}/tree/{node.Identity.Commit}/eng/Version.Details.xml\"";
                 }
             }
 
@@ -251,7 +256,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 AppendAttributes(GetEdgeAttributes(new[] { new SourceBuildEdge { FirstDiscoverer = false } }));
                 sb.AppendLine();
 
-                sb.AppendLine($"\"ProductCritical\"[{productCriticalNodeColor}]");
+                sb.AppendLine($"\"ProductCritical\"[{productCriticalNodeColorAttribute}]");
                 sb.Append("\"Legend\" -> \"ProductCritical\"");
                 AppendAttributes(GetEdgeAttributes(new[] { new SourceBuildEdge { ProductCritical = true, FirstDiscoverer = true } }));
                 sb.AppendLine();
