@@ -10,8 +10,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Maestro.Data.Migrations
 {
     [DbContext(typeof(BuildAssetRegistryContext))]
-    [Migration("20200410212720_AddBuildIncoherenciesField")]
-    partial class AddBuildIncoherenciesField
+    [Migration("20200413233357_AddBuildIncoherenciesTable")]
+    partial class AddBuildIncoherenciesTable
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -164,9 +164,6 @@ namespace Maestro.Data.Migrations
 
                     b.Property<string>("AzureDevOpsRepository");
 
-                    b.Property<string>("BuildIncoherenciesString")
-                        .HasColumnName("Incoherencies");
-
                     b.Property<string>("Commit");
 
                     b.Property<DateTimeOffset>("DateProduced");
@@ -214,6 +211,29 @@ namespace Maestro.Data.Migrations
                     b.HasIndex("DependentBuildId");
 
                     b.ToTable("BuildDependencies");
+                });
+
+            modelBuilder.Entity("Maestro.Data.Models.BuildIncoherence", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<int?>("BuildId");
+
+                    b.Property<string>("Commit");
+
+                    b.Property<string>("Name");
+
+                    b.Property<string>("Repository");
+
+                    b.Property<string>("Version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuildId");
+
+                    b.ToTable("BuildIncoherencies");
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.Channel", b =>
@@ -719,6 +739,13 @@ namespace Maestro.Data.Migrations
                         .WithMany()
                         .HasForeignKey("DependentBuildId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Maestro.Data.Models.BuildIncoherence", b =>
+                {
+                    b.HasOne("Maestro.Data.Models.Build")
+                        .WithMany("Incoherencies")
+                        .HasForeignKey("BuildId");
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.ChannelReleasePipeline", b =>

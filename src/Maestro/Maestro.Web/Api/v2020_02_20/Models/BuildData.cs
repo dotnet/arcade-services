@@ -45,7 +45,7 @@ namespace Maestro.Web.Api.v2020_02_20.Models
 
         public bool Stable { get; set; }
 
-        public BuildIncoherence Incoherencies { get; set; }
+        public List<BuildIncoherence> Incoherencies { get; set; }
 
         public Data.Models.Build ToDb()
         {
@@ -64,7 +64,7 @@ namespace Maestro.Web.Api.v2020_02_20.Models
                 Assets = Assets?.Select(a => a.ToDb()).ToList(),
                 Released = Released,
                 Stable = Stable,
-                BuildIncoherenciesObject = Incoherencies?.ToDb()
+                Incoherencies = Incoherencies?.Select(inc => inc.ToDb()).ToList()
             };
         }
     }

@@ -219,9 +219,9 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             Data.Models.Build buildModel = build.ToDb();
             buildModel.DateProduced = DateTimeOffset.UtcNow;
 
-            if (buildModel.BuildIncoherenciesObject == null)
+            if (buildModel.Incoherencies == null)
             {
-                buildModel.BuildIncoherenciesObject = await 
+                buildModel.Incoherencies = await 
                     GetBuildIncoherencyInfoAsync(
                         buildModel.GitHubRepository ?? buildModel.AzureDevOpsRepository, 
                         buildModel.Commit);
@@ -314,7 +314,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 new Models.Build(buildModel));
         }
 
-        private async Task<Data.Models.BuildIncoherence> GetBuildIncoherencyInfoAsync(string repositoryUri, string commit)
+        private async Task<List<Data.Models.BuildIncoherence>> GetBuildIncoherencyInfoAsync(string repositoryUri, string commit)
         {
             DependencyGraphBuildOptions graphBuildOptions = new DependencyGraphBuildOptions()
             {
@@ -330,12 +330,11 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 graphBuildOptions,
                 Logger);
 
-            var deps = new List<Data.Models.IncoherentDependency>();
-            var nodes = new List<Data.Models.IncoherentNode>();
+            List<Data.Models.BuildIncoherence> incoherencies = new List<Data.Models.BuildIncoherence>();
 
             foreach (var item in graph.IncoherentDependencies)
             {
-                deps.Add(new Data.Models.IncoherentDependency
+                incoherencies.Add(new Data.Models.BuildIncoherence
                 {
                     Name = item.Name,
                     Version = item.Version,
@@ -344,16 +343,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 });
             }
 
-            foreach (var item in graph.IncoherentNodes)
-            {
-                nodes.Add(new Data.Models.IncoherentNode
-                {
-                    Repository = item.Repository,
-                    Commit = item.Commit
-                });
-            }
-
-            return new Data.Models.BuildIncoherence(deps, nodes);
+            return incoherencies;
         }
     }
 }

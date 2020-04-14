@@ -13,7 +13,6 @@ using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Maestro.Data.Models
 {
@@ -152,20 +151,7 @@ namespace Maestro.Data.Models
         /// More info is available here: https://github.com/dotnet/arcade/blob/master/Documentation/CorePackages/Versioning.md#build-kind
         /// </summary>
         public bool Stable { get; set; }
-
-        /// <summary>
-        /// JSON string containing incoherency properties & nodes for the subtree
-        /// starting at this build.
-        /// </summary>
-        [Column("Incoherencies")]
-        public string BuildIncoherenciesString { get; set; }
-
-        [NotMapped]
-        public BuildIncoherence BuildIncoherenciesObject
-        {
-            get => BuildIncoherenciesString == null ? null : JsonConvert.DeserializeObject<BuildIncoherence>(BuildIncoherenciesString);
-            set => BuildIncoherenciesString = value == null ? null : JsonConvert.SerializeObject(value);
-        }
+        public List<BuildIncoherence> Incoherencies { get; set; }
 
         [NotMapped]
         public int Staleness { get; set; }
