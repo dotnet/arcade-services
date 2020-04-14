@@ -18,14 +18,14 @@ namespace Microsoft.Dotnet.GitHub.Authentication
     public class GitHubTokenProvider : IGitHubTokenProvider
     {
         private readonly IInstallationLookup _installationLookup;
-        private readonly GitHubAppTokenProvider _tokens;
+        private readonly IGitHubAppTokenProvider _tokens;
         private readonly IOptions<GitHubClientOptions> _gitHubClientOptions;
         private readonly ConcurrentDictionary<long, AccessToken> _tokenCache;
         public readonly ILogger<GitHubTokenProvider> _logger;
 
         public GitHubTokenProvider(
             IInstallationLookup installationLookup,
-            GitHubAppTokenProvider tokens,
+            IGitHubAppTokenProvider tokens,
             IOptions<GitHubClientOptions> gitHubClientOptions,
             ILogger<GitHubTokenProvider> logger)
         {
