@@ -8,7 +8,6 @@ using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.MergePolicies;
 using Microsoft.DncEng.Configuration.Extensions;
-using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;

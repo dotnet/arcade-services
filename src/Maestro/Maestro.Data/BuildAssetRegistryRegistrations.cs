@@ -7,7 +7,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using Microsoft.Dotnet.GitHub.Authentication;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
