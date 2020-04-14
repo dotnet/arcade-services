@@ -502,7 +502,11 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     }
                 }
 
-                throw new Exception(error.ToString());
+                throw new RepositoryMarkedCriticalMoreThanOnceException(error.ToString())
+                {
+                    IdentityConflictingEdges = conflictingProductCriticalEdges
+                        .ToDictionary(g => g.Key, g => g.ToArray())
+                };
             }
 
             return newGraph;

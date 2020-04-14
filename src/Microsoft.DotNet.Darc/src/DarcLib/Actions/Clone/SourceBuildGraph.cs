@@ -281,10 +281,14 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             EdgesWithUpstream.GetOrDefault(node).NullAsEmpty();
 
         public IEnumerable<SourceBuildNode> GetDownstreams(SourceBuildIdentity node) =>
-            GetEdgesWithUpstream(node).Select(e => IdentityNodes[e.Downstream]);
+            GetEdgesWithUpstream(node)
+                .Select(e => IdentityNodes[e.Downstream])
+                .Distinct();
 
         public IEnumerable<SourceBuildNode> GetUpstreams(SourceBuildIdentity node) =>
-            IdentityNodes[node].UpstreamEdges.NullAsEmpty().Select(e => IdentityNodes[e.Upstream]);
+            IdentityNodes[node].UpstreamEdges.NullAsEmpty()
+                .Select(e => IdentityNodes[e.Upstream])
+                .Distinct();
 
         public IEnumerable<SourceBuildNode> GetAllDownstreams(SourceBuildIdentity node) =>
             GetTraverseListCore(node, GetDownstreams);

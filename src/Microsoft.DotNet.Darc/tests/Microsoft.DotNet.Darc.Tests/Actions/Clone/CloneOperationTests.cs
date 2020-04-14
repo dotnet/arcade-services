@@ -16,17 +16,12 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
         [Fact]
         public void IncoherentSiblingsMerge()
         {
-            var root = CreateIdentity("root", "0", null);
+            var root = Identity("root", "0");
             // The siblings should merge into the higher-versioned one.
-            var a = CreateIdentity("sibling", "0", new DependencyDetail { Version = "1.0.0" });
-            var b = CreateIdentity("sibling", "1", new DependencyDetail { Version = "1.0.1" });
+            var a = Identity("sibling", "0");
+            var b = Identity("sibling", "1");
 
-            var incoherent = SourceBuildGraph.CreateWithMissingLeafNodes(new[]
-            {
-                //new SourceBuildNode{Identity = root, Upstream = new [] {a, b}},
-                new SourceBuildNode{Identity = a},
-                new SourceBuildNode{Identity = b}
-            });
+            var incoherent = Graph(Node(root, Edge(a, "1.0.0"), Edge(b, "1.0.1")));
 
             var coherent = MakeCoherent(incoherent);
 
@@ -51,20 +46,16 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
             // to
             //   root => a => cousinB
             //       \=> b ===^
-            var root = CreateIdentity("root", "0", null);
-            var a = CreateIdentity("a", "0", null);
-            var b = CreateIdentity("b", "0", null);
-            var cousinA = CreateIdentity("cousin", "0", new DependencyDetail { Version = "5.0.0-beta.0" });
-            var cousinB = CreateIdentity("cousin", "1", new DependencyDetail { Version = "5.0.0-beta.1" });
+            var root = Identity("root", "0");
+            var a = Identity("a", "0");
+            var b = Identity("b", "0");
+            var cousinA = Identity("cousin", "0");
+            var cousinB = Identity("cousin", "1");
 
-            var incoherent = SourceBuildGraph.CreateWithMissingLeafNodes(new[]
-            {
-                //new SourceBuildNode{Identity = root, Upstreams = new [] {a, b}},
-                //new SourceBuildNode{Identity = a, Upstreams = new [] {cousinA}},
-                //new SourceBuildNode{Identity = b, Upstreams = new [] {cousinB}},
-                new SourceBuildNode{Identity = cousinA},
-                new SourceBuildNode{Identity = cousinB}
-            });
+            var incoherent = Graph(
+                Node(root, Edge(a), Edge(b)),
+                Node(a, Edge(cousinA, "5.0.0-beta.0")),
+                Node(b, Edge(cousinB, "5.0.0-beta.1")));
 
             var coherent = MakeCoherent(incoherent);
 
@@ -81,21 +72,15 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
         [Fact]
         public void CommitDateBreaksVersionTies()
         {
-            var root = CreateIdentity("root", "0", null);
+            var root = Identity("root", "0");
             // When building stable, we may build the same version multiple times. This results in
             // only the commit hash changing. Commit hashes don't sort, so we need to break the tie
             // somehow. The current algorithm uses commit date as a reasonable-seeming heuristic.
-            var a = CreateIdentity("sibling", "0", new DependencyDetail { Version = "1.0.0" });
-            var b = CreateIdentity("sibling", "1", new DependencyDetail { Version = "1.0.0" });
-            var c = CreateIdentity("sibling", "2", new DependencyDetail { Version = "1.0.0" });
+            var a = Identity("sibling", "0");
+            var b = Identity("sibling", "1");
+            var c = Identity("sibling", "2");
 
-            var incoherent = SourceBuildGraph.CreateWithMissingLeafNodes(new[]
-            {
-                //new SourceBuildNode{Identity = root, Upstreams = new [] {a, b, c}},
-                new SourceBuildNode{Identity = a},
-                new SourceBuildNode{Identity = b},
-                new SourceBuildNode{Identity = c}
-            });
+            var incoherent = Graph(Node(root, Edge(a), Edge(b), Edge(c)));
 
             var coherent = MakeCoherent(incoherent, new Dictionary<SourceBuildIdentity, DateTimeOffset>
             {
@@ -107,17 +92,39 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
             AssertEquivalentSet(new[] { root, b }, coherent.Nodes.Select(n => n.Identity));
         }
 
-        private SourceBuildIdentity CreateIdentity(
-            string repoUri,
-            string commit,
-            DependencyDetail detail)
+        [Fact]
+        public void TooManyProductCriticalAttributesCausesFailure()
         {
-            return new SourceBuildIdentity
+            var root = Identity("root", "0");
+            var a = Identity("a", "0");
+            var b0 = Identity("b", "0");
+            var b1 = Identity("b", "1");
+
+            Assert.Throws<RepositoryMarkedCriticalMoreThanOnceException>(() =>
             {
-                RepoUri = repoUri,
-                Commit = commit,
-                //Sources = detail == null ? null : new[] { detail }
-            };
+                MakeCoherent(Graph(
+                    Node(
+                        root,
+                        Edge(a, productCritical: true),
+                        Edge(a, productCritical: true)
+                    )
+                ));
+            });
+
+            Assert.Throws<RepositoryMarkedCriticalMoreThanOnceException>(() =>
+            {
+                MakeCoherent(Graph(
+                    Node(
+                        root,
+                        Edge(a),
+                        Edge(b1, productCritical: true)
+                    ),
+                    Node(
+                        a,
+                        Edge(b0, productCritical: true)
+                    )
+                ));
+            });
         }
 
         private SourceBuildGraph MakeCoherent(
@@ -130,6 +137,55 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
             };
 
             return client.CreateArtificiallyCoherentGraph(graph);
+        }
+
+        private SourceBuildGraph Graph(params SourceBuildNode[] nodes)
+        {
+            // Fix up back-references.
+            foreach (var n in nodes)
+            {
+                foreach (var e in n.UpstreamEdges)
+                {
+                    e.Downstream = n.Identity;
+                }
+            }
+
+            return SourceBuildGraph.CreateWithMissingLeafNodes(nodes);
+        }
+
+        private static SourceBuildNode Node(
+            SourceBuildIdentity id,
+            params SourceBuildEdge[] edges)
+        {
+            return new SourceBuildNode
+            {
+                Identity = id,
+                UpstreamEdges = edges,
+            };
+        }
+
+        private static SourceBuildEdge Edge(
+            SourceBuildIdentity upstream,
+            string version = "1.0.0",
+            bool productCritical = false)
+        {
+            return new SourceBuildEdge
+            {
+                Upstream = upstream,
+                ProductCritical = productCritical,
+                Source = new DependencyDetail
+                {
+                    Version = version,
+                }
+            };
+        }
+        private static SourceBuildIdentity Identity(string repoUri, string commit)
+        {
+            return new SourceBuildIdentity
+            {
+                RepoUri = repoUri,
+                Commit = commit,
+            };
         }
 
         private static void AssertEquivalentSet<T>(
