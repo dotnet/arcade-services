@@ -12,7 +12,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
     public class SourceBuildGraph
     {
-        public static SourceBuildGraph CreateWithMissingLeafNodes(IEnumerable<SourceBuildNode> nodes)
+        public static SourceBuildGraph CreateAndAddMissingLeafNodes(IEnumerable<SourceBuildNode> nodes)
         {
             var graph = new SourceBuildGraph(nodes);
             graph.AddMissingLeafNodes();

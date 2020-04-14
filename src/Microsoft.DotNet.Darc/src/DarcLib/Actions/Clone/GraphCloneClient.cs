@@ -2,7 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.DarcLib.Models;
+using Microsoft.DotNet.DarcLib.Models.Darc;
 using Microsoft.Extensions.Logging;
 using NuGet.Versioning;
 using System;
@@ -13,8 +15,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.DotNet.DarcLib.Models.Darc;
 
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
@@ -173,80 +173,28 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 Logger.LogDebug($"Clone depth remaining: {cloneDepth}");
 
                 // Create a temp graph that includes all potential nodes to evaluate next. We use
-                // this graph to evaluate whether to evaluate each node.
-                var graph = SourceBuildGraph.CreateWithMissingLeafNodes(
+                // this graph to evaluate whether to further evaluate each node.
+                var graph = SourceBuildGraph.CreateAndAddMissingLeafNodes(
                     allNodes.Concat(discoveredNodes));
-
-                SkipDependencyExplorationExplanation ReasonToSkipDependency(
-                    SourceBuildIdentity upstream,
-                    SourceBuildIdentity source)
-                {
-                    if (allNodes.Concat(discoveredNodes)
-                        .Any(n => SourceBuildIdentity.CaseInsensitiveComparer.Equals(n.Identity, upstream)))
-                    {
-                        return new SkipDependencyExplorationExplanation
-                        {
-                            Reason = SkipDependencyExplorationReason.AlreadyVisited
-                        };
-                    }
-
-                    // Remove self-dependency. E.g. arcade depends on previous versions of itself to
-                    // build, so this tends to go on essentially forever.
-                    if (string.Equals(upstream.RepoUri, source.RepoUri, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return new SkipDependencyExplorationExplanation
-                        {
-                            Reason = SkipDependencyExplorationReason.SelfDependency,
-                            Details = $"Skipping self-dependency in {source.RepoUri} ({source.Commit} => {upstream.Commit})"
-                        };
-                    }
-                    // Remove circular dependencies that have different hashes. That is, detect
-                    // circular-by-name-only dependencies.
-                    // e.g. DotNet-Trusted -> core-setup -> DotNet-Trusted -> ...
-                    // We are working our way upstream, so this check walks all downstreams we've
-                    // seen so far to see if any have this potential repo name. (We can't simply
-                    // check if we've seen the repo name before: other branches may have the same
-                    // repo name dependency but not as part of a circular dependency.)
-                    var allDownstreams = graph.GetAllDownstreams(upstream).ToArray();
-                    if (allDownstreams.Any(
-                        d => SourceBuildIdentity.RepoNameOnlyComparer.Equals(d.Identity, upstream)))
-                    {
-                        return new SkipDependencyExplorationExplanation
-                        {
-                            Reason = SkipDependencyExplorationReason.CircularWhenOnlyConsideringName,
-                            Details =
-                                $"Skipping already-seen circular dependency from {source} to {upstream}\n" +
-                                string.Join(" -> ", allDownstreams.Select(d => d.ToString()))
-                        };
-                    }
-                    // Remove repos specifically ignored by the caller.
-                    if (ignoredRepos.Any(r => r.Equals(upstream.RepoUri, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        return new SkipDependencyExplorationExplanation
-                        {
-                            Reason = SkipDependencyExplorationReason.Ignored,
-                            Details = $"Skipping ignored repo {upstream}"
-                        };
-                    }
-                    // Remove repos with invalid dependency info: missing commit.
-                    if (string.IsNullOrWhiteSpace(upstream.Commit))
-                    {
-                        return new SkipDependencyExplorationExplanation
-                        {
-                            Reason = SkipDependencyExplorationReason.DependencyDetailMissingCommit,
-                            Details = $"Skipping dependency from {source} to {upstream.RepoUri}: Missing commit."
-                        };
-                    }
-
-                    return null;
-                }
 
                 // Fill in each discovered node's reasons to skip dependencies (if exist).
                 foreach (var node in discoveredNodes)
                 {
                     foreach (var edge in node.UpstreamEdges.NullAsEmpty())
                     {
-                        edge.SkippedReason = ReasonToSkipDependency(edge.Upstream, node.Identity);
+                        // Remove repos specifically ignored by the caller.
+                        if (ignoredRepos.Any(r => r.Equals(edge.Upstream.RepoUri, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            edge.SkippedReason = new SkipDependencyExplorationExplanation
+                            {
+                                Reason = SkipDependencyExplorationReason.Ignored,
+                                Details = $"Skipping ignored repo {edge.Upstream}"
+                            };
+                        }
+                        else
+                        {
+                            edge.SkippedReason = edge.GetExplorationSkipReason(graph);
+                        }
 
                         if (edge.SkippedReason?.Reason == SkipDependencyExplorationReason.AlreadyVisited)
                         {
@@ -278,7 +226,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                 Logger.LogDebug($"Dependencies remaining: {nextLevelDependencies.Length}");
             }
 
-            return SourceBuildGraph.CreateWithMissingLeafNodes(allNodes);
+            return SourceBuildGraph.CreateAndAddMissingLeafNodes(allNodes);
         }
 
         public async Task CreateWorktreesAsync(SourceBuildGraph graph, string reposFolder)

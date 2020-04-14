@@ -10,6 +10,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         SelfDependency,
         CircularWhenOnlyConsideringName,
         Ignored,
+        ExcludedFromSourceBuild,
         DependencyDetailMissingCommit,
     }
 }

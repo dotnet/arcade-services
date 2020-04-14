@@ -167,7 +167,7 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
 
         private static SourceBuildGraph Graph(params SourceBuildNode[] nodes)
         {
-            return SourceBuildGraph.CreateWithMissingLeafNodes(nodes);
+            return SourceBuildGraph.CreateAndAddMissingLeafNodes(nodes);
         }
 
         private static SourceBuildNode Node(

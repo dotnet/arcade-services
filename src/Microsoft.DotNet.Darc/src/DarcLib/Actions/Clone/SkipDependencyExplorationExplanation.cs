@@ -24,10 +24,12 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                     return "color=\"#BBB422\" arrowhead=ediamond";
                 case SkipDependencyExplorationReason.Ignored:
                     return "color=\"#41BAB8\" arrowhead=odot";
+                case SkipDependencyExplorationReason.ExcludedFromSourceBuild:
+                    return "color=\"#499C9A\" arrowhead=invodot";
                 case SkipDependencyExplorationReason.DependencyDetailMissingCommit:
                     return "color=\"#F53C3C\"";
                 default:
-                    return null;
+                    return string.Empty;
             }
         }
     }
