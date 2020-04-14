@@ -5,7 +5,7 @@
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Microsoft.Dotnet.GitHub.Authentication
+namespace Microsoft.DotNet.GitHub.Authentication
 {
     public static class ServiceCollectionExtensions
     {

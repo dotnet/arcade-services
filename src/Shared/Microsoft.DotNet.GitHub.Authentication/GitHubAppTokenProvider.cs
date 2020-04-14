@@ -7,7 +7,7 @@ using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Options;
 using System.Text;
 
-namespace Microsoft.Dotnet.GitHub.Authentication
+namespace Microsoft.DotNet.GitHub.Authentication
 {
     public class GitHubAppTokenProvider : IGitHubAppTokenProvider
     {
