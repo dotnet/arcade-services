@@ -78,6 +78,7 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                 RemoteFactory = new RemoteFactory(_options),
                 Logger = Logger,
                 IncludeToolset = _options.IncludeToolset,
+                SkipFetch = _options.SkipFetch,
             };
         }
 

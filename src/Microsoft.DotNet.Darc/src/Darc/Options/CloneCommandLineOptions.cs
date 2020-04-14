@@ -34,6 +34,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option('d', "depth", Default = uint.MaxValue, HelpText = "Depth to clone the repos to.  Defaults to infinite.")]
         public uint CloneDepth { get; set; }
 
+        [Option("skip-fetch", HelpText="Skip fetching new commits for each repository. May cause failure.")]
+        public bool SkipFetch { get; set; }
+
         [Option("force-coherence", HelpText="Force coherency instead of cloning the same repository multiple times.")]
         public bool ForceCoherence { get; set; }
 

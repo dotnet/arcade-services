@@ -28,6 +28,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public bool ProductCritical { get; set; }
 
+        public bool ExcludeFromSourceBuild { get; set; }
+
         /// <summary>
         /// Marks this link was discovered in the first wave where the target node existed. That is,
         /// the target node wasn't already in the graph when the parent node saw it. This influences

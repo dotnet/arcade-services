@@ -25,6 +25,8 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         public ILogger Logger { get; set; }
         public IRemoteFactory RemoteFactory { get; set; }
 
+        public bool SkipFetch { get; set; }
+
         public bool IncludeToolset { get; set; }
         public bool IgnoreNonGitHub { get; set; } = true;
         public IEnumerable<DarcCloneOverrideDetail> RootOverrides { get; set; }
@@ -60,36 +62,33 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             result.UpstreamEdges = deps
                 .Select(d =>
                 {
-                    var identity = new SourceBuildIdentity
+                    var edge = new SourceBuildEdge
                     {
-                        RepoUri = d.RepoUri,
-                        Commit = d.Commit,
+                        Upstream = new SourceBuildIdentity
+                        {
+                            RepoUri = d.RepoUri,
+                            Commit = d.Commit,
+                        },
+                        Downstream = sourceRepo,
+                        Source = d,
+                        FirstDiscoverer = true
                     };
 
-                    bool? critical = d.ProductCritical;
-
-                    foreach (var rootOverride in RootOverrides)
+                    foreach (var rootOverride in RootOverrides
+                        .Where(o => string.Equals(o.Repo, sourceRepo.RepoUri, StringComparison.OrdinalIgnoreCase)))
                     {
-                        if (string.Equals(rootOverride.Repo, sourceRepo.RepoUri, StringComparison.OrdinalIgnoreCase))
+                        foreach (var find in rootOverride.FindDependencies
+                            .Where(f => string.Equals(f.Name, d.Name, StringComparison.OrdinalIgnoreCase)))
                         {
-                            foreach (var find in rootOverride.FindDependencies)
-                            {
-                                if (string.Equals(find.Name, d.Name, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    critical = find.ProductCritical ?? critical;
-                                }
-                            }
+                            edge.ProductCritical =
+                                find.ProductCritical ?? edge.ProductCritical;
+
+                            edge.ExcludeFromSourceBuild =
+                                find.ExcludeFromSourceBuild ?? edge.ExcludeFromSourceBuild;
                         }
                     }
 
-                    return new SourceBuildEdge
-                    {
-                        Upstream = identity,
-                        Downstream = sourceRepo,
-                        Source = d,
-                        ProductCritical = critical ?? false,
-                        FirstDiscoverer = true
-                    };
+                    return edge;
                 })
                 .ToArray();
 
@@ -606,10 +605,13 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                         {
                             if (Directory.Exists(gitDir))
                             {
-                                // Ensure repo is up to date. This task runs once per lifetime of
-                                // the client, on first use, so this is a nice place to do it.
-                                Local local = new Local(Logger, gitDir);
-                                local.Fetch();
+                                if (!SkipFetch)
+                                {
+                                    // Ensure repo is up to date. This task runs once per lifetime
+                                    // of the client, on first use, so nice place to do it.
+                                    Local local = new Local(Logger, gitDir);
+                                    local.Fetch();
+                                }
 
                                 return;
                             }
