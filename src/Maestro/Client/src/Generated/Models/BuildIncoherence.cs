@@ -10,10 +10,16 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         {
         }
 
-        [JsonProperty("incoherentDeps")]
-        public IImmutableList<Models.IncoherentDependency> IncoherentDeps { get; set; }
+        [JsonProperty("name")]
+        public string Name { get; set; }
 
-        [JsonProperty("incoherentNodes")]
-        public IImmutableList<Models.IncoherentNode> IncoherentNodes { get; set; }
+        [JsonProperty("version")]
+        public string Version { get; set; }
+
+        [JsonProperty("repository")]
+        public string Repository { get; set; }
+
+        [JsonProperty("commit")]
+        public string Commit { get; set; }
     }
 }

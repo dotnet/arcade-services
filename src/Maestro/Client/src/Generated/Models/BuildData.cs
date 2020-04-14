@@ -61,7 +61,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public bool Stable { get; set; }
 
         [JsonProperty("incoherencies")]
-        public Models.BuildIncoherence Incoherencies { get; set; }
+        public IImmutableList<Models.BuildIncoherence> Incoherencies { get; set; }
 
         [JsonIgnore]
         public bool IsValid
