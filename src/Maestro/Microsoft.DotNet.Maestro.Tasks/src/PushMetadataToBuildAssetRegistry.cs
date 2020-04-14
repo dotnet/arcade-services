@@ -13,7 +13,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
@@ -32,8 +31,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         [Required]
         public string MaestroApiEndpoint { get; set; }
-
-        public bool PublishUsingPipelines { get; set; } = false;
 
         private bool IsStableBuild { get; set; } = false;
 
