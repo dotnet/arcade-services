@@ -219,8 +219,6 @@ namespace Maestro.Web
             services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
 
             services.AddMergePolicies();
-
-            Build.s_dynamicConfigs = Configuration;
         }
 
         public void ConfigureContainer(ContainerBuilder builder)
