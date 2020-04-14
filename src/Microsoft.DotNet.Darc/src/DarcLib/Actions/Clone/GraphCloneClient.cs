@@ -486,13 +486,14 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             {
                 var error = new StringBuilder();
                 error.AppendLine(
-                    "Unable to create synthetic coherency: multiple edges pointing at the same" +
+                    "Unable to create synthetic coherency: multiple edges pointing at the same " +
                     "upstream are marked ProductCritical. This cannot be automatically resolved. " +
                     "Add DarcCloneOverrides to the root repo or fix the ProductCritical " +
                     "attributes in the parent repositories.");
 
                 foreach (var g in conflictingProductCriticalEdges)
                 {
+                    error.Append("Ended up in graph: ");
                     error.AppendLine(g.Key.ToString());
 
                     foreach (var edge in g)

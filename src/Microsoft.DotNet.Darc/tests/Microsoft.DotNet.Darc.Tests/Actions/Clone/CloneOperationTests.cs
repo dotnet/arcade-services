@@ -7,6 +7,7 @@ using Microsoft.DotNet.DarcLib.Actions.Clone;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.VisualStudio.Services.OAuth;
 using Xunit;
 
 namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
@@ -127,6 +128,31 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
             });
         }
 
+        [Fact]
+        public void ProductCriticalDuplicationIsOkWhenTraversalPicksOne()
+        {
+            var root = Identity("root", "0");
+            var a0 = Identity("a", "0");
+            var a1 = Identity("a", "1");
+            var b0 = Identity("b", "0");
+            var b1 = Identity("b", "1");
+
+            // When both a0 => b0 and a1 => b1 are critical, this is fine because we already
+            // eliminated a1 by saying root => a0 is critical and root => a1 is not. This happens
+            // all the time in the real SDK graph, because dependency criticality doesn't change
+            // much (if at all) from one commit to the next, and runtime versions are a very common
+            // source of incoherency.
+            MakeCoherent(Graph(
+                Node(a0, Edge(b0, productCritical: true)),
+                Node(a1, Edge(b1, productCritical: true)),
+                Node(
+                    root,
+                    Edge(a0),
+                    Edge(a1, productCritical: true)
+                )
+            ));
+        }
+
         private SourceBuildGraph MakeCoherent(
             SourceBuildGraph graph,
             Dictionary<SourceBuildIdentity, DateTimeOffset> commitDateMap = null)
@@ -139,17 +165,8 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
             return client.CreateArtificiallyCoherentGraph(graph);
         }
 
-        private SourceBuildGraph Graph(params SourceBuildNode[] nodes)
+        private static SourceBuildGraph Graph(params SourceBuildNode[] nodes)
         {
-            // Fix up back-references.
-            foreach (var n in nodes)
-            {
-                foreach (var e in n.UpstreamEdges)
-                {
-                    e.Downstream = n.Identity;
-                }
-            }
-
             return SourceBuildGraph.CreateWithMissingLeafNodes(nodes);
         }
 
@@ -157,6 +174,12 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
             SourceBuildIdentity id,
             params SourceBuildEdge[] edges)
         {
+            // Fix up back-references here since they're clunky to write in by hand.
+            foreach (var e in edges)
+            {
+                e.Downstream = id;
+            }
+
             return new SourceBuildNode
             {
                 Identity = id,

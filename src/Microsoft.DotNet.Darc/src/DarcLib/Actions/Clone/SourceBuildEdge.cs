@@ -45,7 +45,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public override string ToString() => $"-> {Upstream}";
 
-        public string ToConflictExplanationString() => $"-> {Upstream} for '{Source?.Name}' '{Source?.Version}'";
+        public string ToConflictExplanationString() =>
+            $"Critical: {Downstream} -> {OveriddenUpstreamForCoherency ?? Upstream} " +
+            $"for '{Source?.Name}' '{Source?.Version}'";
 
         public SourceBuildEdge CreateShallowCopy() => (SourceBuildEdge)MemberwiseClone();
 
