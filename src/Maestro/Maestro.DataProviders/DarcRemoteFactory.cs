@@ -2,21 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Threading.Tasks;
 using Maestro.AzureDevOps;
 using Maestro.Data;
 using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Kusto;
-using Microsoft.DotNet.Services.Utility;
-using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using System.IO;
-using System.Threading;
-using System.Net.Http;
-using System.IO.Compression;
+using System;
+using System.Threading.Tasks;
 
 namespace Maestro.DataProviders
 {
@@ -25,34 +18,22 @@ namespace Maestro.DataProviders
         public DarcRemoteFactory(
             BuildAssetRegistryContext context,
             IKustoClientProvider kustoClientProvider,
-            IConfiguration configuration,
             IGitHubTokenProvider gitHubTokenProvider,
             IAzureDevOpsTokenProvider azureDevOpsTokenProvider,
-            DarcRemoteMemoryCache memoryCache,
-            TemporaryFiles tempFiles)
+            DarcRemoteMemoryCache memoryCache)
         {
             Context = context;
-            KustoClientProvider = (KustoClientProvider) kustoClientProvider;
-            Configuration = configuration;
+            KustoClientProvider = (KustoClientProvider)kustoClientProvider;
             GitHubTokenProvider = gitHubTokenProvider;
             AzureDevOpsTokenProvider = azureDevOpsTokenProvider;
             Cache = memoryCache;
-            TempFiles = tempFiles;
         }
-
-        public IConfiguration Configuration { get; }
 
         public BuildAssetRegistryContext Context { get; }
 
         private readonly KustoClientProvider KustoClientProvider;
 
-        private readonly TemporaryFiles TempFiles;
-
-        private string GitExecutable;
-
         public DarcRemoteMemoryCache Cache { get; }
-
-        private readonly SemaphoreSlim SemaphoreSlim = new SemaphoreSlim(1, 1);
 
         public IGitHubTokenProvider GitHubTokenProvider { get; }
 
@@ -72,21 +53,10 @@ namespace Maestro.DataProviders
                 // may end up traversing links to classic azdo uris.
                 string normalizedUrl = AzureDevOpsClient.NormalizeUrl(repoUrl);
                 Uri normalizedRepoUri = new Uri(normalizedUrl);
-                // Look up the setting for where the repo root should be held.  Default to empty,
-                // which will use the temp directory.
-                string temporaryRepositoryRoot = Configuration.GetValue<string>("DarcTemporaryRepoRoot", null);
-                if (string.IsNullOrEmpty(temporaryRepositoryRoot))
-                {
-                    temporaryRepositoryRoot = TempFiles.GetFilePath("repos");
-                }
+
                 IGitRepo gitClient;
 
                 long installationId = await Context.GetInstallationId(normalizedUrl);
-
-                await ExponentialRetry.RetryAsync(
-                    async () => await EnsureLocalGit(logger),
-                    ex => logger.LogError(ex, $"Failed to install git to local temporary directory."),
-                    ex => true);
 
                 switch (normalizedRepoUri.Host)
                 {
@@ -95,12 +65,12 @@ namespace Maestro.DataProviders
                         {
                             throw new GithubApplicationInstallationException($"No installation is avaliable for repository '{normalizedUrl}'");
                         }
-                        gitClient = new GitHubClient(GitExecutable, await GitHubTokenProvider.GetTokenForInstallationAsync(installationId),
-                            logger, temporaryRepositoryRoot, Cache.Cache);
+                        gitClient = new GitHubClient(null, await GitHubTokenProvider.GetTokenForInstallationAsync(installationId),
+                            logger, null, Cache.Cache);
                         break;
                     case "dev.azure.com":
-                        gitClient = new AzureDevOpsClient(GitExecutable, await AzureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl),
-                            logger, temporaryRepositoryRoot);
+                        gitClient = new AzureDevOpsClient(null, await AzureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl),
+                            logger, null);
                         break;
                     default:
                         throw new NotImplementedException($"Unknown repo url type {normalizedUrl}");
@@ -108,63 +78,6 @@ namespace Maestro.DataProviders
 
                 return new Remote(gitClient, new MaestroBarClient(Context, KustoClientProvider), logger);
             }
-        }
-
-        /// <summary>
-        ///     Download and install git to the a temporary location.
-        ///     Git is used by DarcLib, and the Service Fabric nodes do not have it installed natively.
-        ///     
-        ///     The file is assumed to be on a public endpoint.
-        ///     We return the git client executable so that this call may be easily wrapped in RetryAsync
-        /// </summary>
-        public async Task<string> EnsureLocalGit(ILogger logger)
-        {
-            // Determine whether we need to do any downloading at all.
-            if (string.IsNullOrEmpty(GitExecutable))
-            {
-                await SemaphoreSlim.WaitAsync();
-                try
-                {
-                    // Determine whether another thread ended up getting the lock and downloaded git
-                    // in the meantime.
-                    if (string.IsNullOrEmpty(GitExecutable))
-                    {
-                        using (logger.BeginScope($"Installing a local copy of git"))
-                        {
-                            string gitLocation = Configuration.GetValue<string>("GitDownloadLocation", null);
-                            string[] pathSegments = new Uri(gitLocation, UriKind.Absolute).Segments;
-                            string remoteFileName = pathSegments[pathSegments.Length - 1];
-
-                            string gitRoot = TempFiles.GetFilePath("git-portable");
-                            string targetPath = Path.Combine(gitRoot, Path.GetFileNameWithoutExtension(remoteFileName));
-                            string gitZipFile = Path.Combine(gitRoot, remoteFileName);
-
-                            logger.LogInformation($"Downloading git from '{gitLocation}' to '{gitZipFile}'");
-
-                            Directory.CreateDirectory(targetPath);
-
-                            using (HttpClient client = new HttpClient())
-                            using (FileStream outStream = new FileStream(gitZipFile, FileMode.Create, FileAccess.Write))
-                            using (var inStream = await client.GetStreamAsync(gitLocation))
-                            {
-                                await inStream.CopyToAsync(outStream);
-                            }
-
-                            logger.LogInformation($"Extracting '{gitZipFile}' to '{targetPath}'");
-
-                            ZipFile.ExtractToDirectory(gitZipFile, targetPath, overwriteFiles: true);
-
-                            GitExecutable = Path.Combine(targetPath, "bin", "git.exe");
-                        }
-                    }
-                }
-                finally
-                {
-                    SemaphoreSlim.Release();
-                }
-            }
-
-            return GitExecutable;
         }
     }
 }

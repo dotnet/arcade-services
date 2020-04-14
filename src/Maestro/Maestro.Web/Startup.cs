@@ -221,7 +221,6 @@ namespace Maestro.Web
             // use a sized cache and some components, such as EFCore, do not implement their caching
             // in such a way that will work with sizing.
             services.AddSingleton<DarcRemoteMemoryCache>();
-            services.AddSingleton<TemporaryFiles>();
 
             services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
 
@@ -288,17 +287,17 @@ namespace Maestro.Web
 
             app.UseAuthentication();
 
-            if (HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric())
-            {
-                // Redirect api requests to prod when running locally outside of service fabric
-                // This is for the `ng serve` local debugging case for the website
-                app.MapWhen(
-                    ctx => IsGet(ctx) && ctx.Request.Path.StartsWithSegments("/api") && ctx.Request.Path != "/api/swagger.json",
-                    a =>
-                    {
-                        a.Run(ApiRedirectHandler);
-                    });
-            }
+            //if (HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric())
+            //{
+            //    // Redirect api requests to prod when running locally outside of service fabric
+            //    // This is for the `ng serve` local debugging case for the website
+            //    app.MapWhen(
+            //        ctx => IsGet(ctx) && ctx.Request.Path.StartsWithSegments("/api") && ctx.Request.Path != "/api/swagger.json",
+            //        a =>
+            //        {
+            //            a.Run(ApiRedirectHandler);
+            //        });
+            //}
 
             app.UseMvc();
 
