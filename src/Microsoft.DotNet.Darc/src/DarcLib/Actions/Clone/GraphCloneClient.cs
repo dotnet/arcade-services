@@ -240,7 +240,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public async Task CreateWorktreesAsync(SourceBuildGraph graph, string reposFolder)
         {
-            var worktreeNodes = graph.Nodes
+            var worktreeNodes = graph.GetNodesExcludingCompletelySkipped()
                 // Filter to unique worktree paths.
                 .Select(repo => new { repo, path = GetWorktreePath(reposFolder, repo.Identity) })
                 .GroupBy(r => r.path)

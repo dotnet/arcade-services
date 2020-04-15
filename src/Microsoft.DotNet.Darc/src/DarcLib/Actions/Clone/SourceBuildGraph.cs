@@ -304,6 +304,13 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         public IEnumerable<SourceBuildNode> GetRootNodes() =>
             Nodes.Where(n => !GetDownstreams(n.Identity).Any());
 
+        public IEnumerable<SourceBuildNode> GetNodesExcludingCompletelySkipped() =>
+            Nodes.Where(n =>
+            {
+                IEnumerable<SourceBuildEdge> edgesToNode = GetEdgesWithUpstream(n.Identity);
+                return !edgesToNode.Any() || edgesToNode.Any(e => e.SkippedReason == null);
+            });
+
         private IEnumerable<SourceBuildNode> GetTraverseListCore(
             SourceBuildIdentity start,
             Func<SourceBuildIdentity, IEnumerable<SourceBuildNode>> links)
