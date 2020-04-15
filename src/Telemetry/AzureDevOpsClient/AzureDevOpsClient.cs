@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Microsoft.DotNet.AzureDevOpsTimeline
+namespace Microsoft.DotNet.Internal.AzureDevOps
 {
     public sealed class AzureDevOpsClient
     {
@@ -97,6 +97,29 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
             return buildList.ToArray();
         }
 
+        public async Task<AzureDevOpsProject[]> ListProjectsAsync(CancellationToken cancellationToken = default)
+        {
+            JsonResult result = await GetJsonResult($"{_baseUrl}/{_organization}/_apis/projects?api-version=5.1", cancellationToken);
+            return JsonConvert.DeserializeObject<AzureDevOpsArrayOf<AzureDevOpsProject>>(result.Body).Value;
+        }
+
+        public async Task<Build> GetBuildAsync(string project, long buildId, CancellationToken cancellationToken = default)
+        {
+            StringBuilder builder = GetProjectApiRootBuilder(project);
+            builder.Append($"/build/builds/{buildId}?api-version=5.1");
+            JsonResult jsonResult = await GetJsonResult(builder.ToString(), cancellationToken);
+            return JsonConvert.DeserializeObject<Build>(jsonResult.Body);
+        }
+
+        public async Task<(BuildChange[] changes, int truncatedChangeCount)> GetBuildChangesAsync(string project, long buildId, CancellationToken cancellationToken = default)
+        {
+            StringBuilder builder = GetProjectApiRootBuilder(project);
+            builder.Append($"/build/builds/{buildId}/changes?$top=10&api-version=5.1");
+            JsonResult jsonResult = await GetJsonResult(builder.ToString(), cancellationToken);
+            var arrayOf = JsonConvert.DeserializeObject<AzureDevOpsArrayOf<BuildChange>>(jsonResult.Body);
+            return (arrayOf.Value, arrayOf.Count - arrayOf.Value.Length);
+        }
+
         private async Task<string> GetTimelineRaw(string project, int buildId, CancellationToken cancellationToken)
         {
             StringBuilder builder = GetProjectApiRootBuilder(project);
@@ -154,6 +177,74 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                 _parallelism.Release();
             }
         }
+
+        public async Task<BuildChangeDetail> GetChangeDetails(string changeUrl, CancellationToken cancellationToken = default)
+        {
+            var result = await GetJsonResult(changeUrl, cancellationToken);
+            return JsonConvert.DeserializeObject<BuildChangeDetail>(result.Body);
+        }
+    }
+
+    public class BuildChangeDetail
+    {
+        [JsonProperty("_links")]
+        public BuildLinks Links { get; set; }
+    }
+
+    public class BuildChange
+    {
+        public BuildChange(string id, IdentityRef author, string message, string type, string displayUri, string location)
+        {
+            Id = id;
+            Author = author;
+            Message = message;
+            Type = type;
+            DisplayUri = displayUri;
+            Location = location;
+        }
+
+        public string Id { get;  }
+        public IdentityRef Author { get; }
+        public string Message { get; }
+
+        public string Type { get; }
+        public string DisplayUri { get; }
+        public string Location { get; }
+    }
+
+    public class AzureDevOpsArrayOf<T>
+    {
+        public AzureDevOpsArrayOf(int count, T[] value)
+        {
+            Count = count;
+            Value = value;
+        }
+
+        public int Count { get; }
+        public T[] Value { get; }
+    }
+
+    public class AzureDevOpsProject
+    {
+        public AzureDevOpsProject(string id, string name, string description, string url, string state, int revision, string visibility)
+        {
+            Id = id;
+            Name = name;
+            Description = description;
+            Url = url;
+            State = state;
+            Revision = revision;
+            Visibility = visibility;
+        }
+
+        public string Id { get; }
+        public string Name { get;}
+        public string Description { get; }
+        public string Url { get; }
+        public string State { get; }
+        public int Revision { get; }
+        public string Visibility { get; }
+
     }
 
     public sealed class JsonResult

@@ -347,7 +347,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="itemsToUpdate">Dependencies that need updating.</param>
         /// <param name="message">Commit message.</param>
         /// <returns>Async task.</returns>
-        Task CommitUpdatesAsync(string repoUri, string branch, List<DependencyDetail> itemsToUpdate, string message);
+        Task<List<GitFile>> CommitUpdatesAsync(string repoUri, string branch, List<DependencyDetail> itemsToUpdate, string message);
 
         /// <summary>
         ///     Diff two commits in a repository and return information about them.

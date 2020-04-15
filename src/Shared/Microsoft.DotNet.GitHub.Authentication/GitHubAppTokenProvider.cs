@@ -17,7 +17,7 @@ namespace Microsoft.Dotnet.GitHub.Authentication
             _options = options;
         }
 
-        public string GetAppToken()
+        public virtual string GetAppToken()
         {
             return GetAppToken(_options.Value.GitHubAppId, new StringPrivateKeySource(_options.Value.PrivateKey));
         }
