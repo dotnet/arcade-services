@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "microsoft.dotnet.swaggergenerator.cmdline": {
+      "version": "5.0.0-beta.20215.1",
+      "commands": [
+        "dotnet-swaggergen"
+      ]
+    }
+  }
+}

@@ -6,9 +6,10 @@ export {
     MaestroModule,
     IAssetsApi,
     IBuildsApi,
+    IBuildTimeApi,
     IChannelsApi,
     IDefaultChannelsApi,
-    IPipelinesApi,
+    IGoalApi,
     IRepositoryApi,
     ISubscriptionsApi,
 } from "./maestro";
