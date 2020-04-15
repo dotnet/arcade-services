@@ -88,7 +88,7 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
             {
                 EnsureOptionsCompatibility(_options);
                 // Accumulate root info.
-                var accumulatedDependencies = new HashSet<SourceBuildNode>();
+                SourceBuildNode root;
 
                 // Seed the dependency set with initial dependencies from args.
                 if (string.IsNullOrWhiteSpace(_options.RepoUri))
@@ -100,20 +100,11 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                     _cloneClient.RootOverrides =
                         DarcCloneOverrideDetail.ParseAll(rootDependencyXml.DocumentElement);
 
-                    var node = _cloneClient.ParseNode(
+                    root = _cloneClient.ParseNode(
                         new SourceBuildIdentity { RepoUri = "root" },
                         rootDependencyXml);
 
-                    if (_options.IgnoredRepos.Any(r => r.Equals(node.Identity.RepoUri, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        Logger.LogDebug($"Skipping ignored repo {node}");
-                    }
-                    else
-                    {
-                        accumulatedDependencies.Add(node);
-                    }
-
-                    Logger.LogInformation($"Found {node.UpstreamEdges} local dependency edges.  Starting deep clone...");
+                    Logger.LogInformation($"Found {root.UpstreamEdges} local dependency edges.  Starting deep clone...");
                 }
                 else
                 {
@@ -124,24 +115,23 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                         Commit = _options.Version
                     };
 
-                    var root = new SourceBuildIdentity
+                    var rootId = new SourceBuildIdentity
                     {
                         RepoUri = "root"
                     };
 
-                    accumulatedDependencies.Add(
-                        new SourceBuildNode
+                    root = new SourceBuildNode
+                    {
+                        Identity = rootId,
+                        UpstreamEdges = new[]
                         {
-                            Identity = root,
-                            UpstreamEdges = new []
+                            new SourceBuildEdge
                             {
-                                new SourceBuildEdge
-                                {
-                                    Downstream = root,
-                                    Upstream = targetIdentity
-                                }
+                                Downstream = rootId,
+                                Upstream = targetIdentity
                             }
-                        });
+                        }
+                    };
 
                     Logger.LogInformation($"Starting deep clone of {targetIdentity}");
                 }
@@ -149,7 +139,7 @@ namespace Microsoft.DotNet.Darc.Operations.Clone
                 var timeBeforeGraph = DateTimeOffset.UtcNow;
 
                 SourceBuildGraph graph = await _cloneClient.GetGraphAsync(
-                    accumulatedDependencies,
+                    root,
                     _options.IgnoredRepos,
                     _options.CloneDepth);
 

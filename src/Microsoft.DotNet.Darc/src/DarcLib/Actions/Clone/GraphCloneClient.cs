@@ -102,12 +102,11 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
         }
 
         public async Task<SourceBuildGraph> GetGraphAsync(
-            IEnumerable<SourceBuildNode> rootDependencies,
+            SourceBuildNode root,
             IEnumerable<string> ignoredRepos,
             uint cloneDepth)
         {
-            var allNodes = new List<SourceBuildNode>(
-                rootDependencies.Distinct(SourceBuildNode.CaseInsensitiveComparer));
+            var allNodes = new List<SourceBuildNode> { root };
 
             // Some initial edges might need to be skipped. Evaluate skip reasons.
             foreach (var edge in allNodes.SelectMany(n => n.UpstreamEdges))
@@ -241,14 +240,15 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public async Task CreateWorktreesAsync(SourceBuildGraph graph, string reposFolder)
         {
-            var nodesWithDistinctWorktree = graph.Nodes
+            var worktreeNodes = graph.Nodes
+                // Filter to unique worktree paths.
                 .Select(repo => new { repo, path = GetWorktreePath(reposFolder, repo.Identity) })
                 .GroupBy(r => r.path)
                 .Select(g => g.First().repo)
                 .OrderBy(r => r.ToString())
                 .ToArray();
 
-            await Task.WhenAll(nodesWithDistinctWorktree.Select(async repo =>
+            await Task.WhenAll(worktreeNodes.Select(async repo =>
             {
                 var identity = repo.Identity;
                 if (IsRepoNonGitHubAndIgnored(identity))
