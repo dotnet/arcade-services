@@ -4,7 +4,6 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
-using Microsoft.DotNet.Darc.Operations.Clone;
 using System.Collections.Generic;
 
 namespace Microsoft.DotNet.Darc.Options

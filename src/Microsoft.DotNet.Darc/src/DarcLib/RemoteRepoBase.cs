@@ -153,7 +153,7 @@ namespace Microsoft.DotNet.DarcLib
                     // will be ignored.
                     Username = dotnetMaestro,
                     Password = pat
-                }
+                },
             };
 
             if (targetDirectory == null)

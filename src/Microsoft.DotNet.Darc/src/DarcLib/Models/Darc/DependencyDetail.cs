@@ -99,6 +99,7 @@ namespace Microsoft.DotNet.DarcLib
             Type = other.Type;
             CoherentParentDependencyName = other.CoherentParentDependencyName;
             ProductCritical = other.ProductCritical;
+            ExcludeFromSourceBuild = other.ExcludeFromSourceBuild;
             Locations = other.Locations;
         }
 

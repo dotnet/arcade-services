@@ -202,6 +202,7 @@ namespace Microsoft.DotNet.Darc.Tests.Actions.Clone
                 }
             };
         }
+
         private static SourceBuildIdentity Identity(string repoUri, string commit)
         {
             return new SourceBuildIdentity
