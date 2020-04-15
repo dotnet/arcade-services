@@ -57,10 +57,14 @@ namespace Microsoft.DotNet.DarcLib
                                 Commit = dependency.SelectSingleNode(VersionFiles.ShaElementName)?.InnerText?.Trim(),
                                 Version = dependency.Attributes[VersionFiles.VersionAttributeName].Value?.Trim(),
                                 CoherentParentDependencyName = dependency.Attributes[VersionFiles.CoherentParentAttributeName]?.Value?.Trim(),
-                                ProductCritical = bool.TryParse(
-                                    dependency.SelectSingleNode(VersionFiles.ProductCriticalElementName)?.InnerText.Trim(),
-                                    out bool b)
-                                    && b,
+
+                                ProductCritical =
+                                    ParseSingleNodeAsOptionalBool(dependency, VersionFiles.ProductCriticalElementName)
+                                    ?? false,
+                                ExcludeFromSourceBuild =
+                                    ParseSingleNodeAsOptionalBool(dependency, VersionFiles.ExcludeFromSourceBuildElementName)
+                                    ?? false,
+
                                 Pinned = isPinned,
                                 Type = type
                             };
@@ -175,8 +179,23 @@ namespace Microsoft.DotNet.DarcLib
         public bool ProductCritical { get; set; }
 
         /// <summary>
+        /// Indicates this dependency should not be used when building from source.
+        /// </summary>
+        public bool ExcludeFromSourceBuild { get; set; }
+
+        /// <summary>
         /// Asset locations for the dependency
         /// </summary>
         public IEnumerable<string> Locations { get; set; }
+
+        private static bool? ParseSingleNodeAsOptionalBool(XmlNode node, string path)
+        {
+            if (bool.TryParse(node.SelectSingleNode(path)?.InnerText.Trim(), out bool b))
+            {
+                return b;
+            }
+
+            return null;
+        }
     }
 }

@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.DotNet.DarcLib.Helpers;
 
 namespace Microsoft.DotNet.DarcLib.Actions.Clone
 {
@@ -49,8 +50,10 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
 
         public SkipDependencyExplorationExplanation GetExplorationSkipReason(SourceBuildGraph graph)
         {
-            if (graph.Nodes.Except(graph.IdentitiesWithoutNodes).Any(
-                n => SourceBuildIdentity.CaseInsensitiveComparer.Equals(n.Identity, Upstream)))
+            if (graph?.Nodes
+                .Except(graph.IdentitiesWithoutNodes)
+                .Any(n => SourceBuildIdentity.CaseInsensitiveComparer
+                    .Equals(n.Identity, Upstream)) == true)
             {
                 return new SkipDependencyExplorationExplanation
                 {
@@ -88,7 +91,7 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             // seen so far to see if any have this potential repo name. (We can't simply
             // check if we've seen the repo name before: other branches may have the same
             // repo name dependency but not as part of a circular dependency.)
-            var allDownstreams = graph.GetAllDownstreams(Upstream).ToArray();
+            var allDownstreams = (graph?.GetAllDownstreams(Upstream).ToArray()).NullAsEmpty();
             if (allDownstreams.Any(
                 d => SourceBuildIdentity.RepoNameOnlyComparer.Equals(d.Identity, Upstream)))
             {

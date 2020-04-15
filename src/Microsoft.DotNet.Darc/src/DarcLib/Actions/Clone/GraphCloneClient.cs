@@ -71,7 +71,9 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
                         },
                         Downstream = sourceRepo,
                         Source = d,
-                        FirstDiscoverer = true
+                        FirstDiscoverer = true,
+                        ProductCritical = d.ProductCritical,
+                        ExcludeFromSourceBuild = d.ExcludeFromSourceBuild,
                     };
 
                     foreach (var rootOverride in RootOverrides
@@ -107,8 +109,16 @@ namespace Microsoft.DotNet.DarcLib.Actions.Clone
             var allNodes = new List<SourceBuildNode>(
                 rootDependencies.Distinct(SourceBuildNode.CaseInsensitiveComparer));
 
+            // Some initial edges might need to be skipped. Evaluate skip reasons.
+            foreach (var edge in allNodes.SelectMany(n => n.UpstreamEdges))
+            {
+                edge.SkippedReason = edge.GetExplorationSkipReason(null);
+            }
+
             var nextLevelDependencies = allNodes
-                .SelectMany(r => r.UpstreamEdges.Select(e => e.Upstream))
+                .SelectMany(r => r.UpstreamEdges
+                    .Where(e => e.SkippedReason == null)
+                    .Select(e => e.Upstream))
                 .Distinct(SourceBuildIdentity.CaseInsensitiveComparer)
                 .ToArray();
 
