@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFrameworks>netcoreapp2.1;netcoreapp3.0</TargetFrameworks>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>preview</LangVersion>
     <SignAssembly>false</SignAssembly>
     <IsPackable>true</IsPackable>
     <Description>Darc CLI</Description>
