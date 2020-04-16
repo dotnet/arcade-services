@@ -5,10 +5,9 @@ import { select } from 'd3';
 
 import { FlowGraph, FlowRef, FlowEdge } from 'src/maestro-client/models';
 import { RepoNamePipe } from 'src/app/pipes/repo-name.pipe';
-import { analyzeAndValidateNgModules } from '@angular/compiler';
 
-function getRepositoryShortName(repo:string): string {
-  return RepoNamePipe.prototype.transform(repo) || "unknown repository";
+function getRepositoryShortName(repo?: string): string {
+  return repo && RepoNamePipe.prototype.transform(repo) || "unknown repository";
 }
 
 function getNodeLabel(node:FlowRef): string {
@@ -20,14 +19,14 @@ function getNodeLabel(node:FlowRef): string {
 function getNodeTitle(node:FlowRef): string {
   let official = node.officialBuildTime == 0 ? "No successful runs in the last 30 days" : `${node.officialBuildTime.toFixed(2)} min`;
   let pr = node.prBuildTime == 0 ? "No successful runs in the last 30 days" : `${node.prBuildTime.toFixed(2)} min`;
-  let goal = node.goalTime == 0 ? "No goal time set" : `${node.goalTime} min`;
+  let goal = node.goalTimeInMinutes == 0 ? "No goal time set" : `${node.goalTimeInMinutes} min`;
 
   return `Repository: ${getRepositoryShortName(node.repository)}\n` +
          `Branch: ${node.branch}\n` +
          `Official Build: ${official}\n` +
          `Dep Flow: ${pr}\n` +
-         `Best Case Path Time: ${node.bestCaseTime.toFixed(2)} min\n` +
-         `Worst Case Path Time: ${node.worstCaseTime.toFixed(2)} min\n` +
+         `Best Case Path Time: ${node.bestCasePathTime.toFixed(2)} min\n` +
+         `Worst Case Path Time: ${node.bestCasePathTime.toFixed(2)} min\n` +
          `Goal Time: ${goal}`;
 }
 
@@ -39,7 +38,7 @@ function getNodeDescription(node:FlowRef): string {
 }
 
 function getEdgeDescription(edge:FlowEdge, graph:FlowGraph): string {
-  let from = graph.nodes.find(x => x.id == edge.fromId);
+  let from = graph.flowRefs.find(x => x.id == edge.fromId);
   let fromRepo: string | undefined = undefined;
   let fromBranch: string | undefined = undefined;
   let fromId = edge.fromId;
@@ -53,7 +52,7 @@ function getEdgeDescription(edge:FlowEdge, graph:FlowGraph): string {
     fromId = `${fromRepo}@${fromBranch}`;
   }
 
-  let to = graph.nodes.find(x => x.id == edge.toId);
+  let to = graph.flowRefs.find(x => x.id == edge.toId);
   let toRepo: string | undefined = undefined;
   let toBranch: string | undefined = undefined;
   let toId = edge.toId;
@@ -86,7 +85,10 @@ function drawFlowGraph(graph: FlowGraph, includeArcade: boolean) {
     var arcadeMasterNode: string = "";
     var arcade3xNode: string = "";
 
-    for ( var flowRef of graph.nodes ) {
+    for ( var flowRef of graph.flowRefs ) {
+      if (!flowRef.id) {
+        continue;
+      }
       let nodeProperties:any = { 
         labelType: "html",
         label: getNodeLabel(flowRef),
@@ -102,7 +104,7 @@ function drawFlowGraph(graph: FlowGraph, includeArcade: boolean) {
       singletons.push(flowRef.id)
 
       // Find the arcade nodes, if they exist
-      var isArcade = flowRef.repository.endsWith("arcade");
+      var isArcade = flowRef.repository && flowRef.repository.endsWith("arcade");
 
       if (isArcade && flowRef.branch == "master") {
         arcadeMasterNode = flowRef.id;
@@ -118,7 +120,11 @@ function drawFlowGraph(graph: FlowGraph, includeArcade: boolean) {
       }
     }
 
-    for (var edge of graph.edges) {
+    for (var edge of graph.flowEdges) {
+      if (!edge.fromId || !edge.toId) {
+        continue;
+      }
+      
       let edgeProperties:any = { arrowheadClass: 'arrowhead',
                     description: getEdgeDescription(edge, graph)};
 
