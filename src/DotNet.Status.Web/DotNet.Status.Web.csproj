@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <UserSecretsId>65a272ca-730a-4afd-b68b-d256719c2db2</UserSecretsId>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SignAssembly>false</SignAssembly>
     <IsPackable>true</IsPackable>
   </PropertyGroup>
@@ -25,5 +26,6 @@
     <ProjectReference Include="..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
     <ProjectReference Include="..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
     <ProjectReference Include="..\shared\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj" />
+    <ProjectReference Include="..\Telemetry\AzureDevOpsClient\AzureDevOpsClient.csproj" />
   </ItemGroup>
 </Project>

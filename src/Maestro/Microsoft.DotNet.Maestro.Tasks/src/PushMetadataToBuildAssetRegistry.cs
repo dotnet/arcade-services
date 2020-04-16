@@ -96,6 +96,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     BuildId = recordedBuild.Id;
 
                     Log.LogMessage(MessageImportance.High, $"Metadata has been pushed. Build id in the Build Asset Registry is '{recordedBuild.Id}'");
+                    Console.WriteLine($"##vso[build.addbuildtag]BAR ID: {recordedBuild.Id}");
 
                     // Only 'create' the AzDO (VSO) variables if running in an AzDO build
                     if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BUILD_BUILDID")))

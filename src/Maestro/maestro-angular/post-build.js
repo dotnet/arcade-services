@@ -35,13 +35,22 @@ function addAsset(assetName, fileName) {
     });
   }
 }
+function getAsset(name) {
+  const assets = stats.assetsByChunkName[name];
+  if (Array.isArray(assets)) {
+    return assets[0];
+  } else {
+    return assets;
+  }
+}
+
 for (const assetName of assetOrder) {
-  const fileName = stats.assetsByChunkName[assetName];
+  const fileName = getAsset(assetName);
   delete stats.assetsByChunkName[assetName];
   addAsset(assetName, fileName);
 }
 for (const asset of Object.keys(stats.assetsByChunkName)) {
-  const fileName = stats.assetsByChunkName[asset];
+  const fileName = getAsset(asset);
   addAsset(asset, fileName);
 }
 fs.writeFileSync(assetsJson, JSON.stringify(assets, undefined, 2));

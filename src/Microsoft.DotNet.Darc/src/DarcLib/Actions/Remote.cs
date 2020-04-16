@@ -756,7 +756,7 @@ namespace Microsoft.DotNet.DarcLib
             return await GetRequiredCoherencyUpdatesAsync(currentDependencies, remoteFactory);
         }
 
-        public async Task CommitUpdatesAsync(
+        public async Task<List<GitFile>> CommitUpdatesAsync(
             string repoUri,
             string branch,
             List<DependencyDetail> itemsToUpdate,
@@ -837,6 +837,8 @@ namespace Microsoft.DotNet.DarcLib
             filesToCommit.AddRange(fileContainer.GetFilesToCommit());
 
             await _gitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
+
+            return filesToCommit;
         }
 
         public Task<PullRequest> GetPullRequestAsync(string pullRequestUri)
@@ -1138,15 +1140,20 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     if (repoDotnetVersion.CompareTo(incomingDotnetVersion) < 0)
                     {
+                        Dictionary<GitFileMetadataName, string> metadata = new Dictionary<GitFileMetadataName, string>();
+
                         parsedGlobalJson["tools"]["dotnet"] = incomingDotnetVersion.ToNormalizedString();
+                        metadata.Add(GitFileMetadataName.ToolsDotNetUpdate, incomingDotnetVersion.ToNormalizedString());
 
                         // Also update and keep sdk.version in sync.
                         JToken sdkVersion = parsedGlobalJson.SelectToken("sdk.version");
                         if (sdkVersion != null)
                         {
                             parsedGlobalJson["sdk"]["version"] = incomingDotnetVersion.ToNormalizedString();
+                            metadata.Add(GitFileMetadataName.SdkVersionUpdate, incomingDotnetVersion.ToNormalizedString());
                         }
-                        return new GitFile(VersionFiles.GlobalJson, parsedGlobalJson);
+
+                        return new GitFile(VersionFiles.GlobalJson, parsedGlobalJson, metadata);
                     }
                     return repoGlobalJson;
                 }

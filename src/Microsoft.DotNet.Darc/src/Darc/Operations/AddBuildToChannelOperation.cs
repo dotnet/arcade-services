@@ -13,6 +13,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Net.Http;
 using Microsoft.DotNet.Services.Utility;
+using System.Text;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -42,34 +43,75 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
 
-                // Find the build to give someone info
                 Build build = await remote.GetBuildAsync(_options.Id);
                 if (build == null)
                 {
-                    Console.WriteLine($"Could not find a build with id '{_options.Id}'");
+                    Console.WriteLine($"Could not find a build with id '{_options.Id}'.");
                     return Constants.ErrorCode;
                 }
 
-                Channel targetChannel = await UxHelpers.ResolveSingleChannel(remote, _options.Channel);
-                if (targetChannel == null)
+                if (string.IsNullOrEmpty(_options.Channel) && !_options.AddToDefaultChannels)
                 {
+                    Console.WriteLine("You need to use --channel or --default-channels to inform the channel(s) that the build should be promoted to.");
                     return Constants.ErrorCode;
                 }
 
-                if (build.Channels.Any(c => c.Id == targetChannel.Id))
+                List<Channel> targetChannels = new List<Channel>();
+
+                if (!string.IsNullOrEmpty(_options.Channel))
                 {
-                    Console.WriteLine($"Build '{build.Id}' has already been assigned to '{targetChannel.Name}'");
+                    Channel targetChannel = await UxHelpers.ResolveSingleChannel(remote, _options.Channel);
+                    if (targetChannel == null)
+                    {
+                        return Constants.ErrorCode;
+                    }
+
+                    targetChannels.Add(targetChannel);
+                }
+
+                if (_options.AddToDefaultChannels)
+                {
+                    IEnumerable<DefaultChannel> defaultChannels = await remote.GetDefaultChannelsAsync(
+                        build.GitHubRepository ?? build.AzureDevOpsRepository, 
+                        build.GitHubBranch ?? build.AzureDevOpsBranch);
+
+                    targetChannels.AddRange(
+                        defaultChannels.
+                            Where(dc => dc.Enabled).
+                            Select(dc => dc.Channel));
+                }
+
+                IEnumerable<Channel> currentChannels = build.Channels.Where(ch => targetChannels.Any(tc => tc.Id == ch.Id));
+                if (currentChannels.Any())
+                {
+                    Console.WriteLine($"The build '{build.Id}' is already on these target channel(s):");
+
+                    foreach (var channel in currentChannels)
+                    {
+                        Console.WriteLine($"\t{channel.Name}");
+                        targetChannels.RemoveAll(tch => tch.Id == channel.Id);
+                    }
+                }
+
+                if (!targetChannels.Any())
+                {
+                    Console.WriteLine($"Build '{build.Id}' is already on all target channel(s).");
                     return Constants.SuccessCode;
                 }
 
-                Console.WriteLine($"Assigning the following build to channel '{targetChannel.Name}':");
+                Console.WriteLine($"Assigning build '{build.Id}' to the following channel(s):");
+                foreach (var channel in targetChannels)
+                {
+                    Console.WriteLine($"\t{channel.Name}");
+                }
                 Console.WriteLine();
                 Console.Write(UxHelpers.GetTextBuildDescription(build));
 
                 // Queues a build of the Build Promotion pipeline that will takes care of making sure
                 // that the build assets are published to the right location and also promoting the build
                 // to the requested channel
-                int promoteBuildQueuedStatus = await PromoteBuildAsync(build, targetChannel, remote).ConfigureAwait(false);
+                int promoteBuildQueuedStatus = await PromoteBuildAsync(build, targetChannels, remote)
+                    .ConfigureAwait(false);
 
                 if (promoteBuildQueuedStatus != Constants.SuccessCode)
                 {
@@ -78,8 +120,16 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 // Be helpful. Let the user know what will happen.
                 string buildRepo = build.GitHubRepository ?? build.AzureDevOpsRepository;
-                List<Subscription> applicableSubscriptions = (await remote.GetSubscriptionsAsync(
-                    sourceRepo: buildRepo, channelId: targetChannel.Id)).ToList();
+                List<Subscription> applicableSubscriptions = new List<Subscription>();
+
+                foreach (var targetChannel in targetChannels)
+                {
+                    IEnumerable<Subscription> appSubscriptions = await remote.GetSubscriptionsAsync(
+                        sourceRepo: buildRepo, 
+                        channelId: targetChannel.Id);
+
+                    applicableSubscriptions.AddRange(appSubscriptions);
+                }
 
                 PrintSubscriptionInfo(applicableSubscriptions);
 
@@ -92,12 +142,15 @@ namespace Microsoft.DotNet.Darc.Operations
             }
         }
 
-        private async Task<int> PromoteBuildAsync(Build build, Channel targetChannel, IRemote remote)
+        private async Task<int> PromoteBuildAsync(Build build, List<Channel> targetChannels, IRemote remote)
         {
             if (_options.SkipAssetsPublishing)
             {
-                await remote.AssignBuildToChannelAsync(build.Id, targetChannel.Id);
-                Console.WriteLine($"Build {build.Id} was assigned to channel '{targetChannel.Name}' bypassing the promotion pipeline.");
+                foreach (var targetChannel in targetChannels)
+                {
+                    await remote.AssignBuildToChannelAsync(build.Id, targetChannel.Id);
+                    Console.WriteLine($"Build {build.Id} was assigned to channel '{targetChannel.Name}' bypassing the promotion pipeline.");
+                }
                 return Constants.SuccessCode;
             }
 
@@ -133,7 +186,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
             var queueTimeVariables = $"{{" +
                 $"\"BARBuildId\": \"{ build.Id }\", " +
-                $"\"PromoteToMaestroChannelId\": \"{ targetChannel.Id }\", " +
+                $"\"PromoteToChannelIds\": \"{ string.Join(",", targetChannels.Select(tch => tch.Id)) }\", " +
                 $"\"EnableSigningValidation\": \"{ _options.DoSigningValidation }\", " +
                 $"\"SigningValidationAdditionalParameters\": \"{ _options.SigningValidationAdditionalParameters }\", " +
                 $"\"EnableNugetValidation\": \"{ _options.DoNuGetValidation }\", " +
@@ -165,7 +218,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
             string promotionBuildUrl = $"https://{build.AzureDevOpsAccount}.visualstudio.com/{promotionPipelineInformation.project}/_build/results?buildId={azdoBuildId}";
 
-            Console.WriteLine($"Build {build.Id} will be assigned to channel '{targetChannel.Name}' once this build finishes publishing assets: {promotionBuildUrl}");
+            Console.WriteLine($"Build {build.Id} will be assigned to target channel(s) once this build finishes publishing assets: {promotionBuildUrl}");
 
             if (_options.NoWait)
             {
@@ -186,7 +239,6 @@ namespace Microsoft.DotNet.Darc.Operations
                         build.AzureDevOpsAccount,
                         promotionPipelineInformation.project,
                         azdoBuildId);
-
                 } while (!promotionBuild.Status.Equals("completed", StringComparison.OrdinalIgnoreCase));
             }
             catch (Exception e)
@@ -197,14 +249,14 @@ namespace Microsoft.DotNet.Darc.Operations
 
             build = await remote.GetBuildAsync(build.Id);
 
-            if (build.Channels.Any(c => c.Id == targetChannel.Id))
+            if (targetChannels.All(ch => build.Channels.Any(c => c.Id == ch.Id)))
             {
-                Console.WriteLine($"Build '{build.Id}' was successfully added to channel '({targetChannel.Id}) {targetChannel.Name}'");
+                Console.WriteLine($"Build '{build.Id}' was successfully added to the target channel(s).");
                 return Constants.SuccessCode;
             }
             else
             {
-                Console.WriteLine("The promotion build finished but the build isn't associated with the channel. This is an error scenario. Please contact @dnceng.");
+                Console.WriteLine("The promotion build finished but the build isn't associated with at least one of the target channels. This is an error scenario. Please contact @dnceng.");
                 return Constants.ErrorCode;
             }
         }

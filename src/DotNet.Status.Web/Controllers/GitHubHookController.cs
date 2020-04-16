@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -7,9 +7,9 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebHooks;
-using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -20,28 +20,25 @@ namespace DotNet.Status.Web.Controllers
     public class GitHubHookController : ControllerBase
     {
         private readonly Lazy<Task> _ensureLabels;
-        private readonly IOptions<GitHubClientOptions> _githubClientOptions;
         private readonly IOptions<GitHubConnectionOptions> _githubOptions;
         private readonly ILogger<GitHubHookController> _logger;
-        private readonly IGitHubTokenProvider _tokenProvider;
+        private readonly IGitHubClientFactory _gitHubClientFactory;
 
         public GitHubHookController(
-            IGitHubTokenProvider tokenProvider,
             IOptions<GitHubConnectionOptions> githubOptions,
-            IOptions<GitHubClientOptions> githubClientOptions,
+            IGitHubClientFactory gitHubClientFactory,
             ILogger<GitHubHookController> logger)
         {
-            _tokenProvider = tokenProvider;
             _githubOptions = githubOptions;
-            _githubClientOptions = githubClientOptions;
             _logger = logger;
+            _gitHubClientFactory = gitHubClientFactory;
             _ensureLabels = new Lazy<Task>(EnsureLabelsAsync);
         }
 
         private async Task EnsureLabelsAsync()
         {
             GitHubConnectionOptions options = _githubOptions.Value;
-            IGitHubClient client = await GetGitHubClientAsync(options.Organization, options.Repository);
+            IGitHubClient client = await _gitHubClientFactory.CreateGitHubClientAsync(options.Organization, options.Repository);
             await GitHubModifications.TryCreateAsync(
                 () => client.Issue.Labels.Create(
                     options.Organization,
@@ -98,7 +95,7 @@ namespace DotNet.Status.Web.Controllers
             string issueRepo = data.Repository.Name;
             string issueOrg = data.Repository.Owner.Login;
             _logger.LogInformation("Opening connection to open issue to {org}/{repo}", options.Organization, options.Repository);
-            IGitHubClient client = await GetGitHubClientAsync(options.Organization, options.Repository);
+            IGitHubClient client = await _gitHubClientFactory.CreateGitHubClientAsync(options.Organization, options.Repository);
 
             var issue = new NewIssue($"RCA: {issueTitle} ({issueNumber})")
             {
@@ -205,14 +202,6 @@ For help filling out this form, see the [Root Cause Analysis](https://github.com
         {
             // Ignore them, none are interesting
             return NoContent();
-        }
-
-        private async Task<IGitHubClient> GetGitHubClientAsync(string org, string repo)
-        {
-            return new GitHubClient(_githubClientOptions.Value.ProductHeader)
-            {
-                Credentials = new Credentials(await _tokenProvider.GetTokenForRepository(org, repo))
-            };
         }
     }
 

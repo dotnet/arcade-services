@@ -2,16 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using Newtonsoft.Json;
 
-namespace Microsoft.DotNet.AzureDevOpsTimeline
+namespace Microsoft.DotNet.Internal.AzureDevOps
 {
     /// <summary>
     ///     https://docs.microsoft.com/en-us/rest/api/azure/devops/build/builds/list?view=azure-devops-rest-5.0#build
     /// </summary>
     public sealed class Build
     {
+        [JsonProperty("_links")]
         public BuildLinks Links { get; set; }
         public string BuildNumber { get; set; }
         public int BuildNumberRevision { get; set; }
@@ -72,7 +72,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
 
     public sealed class Badge
     {
-        public Uri Href { get; set; }
+        public string Href { get; set; }
     }
 
     /// <summary>
@@ -131,7 +131,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
     /// </summary>
     public sealed class IdentityRef
     {
-        // TODO
+        public string DisplayName { get; set; }
     }
 
     /// <summary>
@@ -209,7 +209,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         public int ErrorCount { get; set; }
         public string FinishTime { get; set; }
         public string Id { get; set; }
-        public Issue[] Issues { get; set; }
+        public TimelineIssue[] Issues { get; set; }
         public string LastModified { get; set; }
         public string Name { get; set; }
         public BuildLogReference Log { get; set; }
@@ -224,6 +224,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
         public string ResultCode { get; set; }
         public string StartTime { get; set; }
         public TaskReference Task { get; set; }
+        public string Type { get; set; }
         public string Url { get; set; }
         public int WarningCount { get; set; }
         public string WorkerName { get; set; }
@@ -242,7 +243,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
     /// <summary>
     ///     https://docs.microsoft.com/en-us/rest/api/azure/devops/build/timeline/get?view=azure-devops-rest-5.0#issue
     /// </summary>
-    public sealed class Issue
+    public sealed class TimelineIssue
     {
         public string Category { get; set; }
         public object Data { get; set; }
