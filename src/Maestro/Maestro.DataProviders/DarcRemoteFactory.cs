@@ -4,6 +4,7 @@
 
 using System.Threading.Tasks;
 using Maestro.Data;
+using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Configuration;
@@ -15,12 +16,16 @@ namespace Maestro.DataProviders
     {
         public DarcRemoteFactory(
             BuildAssetRegistryContext context,
+            IGitHubTokenProvider githubTokenProvider,
             IKustoClientProvider kustoClientProvider)
         {
             Context = context;
+            GHProvider = githubTokenProvider;
             KustoClientProvider = (KustoClientProvider) kustoClientProvider;
         }
         
+        private IGitHubTokenProvider GHProvider { get; set; }
+
         public BuildAssetRegistryContext Context { get; }
 
         private readonly KustoClientProvider KustoClientProvider;
