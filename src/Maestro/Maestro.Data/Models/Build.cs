@@ -151,6 +151,11 @@ namespace Maestro.Data.Models
         /// More info is available here: https://github.com/dotnet/arcade/blob/master/Documentation/CorePackages/Versioning.md#build-kind
         /// </summary>
         public bool Stable { get; set; }
+
+        /// <summary>
+        /// This will store the list of dependency incoherencies of the current build.
+        /// Basically a summary version of the dependencies in DarcLib->DependencyGraph->IncoherentDependencies
+        /// </summary>
         public List<BuildIncoherence> Incoherencies { get; set; }
 
         [NotMapped]

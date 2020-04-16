@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>netcoreapp2.1</TargetFrameworks>
     <PackageType>MSBuildSdk</PackageType>
-    <LangVersion>preview</LangVersion>
+    <LangVersion>latest</LangVersion>
     <ExcludeFromSourceBuild>true</ExcludeFromSourceBuild>
     <NoWarn>NU5110,NU5111</NoWarn>
   </PropertyGroup>

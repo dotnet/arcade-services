@@ -221,10 +221,18 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
 
             if (buildModel.Incoherencies == null)
             {
-                buildModel.Incoherencies = await 
-                    GetBuildIncoherencyInfoAsync(
-                        buildModel.GitHubRepository ?? buildModel.AzureDevOpsRepository, 
-                        buildModel.Commit);
+                try
+                {
+                    buildModel.Incoherencies = await 
+                        GetBuildIncoherencyInfoAsync(
+                            buildModel.GitHubRepository ?? buildModel.AzureDevOpsRepository, 
+                            buildModel.Commit);
+                }
+                catch (Exception e)
+                {
+                    Logger.LogWarning(e, $"Problems computing the dependency incoherencies for a new build of " +
+                        $"{buildModel.AzureDevOpsBuildNumber} from {(buildModel.AzureDevOpsRepository ?? buildModel.GitHubRepository)}");
+                }
             }
 
             if (build.Dependencies != null)
