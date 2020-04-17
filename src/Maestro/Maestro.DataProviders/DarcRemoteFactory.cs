@@ -4,7 +4,7 @@
 
 using System.Threading.Tasks;
 using Maestro.Data;
-using Microsoft.Dotnet.GitHub.Authentication;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Configuration;
