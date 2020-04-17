@@ -828,13 +828,16 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             }
         }
 
-        private void UpdatePRDescriptionDueConfigFiles(List<GitFile> commitedFiles, StringBuilder globalJsonSection)
+        public static void UpdatePRDescriptionDueConfigFiles(List<GitFile> committedFiles, StringBuilder globalJsonSection)
         {
-            GitFile globalJsonFile = commitedFiles?.
+            GitFile globalJsonFile = committedFiles?.
                 Where(gf => gf.FilePath.Equals("global.json", StringComparison.OrdinalIgnoreCase)).
                 FirstOrDefault();
 
-            if (globalJsonFile != null)
+            // The list of committedFiles can contain the `global.json` file (and others) 
+            // even though no actual change was made to the file and therefore there is no 
+            // metadata for it.
+            if (globalJsonFile?.Metadata != null)
             {
                 bool hasSdkVersionUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.SdkVersionUpdate);
                 bool hasToolsDotnetUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.ToolsDotNetUpdate);

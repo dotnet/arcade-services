@@ -20,7 +20,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1580413285059,
+  "iteration": 1586883704387,
   "links": [
     {
       "icon": "external link",
@@ -638,7 +638,7 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 9,
-        "w": 10,
+        "w": 12,
         "x": 0,
         "y": 16
       },
@@ -856,6 +856,175 @@
         {
           "format": "percent",
           "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "alert": {
+        "alertRuleTags": {
+          "NotificationId": "66b2ef8da5c74a2fbbc7d6739f55e4e8"
+        },
+        "conditions": [
+          {
+            "evaluator": {
+              "params": [
+                4800
+              ],
+              "type": "gt"
+            },
+            "operator": {
+              "type": "and"
+            },
+            "query": {
+              "params": [
+                "A",
+                "5m",
+                "now"
+              ]
+            },
+            "reducer": {
+              "params": [],
+              "type": "max"
+            },
+            "type": "query"
+          }
+        ],
+        "executionErrorState": "keep_state",
+        "for": "5m",
+        "frequency": "1m",
+        "handler": 1,
+        "name": "Cores consumption",
+        "noDataState": "keep_state",
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
+      },
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "AI-helix-autoscale",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "hiddenSeries": false,
+      "id": 30,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "scopedVars": {
+        "Resource": {
+          "selected": true,
+          "text": "cores",
+          "value": "cores"
+        }
+      },
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "appInsights": {
+            "dimension": "none",
+            "metricName": "select",
+            "rawQuery": true,
+            "rawQueryString": "customEvents\n| where name == \"QueueReport\" \n| where $__timeFilter(timestamp)\n| extend queue = tostring(customDimensions[\"Queue\"])\n| where queue !contains \"xaml\" and queue !contains \"arcade\"\n| extend deployment = tostring(customDimensions[\"Deployment\"])\n| extend machines = todouble(customMeasurements[\"Online\"]) + todouble(customMeasurements[\"Offline\"]) + todouble(customMeasurements[\"Busy\"]) + todouble(customMeasurements[\"Initializing\"]) \n| extend online = todouble(customMeasurements[\"Online\"])\n| where deployment == \"ScaleSet\"\n| summarize max(machines) by bin(timestamp, 2m), queue\n| extend cores = iif(queue contains \"buildpool\", 4, 2)\n| summarize sum_core = sum(cores * max_machines) by bin(timestamp, 2m)\n| summarize cores=max(sum_core) by bin(timestamp, $__interval)\n| order by timestamp asc",
+            "timeColumn": "timestamp",
+            "timeGrain": "auto",
+            "valueColumn": "cores"
+          },
+          "azureLogAnalytics": {
+            "query": "//change this example to create your own time series query\n<table name>                                                              //the table to query (e.g. Usage, Heartbeat, Perf)\n| where $__timeFilter(TimeGenerated)                                      //this is a macro used to show the full chart’s time range, choose the datetime column here\n| summarize count() by <group by column>, bin(TimeGenerated, $__interval) //change “group by column” to a column in your table, such as “Computer”. The $__interval macro is used to auto-select the time grain. Can also use 1h, 5m etc.\n| order by TimeGenerated asc",
+            "resultFormat": "time_series",
+            "workspace": "b165f541-bd03-4f8d-a509-8358194e2831"
+          },
+          "azureMonitor": {
+            "aggOptions": [],
+            "dimensionFilter": "*",
+            "metricDefinition": "select",
+            "metricName": "select",
+            "metricNamespace": "select",
+            "resourceGroup": "select",
+            "resourceName": "select",
+            "timeGrain": "auto",
+            "timeGrains": [],
+            "top": "10"
+          },
+          "queryType": "Application Insights",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 4800
+        }
+      ],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Cores consumption",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "none",
+          "label": null,
           "logBase": 1,
           "max": null,
           "min": null,

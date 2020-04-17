@@ -4,8 +4,8 @@
 
 namespace Microsoft.DotNet.GitHub.Authentication
 {
-    public static class GitHubHelper
+    public interface IGitHubAppTokenProvider 
     {
-        public static string GetRepositoryUrl(string organization, string repository) => $"https://github.com/{organization}/{repository}";
+        string GetAppToken();
     }
 }

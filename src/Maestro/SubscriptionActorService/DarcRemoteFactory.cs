@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Maestro.AzureDevOps;
 using Maestro.Data;
-using Microsoft.Dotnet.GitHub.Authentication;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.Services.Utility;

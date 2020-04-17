@@ -4,7 +4,6 @@
 using System.Reflection;
 using Maestro.Data;
 using Microsoft.DncEng.Configuration.Extensions;
-using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
