@@ -197,7 +197,7 @@ namespace Microsoft.DotNet.Monitoring.Sdk
 
         private async Task<JObject> SendObjectAsync(JObject value, Uri uri, HttpMethod method = null)
         {
-            method ??= HttpMethod.Post;
+            method = method ?? HttpMethod.Post;
             using (var stream = new MemoryStream())
             using (var textWriter = new StreamWriter(stream))
             using (var jsonStream = new JsonTextWriter(textWriter))

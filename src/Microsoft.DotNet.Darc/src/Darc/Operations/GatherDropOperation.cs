@@ -1170,14 +1170,16 @@ namespace Microsoft.DotNet.Darc.Operations
                 string finalUri = assetLocation.Location.Substring(0, assetLocation.Location.Length - "index.json".Length);
                 finalUri += $"flatcontainer/{name}/{version}/{name}.{version}.nupkg";
 
-                using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
-                var cancellationToken = cancellationTokenSource.Token;
-
-                if (await DownloadFileAsync(client, finalUri, null, targetFilePaths, errors, downloadOutput, cancellationToken))
+                using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds)))
                 {
-                    downloadedAsset.Successful = true;
-                    downloadedAsset.SourceLocation = finalUri;
-                    return downloadedAsset;
+                    var cancellationToken = cancellationTokenSource.Token;
+
+                    if (await DownloadFileAsync(client, finalUri, null, targetFilePaths, errors, downloadOutput, cancellationToken))
+                    {
+                        downloadedAsset.Successful = true;
+                        downloadedAsset.SourceLocation = finalUri;
+                        return downloadedAsset;
+                    }
                 }
             }
             else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out string feedAccount, out string feedVisibility, out string feedName))
@@ -1246,16 +1248,18 @@ namespace Microsoft.DotNet.Darc.Operations
                     Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _options.AzureDevOpsPat))));
             }
 
-            using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
-            var cancellationToken = cancellationTokenSource.Token;
+            using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds)))
+            {
+                var cancellationToken = cancellationTokenSource.Token;
 
-            if (await DownloadFileAsync(client, packageContentUrl, authHeader, targetFilePaths, errors, downloadOutput, cancellationToken))
-            {
-                return packageContentUrl;
-            }
-            else
-            {
-                return null;
+                if (await DownloadFileAsync(client, packageContentUrl, authHeader, targetFilePaths, errors, downloadOutput, cancellationToken))
+                {
+                    return packageContentUrl;
+                }
+                else
+                {
+                    return null;
+                }
             }
         }
 
@@ -1366,20 +1370,24 @@ namespace Microsoft.DotNet.Darc.Operations
                 string finalUri1 = $"{finalBaseUri}{asset.Name}";
                 string finalUri2 = $"{finalBaseUri}assets/{asset.Name}";
 
-                using var cancellationTokenSource1 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
-                using var cancellationTokenSource2 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
-
-                if (await DownloadFileAsync(client, finalUri1, null, targetFilePaths, errors, downloadOutput, cancellationTokenSource1.Token))
+                using (var cancellationTokenSource1 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds)))
                 {
-                    downloadedAsset.Successful = true;
-                    downloadedAsset.SourceLocation = finalUri1;
-                    return downloadedAsset;
+                    if (await DownloadFileAsync(client, finalUri1, null, targetFilePaths, errors, downloadOutput, cancellationTokenSource1.Token))
+                    {
+                        downloadedAsset.Successful = true;
+                        downloadedAsset.SourceLocation = finalUri1;
+                        return downloadedAsset;
+                    }
                 }
-                if (await DownloadFileAsync(client, finalUri2, null, targetFilePaths, errors, downloadOutput, cancellationTokenSource2.Token))
+
+                using (var cancellationTokenSource2 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds)))
                 {
-                    downloadedAsset.Successful = true;
-                    downloadedAsset.SourceLocation = finalUri2;
-                    return downloadedAsset;
+                    if (await DownloadFileAsync(client, finalUri2, null, targetFilePaths, errors, downloadOutput, cancellationTokenSource2.Token))
+                    {
+                        downloadedAsset.Successful = true;
+                        downloadedAsset.SourceLocation = finalUri2;
+                        return downloadedAsset;
+                    }
                 }
 
                 // Could be under assets/assets/ in some recent builds due to a bug in the release
@@ -1387,24 +1395,26 @@ namespace Microsoft.DotNet.Darc.Operations
                 if (!_options.NoWorkarounds)
                 {
                     string finalUri3 = $"{finalBaseUri}assets/assets/{asset.Name}";
-                    using var cancellationTokenSource3 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
-
-                    if (await DownloadFileAsync(client, finalUri3, null, targetFilePaths, errors, downloadOutput, cancellationTokenSource3.Token))
+                    using (var cancellationTokenSource3 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds)))
                     {
-                        downloadedAsset.Successful = true;
-                        downloadedAsset.SourceLocation = finalUri3;
-                        return downloadedAsset;
+                        if (await DownloadFileAsync(client, finalUri3, null, targetFilePaths, errors, downloadOutput, cancellationTokenSource3.Token))
+                        {
+                            downloadedAsset.Successful = true;
+                            downloadedAsset.SourceLocation = finalUri3;
+                            return downloadedAsset;
+                        }
                     }
 
                     // Could also not be under /assets, so strip that from the url
                     string finalUri4 = finalUri1.Replace("assets/", "", StringComparison.OrdinalIgnoreCase);
-                    using var cancellationTokenSource4 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
-
-                    if (await DownloadFileAsync(client, finalUri4, null, targetFilePaths, errors, downloadOutput, cancellationTokenSource4.Token))
+                    using (var cancellationTokenSource4 = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds)))
                     {
-                        downloadedAsset.Successful = true;
-                        downloadedAsset.SourceLocation = finalUri4;
-                        return downloadedAsset;
+                        if (await DownloadFileAsync(client, finalUri4, null, targetFilePaths, errors, downloadOutput, cancellationTokenSource4.Token))
+                        {
+                            downloadedAsset.Successful = true;
+                            downloadedAsset.SourceLocation = finalUri4;
+                            return downloadedAsset;
+                        }
                     }
                 }
                 return downloadedAsset;
