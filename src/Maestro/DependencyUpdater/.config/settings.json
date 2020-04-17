@@ -5,5 +5,9 @@
   "Kusto": {
     "Database": "engineeringdata",
     "QueryConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-query)]"
+  },
+  "GitHub": {
+    "GitHubAppId": "[vault(github-application-id)]",
+    "PrivateKey": "[vault(github-application-private-key)]"
   }
 }

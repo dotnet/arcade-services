@@ -7,11 +7,14 @@ using Maestro.Data;
 using Maestro.DataProviders;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using System.Configuration;
+using System.Reflection;
 
 namespace DependencyUpdater
 {
@@ -39,6 +42,23 @@ namespace DependencyUpdater
                 var config = provider.GetRequiredService<IConfiguration>();
                 options.UseSqlServer(config.GetSection("BuildAssetRegistry")["ConnectionString"]);
             });
+
+            services.Configure<GitHubClientOptions>(o =>
+            {
+                o.ProductHeader = new Octokit.ProductHeaderValue("Maestro",
+                    Assembly.GetEntryAssembly()
+                        .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                        ?.InformationalVersion);
+            });
+            services.Configure<GitHubTokenProviderOptions>(
+                (options, provider) =>
+                {
+                    var config = provider.GetRequiredService<IConfiguration>();
+                    IConfigurationSection section = config.GetSection("GitHub");
+                    section.Bind(options);
+                });
+            services.AddGitHubTokenProvider();
+
             services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
             services.AddKustoClientProvider((provider, options) =>
             {
