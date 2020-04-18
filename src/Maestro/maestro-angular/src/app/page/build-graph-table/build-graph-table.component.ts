@@ -21,8 +21,6 @@ interface BuildData {
   isToolset?: boolean;
   isRootOrImmediateDependency?: boolean;
   state?: BuildState;
-  hasIncoherentDependencies?: boolean;
-  hasIncoherentDependenciesIncludingToolsets?: boolean;
   hasCycles?: boolean;
   cyclePath?: string;
   timeToInclusionInMinutes?: number;
@@ -100,12 +98,7 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
       };
   });
 
-  // We want to check the coherency of dependencies in this order, as BuildData array will start from the lowest dependency first. This will
-  // eliminate the need for recursion in the hasIncoherentDependencies method.
   for (const node of result) {
-    node.hasIncoherentDependencies = hasIncoherentDependencies(node.build, result, false);
-    node.hasIncoherentDependenciesIncludingToolsets = hasIncoherentDependencies(node.build, result, true);
-
     // If node is incoherent with product check to make sure there aren't any cycles in the dependencies
     [node.hasCycles, node.cyclePath] = hasCycles(node.build, result);
   }
@@ -115,21 +108,16 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
   if (result && result[0] && result[0].build)
   {
     result[0].isRootOrImmediateDependency = true;
-    if (result[0].build.dependencies)
-    {
-      for (const dependecy of result[0].build.dependencies!)
-      {
-        if (dependecy)
-        {
+    if (result[0].build.dependencies) {
+      for (const dependecy of result[0].build.dependencies!) {
+        if (dependecy) {
           let dep = result.find(d => d.build.id == dependecy.buildId);
-          if (dep)
-          {
+          if (dep) {
             dep.isRootOrImmediateDependency = true;
           }
         }
       }
     }
-
     result[0].timeToInclusionInMinutes = 0;
     calculateNodeTimeToInclusion(result[0].build, result, result[0].timeToInclusionInMinutes);
   }
@@ -139,58 +127,6 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
   }
 
   return result;
-}
-
-// Given a build, determines if that build has incoherent dependencies at any level. Searches through toolset incoherencies if necessary. 
-function hasIncoherentDependencies(build: Build, buildData: BuildData[], includeToolsets: boolean): boolean {
-  let currentBuildData = buildData.find(x => x.build.id == build.id);
-  if(currentBuildData)
-  {
-    if(buildHasIncoherentDependencies(currentBuildData, includeToolsets))
-    {
-      return true;
-    }
-
-    if (currentBuildData.build.dependencies) {
-      for (const dep of currentBuildData.build.dependencies) {
-        if(shouldConsiderDependecy(dep, includeToolsets)){ 
-          let depBuildData = buildData.find(r => r.build.id == dep.buildId);
-          if(depBuildData && (dependencyIsIncoherent(depBuildData, includeToolsets) || buildHasIncoherentDependencies(depBuildData, includeToolsets)))
-          {
-            return true;
-          }
-        }
-      }
-    }
-  }
-
-  return false;
-}
-
-function shouldConsiderDependecy(dependecy: BuildRef, includeToolsets: boolean): boolean {
-  return !(!includeToolsets && !dependecy.isProduct);
-}
-
-function dependencyIsIncoherent(buildData: BuildData, includeToolsets: boolean): boolean {
-  return includeToolsets ? !buildData.coherent.withAll : !buildData.coherent.withProduct;
-}
-
-function buildHasIncoherentDependencies(buildData: BuildData, includeToolsets: boolean): boolean {
-  if(includeToolsets)
-  {
-    if(buildData.hasIncoherentDependenciesIncludingToolsets)
-    {
-      return buildData.hasIncoherentDependenciesIncludingToolsets;
-    }
-  }
-  else
-  { if(buildData.hasIncoherentDependencies)
-    {
-      return buildData.hasIncoherentDependencies;
-    }
-  }
-
-  return false;
 }
 
 function hasCycles(build:Build, buildData: BuildData[]): [boolean,string?] {
@@ -408,12 +344,5 @@ export class BuildGraphTableComponent implements OnChanges {
       return node.timeToInclusionInMinutes.toLocaleString();
     }
     return 0;
-  }
-
-  public hasIncoherentDependencies(node: BuildData) {
-    if (this.includeToolsets) {
-      return node.hasIncoherentDependenciesIncludingToolsets;
-    }
-    return node.hasIncoherentDependencies;
   }
 }

@@ -113,7 +113,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         [ValidateModelState]
         public override async Task<IActionResult> GetBuildGraph(int id)
         {
-            Data.Models.Build build = await _context.Builds.FirstOrDefaultAsync(b => b.Id == id);
+            Data.Models.Build build = await _context.Builds.Include(b => b.Incoherencies).FirstOrDefaultAsync(b => b.Id == id);
 
             if (build == null)
             {

@@ -1,0 +1,28 @@
+<table class="table table-sm">
+  <thead>
+    <th>
+      <span class="align-self-center">Dependency</span>
+    </th>
+    <th>
+      <span class="align-self-center">Version</span>
+    </th>
+    <th>
+      <span class="align-self-center">Repository:Commit</span>
+    </th>
+  </thead>
+  <tbody>
+    <ng-container *ngFor="let incoherence of sortedIncoherencies()">
+      <tr>
+        <td>
+          <span class="align-self-center">{{ incoherence.name }}</span>
+        </td>
+        <td>
+          <span class="align-self-center">{{ incoherence.version }}</span>
+        </td>
+        <td>
+          <span class="align-self-center">{{ incoherence.repository }}:{{ incoherence.commit | slice:0:7}}</span>
+        </td>
+      </tr>
+    </ng-container>
+  </tbody>
+</table>

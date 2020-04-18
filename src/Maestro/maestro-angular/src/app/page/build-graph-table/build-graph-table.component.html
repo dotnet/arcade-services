@@ -27,9 +27,9 @@
       </tr>
       <tr>
         <td>
-        <span class="text-danger">
-          <fa-icon icon="exclamation-triangle" title="conflicting build"></fa-icon>
-        </span>
+          <span class="text-danger">
+            <fa-icon icon="exclamation-triangle" title="conflicting build"></fa-icon>
+          </span>
         </td>
         <td>
           <span>This node is a different build of the same repository as the focused node.</span>
@@ -37,18 +37,10 @@
       </tr>
       <tr>
         <td>
-            <span class="align-self-center" style="padding-right: 1rem;"><fa-icon icon="exclamation-circle"></fa-icon></span>
+          <span class="align-self-center" style="padding-right: 1rem;"><fa-icon icon="exclamation-triangle"></fa-icon></span>
         </td>
         <td>
-          <span class='table-danger'>This node is incoherent</span>
-        </td>
-      </tr>
-      <tr>
-        <td>
-            <span class="align-self-center" style="padding-right: 1rem;"><fa-icon icon="exclamation-triangle"></fa-icon></span>
-        </td>
-        <td>
-          <span class='table-warning'>This node has incoherent dependencies</span>
+          <span class='table-warning'>This build has incoherent dependencies</span>
         </td>
       </tr>
       <tr>
@@ -84,7 +76,7 @@
     <ng-container *ngFor="let node of sortedBuilds; trackBy getBuildId">
     <tr *ngIf="(includeToolsets || !node.isToolset) && (showAllDependencies || node.isRootOrImmediateDependency)"
       @insertRemove
-      [ngClass]="{'table-danger': !isCoherent(node), 'table-warning': hasIncoherentDependencies(node)}"
+      [ngClass]="{'table-danger': !isCoherent(node), 'table-warning': node.build.incoherencies.length > 0}"
       (mouseenter)="hover(node.build.id)"
       (mouseleave)="hover(undefined)">
       <td (click)="node.isFocused && toggleLock()" class="graph-icon">
@@ -121,9 +113,13 @@
           [style.visibility]="node.hasCycles ? 'visible' : 'hidden'"></fa-icon>
       </td>
       <td>
-        <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 
-          [title]="!isCoherent(node) ? 'A newer build of this same repository is in the tree' : (hasIncoherentDependencies(node) ? 'This build relies on dependencies that are incoherent' : '')" 
-          [style.visibility]="(!isCoherent(node) || hasIncoherentDependencies(node)) ? 'visible' : 'hidden'"></fa-icon>
+        <span style="cursor: help;" [ngbPopover]="popOver" [style.visibility]="(node.build.incoherencies.length > 0) ? 'visible' : 'hidden'">
+          <fa-icon [icon]="'exclamation-triangle'" 
+            [title]="'This build has incoherent dependencies.'"></fa-icon>
+        </span>
+        <ng-template #popOver>
+          <popIncoherencies [data]="node.build"></popIncoherencies>
+        </ng-template>
         {{node.build.azureDevOpsBuildNumber}}
       </td>
       <td>
@@ -135,17 +131,19 @@
         </span>
       </td>
       <td class="text-monospace">
-        <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 
-        [style.visibility]="(!isCoherent(node) || hasIncoherentDependencies(node)) ? 'visible' : 'hidden'"></fa-icon>
+        <fa-icon [icon]="'exclamation-circle'" 
+        [style.visibility]="(node.build.incoherencies.length > 0) ? 'visible' : 'hidden'"></fa-icon>
+
         <a *ngIf="(node.build | commitLink) as link; else noCommitLink" [href]="link" target="_blank">
-          {{node.build.commit | slice:0:7}}
-          <fa-icon icon="external-link-alt"></fa-icon>
+          {{node.build.commit | slice:0:7}}<fa-icon icon="external-link-alt"></fa-icon>
         </a>
+
         <ng-template #noCommitLink>
-            <fa-icon [icon]="!isCoherent(node) ? 'exclamation-circle' : 'exclamation-triangle'" 
-            [style.visibility]="(!isCoherent(node) || hasIncoherentDependencies(node)) ? 'visible' : 'hidden'"></fa-icon>
+            <fa-icon [icon]="'exclamation-circle'" 
+            [style.visibility]="node.incoherencies.length > 0 ? 'visible' : 'hidden'"></fa-icon>
           {{node.build.commit | slice:0:7}}
         </ng-template>
+
       </td>
       <td>
         <a *ngIf="(node.build | buildLink) as link; else noBuildLink" class="btn btn-sm btn-primary" [href]="link" target="_blank">
