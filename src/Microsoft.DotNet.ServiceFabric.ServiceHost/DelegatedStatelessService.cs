@@ -19,24 +19,21 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
     public class DelegatedStatelessService<TServiceImplementation> : StatelessService
         where TServiceImplementation : IServiceImplementation
     {
-        private readonly Action<IServiceCollection> _configureServices;
-        private ServiceProvider _container;
+        private readonly ServiceProvider _container;
 
         public DelegatedStatelessService(
             StatelessServiceContext context,
             Action<IServiceCollection> configureServices) : base(context)
         {
-            _configureServices = configureServices;
-
             var services = new ServiceCollection();
             services.AddSingleton<ServiceContext>(Context);
             services.AddSingleton(Context);
-            _configureServices(services);
+            configureServices(services);
 
             _container = services.BuildServiceProvider();
 
             // This requires the ServiceContext up a few lines, so we can't inject it in the constructor
-            _container.GetRequiredService<TemporaryFiles>()?.Initialize();
+            _container.GetService<TemporaryFiles>()?.Initialize();
         }
 
         protected override Task OnCloseAsync(CancellationToken cancellationToken)
