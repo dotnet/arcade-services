@@ -1,5 +1,5 @@
 import { Component, Input } from '@angular/core';
-import { Build } from 'src/maestro-client/models';
+import { Build, BuildIncoherence } from 'src/maestro-client/models';
 
 @Component({
   selector: 'popIncoherencies',
@@ -7,13 +7,19 @@ import { Build } from 'src/maestro-client/models';
 })
 
 export class PopIncoherenciesComponent {
-  @Input() data: Build;
+  @Input() data: Build = Build.fromRawObject(null);
+
+  private sortIt(a: BuildIncoherence, b: BuildIncoherence) {
+    if (a.name === undefined) return -1;
+    if (b.name === undefined) return 1;
+
+    return (a.name > b.name) ? 1 : a.name === b.name ? 0 : -1
+  }
 
   sortedIncoherencies() {
-    if (this.data == undefined) return this.data;
-    if (this.data.incoherencies == undefined) return this.data;
+    if (this.data.incoherencies === undefined) return this.data;
 
-    return this.data.incoherencies.sort((a, b) => a.name > b.name ? 1 : a.name === b.name ? 0 : -1);
+    return this.data.incoherencies.sort((a, b) => this.sortIt(a, b));
   }
 }
 
