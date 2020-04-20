@@ -35,6 +35,12 @@ using Microsoft.Extensions.Hosting;
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
     public class HostEnvironment : IWebHostEnvironment, IHostEnvironment
+#if NETCOREAPP3_1
+#pragma warning disable 618 // use of obsolete symbol
+        , Microsoft.AspNetCore.Hosting.IHostingEnvironment
+        , Microsoft.Extensions.Hosting.IHostingEnvironment
+#pragma warning restore 618
+#endif
     {
         public HostEnvironment(string environmentName, string applicationName, string contentRootPath, IFileProvider contentRootFileProvider)
         {
@@ -259,6 +265,12 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             services.TryAddSingleton(InitializeEnvironment());
             services.TryAddSingleton(b => (IHostEnvironment) b.GetService<HostEnvironment>());
             services.TryAddSingleton(b => (IWebHostEnvironment) b.GetService<HostEnvironment>());
+#if NETCOREAPP3_1
+#pragma warning disable 618 // use of obsolete symbol
+            services.TryAddSingleton(b => (Microsoft.AspNetCore.Hosting.IHostingEnvironment) b.GetService<HostEnvironment>());
+            services.TryAddSingleton(b => (Microsoft.Extensions.Hosting.IHostingEnvironment) b.GetService<HostEnvironment>());
+#pragma warning restore 618
+#endif
             ConfigureApplicationInsights(services);
             services.AddLogging(
                 builder =>
