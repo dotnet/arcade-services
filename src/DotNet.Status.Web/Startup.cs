@@ -19,7 +19,6 @@ using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.DncEng.Configuration.Extensions;
-using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Web.Authentication;
 using Microsoft.DotNet.Web.Authentication.GitHub;

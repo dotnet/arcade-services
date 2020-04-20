@@ -7,7 +7,7 @@ using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 
 namespace DependencyUpdateErrorProcessor
 {
-    class DependencyUpdateErrorProcessorOptions
+    public class DependencyUpdateErrorProcessorOptions
     {
         public bool IsEnabled { get; set; }
         public string GithubUrl { get; set; }

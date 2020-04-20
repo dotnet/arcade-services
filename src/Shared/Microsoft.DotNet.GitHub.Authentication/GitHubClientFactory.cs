@@ -1,16 +1,15 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
 using System.Threading.Tasks;
-using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Options;
 using Octokit;
 
-namespace DotNet.Status.Web.Controllers
+namespace Microsoft.DotNet.GitHub.Authentication
 {
-    public class GitHubClientFactory
+    public class GitHubClientFactory : IGitHubClientFactory
     {
         private readonly IOptions<GitHubClientOptions> _githubClientOptions;
         private readonly IGitHubTokenProvider _tokenProvider;

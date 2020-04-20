@@ -40,7 +40,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Azure.Services.AppAuthentication;
@@ -218,8 +217,7 @@ namespace Maestro.Web
             services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
 
             services.AddMergePolicies();
-            
-            Build.s_dynamicConfigs = Configuration;
+
         }
 
         private void ConfigureApiExceptions(IApplicationBuilder app)

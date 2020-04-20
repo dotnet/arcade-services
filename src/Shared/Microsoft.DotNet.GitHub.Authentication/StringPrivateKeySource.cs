@@ -5,7 +5,7 @@
 using System.IO;
 using GitHubJwt;
 
-namespace Microsoft.Dotnet.GitHub.Authentication
+namespace Microsoft.DotNet.GitHub.Authentication
 {
     internal class StringPrivateKeySource : IPrivateKeySource
     {

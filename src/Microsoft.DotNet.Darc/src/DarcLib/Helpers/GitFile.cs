@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Xml;
@@ -23,6 +24,12 @@ namespace Microsoft.DotNet.DarcLib
 
         public GitFile(string filePath, string content) : this(filePath, content, ContentEncoding.Utf8)
         {
+        }
+
+        public GitFile(string filePath, JObject jsonObject, Dictionary<GitFileMetadataName, string> metadata) 
+            : this(filePath, jsonObject.ToString(Formatting.Indented))
+        {
+            Metadata = metadata;
         }
 
         public GitFile(
@@ -56,6 +63,8 @@ namespace Microsoft.DotNet.DarcLib
 
         public GitFileOperation Operation { get; } = GitFileOperation.Add;
 
+        public Dictionary<GitFileMetadataName, string> Metadata { get; set; }
+
         private static string GetIndentedXmlBody(XmlDocument xmlDocument)
         {
             MemoryStream mStream = new MemoryStream();
@@ -80,6 +89,15 @@ namespace Microsoft.DotNet.DarcLib
                 throw;
             }
         }
+    }
+
+    public enum GitFileMetadataName
+    {
+        // Used when the GitFile contains an update to global.json -> tools.dotnet entry.
+        ToolsDotNetUpdate,
+
+        // Used when the GitFile contains an update to global.json -> sdk.version entry.
+        SdkVersionUpdate
     }
 
     public enum GitFileOperation

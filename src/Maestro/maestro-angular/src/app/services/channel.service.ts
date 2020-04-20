@@ -56,7 +56,13 @@ export class ChannelService {
     if (id in ChannelService.graphCache) {
       return of(ChannelService.graphCache[id]);
     }
-    return this.maestro.channels.getFlowGraphAsync({id}).pipe(
+    return this.maestro.channels.getFlowGraphAsyncAsync({
+      channelId: id,
+      days: 30,
+      includeArcade: true,
+      includeBuildTimes: true,
+      includeDisabledSubscriptions: false,
+    }).pipe(
       tap(graph => ChannelService.graphCache[id] = graph),
     );
   }
@@ -71,6 +77,7 @@ export class ChannelService {
             repository: y ,
             branch: undefined,
             id: 0,
+            enabled: true,
           });
         })));
       return repos;
