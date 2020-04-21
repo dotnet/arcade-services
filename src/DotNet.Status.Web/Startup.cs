@@ -192,10 +192,9 @@ namespace DotNet.Status.Web
             {
                 o.SelectScheme = p => p.StartsWithSegments("/api") ? "github-token" : IdentityConstants.ApplicationScheme;
             });
-            services.AddSingleton<GitHubJwtFactory>();
 
             services.AddSingleton<ZenHubClient>();
-            services.AddSingleton<GitHubClientFactory>();
+            services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
