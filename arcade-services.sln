@@ -126,7 +126,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Monitoring
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Metrics", "src\Monitoring\Microsoft.DotNet.Metrics\Microsoft.DotNet.Metrics.csproj", "{A2B7789F-0CDF-4209-9DB9-164497E3C891}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DotNet.Monitoring.Sdk.Tests", "src\Monitoring\Microsoft.DotNet.Monitoring.Sdk.Tests\Microsoft.DotNet.Monitoring.Sdk.Tests.csproj", "{0F3B5969-0890-441A-8A3A-6F9E07F92645}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Monitoring.Sdk.Tests", "src\Monitoring\Microsoft.DotNet.Monitoring.Sdk.Tests\Microsoft.DotNet.Monitoring.Sdk.Tests.csproj", "{0F3B5969-0890-441A-8A3A-6F9E07F92645}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GitHubApps", "GitHubApps", "{B09F23B6-3D2A-4929-96F2-2316512A832A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DarcBot", "src\GitHubApps\DarcBot\DarcBot.csproj", "{0D4CB38C-75EB-4107-BA2F-4CF6F70A7ACE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -594,6 +598,14 @@ Global
 		{0F3B5969-0890-441A-8A3A-6F9E07F92645}.Release|x64.Build.0 = Release|Any CPU
 		{0F3B5969-0890-441A-8A3A-6F9E07F92645}.Release|x86.ActiveCfg = Release|Any CPU
 		{0F3B5969-0890-441A-8A3A-6F9E07F92645}.Release|x86.Build.0 = Release|Any CPU
+		{0D4CB38C-75EB-4107-BA2F-4CF6F70A7ACE}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{0D4CB38C-75EB-4107-BA2F-4CF6F70A7ACE}.Debug|x64.ActiveCfg = Debug|x64
+		{0D4CB38C-75EB-4107-BA2F-4CF6F70A7ACE}.Debug|x64.Build.0 = Debug|x64
+		{0D4CB38C-75EB-4107-BA2F-4CF6F70A7ACE}.Debug|x86.ActiveCfg = Debug|x64
+		{0D4CB38C-75EB-4107-BA2F-4CF6F70A7ACE}.Release|Any CPU.ActiveCfg = Release|x64
+		{0D4CB38C-75EB-4107-BA2F-4CF6F70A7ACE}.Release|x64.ActiveCfg = Release|x64
+		{0D4CB38C-75EB-4107-BA2F-4CF6F70A7ACE}.Release|x64.Build.0 = Release|x64
+		{0D4CB38C-75EB-4107-BA2F-4CF6F70A7ACE}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -631,6 +643,7 @@ Global
 		{0D7A312A-D3A5-4219-A023-25B0668BA191} = {09C0DC50-2819-48D1-A7B6-ADC9C99EE226}
 		{A2B7789F-0CDF-4209-9DB9-164497E3C891} = {09C0DC50-2819-48D1-A7B6-ADC9C99EE226}
 		{0F3B5969-0890-441A-8A3A-6F9E07F92645} = {09C0DC50-2819-48D1-A7B6-ADC9C99EE226}
+		{0D4CB38C-75EB-4107-BA2F-4CF6F70A7ACE} = {B09F23B6-3D2A-4929-96F2-2316512A832A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {32B9C883-432E-4FC8-A1BF-090EB033DD5B}

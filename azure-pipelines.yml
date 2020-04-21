@@ -174,7 +174,7 @@ stages:
             displayName: Publish DotNet.Status.Web
 
           - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\DarcBot
-            workingDirectory: src/GitHubApps/src/DarcBot
+            workingDirectory: src/GitHubApps/DarcBot
             displayName: Publish DarcBot
 
           - publish: $(Build.ArtifactStagingDirectory)\DarcBot
