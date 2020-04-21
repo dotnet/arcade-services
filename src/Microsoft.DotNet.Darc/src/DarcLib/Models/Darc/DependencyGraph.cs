@@ -491,7 +491,7 @@ namespace Microsoft.DotNet.DarcLib
             HashSet<DependencyGraphNode> incoherentNodes = new HashSet<DependencyGraphNode>();
             // Cache of incoherent dependencies, looked up by name
             Dictionary<string, DependencyDetail> incoherentDependenciesCache = new Dictionary<string, DependencyDetail>();
-            HashSet<DependencyDetail> incoherentDependencies = new HashSet<DependencyDetail>();
+            HashSet<DependencyDetail> incoherentDependencies = new HashSet<DependencyDetail>(new DependencyDetailComparer());
 
             while (nodesToVisit.Count > 0)
             {
