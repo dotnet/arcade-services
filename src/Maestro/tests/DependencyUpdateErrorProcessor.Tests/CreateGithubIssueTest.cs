@@ -13,31 +13,38 @@ using Xunit;
 
 namespace DependencyUpdateErrorProcessor.Tests
 {
+    //private string fakeSubscriptionId = "00000000-0000-0000-0000-000000000001";
     public class CreateGithubIssueTest : DependencyUpdateErrorProcessorTests
     {
+        private const string SubscriptionId = "00000000-0000-0000-0000-000000000001";
+        private const string RepoUrl = "https://github.test/test-org-1/test-repo-1";
+        private const string BranchOne = "BranchOne";
+        private const string BranchTwo = "BranchTwo";
         [Theory]
-        [InlineData("https://github.com/maestro-auth-test/maestro-test2", "38", "ProcessPendingUpdatesAsync", "no arguments" , "2200/1/1" , false)]
-        [InlineData("https://github.com/maestro-auth-test/maestro-test2", "38", "UpdateAssetsAsync", "[\"ee8cdcfb-ee51-4bf3-55d3-08d79538f94d\",\"UpdateAssetsAsync\"]",  "2200/1/1", false)]
+        [InlineData("https://github.test/test-org-1/test-repo-1", "BranchOne", "ProcessPendingUpdatesAsync", "no arguments" , "2200/1/1" , false)]
+        [InlineData("https://github.test/test-org-1/test-repo-13", "BranchTwo", "UpdateAssetsAsync", "[\"00000000-0000-0000-0000-000000000001\",\"UpdateAssetsAsync\"]",  "2200/1/1", false)]
         public async Task ShouldCreateIssue(string repoUrl, string branch , string method, string arguments , DateTime errorOccurredAt, bool success)
         {
-            Mock<RepositoryBranchUpdateHistoryEntry> repositoryBranchUpdate =
-                new Mock<RepositoryBranchUpdateHistoryEntry>();
-            repositoryBranchUpdate.Object.Repository = repoUrl;
-            repositoryBranchUpdate.Object.Branch = branch;
-            repositoryBranchUpdate.Object.Method = method;
-            repositoryBranchUpdate.Object.Timestamp = errorOccurredAt;
-            repositoryBranchUpdate.Object.Arguments = arguments;
-            repositoryBranchUpdate.Object.Success = success;
-            Mock<Octokit.Repository> repository = new Mock<Repository>();
-            GithubClient.Setup(x => x.Repository.Get(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(repository.Object);
+            RepositoryBranchUpdateHistoryEntry repositoryBranchUpdate =
+                new RepositoryBranchUpdateHistoryEntry
+                {
+                    Repository = repoUrl,
+                    Branch = branch,
+                    Method = method,
+                    Timestamp = errorOccurredAt,
+                    Arguments = arguments,
+                    Success = success
+                };
+            Repository repository = new Repository();
+            GithubClient.Setup(x => x.Repository.Get(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(repository);
             Mock<Maestro.Data.Models.Subscription> subscription = new Mock<Maestro.Data.Models.Subscription>();
-            subscription.Object.Id = Guid.Parse("ee8cdcfb-ee51-4bf3-55d3-08d79538f94d");
+            subscription.Object.Id = Guid.Parse(SubscriptionId);
             Context.Subscriptions.Add(subscription.Object);
             Context.SaveChanges();
             Mock<Octokit.Issue> issue = new Mock<Issue>();
             GithubClient.Setup(x => x.Issue.Create(It.IsAny<long>(),It.IsAny<NewIssue>())).ReturnsAsync(issue.Object);
             Context.RepoBranchUpdateInMemory = new List<RepositoryBranchUpdateHistoryEntry>
-                {repositoryBranchUpdate.Object};
+                {repositoryBranchUpdate};
             DependencyUpdateErrorProcessor errorProcessor =
                 ActivatorUtilities.CreateInstance<DependencyUpdateErrorProcessor>(Scope.ServiceProvider,
                     Context);
@@ -45,26 +52,38 @@ namespace DependencyUpdateErrorProcessor.Tests
             GithubClient.Verify(x => x.Issue.Create(It.IsAny<long>(), It.IsAny<NewIssue>()), Times.Once);
         }
 
-
+        /// <summary>
+        /// No issue should be created for the method SynchronizePullRequestAsync
+        /// No issue should be created if the subscriptionGuid is invalid for the UpdateAssetsAsync method
+        /// </summary>
+        /// <param name="repoUrl"></param>
+        /// <param name="branch"></param>
+        /// <param name="method"></param>
+        /// <param name="arguments"></param>
+        /// <param name="errorOccurredAt"></param>
+        /// <param name="success"></param>
+        /// <returns>Does not create any new issue.</returns>
         [Theory]
-        [InlineData("https://github.com/maestro-auth-test/maestro-test2", "38", "SynchronizePullRequestAsync", "no arguments", "2200/1/1", false)]
-        [InlineData("https://github.com/maestro-auth-test/maestro-test2", "38", "UpdateAssetsAsync", "[\"ee8cdcfb-ee51-4bf3-55d3-08d79538f94d\",\"UpdateAssetsAsync\"]", "2200/1/1", false)]
+        [InlineData("https://github.test/test-org-1/test-repo-1", "38", "SynchronizePullRequestAsync", "no arguments", "2200/1/1", false)]
+        [InlineData("https://github.test/test-org-1/test-repo-13", "38", "UpdateAssetsAsync", "[\"0000000\",\"UpdateAssetsAsync\"]", "2200/1/1", false)]
         public async Task ShouldNotCreateIssue(string repoUrl, string branch, string method, string arguments, DateTime errorOccurredAt, bool success)
-        { 
-            Mock<RepositoryBranchUpdateHistoryEntry> repositoryBranchUpdate =
-                new Mock<RepositoryBranchUpdateHistoryEntry>();
-            repositoryBranchUpdate.Object.Repository = repoUrl;
-            repositoryBranchUpdate.Object.Branch = branch;
-            repositoryBranchUpdate.Object.Method = method;
-            repositoryBranchUpdate.Object.Timestamp = errorOccurredAt;
-            repositoryBranchUpdate.Object.Arguments = arguments;
-            repositoryBranchUpdate.Object.Success = success;
-            Mock<Octokit.Repository> repository = new Mock<Repository>();
-            GithubClient.Setup(x => x.Repository.Get(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(repository.Object);
+        {
+            RepositoryBranchUpdateHistoryEntry repositoryBranchUpdate =
+                new RepositoryBranchUpdateHistoryEntry
+                {
+                    Repository = repoUrl,
+                    Branch = branch,
+                    Method = method,
+                    Timestamp = errorOccurredAt,
+                    Arguments = arguments,
+                    Success = success
+                };
+            Repository repository = new Repository();
+            GithubClient.Setup(x => x.Repository.Get(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(repository);
             Mock<Octokit.Issue> issue = new Mock<Issue>();
             GithubClient.Setup(x => x.Issue.Create(It.IsAny<long>(), It.IsAny<NewIssue>())).ReturnsAsync(issue.Object);
             Context.RepoBranchUpdateInMemory = new List<RepositoryBranchUpdateHistoryEntry>
-                {repositoryBranchUpdate.Object};
+                {repositoryBranchUpdate};
             DependencyUpdateErrorProcessor errorProcessor =
                 ActivatorUtilities.CreateInstance<DependencyUpdateErrorProcessor>(Scope.ServiceProvider,
                     Context);
@@ -75,33 +94,36 @@ namespace DependencyUpdateErrorProcessor.Tests
         [Fact]
         public async Task CreateIssue()
         {
-            Mock<RepositoryBranchUpdateHistoryEntry> firstError =
-                new Mock<RepositoryBranchUpdateHistoryEntry>();
-            firstError.Object.Repository = "https://github.com/maestro-auth-test/maestro-test2";
-            firstError.Object.Branch = "38";
-            firstError.Object.Method = "ProcessPendingUpdatesAsync";
-            firstError.Object.Timestamp = new DateTime(2200, 1, 1);
-            firstError.Object.Arguments = "[\"ee8cdcfb-ee51-4bf3-55d3-08d79538f94d\",\"UpdateAssetsAsync\",\"build: 14	Unexpected error processing action: Validation Failed\"]";
-            firstError.Object.Success = false;
-            firstError.Object.ErrorMessage = "build: 14	Unexpected error processing action: Validation Failed";
-            firstError.Object.Action = "Creating new issue";
+            RepositoryBranchUpdateHistoryEntry firstError =
+                new RepositoryBranchUpdateHistoryEntry
+                {
+                    Repository = RepoUrl,
+                    Branch = BranchOne,
+                    Method = "ProcessPendingUpdatesAsync",
+                    Timestamp = new DateTime(2200, 1, 1),
+                    Arguments = "[Error Message]",
+                    Success = false,
+                    ErrorMessage = "Error Message",
+                    Action = "Creating new issue"
+                };
 
-            Mock<RepositoryBranchUpdateHistoryEntry> secondError =
-                new Mock<RepositoryBranchUpdateHistoryEntry>();
-            secondError.Object.Repository = "https://github.com/maestro-auth-test/maestro-test3";
-            secondError.Object.Branch = "38";
-            secondError.Object.Method = "ProcessPendingUpdatesAsync";
-            secondError.Object.Timestamp = new DateTime(2200, 1, 1);
-            secondError.Object.Arguments = "[Arguments]";
-            secondError.Object.Success = false;
-            secondError.Object.ErrorMessage = "ProcessPendingUpdatesAsync error";
-            secondError.Object.Action = "Create another issue";
-
+            RepositoryBranchUpdateHistoryEntry secondError =
+                new RepositoryBranchUpdateHistoryEntry
+                {
+                    Repository = RepoUrl,
+                    Branch = BranchTwo,
+                    Method = "ProcessPendingUpdatesAsync",
+                    Timestamp = new DateTime(2200, 1, 1),
+                    Arguments = "[Arguments]",
+                    Success = false,
+                    ErrorMessage = "ProcessPendingUpdatesAsync error",
+                    Action = "Create another issue"
+                };
             Context.RepoBranchUpdateInMemory = new List<RepositoryBranchUpdateHistoryEntry>
-                {firstError.Object , secondError.Object};
+                {firstError , secondError};
 
-            Mock<Octokit.Repository> repository = new Mock<Repository>();
-            GithubClient.Setup(x => x.Repository.Get(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(repository.Object);
+            Repository repository = new Repository();
+            GithubClient.Setup(x => x.Repository.Get(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(repository);
             Mock<Octokit.Issue> issue = new Mock<Issue>();
             List<NewIssue> newIssue = new List<NewIssue>();
             GithubClient.Setup(x => x.Issue.Create(It.IsAny<long>(), Capture.In(newIssue))).ReturnsAsync(issue.Object);
@@ -109,41 +131,19 @@ namespace DependencyUpdateErrorProcessor.Tests
                 ActivatorUtilities.CreateInstance<DependencyUpdateErrorProcessor>(Scope.ServiceProvider,
                     Context);
             await errorProcessor.ProcessDependencyUpdateErrorsAsync();
-            string firstIssueTitle =
-                "[Dependency Update] Errors during dependency updates to : https://github.com/maestro-auth-test/maestro-test2";
-            string secondIssueTitle =
-                "[Dependency Update] Errors during dependency updates to : https://github.com/maestro-auth-test/maestro-test3";
-            string firstIssueBody =
-                $@"The following errors have been detected when attempting to update dependencies in 
-'https://github.com/maestro-auth-test/maestro-test2'
-
- [marker]: <> (subscriptionId: '', method: 'ProcessPendingUpdatesAsync', errorMessage: 'build: 14	Unexpected error processing action: Validation Failed')
-**Repository :** 'https://github.com/maestro-auth-test/maestro-test2'
-**Branch Name :** '38'
-**Error Message :**  'build: 14	Unexpected error processing action: Validation Failed'
-**Method :**   'ProcessPendingUpdatesAsync'
-**Action :**  'Creating new issue'
-**Last seen :**  '1/1/2200 12:00:00 AM'
-**/FyiHandle :** @epananth";
-            string secondIssueBody =
-                $@"The following errors have been detected when attempting to update dependencies in 
-'https://github.com/maestro-auth-test/maestro-test3'
-
- [marker]: <> (subscriptionId: '', method: 'ProcessPendingUpdatesAsync', errorMessage: 'ProcessPendingUpdatesAsync error')
-**Repository :** 'https://github.com/maestro-auth-test/maestro-test3'
-**Branch Name :** '38'
-**Error Message :**  'ProcessPendingUpdatesAsync error'
-**Method :**   'ProcessPendingUpdatesAsync'
-**Action :**  'Create another issue'
-**Last seen :**  '1/1/2200 12:00:00 AM'
-**/FyiHandle :** @epananth";
             Assert.Equal(2, newIssue.Count);
             Assert.Equal("DependencyUpdateError", newIssue[0].Labels[0]);
-            Assert.Equal(firstIssueTitle, newIssue[0].Title);
-            Assert.Equal(firstIssueBody,newIssue[0].Body);
+            Assert.Contains(RepoUrl, newIssue[0].Title);
+            Assert.Contains(BranchOne, newIssue[0].Body);
+            Assert.Contains("ProcessPendingUpdatesAsync", newIssue[0].Body);
+            Assert.Contains("1/1/2200 12:00:00 AM", newIssue[0].Body);
+            Assert.Contains(RepoUrl, newIssue[0].Body);
             Assert.Equal( "DependencyUpdateError", newIssue[1].Labels[0]);
-            Assert.Equal(secondIssueTitle, newIssue[1].Title);
-            Assert.Equal(secondIssueBody, newIssue[1].Body);
+            Assert.Contains(RepoUrl, newIssue[1].Title);
+            Assert.Contains(BranchTwo, newIssue[1].Body);
+            Assert.Contains("ProcessPendingUpdatesAsync error", newIssue[1].Body);
+            Assert.Contains("1/1/2200 12:00:00 AM", newIssue[1].Body);
+            Assert.Contains(RepoUrl, newIssue[1].Body);
         }
     }
 }
