@@ -3,12 +3,13 @@
 // See the LICENSE file in the project root for more information.
 
 using GitHubJwt;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Options;
 using System.Text;
 
-namespace Microsoft.Dotnet.GitHub.Authentication
+namespace Microsoft.DotNet.GitHub.Authentication
 {
-    public class GitHubAppTokenProvider
+    public class GitHubAppTokenProvider : IGitHubAppTokenProvider
     {
         private readonly IOptions<GitHubTokenProviderOptions> _options;
 
@@ -17,7 +18,7 @@ namespace Microsoft.Dotnet.GitHub.Authentication
             _options = options;
         }
 
-        public virtual string GetAppToken()
+        public string GetAppToken()
         {
             return GetAppToken(_options.Value.GitHubAppId, new StringPrivateKeySource(_options.Value.PrivateKey));
         }

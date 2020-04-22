@@ -7,8 +7,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading;
 using System.Threading.Tasks;
-using GitHubJwt;
-using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -18,7 +16,7 @@ namespace DotNet.Status.Web
 {
     public class InMemoryCacheInstallationLookup : IInstallationLookup
     {
-        private readonly GitHubAppTokenProvider _tokens;
+        private readonly IGitHubAppTokenProvider _tokens;
         private readonly IOptions<GitHubClientOptions> _options;
         private readonly ILogger<InMemoryCacheInstallationLookup> _log;
         private readonly SemaphoreSlim _sem = new SemaphoreSlim(1, 1);
@@ -27,7 +25,7 @@ namespace DotNet.Status.Web
         private DateTimeOffset _lastCached = DateTimeOffset.MinValue;
 
         public InMemoryCacheInstallationLookup(
-            GitHubAppTokenProvider tokens,
+            IGitHubAppTokenProvider tokens,
             IOptions<GitHubClientOptions> options,
             ILogger<InMemoryCacheInstallationLookup> log)
         {
