@@ -337,6 +337,23 @@ namespace Microsoft.DotNet.DarcLib
             return _gitClient.UpdatePullRequestAsync(pullRequestUri, pullRequest);
         }
 
+        /// <summary>
+        ///     Delete a Pull Request branch
+        /// </summary>
+        /// <param name="pullRequestUri">URI of pull request to delete branch for</param>
+        /// <returns>Async task</returns>
+        public async Task DeletePullRequestBranchAsync(string pullRequestUri)
+        {
+            try
+            {
+                await _gitClient.DeletePullRequestBranchAsync(pullRequestUri);
+            }
+            catch (Exception e)
+            {
+                throw new DarcException("Failed to delete head branch for pull request {pullRequestUri}", e);
+            }
+        }
+
         public async Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
         {
             CheckForValidGitClient();
@@ -739,7 +756,7 @@ namespace Microsoft.DotNet.DarcLib
             return await GetRequiredCoherencyUpdatesAsync(currentDependencies, remoteFactory);
         }
 
-        public async Task CommitUpdatesAsync(
+        public async Task<List<GitFile>> CommitUpdatesAsync(
             string repoUri,
             string branch,
             List<DependencyDetail> itemsToUpdate,
@@ -820,6 +837,8 @@ namespace Microsoft.DotNet.DarcLib
             filesToCommit.AddRange(fileContainer.GetFilesToCommit());
 
             await _gitClient.CommitFilesAsync(filesToCommit, repoUri, branch, message);
+
+            return filesToCommit;
         }
 
         public Task<PullRequest> GetPullRequestAsync(string pullRequestUri)
@@ -861,7 +880,10 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>True if the repository exists, false otherwise.</returns>
         public async Task<bool> RepositoryExistsAsync(string repoUri)
         {
-            CheckForValidGitClient();
+            if (string.IsNullOrWhiteSpace(repoUri) || _gitClient == null)
+            {
+                return false;
+            }
 
             return await _gitClient.RepoExistsAsync(repoUri);
         }
@@ -1052,7 +1074,7 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Called prior to operations requiring the BAR.  Throws if a git client isn't available;
+        ///     Called prior to operations requiring GIT.  Throws if a git client isn't available;
         /// </summary>
         private void CheckForValidGitClient()
         {
@@ -1118,15 +1140,20 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     if (repoDotnetVersion.CompareTo(incomingDotnetVersion) < 0)
                     {
+                        Dictionary<GitFileMetadataName, string> metadata = new Dictionary<GitFileMetadataName, string>();
+
                         parsedGlobalJson["tools"]["dotnet"] = incomingDotnetVersion.ToNormalizedString();
+                        metadata.Add(GitFileMetadataName.ToolsDotNetUpdate, incomingDotnetVersion.ToNormalizedString());
 
                         // Also update and keep sdk.version in sync.
                         JToken sdkVersion = parsedGlobalJson.SelectToken("sdk.version");
                         if (sdkVersion != null)
                         {
                             parsedGlobalJson["sdk"]["version"] = incomingDotnetVersion.ToNormalizedString();
+                            metadata.Add(GitFileMetadataName.SdkVersionUpdate, incomingDotnetVersion.ToNormalizedString());
                         }
-                        return new GitFile(VersionFiles.GlobalJson, parsedGlobalJson);
+
+                        return new GitFile(VersionFiles.GlobalJson, parsedGlobalJson, metadata);
                     }
                     return repoGlobalJson;
                 }
@@ -1224,6 +1251,18 @@ namespace Microsoft.DotNet.DarcLib
         {
             CheckForValidBarClient();
             return _barClient.GetGoalAsync(channel, definitionId);
+        }
+
+        /// <summary>
+        ///     Gets official and pr build times (in minutes) for a default channel summarized over a number of days.
+        /// </summary>
+        /// <param name="defaultChannelId">Id of the default channel</param>
+        /// <param name="days">Number of days to summarize over</param>
+        /// <returns>Returns BuildTime in minutes</returns>
+        public Task<BuildTime> GetBuildTimeAsync(int defaultChannelId, int days)
+        {
+            CheckForValidBarClient();
+            return _barClient.GetBuildTimeAsync(defaultChannelId, days);
         }
     }
 }

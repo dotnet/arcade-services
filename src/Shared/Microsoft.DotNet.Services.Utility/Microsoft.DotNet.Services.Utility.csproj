@@ -2,10 +2,11 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
   </ItemGroup>
-
+  
 </Project>

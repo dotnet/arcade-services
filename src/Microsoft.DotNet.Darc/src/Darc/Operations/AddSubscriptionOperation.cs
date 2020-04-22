@@ -17,6 +17,7 @@ using Microsoft.DotNet.Maestro.Client;
 using Newtonsoft.Json.Linq;
 using Microsoft.VisualStudio.Services.FileContainer;
 using Microsoft.Azure.KeyVault.Models;
+using Microsoft.DotNet.Services.Utility;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -96,7 +97,7 @@ namespace Microsoft.DotNet.Darc.Operations
             string channel = _options.Channel;
             string sourceRepository = _options.SourceRepository;
             string targetRepository = _options.TargetRepository;
-            string targetBranch = _options.TargetBranch;
+            string targetBranch = GitHelpers.NormalizeBranchName(_options.TargetBranch);
             string updateFrequency = _options.UpdateFrequency;
             bool batchable = _options.Batchable;
 

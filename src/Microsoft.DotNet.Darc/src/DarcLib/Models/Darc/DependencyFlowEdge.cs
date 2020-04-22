@@ -13,6 +13,8 @@ namespace Microsoft.DotNet.DarcLib
             Subscription = subscription;
             From = from;
             To = to;
+            OnLongestBuildPath = false;
+            BackEdge = false;
         }
 
         // An edge is associated with a subscription
@@ -23,5 +25,7 @@ namespace Microsoft.DotNet.DarcLib
         ///     True if the edge is part of a cycle, false if the edge is not, null if cycles have not been computed
         /// </summary>
         public bool? PartOfCycle { get; set; }
+        public bool BackEdge { get; set; }
+        public bool OnLongestBuildPath { get; set; }
     }
 }

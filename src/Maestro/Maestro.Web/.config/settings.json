@@ -4,7 +4,8 @@
     "ClientSecret": "[vault(github-oauth-secret)]",
     "SaveTokens": true,
     "CallbackPath": "/signin/github",
-    "UserAgentProduct": "" 
+    "UserAgentProduct": "",
+    "ClaimsIssuer": "github" 
   },
   "GitHub": {
     "GitHubAppId": "[vault(github-application-id)]",
@@ -42,6 +43,7 @@
   },
   "ApiRedirect": {
     "uri": "https://maestro-prod.westus2.cloudapp.azure.com",
-    "token": "[vault(prod-maestro-token)]" 
-  }
+    "token": "[vault(prod-maestro-token)]"
+  },
+  "EnableAutoBuildPromotion": "[config(FeatureManagement:AutoBuildPromotion)]" 
 }

@@ -240,6 +240,13 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Async task.</returns>
         Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest);
 
+        /// <summary>
+        ///     Delete a Pull Request branch
+        /// </summary>
+        /// <param name="pullRequestUri">URI of pull request to delete branch for</param>
+        /// <returns>Async task</returns>
+        Task DeletePullRequestBranchAsync(string pullRequestUri);
+
         #endregion
 
         #region Repo/Dependency Operations
@@ -340,7 +347,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="itemsToUpdate">Dependencies that need updating.</param>
         /// <param name="message">Commit message.</param>
         /// <returns>Async task.</returns>
-        Task CommitUpdatesAsync(string repoUri, string branch, List<DependencyDetail> itemsToUpdate, string message);
+        Task<List<GitFile>> CommitUpdatesAsync(string repoUri, string branch, List<DependencyDetail> itemsToUpdate, string message);
 
         /// <summary>
         ///     Diff two commits in a repository and return information about them.
@@ -466,6 +473,14 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="definitionId">Azure DevOps DefinitionId.</param>
         /// <returns>Returns Goal in minutes.</returns>
         Task<Goal> GetGoalAsync(string channel, int definitionId);
+
+        /// <summary>
+        ///     Gets official and pr build times (in minutes) for a default channel summarized over a number of days.
+        /// </summary>
+        /// <param name="defaultChannelId">Id of the default channel</param>
+        /// <param name="days">Number of days to summarize over</param>
+        /// <returns>Returns BuildTime in minutes</returns>
+        Task<BuildTime> GetBuildTimeAsync(int defaultChannelId, int days);
         #endregion
 
 

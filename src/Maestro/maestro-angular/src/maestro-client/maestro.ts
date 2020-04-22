@@ -47,17 +47,19 @@ export class MaestroService {
         this.options = Object.assign({}, MaestroModule.defaultOptions, options);
         this.assets = new AssetsApiService(this);
         this.builds = new BuildsApiService(this);
+        this.buildTime = new BuildTimeApiService(this);
         this.channels = new ChannelsApiService(this);
         this.defaultChannels = new DefaultChannelsApiService(this);
-        this.pipelines = new PipelinesApiService(this);
+        this.goal = new GoalApiService(this);
         this.repository = new RepositoryApiService(this);
         this.subscriptions = new SubscriptionsApiService(this);
     }
     public assets: IAssetsApi;
     public builds: IBuildsApi;
+    public buildTime: IBuildTimeApi;
     public channels: IChannelsApi;
     public defaultChannels: IDefaultChannelsApi;
-    public pipelines: IPipelinesApi;
+    public goal: IGoalApi;
     public repository: IRepositoryApi;
     public subscriptions: ISubscriptionsApi;
 
@@ -96,6 +98,12 @@ export class MaestroModule {
 
 export interface IAssetsApi {
 
+    bulkAddLocationsAsync(
+        parameters: {
+            body: models.AssetAndLocation[],
+        }
+    ): Observable<void>;
+
     listAssetsAsync(
         parameters: {
             buildId?: number,
@@ -107,6 +115,9 @@ export interface IAssetsApi {
             version?: string,
         }
     ): Observable<models.Asset[]>;
+
+    getDarcVersionAsync(
+    ): Observable<string>;
 
     getAssetAsync(
         parameters: {
@@ -136,6 +147,44 @@ export class AssetsApiService implements IAssetsApi {
         this.options = client.options;
     }
 
+    public bulkAddLocationsAsync(
+        {
+            body,
+        }: {
+            body: models.AssetAndLocation[],
+        }
+    ): Observable<void> {
+        if (body === undefined) {
+            throw new Error("Required parameter body is undefined.");
+        }
+
+        const apiVersion = "2020-02-20";
+        let _path = this.options.baseUrl;
+        if (_path.endsWith("/"))
+        {
+            _path = _path.slice(0, -1);
+        }
+        _path = _path + "/api/assets/bulk-add-locations";
+
+        let queryParameters = new HttpParams();
+        let headerParameters = new HttpHeaders(this.options.defaultHeaders);
+
+        queryParameters = queryParameters.set("api-version", apiVersion);
+
+
+        return this.client.request(
+            "post",
+            _path,
+            {
+                headers: headerParameters,
+                params: queryParameters,
+                responseType: "text",
+                body: JSON.stringify(body.map((e: any) => models.AssetAndLocation.toRawObject(e))),
+            }
+        );
+
+    }
+
     public listAssetsAsync(
         {
             buildId,
@@ -155,7 +204,7 @@ export class AssetsApiService implements IAssetsApi {
             version?: string,
         }
     ): Observable<models.Asset[]> {
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -218,6 +267,36 @@ export class AssetsApiService implements IAssetsApi {
 
     }
 
+    public getDarcVersionAsync(
+    ): Observable<string> {
+        const apiVersion = "2020-02-20";
+        let _path = this.options.baseUrl;
+        if (_path.endsWith("/"))
+        {
+            _path = _path.slice(0, -1);
+        }
+        _path = _path + "/api/assets/darc-version";
+
+        let queryParameters = new HttpParams();
+        let headerParameters = new HttpHeaders(this.options.defaultHeaders);
+
+        queryParameters = queryParameters.set("api-version", apiVersion);
+
+
+        return this.client.request(
+            "get",
+            _path,
+            {
+                headers: headerParameters,
+                params: queryParameters,
+                responseType: "json",
+            }
+        ).pipe(
+            map(raw => raw)
+        );
+
+    }
+
     public getAssetAsync(
         {
             id,
@@ -229,7 +308,7 @@ export class AssetsApiService implements IAssetsApi {
             throw new Error("Required parameter id is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -281,7 +360,7 @@ export class AssetsApiService implements IAssetsApi {
             throw new Error("Required parameter location is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -337,7 +416,7 @@ export class AssetsApiService implements IAssetsApi {
             throw new Error("Required parameter assetLocationId is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -370,6 +449,9 @@ export interface IBuildsApi {
 
     listBuildsAsync(
         parameters: {
+            azdoAccount?: string,
+            azdoBuildId?: number,
+            azdoProject?: string,
             buildNumber?: string,
             channelId?: number,
             commit?: string,
@@ -411,6 +493,13 @@ export interface IBuildsApi {
             repository?: string,
         }
     ): Observable<models.Build>;
+
+    updateAsync(
+        parameters: {
+            body: models.BuildUpdate,
+            buildId: number,
+        }
+    ): Observable<models.Build>;
 }
 
 export class BuildsApiService implements IBuildsApi {
@@ -421,6 +510,9 @@ export class BuildsApiService implements IBuildsApi {
 
     public listBuildsAsync(
         {
+            azdoAccount,
+            azdoBuildId,
+            azdoProject,
             buildNumber,
             channelId,
             commit,
@@ -431,6 +523,9 @@ export class BuildsApiService implements IBuildsApi {
             perPage,
             repository,
         }: {
+            azdoAccount?: string,
+            azdoBuildId?: number,
+            azdoProject?: string,
             buildNumber?: string,
             channelId?: number,
             commit?: string,
@@ -442,7 +537,7 @@ export class BuildsApiService implements IBuildsApi {
             repository?: string,
         }
     ): Observable<models.Build[]> {
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -466,6 +561,21 @@ export class BuildsApiService implements IBuildsApi {
         if (buildNumber)
         {
             queryParameters = queryParameters.set("buildNumber", buildNumber);
+        }
+
+        if (azdoBuildId)
+        {
+            queryParameters = queryParameters.set("azdoBuildId", azdoBuildId + "");
+        }
+
+        if (azdoAccount)
+        {
+            queryParameters = queryParameters.set("azdoAccount", azdoAccount);
+        }
+
+        if (azdoProject)
+        {
+            queryParameters = queryParameters.set("azdoProject", azdoProject);
         }
 
         if (channelId)
@@ -526,7 +636,7 @@ export class BuildsApiService implements IBuildsApi {
             throw new Error("Required parameter body is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -566,7 +676,7 @@ export class BuildsApiService implements IBuildsApi {
             throw new Error("Required parameter id is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -606,7 +716,7 @@ export class BuildsApiService implements IBuildsApi {
             throw new Error("Required parameter id is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -654,7 +764,7 @@ export class BuildsApiService implements IBuildsApi {
             repository?: string,
         }
     ): Observable<models.Build> {
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -716,6 +826,121 @@ export class BuildsApiService implements IBuildsApi {
         );
 
     }
+
+    public updateAsync(
+        {
+            body,
+            buildId,
+        }: {
+            body: models.BuildUpdate,
+            buildId: number,
+        }
+    ): Observable<models.Build> {
+        if (body === undefined) {
+            throw new Error("Required parameter body is undefined.");
+        }
+
+        if (buildId === undefined) {
+            throw new Error("Required parameter buildId is undefined.");
+        }
+
+        const apiVersion = "2020-02-20";
+        let _path = this.options.baseUrl;
+        if (_path.endsWith("/"))
+        {
+            _path = _path.slice(0, -1);
+        }
+        _path = _path + "/api/builds/{buildId}";
+        _path = _path.replace("{buildId}", buildId + "");
+
+        let queryParameters = new HttpParams();
+        let headerParameters = new HttpHeaders(this.options.defaultHeaders);
+
+        queryParameters = queryParameters.set("api-version", apiVersion);
+
+
+        return this.client.request(
+            "patch",
+            _path,
+            {
+                headers: headerParameters,
+                params: queryParameters,
+                responseType: "json",
+                body: JSON.stringify(models.BuildUpdate.toRawObject(body)),
+            }
+        ).pipe(
+            map(raw => models.Build.fromRawObject(raw))
+        );
+
+    }
+}
+
+export interface IBuildTimeApi {
+
+    getBuildTimesAsync(
+        parameters: {
+            days: number,
+            id: number,
+        }
+    ): Observable<models.BuildTime>;
+}
+
+export class BuildTimeApiService implements IBuildTimeApi {
+    private options: MaestroOptions;
+    constructor(public client: MaestroService) {
+        this.options = client.options;
+    }
+
+    public getBuildTimesAsync(
+        {
+            days,
+            id,
+        }: {
+            days: number,
+            id: number,
+        }
+    ): Observable<models.BuildTime> {
+        if (days === undefined) {
+            throw new Error("Required parameter days is undefined.");
+        }
+
+        if (id === undefined) {
+            throw new Error("Required parameter id is undefined.");
+        }
+
+        const apiVersion = "2020-02-20";
+        let _path = this.options.baseUrl;
+        if (_path.endsWith("/"))
+        {
+            _path = _path.slice(0, -1);
+        }
+        _path = _path + "/api/buildtime/{id}";
+        _path = _path.replace("{id}", id + "");
+
+        let queryParameters = new HttpParams();
+        let headerParameters = new HttpHeaders(this.options.defaultHeaders);
+
+        if (days)
+        {
+            queryParameters = queryParameters.set("days", days + "");
+        }
+
+        queryParameters = queryParameters.set("api-version", apiVersion);
+
+
+        return this.client.request(
+            "get",
+            _path,
+            {
+                headers: headerParameters,
+                params: queryParameters,
+                responseType: "json",
+            }
+        ).pipe(
+            map(raw => models.BuildTime.fromRawObject(raw))
+        );
+
+    }
 }
 
 export interface IChannelsApi {
@@ -726,18 +951,18 @@ export interface IChannelsApi {
         }
     ): Observable<models.Channel[]>;
 
-    listRepositoriesAsync(
-        parameters: {
-            id: number,
-        }
-    ): Observable<string[]>;
-
     createChannelAsync(
         parameters: {
             classification: string,
             name: string,
         }
     ): Observable<models.Channel>;
+
+    listRepositoriesAsync(
+        parameters: {
+            id: number,
+        }
+    ): Observable<string[]>;
 
     getChannelAsync(
         parameters: {
@@ -758,19 +983,23 @@ export interface IChannelsApi {
         }
     ): Observable<void>;
 
-    addPipelineToChannelAsync(
+    removeBuildFromChannelAsync(
         parameters: {
+            buildId: number,
             channelId: number,
-            pipelineId: number,
         }
     ): Observable<void>;
 
-    deletePipelineFromChannelAsync(
+    getFlowGraphAsyncAsync(
         parameters: {
             channelId: number,
-            pipelineId: number,
+            days: number,
+            includeArcade: boolean,
+            includeBuildTimes: boolean,
+            includeDisabledSubscriptions: boolean,
+            includedFrequencies?: string[],
         }
-    ): Observable<void>;
+    ): Observable<models.FlowGraph>;
 }
 
 export class ChannelsApiService implements IChannelsApi {
@@ -786,7 +1015,7 @@ export class ChannelsApiService implements IChannelsApi {
             classification?: string,
         }
     ): Observable<models.Channel[]> {
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -819,41 +1048,6 @@ export class ChannelsApiService implements IChannelsApi {
 
     }
 
-    public listRepositoriesAsync(
-        {
-            id
-        }: {
-            id: number
-        }
-    ): Observable<string[]> {
-        if (id === undefined) {
-            throw new Error("Required parameter id is undefined.");
-        }
-
-        const apiVersion = "2019-01-16";
-        let _path = this.options.baseUrl;
-        if (_path.endsWith("/")) {
-            _path = _path.slice(0, -1);
-        }
-        _path = _path + "/api/channels/{id}/repositories";
-        _path = _path.replace("{id}", id + "");
-
-        let queryParameters = new HttpParams();
-        let headerParameters = new HttpHeaders(this.options.defaultHeaders);
-
-        queryParameters = queryParameters.set("api-version", apiVersion);
-
-        return this.client.request(
-            "get",
-            _path,
-            {
-                headers: headerParameters,
-                params: queryParameters,
-                responseType: "json",
-            }
-        );
-    }
-
     public createChannelAsync(
         {
             classification,
@@ -871,7 +1065,7 @@ export class ChannelsApiService implements IChannelsApi {
             throw new Error("Required parameter name is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -909,6 +1103,46 @@ export class ChannelsApiService implements IChannelsApi {
 
     }
 
+    public listRepositoriesAsync(
+        {
+            id,
+        }: {
+            id: number,
+        }
+    ): Observable<string[]> {
+        if (id === undefined) {
+            throw new Error("Required parameter id is undefined.");
+        }
+
+        const apiVersion = "2020-02-20";
+        let _path = this.options.baseUrl;
+        if (_path.endsWith("/"))
+        {
+            _path = _path.slice(0, -1);
+        }
+        _path = _path + "/api/channels/{id}/repositories";
+        _path = _path.replace("{id}", id + "");
+
+        let queryParameters = new HttpParams();
+        let headerParameters = new HttpHeaders(this.options.defaultHeaders);
+
+        queryParameters = queryParameters.set("api-version", apiVersion);
+
+
+        return this.client.request(
+            "get",
+            _path,
+            {
+                headers: headerParameters,
+                params: queryParameters,
+                responseType: "json",
+            }
+        ).pipe(
+            map(raw => raw.map((e: any) => e))
+        );
+
+    }
+
     public getChannelAsync(
         {
             id,
@@ -920,7 +1154,7 @@ export class ChannelsApiService implements IChannelsApi {
             throw new Error("Required parameter id is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -960,7 +1194,7 @@ export class ChannelsApiService implements IChannelsApi {
             throw new Error("Required parameter id is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -1006,7 +1240,7 @@ export class ChannelsApiService implements IChannelsApi {
             throw new Error("Required parameter channelId is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -1034,77 +1268,32 @@ export class ChannelsApiService implements IChannelsApi {
 
     }
 
-    public addPipelineToChannelAsync(
+    public removeBuildFromChannelAsync(
         {
+            buildId,
             channelId,
-            pipelineId,
         }: {
+            buildId: number,
             channelId: number,
-            pipelineId: number,
         }
     ): Observable<void> {
+        if (buildId === undefined) {
+            throw new Error("Required parameter buildId is undefined.");
+        }
+
         if (channelId === undefined) {
             throw new Error("Required parameter channelId is undefined.");
         }
 
-        if (pipelineId === undefined) {
-            throw new Error("Required parameter pipelineId is undefined.");
-        }
-
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
             _path = _path.slice(0, -1);
         }
-        _path = _path + "/api/channels/{channelId}/pipelines/{pipelineId}";
+        _path = _path + "/api/channels/{channelId}/builds/{buildId}";
         _path = _path.replace("{channelId}", channelId + "");
-        _path = _path.replace("{pipelineId}", pipelineId + "");
-
-        let queryParameters = new HttpParams();
-        let headerParameters = new HttpHeaders(this.options.defaultHeaders);
-
-        queryParameters = queryParameters.set("api-version", apiVersion);
-
-
-        return this.client.request(
-            "post",
-            _path,
-            {
-                headers: headerParameters,
-                params: queryParameters,
-                responseType: "text",
-            }
-        );
-
-    }
-
-    public deletePipelineFromChannelAsync(
-        {
-            channelId,
-            pipelineId,
-        }: {
-            channelId: number,
-            pipelineId: number,
-        }
-    ): Observable<void> {
-        if (channelId === undefined) {
-            throw new Error("Required parameter channelId is undefined.");
-        }
-
-        if (pipelineId === undefined) {
-            throw new Error("Required parameter pipelineId is undefined.");
-        }
-
-        const apiVersion = "2019-01-16";
-        let _path = this.options.baseUrl;
-        if (_path.endsWith("/"))
-        {
-            _path = _path.slice(0, -1);
-        }
-        _path = _path + "/api/channels/{channelId}/pipelines/{pipelineId}";
-        _path = _path.replace("{channelId}", channelId + "");
-        _path = _path.replace("{pipelineId}", pipelineId + "");
+        _path = _path.replace("{buildId}", buildId + "");
 
         let queryParameters = new HttpParams();
         let headerParameters = new HttpHeaders(this.options.defaultHeaders);
@@ -1123,6 +1312,100 @@ export class ChannelsApiService implements IChannelsApi {
         );
 
     }
+
+    public getFlowGraphAsyncAsync(
+        {
+            channelId,
+            days,
+            includeArcade,
+            includeBuildTimes,
+            includeDisabledSubscriptions,
+            includedFrequencies,
+        }: {
+            channelId: number,
+            days: number,
+            includeArcade: boolean,
+            includeBuildTimes: boolean,
+            includeDisabledSubscriptions: boolean,
+            includedFrequencies?: string[],
+        }
+    ): Observable<models.FlowGraph> {
+        if (channelId === undefined) {
+            throw new Error("Required parameter channelId is undefined.");
+        }
+
+        if (days === undefined) {
+            throw new Error("Required parameter days is undefined.");
+        }
+
+        if (includeArcade === undefined) {
+            throw new Error("Required parameter includeArcade is undefined.");
+        }
+
+        if (includeBuildTimes === undefined) {
+            throw new Error("Required parameter includeBuildTimes is undefined.");
+        }
+
+        if (includeDisabledSubscriptions === undefined) {
+            throw new Error("Required parameter includeDisabledSubscriptions is undefined.");
+        }
+
+        const apiVersion = "2020-02-20";
+        let _path = this.options.baseUrl;
+        if (_path.endsWith("/"))
+        {
+            _path = _path.slice(0, -1);
+        }
+        _path = _path + "/api/channels/{channelId}/graph";
+        _path = _path.replace("{channelId}", channelId + "");
+
+        let queryParameters = new HttpParams();
+        let headerParameters = new HttpHeaders(this.options.defaultHeaders);
+
+        if (includeDisabledSubscriptions)
+        {
+            queryParameters = queryParameters.set("includeDisabledSubscriptions", includeDisabledSubscriptions + "");
+        }
+
+        if (includedFrequencies)
+        {
+            for (const _item of JSON.stringify(includedFrequencies.map((e: any) => e)))
+            {
+                queryParameters = queryParameters.append("includedFrequencies", _item);
+            }
+        }
+
+        if (includeBuildTimes)
+        {
+            queryParameters = queryParameters.set("includeBuildTimes", includeBuildTimes + "");
+        }
+
+        if (days)
+        {
+            queryParameters = queryParameters.set("days", days + "");
+        }
+
+        if (includeArcade)
+        {
+            queryParameters = queryParameters.set("includeArcade", includeArcade + "");
+        }
+
+        queryParameters = queryParameters.set("api-version", apiVersion);
+
+
+        return this.client.request(
+            "get",
+            _path,
+            {
+                headers: headerParameters,
+                params: queryParameters,
+                responseType: "json",
+            }
+        ).pipe(
+            map(raw => models.FlowGraph.fromRawObject(raw))
+        );
+
+    }
 }
 
 export interface IDefaultChannelsApi {
@@ -1131,13 +1414,14 @@ export interface IDefaultChannelsApi {
         parameters: {
             branch?: string,
             channelId?: number,
+            enabled?: boolean,
             repository?: string,
         }
     ): Observable<models.DefaultChannel[]>;
 
     createAsync(
         parameters: {
-            body: models.PostData,
+            body: models.DefaultChannelCreateData,
         }
     ): Observable<void>;
 
@@ -1152,6 +1436,13 @@ export interface IDefaultChannelsApi {
             id: number,
         }
     ): Observable<void>;
+
+    updateAsync(
+        parameters: {
+            id: number,
+            body?: models.DefaultChannelUpdateData,
+        }
+    ): Observable<models.DefaultChannel>;
 }
 
 export class DefaultChannelsApiService implements IDefaultChannelsApi {
@@ -1164,14 +1455,16 @@ export class DefaultChannelsApiService implements IDefaultChannelsApi {
         {
             branch,
             channelId,
+            enabled,
             repository,
         }: {
             branch?: string,
             channelId?: number,
+            enabled?: boolean,
             repository?: string,
         }
     ): Observable<models.DefaultChannel[]> {
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -1197,6 +1490,11 @@ export class DefaultChannelsApiService implements IDefaultChannelsApi {
             queryParameters = queryParameters.set("channelId", channelId + "");
         }
 
+        if (enabled)
+        {
+            queryParameters = queryParameters.set("enabled", enabled + "");
+        }
+
         queryParameters = queryParameters.set("api-version", apiVersion);
 
 
@@ -1218,14 +1516,14 @@ export class DefaultChannelsApiService implements IDefaultChannelsApi {
         {
             body,
         }: {
-            body: models.PostData,
+            body: models.DefaultChannelCreateData,
         }
     ): Observable<void> {
         if (body === undefined) {
             throw new Error("Required parameter body is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -1246,7 +1544,7 @@ export class DefaultChannelsApiService implements IDefaultChannelsApi {
                 headers: headerParameters,
                 params: queryParameters,
                 responseType: "text",
-                body: JSON.stringify(models.PostData.toRawObject(body)),
+                body: JSON.stringify(models.DefaultChannelCreateData.toRawObject(body)),
             }
         );
 
@@ -1263,7 +1561,7 @@ export class DefaultChannelsApiService implements IDefaultChannelsApi {
             throw new Error("Required parameter id is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -1303,7 +1601,7 @@ export class DefaultChannelsApiService implements IDefaultChannelsApi {
             throw new Error("Required parameter id is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -1329,184 +1627,101 @@ export class DefaultChannelsApiService implements IDefaultChannelsApi {
         );
 
     }
+
+    public updateAsync(
+        {
+            id,
+            body,
+        }: {
+            id: number,
+            body?: models.DefaultChannelUpdateData,
+        }
+    ): Observable<models.DefaultChannel> {
+        if (id === undefined) {
+            throw new Error("Required parameter id is undefined.");
+        }
+
+        const apiVersion = "2020-02-20";
+        let _path = this.options.baseUrl;
+        if (_path.endsWith("/"))
+        {
+            _path = _path.slice(0, -1);
+        }
+        _path = _path + "/api/default-channels/{id}";
+        _path = _path.replace("{id}", id + "");
+
+        let queryParameters = new HttpParams();
+        let headerParameters = new HttpHeaders(this.options.defaultHeaders);
+
+        queryParameters = queryParameters.set("api-version", apiVersion);
+
+
+        return this.client.request(
+            "patch",
+            _path,
+            {
+                headers: headerParameters,
+                params: queryParameters,
+                responseType: "json",
+                body: body == undefined ? undefined : JSON.stringify(models.DefaultChannelUpdateData.toRawObject(body)),
+            }
+        ).pipe(
+            map(raw => models.DefaultChannel.fromRawObject(raw))
+        );
+
+    }
 }
 
-export interface IPipelinesApi {
+export interface IGoalApi {
 
-    listAsync(
+    getGoalTimesAsync(
         parameters: {
-            organization?: string,
-            pipelineIdentifier?: number,
-            project?: string,
+            channelName: string,
+            definitionId: number,
         }
-    ): Observable<models.ReleasePipeline[]>;
+    ): Observable<models.Goal>;
 
-    createPipelineAsync(
+    createAsync(
         parameters: {
-            organization: string,
-            pipelineIdentifier: number,
-            project: string,
+            body: models.GoalRequestJson,
+            channelName: string,
+            definitionId: number,
         }
-    ): Observable<models.ReleasePipeline>;
-
-    getPipelineAsync(
-        parameters: {
-            id: number,
-        }
-    ): Observable<models.ReleasePipeline>;
-
-    deletePipelineAsync(
-        parameters: {
-            id: number,
-        }
-    ): Observable<models.ReleasePipeline>;
+    ): Observable<models.Goal>;
 }
 
-export class PipelinesApiService implements IPipelinesApi {
+export class GoalApiService implements IGoalApi {
     private options: MaestroOptions;
     constructor(public client: MaestroService) {
         this.options = client.options;
     }
 
-    public listAsync(
+    public getGoalTimesAsync(
         {
-            organization,
-            pipelineIdentifier,
-            project,
+            channelName,
+            definitionId,
         }: {
-            organization?: string,
-            pipelineIdentifier?: number,
-            project?: string,
+            channelName: string,
+            definitionId: number,
         }
-    ): Observable<models.ReleasePipeline[]> {
-        const apiVersion = "2019-01-16";
+    ): Observable<models.Goal> {
+        if (channelName === undefined) {
+            throw new Error("Required parameter channelName is undefined.");
+        }
+
+        if (definitionId === undefined) {
+            throw new Error("Required parameter definitionId is undefined.");
+        }
+
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
             _path = _path.slice(0, -1);
         }
-        _path = _path + "/api/pipelines";
-
-        let queryParameters = new HttpParams();
-        let headerParameters = new HttpHeaders(this.options.defaultHeaders);
-
-        if (pipelineIdentifier)
-        {
-            queryParameters = queryParameters.set("pipelineIdentifier", pipelineIdentifier + "");
-        }
-
-        if (organization)
-        {
-            queryParameters = queryParameters.set("organization", organization);
-        }
-
-        if (project)
-        {
-            queryParameters = queryParameters.set("project", project);
-        }
-
-        queryParameters = queryParameters.set("api-version", apiVersion);
-
-
-        return this.client.request(
-            "get",
-            _path,
-            {
-                headers: headerParameters,
-                params: queryParameters,
-                responseType: "json",
-            }
-        ).pipe(
-            map(raw => raw.map((e: any) => models.ReleasePipeline.fromRawObject(e)))
-        );
-
-    }
-
-    public createPipelineAsync(
-        {
-            organization,
-            pipelineIdentifier,
-            project,
-        }: {
-            organization: string,
-            pipelineIdentifier: number,
-            project: string,
-        }
-    ): Observable<models.ReleasePipeline> {
-        if (organization === undefined) {
-            throw new Error("Required parameter organization is undefined.");
-        }
-
-        if (pipelineIdentifier === undefined) {
-            throw new Error("Required parameter pipelineIdentifier is undefined.");
-        }
-
-        if (project === undefined) {
-            throw new Error("Required parameter project is undefined.");
-        }
-
-        const apiVersion = "2019-01-16";
-        let _path = this.options.baseUrl;
-        if (_path.endsWith("/"))
-        {
-            _path = _path.slice(0, -1);
-        }
-        _path = _path + "/api/pipelines";
-
-        let queryParameters = new HttpParams();
-        let headerParameters = new HttpHeaders(this.options.defaultHeaders);
-
-        if (pipelineIdentifier)
-        {
-            queryParameters = queryParameters.set("pipelineIdentifier", pipelineIdentifier + "");
-        }
-
-        if (organization)
-        {
-            queryParameters = queryParameters.set("organization", organization);
-        }
-
-        if (project)
-        {
-            queryParameters = queryParameters.set("project", project);
-        }
-
-        queryParameters = queryParameters.set("api-version", apiVersion);
-
-
-        return this.client.request(
-            "post",
-            _path,
-            {
-                headers: headerParameters,
-                params: queryParameters,
-                responseType: "json",
-            }
-        ).pipe(
-            map(raw => models.ReleasePipeline.fromRawObject(raw))
-        );
-
-    }
-
-    public getPipelineAsync(
-        {
-            id,
-        }: {
-            id: number,
-        }
-    ): Observable<models.ReleasePipeline> {
-        if (id === undefined) {
-            throw new Error("Required parameter id is undefined.");
-        }
-
-        const apiVersion = "2019-01-16";
-        let _path = this.options.baseUrl;
-        if (_path.endsWith("/"))
-        {
-            _path = _path.slice(0, -1);
-        }
-        _path = _path + "/api/pipelines/{id}";
-        _path = _path.replace("{id}", id + "");
+        _path = _path + "/api/goals/channelName/{channelName}/definitionId/{definitionId}";
+        _path = _path.replace("{definitionId}", definitionId + "");
+        _path = _path.replace("{channelName}", channelName);
 
         let queryParameters = new HttpParams();
         let headerParameters = new HttpHeaders(this.options.defaultHeaders);
@@ -1523,30 +1738,43 @@ export class PipelinesApiService implements IPipelinesApi {
                 responseType: "json",
             }
         ).pipe(
-            map(raw => models.ReleasePipeline.fromRawObject(raw))
+            map(raw => models.Goal.fromRawObject(raw))
         );
 
     }
 
-    public deletePipelineAsync(
+    public createAsync(
         {
-            id,
+            body,
+            channelName,
+            definitionId,
         }: {
-            id: number,
+            body: models.GoalRequestJson,
+            channelName: string,
+            definitionId: number,
         }
-    ): Observable<models.ReleasePipeline> {
-        if (id === undefined) {
-            throw new Error("Required parameter id is undefined.");
+    ): Observable<models.Goal> {
+        if (body === undefined) {
+            throw new Error("Required parameter body is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        if (channelName === undefined) {
+            throw new Error("Required parameter channelName is undefined.");
+        }
+
+        if (definitionId === undefined) {
+            throw new Error("Required parameter definitionId is undefined.");
+        }
+
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
             _path = _path.slice(0, -1);
         }
-        _path = _path + "/api/pipelines/{id}";
-        _path = _path.replace("{id}", id + "");
+        _path = _path + "/api/goals/channelName/{channelName}/definitionId/{definitionId}";
+        _path = _path.replace("{channelName}", channelName);
+        _path = _path.replace("{definitionId}", definitionId + "");
 
         let queryParameters = new HttpParams();
         let headerParameters = new HttpHeaders(this.options.defaultHeaders);
@@ -1555,21 +1783,29 @@ export class PipelinesApiService implements IPipelinesApi {
 
 
         return this.client.request(
-            "delete",
+            "put",
             _path,
             {
                 headers: headerParameters,
                 params: queryParameters,
                 responseType: "json",
+                body: JSON.stringify(models.GoalRequestJson.toRawObject(body)),
             }
         ).pipe(
-            map(raw => models.ReleasePipeline.fromRawObject(raw))
+            map(raw => models.Goal.fromRawObject(raw))
         );
 
     }
 }
 
 export interface IRepositoryApi {
+
+    listRepositoriesAsync(
+        parameters: {
+            branch?: string,
+            repository?: string,
+        }
+    ): Observable<models.RepositoryBranch[]>;
 
     getMergePoliciesAsync(
         parameters: {
@@ -1610,6 +1846,53 @@ export class RepositoryApiService implements IRepositoryApi {
         this.options = client.options;
     }
 
+    public listRepositoriesAsync(
+        {
+            branch,
+            repository,
+        }: {
+            branch?: string,
+            repository?: string,
+        }
+    ): Observable<models.RepositoryBranch[]> {
+        const apiVersion = "2020-02-20";
+        let _path = this.options.baseUrl;
+        if (_path.endsWith("/"))
+        {
+            _path = _path.slice(0, -1);
+        }
+        _path = _path + "/api/repo-config/repositories";
+
+        let queryParameters = new HttpParams();
+        let headerParameters = new HttpHeaders(this.options.defaultHeaders);
+
+        if (repository)
+        {
+            queryParameters = queryParameters.set("repository", repository);
+        }
+
+        if (branch)
+        {
+            queryParameters = queryParameters.set("branch", branch);
+        }
+
+        queryParameters = queryParameters.set("api-version", apiVersion);
+
+
+        return this.client.request(
+            "get",
+            _path,
+            {
+                headers: headerParameters,
+                params: queryParameters,
+                responseType: "json",
+            }
+        ).pipe(
+            map(raw => raw.map((e: any) => models.RepositoryBranch.fromRawObject(e)))
+        );
+
+    }
+
     public getMergePoliciesAsync(
         {
             branch,
@@ -1627,7 +1910,7 @@ export class RepositoryApiService implements IRepositoryApi {
             throw new Error("Required parameter repository is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -1684,7 +1967,7 @@ export class RepositoryApiService implements IRepositoryApi {
             throw new Error("Required parameter repository is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -1734,7 +2017,7 @@ export class RepositoryApiService implements IRepositoryApi {
             repository?: string,
         }
     ): Observable<models.RepositoryHistoryItem[]> {
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -1805,7 +2088,7 @@ export class RepositoryApiService implements IRepositoryApi {
             throw new Error("Required parameter timestamp is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -1923,7 +2206,7 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
             targetRepository?: string,
         }
     ): Observable<models.Subscription[]> {
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -1982,7 +2265,7 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
             throw new Error("Required parameter body is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -2022,7 +2305,7 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
             throw new Error("Required parameter id is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -2062,7 +2345,7 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
             throw new Error("Required parameter id is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -2104,7 +2387,7 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
             throw new Error("Required parameter id is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -2145,7 +2428,7 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
             throw new Error("Required parameter id is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -2176,7 +2459,7 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
 
     public triggerDailyUpdateAsync(
     ): Observable<void> {
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -2217,7 +2500,7 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
             throw new Error("Required parameter id is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {
@@ -2273,7 +2556,7 @@ export class SubscriptionsApiService implements ISubscriptionsApi {
             throw new Error("Required parameter timestamp is undefined.");
         }
 
-        const apiVersion = "2019-01-16";
+        const apiVersion = "2020-02-20";
         let _path = this.options.baseUrl;
         if (_path.endsWith("/"))
         {

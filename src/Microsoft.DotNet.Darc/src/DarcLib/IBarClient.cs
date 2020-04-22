@@ -266,6 +266,14 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Returns Goal in minutes.</returns>
         Task<Goal> GetGoalAsync(string channel, int definitionId);
 
+        /// <summary>
+        ///     Gets official and pr build time (in minutes) for a default channel summarized over a number of days.
+        /// </summary>
+        /// <param name="defaultChannelId">Id of the default channel</param>
+        /// <param name="days">Number of days to summarize over</param>
+        /// <returns>Returns BuildTime in minutes.</returns>
+        Task<BuildTime> GetBuildTimeAsync(int defaultChannelId, int days);
+
         #endregion
 
     }

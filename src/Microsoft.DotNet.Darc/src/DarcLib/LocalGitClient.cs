@@ -494,5 +494,10 @@ namespace Microsoft.DotNet.DarcLib
         {
             throw new NotImplementedException();
         }
+
+        public Task DeletePullRequestBranchAsync(string pullRequestUri)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

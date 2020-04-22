@@ -163,6 +163,80 @@ export class Asset {
     }
 }
 
+export class AssetAndLocation {
+    public constructor(
+        {
+            assetId,
+            location,
+            locationType,
+        }: {
+            assetId: number,
+            location?: string,
+            locationType: LocationType,
+        }
+    ) {
+        this._assetId = assetId;
+        this._location = location;
+        this._locationType = locationType;
+    }
+
+    private _assetId: number;
+
+    public get assetId(): number {
+        return this._assetId;
+    }
+
+    public set assetId(__value: number) {
+        this._assetId = __value;
+    }
+
+    private _location?: string;
+
+    public get location(): string | undefined {
+        return this._location;
+    }
+
+    public set location(__value: string | undefined) {
+        this._location = __value;
+    }
+
+    private _locationType: LocationType;
+
+    public get locationType(): LocationType {
+        return this._locationType;
+    }
+
+    public set locationType(__value: LocationType) {
+        this._locationType = __value;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._assetId !== undefined &&
+            this._locationType !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): AssetAndLocation {
+        let result = new AssetAndLocation({
+            assetId: value["assetId"] == null ? undefined : value["assetId"] as any,
+            location: value["location"] == null ? undefined : value["location"] as any,
+            locationType: value["locationType"] == null ? undefined : value["locationType"] as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: AssetAndLocation): any {
+        let result: any = {};
+        result["assetId"] = value._assetId;
+        if (value._location) {
+            result["location"] = value._location;
+        }
+        result["locationType"] = value._locationType;
+        return result;
+    }
+}
+
 export class AssetData {
     public constructor(
         {
@@ -264,7 +338,7 @@ export class AssetLocation {
         }: {
             id: number,
             location?: string,
-            type: AssetLocationType,
+            type: LocationType,
         }
     ) {
         this._id = id;
@@ -284,10 +358,14 @@ export class AssetLocation {
         return this._location;
     }
 
-    private _type: AssetLocationType;
+    private _type: LocationType;
 
-    public get type(): AssetLocationType {
+    public get type(): LocationType {
         return this._type;
+    }
+
+    public set type(__value: LocationType) {
+        this._type = __value;
     }
     
     public isValid(): boolean {
@@ -324,7 +402,7 @@ export class AssetLocationData {
             type,
         }: {
             location?: string,
-            type: AssetLocationDataType,
+            type: LocationType,
         }
     ) {
         this._location = location;
@@ -341,13 +419,13 @@ export class AssetLocationData {
         this._location = __value;
     }
 
-    private _type: AssetLocationDataType;
+    private _type: LocationType;
 
-    public get type(): AssetLocationDataType {
+    public get type(): LocationType {
         return this._type;
     }
 
-    public set type(__value: AssetLocationDataType) {
+    public set type(__value: LocationType) {
         this._type = __value;
     }
     
@@ -375,18 +453,6 @@ export class AssetLocationData {
     }
 }
 
-export enum AssetLocationDataType {
-    None = "none",
-    NugetFeed = "nugetFeed",
-    Container = "container",
-}
-
-export enum AssetLocationType {
-    None = "none",
-    NugetFeed = "nugetFeed",
-    Container = "container",
-}
-
 export class Build {
     public constructor(
         {
@@ -401,12 +467,13 @@ export class Build {
             azureDevOpsBranch,
             gitHubRepository,
             gitHubBranch,
-            publishUsingPipelines,
             dateProduced,
             channels,
             assets,
             dependencies,
             staleness,
+            released,
+            stable,
         }: {
             id: number,
             commit?: string,
@@ -419,12 +486,13 @@ export class Build {
             azureDevOpsBranch?: string,
             gitHubRepository?: string,
             gitHubBranch?: string,
-            publishUsingPipelines: boolean,
             dateProduced: Date,
             channels?: Channel[],
             assets?: Asset[],
             dependencies?: BuildRef[],
-            staleness?: number,
+            staleness: number,
+            released: boolean,
+            stable: boolean,
         }
     ) {
         this._id = id;
@@ -438,12 +506,13 @@ export class Build {
         this._azureDevOpsBranch = azureDevOpsBranch;
         this._gitHubRepository = gitHubRepository;
         this._gitHubBranch = gitHubBranch;
-        this._publishUsingPipelines = publishUsingPipelines;
         this._dateProduced = dateProduced;
         this._channels = channels;
         this._assets = assets;
         this._dependencies = dependencies;
         this._staleness = staleness;
+        this._released = released;
+        this._stable = stable;
     }
 
     private _id: number;
@@ -548,16 +617,6 @@ export class Build {
         this._gitHubBranch = __value;
     }
 
-    private _publishUsingPipelines: boolean;
-
-    public get publishUsingPipelines(): boolean {
-        return this._publishUsingPipelines;
-    }
-
-    public set publishUsingPipelines(__value: boolean) {
-        this._publishUsingPipelines = __value;
-    }
-
     private _dateProduced: Date;
 
     public get dateProduced(): Date {
@@ -582,17 +641,31 @@ export class Build {
         return this._dependencies;
     }
 
-    private _staleness?: number;
+    private _staleness: number;
 
-    public get staleness(): number | undefined {
+    public get staleness(): number {
         return this._staleness;
+    }
+
+    private _released: boolean;
+
+    public get released(): boolean {
+        return this._released;
+    }
+
+    private _stable: boolean;
+
+    public get stable(): boolean {
+        return this._stable;
     }
     
     public isValid(): boolean {
         return (
             this._id !== undefined &&
-            this._publishUsingPipelines !== undefined &&
-            this._dateProduced !== undefined
+            this._dateProduced !== undefined &&
+            this._staleness !== undefined &&
+            this._released !== undefined &&
+            this._stable !== undefined
         );
     }
 
@@ -609,12 +682,13 @@ export class Build {
             azureDevOpsBranch: value["azureDevOpsBranch"] == null ? undefined : value["azureDevOpsBranch"] as any,
             gitHubRepository: value["gitHubRepository"] == null ? undefined : value["gitHubRepository"] as any,
             gitHubBranch: value["gitHubBranch"] == null ? undefined : value["gitHubBranch"] as any,
-            publishUsingPipelines: value["publishUsingPipelines"] == null ? undefined : value["publishUsingPipelines"] as any,
             dateProduced: value["dateProduced"] == null ? undefined : parseISO(value["dateProduced"]) as any,
             channels: value["channels"] == null ? undefined : value["channels"].map((e: any) => Channel.fromRawObject(e)) as any,
             assets: value["assets"] == null ? undefined : value["assets"].map((e: any) => Asset.fromRawObject(e)) as any,
             dependencies: value["dependencies"] == null ? undefined : value["dependencies"].map((e: any) => BuildRef.fromRawObject(e)) as any,
             staleness: value["staleness"] == null ? undefined : value["staleness"] as any,
+            released: value["released"] == null ? undefined : value["released"] as any,
+            stable: value["stable"] == null ? undefined : value["stable"] as any,
         });
         return result;
     }
@@ -652,7 +726,6 @@ export class Build {
         if (value._gitHubBranch) {
             result["gitHubBranch"] = value._gitHubBranch;
         }
-        result["publishUsingPipelines"] = value._publishUsingPipelines;
         result["dateProduced"] = value._dateProduced.toISOString();
         if (value._channels) {
             result["channels"] = value._channels.map((e: any) => Channel.toRawObject(e));
@@ -663,9 +736,9 @@ export class Build {
         if (value._dependencies) {
             result["dependencies"] = value._dependencies.map((e: any) => BuildRef.toRawObject(e));
         }
-        if (value._staleness) {
-            result["staleness"] = value._staleness;
-        }
+        result["staleness"] = value._staleness;
+        result["released"] = value._released;
+        result["stable"] = value._stable;
         return result;
     }
 }
@@ -685,7 +758,8 @@ export class BuildData {
             azureDevOpsBranch,
             gitHubRepository,
             gitHubBranch,
-            publishUsingPipelines,
+            released,
+            stable,
         }: {
             commit: string,
             assets?: AssetData[],
@@ -699,7 +773,8 @@ export class BuildData {
             azureDevOpsBranch: string,
             gitHubRepository?: string,
             gitHubBranch?: string,
-            publishUsingPipelines: boolean,
+            released: boolean,
+            stable: boolean,
         }
     ) {
         this._commit = commit;
@@ -714,7 +789,8 @@ export class BuildData {
         this._azureDevOpsBranch = azureDevOpsBranch;
         this._gitHubRepository = gitHubRepository;
         this._gitHubBranch = gitHubBranch;
-        this._publishUsingPipelines = publishUsingPipelines;
+        this._released = released;
+        this._stable = stable;
     }
 
     private _commit: string;
@@ -837,14 +913,24 @@ export class BuildData {
         this._gitHubBranch = __value;
     }
 
-    private _publishUsingPipelines: boolean;
+    private _released: boolean;
 
-    public get publishUsingPipelines(): boolean {
-        return this._publishUsingPipelines;
+    public get released(): boolean {
+        return this._released;
     }
 
-    public set publishUsingPipelines(__value: boolean) {
-        this._publishUsingPipelines = __value;
+    public set released(__value: boolean) {
+        this._released = __value;
+    }
+
+    private _stable: boolean;
+
+    public get stable(): boolean {
+        return this._stable;
+    }
+
+    public set stable(__value: boolean) {
+        this._stable = __value;
     }
     
     public isValid(): boolean {
@@ -855,7 +941,8 @@ export class BuildData {
             this._azureDevOpsBuildNumber !== undefined &&
             this._azureDevOpsRepository !== undefined &&
             this._azureDevOpsBranch !== undefined &&
-            this._publishUsingPipelines !== undefined
+            this._released !== undefined &&
+            this._stable !== undefined
         );
     }
 
@@ -873,7 +960,8 @@ export class BuildData {
             azureDevOpsBranch: value["azureDevOpsBranch"] == null ? undefined : value["azureDevOpsBranch"] as any,
             gitHubRepository: value["gitHubRepository"] == null ? undefined : value["gitHubRepository"] as any,
             gitHubBranch: value["gitHubBranch"] == null ? undefined : value["gitHubBranch"] as any,
-            publishUsingPipelines: value["publishUsingPipelines"] == null ? undefined : value["publishUsingPipelines"] as any,
+            released: value["released"] == null ? undefined : value["released"] as any,
+            stable: value["stable"] == null ? undefined : value["stable"] as any,
         });
         return result;
     }
@@ -904,7 +992,8 @@ export class BuildData {
         if (value._gitHubBranch) {
             result["gitHubBranch"] = value._gitHubBranch;
         }
-        result["publishUsingPipelines"] = value._publishUsingPipelines;
+        result["released"] = value._released;
+        result["stable"] = value._stable;
         return result;
     }
 }
@@ -980,6 +1069,10 @@ export class BuildRef {
     public get timeToInclusionInMinutes(): number {
         return this._timeToInclusionInMinutes;
     }
+
+    public set timeToInclusionInMinutes(__value: number) {
+        this._timeToInclusionInMinutes = __value;
+    }
     
     public isValid(): boolean {
         return (
@@ -1007,24 +1100,147 @@ export class BuildRef {
     }
 }
 
+export class BuildTime {
+    public constructor(
+        {
+            defaultChannelId,
+            officialBuildTime,
+            prBuildTime,
+            goalTimeInMinutes,
+        }: {
+            defaultChannelId: number,
+            officialBuildTime: number,
+            prBuildTime: number,
+            goalTimeInMinutes: number,
+        }
+    ) {
+        this._defaultChannelId = defaultChannelId;
+        this._officialBuildTime = officialBuildTime;
+        this._prBuildTime = prBuildTime;
+        this._goalTimeInMinutes = goalTimeInMinutes;
+    }
+
+    private _defaultChannelId: number;
+
+    public get defaultChannelId(): number {
+        return this._defaultChannelId;
+    }
+
+    public set defaultChannelId(__value: number) {
+        this._defaultChannelId = __value;
+    }
+
+    private _officialBuildTime: number;
+
+    public get officialBuildTime(): number {
+        return this._officialBuildTime;
+    }
+
+    public set officialBuildTime(__value: number) {
+        this._officialBuildTime = __value;
+    }
+
+    private _prBuildTime: number;
+
+    public get prBuildTime(): number {
+        return this._prBuildTime;
+    }
+
+    public set prBuildTime(__value: number) {
+        this._prBuildTime = __value;
+    }
+
+    private _goalTimeInMinutes: number;
+
+    public get goalTimeInMinutes(): number {
+        return this._goalTimeInMinutes;
+    }
+
+    public set goalTimeInMinutes(__value: number) {
+        this._goalTimeInMinutes = __value;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._defaultChannelId !== undefined &&
+            this._officialBuildTime !== undefined &&
+            this._prBuildTime !== undefined &&
+            this._goalTimeInMinutes !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): BuildTime {
+        let result = new BuildTime({
+            defaultChannelId: value["defaultChannelId"] == null ? undefined : value["defaultChannelId"] as any,
+            officialBuildTime: value["officialBuildTime"] == null ? undefined : value["officialBuildTime"] as any,
+            prBuildTime: value["prBuildTime"] == null ? undefined : value["prBuildTime"] as any,
+            goalTimeInMinutes: value["goalTimeInMinutes"] == null ? undefined : value["goalTimeInMinutes"] as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: BuildTime): any {
+        let result: any = {};
+        result["defaultChannelId"] = value._defaultChannelId;
+        result["officialBuildTime"] = value._officialBuildTime;
+        result["prBuildTime"] = value._prBuildTime;
+        result["goalTimeInMinutes"] = value._goalTimeInMinutes;
+        return result;
+    }
+}
+
+export class BuildUpdate {
+    public constructor(
+        {
+            released,
+        }: {
+            released?: boolean,
+        }
+    ) {
+        this._released = released;
+    }
+
+    private _released?: boolean;
+
+    public get released(): boolean | undefined {
+        return this._released;
+    }
+
+    public set released(__value: boolean | undefined) {
+        this._released = __value;
+    }
+
+    public static fromRawObject(value: any): BuildUpdate {
+        let result = new BuildUpdate({
+            released: value["released"] == null ? undefined : value["released"] as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: BuildUpdate): any {
+        let result: any = {};
+        if (value._released) {
+            result["released"] = value._released;
+        }
+        return result;
+    }
+}
+
 export class Channel {
     public constructor(
         {
             id,
             name,
             classification,
-            releasePipelines,
         }: {
             id: number,
-            name?: string,
-            classification?: string,
-            releasePipelines?: ReleasePipeline[],
+            name: string,
+            classification: string,
         }
     ) {
         this._id = id;
         this._name = name;
         this._classification = classification;
-        this._releasePipelines = releasePipelines;
     }
 
     private _id: number;
@@ -1033,27 +1249,23 @@ export class Channel {
         return this._id;
     }
 
-    private _name?: string;
+    private _name: string;
 
-    public get name(): string | undefined {
+    public get name(): string {
         return this._name;
     }
 
-    private _classification?: string;
+    private _classification: string;
 
-    public get classification(): string | undefined {
+    public get classification(): string {
         return this._classification;
-    }
-
-    private _releasePipelines?: ReleasePipeline[];
-
-    public get releasePipelines(): ReleasePipeline[] | undefined {
-        return this._releasePipelines;
     }
     
     public isValid(): boolean {
         return (
-            this._id !== undefined
+            this._id !== undefined &&
+            this._name !== undefined &&
+            this._classification !== undefined
         );
     }
 
@@ -1062,7 +1274,6 @@ export class Channel {
             id: value["id"] == null ? undefined : value["id"] as any,
             name: value["name"] == null ? undefined : value["name"] as any,
             classification: value["classification"] == null ? undefined : value["classification"] as any,
-            releasePipelines: value["releasePipelines"] == null ? undefined : value["releasePipelines"].map((e: any) => ReleasePipeline.fromRawObject(e)) as any,
         });
         return result;
     }
@@ -1070,15 +1281,8 @@ export class Channel {
     public static toRawObject(value: Channel): any {
         let result: any = {};
         result["id"] = value._id;
-        if (value._name) {
-            result["name"] = value._name;
-        }
-        if (value._classification) {
-            result["classification"] = value._classification;
-        }
-        if (value._releasePipelines) {
-            result["releasePipelines"] = value._releasePipelines.map((e: any) => ReleasePipeline.toRawObject(e));
-        }
+        result["name"] = value._name;
+        result["classification"] = value._classification;
         return result;
     }
 }
@@ -1090,17 +1294,20 @@ export class DefaultChannel {
             repository,
             branch,
             channel,
+            enabled,
         }: {
             id: number,
             repository: string,
             branch?: string,
             channel?: Channel,
+            enabled: boolean,
         }
     ) {
         this._id = id;
         this._repository = repository;
         this._branch = branch;
         this._channel = channel;
+        this._enabled = enabled;
     }
 
     private _id: number;
@@ -1142,11 +1349,22 @@ export class DefaultChannel {
     public set channel(__value: Channel | undefined) {
         this._channel = __value;
     }
+
+    private _enabled: boolean;
+
+    public get enabled(): boolean {
+        return this._enabled;
+    }
+
+    public set enabled(__value: boolean) {
+        this._enabled = __value;
+    }
     
     public isValid(): boolean {
         return (
             this._id !== undefined &&
-            this._repository !== undefined
+            this._repository !== undefined &&
+            this._enabled !== undefined
         );
     }
 
@@ -1156,6 +1374,7 @@ export class DefaultChannel {
             repository: value["repository"] == null ? undefined : value["repository"] as any,
             branch: value["branch"] == null ? undefined : value["branch"] as any,
             channel: value["channel"] == null ? undefined : Channel.fromRawObject(value["channel"]) as any,
+            enabled: value["enabled"] == null ? undefined : value["enabled"] as any,
         });
         return result;
     }
@@ -1170,8 +1389,576 @@ export class DefaultChannel {
         if (value._channel) {
             result["channel"] = Channel.toRawObject(value._channel);
         }
+        result["enabled"] = value._enabled;
         return result;
     }
+}
+
+export class DefaultChannelCreateData {
+    public constructor(
+        {
+            repository,
+            branch,
+            channelId,
+            enabled,
+        }: {
+            repository: string,
+            branch: string,
+            channelId: number,
+            enabled?: boolean,
+        }
+    ) {
+        this._repository = repository;
+        this._branch = branch;
+        this._channelId = channelId;
+        this._enabled = enabled;
+    }
+
+    private _repository: string;
+
+    public get repository(): string {
+        return this._repository;
+    }
+
+    public set repository(__value: string) {
+        this._repository = __value;
+    }
+
+    private _branch: string;
+
+    public get branch(): string {
+        return this._branch;
+    }
+
+    public set branch(__value: string) {
+        this._branch = __value;
+    }
+
+    private _channelId: number;
+
+    public get channelId(): number {
+        return this._channelId;
+    }
+
+    public set channelId(__value: number) {
+        this._channelId = __value;
+    }
+
+    private _enabled?: boolean;
+
+    public get enabled(): boolean | undefined {
+        return this._enabled;
+    }
+
+    public set enabled(__value: boolean | undefined) {
+        this._enabled = __value;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._repository !== undefined &&
+            this._branch !== undefined &&
+            this._channelId !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): DefaultChannelCreateData {
+        let result = new DefaultChannelCreateData({
+            repository: value["repository"] == null ? undefined : value["repository"] as any,
+            branch: value["branch"] == null ? undefined : value["branch"] as any,
+            channelId: value["channelId"] == null ? undefined : value["channelId"] as any,
+            enabled: value["enabled"] == null ? undefined : value["enabled"] as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: DefaultChannelCreateData): any {
+        let result: any = {};
+        result["repository"] = value._repository;
+        result["branch"] = value._branch;
+        result["channelId"] = value._channelId;
+        if (value._enabled) {
+            result["enabled"] = value._enabled;
+        }
+        return result;
+    }
+}
+
+export class DefaultChannelUpdateData {
+    public constructor(
+        {
+            repository,
+            branch,
+            channelId,
+            enabled,
+        }: {
+            repository?: string,
+            branch?: string,
+            channelId?: number,
+            enabled?: boolean,
+        }
+    ) {
+        this._repository = repository;
+        this._branch = branch;
+        this._channelId = channelId;
+        this._enabled = enabled;
+    }
+
+    private _repository?: string;
+
+    public get repository(): string | undefined {
+        return this._repository;
+    }
+
+    public set repository(__value: string | undefined) {
+        this._repository = __value;
+    }
+
+    private _branch?: string;
+
+    public get branch(): string | undefined {
+        return this._branch;
+    }
+
+    public set branch(__value: string | undefined) {
+        this._branch = __value;
+    }
+
+    private _channelId?: number;
+
+    public get channelId(): number | undefined {
+        return this._channelId;
+    }
+
+    public set channelId(__value: number | undefined) {
+        this._channelId = __value;
+    }
+
+    private _enabled?: boolean;
+
+    public get enabled(): boolean | undefined {
+        return this._enabled;
+    }
+
+    public set enabled(__value: boolean | undefined) {
+        this._enabled = __value;
+    }
+
+    public static fromRawObject(value: any): DefaultChannelUpdateData {
+        let result = new DefaultChannelUpdateData({
+            repository: value["repository"] == null ? undefined : value["repository"] as any,
+            branch: value["branch"] == null ? undefined : value["branch"] as any,
+            channelId: value["channelId"] == null ? undefined : value["channelId"] as any,
+            enabled: value["enabled"] == null ? undefined : value["enabled"] as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: DefaultChannelUpdateData): any {
+        let result: any = {};
+        if (value._repository) {
+            result["repository"] = value._repository;
+        }
+        if (value._branch) {
+            result["branch"] = value._branch;
+        }
+        if (value._channelId) {
+            result["channelId"] = value._channelId;
+        }
+        if (value._enabled) {
+            result["enabled"] = value._enabled;
+        }
+        return result;
+    }
+}
+
+export class FlowEdge {
+    public constructor(
+        {
+            toId,
+            fromId,
+            onLongestBuildPath,
+        }: {
+            toId?: string,
+            fromId?: string,
+            onLongestBuildPath: boolean,
+        }
+    ) {
+        this._toId = toId;
+        this._fromId = fromId;
+        this._onLongestBuildPath = onLongestBuildPath;
+    }
+
+    private _toId?: string;
+
+    public get toId(): string | undefined {
+        return this._toId;
+    }
+
+    private _fromId?: string;
+
+    public get fromId(): string | undefined {
+        return this._fromId;
+    }
+
+    private _onLongestBuildPath: boolean;
+
+    public get onLongestBuildPath(): boolean {
+        return this._onLongestBuildPath;
+    }
+
+    public set onLongestBuildPath(__value: boolean) {
+        this._onLongestBuildPath = __value;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._onLongestBuildPath !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): FlowEdge {
+        let result = new FlowEdge({
+            toId: value["toId"] == null ? undefined : value["toId"] as any,
+            fromId: value["fromId"] == null ? undefined : value["fromId"] as any,
+            onLongestBuildPath: value["onLongestBuildPath"] == null ? undefined : value["onLongestBuildPath"] as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: FlowEdge): any {
+        let result: any = {};
+        if (value._toId) {
+            result["toId"] = value._toId;
+        }
+        if (value._fromId) {
+            result["fromId"] = value._fromId;
+        }
+        result["onLongestBuildPath"] = value._onLongestBuildPath;
+        return result;
+    }
+}
+
+export class FlowGraph {
+    public constructor(
+        {
+            flowRefs,
+            flowEdges,
+        }: {
+            flowRefs: FlowRef[],
+            flowEdges: FlowEdge[],
+        }
+    ) {
+        this._flowRefs = flowRefs;
+        this._flowEdges = flowEdges;
+    }
+
+    private _flowRefs: FlowRef[];
+
+    public get flowRefs(): FlowRef[] {
+        return this._flowRefs;
+    }
+
+    private _flowEdges: FlowEdge[];
+
+    public get flowEdges(): FlowEdge[] {
+        return this._flowEdges;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._flowRefs !== undefined &&
+            this._flowEdges !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): FlowGraph {
+        let result = new FlowGraph({
+            flowRefs: value["flowRefs"] == null ? undefined : value["flowRefs"].map((e: any) => FlowRef.fromRawObject(e)) as any,
+            flowEdges: value["flowEdges"] == null ? undefined : value["flowEdges"].map((e: any) => FlowEdge.fromRawObject(e)) as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: FlowGraph): any {
+        let result: any = {};
+        result["flowRefs"] = value._flowRefs.map((e: any) => FlowRef.toRawObject(e));
+        result["flowEdges"] = value._flowEdges.map((e: any) => FlowEdge.toRawObject(e));
+        return result;
+    }
+}
+
+export class FlowRef {
+    public constructor(
+        {
+            repository,
+            branch,
+            id,
+            officialBuildTime,
+            prBuildTime,
+            onLongestBuildPath,
+            bestCasePathTime,
+            worstCasePathTime,
+            goalTimeInMinutes,
+        }: {
+            repository?: string,
+            branch?: string,
+            id?: string,
+            officialBuildTime: number,
+            prBuildTime: number,
+            onLongestBuildPath: boolean,
+            bestCasePathTime: number,
+            worstCasePathTime: number,
+            goalTimeInMinutes: number,
+        }
+    ) {
+        this._repository = repository;
+        this._branch = branch;
+        this._id = id;
+        this._officialBuildTime = officialBuildTime;
+        this._prBuildTime = prBuildTime;
+        this._onLongestBuildPath = onLongestBuildPath;
+        this._bestCasePathTime = bestCasePathTime;
+        this._worstCasePathTime = worstCasePathTime;
+        this._goalTimeInMinutes = goalTimeInMinutes;
+    }
+
+    private _repository?: string;
+
+    public get repository(): string | undefined {
+        return this._repository;
+    }
+
+    private _branch?: string;
+
+    public get branch(): string | undefined {
+        return this._branch;
+    }
+
+    private _id?: string;
+
+    public get id(): string | undefined {
+        return this._id;
+    }
+
+    private _officialBuildTime: number;
+
+    public get officialBuildTime(): number {
+        return this._officialBuildTime;
+    }
+
+    private _prBuildTime: number;
+
+    public get prBuildTime(): number {
+        return this._prBuildTime;
+    }
+
+    private _onLongestBuildPath: boolean;
+
+    public get onLongestBuildPath(): boolean {
+        return this._onLongestBuildPath;
+    }
+
+    public set onLongestBuildPath(__value: boolean) {
+        this._onLongestBuildPath = __value;
+    }
+
+    private _bestCasePathTime: number;
+
+    public get bestCasePathTime(): number {
+        return this._bestCasePathTime;
+    }
+
+    public set bestCasePathTime(__value: number) {
+        this._bestCasePathTime = __value;
+    }
+
+    private _worstCasePathTime: number;
+
+    public get worstCasePathTime(): number {
+        return this._worstCasePathTime;
+    }
+
+    public set worstCasePathTime(__value: number) {
+        this._worstCasePathTime = __value;
+    }
+
+    private _goalTimeInMinutes: number;
+
+    public get goalTimeInMinutes(): number {
+        return this._goalTimeInMinutes;
+    }
+
+    public set goalTimeInMinutes(__value: number) {
+        this._goalTimeInMinutes = __value;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._officialBuildTime !== undefined &&
+            this._prBuildTime !== undefined &&
+            this._onLongestBuildPath !== undefined &&
+            this._bestCasePathTime !== undefined &&
+            this._worstCasePathTime !== undefined &&
+            this._goalTimeInMinutes !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): FlowRef {
+        let result = new FlowRef({
+            repository: value["repository"] == null ? undefined : value["repository"] as any,
+            branch: value["branch"] == null ? undefined : value["branch"] as any,
+            id: value["id"] == null ? undefined : value["id"] as any,
+            officialBuildTime: value["officialBuildTime"] == null ? undefined : value["officialBuildTime"] as any,
+            prBuildTime: value["prBuildTime"] == null ? undefined : value["prBuildTime"] as any,
+            onLongestBuildPath: value["onLongestBuildPath"] == null ? undefined : value["onLongestBuildPath"] as any,
+            bestCasePathTime: value["bestCasePathTime"] == null ? undefined : value["bestCasePathTime"] as any,
+            worstCasePathTime: value["worstCasePathTime"] == null ? undefined : value["worstCasePathTime"] as any,
+            goalTimeInMinutes: value["goalTimeInMinutes"] == null ? undefined : value["goalTimeInMinutes"] as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: FlowRef): any {
+        let result: any = {};
+        if (value._repository) {
+            result["repository"] = value._repository;
+        }
+        if (value._branch) {
+            result["branch"] = value._branch;
+        }
+        if (value._id) {
+            result["id"] = value._id;
+        }
+        result["officialBuildTime"] = value._officialBuildTime;
+        result["prBuildTime"] = value._prBuildTime;
+        result["onLongestBuildPath"] = value._onLongestBuildPath;
+        result["bestCasePathTime"] = value._bestCasePathTime;
+        result["worstCasePathTime"] = value._worstCasePathTime;
+        result["goalTimeInMinutes"] = value._goalTimeInMinutes;
+        return result;
+    }
+}
+
+export class Goal {
+    public constructor(
+        {
+            definitionId,
+            channel,
+            minutes,
+        }: {
+            definitionId: number,
+            channel?: Channel,
+            minutes: number,
+        }
+    ) {
+        this._definitionId = definitionId;
+        this._channel = channel;
+        this._minutes = minutes;
+    }
+
+    private _definitionId: number;
+
+    public get definitionId(): number {
+        return this._definitionId;
+    }
+
+    public set definitionId(__value: number) {
+        this._definitionId = __value;
+    }
+
+    private _channel?: Channel;
+
+    public get channel(): Channel | undefined {
+        return this._channel;
+    }
+
+    public set channel(__value: Channel | undefined) {
+        this._channel = __value;
+    }
+
+    private _minutes: number;
+
+    public get minutes(): number {
+        return this._minutes;
+    }
+
+    public set minutes(__value: number) {
+        this._minutes = __value;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._definitionId !== undefined &&
+            this._minutes !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): Goal {
+        let result = new Goal({
+            definitionId: value["definitionId"] == null ? undefined : value["definitionId"] as any,
+            channel: value["channel"] == null ? undefined : Channel.fromRawObject(value["channel"]) as any,
+            minutes: value["minutes"] == null ? undefined : value["minutes"] as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: Goal): any {
+        let result: any = {};
+        result["definitionId"] = value._definitionId;
+        if (value._channel) {
+            result["channel"] = Channel.toRawObject(value._channel);
+        }
+        result["minutes"] = value._minutes;
+        return result;
+    }
+}
+
+export class GoalRequestJson {
+    public constructor(
+        {
+            minutes,
+        }: {
+            minutes: number,
+        }
+    ) {
+        this._minutes = minutes;
+    }
+
+    private _minutes: number;
+
+    public get minutes(): number {
+        return this._minutes;
+    }
+
+    public set minutes(__value: number) {
+        this._minutes = __value;
+    }
+    
+    public isValid(): boolean {
+        return (
+            this._minutes !== undefined
+        );
+    }
+
+    public static fromRawObject(value: any): GoalRequestJson {
+        let result = new GoalRequestJson({
+            minutes: value["minutes"] == null ? undefined : value["minutes"] as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: GoalRequestJson): any {
+        let result: any = {};
+        result["minutes"] = value._minutes;
+        return result;
+    }
+}
+
+export enum LocationType {
+    None = "none",
+    NugetFeed = "nugetFeed",
+    Container = "container",
 }
 
 export class MergePolicy {
@@ -1228,165 +2015,72 @@ export class MergePolicy {
     }
 }
 
-export class PostData {
+export class RepositoryBranch {
     public constructor(
         {
             repository,
             branch,
-            channelId,
+            mergePolicies,
         }: {
-            repository: string,
-            branch: string,
-            channelId: number,
+            repository?: string,
+            branch?: string,
+            mergePolicies?: MergePolicy[],
         }
     ) {
         this._repository = repository;
         this._branch = branch;
-        this._channelId = channelId;
+        this._mergePolicies = mergePolicies;
     }
 
-    private _repository: string;
+    private _repository?: string;
 
-    public get repository(): string {
+    public get repository(): string | undefined {
         return this._repository;
     }
 
-    public set repository(__value: string) {
+    public set repository(__value: string | undefined) {
         this._repository = __value;
     }
 
-    private _branch: string;
+    private _branch?: string;
 
-    public get branch(): string {
+    public get branch(): string | undefined {
         return this._branch;
     }
 
-    public set branch(__value: string) {
+    public set branch(__value: string | undefined) {
         this._branch = __value;
     }
 
-    private _channelId: number;
+    private _mergePolicies?: MergePolicy[];
 
-    public get channelId(): number {
-        return this._channelId;
+    public get mergePolicies(): MergePolicy[] | undefined {
+        return this._mergePolicies;
     }
 
-    public set channelId(__value: number) {
-        this._channelId = __value;
-    }
-    
-    public isValid(): boolean {
-        return (
-            this._repository !== undefined &&
-            this._branch !== undefined &&
-            this._channelId !== undefined
-        );
+    public set mergePolicies(__value: MergePolicy[] | undefined) {
+        this._mergePolicies = __value;
     }
 
-    public static fromRawObject(value: any): PostData {
-        let result = new PostData({
+    public static fromRawObject(value: any): RepositoryBranch {
+        let result = new RepositoryBranch({
             repository: value["repository"] == null ? undefined : value["repository"] as any,
             branch: value["branch"] == null ? undefined : value["branch"] as any,
-            channelId: value["channelId"] == null ? undefined : value["channelId"] as any,
+            mergePolicies: value["mergePolicies"] == null ? undefined : value["mergePolicies"].map((e: any) => MergePolicy.fromRawObject(e)) as any,
         });
         return result;
     }
 
-    public static toRawObject(value: PostData): any {
+    public static toRawObject(value: RepositoryBranch): any {
         let result: any = {};
-        result["repository"] = value._repository;
-        result["branch"] = value._branch;
-        result["channelId"] = value._channelId;
-        return result;
-    }
-}
-
-export class ReleasePipeline {
-    public constructor(
-        {
-            id,
-            pipelineIdentifier,
-            organization,
-            project,
-        }: {
-            id: number,
-            pipelineIdentifier: number,
-            organization?: string,
-            project?: string,
+        if (value._repository) {
+            result["repository"] = value._repository;
         }
-    ) {
-        this._id = id;
-        this._pipelineIdentifier = pipelineIdentifier;
-        this._organization = organization;
-        this._project = project;
-    }
-
-    private _id: number;
-
-    public get id(): number {
-        return this._id;
-    }
-
-    public set id(__value: number) {
-        this._id = __value;
-    }
-
-    private _pipelineIdentifier: number;
-
-    public get pipelineIdentifier(): number {
-        return this._pipelineIdentifier;
-    }
-
-    public set pipelineIdentifier(__value: number) {
-        this._pipelineIdentifier = __value;
-    }
-
-    private _organization?: string;
-
-    public get organization(): string | undefined {
-        return this._organization;
-    }
-
-    public set organization(__value: string | undefined) {
-        this._organization = __value;
-    }
-
-    private _project?: string;
-
-    public get project(): string | undefined {
-        return this._project;
-    }
-
-    public set project(__value: string | undefined) {
-        this._project = __value;
-    }
-    
-    public isValid(): boolean {
-        return (
-            this._id !== undefined &&
-            this._pipelineIdentifier !== undefined
-        );
-    }
-
-    public static fromRawObject(value: any): ReleasePipeline {
-        let result = new ReleasePipeline({
-            id: value["id"] == null ? undefined : value["id"] as any,
-            pipelineIdentifier: value["pipelineIdentifier"] == null ? undefined : value["pipelineIdentifier"] as any,
-            organization: value["organization"] == null ? undefined : value["organization"] as any,
-            project: value["project"] == null ? undefined : value["project"] as any,
-        });
-        return result;
-    }
-
-    public static toRawObject(value: ReleasePipeline): any {
-        let result: any = {};
-        result["id"] = value._id;
-        result["pipelineIdentifier"] = value._pipelineIdentifier;
-        if (value._organization) {
-            result["organization"] = value._organization;
+        if (value._branch) {
+            result["branch"] = value._branch;
         }
-        if (value._project) {
-            result["project"] = value._project;
+        if (value._mergePolicies) {
+            result["mergePolicies"] = value._mergePolicies.map((e: any) => MergePolicy.toRawObject(e));
         }
         return result;
     }
@@ -1875,7 +2569,7 @@ export class SubscriptionPolicy {
             mergePolicies,
         }: {
             batchable: boolean,
-            updateFrequency: SubscriptionPolicyUpdateFrequency,
+            updateFrequency: UpdateFrequency,
             mergePolicies?: MergePolicy[],
         }
     ) {
@@ -1894,13 +2588,13 @@ export class SubscriptionPolicy {
         this._batchable = __value;
     }
 
-    private _updateFrequency: SubscriptionPolicyUpdateFrequency;
+    private _updateFrequency: UpdateFrequency;
 
-    public get updateFrequency(): SubscriptionPolicyUpdateFrequency {
+    public get updateFrequency(): UpdateFrequency {
         return this._updateFrequency;
     }
 
-    public set updateFrequency(__value: SubscriptionPolicyUpdateFrequency) {
+    public set updateFrequency(__value: UpdateFrequency) {
         this._updateFrequency = __value;
     }
 
@@ -1939,12 +2633,6 @@ export class SubscriptionPolicy {
         }
         return result;
     }
-}
-
-export enum SubscriptionPolicyUpdateFrequency {
-    None = "none",
-    EveryDay = "everyDay",
-    EveryBuild = "everyBuild",
 }
 
 export class SubscriptionUpdate {
@@ -2033,4 +2721,12 @@ export class SubscriptionUpdate {
         }
         return result;
     }
+}
+
+export enum UpdateFrequency {
+    None = "none",
+    EveryDay = "everyDay",
+    EveryBuild = "everyBuild",
+    TwiceDaily = "twiceDaily",
+    EveryWeek = "everyWeek",
 }

@@ -357,7 +357,7 @@ namespace SubscriptionActorService
                 // If the PR is currently open, then evaluate the merge policies, which will potentially
                 // merge the PR if they are successul.
                 case PrStatus.Open:
-                    ActionResult<MergePolicyCheckResult> checkPolicyResult = await CheckMergePolicyAsync(prUrl, darc);
+                    ActionResult<MergePolicyCheckResult> checkPolicyResult = await CheckMergePolicyAsync(pr, darc);
                     pr.MergePolicyResult = checkPolicyResult.Result;
 
                     switch (checkPolicyResult.Result)
@@ -400,6 +400,16 @@ namespace SubscriptionActorService
                         pr.MergePolicyResult,
                         prUrl);
                     await StateManager.RemoveStateAsync(PullRequest);
+
+                    // Also try to clean up the PR branch.
+                    try
+                    {
+                        await darc.DeletePullRequestBranchAsync(prUrl);
+                    }
+                    catch (DarcException e)
+                    {
+                        Logger.LogInformation(e, $"Failed to delete Branch associated with pull request {prUrl}");
+                    }
                     return ActionResult.Create(SynchronizePullRequestResult.Completed, $"PR Has been manually {status}");
                 default:
                     throw new NotImplementedException($"Unknown pr status '{status}'");
@@ -412,11 +422,11 @@ namespace SubscriptionActorService
         /// <param name="prUrl">Pull request URL</param>
         /// <param name="darc">Darc remote</param>
         /// <returns>Result of the policy check.</returns>
-        private async Task<ActionResult<MergePolicyCheckResult>> CheckMergePolicyAsync(string prUrl, IRemote darc)
+        private async Task<ActionResult<MergePolicyCheckResult>> CheckMergePolicyAsync(IPullRequest pr, IRemote darc)
         {
             IReadOnlyList<MergePolicyDefinition> policyDefinitions = await GetMergePolicyDefinitions();
             MergePolicyEvaluationResult result = await MergePolicyEvaluator.EvaluateAsync(
-                prUrl,
+                pr,
                 darc,
                 policyDefinitions);
 
@@ -424,7 +434,7 @@ namespace SubscriptionActorService
             {
                 await UpdateStatusCommentAsync(
                     darc,
-                    prUrl,
+                    pr.Url,
                     $@"## Auto-Merge Status
 This pull request has not been merged because Maestro++ is waiting on the following merge policies.
 
@@ -432,7 +442,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
 
                 return ActionResult.Create(
                     result.Pending ? MergePolicyCheckResult.PendingPolicies : MergePolicyCheckResult.FailedPolicies,
-                    $"NOT Merged: PR '{prUrl}' failed policies {string.Join(", ", result.Results.Where(r => r.Success == null || r.Success == false).Select(r => r.Policy?.Name + r.Message))}");
+                    $"NOT Merged: PR '{pr.Url}' failed policies {string.Join(", ", result.Results.Where(r => r.Success == null || r.Success == false).Select(r => r.Policy?.Name + r.Message))}");
             }
 
             if (result.Succeeded)
@@ -440,7 +450,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
                 var merged = false;
                 try
                 {
-                    await darc.MergePullRequestAsync(prUrl, new MergePullRequestParameters());
+                    await darc.MergePullRequestAsync(pr.Url, new MergePullRequestParameters());
                     merged = true;
                 }
                 catch
@@ -450,7 +460,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
 
                 await UpdateStatusCommentAsync(
                     darc,
-                    prUrl,
+                    pr.Url,
                     $@"## Auto-Merge Status
 This pull request {(merged ? "has been merged" : "will be merged")} because the following merge policies have succeeded.
 
@@ -460,10 +470,10 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 {
                     return ActionResult.Create(
                         MergePolicyCheckResult.Merged,
-                        $"Merged: PR '{prUrl}' passed policies {string.Join(", ", policyDefinitions.Select(p => p.Name))}");
+                        $"Merged: PR '{pr.Url}' passed policies {string.Join(", ", policyDefinitions.Select(p => p.Name))}");
                 }
 
-                return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{prUrl}' has merge conflicts.");
+                return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{pr.Url}' has merge conflicts.");
             }
 
             return ActionResult.Create(MergePolicyCheckResult.NoPolicies, "NOT Merged: There are no merge policies");
@@ -663,7 +673,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             (string targetRepository, string targetBranch) = await GetTargetAsync();
             IRemote darcRemote = await DarcRemoteFactory.GetRemoteAsync(targetRepository, Logger);
 
-            List<(UpdateAssetsParameters update, List<DependencyDetail> deps)> requiredUpdates =
+            List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> requiredUpdates =
                 await GetRequiredUpdates(updates, DarcRemoteFactory, targetRepository, targetBranch);
 
             if (requiredUpdates.Count < 1)
@@ -694,7 +704,17 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                                 SubscriptionId = u.update.SubscriptionId,
                                 BuildId = u.update.BuildId
                             })
-                        .ToList()
+                        .ToList(),
+
+                    RequiredUpdates = requiredUpdates
+                            .SelectMany(update => update.deps)
+                            .Select(du => new DependencyUpdateSummary
+                            {
+                                DependencyName = du.To.Name,
+                                FromVersion = du.From.Version,
+                                ToVersion = du.To.Version
+                            })
+                            .ToList()
                 };
 
                 string prUrl = await darcRemote.CreatePullRequestAsync(
@@ -761,7 +781,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         /// <param name="newBranchName">Target branch the updates should be to</param>
         /// <returns></returns>
         private async Task CommitUpdatesAsync(
-            List<(UpdateAssetsParameters update, List<DependencyDetail> deps)> requiredUpdates,
+            List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> requiredUpdates,
             StringBuilder description,
             IRemote darc,
             string targetRepository,
@@ -769,31 +789,31 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         {
             // First run through non-coherency and then do a coherency
             // message if one exists.
-            List<(UpdateAssetsParameters update, List<DependencyDetail> deps)> nonCoherencyUpdates =
+            List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> nonCoherencyUpdates =
                 requiredUpdates.Where(u => !u.update.IsCoherencyUpdate).ToList();
             // Should max one coherency update
-            (UpdateAssetsParameters update, List<DependencyDetail> deps) coherencyUpdate =
+            (UpdateAssetsParameters update, List<DependencyUpdate> deps) coherencyUpdate =
                 requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
 
             // To keep a PR to as few commits as possible, if the number of
             // non-coherency updates is 1 then combine coherency updates with those.
             // Otherwise, put all coherency updates in a separate commit.
             bool combineCoherencyWithNonCoherency = (nonCoherencyUpdates.Count == 1);
-            foreach ((UpdateAssetsParameters update, List<DependencyDetail> deps) in nonCoherencyUpdates)
+            foreach ((UpdateAssetsParameters update, List<DependencyUpdate> deps) in nonCoherencyUpdates)
             {
                 var message = new StringBuilder();
-                List<DependencyDetail> dependenciesToCommit = deps;
+                List<DependencyUpdate> dependenciesToCommit = deps;
                 await CalculateCommitMessage(update, deps, message);
-                await CalculatePRDescription(update, deps, description);
 
                 if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
                 {
                     await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                    await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, description);
+                    await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description);
                     dependenciesToCommit.AddRange(coherencyUpdate.deps);
                 }
 
-                await darc.CommitUpdatesAsync(targetRepository, newBranchName, dependenciesToCommit, message.ToString());
+                List<GitFile> committedFiles = await darc.CommitUpdatesAsync(targetRepository, newBranchName, dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
+                await CalculatePRDescription(update, deps, committedFiles, description);
             }
 
             // If the coherency update wasn't combined, then
@@ -802,21 +822,52 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             {
                 var message = new StringBuilder();
                 await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, description);
-                await darc.CommitUpdatesAsync(targetRepository, newBranchName, coherencyUpdate.deps, message.ToString());
+                await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description);
+
+                await darc.CommitUpdatesAsync(targetRepository, newBranchName, coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
             }
         }
 
-        private async Task CalculateCommitMessage(UpdateAssetsParameters update, List<DependencyDetail> deps, StringBuilder message)
+        public static void UpdatePRDescriptionDueConfigFiles(List<GitFile> committedFiles, StringBuilder globalJsonSection)
+        {
+            GitFile globalJsonFile = committedFiles?.
+                Where(gf => gf.FilePath.Equals("global.json", StringComparison.OrdinalIgnoreCase)).
+                FirstOrDefault();
+
+            // The list of committedFiles can contain the `global.json` file (and others) 
+            // even though no actual change was made to the file and therefore there is no 
+            // metadata for it.
+            if (globalJsonFile?.Metadata != null)
+            {
+                bool hasSdkVersionUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.SdkVersionUpdate);
+                bool hasToolsDotnetUpdate = globalJsonFile.Metadata.ContainsKey(GitFileMetadataName.ToolsDotNetUpdate);
+
+                globalJsonSection.AppendLine("- **Updates to .NET SDKs:**");
+
+                if (hasSdkVersionUpdate)
+                {
+                    globalJsonSection.AppendLine($"  - Updates sdk.version to " +
+                        $"{globalJsonFile.Metadata[GitFileMetadataName.SdkVersionUpdate]}");
+                }
+
+                if (hasToolsDotnetUpdate)
+                {
+                    globalJsonSection.AppendLine($"  - Updates tools.dotnet to " +
+                        $"{globalJsonFile.Metadata[GitFileMetadataName.ToolsDotNetUpdate]}");
+                }
+            }
+        }
+
+        private async Task CalculateCommitMessage(UpdateAssetsParameters update, List<DependencyUpdate> deps, StringBuilder message)
         {
             if (update.IsCoherencyUpdate)
             {
                 message.AppendLine("Dependency coherency updates");
                 message.AppendLine();
 
-                foreach (DependencyDetail dep in deps)
+                foreach (DependencyUpdate dep in deps)
                 {
-                    message.AppendLine($"- {dep.Name} - {dep.Version} (parent: {dep.CoherentParentDependencyName})");
+                    message.AppendLine($"- {dep.To.Name}: {dep.From.Version} -> {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
                 }
             }
             else
@@ -826,9 +877,9 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 message.AppendLine($"Update dependencies from {sourceRepository} build {build.AzureDevOpsBuildNumber}");
                 message.AppendLine();
 
-                foreach (DependencyDetail dep in deps)
+                foreach (DependencyUpdate dep in deps)
                 {
-                    message.AppendLine($"- {dep.Name} - {dep.Version}");
+                    message.AppendLine($"- {dep.To.Name}: {dep.From.Version} -> {dep.To.Version}");
                 }
             }
 
@@ -846,9 +897,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         ///     Because PRs tend to be live for short periods of time, we can put more information
         ///     in the description than the commit message without worrying that links will go stale.
         /// </remarks>
-        private async Task CalculatePRDescription(UpdateAssetsParameters update, List<DependencyDetail> deps, StringBuilder description)
+        private async Task CalculatePRDescription(UpdateAssetsParameters update, List<DependencyUpdate> deps, List<GitFile> committedFiles, StringBuilder description)
         {
-
             //Find the Coherency section of the PR description
             if (update.IsCoherencyUpdate)
             {
@@ -865,9 +915,9 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 coherencySection.AppendLine("See [Dependency Description Format](https://github.com/dotnet/arcade/blob/master/Documentation/DependencyDescriptionFormat.md#dependency-description-overview)");
                 coherencySection.AppendLine();
 
-                foreach (DependencyDetail dep in deps)
+                foreach (DependencyUpdate dep in deps)
                 {
-                    coherencySection.AppendLine($"- **{dep.Name}** -> {dep.Version} (parent: {dep.CoherentParentDependencyName})");
+                    coherencySection.AppendLine($"- **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
                 }
                 coherencySection.AppendLine();
                 coherencySection.AppendLine(sectionEndMarker);
@@ -897,10 +947,13 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 }
                 subscriptionSection.AppendLine($"- **Updates**:");
 
-                foreach (DependencyDetail dep in deps)
+                foreach (DependencyUpdate dep in deps)
                 {
-                    subscriptionSection.AppendLine($"  - **{dep.Name}** -> {dep.Version}");
+                    subscriptionSection.AppendLine($"  - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version}");
                 }
+
+                UpdatePRDescriptionDueConfigFiles(committedFiles, subscriptionSection);
+
                 subscriptionSection.AppendLine();
                 subscriptionSection.AppendLine(sectionEndMarker);
                 description.Insert(sectionStartIndex, subscriptionSection.ToString());
@@ -930,7 +983,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             (string targetRepository, string targetBranch) = await GetTargetAsync();
             IRemote darcRemote = await DarcRemoteFactory.GetRemoteAsync(targetRepository, Logger);
 
-            List<(UpdateAssetsParameters update, List<DependencyDetail> deps)> requiredUpdates =
+            List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> requiredUpdates =
                 await GetRequiredUpdates(updates, DarcRemoteFactory, targetRepository, targetBranch);
 
             if (requiredUpdates.Count < 1)
@@ -947,7 +1000,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             // Replace all existing updates for the subscription id with the new update.
             // This avoids a potential issue where we may update the last applied build id
             // on the subscription to an older build id.
-            foreach ((UpdateAssetsParameters update, List<DependencyDetail> deps) update in requiredUpdates)
+            foreach ((UpdateAssetsParameters update, List<DependencyUpdate> deps) update in requiredUpdates)
             {
                 pr.ContainedSubscriptions.RemoveAll(s => s.SubscriptionId == update.update.SubscriptionId);
             }
@@ -1011,7 +1064,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         ///     updates required based on the input updates.  The second pass uses the repo state + the
         ///     updates from the first pass to determine what else needs to change based on the coherency metadata.
         /// </remarks>
-        private async Task<List<(UpdateAssetsParameters update, List<DependencyDetail> deps)>> GetRequiredUpdates(
+        private async Task<List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)>> GetRequiredUpdates(
             List<UpdateAssetsParameters> updates,
             IRemoteFactory remoteFactory,
             string targetRepository,
@@ -1020,7 +1073,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             // Get a remote factory for the target repo
             IRemote darc = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
 
-            var requiredUpdates = new List<(UpdateAssetsParameters update, List<DependencyDetail> deps)>();
+            var requiredUpdates = new List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)>();
             // Existing details 
             List<DependencyDetail> existingDependencies = (await darc.GetDependenciesAsync(targetRepository, branch)).ToList();
 
@@ -1055,14 +1108,13 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     continue;
                 }
 
-                List<DependencyDetail> targetOfUpdates = dependenciesToUpdate.Select(u => u.To).ToList();
                 // Update the existing details list
                 foreach (DependencyUpdate dependencyUpdate in dependenciesToUpdate)
                 {
                     existingDependencies.Remove(dependencyUpdate.From);
                     existingDependencies.Add(dependencyUpdate.To);
                 }
-                requiredUpdates.Add((update, targetOfUpdates));
+                requiredUpdates.Add((update, dependenciesToUpdate));
             }
 
             // Once we have applied all of non coherent updates, then we need to run a coherency check on the
@@ -1078,7 +1130,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 {
                     IsCoherencyUpdate = true
                 };
-                requiredUpdates.Add((coherencyUpdateParameters, coherencyUpdates.Select(u => u.To).ToList()));
+                requiredUpdates.Add((coherencyUpdateParameters, coherencyUpdates.ToList()));
             }
 
             return requiredUpdates;

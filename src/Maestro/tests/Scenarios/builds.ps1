@@ -64,7 +64,7 @@ try {
 
     # Gather a drop with released included
     $gatherWithReleasedDir = Join-Path -Path $testRoot -ChildPath "gather-with-released"
-    $darcParams = @( "gather-drop", "--id", "$buildId", "--dry-run", "--output-dir", $gatherWithReleasedDir )
+    $darcParams = @( "gather-drop", "--id", "$buildId", "--dry-run", "--include-released", "--output-dir", $gatherWithReleasedDir )
     $gatherDropOutput = Darc-Command -darcParams $darcParams
     if ((-not $gatherDropOutput -match "Gathering drop for build $sourceBuildNumber")) {
         throw "Build should download build $sourceBuildNumber"
@@ -74,28 +74,34 @@ try {
         throw "Build should download both Foo and Bar"
     }
 
-    # Gather with release excluded
+    # Gather with release excluded (default behavior). gather-drop should throw an error
     $gatherWithNoReleasedDir = Join-Path -Path $testRoot -ChildPath "gather-no-released"
-    $darcParams = @( "gather-drop", "--id", "$buildId", "--dry-run", "--skip-released", "--output-dir", $gatherWithNoReleasedDir )
-    $gatherDropOutput = Darc-Command -darcParams $darcParams
-    if ((-not $gatherDropOutput -match "Skipping download of released build $sourceBuildNumber of $sourceRepoUri @ $sourceCommit")) {
-        throw "Build should not download build $sourceBuildNumber"
+    $darcParams = @( "gather-drop", "--id", "$buildId", "--dry-run", "--output-dir", $gatherWithNoReleasedDir )
+    $gatherDropOutput = $null
+    try {
+        $gatherDropOutput = Darc-Command -darcParams $darcParams
+        throw "Gather-drop should fail if all builds are released"
     }
-    if (($gatherDropOutput -match "Downloading asset Bar@2.1.0") -or
-        ($gatherDropOutput -match "Downloading asset Foo@1.1.0")) {
-        throw "Build should not download either Foo or Bar"
+    catch {
+        if ((-not $gatherDropOutput -match "Skipping download of released build $sourceBuildNumber of $sourceRepoUri @ $sourceCommit")) {
+            throw "Build should not download build $sourceBuildNumber"
+        }
+        if (($gatherDropOutput -match "Downloading asset Bar@2.1.0") -or
+            ($gatherDropOutput -match "Downloading asset Foo@1.1.0")) {
+            throw "Build should not download either Foo or Bar"
+        }
     }
     Write-Host $gatherDropOutput
 
     # Unrelease the build
-    # $output = Darc-Update-Build -id $buildId -updateParams @( "--not-released" )
+    $output = Darc-Update-Build -id $buildId -updateParams @( "--not-released" )
     if (-not $output -match "Released: +False") {
         throw "Build should be marked unreleased"
     }
 
-    # Gather with release excluded
+    # Gather with release excluded again (defualt behavior)
     $gatherWithNoReleased2Dir = Join-Path -Path $testRoot -ChildPath "gather-no-released-2"
-    $darcParams = @( "gather-drop", "--id", "$buildId", "--dry-run", "--skip-released", "--output-dir", $gatherWithNoReleased2Dir )
+    $darcParams = @( "gather-drop", "--id", "$buildId", "--dry-run", "--output-dir", $gatherWithNoReleased2Dir )
     $gatherDropOutput = Darc-Command -darcParams $darcParams
     if ((-not $gatherDropOutput -match "Gathering drop for build $sourceBuildNumber")) {
         throw "Build should download build $sourceBuildNumber"

@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
+    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
+    <SignAssembly>false</SignAssembly>
+    <LangVersion>7.1</LangVersion>
+    <DebugType>Full</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include=".config\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Identity" Version="1.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
+    <PackageReference Include="Microsoft.ServiceFabric" Version="6.5.677" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="3.4.677" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" Version="3.4.677" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.AzureAppConfiguration" Version="3.0.0-preview-011100001-1152" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.DncEng.Configuration.Extensions\Microsoft.DncEng.Configuration.Extensions.csproj" />
+    <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
+    <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
+    <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include=".config\settings.Development.json" />
+    <None Include=".config\settings.json" />
+    <None Include=".config\settings.Production.json" />
+    <None Include=".config\settings.Staging.json" />
+  </ItemGroup>
+
+</Project>

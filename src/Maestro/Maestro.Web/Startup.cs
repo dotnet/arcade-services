@@ -18,6 +18,7 @@ using Maestro.AzureDevOps;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.DataProviders;
 using Maestro.MergePolicies;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
@@ -30,6 +31,7 @@ using Microsoft.AspNetCore.Rewrite;
 using Microsoft.AspNetCore.Rewrite.Internal;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -39,10 +41,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using Microsoft.DotNet.Configuration.Extensions;
-using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
+using Microsoft.Azure.Services.AppAuthentication;
 
 namespace Maestro.Web
 {
@@ -55,29 +56,6 @@ namespace Maestro.Web
 
         static Startup()
         {
-            Triggers<BuildChannel>.Inserting += entry =>
-            {
-                BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
-                BuildChannel entity = entry.Entity;
-                Build build = context.Builds.Find(entity.BuildId);
-
-                if (build == null)
-                {
-                    ILogger<Startup> logger = context.GetService<ILogger<Startup>>();
-                    logger.LogError($"Could not find build with id {entity.BuildId} in BAR. Skipping pipeline triggering.");
-                }
-                else
-                {
-                    if (build.PublishUsingPipelines && ChannelHasAssociatedReleasePipeline(entity.ChannelId, context))
-                    {
-                        entry.Cancel = true;
-                        var queue = context.GetService<BackgroundQueue>();
-                        var releasePipelineRunner = context.GetService<IReleasePipelineRunner>();
-                        queue.Post(() => releasePipelineRunner.StartAssociatedReleasePipelinesAsync(entity.BuildId, entity.ChannelId));
-                    }
-                }
-            };
-
             Triggers<BuildChannel>.Inserted += entry =>
             {
                 BuildAssetRegistryContext context = entry.Context as BuildAssetRegistryContext;
@@ -110,29 +88,19 @@ namespace Maestro.Web
                         logger.LogInformation($"Skipping Dependency update for Build {entity.BuildId} because it contains no assets in valid locations");
                     }
                 }
-
             };
-        }
-
-        private static bool ChannelHasAssociatedReleasePipeline(int channelId, BuildAssetRegistryContext context)
-        {
-            return context.Channels
-                .Where(ch => ch.Id == channelId)
-                .Include(ch => ch.ChannelReleasePipelines)
-                .ThenInclude(crp => crp.ReleasePipeline)
-                .FirstOrDefault(c => c.ChannelReleasePipelines.Count > 0) != null;
         }
 
         public Startup(IConfiguration configuration, IHostingEnvironment env)
         {
             HostingEnvironment = env;
-            Configuration = KeyVaultMappedJsonConfigurationExtensions.CreateConfiguration(configuration, env, new ServiceHostKeyVaultProvider(env));
+            Configuration = configuration;
         }
 
         public static readonly TimeSpan LoginCookieLifetime = new TimeSpan(days: 120, hours: 0, minutes: 0, seconds: 0);
 
         public IHostingEnvironment HostingEnvironment { get; set; }
-        public IConfigurationRoot Configuration { get; }
+        public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -148,9 +116,9 @@ namespace Maestro.Web
 
                 string vaultUri = Configuration["KeyVaultUri"];
                 string keyVaultKeyIdentifierName = dpConfig["KeyIdentifier"];
-                KeyVaultClient kvClient = ServiceHostKeyVaultProvider.CreateKeyVaultClient(HostingEnvironment);
+                var provider = new AzureServiceTokenProvider();
+                var kvClient = new KeyVaultClient(new KeyVaultClient.AuthenticationCallback(provider.KeyVaultTokenCallback));
                 KeyBundle key = kvClient.GetKeyAsync(vaultUri, keyVaultKeyIdentifierName).GetAwaiter().GetResult();
-
 
 
                 services.AddDataProtection()
@@ -166,7 +134,18 @@ namespace Maestro.Web
                 options =>
                 {
                     options.CheckConsentNeeded = context => true;
-                    options.MinimumSameSitePolicy = SameSiteMode.None;
+                    options.MinimumSameSitePolicy = SameSiteMode.Lax;
+
+                    options.HttpOnly = Microsoft.AspNetCore.CookiePolicy.HttpOnlyPolicy.Always;
+
+                    if (HostingEnvironment.IsDevelopment())
+                    {
+                        options.Secure = CookieSecurePolicy.SameAsRequest;
+                    }
+                    else
+                    {
+                        options.Secure = CookieSecurePolicy.Always;
+                    }
                 });
 
             services.AddBuildAssetRegistry(
@@ -204,7 +183,6 @@ namespace Maestro.Web
             services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BackgroundQueue>());
 
             services.AddServiceFabricService<IDependencyUpdater>("fabric:/MaestroApplication/DependencyUpdater");
-            services.AddServiceFabricService<IReleasePipelineRunner>("fabric:/MaestroApplication/ReleasePipelineRunner");
 
             services.AddGitHubTokenProvider();
             services.Configure<GitHubClientOptions>(o =>
@@ -236,8 +214,8 @@ namespace Maestro.Web
                 {
                     IConfigurationSection section = Configuration.GetSection("Kusto");
                     section.Bind(options);
-                }
-            );
+                });
+            services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
 
             services.AddMergePolicies();
         }
@@ -257,7 +235,7 @@ namespace Maestro.Web
                     MvcJsonOptions jsonOptions =
                         ctx.RequestServices.GetRequiredService<IOptions<MvcJsonOptions>>().Value;
                     string output = JsonConvert.SerializeObject(result, jsonOptions.SerializerSettings);
-                    ctx.Response.StatusCode = (int) HttpStatusCode.InternalServerError;
+                    ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                     await ctx.Response.WriteAsync(output, Encoding.UTF8);
                 });
         }
@@ -285,7 +263,7 @@ namespace Maestro.Web
 
             using (var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
-                var uri = new UriBuilder(ApiRedirectTarget) {Path = ctx.Request.Path, Query = ctx.Request.QueryString.ToUriComponent(),};
+                var uri = new UriBuilder(ApiRedirectTarget) { Path = ctx.Request.Path, Query = ctx.Request.QueryString.ToUriComponent(), };
                 await ctx.ProxyRequestAsync(client, uri.Uri.AbsoluteUri,
                     req =>
                     {
@@ -337,11 +315,11 @@ namespace Maestro.Web
                             doc.Host = req.Host.Value;
                             if (HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric())
                             {
-                                doc.Schemes = new List<string> {"http"};
+                                doc.Schemes = new List<string> { "http" };
                             }
                             else
                             {
-                                doc.Schemes = new List<string> {"https"};
+                                doc.Schemes = new List<string> { "https" };
                             }
 
                             req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
@@ -366,6 +344,12 @@ namespace Maestro.Web
             // Redirect the entire cookie-authed api if it is in settings.
             if (DoApiRedirect)
             {
+                // when told to not redirect by the request, don't do it.
+                app.MapWhen(ctx => ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _), a =>
+                {
+                    a.UseMvc();
+                });
+
                 app.Run(ApiRedirectHandler);
             }
             else
@@ -391,6 +375,38 @@ namespace Maestro.Web
                 app.UseHsts();
                 app.UseHttpsRedirection();
             }
+
+            // Add security headers
+            app.Use(
+                (ctx, next) =>
+                {
+                    ctx.Response.OnStarting(() =>
+                    {
+                        if (!ctx.Response.Headers.ContainsKey("X-XSS-Protection"))
+                        {
+                            ctx.Response.Headers.Add("X-XSS-Protection", "1");
+                        }
+
+                        if (!ctx.Response.Headers.ContainsKey("X-Frame-Options"))
+                        {
+                            ctx.Response.Headers.Add("X-Frame-Options", "DENY");
+                        }
+
+                        if (!ctx.Response.Headers.ContainsKey("X-Content-Type-Options"))
+                        {
+                            ctx.Response.Headers.Add("X-Content-Type-Options", "nosniff");
+                        }
+
+                        if (!ctx.Response.Headers.ContainsKey("Referrer-Policy"))
+                        {
+                            ctx.Response.Headers.Add("Referrer-Policy", "no-referrer-when-downgrade");
+                        }
+
+                        return Task.CompletedTask;
+                    });
+
+                    return next();
+                });
 
             if (env.IsDevelopment() && !Program.RunningInServiceFabric())
             {

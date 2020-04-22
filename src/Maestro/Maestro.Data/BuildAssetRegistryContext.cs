@@ -15,7 +15,7 @@ using Microsoft.AspNetCore.Hosting.Internal;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.DotNet.EntityFrameworkCore.Extensions;
-using Microsoft.Dotnet.GitHub.Authentication;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -76,6 +76,7 @@ namespace Maestro.Data
         public DbQuery<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory { get; set; }
         public DbSet<DependencyFlowEvent> DependencyFlowEvents { get; set; }
         public DbSet<GoalTime> GoalTime { get; set; }
+        public DbSet<LongestBuildPath> LongestBuildPaths { get; set; }
 
         public override Task<int> SaveChangesAsync(
             bool acceptAllChangesOnSuccess,
@@ -280,7 +281,7 @@ FOR SYSTEM_TIME ALL
                             }));
         }
 
-        public Task<long> GetInstallationId(string repositoryUrl)
+        public virtual Task<long> GetInstallationId(string repositoryUrl)
         {
             return Repositories.Where(r => r.RepositoryName == repositoryUrl)
                 .Select(r => r.InstallationId)

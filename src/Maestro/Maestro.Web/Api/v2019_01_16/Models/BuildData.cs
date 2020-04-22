@@ -43,7 +43,15 @@ namespace Maestro.Web.Api.v2019_01_16.Models
 
         public string GitHubBranch { get; set; }
 
-        public bool PublishUsingPipelines { get; set; }
+        public bool PublishUsingPipelines
+        {
+            get
+            {
+                return true;
+            }
+
+            set { }
+        }
 
         public bool Released { get; set; }
 
@@ -53,7 +61,6 @@ namespace Maestro.Web.Api.v2019_01_16.Models
             {
                 GitHubRepository = GitHubRepository,
                 GitHubBranch = GitHubBranch,
-                PublishUsingPipelines = PublishUsingPipelines,
                 AzureDevOpsBuildId = AzureDevOpsBuildId,
                 AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId,
                 AzureDevOpsAccount = AzureDevOpsAccount,

@@ -1,0 +1,18 @@
+<div class="d-flex flex-column" style="height: 100%;">
+  <h5 class="card-title">
+    <ng-container *stateful="let channel from channel$">
+      {{channel.name}}
+    </ng-container>
+  </h5>
+  <span class="form-check float-right">
+    <mc-switch [style]="" [(value)]="includeArcade" title="Include Arcade"></mc-switch>
+    <label class="form-check-label">
+      Include Arcade
+    </label>
+  </span>
+  <div class="container-fluid" style="height: 100%;">
+    <ng-container *stateful="let graph from graph$">
+      <mc-channel-graph [graph]="graph" [includeArcade]="includeArcade"></mc-channel-graph>
+    </ng-container>
+  </div>
+</div>

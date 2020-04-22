@@ -11,8 +11,8 @@ namespace Microsoft.DotNet.Darc.Options
     [Verb("gather-drop", HelpText = "Gather a drop of the outputs for a build")]
     internal class GatherDropCommandLineOptions : CommandLineOptions
     {
-        [Option('i', "id", HelpText = "BAR ID of build.")]
-        public int RootBuildId { get; set; }
+        [Option('i', "id", Separator = ',', HelpText = "BAR ID(s) of the root build(s) that we want to gather. comma separated.")]
+        public IEnumerable<int> RootBuildIds { get; set; }
 
         [Option('r', "repo", HelpText = "Gather a build drop for a build of this repo. Requires --commit or --channel.")]
         public string RepoUri { get; set; }
@@ -32,9 +32,6 @@ namespace Microsoft.DotNet.Darc.Options
         [Option('f', "full", HelpText = "Gather the full drop (build and all input builds).")]
         public bool Transitive { get; set; }
 
-        [Option("release", HelpText = "Generate a layout compatible with releasing the product (separated drop, generate release json).")]
-        public bool ReleaseLayout { get; set; }
-
         [Option("release-name", Default ="3.0.0-previewN", HelpText = "Name of release to use when generating release json.")]
         public string ReleaseName { get; set; }
 
@@ -53,15 +50,6 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("include-toolset", HelpText = "Include toolset dependencies.")]
         public bool IncludeToolset { get; set; }
 
-        [Option("sdk", HelpText = "Download an SDK (core-sdk). Requires --commit or --channel.")]
-        public bool DownloadSdk { get; set; }
-
-        [Option("runtime", HelpText = "Download a runtime (core-setup). Requires --commit or --channel.")]
-        public bool DownloadRuntime { get; set; }
-
-        [Option("aspnet", HelpText = "Download an aspnet drop (aspnet). Requires --commit or --channel.")]
-        public bool DownloadAspNet { get; set; }
-
         [Option("channel", HelpText = "Download the latest from this channel. Matched on substring.")]
         public string Channel { get; set; }
 
@@ -71,8 +59,8 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("skip-existing", HelpText = "Skip files that already exist at the destination.")]
         public bool SkipExisting { get; set; }
 
-        [Option("skip-released", HelpText = "Skip builds that are marked as released")]
-        public bool SkipReleased { get; set; }
+        [Option("include-released", HelpText = "Include builds that are marked as released")]
+        public bool IncludeReleased { get; set; }
 
         [Option("latest-location", HelpText = "Download assets from their latest known location.")]
         public bool LatestLocation { get; set; }

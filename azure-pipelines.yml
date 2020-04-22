@@ -100,11 +100,11 @@ stages:
 
         - task: NuGetToolInstaller@0
           inputs:
-            versionSpec: 4.4.1
+            versionSpec: 5.4.0
 
         - task: NodeTool@0
           inputs:
-            versionSpec: '>=11'
+            versionSpec: 12.x
 
         - task: NuGetCommand@2
           displayName: Restore Packages
@@ -114,6 +114,14 @@ stages:
 
         - powershell: eng\set-version-parameters.ps1
           displayName: Calculate release version variables
+
+        - powershell: |
+            [xml]$manifest = Get-Content src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml
+            $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name()='Policies']").RemoveAll()
+            $manifest.SelectSingleNode("/*[local-name()='ApplicationManifest']/*[local-name()='Principals']").RemoveAll()
+            $manifest.Save("src\Maestro\MaestroApplication\ApplicationPackageRoot\ApplicationManifest.xml")
+            git diff
+          displayName: Remove Service Fabric RunAsPolicy
 
         - script: eng\common\cibuild.cmd
             -configuration $(_BuildConfig)
@@ -136,6 +144,7 @@ stages:
           - powershell: |
               robocopy src/Maestro/MaestroApplication/PublishProfiles $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\PublishProfiles /S *.xml
               robocopy src/Maestro/MaestroApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationParameters /S *.xml
+              robocopy src/Maestro/MaestroApplication/ApplicationPackageRoot $(Build.ArtifactStagingDirectory)\ServiceFabric\MaestroApplication\projectartifacts\ApplicationPackageRoot /S *.xml
               exit 0
             displayName: Copy Maestro Project Artifacts
 
@@ -150,6 +159,7 @@ stages:
           - powershell: |
               robocopy src/Telemetry/TelemetryApplication/PublishProfiles $(Build.ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication\projectartifacts\PublishProfiles /S *.xml
               robocopy src/Telemetry/TelemetryApplication/ApplicationParameters $(Build.ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication\projectartifacts\ApplicationParameters /S *.xml
+              robocopy src/Telemetry/TelemetryApplication/ApplicationPackageRoot $(Build.ArtifactStagingDirectory)\ServiceFabric\TelemetryApplication\projectartifacts\ApplicationPackageRoot /S *.xml
               exit 0
             displayName: Copy Telemetry Project Artifacts
 
@@ -243,6 +253,9 @@ stages:
               ArtifactName: ScenarioTests
               ArtifactType: Container
 
+          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\netcoreapp2.1\publish
+            artifact: Maestro.ScenarioTests
+
           # Reenable tagging when stable package versions can be generated.
           # https://github.com/dotnet/arcade-services/issues/59
           # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
@@ -267,3 +280,37 @@ stages:
         -TsaRepositoryName "Arcade-Services"
         -TsaCodebaseName "Arcade-Services"
         -TsaPublish $True'
+- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+  - template: eng\deploy.yaml
+    parameters:
+      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+        DeploymentEnvironment: Staging
+        DotNetStatusAppName: dotneteng-status-staging
+        DotNetStatusEndpoint: .NET Engineering Deployment Notification - Staging
+        MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+        MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
+        PublishProfile: Int
+        RolloutScorerAppName: rollout-scorer-int
+        ServiceFabricConnection: Maestro-Int
+        Subscription: NetHelixStaging
+        VariableGroup: MaestroInt KeyVault
+        StatusVariableGroup: DotNetStatus Staging
+        GrafanaHost: https://dotnet-eng-grafana-staging.westus2.cloudapp.azure.com
+        GrafanaKeyVault: dotnet-grafana-staging
+        GrafanaVariableGroup: Dotnet-Grafana-Staging
+      ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+        DeploymentEnvironment: Production
+        DotNetStatusAppName: dotneteng-status
+        DotNetStatusEndpoint: .NET Engineering Deployment Notification - Production
+        MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+        MaestroTestEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+        PublishProfile: Prod
+        RolloutScorerAppName: rollout-scorer-prod
+        ServiceFabricConnection: Maestro-Prod
+        Subscription: NetHelix
+        VariableGroup: MaestroProd KeyVault
+        StatusVariableGroup: DotNetStatus Production
+        GrafanaHost: https://dotnet-eng-grafana.westus2.cloudapp.azure.com
+        GrafanaKeyVault: dotnet-grafana
+        GrafanaVariableGroup: Dotnet-Grafana-Production
+        DarcBotVariableGroup: Deploy DarcBot KeyVault Variables (Production)

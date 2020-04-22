@@ -12,11 +12,9 @@ These are the services that drive several of the tools behind the [Arcade](//git
 
 - [Issues](https://github.com/dotnet/arcade/issues)
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).  For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
 Information about Maestro [README.md](src/Maestro/Readme.md)
 
-Please follow our [Validation Process](https://github.com/dotnet/core-eng/blob/master/Documentation/Validation/ValidationProcess.md) for including tests to go with new or changed functionality. 
+Please follow our [Validation Process](https://github.com/dotnet/core-eng/blob/master/Documentation/Validation/README.md) for including tests to go with new or changed functionality.
 
 ### License
 
@@ -49,3 +47,29 @@ Similarly, each dependency denotes the version of that dependency used and a lin
 #### How to Onboard a New Repository
 
 If you would like to see your repository on BARViz, it needs to be published to the Build Asset Registry. Please see the [Darc documentation](https://github.com/dotnet/arcade/blob/master/Documentation/Darc.md).
+
+## Validation Process in dev and int environments
+
+For any non-deployment code changes, the expectation is to have run the tests corresponding to the service locally to confirm that the change works before putting up the PR. The tests for each of the major areas in arcade-services are as below:
+- [Maestro](src\Maestro\Tests)
+- [Darc](src\Microsoft.DotNet.Darc\tests)
+
+For any deployment changes, the only way to test would be to kick off the [build pipeline](https://dev.azure.com/dnceng/internal/_build?definitionId=252&_a=summary) that deploys the intended service from the dev branch to staging / int environment.
+
+<Details>
+
+<Summary>
+:warning: :sweat: :boom:
+
+**This comes with a significant overhead of a possibility of leaving the int deployments in a broken or non-responsive state, which then would require significant manual effort to undo the damage especially with the Service Fabric Clusters. This process should only be done if and only if absolutely necessary and after obtaining management approval.**
+
+</Summary>
+
+Steps:
+- Execute the azurepipeline.yaml targeting dev branch by using run pipeline and selecting the branch
+![RunPipeline](Images/RunPipeline.PNG)
+
+- Once the testing is done, rerun the pipeline for master branch to return the deployment to a last known good.
+
+</Details>
+

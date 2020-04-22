@@ -127,9 +127,195 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
-        public static DependencyFlowGraph Build(
+        /// <summary>
+        ///    Mark the back edges of the graph so that they can be ignored when walking it.
+        ///    Determine the backedges by computing dominators for each node. A node n is said to
+        ///    dominate another node if every path from the start to the other node must go through
+        ///    n.
+        /// </summary>
+        public void MarkBackEdges()
+        {
+            // In this, we will interpret the root of the graph as those nodes that have no outgoing edges
+            // (call them 'products').  Connect all of these via a start node.
+            // Add a start node to the graph (a node that connects all nodes that have no outgoing edges
+            // We will also reverse the graph by flipping the interpretation of incoming and outgoing.
+            DependencyFlowNode startNode = new DependencyFlowNode("start", "start", "start");
+            foreach (DependencyFlowNode node in Nodes)
+            {
+                if (!node.OutgoingEdges.Any())
+                {
+                    DependencyFlowEdge newEdge = new DependencyFlowEdge(node, startNode, null);
+                    startNode.IncomingEdges.Add(newEdge);
+                    node.OutgoingEdges.Add(newEdge);
+                }
+            }
+            Nodes.Add(startNode);
+
+            // Dominator set for each node starts with the full set of nodes.
+            Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> dominators = new Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>>();
+            foreach (DependencyFlowNode node in Nodes)
+            {
+                dominators.Add(node, new HashSet<DependencyFlowNode>(Nodes));
+            }
+
+            Queue<DependencyFlowNode> workList = new Queue<DependencyFlowNode>();
+            workList.Enqueue(startNode);
+
+            while (workList.Count != 0)
+            {
+                DependencyFlowNode currentNode = workList.Dequeue();
+
+                // Compute a new dominator set for this node. Remember we are 
+                // flipping the interepretation of incoming and outgoing
+                HashSet<DependencyFlowNode> newDom = null;
+
+                IEnumerable<DependencyFlowNode> predecessors = currentNode.OutgoingEdges.Select(e => e.To);
+                IEnumerable<DependencyFlowNode> successors = currentNode.IncomingEdges.Select(e => e.From);
+
+                // Compute the intersection of the dominators for the predecessors
+                foreach (DependencyFlowNode predNode in predecessors)
+                {
+                    if (newDom == null)
+                    {
+                        newDom = new HashSet<DependencyFlowNode>(dominators[predNode]);
+                    }
+                    else
+                    {
+                        newDom.IntersectWith(dominators[predNode]);
+                    }
+                }
+
+                if (newDom == null)
+                {
+                    newDom = new HashSet<DependencyFlowNode>();
+                }
+
+                // Add the current node
+                newDom.Add(currentNode);
+
+                // Compare to the existing dominator set for this node
+                if (!dominators[currentNode].SetEquals(newDom))
+                {
+                    dominators[currentNode] = newDom;
+
+                    // Queue all of the successors
+                    foreach (DependencyFlowNode succ in successors)
+                    {
+                        workList.Enqueue(succ);
+                    }
+                }
+            }
+
+            // Determine backedges
+            List<DependencyFlowEdge> toRemove = new List<DependencyFlowEdge>();
+            foreach (DependencyFlowEdge edge in Edges)
+            {
+                if (dominators[edge.To].Contains(edge.From))
+                {
+                    edge.BackEdge = true;
+                }
+            }
+
+            // Remove the start node we created and links to it
+            foreach (DependencyFlowEdge edge in startNode.IncomingEdges)
+            {
+                RemoveEdge(edge);
+            }
+
+            RemoveNode(startNode);
+        }
+
+        /// <summary>
+        ///     Calculate the longest build path time from each node in the flow graph
+        /// </summary>
+        /// <remarks>
+        ///     Starting with the set of root node (nodes with no outgoing edges), compute the
+        ///     longest build path time using a breadth first search
+        /// </remarks>
+        public void CalculateLongestBuildPaths()
+        {
+            List<DependencyFlowNode> roots = Nodes.Where(n => n.OutgoingEdges.Count == 0).ToList();
+            Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>> visitedNodes = new Dictionary<DependencyFlowNode, HashSet<DependencyFlowNode>>();
+
+            Queue<DependencyFlowNode> nodesToVisit = new Queue<DependencyFlowNode>();
+
+            foreach (DependencyFlowNode root in roots)
+            {
+                nodesToVisit.Enqueue(root);
+
+                while (nodesToVisit.Count > 0)
+                {
+                    DependencyFlowNode node = nodesToVisit.Dequeue();
+                    if (visitedNodes.ContainsKey(node))
+                    {
+                        visitedNodes[node].Add(node);
+                    }
+                    else
+                    {
+                        visitedNodes.Add(node, new HashSet<DependencyFlowNode>(){node});
+                    }
+
+                    foreach (DependencyFlowEdge edge in node.IncomingEdges)
+                    {
+                        DependencyFlowNode child = edge.From;
+
+                        if (!visitedNodes[node].Contains(child) && !nodesToVisit.Contains(child))
+                        {
+                            if (visitedNodes.ContainsKey(child))
+                            {
+                                visitedNodes[child].UnionWith(visitedNodes[node]);
+                            }
+                            else
+                            {
+                                visitedNodes.Add(child, new HashSet<DependencyFlowNode>(visitedNodes[node]));
+                            }
+                            
+                            nodesToVisit.Enqueue(child);
+                        }
+                    }
+
+                    node.CalculateLongestPathTime();
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Determine and mark the absolute longest build path in the flow graph, based on the Best Case time.
+        /// </summary>
+        public void MarkLongestBuildPath()
+        {            
+            // Find the node with the worst best case time, we will treat it as the starting point and walk down the path
+            // from this node to a product node
+            DependencyFlowNode startNode = Nodes.OrderByDescending(n => n.BestCasePathTime).FirstOrDefault();
+            if (startNode != null)
+            {
+                startNode.OnLongestBuildPath = true;
+                MarkLongestPath(startNode);
+            } 
+        }
+
+        private void MarkLongestPath(DependencyFlowNode node)
+        {
+            // The edges we are interested in are those that haven't been marked as on the longest build path 
+            // and aren't back edges, both of which indicate a cycle
+            var edgesOfInterest = node.OutgoingEdges.Where(e => !e.OnLongestBuildPath && !e.BackEdge).ToList();
+
+            if (edgesOfInterest.Count > 0)
+            {
+                DependencyFlowEdge pathEdge = edgesOfInterest.Aggregate( (e1, e2) => e1.To.BestCasePathTime > e2.To.BestCasePathTime ? e1: e2);
+
+                // Mark the edge and the node as on the longest build path
+                pathEdge.OnLongestBuildPath = true;
+                pathEdge.To.OnLongestBuildPath = true;
+                MarkLongestPath(pathEdge.To);
+            }
+        }
+
+        public static async Task<DependencyFlowGraph> BuildAsync(
             List<DefaultChannel> defaultChannels,
-            List<Subscription> subscriptions)
+            List<Subscription> subscriptions,
+            IRemote barOnlyRemote,
+            int days)
         {
             // Dictionary of nodes. Key is the repo+branch
             Dictionary<string, DependencyFlowNode> nodes = new Dictionary<string, DependencyFlowNode>(
@@ -141,6 +327,21 @@ namespace Microsoft.DotNet.DarcLib
             foreach (DefaultChannel channel in defaultChannels)
             {
                 DependencyFlowNode flowNode = GetOrCreateNode(channel.Repository, channel.Branch, nodes);
+
+                // Add the build times
+                if (channel.Id != default(int))
+                {
+                    BuildTime buildTime = await barOnlyRemote.GetBuildTimeAsync(channel.Id, days);
+                    flowNode.OfficialBuildTime = buildTime.OfficialBuildTime;
+                    flowNode.PrBuildTime = buildTime.PrBuildTime;
+                    flowNode.GoalTimeInMinutes = buildTime.GoalTimeInMinutes;
+                }
+                else
+                {
+                    flowNode.OfficialBuildTime = 0;
+                    flowNode.PrBuildTime = 0;
+                }
+                
                 // Add a the output mapping.
                 flowNode.OutputChannels.Add(channel.Channel.Name);
             }
@@ -182,10 +383,38 @@ namespace Microsoft.DotNet.DarcLib
             }
             else
             {
-                DependencyFlowNode newNode = new DependencyFlowNode(repo, branch);
+                DependencyFlowNode newNode = new DependencyFlowNode(repo, branch, Guid.NewGuid().ToString());
                 nodes.Add(key, newNode);
                 return newNode;
             }
+        }
+
+        /// <summary>
+        ///     If pruning the graph is desired, determine whether a node is interesting.
+        /// </summary>
+        /// <param name="node">Node</param>
+        /// <returns>True if the node is interesting, false otherwise</returns>
+        public static bool IsInterestingNode(string targetChannel, DependencyFlowNode node)
+        {
+            return node.OutputChannels.Any(c => c == targetChannel);
+        }
+
+        /// <summary>
+        ///     If pruning the graph is desired, determine whether an edge is interesting
+        /// </summary>
+        /// <param name="edge">Edge</param>
+        /// <returns>True if the edge is interesting, false otherwise.</returns>
+        public static bool IsInterestingEdge(DependencyFlowEdge edge, bool includeDisabledSubscriptions, IEnumerable<string> includedFrequencies)
+        {
+            if (!includeDisabledSubscriptions && !edge.Subscription.Enabled)
+            {
+                return false;
+            }
+            if (!includedFrequencies.Any(s => s.Equals(edge.Subscription.Policy.UpdateFrequency.ToString(), StringComparison.OrdinalIgnoreCase)))
+            {
+                return false;
+            }
+            return true;
         }
     }
 }

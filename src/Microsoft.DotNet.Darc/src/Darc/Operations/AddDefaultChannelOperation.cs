@@ -5,6 +5,7 @@
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
@@ -25,6 +26,8 @@ namespace Microsoft.DotNet.Darc.Operations
             try
             {
                 IRemote remote = RemoteFactory.GetRemote(_options, _options.Repository, Logger);
+
+                _options.Branch = GitHelpers.NormalizeBranchName(_options.Branch);
 
                 if (!(await UxHelpers.VerifyAndConfirmBranchExistsAsync(remote, _options.Repository, _options.Branch, !_options.NoConfirmation)))
                 {

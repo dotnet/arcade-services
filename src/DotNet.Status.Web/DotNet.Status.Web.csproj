@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <UserSecretsId>65a272ca-730a-4afd-b68b-d256719c2db2</UserSecretsId>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SignAssembly>false</SignAssembly>
     <IsPackable>true</IsPackable>
   </PropertyGroup>
@@ -13,6 +14,7 @@
     <PackageReference Include="Azure.Storage.Queues" Version="12.0.0" />
     <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.8.2" />
     <PackageReference Include="Microsoft.AspNetCore.All" />
+    <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" Version="1.0.0-preview2-final" />
     <PackageReference Include="Microsoft.Extensions.Configuration.AzureKeyVault" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.2.0" />
     <PackageReference Include="Octokit" Version="$(OctokitVersion)" />
@@ -20,9 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.DotNet.Configuration.Extensions\Microsoft.DotNet.Configuration.Extensions.csproj" />
+    <ProjectReference Include="..\Microsoft.DncEng.Configuration.Extensions\Microsoft.DncEng.Configuration.Extensions.csproj" />
     <ProjectReference Include="..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
     <ProjectReference Include="..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
     <ProjectReference Include="..\shared\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj" />
+    <ProjectReference Include="..\Telemetry\AzureDevOpsClient\AzureDevOpsClient.csproj" />
   </ItemGroup>
 </Project>

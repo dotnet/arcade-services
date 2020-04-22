@@ -92,20 +92,29 @@ namespace Microsoft.DotNet.Maestro.Client
 
                 while (true)
                 {
-                    var _page = await ListAssetsPageAsync(
-                        buildId,
-                        loadLocations,
-                        name,
-                        nonShipping,
-                        page,
-                        perPage,
-                        version,
-                        cancellationToken
-                    ).ConfigureAwait(false);
-                    if (_page.Values.Count < 1)
+                    Page<Models.Asset> _page = null;
+
+                    try {
+                        _page = await ListAssetsPageAsync(
+                            buildId,
+                            loadLocations,
+                            name,
+                            nonShipping,
+                            page,
+                            perPage,
+                            version,
+                            cancellationToken
+                        ).ConfigureAwait(false);
+                        if (_page.Values.Count < 1)
+                        {
+                            yield break;
+                        }                   
+                    }
+                    catch (RestApiException e) when (e.Response.Status == 404)
                     {
                         yield break;
                     }
+
                     yield return _page;
                     page++;
                 }

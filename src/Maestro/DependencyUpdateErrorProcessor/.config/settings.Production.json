@@ -1,0 +1,6 @@
+{
+  "KeyVaultUri": "https://maestroprod.vault.azure.net/",
+  "AppConfigurationUri": "https://maestroprod.azconfig.io/",
+  "GithubUrl": "https://github.com/dotnet/core-eng",
+  "FyiHandle": "@epananth"
+}

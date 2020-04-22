@@ -6,8 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using EntityFrameworkCore.Triggers;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Services.Utility;
 
@@ -19,29 +17,6 @@ namespace Maestro.Data.Models
         private string _gitHubRepository;
         private string _azureDevOpsBranch;
         private string _githubBranch;
-
-        static Build()
-        {
-            Triggers<Build>.Inserted += entry =>
-            {
-                Build build = entry.Entity;
-                var context = (BuildAssetRegistryContext) entry.Context;
-
-                context.BuildChannels.AddRange((
-                    from dc in context.DefaultChannels
-                    where (dc.Enabled)
-                    where (dc.Repository == build.GitHubRepository || dc.Repository == build.AzureDevOpsRepository)
-                    where (dc.Branch == build.GitHubBranch || dc.Branch == build.AzureDevOpsBranch)
-                    select new BuildChannel
-                    {
-                        Channel = dc.Channel,
-                        Build = build,
-                        DateTimeAdded = DateTimeOffset.UtcNow
-                    }).Distinct());
-
-                context.SaveChangesWithTriggers(b => context.SaveChanges(b));
-            };
-        }
 
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -110,8 +85,6 @@ namespace Maestro.Data.Models
             }
         }
 
-        public bool PublishUsingPipelines { get; set; }
-
         public DateTimeOffset DateProduced { get; set; }
 
         public List<Asset> Assets { get; set; }
@@ -122,7 +95,14 @@ namespace Maestro.Data.Models
         /// If true, the build has been released to the public. This can be used to make decisions on whether certain
         /// builds should be included in future release drops.
         /// </summary>
-        public bool Released { get; set; } = false;
+        public bool Released { get; set; }
+
+        /// <summary>
+        /// If true, the build was marked with `$(DotNetFinalVersionKind) == 'release'`. Which means that it 
+        /// produced assets with only (Major).(Minor).(Patch) version.
+        /// More info is available here: https://github.com/dotnet/arcade/blob/master/Documentation/CorePackages/Versioning.md#build-kind
+        /// </summary>
+        public bool Stable { get; set; }
 
         [NotMapped]
         public int Staleness { get; set; }

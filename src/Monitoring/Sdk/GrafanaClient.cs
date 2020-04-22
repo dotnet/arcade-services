@@ -152,10 +152,11 @@ namespace Microsoft.DotNet.Monitoring.Sdk
                 notificationChannel.Value<string>("uid"),
                 uid => $"/api/alert-notifications/uid/{Uri.EscapeDataString(uid)}",
                 "/api/alert-notifications",
-                x => (HttpMethod.Put, $"/api/alert-notifications/uid/{x.Value<int>("id")}"),
+                x => (HttpMethod.Put, $"/api/alert-notifications/{x.Value<int>("id")}"),
                 (d, x) =>
                 {
                     d["id"] = x.Value<int>("id");
+                    d["uid"] = x.Value<string>("uid");
                     d["version"] = x.Value<int>("version");
                 }
             );

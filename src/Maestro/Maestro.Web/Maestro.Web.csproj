@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
@@ -21,6 +21,7 @@
   <ItemGroup>
     <PackageReference Include="Autofac" Version="4.8.1" />
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="4.2.2" />
+    <PackageReference Include="Azure.Identity" Version="1.1.1" />
     <PackageReference Include="EntityFrameworkCore.Triggers" Version="1.1.1" />
     <PackageReference Include="FluentValidation.AspNetCore" Version="7.6.104" />
     <PackageReference Include="Humanizer.Core" Version="2.4.2" />
@@ -46,11 +47,11 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="2.1.2" />
-    <PackageReference Include="Microsoft.ServiceFabric" Version="6.4.664" />
-    <PackageReference Include="Microsoft.ServiceFabric.Actors" Version="3.3.664" />
-    <PackageReference Include="Microsoft.ServiceFabric.AspNetCore.HttpSys" Version="3.3.664" />
-    <PackageReference Include="Microsoft.ServiceFabric.Data" Version="3.3.664" />
-    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="3.3.664" />
+    <PackageReference Include="Microsoft.ServiceFabric" Version="6.5.677" />
+    <PackageReference Include="Microsoft.ServiceFabric.Actors" Version="3.4.677" />
+    <PackageReference Include="Microsoft.ServiceFabric.AspNetCore.HttpSys" Version="3.4.677" />
+    <PackageReference Include="Microsoft.ServiceFabric.Data" Version="3.4.677" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="3.4.677" />
     <PackageReference Include="Microsoft.VisualStudio.Web.BrowserLink" Version="2.1.0" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="2.2.3" />
     <PackageReference Include="Octokit" Version="$(OctokitVersion)" />
@@ -61,6 +62,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.DncEng.Configuration.Extensions\Microsoft.DncEng.Configuration.Extensions.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.Darc\src\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
     <ProjectReference Include="..\..\Shared\Microsoft.DotNet.GitHub.Authentication\Microsoft.DotNet.GitHub.Authentication.csproj" />
@@ -70,6 +72,7 @@
     <ProjectReference Include="..\Maestro.AzureDevOps\Maestro.AzureDevOps.csproj" />
     <ProjectReference Include="..\Maestro.Contracts\Maestro.Contracts.csproj" />
     <ProjectReference Include="..\Maestro.Data\Maestro.Data.csproj" />
+    <ProjectReference Include="..\Maestro.DataProviders\Maestro.DataProviders.csproj" />
     <ProjectReference Include="..\Maestro.MergePolicies\Maestro.MergePolicies.csproj" />
     <ProjectReference Include="..\Microsoft.AspNetCore.ApiPagination\Microsoft.AspNetCore.ApiPagination.csproj" />
     <ProjectReference Include="..\Microsoft.AspNetCore.ApiVersioning.Swashbuckle\Microsoft.AspNetCore.ApiVersioning.Swashbuckle.csproj" />

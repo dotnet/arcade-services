@@ -227,6 +227,10 @@ namespace Microsoft.DotNet.Maestro.Client
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public T Deserialize<T>(string value)
         {
+            if (typeof(T) == typeof(string))
+            {
+                return (T)(object)value;
+            }
             return JsonConvert.DeserializeObject<T>(value, SerializerSettings);
         }
 

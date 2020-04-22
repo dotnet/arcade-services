@@ -41,6 +41,10 @@
                 {
                   "replace": "src/environments/environment.ts",
                   "with": "src/environments/environment.prod.ts"
+                },
+                {
+                  "replace": "node_modules/dagre-d3/lib/d3.js",
+                  "with": "src/d3.ts"
                 }
               ],
               "optimization": true,

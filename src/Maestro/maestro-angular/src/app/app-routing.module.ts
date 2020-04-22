@@ -7,6 +7,7 @@ import { ChannelResolverService } from './resolvers/channel-resolver.service';
 import { BuildResolverService } from './resolvers/build-resolver.service';
 import { toTitleCase } from 'src/helpers';
 import { RepoNamePipe } from './pipes/repo-name.pipe';
+import { ChannelComponent } from './page/channel/channel.component';
 
 const routes: Routes = [
   {
@@ -15,6 +16,18 @@ const routes: Routes = [
     data: {
       title: "Index",
       name: "Index",
+    },
+  },
+  {
+    path: ":channelId/graph",
+    component: ChannelComponent,
+    data: {
+      title(params: any) {
+        return `Channel ${params.channelId}`;
+      },
+      name(params: any) {
+        return `Channel ${params.channelId}`;
+      }
     },
   },
   {

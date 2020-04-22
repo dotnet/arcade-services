@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.DotNet.DarcLib;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Services.Utility;
 
 namespace Microsoft.DotNet.Darc.Options
 {
@@ -67,7 +68,7 @@ namespace Microsoft.DotNet.Darc.Options
         public bool SubcriptionFilter(Subscription subscription, IEnumerable<DefaultChannel> defaultChannels)
         {
             return (SubscriptionParameterMatches(TargetRepository, subscription.TargetRepository) &&
-                    SubscriptionParameterMatches(TargetBranch, subscription.TargetBranch) &&
+                    SubscriptionParameterMatches(GitHelpers.NormalizeBranchName(TargetBranch), subscription.TargetBranch) &&
                     SubscriptionParameterMatches(SourceRepository, subscription.SourceRepository) &&
                     SubscriptionParameterMatches(Channel, subscription.Channel.Name) &&
                     SubscriptionEnabledParameterMatches(subscription) &&
@@ -121,19 +122,19 @@ namespace Microsoft.DotNet.Darc.Options
             {
                 return true;
             }
+
             // Compare properties ignoring case because branch, repo, etc. names cannot differ only by case.
-            else if (ExactMatch && inputParameter.Equals(subscriptionProperty, StringComparison.OrdinalIgnoreCase))
+            if (ExactMatch)
             {
-                return true;
+                return inputParameter.Equals(subscriptionProperty, StringComparison.OrdinalIgnoreCase);
             }
-            else if (RegexMatch && Regex.IsMatch(subscriptionProperty, inputParameter, RegexOptions.IgnoreCase))
+
+            if (RegexMatch)
             {
-                return true;
+                return Regex.IsMatch(subscriptionProperty, inputParameter, RegexOptions.IgnoreCase);
             }
-            else
-            {
-                return subscriptionProperty.Contains(inputParameter, StringComparison.OrdinalIgnoreCase);
-            }
+
+            return subscriptionProperty.Contains(inputParameter, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>

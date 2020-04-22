@@ -10,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Maestro.AzureDevOps;
 using Maestro.Data;
-using Microsoft.Dotnet.GitHub.Authentication;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.Services.Utility;
@@ -22,7 +22,7 @@ namespace SubscriptionActorService
     public class DarcRemoteFactory : IRemoteFactory
     {
         public DarcRemoteFactory(
-            IConfigurationRoot configuration,
+            IConfiguration configuration,
             IGitHubTokenProvider gitHubTokenProvider,
             IAzureDevOpsTokenProvider azureDevOpsTokenProvider,
             DarcRemoteMemoryCache memoryCache,
@@ -37,7 +37,7 @@ namespace SubscriptionActorService
             Context = context;
         }
         
-        public IConfigurationRoot Configuration { get; }
+        public IConfiguration Configuration { get; }
         public IGitHubTokenProvider GitHubTokenProvider { get; }
         public IAzureDevOpsTokenProvider AzureDevOpsTokenProvider { get; }
         public BuildAssetRegistryContext Context { get; }
@@ -83,7 +83,7 @@ namespace SubscriptionActorService
                     case "github.com":
                         if (installationId == default)
                         {
-                            throw new SubscriptionException($"No installation is avaliable for repository '{normalizedUrl}'");
+                            throw new GithubApplicationInstallationException($"No installation is avaliable for repository '{normalizedUrl}'");
                         }
 
                         gitClient = new GitHubClient(_gitExecutable, await GitHubTokenProvider.GetTokenForInstallationAsync(installationId),

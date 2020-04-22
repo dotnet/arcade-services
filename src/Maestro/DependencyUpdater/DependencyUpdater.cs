@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -39,17 +40,20 @@ namespace DependencyUpdater
             IReliableStateManager stateManager,
             ILogger<DependencyUpdater> logger,
             BuildAssetRegistryContext context,
+            IRemoteFactory factory,
             Func<ActorId, ISubscriptionActor> subscriptionActorFactory)
         {
             StateManager = stateManager;
             Logger = logger;
             Context = context;
+            RemoteFactory = factory;
             SubscriptionActorFactory = subscriptionActorFactory;
         }
 
         public IReliableStateManager StateManager { get; }
         public ILogger<DependencyUpdater> Logger { get; }
         public BuildAssetRegistryContext Context { get; }
+        public IRemoteFactory RemoteFactory { get; }
         public Func<ActorId, ISubscriptionActor> SubscriptionActorFactory { get; }
 
         public async Task StartUpdateDependenciesAsync(int buildId, int channelId)
@@ -200,6 +204,64 @@ namespace DependencyUpdater
                     Logger.LogInformation($"Will update {s.subscription} to build {s.latestBuild}");
                     await UpdateSubscriptionAsync(s.subscription, s.latestBuild);
                 }
+            }
+        }
+
+        [CronSchedule("0 0 0 1/1 * ? *", TimeZones.PST)]
+        public async Task UpdateLongestBuildPathAsync(CancellationToken cancellationToken)
+        {
+            using (Logger.BeginScope($"Updating Longest Build Path table"))
+            {
+                List<Channel> channels = Context.Channels.Select(c => new Channel() { Id = c.Id, Name = c.Name }).ToList();
+
+                // Get the flow graph
+                IRemote barOnlyRemote = await RemoteFactory.GetBarOnlyRemoteAsync(Logger);
+
+                List<Microsoft.DotNet.Maestro.Client.Models.DefaultChannel> defaultChannels = (await barOnlyRemote.GetDefaultChannelsAsync()).ToList();
+                List<Microsoft.DotNet.Maestro.Client.Models.Subscription> subscriptions = (await barOnlyRemote.GetSubscriptionsAsync()).ToList();
+
+                IEnumerable<string> frequencies = new[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", };
+
+                Logger.LogInformation($"Will update '{channels.Count}' channels");
+
+                foreach (var channel in channels)
+                {
+                    // Build, then prune out what we don't want to see if the user specified channels.
+                    DependencyFlowGraph flowGraph = await DependencyFlowGraph.BuildAsync(defaultChannels, subscriptions, barOnlyRemote, 30);
+
+                    flowGraph.PruneGraph(
+                        node => DependencyFlowGraph.IsInterestingNode(channel.Name, node), 
+                        edge => DependencyFlowGraph.IsInterestingEdge(edge, false, frequencies));
+
+                    if (flowGraph.Nodes.Count > 0)
+                    {
+
+                        flowGraph.MarkBackEdges();
+                        flowGraph.CalculateLongestBuildPaths();
+                        flowGraph.MarkLongestBuildPath();
+
+                        // Get the nodes on the longest path and order them by path time so that the
+                        // contributing repos are in the right order
+                        List<DependencyFlowNode> longestBuildPathNodes = flowGraph.Nodes
+                            .Where(n => n.OnLongestBuildPath)
+                            .OrderByDescending(n => n.BestCasePathTime)
+                            .ToList();
+
+                        LongestBuildPath lbp = new LongestBuildPath()
+                        {
+                            ChannelId = channel.Id,
+                            BestCaseTimeInMinutes = longestBuildPathNodes.Max(n => n.BestCasePathTime),
+                            WorstCaseTimeInMinutes = longestBuildPathNodes.Max(n => n.WorstCasePathTime),
+                            ContributingRepositories = String.Join(';', longestBuildPathNodes.Select(n => $"{n.Repository}@{n.Branch}").ToArray()),
+                            ReportDate = DateTimeOffset.UtcNow,
+                        };
+
+                        Logger.LogInformation($"Will update {channel.Name} to best case time {lbp.BestCaseTimeInMinutes} and worst case time {lbp.WorstCaseTimeInMinutes}");
+                        await Context.LongestBuildPaths.AddAsync(lbp);
+                    }
+                }
+
+                await Context.SaveChangesAsync();
             }
         }
 

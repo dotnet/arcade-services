@@ -178,10 +178,28 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
+        /// <summary>
+        /// Deletes a branch in a repository
+        /// </summary>
+        /// <param name="repoUri">Repository URL</param>
+        /// <param name="branch">Branch to delete</param>
+        /// <returns>Async Task</returns>
         public async Task DeleteBranchAsync(string repoUri, string branch)
         {
             (string owner, string repo) = ParseRepoUri(repoUri);
 
+            await DeleteBranchAsync(owner, repo, branch);
+        }
+
+        /// <summary>
+        /// Deletes a branch in a repository
+        /// </summary>
+        /// <param name="owner">Repository owner</param>
+        /// <param name="repo">Repository name</param>
+        /// <param name="branch">Branch to delete</param>
+        /// <returns></returns>
+        private async Task DeleteBranchAsync(string owner, string repo, string branch)
+        {
             await Client.Git.Reference.Delete(owner, repo, $"heads/{branch}");
         }
 
@@ -426,12 +444,13 @@ namespace Microsoft.DotNet.DarcLib
             // arcade update sent to each repository daily per subscription. This is inefficient, as it means we
             // request each file N times, where N is the number of subscriptions. The number of files (M),
             // is non-trivial, so reducing N*M to M is vast improvement.
-            // Use the treeItem.Sha as the key. I think it is overkill to hash the repo and owner into
+            // Use a combination of (treeItem.Path, treeItem.Sha as the key) as items with identical contents but
+            // different paths will have the same SHA. I think it is overkill to hash the repo and owner into
             // the key.
 
             if (Cache != null)
             {
-                return await Cache.GetOrCreateAsync(treeItem.Sha, async (entry) =>
+                return await Cache.GetOrCreateAsync((treeItem.Path, treeItem.Sha), async (entry) =>
                 {
                     GitFile file = await GetGitItemImpl(path, treeItem, owner, repo);
 
@@ -981,6 +1000,18 @@ namespace Microsoft.DotNet.DarcLib
             catch (Exception) { }
 
             return false;
+        }
+
+        /// <summary>
+        /// Deletes the head branch for a pull request
+        /// </summary>
+        /// <param name="pullRequestUri">Pull request Uri</param>
+        /// <returns>Async task</returns>
+        public async Task DeletePullRequestBranchAsync(string pullRequestUri)
+        {
+            PullRequest pr = await GetPullRequestAsync(pullRequestUri);
+            (string owner, string repo, int id) prInfo = ParsePullRequestUri(pullRequestUri);
+            await DeleteBranchAsync(prInfo.owner, prInfo.repo, pr.HeadBranch);
         }
     }
 }
