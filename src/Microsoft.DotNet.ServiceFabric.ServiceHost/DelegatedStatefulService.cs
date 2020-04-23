@@ -8,8 +8,6 @@ using System.Fabric;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Autofac;
-using Autofac.Extensions.DependencyInjection;
 using Castle.DynamicProxy.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
@@ -21,17 +19,14 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
     public class DelegatedStatefulService<TServiceImplementation> : StatefulService
         where TServiceImplementation : IServiceImplementation
     {
-        private readonly Action<ContainerBuilder> _configureContainer;
         private readonly Action<IServiceCollection> _configureServices;
-        private ILifetimeScope _container;
+        private ServiceProvider _container;
 
         public DelegatedStatefulService(
             StatefulServiceContext context,
-            Action<IServiceCollection> configureServices,
-            Action<ContainerBuilder> configureContainer) : base(context)
+            Action<IServiceCollection> configureServices) : base(context)
         {
             _configureServices = configureServices;
-            _configureContainer = configureContainer;
         }
 
         protected override Task OnOpenAsync(ReplicaOpenMode openMode, CancellationToken cancellationToken)
@@ -43,13 +38,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
             services.AddSingleton(StateManager);
 
-            var builder = new ContainerBuilder();
-            builder.Populate(services);
-            _configureContainer(builder);
-            _container = builder.Build();
+            _container = services.BuildServiceProvider();
             
             // This requires the ServiceContext up a few lines, so we can't inject it in the constructor
-            _container.ResolveOptional<TemporaryFiles>()?.Initialize();
+            _container.GetService<TemporaryFiles>()?.Initialize();
 
             return Task.CompletedTask;
         }
@@ -73,7 +65,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             }
 
             Type[] interfaces = typeof(TServiceImplementation).GetAllInterfaces()
-                .Where(iface => iface.IsAssignableTo<IService>())
+                .Where(iface => typeof(IService).IsAssignableFrom(iface))
                 .ToArray();
             if (interfaces.Length == 0)
             {
@@ -104,9 +96,9 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             }
             while (!cancellationToken.IsCancellationRequested)
             {
-                using ILifetimeScope scope = _container.BeginLifetimeScope();
+                using IServiceScope scope = _container.CreateScope();
 
-                TServiceImplementation impl = scope.Resolve<TServiceImplementation>();
+                TServiceImplementation impl = scope.ServiceProvider.GetRequiredService<TServiceImplementation>();
 
                 TimeSpan shouldWaitFor = await impl.RunAsync(cancellationToken);
 

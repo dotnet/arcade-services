@@ -6,8 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
-using Autofac;
-using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,19 +24,16 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
     public class DelegatedStatelessWebService<TStartup> : StatelessService where TStartup : class
     {
-        private readonly Action<ContainerBuilder> _configureContainer;
         private readonly Action<IWebHostBuilder> _configureHost;
         private readonly Action<IServiceCollection> _configureServices;
 
         public DelegatedStatelessWebService(
             StatelessServiceContext context,
             Action<IWebHostBuilder> configureHost,
-            Action<IServiceCollection> configureServices,
-            Action<ContainerBuilder> configureContainer) : base(context)
+            Action<IServiceCollection> configureServices) : base(context)
         {
             _configureHost = configureHost;
             _configureServices = configureServices;
-            _configureContainer = configureContainer;
         }
 
         protected override IEnumerable<ServiceInstanceListener> CreateServiceInstanceListeners()
@@ -63,7 +58,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                                 return builder.ConfigureServices(
                                         services =>
                                         {
-                                            services.AddAutofac(_configureContainer);
                                             services.AddSingleton<ServiceContext>(context);
                                             services.AddSingleton(context);
                                             services.AddSingleton<IStartup>(
@@ -96,7 +90,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             Action<IServiceCollection> configureServices)
         {
             _configureServices = configureServices;
-            if (typeof(TStartup).IsAssignableTo<IStartup>())
+            if (typeof(IStartup).IsAssignableFrom(typeof(TStartup)))
             {
                 _startupImplementation = (IStartup) ActivatorUtilities.CreateInstance<TStartup>(provider)!;
             }

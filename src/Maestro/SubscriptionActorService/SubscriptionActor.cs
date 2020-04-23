@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Microsoft.DotNet.ServiceFabric.ServiceHost;
+using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
@@ -55,33 +58,32 @@ namespace SubscriptionActorService
         }
     }
 
-    public class SubscriptionActor : ISubscriptionActor, IActionTracker
+    public class SubscriptionActor : ISubscriptionActor, IActionTracker, IActorImplementation
     {
         public SubscriptionActor(
-            IActorStateManager stateManager,
-            ActorId id,
             BuildAssetRegistryContext context,
             ILogger<SubscriptionActor> logger,
             IActionRunner actionRunner,
-            Func<ActorId, IPullRequestActor> pullRequestActorFactory)
+            IActorProxyFactory<IPullRequestActor> pullRequestActorFactory)
         {
-            StateManager = stateManager;
-            Id = id;
             Context = context;
             Logger = logger;
             ActionRunner = actionRunner;
             PullRequestActorFactory = pullRequestActorFactory;
         }
 
-
-        public IActorStateManager StateManager { get; }
-        public ActorId Id { get; }
+        public ActorId Id { get; private set; }
         public BuildAssetRegistryContext Context { get; }
         public ILogger<SubscriptionActor> Logger { get; }
         public IActionRunner ActionRunner { get; }
-        public Func<ActorId, IPullRequestActor> PullRequestActorFactory { get; }
+        public IActorProxyFactory<IPullRequestActor> PullRequestActorFactory { get; }
 
         public Guid SubscriptionId => Id.GetGuidId();
+
+        public void Initialize(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
+        {
+            Id = actorId;
+        }
 
         public async Task TrackSuccessfulAction(string action, string result)
         {
@@ -208,7 +210,7 @@ namespace SubscriptionActorService
 
             Logger.LogInformation($"Creating pull request actor for '{pullRequestActorId}'");
 
-            IPullRequestActor pullRequestActor = PullRequestActorFactory(pullRequestActorId);
+            IPullRequestActor pullRequestActor = PullRequestActorFactory.Lookup(pullRequestActorId);
 
             List<Asset> assets = build.Assets.Select(
                     a => new Asset
