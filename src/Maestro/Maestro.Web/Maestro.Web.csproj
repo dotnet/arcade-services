@@ -19,32 +19,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="EntityFrameworkCore.Triggers" />
     <PackageReference Include="FluentValidation.AspNetCore" />
     <PackageReference Include="Humanizer.Core" />
-    <PackageReference Include="Microsoft.AspNetCore" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.Cookies" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.OAuth" />
-    <PackageReference Include="Microsoft.AspNetCore.CookiePolicy" />
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureKeyVault" />
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureStorage" />
-    <PackageReference Include="Microsoft.AspNetCore.HttpsPolicy" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc" />
-    <PackageReference Include="Microsoft.AspNetCore.Rewrite" />
-    <PackageReference Include="Microsoft.AspNetCore.StaticFiles" />
-    <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" />
     <PackageReference Include="Microsoft.ServiceFabric" />
     <PackageReference Include="Microsoft.ServiceFabric.Actors" />
     <PackageReference Include="Microsoft.ServiceFabric.AspNetCore.HttpSys" />
