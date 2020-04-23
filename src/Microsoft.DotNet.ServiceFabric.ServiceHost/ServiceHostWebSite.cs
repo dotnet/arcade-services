@@ -1,6 +1,5 @@
 #if NETCOREAPP3_1
 using System;
-using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.Extensions.Logging;
@@ -39,7 +38,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 {
                     builder.AddDefaultJsonConfiguration(context.HostingEnvironment);
                 })
-                .ConfigureServices(services => { services.AddAutofac(); })
                 .ConfigureLogging(
                     builder =>
                     {

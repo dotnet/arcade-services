@@ -1,6 +1,7 @@
 using System;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace SubscriptionActorService.Tests
@@ -15,6 +16,8 @@ namespace SubscriptionActorService.Tests
                         Environment.SetEnvironmentVariable("ENVIRONMENT", "XUNIT");
                         ServiceHost.ConfigureDefaultServices(s);
                         Program.Configure(s);
+                        s.AddScoped<SubscriptionActor>();
+                        s.AddScoped<PullRequestActor>();
                     },
                     out string message),
                 message);

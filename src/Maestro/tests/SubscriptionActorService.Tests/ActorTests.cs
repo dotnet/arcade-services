@@ -3,10 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
-using Autofac;
 using FluentAssertions;
-using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
-using Microsoft.ServiceFabric.Actors.Runtime;
 using ServiceFabricMocks;
 
 namespace SubscriptionActorService.Tests
@@ -21,13 +18,10 @@ namespace SubscriptionActorService.Tests
         protected readonly MockReminderManager Reminders;
         protected readonly MockActorStateManager StateManager;
 
-        public ActorTests()
+        protected ActorTests()
         {
             StateManager = new MockActorStateManager();
             Reminders = new MockReminderManager();
-
-            Builder.RegisterInstance(StateManager).As<IActorStateManager>();
-            Builder.RegisterInstance(Reminders).As<IReminderManager>();
         }
 
         public override void Dispose()
