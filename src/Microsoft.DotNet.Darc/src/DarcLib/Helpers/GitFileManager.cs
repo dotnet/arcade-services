@@ -781,6 +781,8 @@ namespace Microsoft.DotNet.DarcLib
 
                         if (existingProperties.Contains(propertyName))
                         {
+                            _logger.LogError($"The dependency '{propertyName}' appears more than once in " +
+                                $"'{VersionFiles.VersionProps}'");
                             hasNoDuplicatedProperties = false;
                         }
 
@@ -1048,7 +1050,7 @@ namespace Microsoft.DotNet.DarcLib
             return managedFeeds;
         }
 
-        private List<(string key, string feed)> GetPackageSources(XmlDocument nugetConfig, Func<string, bool> filter = null)
+        public List<(string key, string feed)> GetPackageSources(XmlDocument nugetConfig, Func<string, bool> filter = null)
         {
             var sources = new List<(string key, string feed)>();
             XmlNodeList nodes = nugetConfig.SelectNodes("//configuration/packageSources/add");

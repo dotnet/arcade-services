@@ -1120,7 +1120,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             // Once we have applied all of non coherent updates, then we need to run a coherency check on the
             // dependencies.
             List<DependencyUpdate> coherencyUpdates =
-                await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory);
+                await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory, CoherencyMode.Legacy);
 
             if (coherencyUpdates.Any())
             {

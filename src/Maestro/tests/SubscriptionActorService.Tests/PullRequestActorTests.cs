@@ -88,7 +88,7 @@ namespace SubscriptionActorService.Tests
             DarcRemotes[TargetRepo]
                 .Verify(r => r.GetDependenciesAsync(TargetRepo, TargetBranch, null, false));
             DarcRemotes[TargetRepo]
-                .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object));
+                .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object, CoherencyMode.Legacy));
             assets.Should()
                 .BeEquivalentTo(
                     new List<List<AssetData>>
@@ -232,7 +232,7 @@ namespace SubscriptionActorService.Tests
                 .Setup(
                     r => r.GetRequiredCoherencyUpdatesAsync(
                         It.IsAny<IEnumerable<DependencyDetail>>(),
-                        It.IsAny<IRemoteFactory>()))
+                        It.IsAny<IRemoteFactory>(), CoherencyMode.Legacy))
                 .ReturnsAsync(
                     (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory) =>
                     {
