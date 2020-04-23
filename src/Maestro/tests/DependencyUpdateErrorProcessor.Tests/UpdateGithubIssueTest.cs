@@ -60,7 +60,8 @@ namespace DependencyUpdateErrorProcessor.Tests
             Context.SaveChanges();
 
             var repository = new Repository();
-
+            //Shared mocks works for Xunit as it creates a separate file for each test, but for Nunit there will be a conflict. 
+            //We need to take care of this if we port to Nunit in future.
             GithubClient.Setup(x => x.Repository.Get(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(repository);
             Issue issueCreated = GetIssue();
             List<NewIssue> newIssues = new List<NewIssue>();

@@ -41,6 +41,8 @@ namespace DependencyUpdateErrorProcessor.Tests
             Context.Subscriptions.Add(subscription.Object);
             Context.SaveChanges();
             Mock<Octokit.Issue> issue = new Mock<Issue>();
+            //Shared mocks works for Xunit as it creates a separate file for each test, but for Nunit there will be a conflict. 
+            //We need to take care of this if we port to Nunit in future.
             GithubClient.Setup(x => x.Issue.Create(It.IsAny<long>(),It.IsAny<NewIssue>())).ReturnsAsync(issue.Object);
             Context.RepoBranchUpdateInMemory = new List<RepositoryBranchUpdateHistoryEntry>
                 {repositoryBranchUpdate};
