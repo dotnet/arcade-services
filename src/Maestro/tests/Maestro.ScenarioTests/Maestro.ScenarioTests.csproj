@@ -10,12 +10,12 @@
   <ItemGroup>
     <!-- The weird implicit package reference sometimes is included, and sometimes not. Remove it. -->
     <PackageReference Remove="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNETTestSdkVersion)" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="3.0.0" />
-    <PackageReference Include="Octokit" Version="$(OctokitVersion)" />
-    <PackageReference Include="coverlet.collector" Version="1.0.1" />
-    <PackageReference Include="nunit" Version="3.12.0" />
-    <PackageReference Include="NUnit3TestAdapter" Version="3.16.1">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
+    <PackageReference Include="Octokit" />
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="nunit" />
+    <PackageReference Include="NUnit3TestAdapter">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

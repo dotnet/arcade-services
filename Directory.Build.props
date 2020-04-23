@@ -18,5 +18,8 @@
     <NoWarn>$(NoWarn);NU5125</NoWarn>
 
     <LangVersion>8.0</LangVersion>
+
+    <EnableCentralPackageVersions>true</EnableCentralPackageVersions>
+    <CentralPackagesFile>$(MSBuildThisFileDirectory)eng/Packages.props</CentralPackagesFile>
   </PropertyGroup>
 </Project>

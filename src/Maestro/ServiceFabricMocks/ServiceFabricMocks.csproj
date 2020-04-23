@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.ServiceFabric" Version="6.5.677" />
-    <PackageReference Include="Microsoft.ServiceFabric.Actors" Version="3.4.677" />
-    <PackageReference Include="Microsoft.ServiceFabric.Data" Version="3.4.677" />
+    <PackageReference Include="Microsoft.ServiceFabric" />
+    <PackageReference Include="Microsoft.ServiceFabric.Actors" />
+    <PackageReference Include="Microsoft.ServiceFabric.Data" />
   </ItemGroup>
 
 </Project>

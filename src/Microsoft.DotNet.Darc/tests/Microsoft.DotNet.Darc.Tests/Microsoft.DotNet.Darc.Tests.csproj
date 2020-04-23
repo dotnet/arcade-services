@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LibGit2Sharp" Version="$(LibGit2SharpVersion)" />
-    <PackageReference Include="Moq" Version="4.8.2" />
-    <PackageReference Include="Microsoft.CodeCoverage" Version="$(MicrosoftCodeCoverageVersion)" />
+    <PackageReference Include="LibGit2Sharp" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="Microsoft.CodeCoverage" />
   </ItemGroup>
 
   <ItemGroup>
