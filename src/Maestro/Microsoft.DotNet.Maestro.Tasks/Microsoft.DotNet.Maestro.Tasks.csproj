@@ -2,7 +2,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp2.1;$(NetFxTfm)</TargetFrameworks>
     <Description>This package include tasks involving Maestro++ and the Build Asset Registry.</Description>
     <DevelopmentDependency>true</DevelopmentDependency>
     <PackageType>MSBuildSdk</PackageType>

@@ -19,28 +19,16 @@ using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
 using Newtonsoft.Json;
 
-#if !NETCOREAPP3_1
-using IWebHostEnvironment = Microsoft.AspNetCore.Hosting.IHostingEnvironment;
-using IHostEnvironment = Microsoft.Extensions.Hosting.IHostingEnvironment;
-#else
-using Microsoft.Extensions.Hosting;
-#endif
-
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
     public class HostEnvironment : IWebHostEnvironment, IHostEnvironment
-#if NETCOREAPP3_1
-#pragma warning disable 618 // use of obsolete symbol
-        , Microsoft.AspNetCore.Hosting.IHostingEnvironment
-        , Microsoft.Extensions.Hosting.IHostingEnvironment
-#pragma warning restore 618
-#endif
     {
         public HostEnvironment(string environmentName, string applicationName, string contentRootPath, IFileProvider contentRootFileProvider)
         {
@@ -235,12 +223,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             services.TryAddSingleton(InitializeEnvironment());
             services.TryAddSingleton(b => (IHostEnvironment) b.GetService<HostEnvironment>());
             services.TryAddSingleton(b => (IWebHostEnvironment) b.GetService<HostEnvironment>());
-#if NETCOREAPP3_1
-#pragma warning disable 618 // use of obsolete symbol
-            services.TryAddSingleton(b => (Microsoft.AspNetCore.Hosting.IHostingEnvironment) b.GetService<HostEnvironment>());
-            services.TryAddSingleton(b => (Microsoft.Extensions.Hosting.IHostingEnvironment) b.GetService<HostEnvironment>());
-#pragma warning restore 618
-#endif
             ConfigureApplicationInsights(services);
             services.AddLogging(
                 builder =>

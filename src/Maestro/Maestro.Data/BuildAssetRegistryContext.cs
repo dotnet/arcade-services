@@ -239,11 +239,7 @@ namespace Maestro.Data
                 .HasIndex("RepositoryName", "BranchName", "SysEndTime", "SysStartTime");
 
             builder.HasDbFunction(() => JsonExtensions.JsonValue("", "")).HasName("JSON_VALUE").HasSchema("");
-
-            builder.Query<SubscriptionUpdateHistoryEntry>()
-                .ToQuery(
-                    () => SubscriptionUpdates.FromSql(
-                            @"
+            RepositoryBranchUpdateHistory = SubscriptionUpdates.FromSqlRaw(@"
 SELECT * FROM [SubscriptionUpdates]
 FOR SYSTEM_TIME ALL
 ")
@@ -257,7 +253,7 @@ FOR SYSTEM_TIME ALL
                                 Method = u.Method,
                                 Arguments = u.Arguments,
                                 Timestamp = EF.Property<DateTime>(u, "SysStartTime")
-                            }));
+                            });
 
             builder.Query<RepositoryBranchUpdateHistoryEntry>()
                 .ToQuery(

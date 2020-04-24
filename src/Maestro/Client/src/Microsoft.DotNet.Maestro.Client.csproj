@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;$(NetFxTfm)</TargetFrameworks>
     <IsPackable>true</IsPackable>
     <Description>This package provides access to the Maestro Api</Description>
     <LangVersion>8.0</LangVersion>
@@ -14,8 +13,6 @@
   <ItemGroup>
     <PackageReference Include="Azure.Core" />
     <PackageReference Include="Newtonsoft.Json" />
-    <PackageReference Include="System.Collections.Immutable" />
-    <PackageReference Include="System.Text.Encodings.Web" />
 
     <PackageReference Include="Microsoft.DotNet.SwaggerGenerator.MSBuild" PrivateAssets="all" />
   </ItemGroup>

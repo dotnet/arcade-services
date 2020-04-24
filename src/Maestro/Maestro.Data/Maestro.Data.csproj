@@ -1,13 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp2.1;$(NetFxTfm)</TargetFrameworks>
     <SignAssembly>false</SignAssembly>
     <LangVersion>7.1</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
 
     <PackageReference Include="JetBrains.Annotations" />
     <PackageReference Include="Newtonsoft.Json" />
