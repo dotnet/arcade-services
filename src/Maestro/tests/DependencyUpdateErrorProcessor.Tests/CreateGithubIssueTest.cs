@@ -22,6 +22,7 @@ namespace DependencyUpdateErrorProcessor.Tests
         [Theory]
         [InlineData("https://github.test/test-org-1/test-repo-1", "BranchOne", "ProcessPendingUpdatesAsync", "no arguments" , "2200/1/1" , false)]
         [InlineData("https://github.test/test-org-1/test-repo-13", "BranchTwo", "UpdateAssetsAsync", "[\"00000000-0000-0000-0000-000000000001\",\"UpdateAssetsAsync\"]",  "2200/1/1", false)]
+        [InlineData("https://github.test/test-org-1/test-repo-1", "BranchOne", "TestMethod", "no arguments", "2200/1/1", false)]
         public async Task ShouldCreateIssue(string repoUrl, string branch , string method, string arguments , DateTime errorOccurredAt, bool success)
         {
             RepositoryBranchUpdateHistoryEntry repositoryBranchUpdate =
@@ -56,6 +57,8 @@ namespace DependencyUpdateErrorProcessor.Tests
         /// <summary>
         /// No issue should be created for the method SynchronizePullRequestAsync
         /// No issue should be created if the subscriptionGuid is invalid for the UpdateAssetsAsync method
+        /// No issue should be created if the createdDate for the error is less than current time
+        /// No issue should be created if the subscriptionId is not present in the database.
         /// </summary>
         /// <param name="repoUrl"></param>
         /// <param name="branch"></param>
@@ -67,6 +70,8 @@ namespace DependencyUpdateErrorProcessor.Tests
         [Theory]
         [InlineData("https://github.test/test-org-1/test-repo-1", "38", "SynchronizePullRequestAsync", "no arguments", "2200/1/1", false)]
         [InlineData("https://github.test/test-org-1/test-repo-13", "38", "UpdateAssetsAsync", "[\"0000000\",\"UpdateAssetsAsync\"]", "2200/1/1", false)]
+        [InlineData("https://github.test/test-org-1/test-repo-12", "38", "UpdateAssetsAsync", "[\"00000000-0000-0000-0000-000000000001\",\"UpdateAssetsAsync\"]", "2020/1/1", false)]
+        [InlineData("https://github.test/test-org-1/test-repo-1", "38", "UpdateAssetsAsync", "[\"00000000-0000-0000-0000-000000000001\",\"UpdateAssetsAsync\"]", "2200/1/1", false)]
         public async Task ShouldNotCreateIssue(string repoUrl, string branch, string method, string arguments, DateTime errorOccurredAt, bool success)
         {
             RepositoryBranchUpdateHistoryEntry repositoryBranchUpdate =
@@ -81,6 +86,9 @@ namespace DependencyUpdateErrorProcessor.Tests
                 };
             Repository repository = new Repository();
             GithubClient.Setup(x => x.Repository.Get(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(repository);
+            Maestro.Data.Models.Subscription subscription = new Maestro.Data.Models.Subscription();
+            Context.Subscriptions.Add(subscription); 
+            Context.SaveChanges();
             Mock<Octokit.Issue> issue = new Mock<Issue>();
             GithubClient.Setup(x => x.Issue.Create(It.IsAny<long>(), It.IsAny<NewIssue>())).ReturnsAsync(issue.Object);
             Context.RepoBranchUpdateInMemory = new List<RepositoryBranchUpdateHistoryEntry>

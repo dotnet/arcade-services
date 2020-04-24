@@ -22,6 +22,7 @@ namespace DependencyUpdateErrorProcessor.Tests
         private const string RepoUrl = "https://github.test/test-org-1/test-repo-1";
         private const int RepoId = 0;
         private const int IssueNumber = 1;
+        private const int CommentId = 1;
         [Fact]
         public async Task CreateIssueAndUpdateIssueBody()
         {
@@ -118,6 +119,172 @@ namespace DependencyUpdateErrorProcessor.Tests
                 null
             );
             return issue;
+        }
+
+        [Fact]
+        public async Task CreateIssueAndAddAdditionalComment()
+        {
+            RepositoryBranchUpdateHistoryEntry firstError =
+                new RepositoryBranchUpdateHistoryEntry
+                {
+                    Repository = RepoUrl,
+                    Branch = Branch,
+                    Method = MethodName,
+                    Timestamp = new DateTime(2200, 1, 1),
+                    Arguments = $"[\"{SubscriptionId}\",\"{MethodName}\",\"{ErrorMessage}\"]",
+                    Success = false,
+                    ErrorMessage = ErrorMessage,
+                    Action = "Creating new issue"
+                };
+            RepositoryBranchUpdateHistoryEntry secondError =
+                new RepositoryBranchUpdateHistoryEntry
+                {
+                    Repository = RepoUrl,
+                    Branch = Branch,
+                    Method = "ProcessPendingUpdatesAsync",
+                    Timestamp = new DateTime(2200, 2, 1),
+                    Arguments = "ProcessPendingUpdatesAsync error",
+                    Success = false,
+                    ErrorMessage = ErrorMessage,
+                    Action = "Create a new issue comment",
+                };
+
+            Context.RepoBranchUpdateInMemory = new List<RepositoryBranchUpdateHistoryEntry>
+                {firstError , secondError};
+            Mock<Maestro.Data.Models.Subscription> subscription = new Mock<Maestro.Data.Models.Subscription>();
+            subscription.Object.Id = Guid.Parse(SubscriptionId);
+            subscription.Object.SourceRepository = "Source Repo";
+            subscription.Object.TargetRepository = "Target Repo";
+            Context.Subscriptions.Add(subscription.Object);
+            Context.SaveChanges();
+            Repository repository = new Repository();
+            GithubClient.Setup(x => x.Repository.Get(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(repository);
+            Issue updateIssue = GetIssue();
+            Octokit.AuthorAssociation author = new Octokit.AuthorAssociation();
+            IssueComment comment = new IssueComment
+            (
+                1,
+                null,
+                null,
+                null,
+                "New comment for the existing issue",
+                new DateTime(2200, 02, 02),
+                null,
+                null,
+                null,
+                author);
+            List<IssueComment> issueComment = new List<IssueComment> { comment };
+            List<NewIssue> newIssues = new List<NewIssue>();
+            List<string> newCommentInfo = new List<string>();
+            GithubClient.Setup(x => x.Issue.Create(It.IsAny<long>(), Capture.In(newIssues))).ReturnsAsync(updateIssue);
+            GithubClient.Setup(x => x.Issue.Get(0, 1)).ReturnsAsync(updateIssue);
+            GithubClient.Setup(x => x.Issue.Comment.GetAllForIssue(RepoId, IssueNumber)).ReturnsAsync(issueComment);
+            GithubClient.Setup(x => x.Issue.Comment.Create(RepoId, IssueNumber, Capture.In(newCommentInfo))).ReturnsAsync(comment);
+            DependencyUpdateErrorProcessor errorProcessor =
+                ActivatorUtilities.CreateInstance<DependencyUpdateErrorProcessor>(Scope.ServiceProvider,
+                    Context);
+            await errorProcessor.ProcessDependencyUpdateErrorsAsync();
+            Assert.Single(newIssues);
+            Assert.Equal("DependencyUpdateError", newIssues[0].Labels[0]);
+            Assert.Contains(RepoUrl, newIssues[0].Body);
+            Assert.Contains(SubscriptionId, newIssues[0].Body);
+            Assert.Contains(SubscriptionId, newIssues[0].Body);
+            Assert.Contains(MethodName, newIssues[0].Body);
+            Assert.DoesNotContain(SubscriptionId, newCommentInfo[0]);
+            Assert.Contains("2/1/2200 12:00:00 AM", newCommentInfo[0]);
+            Assert.Contains("ProcessPendingUpdatesAsync", newCommentInfo[0]);
+        }
+
+        [Fact]
+        public async Task CreateIssueAndUpdateComment()
+        {
+            const string AnotherMethod = "ProcessPendingUpdatesAsync";
+            RepositoryBranchUpdateHistoryEntry firstError =
+                new RepositoryBranchUpdateHistoryEntry
+                {
+                    Repository = RepoUrl,
+                    Branch = Branch,
+                    Method = MethodName,
+                    Timestamp = new DateTime(2200, 1, 1),
+                    Arguments = $"[\"{SubscriptionId}\",\"{MethodName}\",\"{ErrorMessage}\"]",
+                    Success = false,
+                    ErrorMessage = ErrorMessage,
+                    Action = "Creating new issue"
+                };
+            RepositoryBranchUpdateHistoryEntry secondError =
+                new RepositoryBranchUpdateHistoryEntry
+                {
+                    Repository = RepoUrl,
+                    Branch = Branch,
+                    Method = AnotherMethod,
+                    Timestamp = new DateTime(2200, 2, 1),
+                    Arguments = "ProcessPendingUpdatesAsync error",
+                    Success = false,
+                    ErrorMessage = ErrorMessage,
+                    Action = "Create a new issue comment",
+                };
+
+            RepositoryBranchUpdateHistoryEntry thirdError =
+                new RepositoryBranchUpdateHistoryEntry
+                {
+                    Repository = RepoUrl,
+                    Branch = Branch,
+                    Method = AnotherMethod,
+                    Timestamp = new DateTime(2200, 3, 1),
+                    Arguments = "ProcessPendingUpdatesAsync arguments",
+                    Success = false,
+                    ErrorMessage = ErrorMessage,
+                    Action = "Update the comment",
+                };
+            Context.RepoBranchUpdateInMemory = new List<RepositoryBranchUpdateHistoryEntry>
+                {firstError , secondError , thirdError};
+            Mock<Maestro.Data.Models.Subscription> subscription = new Mock<Maestro.Data.Models.Subscription>();
+            subscription.Object.Id = Guid.Parse(SubscriptionId);
+            subscription.Object.SourceRepository = "Source Repo";
+            subscription.Object.TargetRepository = "Target Repo";
+            Context.Subscriptions.Add(subscription.Object);
+            Context.SaveChanges();
+            Repository repository = new Repository();
+            GithubClient.Setup(x => x.Repository.Get(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(repository);
+            Issue updateIssue = GetIssue();
+            Octokit.AuthorAssociation author = new Octokit.AuthorAssociation();
+            IssueComment comment = new IssueComment
+            (
+                1,
+                null,
+                null,
+                null,
+                $"[marker]: <> (subscriptionId: '', method: '{AnotherMethod}', errorMessage: '{ErrorMessage}')",
+                new DateTime(2200, 02, 02),
+                null,
+                null,
+                null,
+                author);
+            List<IssueComment> issueComment = new List<IssueComment> { comment };
+            List<NewIssue> newIssues = new List<NewIssue>();
+            List<string> newCommentInfo = new List<string>();
+
+            GithubClient.Setup(x => x.Issue.Create(It.IsAny<long>(), Capture.In(newIssues))).ReturnsAsync(updateIssue);
+            GithubClient.Setup(x => x.Issue.Get(RepoId, IssueNumber)).ReturnsAsync(updateIssue);
+            GithubClient.Setup(x => x.Issue.Comment.GetAllForIssue(RepoId, IssueNumber)).ReturnsAsync(issueComment);
+            GithubClient.Setup(x => x.Issue.Comment.Create(RepoId, IssueNumber, Capture.In(newCommentInfo))).ReturnsAsync(comment);
+            GithubClient.Setup(x => x.Issue.Comment.Update(RepoId, CommentId, Capture.In(newCommentInfo)))
+                .ReturnsAsync(comment);
+            DependencyUpdateErrorProcessor errorProcessor =
+                ActivatorUtilities.CreateInstance<DependencyUpdateErrorProcessor>(Scope.ServiceProvider,
+                    Context);
+            await errorProcessor.ProcessDependencyUpdateErrorsAsync();
+            Assert.Single(newIssues);
+            Assert.Equal("DependencyUpdateError", newIssues[0].Labels[0]);
+            Assert.Contains(RepoUrl, newIssues[0].Body);
+            Assert.Contains(SubscriptionId, newIssues[0].Body);
+            Assert.Contains(SubscriptionId, newIssues[0].Body);
+            Assert.Contains(AnotherMethod, newCommentInfo[0]);
+            Assert.DoesNotContain(SubscriptionId, newCommentInfo[0]);
+            Assert.Contains("2/1/2200 12:00:00 AM", newCommentInfo[0]);
+            Assert.Contains(AnotherMethod, newCommentInfo[1]);
+            Assert.Contains("3/1/2200 12:00:00 AM", newCommentInfo[1]);
+            Assert.DoesNotContain(SubscriptionId, newCommentInfo[1]);
         }
     }
 }
