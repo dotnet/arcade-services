@@ -57,7 +57,7 @@ namespace DependencyUpdateErrorProcessor
             _authenticateGitHubClient = authenticateGithubClient;
         }
 
-       [CronSchedule("0 0 5 1/1 * ? *", TimeZones.PST)]
+       [CronSchedule("0 0 0/1 1/1 * ? *", TimeZones.PST)]
        public async Task ProcessDependencyUpdateErrorsAsync()
         {
             if (_options.IsEnabled)
