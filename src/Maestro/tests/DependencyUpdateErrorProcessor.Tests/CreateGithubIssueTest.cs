@@ -58,6 +58,7 @@ namespace DependencyUpdateErrorProcessor.Tests
         /// No issue should be created for the method SynchronizePullRequestAsync
         /// No issue should be created if the subscriptionGuid is invalid for the UpdateAssetsAsync method
         /// No issue should be created if the createdDate for the error is less than current time
+        /// No issue is created if the subscription is deleted
         /// </summary>
         /// <param name="repoUrl"></param>
         /// <param name="branch"></param>

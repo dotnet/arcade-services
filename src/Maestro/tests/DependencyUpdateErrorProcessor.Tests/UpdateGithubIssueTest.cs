@@ -151,11 +151,13 @@ namespace DependencyUpdateErrorProcessor.Tests
 
             Context.RepoBranchUpdateInMemory = new List<RepositoryBranchUpdateHistoryEntry>
                 {firstError , secondError};
-            Mock<Maestro.Data.Models.Subscription> subscription = new Mock<Maestro.Data.Models.Subscription>();
-            subscription.Object.Id = Guid.Parse(SubscriptionId);
-            subscription.Object.SourceRepository = "Source Repo";
-            subscription.Object.TargetRepository = "Target Repo";
-            Context.Subscriptions.Add(subscription.Object);
+            Maestro.Data.Models.Subscription subscription = new Maestro.Data.Models.Subscription
+            {
+                Id = Guid.Parse(SubscriptionId),
+                SourceRepository = "Source Repo",
+                TargetRepository = "Target Repo",
+            };
+            Context.Subscriptions.Add(subscription);
             Context.SaveChanges();
             Repository repository = new Repository();
             GithubClient.Setup(x => x.Repository.Get(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(repository);
@@ -237,12 +239,14 @@ namespace DependencyUpdateErrorProcessor.Tests
                     Action = "Update the comment",
                 };
             Context.RepoBranchUpdateInMemory = new List<RepositoryBranchUpdateHistoryEntry>
-                {firstError , secondError , thirdError};
-            Mock<Maestro.Data.Models.Subscription> subscription = new Mock<Maestro.Data.Models.Subscription>();
-            subscription.Object.Id = Guid.Parse(SubscriptionId);
-            subscription.Object.SourceRepository = "Source Repo";
-            subscription.Object.TargetRepository = "Target Repo";
-            Context.Subscriptions.Add(subscription.Object);
+                {firstError, secondError, thirdError};
+            Maestro.Data.Models.Subscription subscription = new Maestro.Data.Models.Subscription
+            {
+                Id = Guid.Parse(SubscriptionId),
+                SourceRepository = "Source Repo",
+                TargetRepository = "Target Repo",
+            };
+            Context.Subscriptions.Add(subscription);
             Context.SaveChanges();
             Repository repository = new Repository();
             GithubClient.Setup(x => x.Repository.Get(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(repository);
@@ -277,7 +281,6 @@ namespace DependencyUpdateErrorProcessor.Tests
             Assert.Single(newIssues);
             Assert.Equal("DependencyUpdateError", newIssues[0].Labels[0]);
             Assert.Contains(RepoUrl, newIssues[0].Body);
-            Assert.Contains(SubscriptionId, newIssues[0].Body);
             Assert.Contains(SubscriptionId, newIssues[0].Body);
             Assert.Contains(AnotherMethod, newCommentInfo[0]);
             Assert.DoesNotContain(SubscriptionId, newCommentInfo[0]);
