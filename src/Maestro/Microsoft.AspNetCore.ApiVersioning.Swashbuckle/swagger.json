@@ -1,0 +1,3649 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "version": "2019-01-16",
+    "title": "Version 2019-01-16",
+    "description": "The Web API enabling access to the Maestro++ service that supports the [.NET Core Dependency Flow infrastructure](https://github.com/dotnet/arcade/blob/master/Documentation/DependenciesFlowPlan.md).",
+    "contact": {
+      "name": ".NET Core Engineering",
+      "email": "dnceng@microsoft.com"
+    }
+  },
+  "host": "maestro-int.westus2.cloudapp.azure.com",
+  "schemes": [
+    "https"
+  ],
+  "paths": {
+    "/api/assets": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Gets a paged list of all Maestro.Web.Api.v2018_07_16.Models.Assets that match the given search criteria.",
+        "operationId": "Assets_ListAssets",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "buildId",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "nonShipping",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "loadLocations",
+            "in": "query",
+            "description": "**true** to include the Asset Location data with the response; **false** otherwise.",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Asset"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        },
+        "x-ms-paginated": {
+          "page": "page",
+          "pageSize": "perPage"
+        }
+      }
+    },
+    "/api/assets/darc-version": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Gets the version of Darc in use by this deployment of Maestro.",
+        "operationId": "Assets_GetDarcVersion",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/{id}": {
+      "get": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Gets a single Maestro.Web.Api.v2018_07_16.Models.Asset, including all Maestro.Web.Api.v2018_07_16.Models.AssetLocations.",
+        "operationId": "Assets_GetAsset",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.Asset.",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Asset"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/{assetId}/locations": {
+      "post": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Adds a new Maestro.Web.Api.v2018_07_16.Models.AssetLocation to an existing Maestro.Web.Api.v2018_07_16.Models.Asset object.",
+        "operationId": "Assets_AddAssetLocationToAsset",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "assetId",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.Asset to add the Maestro.Web.Api.v2018_07_16.Models.AssetLocation to.",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "location",
+            "in": "query",
+            "description": "The location to add to the Asset.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "assetLocationType",
+            "in": "query",
+            "description": "The type of the location.",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "none",
+              "nugetFeed",
+              "container"
+            ]
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/AssetLocation"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/assets/{assetId}/locations/{assetLocationId}": {
+      "delete": {
+        "tags": [
+          "Assets"
+        ],
+        "summary": "Removes an existing Maestro.Web.Api.v2018_07_16.Models.AssetLocation from an Maestro.Web.Api.v2018_07_16.Models.Asset.",
+        "operationId": "Assets_RemoveAssetLocationFromAsset",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "assetId",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.Asset to remove the Maestro.Web.Api.v2018_07_16.Models.AssetLocation from.",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "assetLocationId",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.AssetLocation to remove.",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/builds": {
+      "get": {
+        "tags": [
+          "Builds"
+        ],
+        "summary": "Gets a paged list of all Maestro.Web.Api.v2019_01_16.Models.Builds that match the given search criteria.",
+        "operationId": "Builds_ListBuilds",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "repository",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "commit",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "buildNumber",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "channelId",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "notBefore",
+            "in": "query",
+            "description": "Don't return Maestro.Web.Api.v2019_01_16.Models.Builds that happened before this time.",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "notAfter",
+            "in": "query",
+            "description": "Don't return Maestro.Web.Api.v2019_01_16.Models.Builds that happened after this time.",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "loadCollections",
+            "in": "query",
+            "description": "**true** to include the Maestro.Web.Api.v2018_07_16.Models.Channel, Maestro.Web.Api.v2018_07_16.Models.Asset, and dependent Maestro.Web.Api.v2019_01_16.Models.Build data with the response; **false** otherwise.",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Build"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        },
+        "x-ms-paginated": {
+          "page": "page",
+          "pageSize": "perPage"
+        }
+      },
+      "post": {
+        "tags": [
+          "Builds"
+        ],
+        "summary": "Creates a new Maestro.Web.Api.v2019_01_16.Models.Build in the database.",
+        "operationId": "Builds_Create",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "build",
+            "in": "body",
+            "description": "An object containing the data for the new Maestro.Web.Api.v2019_01_16.Models.Build",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BuildData"
+            }
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Build"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/builds/{id}": {
+      "get": {
+        "tags": [
+          "Builds"
+        ],
+        "summary": "Gets a single Maestro.Web.Api.v2019_01_16.Models.Build, including all the Maestro.Web.Api.v2018_07_16.Models.Channel, Maestro.Web.Api.v2018_07_16.Models.Asset, and dependent Maestro.Web.Api.v2019_01_16.Models.Build data.",
+        "operationId": "Builds_GetBuild",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2019_01_16.Models.Build.",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Build"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/builds/{id}/graph": {
+      "get": {
+        "tags": [
+          "Builds"
+        ],
+        "operationId": "Builds_GetBuildGraph",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/BuildGraph"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/builds/latest": {
+      "get": {
+        "tags": [
+          "Builds"
+        ],
+        "summary": "Gets the latest Maestro.Web.Api.v2019_01_16.Models.Builds that matches the given search criteria.",
+        "operationId": "Builds_GetLatest",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "repository",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "commit",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "buildNumber",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "channelId",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "notBefore",
+            "in": "query",
+            "description": "Don't return Maestro.Web.Api.v2019_01_16.Models.Builds that happened before this time.",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "notAfter",
+            "in": "query",
+            "description": "Don't return Maestro.Web.Api.v2019_01_16.Models.Builds that happened after this time.",
+            "required": false,
+            "type": "string",
+            "format": "date-time"
+          },
+          {
+            "name": "loadCollections",
+            "in": "query",
+            "description": "**true** to include the Maestro.Web.Api.v2018_07_16.Models.Channel, Maestro.Web.Api.v2018_07_16.Models.Asset, and dependent Maestro.Web.Api.v2019_01_16.Models.Build data with the response; **false** otherwise.",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Build"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/builds/{buildId}": {
+      "patch": {
+        "tags": [
+          "Builds"
+        ],
+        "operationId": "Builds_Update",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "buildId",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "buildUpdate",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BuildUpdate"
+            }
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Build"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/buildtime/{id}": {
+      "get": {
+        "tags": [
+          "BuildTime"
+        ],
+        "summary": "Gets the average official build time and average pr build time for a given default channel\r\nThis is captured for generating the longest build times for the dependency flow graph",
+        "operationId": "BuildTime_GetBuildTimes",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Default channel id",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "description": "Number of days to summarize over",
+            "required": true,
+            "type": "integer",
+            "format": "int32",
+            "default": 7
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/BuildTime"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/channels": {
+      "get": {
+        "tags": [
+          "Channels"
+        ],
+        "summary": "Gets a list of all Maestro.Web.Api.v2018_07_16.Models.Channels that match the given classification.",
+        "operationId": "Channels_ListChannels",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "classification",
+            "in": "query",
+            "description": "The Maestro.Web.Api.v2018_07_16.Models.Channel.Classification of Maestro.Web.Api.v2018_07_16.Models.Channel to get",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Channel"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Channels"
+        ],
+        "summary": "Creates a Maestro.Web.Api.v2018_07_16.Models.Channel.",
+        "operationId": "Channels_CreateChannel",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "The name of the new Maestro.Web.Api.v2018_07_16.Models.Channel. This is required to be unique.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "classification",
+            "in": "query",
+            "description": "The classification of the new Maestro.Web.Api.v2018_07_16.Models.Channel",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Channel"
+            }
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/channels/{id}/repositories": {
+      "get": {
+        "tags": [
+          "Channels"
+        ],
+        "operationId": "Channels_ListRepositories",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/channels/{id}": {
+      "get": {
+        "tags": [
+          "Channels"
+        ],
+        "summary": "Gets a single Maestro.Web.Api.v2018_07_16.Models.Channel, including all Maestro.Data.Models.ReleasePipeline data.",
+        "operationId": "Channels_GetChannel",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.Channel to get",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Channel"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Channels"
+        ],
+        "summary": "Deletes a Maestro.Web.Api.v2018_07_16.Models.Channel.",
+        "operationId": "Channels_DeleteChannel",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.Channel to delete",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Channel"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/channels/{channelId}/builds/{buildId}": {
+      "post": {
+        "tags": [
+          "Channels"
+        ],
+        "summary": "Adds an existing Maestro.Data.Models.Build to the specified Maestro.Web.Api.v2018_07_16.Models.Channel",
+        "operationId": "Channels_AddBuildToChannel",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.Channel.",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "buildId",
+            "in": "path",
+            "description": "The id of the Maestro.Data.Models.Build",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Channels"
+        ],
+        "summary": "Remove a build from a channel.",
+        "operationId": "Channels_RemoveBuildFromChannel",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.Channel.",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "buildId",
+            "in": "path",
+            "description": "The id of the Maestro.Data.Models.Build",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/channels/{channelId}/pipelines/{pipelineId}": {
+      "post": {
+        "tags": [
+          "Channels"
+        ],
+        "summary": "Add an existing Maestro.Data.Models.ReleasePipeline to the specified Maestro.Web.Api.v2018_07_16.Models.Channel",
+        "operationId": "Channels_AddPipelineToChannel",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.Channel",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pipelineId",
+            "in": "path",
+            "description": "The id of the Maestro.Data.Models.ReleasePipeline",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Channels"
+        ],
+        "summary": "Remove a Maestro.Data.Models.ReleasePipeline from the specified Maestro.Web.Api.v2018_07_16.Models.Channel",
+        "operationId": "Channels_DeletePipelineFromChannel",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.Channel",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pipelineId",
+            "in": "path",
+            "description": "The id of the Maestro.Data.Models.ReleasePipeline",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/channels/{channelId}/graph": {
+      "get": {
+        "tags": [
+          "Channels"
+        ],
+        "summary": "Get the dependency flow graph for the specified Maestro.Web.Api.v2018_07_16.Models.Channel",
+        "operationId": "Channels_GetFlowGraphAsync",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.Channel",
+            "required": true,
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          {
+            "name": "includeDisabledSubscriptions",
+            "in": "query",
+            "description": "Include disabled subscriptions",
+            "required": true,
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "includedFrequencies",
+            "in": "query",
+            "description": "Frequencies to include",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi",
+            "uniqueItems": false
+          },
+          {
+            "name": "includeBuildTimes",
+            "in": "query",
+            "description": "If we should create the flow graph with build times",
+            "required": true,
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "description": "Number of days over which to summarize build times",
+            "required": true,
+            "type": "integer",
+            "format": "int32",
+            "default": 7
+          },
+          {
+            "name": "includeArcade",
+            "in": "query",
+            "description": "If we should include arcade in the flow graph",
+            "required": true,
+            "type": "boolean",
+            "default": true
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/FlowGraph"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/default-channels": {
+      "get": {
+        "tags": [
+          "DefaultChannels"
+        ],
+        "summary": "Gets a list of all Maestro.Web.Api.v2018_07_16.Models.DefaultChannel mappings that match the given search criteria.",
+        "operationId": "DefaultChannels_List",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "repository",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "branch",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "channelId",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "enabled",
+            "in": "query",
+            "description": "True if the default channel should be initially enabled or disabled.",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DefaultChannel"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "DefaultChannels"
+        ],
+        "summary": "Creates a Maestro.Web.Api.v2018_07_16.Models.DefaultChannel mapping.",
+        "operationId": "DefaultChannels_Create",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "data",
+            "in": "body",
+            "description": "An object containing the data for the new Maestro.Web.Api.v2018_07_16.Models.DefaultChannel",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/DefaultChannelCreateData"
+            }
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/default-channels/{id}": {
+      "get": {
+        "tags": [
+          "DefaultChannels"
+        ],
+        "summary": "Gets a single Maestro.Web.Api.v2018_07_16.Models.DefaultChannel.",
+        "operationId": "DefaultChannels_Get",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.DefaultChannel",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/DefaultChannel"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "DefaultChannels"
+        ],
+        "summary": "Deleted a single Maestro.Web.Api.v2018_07_16.Models.DefaultChannel",
+        "operationId": "DefaultChannels_Delete",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.DefaultChannel to delete.",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "DefaultChannels"
+        ],
+        "summary": "Update an existing default channel with new data.",
+        "operationId": "DefaultChannels_Update",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Id of default channel",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "update",
+            "in": "body",
+            "description": "Default channel update data",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/DefaultChannelUpdateData"
+            }
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/DefaultChannel"
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/goals/channelName/{channelName}/definitionId/{definitionId}": {
+      "get": {
+        "tags": [
+          "Goal"
+        ],
+        "summary": "Gets the build time in minutes Maestro.Web.Api.v2019_01_16.Models.Goal for a given Definition in a Channel.\r\nThis is captured for the Power BI Dashboard -Internal Report under .Net Core Engineering Services workspace.",
+        "operationId": "Goal_GetGoalTimes",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "definitionId",
+            "in": "path",
+            "description": "Azure DevOps pipeline Definition Id",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "channelName",
+            "in": "path",
+            "description": "Channel Name for the build time Eg. .Net Core 5",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Goal"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Goal"
+        ],
+        "summary": "Sets a build time in minutes Maestro.Web.Api.v2019_01_16.Models.Goal for a given Definition in a Channel.\r\nThis is captured for the Power BI Dashboard -Internal Report under .Net Core Engineering Services workspace.",
+        "operationId": "Goal_Create",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "goalData",
+            "in": "body",
+            "description": "An object containing build time goal in minutes Maestro.Web.Api.v2019_01_16.Models.Goal",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/GoalRequestJson"
+            }
+          },
+          {
+            "name": "channelName",
+            "in": "path",
+            "description": "Channel Name for the build time Eg. .Net Core 5",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "definitionId",
+            "in": "path",
+            "description": "Azure DevOps pipeline Definition Id",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Goal"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/pipelines": {
+      "get": {
+        "tags": [
+          "Pipelines"
+        ],
+        "summary": "Gets a list of all Maestro.Web.Api.v2018_07_16.Models.ReleasePipelines that match the given search criteria.",
+        "operationId": "Pipelines_List",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "pipelineIdentifier",
+            "in": "query",
+            "description": "The Azure DevOps Release Pipeline id",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "organization",
+            "in": "query",
+            "description": "The Azure DevOps organization",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "project",
+            "in": "query",
+            "description": "The Azure DevOps project",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ReleasePipeline"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Pipelines"
+        ],
+        "summary": "Creates a Maestro.Web.Api.v2018_07_16.Models.ReleasePipeline",
+        "operationId": "Pipelines_CreatePipeline",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "pipelineIdentifier",
+            "in": "query",
+            "description": "The Azure DevOps Release Pipeline id",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "organization",
+            "in": "query",
+            "description": "The Azure DevOps organization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "project",
+            "in": "query",
+            "description": "The Azure DevOps project",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/ReleasePipeline"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/pipelines/{id}": {
+      "get": {
+        "tags": [
+          "Pipelines"
+        ],
+        "summary": "Gets a single Maestro.Web.Api.v2018_07_16.Models.ReleasePipeline.",
+        "operationId": "Pipelines_GetPipeline",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.ReleasePipeline to get",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/ReleasePipeline"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Pipelines"
+        ],
+        "summary": "Deletes a Maestro.Web.Api.v2018_07_16.Models.ReleasePipeline",
+        "operationId": "Pipelines_DeletePipeline",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.ReleasePipeline to delete",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/ReleasePipeline"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/repo-config/repositories": {
+      "get": {
+        "tags": [
+          "Repository"
+        ],
+        "summary": "Gets the list of <see cref=\"T:Maestro.Web.Api.v2018_07_16.Models.RepositoryBranch\">RepositoryBranch</see>, optionally filtered by\r\nrepository and branch.",
+        "operationId": "Repository_ListRepositories",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "repository",
+            "in": "query",
+            "description": "The repository",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "branch",
+            "in": "query",
+            "description": "The branch",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/RepositoryBranch"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/repo-config/merge-policy": {
+      "get": {
+        "tags": [
+          "Repository"
+        ],
+        "summary": "Gets the list of <see cref=\"T:Maestro.Web.Api.v2018_07_16.Models.MergePolicy\">MergePolicies</see> set up for the given repository and branch.",
+        "operationId": "Repository_GetMergePolicies",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "repository",
+            "in": "query",
+            "description": "The repository",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "branch",
+            "in": "query",
+            "description": "The branch",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/MergePolicy"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Repository"
+        ],
+        "summary": "Sets the <see cref=\"T:Maestro.Web.Api.v2018_07_16.Models.MergePolicy\">MergePolicies</see> for the given repository and branch",
+        "operationId": "Repository_SetMergePolicies",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "repository",
+            "in": "query",
+            "description": "The repository",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "branch",
+            "in": "query",
+            "description": "The branch",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "policies",
+            "in": "body",
+            "description": "The <see cref=\"T:Maestro.Web.Api.v2018_07_16.Models.MergePolicy\">MergePolicies</see>",
+            "required": false,
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/MergePolicy"
+              }
+            }
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/repo-config/history": {
+      "get": {
+        "tags": [
+          "Repository"
+        ],
+        "summary": "Gets a paginated list of the repository history for the given repository and branch",
+        "operationId": "Repository_GetHistory",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "repository",
+            "in": "query",
+            "description": "The repository",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "branch",
+            "in": "query",
+            "description": "The branch",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/RepositoryHistoryItem"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        },
+        "x-ms-paginated": {
+          "page": "page",
+          "pageSize": "perPage"
+        }
+      }
+    },
+    "/api/repo-config/retry/{timestamp}": {
+      "post": {
+        "tags": [
+          "Repository"
+        ],
+        "summary": "Requests that Maestro++ retry the referenced history item.\r\nLinks to this api are returned from the M:Maestro.Web.Api.v2018_07_16.Controllers.RepositoryController.GetHistory(System.String,System.String) api.",
+        "operationId": "Repository_RetryActionAsync",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "repository",
+            "in": "query",
+            "description": "The repository",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "branch",
+            "in": "query",
+            "description": "The branch",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "timestamp",
+            "in": "path",
+            "description": "The timestamp identifying the history item to retry",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success"
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/subscriptions": {
+      "get": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Gets a list of all Maestro.Web.Api.v2019_01_16.Models.Subscriptions that match the given search criteria.",
+        "operationId": "Subscriptions_ListSubscriptions",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "sourceRepository",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "targetRepository",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "channelId",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "enabled",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Subscription"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Creates a new Maestro.Web.Api.v2019_01_16.Models.Subscription",
+        "operationId": "Subscriptions_Create",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "subscription",
+            "in": "body",
+            "description": "An object containing data for the new Maestro.Web.Api.v2019_01_16.Models.Subscription",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/SubscriptionData"
+            }
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Subscription"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/subscriptions/{id}": {
+      "get": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Gets a single Maestro.Web.Api.v2019_01_16.Models.Subscription",
+        "operationId": "Subscriptions_GetSubscription",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2019_01_16.Models.Subscription",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Subscription"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Delete an existing Maestro.Web.Api.v2019_01_16.Models.Subscription",
+        "operationId": "Subscriptions_DeleteSubscription",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2019_01_16.Models.Subscription to delete",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Subscription"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Edit an existing Maestro.Web.Api.v2019_01_16.Models.Subscription",
+        "operationId": "Subscriptions_UpdateSubscription",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2019_01_16.Models.Subscription to update",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "update",
+            "in": "body",
+            "description": "An object containing the new data for the Maestro.Web.Api.v2019_01_16.Models.Subscription",
+            "required": false,
+            "schema": {
+              "$ref": "#/definitions/SubscriptionUpdate"
+            }
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Subscription"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/subscriptions/{id}/trigger": {
+      "post": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Trigger a Maestro.Web.Api.v2019_01_16.Models.Subscription manually by id",
+        "operationId": "Subscriptions_TriggerSubscription",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2019_01_16.Models.Subscription to trigger.",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success",
+            "schema": {
+              "$ref": "#/definitions/Subscription"
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/subscriptions/triggerDaily": {
+      "post": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Trigger daily update",
+        "operationId": "Subscriptions_TriggerDailyUpdate",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    },
+    "/api/subscriptions/{id}/history": {
+      "get": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Gets a paginated list of the Subscription history for the given Subscription",
+        "operationId": "Subscriptions_GetSubscriptionHistory",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.Subscription to get history for",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "schema": {
+              "uniqueItems": false,
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/SubscriptionHistoryItem"
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        },
+        "x-ms-paginated": {
+          "page": "page",
+          "pageSize": "perPage"
+        }
+      }
+    },
+    "/api/subscriptions/{id}/retry/{timestamp}": {
+      "post": {
+        "tags": [
+          "Subscriptions"
+        ],
+        "summary": "Requests that Maestro++ retry the reference history item.\r\nLinks to this api are returned from the M:Maestro.Web.Api.v2018_07_16.Controllers.SubscriptionsController.GetSubscriptionHistory(System.Guid) api.",
+        "operationId": "Subscriptions_RetrySubscriptionActionAsync",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The id of the Maestro.Web.Api.v2018_07_16.Models.Subscription containing the history item to retry",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "timestamp",
+            "in": "path",
+            "description": "The timestamp identifying the history item to retry",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "api-version",
+            "in": "query",
+            "description": "The api version",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "2019-01-16"
+            ]
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Success"
+          },
+          "406": {
+            "description": "Not Acceptable"
+          },
+          "default": {
+            "description": "Error",
+            "schema": {
+              "$ref": "#/definitions/ApiError"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Asset": {
+      "required": [
+        "id",
+        "buildId",
+        "nonShipping"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "format": "int32",
+          "type": "integer",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "readOnly": true
+        },
+        "version": {
+          "type": "string",
+          "readOnly": true
+        },
+        "buildId": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "nonShipping": {
+          "type": "boolean"
+        },
+        "locations": {
+          "uniqueItems": false,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AssetLocation"
+          },
+          "readOnly": true
+        }
+      }
+    },
+    "AssetLocation": {
+      "required": [
+        "id",
+        "type"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "format": "int32",
+          "type": "integer",
+          "readOnly": true
+        },
+        "location": {
+          "type": "string",
+          "readOnly": true
+        },
+        "type": {
+          "$ref": "#/definitions/LocationType",
+          "readOnly": true
+        }
+      }
+    },
+    "LocationType": {
+      "enum": [
+        "none",
+        "nugetFeed",
+        "container"
+      ],
+      "type": "string"
+    },
+    "ApiError": {
+      "required": [],
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "readOnly": true
+        },
+        "errors": {
+          "uniqueItems": false,
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "readOnly": true
+        }
+      }
+    },
+    "Build": {
+      "required": [
+        "id",
+        "publishUsingPipelines",
+        "dateProduced",
+        "staleness",
+        "released"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "format": "int32",
+          "type": "integer",
+          "readOnly": true
+        },
+        "commit": {
+          "type": "string",
+          "readOnly": true
+        },
+        "azureDevOpsBuildId": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "azureDevOpsBuildDefinitionId": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "azureDevOpsAccount": {
+          "type": "string"
+        },
+        "azureDevOpsProject": {
+          "type": "string"
+        },
+        "azureDevOpsBuildNumber": {
+          "type": "string"
+        },
+        "azureDevOpsRepository": {
+          "type": "string"
+        },
+        "azureDevOpsBranch": {
+          "type": "string"
+        },
+        "gitHubRepository": {
+          "type": "string"
+        },
+        "gitHubBranch": {
+          "type": "string"
+        },
+        "publishUsingPipelines": {
+          "type": "boolean"
+        },
+        "dateProduced": {
+          "format": "date-time",
+          "type": "string",
+          "readOnly": true
+        },
+        "channels": {
+          "uniqueItems": false,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Channel"
+          },
+          "readOnly": true
+        },
+        "assets": {
+          "uniqueItems": false,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Asset"
+          },
+          "readOnly": true
+        },
+        "dependencies": {
+          "uniqueItems": false,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/BuildRef"
+          },
+          "readOnly": true
+        },
+        "staleness": {
+          "format": "int32",
+          "type": "integer",
+          "readOnly": true
+        },
+        "released": {
+          "type": "boolean",
+          "readOnly": true
+        }
+      }
+    },
+    "Channel": {
+      "required": [
+        "name",
+        "classification",
+        "id"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "format": "int32",
+          "type": "integer",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string",
+          "readOnly": true
+        },
+        "classification": {
+          "type": "string",
+          "readOnly": true
+        },
+        "releasePipelines": {
+          "uniqueItems": false,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ReleasePipeline"
+          },
+          "readOnly": true
+        }
+      }
+    },
+    "BuildRef": {
+      "required": [
+        "buildId",
+        "isProduct",
+        "timeToInclusionInMinutes"
+      ],
+      "type": "object",
+      "properties": {
+        "buildId": {
+          "format": "int32",
+          "type": "integer",
+          "readOnly": true
+        },
+        "isProduct": {
+          "type": "boolean",
+          "readOnly": true
+        },
+        "timeToInclusionInMinutes": {
+          "format": "double",
+          "type": "number"
+        }
+      }
+    },
+    "ReleasePipeline": {
+      "required": [
+        "id",
+        "pipelineIdentifier"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "pipelineIdentifier": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "project": {
+          "type": "string"
+        }
+      }
+    },
+    "BuildData": {
+      "required": [
+        "commit",
+        "azureDevOpsAccount",
+        "azureDevOpsProject",
+        "azureDevOpsBuildNumber",
+        "azureDevOpsRepository",
+        "azureDevOpsBranch",
+        "publishUsingPipelines",
+        "released"
+      ],
+      "type": "object",
+      "properties": {
+        "commit": {
+          "type": "string"
+        },
+        "assets": {
+          "uniqueItems": false,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AssetData"
+          }
+        },
+        "dependencies": {
+          "uniqueItems": false,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/BuildRef"
+          }
+        },
+        "azureDevOpsBuildId": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "azureDevOpsBuildDefinitionId": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "azureDevOpsAccount": {
+          "type": "string"
+        },
+        "azureDevOpsProject": {
+          "type": "string"
+        },
+        "azureDevOpsBuildNumber": {
+          "type": "string"
+        },
+        "azureDevOpsRepository": {
+          "type": "string"
+        },
+        "azureDevOpsBranch": {
+          "type": "string"
+        },
+        "gitHubRepository": {
+          "type": "string"
+        },
+        "gitHubBranch": {
+          "type": "string"
+        },
+        "publishUsingPipelines": {
+          "type": "boolean"
+        },
+        "released": {
+          "type": "boolean"
+        }
+      }
+    },
+    "AssetData": {
+      "required": [
+        "nonShipping"
+      ],
+      "type": "object",
+      "properties": {
+        "name": {
+          "maxLength": 150,
+          "minLength": 0,
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 75,
+          "minLength": 0,
+          "type": "string"
+        },
+        "nonShipping": {
+          "type": "boolean"
+        },
+        "locations": {
+          "uniqueItems": false,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AssetLocationData"
+          }
+        }
+      }
+    },
+    "AssetLocationData": {
+      "required": [
+        "type"
+      ],
+      "type": "object",
+      "properties": {
+        "location": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/LocationType"
+        }
+      }
+    },
+    "BuildGraph": {
+      "required": [
+        "builds"
+      ],
+      "type": "object",
+      "properties": {
+        "builds": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Build"
+          },
+          "readOnly": true
+        }
+      }
+    },
+    "BuildUpdate": {
+      "required": [],
+      "type": "object",
+      "properties": {
+        "released": {
+          "type": "boolean"
+        }
+      }
+    },
+    "BuildTime": {
+      "required": [
+        "defaultChannelId",
+        "officialBuildTime",
+        "prBuildTime",
+        "goalTimeInMinutes"
+      ],
+      "type": "object",
+      "properties": {
+        "defaultChannelId": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "officialBuildTime": {
+          "format": "double",
+          "type": "number"
+        },
+        "prBuildTime": {
+          "format": "double",
+          "type": "number"
+        },
+        "goalTimeInMinutes": {
+          "format": "int32",
+          "type": "integer"
+        }
+      }
+    },
+    "FlowGraph": {
+      "required": [
+        "flowRefs",
+        "flowEdges"
+      ],
+      "type": "object",
+      "properties": {
+        "flowRefs": {
+          "uniqueItems": false,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FlowRef"
+          },
+          "readOnly": true
+        },
+        "flowEdges": {
+          "uniqueItems": false,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FlowEdge"
+          },
+          "readOnly": true
+        }
+      }
+    },
+    "FlowRef": {
+      "required": [
+        "officialBuildTime",
+        "prBuildTime",
+        "onLongestBuildPath",
+        "bestCasePathTime",
+        "worstCasePathTime",
+        "goalTimeInMinutes"
+      ],
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "readOnly": true
+        },
+        "branch": {
+          "type": "string",
+          "readOnly": true
+        },
+        "id": {
+          "type": "string",
+          "readOnly": true
+        },
+        "officialBuildTime": {
+          "format": "double",
+          "type": "number",
+          "readOnly": true
+        },
+        "prBuildTime": {
+          "format": "double",
+          "type": "number",
+          "readOnly": true
+        },
+        "onLongestBuildPath": {
+          "type": "boolean"
+        },
+        "bestCasePathTime": {
+          "format": "double",
+          "type": "number"
+        },
+        "worstCasePathTime": {
+          "format": "double",
+          "type": "number"
+        },
+        "goalTimeInMinutes": {
+          "format": "int32",
+          "type": "integer"
+        }
+      }
+    },
+    "FlowEdge": {
+      "required": [
+        "onLongestBuildPath",
+        "isBackEdge"
+      ],
+      "type": "object",
+      "properties": {
+        "toId": {
+          "type": "string",
+          "readOnly": true
+        },
+        "fromId": {
+          "type": "string",
+          "readOnly": true
+        },
+        "onLongestBuildPath": {
+          "type": "boolean"
+        }
+      }
+    },
+    "DefaultChannel": {
+      "required": [
+        "repository",
+        "id",
+        "enabled"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "repository": {
+          "maxLength": 300,
+          "minLength": 0,
+          "type": "string"
+        },
+        "branch": {
+          "maxLength": 100,
+          "minLength": 0,
+          "type": "string"
+        },
+        "channel": {
+          "$ref": "#/definitions/Channel"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "DefaultChannelCreateData": {
+      "required": [
+        "repository",
+        "branch",
+        "channelId"
+      ],
+      "type": "object",
+      "properties": {
+        "repository": {
+          "maxLength": 300,
+          "minLength": 0,
+          "type": "string"
+        },
+        "branch": {
+          "maxLength": 100,
+          "minLength": 0,
+          "type": "string"
+        },
+        "channelId": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "DefaultChannelUpdateData": {
+      "required": [],
+      "type": "object",
+      "properties": {
+        "repository": {
+          "maxLength": 300,
+          "minLength": 0,
+          "type": "string"
+        },
+        "branch": {
+          "maxLength": 100,
+          "minLength": 0,
+          "type": "string"
+        },
+        "channelId": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "GoalRequestJson": {
+      "required": [
+        "minutes"
+      ],
+      "type": "object",
+      "properties": {
+        "minutes": {
+          "format": "int32",
+          "type": "integer"
+        }
+      }
+    },
+    "Goal": {
+      "required": [
+        "definitionId",
+        "minutes"
+      ],
+      "type": "object",
+      "properties": {
+        "definitionId": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "channel": {
+          "$ref": "#/definitions/Channel"
+        },
+        "minutes": {
+          "format": "int32",
+          "type": "integer"
+        }
+      }
+    },
+    "RepositoryBranch": {
+      "required": [],
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "mergePolicies": {
+          "uniqueItems": false,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MergePolicy"
+          }
+        }
+      }
+    },
+    "MergePolicy": {
+      "required": [],
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      }
+    },
+    "RepositoryHistoryItem": {
+      "required": [
+        "timestamp",
+        "success"
+      ],
+      "type": "object",
+      "properties": {
+        "repositoryName": {
+          "type": "string",
+          "readOnly": true
+        },
+        "branchName": {
+          "type": "string",
+          "readOnly": true
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string",
+          "readOnly": true
+        },
+        "errorMessage": {
+          "type": "string",
+          "readOnly": true
+        },
+        "success": {
+          "type": "boolean",
+          "readOnly": true
+        },
+        "action": {
+          "type": "string",
+          "readOnly": true
+        },
+        "retryUrl": {
+          "type": "string",
+          "readOnly": true
+        }
+      }
+    },
+    "Subscription": {
+      "required": [
+        "id",
+        "enabled"
+      ],
+      "type": "object",
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "type": "string",
+          "readOnly": true
+        },
+        "channel": {
+          "$ref": "#/definitions/Channel",
+          "readOnly": true
+        },
+        "sourceRepository": {
+          "type": "string",
+          "readOnly": true
+        },
+        "targetRepository": {
+          "type": "string",
+          "readOnly": true
+        },
+        "targetBranch": {
+          "type": "string",
+          "readOnly": true
+        },
+        "policy": {
+          "$ref": "#/definitions/SubscriptionPolicy",
+          "readOnly": true
+        },
+        "lastAppliedBuild": {
+          "$ref": "#/definitions/Build",
+          "readOnly": true
+        },
+        "enabled": {
+          "type": "boolean",
+          "readOnly": true
+        }
+      }
+    },
+    "SubscriptionPolicy": {
+      "required": [
+        "updateFrequency",
+        "batchable"
+      ],
+      "type": "object",
+      "properties": {
+        "batchable": {
+          "type": "boolean"
+        },
+        "updateFrequency": {
+          "$ref": "#/definitions/UpdateFrequency"
+        },
+        "mergePolicies": {
+          "uniqueItems": false,
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MergePolicy"
+          }
+        }
+      }
+    },
+    "UpdateFrequency": {
+      "enum": [
+        "none",
+        "everyDay",
+        "everyBuild",
+        "twiceDaily",
+        "everyWeek"
+      ],
+      "type": "string"
+    },
+    "SubscriptionData": {
+      "required": [
+        "channelName",
+        "sourceRepository",
+        "targetRepository",
+        "targetBranch",
+        "policy"
+      ],
+      "type": "object",
+      "properties": {
+        "channelName": {
+          "type": "string"
+        },
+        "sourceRepository": {
+          "type": "string"
+        },
+        "targetRepository": {
+          "type": "string"
+        },
+        "targetBranch": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "policy": {
+          "$ref": "#/definitions/SubscriptionPolicy"
+        }
+      }
+    },
+    "SubscriptionUpdate": {
+      "required": [],
+      "type": "object",
+      "properties": {
+        "channelName": {
+          "type": "string"
+        },
+        "sourceRepository": {
+          "type": "string"
+        },
+        "policy": {
+          "$ref": "#/definitions/SubscriptionPolicy"
+        },
+        "enabled": {
+          "type": "boolean"
+        }
+      }
+    },
+    "SubscriptionHistoryItem": {
+      "required": [
+        "timestamp",
+        "success",
+        "subscriptionId"
+      ],
+      "type": "object",
+      "properties": {
+        "timestamp": {
+          "format": "date-time",
+          "type": "string",
+          "readOnly": true
+        },
+        "errorMessage": {
+          "type": "string",
+          "readOnly": true
+        },
+        "success": {
+          "type": "boolean",
+          "readOnly": true
+        },
+        "subscriptionId": {
+          "format": "uuid",
+          "type": "string",
+          "readOnly": true
+        },
+        "action": {
+          "type": "string",
+          "readOnly": true
+        },
+        "retryUrl": {
+          "type": "string",
+          "readOnly": true
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "Bearer": {
+      "name": "Authorization",
+      "in": "header",
+      "type": "apiKey"
+    }
+  },
+  "security": [
+    {
+      "Bearer": []
+    }
+  ]
+}
