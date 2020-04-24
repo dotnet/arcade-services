@@ -253,17 +253,18 @@ namespace DependencyUpdateErrorProcessor.Tests
             GithubClient.Setup(x => x.Repository.Get(It.IsAny<string>(), It.IsAny<string>())).ReturnsAsync(repository);
             Issue updateIssue = GetIssue();
             Octokit.AuthorAssociation author = new Octokit.AuthorAssociation();
+            string nodeId = "1";
             IssueComment comment = new IssueComment
             (
                 1,
-                null,
-                null,
-                null,
+                nodeId,
+                "Url",
+                "htmlUrl",
                 $"[marker]: <> (subscriptionId: '', method: '{AnotherMethod}', errorMessage: '{ErrorMessage}')",
                 new DateTime(2200, 02, 02),
-                null,
-                null,
-                null,
+                new DateTime(2200, 03, 01),
+                new User(),
+                new ReactionSummary(),
                 author);
             List<IssueComment> issueComment = new List<IssueComment> { comment };
             List<NewIssue> newIssues = new List<NewIssue>();
