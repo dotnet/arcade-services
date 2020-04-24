@@ -19,7 +19,6 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
-using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -27,7 +26,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
-using Microsoft.AspNetCore.Rewrite.Internal;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
 using Microsoft.DotNet.DarcLib;
@@ -90,7 +88,7 @@ namespace Maestro.Web
             };
         }
 
-        public Startup(IConfiguration configuration, IHostingEnvironment env)
+        public Startup(IConfiguration configuration, IHostEnvironment env)
         {
             HostingEnvironment = env;
             Configuration = configuration;
@@ -98,7 +96,7 @@ namespace Maestro.Web
 
         public static readonly TimeSpan LoginCookieLifetime = new TimeSpan(days: 120, hours: 0, minutes: 0, seconds: 0);
 
-        public IHostingEnvironment HostingEnvironment { get; set; }
+        public IHostEnvironment HostingEnvironment { get; set; }
         public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
@@ -358,7 +356,7 @@ namespace Maestro.Web
             return string.Equals(context.Request.Method, "get", StringComparison.OrdinalIgnoreCase);
         }
 
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
@@ -405,13 +403,9 @@ namespace Maestro.Web
             if (env.IsDevelopment() && !Program.RunningInServiceFabric())
             {
                 // In local dev with the `ng serve` scenario, just redirect /_/api to /api
-                app.UseRewriter(new RewriteOptions
-                {
-                    Rules =
-                    {
-                        new RewriteRule("^_/(.*)", "$1", true),
-                    },
-                });
+                var rewriteOptions = new RewriteOptions();
+                rewriteOptions.AddRewrite("^_/(.*)", "$1", true);
+                app.UseRewriter(rewriteOptions);
             }
 
             app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/api"), ConfigureApi);
@@ -434,13 +428,9 @@ namespace Maestro.Web
 
         private static void AngularIndexHtmlRedirect(IApplicationBuilder app)
         {
-            app.UseRewriter(new RewriteOptions
-            {
-                Rules =
-                {
-                    new RewriteRule(".*", "Index", true),
-                },
-            });
+            var rewriteOptions = new RewriteOptions();
+            rewriteOptions.AddRewrite(".*", "Index", true);
+            app.UseRewriter(rewriteOptions);
             app.UseMvc();
         }
     }

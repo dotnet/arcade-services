@@ -6,7 +6,6 @@ using Kusto.Ingest;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Dotnet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Logging;
 using Octokit;
@@ -16,6 +15,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.DotNet.GitHub.Authentication;
 
 namespace DarcBot
 {

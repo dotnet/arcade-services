@@ -5,16 +5,15 @@
 using Maestro.AzureDevOps;
 using Maestro.Data;
 using Maestro.Data.Models;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace FeedCleanerService.Tests
@@ -22,7 +21,7 @@ namespace FeedCleanerService.Tests
     public class FeedCleanerServiceTests : IDisposable
     {
         private readonly Lazy<BuildAssetRegistryContext> _context;
-        private readonly Mock<IHostingEnvironment> Env;
+        private readonly Mock<IHostEnvironment> Env;
         private readonly ServiceProvider Provider;
         private readonly IServiceScope Scope;
         private readonly Dictionary<string, AzureDevOpsFeed> Feeds;
@@ -37,7 +36,7 @@ namespace FeedCleanerService.Tests
         public FeedCleanerServiceTests()
         {
             var services = new ServiceCollection();
-            Env = new Mock<IHostingEnvironment>(MockBehavior.Strict);
+            Env = new Mock<IHostEnvironment>(MockBehavior.Strict);
             services.AddSingleton(Env.Object);
             services.AddLogging();
             services.AddDbContext<BuildAssetRegistryContext>(

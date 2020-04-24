@@ -6,14 +6,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Maestro.Data;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 
 namespace DependencyUpdateErrorProcessor.Tests
 {
     public class TestBuildAssetRegistryContext : BuildAssetRegistryContext
     {
-        public TestBuildAssetRegistryContext(IHostingEnvironment hostingEnvironment,
+        public TestBuildAssetRegistryContext(IHostEnvironment hostingEnvironment,
             DbContextOptions<TestBuildAssetRegistryContext> options) : base(
             hostingEnvironment, options)
         {
@@ -24,8 +24,7 @@ namespace DependencyUpdateErrorProcessor.Tests
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-            builder.Query<RepositoryBranchUpdateHistoryEntry>()
-                .ToQuery(() => RepoBranchUpdateInMemory.AsQueryable());
+            RepositoryBranchUpdateHistory = RepoBranchUpdateInMemory.AsQueryable();
         }
 
         public override Task<long> GetInstallationId(string repositoryUrl)

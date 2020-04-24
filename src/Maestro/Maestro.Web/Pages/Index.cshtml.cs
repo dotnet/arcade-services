@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.ApplicationInsights.AspNetCore.Extensions;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
 
@@ -16,9 +16,9 @@ namespace Maestro.Web.Pages
 {
     public class IndexModel : PageModel
     {
-        public IHostingEnvironment Environment { get; }
+        public IHostEnvironment Environment { get; }
 
-        public IndexModel(IHostingEnvironment environment, IOptions<ApplicationInsightsServiceOptions> applicationInsightsOptions)
+        public IndexModel(IHostEnvironment environment, IOptions<ApplicationInsightsServiceOptions> applicationInsightsOptions)
         {
             Environment = environment;
             InstrumentationKey = applicationInsightsOptions.Value.InstrumentationKey;

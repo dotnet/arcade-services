@@ -5,11 +5,11 @@
 using System;
 using Maestro.Contracts;
 using Maestro.Data;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Data;
 using Moq;
@@ -20,7 +20,7 @@ namespace DependencyUpdater.Tests
     public class DependencyUpdaterTests : IDisposable
     {
         private readonly Lazy<BuildAssetRegistryContext> _context;
-        protected readonly Mock<IHostingEnvironment> Env;
+        protected readonly Mock<IHostEnvironment> Env;
         protected readonly ServiceProvider Provider;
         protected readonly IServiceScope Scope;
         protected readonly MockReliableStateManager StateManager;
@@ -33,7 +33,7 @@ namespace DependencyUpdater.Tests
             StateManager = new MockReliableStateManager();
             SubscriptionActor = new Mock<ISubscriptionActor>(MockBehavior.Strict);
             RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
-            Env = new Mock<IHostingEnvironment>(MockBehavior.Strict);
+            Env = new Mock<IHostEnvironment>(MockBehavior.Strict);
             services.AddSingleton(Env.Object);
             services.AddSingleton<IReliableStateManager>(StateManager);
             services.AddLogging();

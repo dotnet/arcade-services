@@ -26,6 +26,9 @@
     <PackageReference Update="Microsoft.ApplicationInsights.PerfCounterCollector" Version="2.11.2" />
     <PackageReference Update="Microsoft.ApplicationInsights.ServiceFabric" Version="2.3.1" />
     <PackageReference Update="Microsoft.AspNet.WebApi.Client" Version="5.2.6" />
+    <PackageReference Update="Microsoft.AspNetCore.DataProtection.AzureKeyVault" Version="$(DotNetAssemblyVersion)" />
+    <PackageReference Update="Microsoft.AspNetCore.DataProtection.Azurestorage" Version="$(DotNetAssemblyVersion)" />
+    <PackageReference Update="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" Version="1.0.0-preview2-final" />
     <PackageReference Update="Microsoft.Azure.KeyVault" Version="3.0.4" />
     <PackageReference Update="Microsoft.Azure.Kusto.Ingest" Version="8.0.3" />
@@ -45,7 +48,9 @@
     <PackageReference Update="Microsoft.CodeCoverage" Version="16.5.0" />
     <PackageReference Update="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="$(MicrosoftDotNetSwaggerGeneratorMSBuildVersion)" />
     <PackageReference Update="Microsoft.DotNet.VersionTools" Version="$(MicrosoftDotNetVersionToolsVersion)" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.EntityFrameworkCore.InMemory" Version="$(DotNetAssemblyVersion)" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.SqlServer" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.Caching.Abstractions" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.Configuration" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.Configuration.Abstractions" Version="$(DotNetAssemblyVersion)" />

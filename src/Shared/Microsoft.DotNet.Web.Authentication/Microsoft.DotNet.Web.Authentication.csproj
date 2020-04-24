@@ -4,8 +4,9 @@
     </PropertyGroup>
 
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App"/>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     
+    <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Octokit" />
   </ItemGroup>
 

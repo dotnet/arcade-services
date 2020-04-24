@@ -11,7 +11,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Metrics;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;

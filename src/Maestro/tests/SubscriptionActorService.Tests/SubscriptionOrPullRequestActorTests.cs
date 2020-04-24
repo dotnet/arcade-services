@@ -9,7 +9,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.Data.Models;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -33,7 +32,7 @@ namespace SubscriptionActorService.Tests
 
         protected readonly List<Action> AfterDbUpdateActions = new List<Action>();
 
-        protected readonly Mock<IHostingEnvironment> HostingEnvironment;
+        protected readonly Mock<IHostEnvironment> HostingEnvironment;
 
         protected Channel Channel;
 
@@ -44,7 +43,7 @@ namespace SubscriptionActorService.Tests
         public SubscriptionOrPullRequestActorTests()
         {
             ActionRunner = CreateMock<IActionRunner>();
-            HostingEnvironment = CreateMock<IHostingEnvironment>();
+            HostingEnvironment = CreateMock<IHostEnvironment>();
         }
 
         protected override void RegisterServices(IServiceCollection services)

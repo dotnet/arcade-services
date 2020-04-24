@@ -7,5 +7,6 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App"/>
 
     <PackageReference Include="JetBrains.Annotations" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
   </ItemGroup>
 </Project>

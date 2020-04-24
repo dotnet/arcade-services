@@ -32,13 +32,13 @@ namespace DotNet.Status.Web
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration, IHostingEnvironment env)
+        public Startup(IConfiguration configuration, IHostEnvironment env)
         {
             Configuration = configuration;
             Env = env;
         }
         
-        public IHostingEnvironment Env { get; }
+        public IHostEnvironment Env { get; }
         public IConfiguration Configuration { get; }
 
         public const string GitHubScheme = "github";
