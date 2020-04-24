@@ -6,7 +6,7 @@ using Kusto.Ingest;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Dotnet.GitHub.Authentication;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Logging;
 using Octokit;
