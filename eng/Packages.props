@@ -29,6 +29,8 @@
     <PackageReference Update="Microsoft.AspNetCore.DataProtection.AzureKeyVault" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.AspNetCore.DataProtection.Azurestorage" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="$(DotNetAssemblyVersion)" />
+    <PackageReference Update="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="$(DotNetAssemblyVersion)" />
+    <PackageReference Update="Microsoft.AspNetCore.WebHooks.Receivers" Version="1.0.0-preview2-final" />
     <PackageReference Update="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" Version="1.0.0-preview2-final" />
     <PackageReference Update="Microsoft.Azure.KeyVault" Version="3.0.4" />
     <PackageReference Update="Microsoft.Azure.Kusto.Ingest" Version="8.0.3" />

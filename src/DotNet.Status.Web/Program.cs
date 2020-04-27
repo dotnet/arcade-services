@@ -4,6 +4,7 @@
 
 using System.IO;
 using System.Reflection;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;

@@ -4,24 +4,19 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi;
 using Microsoft.OpenApi.Interfaces;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
-using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
-using Swashbuckle.AspNetCore.Swagger;
 
 namespace Maestro.Web
 {
@@ -40,18 +35,6 @@ namespace Maestro.Web
                         Name = ".NET Core Engineering",
                         Email = "dnceng@microsoft.com",
                     };
-                });
-            services.Configure<MvcJsonOptions>(
-                options =>
-                {
-                    options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                    options.SerializerSettings.Converters.Add(new StringEnumConverter {CamelCaseText = true});
-                    options.SerializerSettings.Converters.Add(
-                        new IsoDateTimeConverter
-                        {
-                            DateTimeFormat = "yyyy-MM-ddTHH:mm:ssZ",
-                            DateTimeStyles = DateTimeStyles.AdjustToUniversal
-                        });
                 });
 
             services.AddSwaggerGenNewtonsoftSupport();

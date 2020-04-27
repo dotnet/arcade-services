@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -19,6 +20,7 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.DataProviders;
 using Maestro.MergePolicies;
+using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -42,6 +44,8 @@ using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.OpenApi.Models;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 
 namespace Maestro.Web
 {
@@ -152,17 +156,15 @@ namespace Maestro.Web
                     options.UseSqlServer(Configuration.GetSection("BuildAssetRegistry")["ConnectionString"]);
                 });
 
-            services.AddMvc()
-                .SetCompatibilityVersion(CompatibilityVersion.Version_2_1)
+            services.AddRazorPages(options =>
+                {
+                    options.Conventions.AuthorizeFolder("/", MsftAuthorizationPolicyName);
+                    options.Conventions.AllowAnonymousToPage("/Index");
+                    options.Conventions.AllowAnonymousToPage("/Error");
+                    options.Conventions.AllowAnonymousToPage("/SwaggerUi");
+                })
+                .SetCompatibilityVersion(CompatibilityVersion.Version_3_0)
                 .AddFluentValidation(options => options.RegisterValidatorsFromAssemblyContaining<Startup>())
-                .AddRazorPagesOptions(
-                    options =>
-                    {
-                        options.Conventions.AuthorizeFolder("/", MsftAuthorizationPolicyName);
-                        options.Conventions.AllowAnonymousToPage("/Index");
-                        options.Conventions.AllowAnonymousToPage("/Error");
-                        options.Conventions.AllowAnonymousToPage("/SwaggerUi");
-                    })
                 .AddGitHubWebHooks()
                 .AddApiPagination()
                 .AddCookieTempDataProvider(
@@ -173,7 +175,21 @@ namespace Maestro.Web
                         options.Cookie.IsEssential = true;
                     });
 
-            services.AddSingleton<IConfiguration>(Configuration);
+            services.AddControllers()
+                .AddNewtonsoftJson(options =>
+                {
+                    options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                    options.SerializerSettings.Converters.Add(new StringEnumConverter
+                        {NamingStrategy = new CamelCaseNamingStrategy()});
+                    options.SerializerSettings.Converters.Add(
+                        new IsoDateTimeConverter
+                        {
+                            DateTimeFormat = "yyyy-MM-ddTHH:mm:ssZ",
+                            DateTimeStyles = DateTimeStyles.AdjustToUniversal
+                        });
+                });
+
+            services.AddSingleton(Configuration);
 
             ConfigureAuthServices(services);
 
@@ -225,8 +241,8 @@ namespace Maestro.Web
                 async ctx =>
                 {
                     var result = new ApiError("An error occured.");
-                    MvcJsonOptions jsonOptions =
-                        ctx.RequestServices.GetRequiredService<IOptions<MvcJsonOptions>>().Value;
+                    MvcNewtonsoftJsonOptions jsonOptions =
+                        ctx.RequestServices.GetRequiredService<IOptions<MvcNewtonsoftJsonOptions>>().Value;
                     string output = JsonConvert.SerializeObject(result, jsonOptions.SerializerSettings);
                     ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                     await ctx.Response.WriteAsync(output, Encoding.UTF8);
@@ -268,8 +284,10 @@ namespace Maestro.Web
         private void ConfigureApi(IApplicationBuilder app)
         {
             app.UseExceptionHandler(ConfigureApiExceptions);
-
+            
+            app.UseRouting();
             app.UseAuthentication();
+            app.UseAuthorization();
 
             if (HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric())
             {
@@ -283,7 +301,11 @@ namespace Maestro.Web
                     });
             }
 
-            app.UseMvc();
+            app.UseEndpoints(e =>
+            {
+                e.MapRazorPages();
+                e.MapControllers();
+            });
 
             app.Use(
                 (ctx, next) =>
@@ -326,13 +348,7 @@ namespace Maestro.Web
             app.UseExceptionHandler(ConfigureApiExceptions);
             app.UseAuthentication();
 
-            app.UseRewriter(new RewriteOptions
-            {
-                Rules =
-                {
-                    new RewriteRule("^_/(.*)", "$1", true),
-                },
-            });
+            app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
 
             // Redirect the entire cookie-authed api if it is in settings.
             if (DoApiRedirect)
@@ -404,9 +420,7 @@ namespace Maestro.Web
             if (env.IsDevelopment() && !Program.RunningInServiceFabric())
             {
                 // In local dev with the `ng serve` scenario, just redirect /_/api to /api
-                var rewriteOptions = new RewriteOptions();
-                rewriteOptions.AddRewrite("^_/(.*)", "$1", true);
-                app.UseRewriter(rewriteOptions);
+                app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
             }
 
             app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/api"), ConfigureApi);
@@ -429,9 +443,7 @@ namespace Maestro.Web
 
         private static void AngularIndexHtmlRedirect(IApplicationBuilder app)
         {
-            var rewriteOptions = new RewriteOptions();
-            rewriteOptions.AddRewrite(".*", "Index", true);
-            app.UseRewriter(rewriteOptions);
+            app.UseRewriter(new RewriteOptions().AddRewrite(".*", "Index", true));
             app.UseMvc();
         }
     }

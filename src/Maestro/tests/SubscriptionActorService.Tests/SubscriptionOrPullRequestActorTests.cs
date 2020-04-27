@@ -11,6 +11,7 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Moq;
 
 namespace SubscriptionActorService.Tests

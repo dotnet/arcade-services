@@ -3,16 +3,16 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using DotNet.Status.Web.Controllers;
 using DotNet.Status.Web.Options;
-using GitHubJwt;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.KeyVault;
@@ -26,26 +26,28 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 using Octokit;
 
 namespace DotNet.Status.Web
 {
-    public class Startup
+    public class Startup : StartupBase
     {
-        public Startup(IConfiguration configuration, IHostEnvironment env)
+        public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
             Env = env;
         }
         
-        public IHostEnvironment Env { get; }
+        public IWebHostEnvironment Env { get; }
         public IConfiguration Configuration { get; }
 
         public const string GitHubScheme = "github";
         public const string MsftAuthorizationPolicyName = "msft";
 
         // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
+        public override void ConfigureServices(IServiceCollection services)
         {
             services.AddSingleton(Configuration);
             if (Env.IsDevelopment())
@@ -70,6 +72,8 @@ namespace DotNet.Status.Web
 
             AddServices(services);
             ConfigureConfiguration(services);
+
+            base.ConfigureServices(services);
         }
 
         private void ConfigureConfiguration(IServiceCollection services)
@@ -123,16 +127,30 @@ namespace DotNet.Status.Web
 
         private void AddServices(IServiceCollection services)
         {
-            services.AddMvc()
-                .WithRazorPagesRoot("/Pages")
-                .AddRazorPagesOptions(o =>
+            services.AddRazorPages(o =>
+                {
                     o.Conventions
                         .AuthorizeFolder("/", MsftAuthorizationPolicyName)
                         .AllowAnonymousToPage("/Index")
                         .AllowAnonymousToPage("/Status")
-                        .AllowAnonymousToPage("/Error")
-                    )
-                .AddGitHubWebHooks();
+                        .AllowAnonymousToPage("/Error");
+                    o.RootDirectory = "/Pages";
+                });
+            services.AddControllers()
+                .AddGitHubWebHooks()
+                .AddNewtonsoftJson(
+                    options =>
+                    {
+                        options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+                        options.SerializerSettings.Converters.Add(new StringEnumConverter {NamingStrategy = new CamelCaseNamingStrategy()});
+                        options.SerializerSettings.Converters.Add(
+                            new IsoDateTimeConverter
+                            {
+                                DateTimeFormat = "yyyy-MM-ddTHH:mm:ssZ",
+                                DateTimeStyles = DateTimeStyles.AdjustToUniversal
+                            });
+                    });
+
             services.AddApplicationInsightsTelemetry(Configuration.GetSection("ApplicationInsights").Bind);
             services.Configure<LoggerFilterOptions>(o =>
             {
@@ -198,7 +216,7 @@ namespace DotNet.Status.Web
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app)
+        public override void Configure(IApplicationBuilder app)
         {
             app.UseStatusCodePagesWithReExecute("/Status", "?code={0}");
 
@@ -213,7 +231,9 @@ namespace DotNet.Status.Web
             }
             
             app.UseAuthentication();
-            app.UseMvc();
+            app.UseRouting();
+            app.UseAuthorization();
+            app.UseEndpoints(e => e.MapRazorPages());
             app.UseMiddleware<SimpleSigninMiddleware>();
             app.UseStaticFiles();
         }
