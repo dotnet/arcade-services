@@ -17,6 +17,7 @@
       <ExeHost>
         <Program>Maestro.Web.exe</Program>
         <WorkingFolder>CodePackage</WorkingFolder>
+        <ConsoleRedirection FileRetentionCount="5" FileMaxSizeInKb="2048"/>
       </ExeHost>
     </EntryPoint>
     <EnvironmentVariables>
