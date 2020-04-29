@@ -33,7 +33,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         public RepositoryController(
             BuildAssetRegistryContext context,
             BackgroundQueue queue,
-            IActorProxyFactory< IPullRequestActor> pullRequestActorFactory)
+            IActorProxyFactory<IPullRequestActor> pullRequestActorFactory)
         {
             Context = context;
             Queue = queue;
