@@ -19,6 +19,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.DotNet.ServiceFabric.ServiceHost;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
 {
@@ -32,7 +33,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         public RepositoryController(
             BuildAssetRegistryContext context,
             BackgroundQueue queue,
-            Func<ActorId, IPullRequestActor> pullRequestActorFactory)
+            IActorProxyFactory< IPullRequestActor> pullRequestActorFactory)
         {
             Context = context;
             Queue = queue;
@@ -41,7 +42,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
         public BuildAssetRegistryContext Context { get; }
         public BackgroundQueue Queue { get; }
-        public Func<ActorId, IPullRequestActor> PullRequestActorFactory { get; }
+        public IActorProxyFactory<IPullRequestActor> PullRequestActorFactory { get; }
 
         /// <summary>
         ///   Gets the list of <see cref="RepositoryBranch">RepositoryBranch</see>, optionally filtered by
@@ -237,7 +238,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 async () =>
                 {
                     IPullRequestActor actor =
-                        PullRequestActorFactory(PullRequestActorId.Create(update.Repository, update.Branch));
+                        PullRequestActorFactory.Lookup(PullRequestActorId.Create(update.Repository, update.Branch));
                     await actor.RunActionAsync(update.Method, update.Arguments);
                 });
 
