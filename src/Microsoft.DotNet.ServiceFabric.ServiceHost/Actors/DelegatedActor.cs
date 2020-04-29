@@ -154,7 +154,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
                         
                         TActor a = scope.ServiceProvider.GetRequiredService<TActor>();
                         a.Initialize(actor.Id, actor.StateManager, actor as IReminderManager);
-                        invocation.ReturnValue = actor;
+                        invocation.ReturnValue = a;
                         return await call();
                     }
                     catch (Exception ex)
