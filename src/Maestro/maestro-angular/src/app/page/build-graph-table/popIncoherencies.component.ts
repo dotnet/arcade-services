@@ -7,9 +7,9 @@ import { Build, BuildIncoherence } from 'src/maestro-client/models';
 })
 
 export class PopIncoherenciesComponent {
-  @Input() data: Build = Build.fromRawObject(null);
+  @Input() data: Build | undefined;
 
-  private sortIt(a: BuildIncoherence, b: BuildIncoherence) {
+  private compareIncoherenciesByName(a: BuildIncoherence, b: BuildIncoherence) {
     if (a.name === undefined) return -1;
     if (b.name === undefined) return 1;
 
@@ -17,9 +17,10 @@ export class PopIncoherenciesComponent {
   }
 
   sortedIncoherencies() {
+    if (this.data === undefined) return;
     if (this.data.incoherencies === undefined) return this.data;
 
-    return this.data.incoherencies.sort((a, b) => this.sortIt(a, b));
+    return this.data.incoherencies.sort((a, b) => this.compareIncoherenciesByName(a, b));
   }
 }
 

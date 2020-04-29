@@ -10,7 +10,9 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.ServiceFabric.Services.Remoting;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -29,13 +31,19 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
     {
         public ILogger<BuildsController> Logger { get; }
         private IRemoteFactory RemoteFactory { get; }
+        private BackgroundQueue Queue { get; }
+        private IServiceScopeFactory ServiceScopeFactory { get; }
 
         public BuildsController(BuildAssetRegistryContext context,
                                 IRemoteFactory factory,
+                                IServiceScopeFactory serviceScopeFactory,
+                                BackgroundQueue queue,
                                 ILogger<BuildsController> logger)
             : base(context)
         {
             RemoteFactory = factory;
+            ServiceScopeFactory = serviceScopeFactory;
+            Queue = queue;
             Logger = logger;
         }
 
@@ -219,22 +227,6 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             Data.Models.Build buildModel = build.ToDb();
             buildModel.DateProduced = DateTimeOffset.UtcNow;
 
-            if (buildModel.Incoherencies == null)
-            {
-                try
-                {
-                    buildModel.Incoherencies = await 
-                        GetBuildIncoherencyInfoAsync(
-                            buildModel.GitHubRepository ?? buildModel.AzureDevOpsRepository, 
-                            buildModel.Commit);
-                }
-                catch (Exception e)
-                {
-                    Logger.LogWarning(e, $"Problems computing the dependency incoherencies for a new build of " +
-                        $"{buildModel.AzureDevOpsBuildNumber} from {(buildModel.AzureDevOpsRepository ?? buildModel.GitHubRepository)}");
-                }
-            }
-
             if (build.Dependencies != null)
             {
                 // For each Dependency, update the time to Inclusion.
@@ -313,6 +305,15 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
 
             await _context.Builds.AddAsync(buildModel);
             await _context.SaveChangesAsync();
+
+            // Compute the dependency incoherencies of the build.
+            // Since this might be an expensive operation we do it asynchronously.
+            Queue.Post(
+                async () =>
+                {
+                    await SetBuildIncoherencyInfoAsync(buildModel);
+                });
+
             return CreatedAtRoute(
                 new
                 {
@@ -322,7 +323,13 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 new Models.Build(buildModel));
         }
 
-        private async Task<List<Data.Models.BuildIncoherence>> GetBuildIncoherencyInfoAsync(string repositoryUri, string commit)
+        /// <summary>
+        /// This method is called asynchronously whenever a new build is inserted in BAR.
+        /// It's goal is to compute the incoherent dependencies that the build have and
+        /// persist the list of them in BAR.
+        /// </summary>
+        /// <param name="build">Build for which the incoherencies should be computed.</param>
+        private async Task SetBuildIncoherencyInfoAsync(Data.Models.Build build)
         {
             DependencyGraphBuildOptions graphBuildOptions = new DependencyGraphBuildOptions()
             {
@@ -331,27 +338,41 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 NodeDiff = NodeDiff.None
             };
 
-            DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
-                RemoteFactory,
-                repositoryUri,
-                commit,
-                graphBuildOptions,
-                Logger);
-
-            List<Data.Models.BuildIncoherence> incoherencies = new List<Data.Models.BuildIncoherence>();
-
-            foreach (var item in graph.IncoherentDependencies)
+            try
             {
-                incoherencies.Add(new Data.Models.BuildIncoherence
+                using (IServiceScope scope = ServiceScopeFactory.CreateScope())
                 {
-                    Name = item.Name,
-                    Version = item.Version,
-                    Repository = item.RepoUri,
-                    Commit = item.Commit
-                });
-            }
+                    BuildAssetRegistryContext context = scope.ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
 
-            return incoherencies;
+                    DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
+                        RemoteFactory,
+                        build.GitHubRepository ?? build.AzureDevOpsRepository,
+                        build.Commit,
+                        graphBuildOptions,
+                        Logger);
+
+                    build.Incoherencies = new List<Data.Models.BuildIncoherence>();
+
+                    foreach (var item in graph.IncoherentDependencies)
+                    {
+                        build.Incoherencies.Add(new Data.Models.BuildIncoherence
+                        {
+                            Name = item.Name,
+                            Version = item.Version,
+                            Repository = item.RepoUri,
+                            Commit = item.Commit
+                        });
+                    }
+
+                    context.Builds.Update(build);
+                    await context.SaveChangesAsync();
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.LogWarning(e, $"Problems computing the dependency incoherencies for a new build of " +
+                    $"{build.AzureDevOpsBuildNumber} from {(build.AzureDevOpsRepository ?? build.GitHubRepository)}");
+            }
         }
     }
 }
