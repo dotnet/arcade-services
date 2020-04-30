@@ -230,6 +230,7 @@ namespace Maestro.Web
                     section.Bind(options);
                 });
             services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
+            services.AddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
 
             services.AddMergePolicies();
 

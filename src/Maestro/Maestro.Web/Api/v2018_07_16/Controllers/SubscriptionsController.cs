@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.ApiPagination;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.ServiceFabric.Actors;
 using Channel = Maestro.Data.Models.Channel;
@@ -32,13 +33,13 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         private readonly BuildAssetRegistryContext _context;
         private readonly BackgroundQueue _queue;
         private readonly IDependencyUpdater _dependencyUpdater;
-        private readonly Func<ActorId, ISubscriptionActor> _subscriptionActorFactory;
+        private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
 
         public SubscriptionsController(
             BuildAssetRegistryContext context,
             BackgroundQueue queue,
             IDependencyUpdater dependencyUpdater,
-            Func<ActorId, ISubscriptionActor> subscriptionActorFactory)
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
         {
             _context = context;
             _queue = queue;
@@ -323,7 +324,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             _queue.Post(
                 async () =>
                 {
-                    ISubscriptionActor actor = _subscriptionActorFactory(new ActorId(subscription.Id));
+                    ISubscriptionActor actor = _subscriptionActorFactory.Lookup(new ActorId(subscription.Id));
                     await actor.RunActionAsync(update.Method, update.Arguments);
                 });
 

@@ -14,13 +14,6 @@
     <PackageReference Include="Microsoft.Extensions.Logging" />
     <PackageReference Include="Microsoft.TeamFoundationServer.Client" />
     <PackageReference Include="Newtonsoft.Json" />
-
-    <!--
-      Needed to appease Microsoft.TeamFoundationServer.Client package
-      They don't actually use these references, but they have package dependencies on them
-    -->
-    <PackageReference Include="Microsoft.Bcl" ExcludeAssets="All" Condition="'$(TargetFramework)' == 'netstandard2.0'" />
-    <PackageReference Include="Microsoft.Net.Http" ExcludeAssets="All" Condition="'$(TargetFramework)' == 'netstandard2.0'" />
   </ItemGroup>
 
   <ItemGroup>

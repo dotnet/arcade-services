@@ -1358,7 +1358,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         {
             RepositoryBranch repositoryBranch =
                 await Context.RepositoryBranches.FindAsync(Target.repository, Target.branch);
-            return (IReadOnlyList<MergePolicyDefinition>) repositoryBranch.PolicyObject?.MergePolicies ??
+            return (IReadOnlyList<MergePolicyDefinition>) repositoryBranch?.PolicyObject?.MergePolicies ??
                    Array.Empty<MergePolicyDefinition>();
         }
     }

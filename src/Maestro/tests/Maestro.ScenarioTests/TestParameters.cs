@@ -13,7 +13,7 @@ namespace Maestro.ScenarioTests
 {
     public class TestParameters : IDisposable
     {
-        private readonly TemporaryDirectory _dir;
+        internal readonly TemporaryDirectory _dir;
 
         public static async Task<TestParameters> GetAsync()
         {
