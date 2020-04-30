@@ -108,16 +108,21 @@ function sortBuilds(graph: BuildGraph): BuildData[] {
   if (result && result[0] && result[0].build)
   {
     result[0].isRootOrImmediateDependency = true;
-    if (result[0].build.dependencies) {
-      for (const dependecy of result[0].build.dependencies!) {
-        if (dependecy) {
+    if (result[0].build.dependencies)
+    {
+      for (const dependecy of result[0].build.dependencies!)
+      {
+        if (dependecy)
+        {
           let dep = result.find(d => d.build.id == dependecy.buildId);
-          if (dep) {
+          if (dep)
+          {
             dep.isRootOrImmediateDependency = true;
           }
         }
       }
     }
+
     result[0].timeToInclusionInMinutes = 0;
     calculateNodeTimeToInclusion(result[0].build, result, result[0].timeToInclusionInMinutes);
   }

@@ -131,19 +131,14 @@
         </span>
       </td>
       <td class="text-monospace">
-        <fa-icon [icon]="'exclamation-circle'" 
-        [style.visibility]="(node.build.incoherencies.length > 0) ? 'visible' : 'hidden'"></fa-icon>
-
         <a *ngIf="(node.build | commitLink) as link; else noCommitLink" [href]="link" target="_blank">
-          {{node.build.commit | slice:0:7}}<fa-icon icon="external-link-alt"></fa-icon>
+          {{node.build.commit | slice:0:7}}
+          <fa-icon icon="external-link-alt"></fa-icon>
         </a>
 
         <ng-template #noCommitLink>
-            <fa-icon [icon]="'exclamation-circle'" 
-            [style.visibility]="node.incoherencies.length > 0 ? 'visible' : 'hidden'"></fa-icon>
           {{node.build.commit | slice:0:7}}
         </ng-template>
-
       </td>
       <td>
         <a *ngIf="(node.build | buildLink) as link; else noBuildLink" class="btn btn-sm btn-primary" [href]="link" target="_blank">

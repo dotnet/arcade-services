@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  
+
   <PropertyGroup>
     <TargetFrameworks>netcoreapp2.1</TargetFrameworks>
     <PackageType>MSBuildSdk</PackageType>
