@@ -1,0 +1,28 @@
+<table class="table table-sm table-hover mb-0" style="white-space: nowrap;">
+  <thead>
+  <th>Source Repository</th>
+  <th>Source Channel</th>
+  <th>Target Branch</th>
+  <th>Status</th>
+  </thead>
+  <tbody>
+    <ng-container *ngFor="let branch of subscriptionsList | keyvalue">
+      <ng-container *ngFor="let sub of subscriptionsList[branch.key]">
+        <tr>
+          <td>
+            {{sub.sourceRepository}}
+          </td>
+          <td>
+            {{sub.channel.name}}
+          </td>
+          <td>
+            {{branch.key}}
+          </td>
+          <td>
+            {{sub.enabled ? 'Enabled' : 'Disabled'}}
+          </td>
+        </tr>
+      </ng-container>
+    </ng-container>
+  </tbody>
+</table>

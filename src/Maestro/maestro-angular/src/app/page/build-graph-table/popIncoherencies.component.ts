@@ -16,11 +16,35 @@ export class PopIncoherenciesComponent {
     return (a.name > b.name) ? 1 : a.name === b.name ? 0 : -1
   }
 
-  sortedIncoherencies() {
+  groupedIncoherencies() {
     if (this.data === undefined) return;
     if (this.data.incoherencies === undefined) return this.data;
 
-    return this.data.incoherencies.sort((a, b) => this.compareIncoherenciesByName(a, b));
+    const sortedIncoherencies = this.data.incoherencies.sort((a, b) => this.compareIncoherenciesByName(a, b));
+
+    const groups = sortedIncoherencies.reduce(function (r, a) {
+      if (a.name === undefined) return r;
+      r[a.name] = r[a.name] || [];
+      r[a.name].push(a);
+      return r;
+    }, Object.create(null));
+
+    const summaries = [];
+
+    for (const groupName in groups) {
+      summaries.push(new IncoherencySummary(groupName, groups[groupName]));
+    }
+
+    return summaries;
   }
 }
 
+export class IncoherencySummary {
+  dependencyName: string | undefined;
+  incoherencies: BuildIncoherence[] | undefined;
+
+  constructor(name: string, incoherencies: BuildIncoherence[]) {
+    this.dependencyName = name;
+    this.incoherencies = incoherencies;
+  }
+}

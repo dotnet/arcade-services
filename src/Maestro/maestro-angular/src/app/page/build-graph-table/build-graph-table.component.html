@@ -113,7 +113,7 @@
           [style.visibility]="node.hasCycles ? 'visible' : 'hidden'"></fa-icon>
       </td>
       <td>
-        <span style="cursor: help;" [ngbPopover]="popOver" [style.visibility]="(node.build.incoherencies.length > 0) ? 'visible' : 'hidden'">
+        <span style="cursor: help;" [ngbPopover]="popOver" placement="right" popoverTitle="Incoherent Dependencies" [style.visibility]="(node.build.incoherencies.length > 0) ? 'visible' : 'hidden'">
           <fa-icon [icon]="'exclamation-triangle'" 
             [title]="'This build has incoherent dependencies.'"></fa-icon>
         </span>

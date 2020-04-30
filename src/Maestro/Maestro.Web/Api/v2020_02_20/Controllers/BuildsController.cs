@@ -353,14 +353,14 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
 
                     build.Incoherencies = new List<Data.Models.BuildIncoherence>();
 
-                    foreach (var item in graph.IncoherentDependencies)
+                    foreach (var incoherence in graph.IncoherentDependencies)
                     {
                         build.Incoherencies.Add(new Data.Models.BuildIncoherence
                         {
-                            Name = item.Name,
-                            Version = item.Version,
-                            Repository = item.RepoUri,
-                            Commit = item.Commit
+                            Name = incoherence.Name,
+                            Version = incoherence.Version,
+                            Repository = incoherence.RepoUri,
+                            Commit = incoherence.Commit
                         });
                     }
 
