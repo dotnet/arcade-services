@@ -11,10 +11,10 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Metrics;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
-using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
@@ -27,7 +27,7 @@ using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
-    public class HostEnvironment : IWebHostEnvironment, IHostEnvironment
+    public class HostEnvironment : IWebHostEnvironment
     {
         public HostEnvironment(string environmentName, string applicationName, string contentRootPath, IFileProvider contentRootFileProvider)
         {

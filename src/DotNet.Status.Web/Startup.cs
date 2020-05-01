@@ -136,20 +136,9 @@ namespace DotNet.Status.Web
                         .AllowAnonymousToPage("/Error");
                     o.RootDirectory = "/Pages";
                 });
+
             services.AddControllers()
-                .AddGitHubWebHooks()
-                .AddNewtonsoftJson(
-                    options =>
-                    {
-                        options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                        options.SerializerSettings.Converters.Add(new StringEnumConverter {NamingStrategy = new CamelCaseNamingStrategy()});
-                        options.SerializerSettings.Converters.Add(
-                            new IsoDateTimeConverter
-                            {
-                                DateTimeFormat = "yyyy-MM-ddTHH:mm:ssZ",
-                                DateTimeStyles = DateTimeStyles.AdjustToUniversal
-                            });
-                    });
+                .AddGitHubWebHooks();
 
             services.AddApplicationInsightsTelemetry(Configuration.GetSection("ApplicationInsights").Bind);
             services.Configure<LoggerFilterOptions>(o =>
@@ -230,10 +219,14 @@ namespace DotNet.Status.Web
                 app.UseHttpsRedirection();
             }
             
-            app.UseAuthentication();
             app.UseRouting();
+            app.UseAuthentication();
             app.UseAuthorization();
-            app.UseEndpoints(e => e.MapRazorPages());
+            app.UseEndpoints(e =>
+            {
+                e.MapRazorPages();
+                e.MapControllers();
+            });
             app.UseMiddleware<SimpleSigninMiddleware>();
             app.UseStaticFiles();
         }

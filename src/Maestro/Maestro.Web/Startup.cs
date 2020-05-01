@@ -436,16 +436,24 @@ namespace Maestro.Web
             app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
             app.UseCookiePolicy();
             app.UseStaticFiles();
+
+            app.UseRouting();
             app.UseAuthentication();
 
-            app.UseMvc();
+            app.UseEndpoints(e =>
+                {
+                    e.MapRazorPages();
+                    e.MapControllers();
+                }
+                );
             app.MapWhen(IsGet, AngularIndexHtmlRedirect);
         }
 
         private static void AngularIndexHtmlRedirect(IApplicationBuilder app)
         {
             app.UseRewriter(new RewriteOptions().AddRewrite(".*", "Index", true));
-            app.UseMvc();
+            app.UseRouting();
+            app.UseEndpoints(e => { e.MapRazorPages(); });
         }
     }
 }

@@ -7,6 +7,7 @@ using System.Reflection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace DotNet.Status.Web
@@ -15,8 +16,13 @@ namespace DotNet.Status.Web
     {
         public static void Main(string[] args)
         {
-            new WebHostBuilder()
-                .UseKestrel()
+            new HostBuilder()
+                .ConfigureWebHostDefaults(host =>
+                {
+                    host.UseStartup<Startup>()
+                        .UseUrls("http://localhost:5000/")
+                        .CaptureStartupErrors(true);
+                })
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .ConfigureAppConfiguration((host, config) =>
                 {
@@ -32,9 +38,6 @@ namespace DotNet.Status.Web
                         builder.AddFilter(level => level > LogLevel.Debug);
                         builder.AddConsole();
                     })
-                .UseStartup<Startup>()
-                .UseUrls("http://localhost:5000/")
-                .CaptureStartupErrors(true)
                 .Build()
                 .Run();
         }
