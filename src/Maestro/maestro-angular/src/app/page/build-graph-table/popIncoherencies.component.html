@@ -1,0 +1,11 @@
+<ul>
+  <ng-container *ngFor="let summary of groupedIncoherencies()">
+    <li>{{summary.dependencyName}}
+      <ul>
+        <ng-container *ngFor="let detail of summary.incoherencies">
+          <li><a target="_blank" href="{{ detail.repository }}/commit/{{ detail.commit }}">{{ detail.version }} <fa-icon icon="external-link-alt"></fa-icon></a></li>
+        </ng-container>
+      </ul>
+    </li>
+  </ng-container>
+</ul>
