@@ -1,11 +1,20 @@
 import { Component, Input } from '@angular/core';
 import { Build, BuildIncoherence } from 'src/maestro-client/models';
 
+export class IncoherencySummary {
+  dependencyName: string | undefined;
+  incoherencies: BuildIncoherence[] | undefined;
+
+  constructor(name: string, incoherencies: BuildIncoherence[]) {
+    this.dependencyName = name;
+    this.incoherencies = incoherencies;
+  }
+}
+
 @Component({
   selector: 'popIncoherencies',
   templateUrl: './popIncoherencies.component.html'
 })
-
 export class PopIncoherenciesComponent {
   @Input() data: Build | undefined;
 
@@ -36,15 +45,5 @@ export class PopIncoherenciesComponent {
     }
 
     return summaries;
-  }
-}
-
-export class IncoherencySummary {
-  dependencyName: string | undefined;
-  incoherencies: BuildIncoherence[] | undefined;
-
-  constructor(name: string, incoherencies: BuildIncoherence[]) {
-    this.dependencyName = name;
-    this.incoherencies = incoherencies;
   }
 }
