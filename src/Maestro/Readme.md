@@ -3,7 +3,7 @@
 ## Getting started
 1. Install Azure Service Fabric SDK: https://www.microsoft.com/web/handlers/webpi.ashx?command=getinstallerredirect&appid=MicrosoftAzure-ServiceFabric-CoreSDK
 2. Install SQL Server Express: https://www.microsoft.com/en-us/sql-server/sql-server-editions-express
-3. Acquire the required secrets from azure key vault. This can be done by running [bootstrap.ps1](bootstrap.ps1) from an admin powershell window. This script will do 3 things:
+3. Acquire the required secrets from azure key vault. This can be done by running [bootstrap.ps1](bootstrap.ps1) from an admin powershell window (note: the Powershell ISE may have problems running this script). This script will do 3 things:
     - Download a secret required for using the `Microsoft.Azure.Services.AppAuthentication` package from the service fabric local dev cluster
     - Download and install the SSL cert used for local development from key vault
     - Configure the SQL Server LocalDB instance for use from the local service fabric cluster
@@ -11,9 +11,17 @@
 5. From the Maestro.Data project directory, run `dotnet ef --msbuildprojectextensionspath <full path to obj dir for Maestro repo (e.g. "C:\arcade-services\artifacts\obj\Maestro.Data\")> database update`.
     - Note that the generated files are in the root artifacts folder, not the artifacts folder within the Maestro.Data project folder
 6. Join the @maestro-auth-test org in GitHub (you will need to ask someone to manually add you to the org).
-7. In SQL Server Object Explorer in Visual Studio, find the local SQLExpression database for the build asset registry and populate the Repositories table with the following row:
-    - Repository: https://github.com/maestro-auth-test/maestro-test
-    - Installation Id: 289474
+7. In SQL Server Object Explorer in Visual Studio, find the local SQLExpression database for the build asset registry and populate the Repositories table with the following rows:
+
+    1. 
+        - Repository: https://github.com/maestro-auth-test/maestro-test
+        - Installation Id: 289474
+    2.  
+        - Repository: https://github.com/maestro-auth-test/maestro-test2
+        - Installation Id: 289474
+    3. 
+        - Repository: https://github.com/maestro-auth-test/maestro-test3
+        - Installation Id: 289474
 
 After successfully running `bootstrap.ps1` running the `MaestroApplication` project via F5 in VS (launch as elevated) will run the application on `https://localhost:4430`
 

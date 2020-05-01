@@ -10,12 +10,12 @@ using System.Net;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Autofac;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Metrics;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
@@ -35,6 +35,12 @@ using Microsoft.Extensions.Hosting;
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
     public class HostEnvironment : IWebHostEnvironment, IHostEnvironment
+#if NETCOREAPP3_1
+#pragma warning disable 618 // use of obsolete symbol
+        , Microsoft.AspNetCore.Hosting.IHostingEnvironment
+        , Microsoft.Extensions.Hosting.IHostingEnvironment
+#pragma warning restore 618
+#endif
     {
         public HostEnvironment(string environmentName, string applicationName, string contentRootPath, IFileProvider contentRootFileProvider)
         {
@@ -57,9 +63,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
     /// </summary>
     public partial class ServiceHost
     {
-        private readonly List<Action<ContainerBuilder>> _configureContainerActions =
-            new List<Action<ContainerBuilder>> {ConfigureDefaultContainer};
-
         private readonly List<Action<IServiceCollection>> _configureServicesActions =
             new List<Action<IServiceCollection>> {ConfigureDefaultServices};
 
@@ -107,20 +110,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             return this;
         }
 
-        public ServiceHost ConfigureContainer(Action<ContainerBuilder> configure)
-        {
-            _configureContainerActions.Add(configure);
-            return this;
-        }
-
-        private void ApplyConfigurationToContainer(ContainerBuilder builder)
-        {
-            foreach (Action<ContainerBuilder> act in _configureContainerActions)
-            {
-                act(builder);
-            }
-        }
-
         private void ApplyConfigurationToServices(IServiceCollection services)
         {
             foreach (Action<IServiceCollection> act in _configureServicesActions)
@@ -144,29 +133,25 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         }
 
         public ServiceHost RegisterStatefulService<TService>(string serviceTypeName)
-            where TService : IServiceImplementation
+            where TService : class, IServiceImplementation
         {
             RegisterStatefulService(
                 serviceTypeName,
                 context => new DelegatedStatefulService<TService>(
                     context,
-                    ApplyConfigurationToServices,
-                    ApplyConfigurationToContainer));
-            return ConfigureContainer(
-                builder => { builder.RegisterType<TService>().As<TService>().InstancePerDependency(); });
+                    ApplyConfigurationToServices));
+            return ConfigureServices(c => c.AddScoped<TService, TService>());
         }
 
         public ServiceHost RegisterStatelessService<TService>(string serviceTypeName)
-            where TService : IServiceImplementation
+            where TService : class, IServiceImplementation
         {
             RegisterStatelessService(
                 serviceTypeName,
                 context => new DelegatedStatelessService<TService>(
                     context,
-                    ApplyConfigurationToServices,
-                    ApplyConfigurationToContainer));
-            return ConfigureContainer(
-                builder => { builder.RegisterType<TService>().As<TService>().InstancePerDependency(); });
+                    ApplyConfigurationToServices));
+            return ConfigureServices(c => c.AddScoped<TService, TService>());
         }
 
         private void RegisterActorService<TService, TActor>(
@@ -178,13 +163,12 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         private void RegisterStatefulActorService<TActor>(
             string actorName,
-            Func<StatefulServiceContext, ActorTypeInformation,
-                Func<ActorService, ActorId, ILifetimeScope, Action<ContainerBuilder>, ActorBase>, ActorService> ctor)
-            where TActor : IActor
+            Func<StatefulServiceContext, ActorTypeInformation, Func<ActorService, ActorId, IServiceScopeFactory, Action<IServiceProvider>, ActorBase>, ActorService> ctor)
+            where TActor : IActor, IActorImplementation
         {
             (Type actorType,
-                    Func<ActorService, ActorId, ILifetimeScope, Action<ContainerBuilder>, ActorBase> actorFactory) =
-                DelegatedActor.CreateActorTypeAndFactory(actorName, typeof(TActor));
+                    Func<ActorService, ActorId, IServiceScopeFactory, Action<IServiceProvider>, ActorBase> actorFactory) =
+                DelegatedActor.CreateActorTypeAndFactory<TActor>(actorName);
             // ReSharper disable once PossibleNullReferenceException
             // The method search parameters are hard coded
             MethodInfo registerActorAsyncMethod = typeof(ActorRuntime).GetMethod(
@@ -210,7 +194,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         public ServiceHost RegisterStatefulActorService<
             [MeansImplicitUse(ImplicitUseKindFlags.InstantiatedNoFixedConstructorSignature)]
-            TActor>(string actorName) where TActor : IActor
+            TActor>(string actorName) where TActor : class, IActor, IActorImplementation
         {
             RegisterStatefulActorService<TActor>(
                 actorName,
@@ -220,11 +204,9 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                         context,
                         info,
                         ApplyConfigurationToServices,
-                        ApplyConfigurationToContainer,
                         actorFactory);
                 });
-            return ConfigureContainer(
-                builder => { builder.RegisterType<TActor>().As<TActor>().InstancePerDependency(); });
+            return ConfigureServices(builder => builder.AddScoped<TActor>());
         }
 
         public ServiceHost RegisterStatelessWebService<TStartup>(string serviceTypeName, Action<IWebHostBuilder> configureWebHost = null) where TStartup : class
@@ -234,10 +216,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 context => new DelegatedStatelessWebService<TStartup>(
                     context,
                     configureWebHost ?? (builder => { }),
-                    ApplyConfigurationToServices,
-                    ApplyConfigurationToContainer));
-            return ConfigureContainer(
-                builder => { builder.RegisterType<TStartup>().As<TStartup>().InstancePerDependency(); });
+                    ApplyConfigurationToServices));
+            return ConfigureServices(builder => builder.AddScoped<TStartup>());
         }
 
         private void Start()
@@ -248,10 +228,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             }
         }
 
-        private static void ConfigureDefaultContainer(ContainerBuilder builder)
-        {
-        }
-
         public static void ConfigureDefaultServices(IServiceCollection services)
         {
             services.AddOptions();
@@ -259,6 +235,12 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             services.TryAddSingleton(InitializeEnvironment());
             services.TryAddSingleton(b => (IHostEnvironment) b.GetService<HostEnvironment>());
             services.TryAddSingleton(b => (IWebHostEnvironment) b.GetService<HostEnvironment>());
+#if NETCOREAPP3_1
+#pragma warning disable 618 // use of obsolete symbol
+            services.TryAddSingleton(b => (Microsoft.AspNetCore.Hosting.IHostingEnvironment) b.GetService<HostEnvironment>());
+            services.TryAddSingleton(b => (Microsoft.Extensions.Hosting.IHostingEnvironment) b.GetService<HostEnvironment>());
+#pragma warning restore 618
+#endif
             ConfigureApplicationInsights(services);
             services.AddLogging(
                 builder =>
@@ -267,6 +249,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     builder.AddFixedApplicationInsights(LogLevel.Information);
                 });
             services.TryAddSingleton<IMetricTracker, ApplicationInsightsMetricTracker>();
+            services.TryAddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
         }
 
         public static HostEnvironment InitializeEnvironment()

@@ -11,7 +11,6 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Autofac;
 using EntityFrameworkCore.Triggers;
 using FluentValidation.AspNetCore;
 using Maestro.AzureDevOps;
@@ -222,14 +221,10 @@ namespace Maestro.Web
             services.AddSingleton<DarcRemoteMemoryCache>();
 
             services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
+            services.AddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
 
             services.AddMergePolicies();
-        }
 
-        public void ConfigureContainer(ContainerBuilder builder)
-        {
-            builder.AddServiceFabricActor<ISubscriptionActor>();
-            builder.AddServiceFabricActor<IPullRequestActor>();
         }
 
         private void ConfigureApiExceptions(IApplicationBuilder app)

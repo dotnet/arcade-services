@@ -491,7 +491,7 @@ namespace Microsoft.DotNet.DarcLib
             HashSet<DependencyGraphNode> incoherentNodes = new HashSet<DependencyGraphNode>();
             // Cache of incoherent dependencies, looked up by name
             Dictionary<string, DependencyDetail> incoherentDependenciesCache = new Dictionary<string, DependencyDetail>();
-            HashSet<DependencyDetail> incoherentDependencies = new HashSet<DependencyDetail>();
+            HashSet<DependencyDetail> incoherentDependencies = new HashSet<DependencyDetail>(new LooseDependencyDetailComparer());
 
             while (nodesToVisit.Count > 0)
             {
@@ -908,6 +908,23 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             return remotesMapping;
+        }
+    }
+
+    public class LooseDependencyDetailComparer : IEqualityComparer<DependencyDetail>
+    {
+        public bool Equals(DependencyDetail x, DependencyDetail y)
+        {
+            return x.Commit == y.Commit &&
+                x.Name == y.Name &&
+                x.Version == y.Version;
+        }
+
+        public int GetHashCode(DependencyDetail obj)
+        {
+            return (obj.Commit,
+                obj.Name,
+                obj.Version).GetHashCode();
         }
     }
 }
