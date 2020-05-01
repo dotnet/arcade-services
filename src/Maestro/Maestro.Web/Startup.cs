@@ -25,6 +25,7 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
@@ -49,7 +50,7 @@ using Newtonsoft.Json.Serialization;
 
 namespace Maestro.Web
 {
-    public partial class Startup
+    public partial class Startup : StartupBase
     {
         // https://github.com/dotnet/core-eng/issues/6819
         // TODO: Remove once the repo in this list is ready to onboard to yaml publishing.
@@ -101,11 +102,10 @@ namespace Maestro.Web
 
         public static readonly TimeSpan LoginCookieLifetime = new TimeSpan(days: 120, hours: 0, minutes: 0, seconds: 0);
 
-        public IHostEnvironment HostingEnvironment { get; set; }
+        public IHostEnvironment HostingEnvironment { get; }
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
+        public override void ConfigureServices(IServiceCollection services)
         {
             if (HostingEnvironment.IsDevelopment())
             {
@@ -374,9 +374,9 @@ namespace Maestro.Web
             return string.Equals(context.Request.Method, "get", StringComparison.OrdinalIgnoreCase);
         }
 
-        public void Configure(IApplicationBuilder app, IHostEnvironment env)
+        public override void Configure(IApplicationBuilder app)
         {
-            if (env.IsDevelopment())
+            if (HostingEnvironment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
@@ -418,7 +418,7 @@ namespace Maestro.Web
                     return next();
                 });
 
-            if (env.IsDevelopment() && !Program.RunningInServiceFabric())
+            if (HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric())
             {
                 // In local dev with the `ng serve` scenario, just redirect /_/api to /api
                 app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));

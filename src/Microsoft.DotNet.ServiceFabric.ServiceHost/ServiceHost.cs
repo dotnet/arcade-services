@@ -27,7 +27,10 @@ using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
-    public class HostEnvironment : IWebHostEnvironment
+    public class HostEnvironment : IWebHostEnvironment,
+#pragma warning disable 618 // use of obsolete symbol: some of the packages we are using still resolve this so we need to inject it
+        Microsoft.AspNetCore.Hosting.IHostingEnvironment, Microsoft.Extensions.Hosting.IHostingEnvironment
+#pragma warning restore 618
     {
         public HostEnvironment(string environmentName, string applicationName, string contentRootPath, IFileProvider contentRootFileProvider)
         {
@@ -222,6 +225,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             services.TryAddSingleton(InitializeEnvironment());
             services.TryAddSingleton(b => (IHostEnvironment) b.GetService<HostEnvironment>());
             services.TryAddSingleton(b => (IWebHostEnvironment) b.GetService<HostEnvironment>());
+#pragma warning disable 618 // use of obsolete symbol: some of the packages we are using still resolve this so we need to inject it
+            services.TryAddSingleton(b => (Microsoft.AspNetCore.Hosting.IHostingEnvironment) b.GetService<HostEnvironment>());
+            services.TryAddSingleton(b => (Microsoft.Extensions.Hosting.IHostingEnvironment) b.GetService<HostEnvironment>());
+#pragma warning restore 618
             ConfigureApplicationInsights(services);
             services.AddLogging(
                 builder =>

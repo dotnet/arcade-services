@@ -7,9 +7,7 @@ using System.IO;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using IHostEnvironment = Microsoft.Extensions.Hosting.IHostEnvironment;
 
 namespace Maestro.Web
 {
@@ -38,14 +36,7 @@ namespace Maestro.Web
 
         private static void NonServiceFabricMain()
         {
-            new HostBuilder()
-                .ConfigureWebHostDefaults(b =>
-                {
-                    b.ConfigureKestrel(o => { })
-                        .UseStartup<Startup>()
-                        .UseUrls("http://localhost:8080/")
-                        .CaptureStartupErrors(true);
-                })
+            new WebHostBuilder().UseKestrel()
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .ConfigureAppConfiguration((context, builder) =>
                 {
@@ -57,6 +48,9 @@ namespace Maestro.Web
                         builder.AddFilter(level => level > LogLevel.Debug);
                         builder.AddConsole();
                     })
+                .UseStartup<Startup>()
+                .UseUrls("http://localhost:8080/")
+                .CaptureStartupErrors(true)
                 .Build()
                 .Run();
         }
@@ -68,7 +62,7 @@ namespace Maestro.Web
                 {
                     hostBuilder.ConfigureAppConfiguration((context, builder) =>
                     {
-                        builder.AddDefaultJsonConfiguration((IHostEnvironment) context.HostingEnvironment);
+                        builder.AddDefaultJsonConfiguration(context.HostingEnvironment);
                     });
                 }));
         }
