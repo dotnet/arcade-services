@@ -16,7 +16,7 @@ namespace DotNet.Status.Web
     {
         public static void Main(string[] args)
         {
-            new HostBuilder()
+            Host.CreateDefaultBuilder()
                 .ConfigureWebHostDefaults(host =>
                 {
                     host.UseStartup<Startup>()

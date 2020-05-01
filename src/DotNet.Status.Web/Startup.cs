@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Security.Claims;
@@ -26,13 +25,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
 using Octokit;
 
 namespace DotNet.Status.Web
 {
-    public class Startup : StartupBase
+    public class Startup
     {
         public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
@@ -47,7 +44,7 @@ namespace DotNet.Status.Web
         public const string MsftAuthorizationPolicyName = "msft";
 
         // This method gets called by the runtime. Use this method to add services to the container.
-        public override void ConfigureServices(IServiceCollection services)
+        public void ConfigureServices(IServiceCollection services)
         {
             services.AddSingleton(Configuration);
             if (Env.IsDevelopment())
@@ -72,8 +69,6 @@ namespace DotNet.Status.Web
 
             AddServices(services);
             ConfigureConfiguration(services);
-
-            base.ConfigureServices(services);
         }
 
         private void ConfigureConfiguration(IServiceCollection services)
@@ -151,7 +146,17 @@ namespace DotNet.Status.Web
                     "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider"));
             });
 
-            services.AddAuthentication()
+            services.AddAuthentication("contextual")
+                .AddPolicyScheme("contextual", "Contextual Scheme",
+                    o => { o.ForwardDefaultSelector = context =>
+                    {
+                        if (context.Request.Path.StartsWithSegments("/api"))
+                        {
+                            return "github-token";
+                        }
+
+                        return IdentityConstants.ApplicationScheme;
+                    }; })
                 .AddGitHubOAuth(Configuration.GetSection("GitHubAuthentication"), GitHubScheme)
                 .AddScheme<UserTokenOptions, GitHubUserTokenHandler>("github-token", o => { })
                 .AddCookie(IdentityConstants.ApplicationScheme,
@@ -171,7 +176,7 @@ namespace DotNet.Status.Web
                                     ctx.HttpContext.RequestServices.GetRequiredService<GitHubClaimResolver>();
                                 ClaimsIdentity identity = ctx.Principal.Identities.FirstOrDefault();
                                 identity?.AddClaims(await resolver.GetMembershipClaims(resolver.GetAccessToken(ctx.Principal)));
-                            }
+                            },
                         };
                     })
                 .AddExternalCookie()
@@ -195,17 +200,17 @@ namespace DotNet.Status.Web
             services.AddScoped<SimpleSigninMiddleware>();
             services.AddGitHubTokenProvider();
             services.AddSingleton<IInstallationLookup, InMemoryCacheInstallationLookup>();
-            services.AddContextAwareAuthenticationScheme(o =>
-            {
-                o.SelectScheme = p => p.StartsWithSegments("/api") ? "github-token" : IdentityConstants.ApplicationScheme;
-            });
+            //services.AddContextAwareAuthenticationScheme(o =>
+            //{
+            //    o.SelectScheme = p => p.StartsWithSegments("/api") ? "github-token" : IdentityConstants.ApplicationScheme;
+            //});
 
             services.AddSingleton<ZenHubClient>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public override void Configure(IApplicationBuilder app)
+        public void Configure(IApplicationBuilder app)
         {
             app.UseStatusCodePagesWithReExecute("/Status", "?code={0}");
 
@@ -227,8 +232,8 @@ namespace DotNet.Status.Web
                 e.MapRazorPages();
                 e.MapControllers();
             });
-            app.UseMiddleware<SimpleSigninMiddleware>();
             app.UseStaticFiles();
+            app.UseMiddleware<SimpleSigninMiddleware>();
         }
     }
 }
