@@ -29,7 +29,6 @@ namespace Microsoft.DotNet.Maestro.Client
         IChannels Channels { get; }
         IDefaultChannels DefaultChannels { get; }
         IGoal Goal { get; }
-        IPipelines Pipelines { get; }
         IRepository Repository { get; }
         ISubscriptions Subscriptions { get; }
     }
@@ -42,7 +41,7 @@ namespace Microsoft.DotNet.Maestro.Client
     public partial class MaestroApiOptions : ClientOptions
     {
         public MaestroApiOptions()
-            : this(new Uri("https://maestro-int.westus2.cloudapp.azure.com"))
+            : this(new Uri("https://localhost:4430"))
         {
         }
 
@@ -52,7 +51,7 @@ namespace Microsoft.DotNet.Maestro.Client
         }
 
         public MaestroApiOptions(TokenCredential credentials)
-            : this(new Uri("https://maestro-int.westus2.cloudapp.azure.com"), credentials)
+            : this(new Uri("https://localhost:4430"), credentials)
         {
         }
 
@@ -119,8 +118,6 @@ namespace Microsoft.DotNet.Maestro.Client
 
         public IGoal Goal { get; }
 
-        public IPipelines Pipelines { get; }
-
         public IRepository Repository { get; }
 
         public ISubscriptions Subscriptions { get; }
@@ -140,7 +137,6 @@ namespace Microsoft.DotNet.Maestro.Client
             Channels = new Channels(this);
             DefaultChannels = new DefaultChannels(this);
             Goal = new Goal(this);
-            Pipelines = new Pipelines(this);
             Repository = new Repository(this);
             Subscriptions = new Subscriptions(this);
             SerializerSettings = new JsonSerializerSettings
@@ -227,10 +223,6 @@ namespace Microsoft.DotNet.Maestro.Client
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public T Deserialize<T>(string value)
         {
-            if (typeof(T) == typeof(string))
-            {
-                return (T)(object)value;
-            }
             return JsonConvert.DeserializeObject<T>(value, SerializerSettings);
         }
 

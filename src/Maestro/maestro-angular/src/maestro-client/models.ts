@@ -471,6 +471,7 @@ export class Build {
             channels,
             assets,
             dependencies,
+            incoherencies,
             staleness,
             released,
             stable,
@@ -490,6 +491,7 @@ export class Build {
             channels?: Channel[],
             assets?: Asset[],
             dependencies?: BuildRef[],
+            incoherencies?: BuildIncoherence[],
             staleness: number,
             released: boolean,
             stable: boolean,
@@ -510,6 +512,7 @@ export class Build {
         this._channels = channels;
         this._assets = assets;
         this._dependencies = dependencies;
+        this._incoherencies = incoherencies;
         this._staleness = staleness;
         this._released = released;
         this._stable = stable;
@@ -641,6 +644,12 @@ export class Build {
         return this._dependencies;
     }
 
+    private _incoherencies?: BuildIncoherence[];
+
+    public get incoherencies(): BuildIncoherence[] | undefined {
+        return this._incoherencies;
+    }
+
     private _staleness: number;
 
     public get staleness(): number {
@@ -686,6 +695,7 @@ export class Build {
             channels: value["channels"] == null ? undefined : value["channels"].map((e: any) => Channel.fromRawObject(e)) as any,
             assets: value["assets"] == null ? undefined : value["assets"].map((e: any) => Asset.fromRawObject(e)) as any,
             dependencies: value["dependencies"] == null ? undefined : value["dependencies"].map((e: any) => BuildRef.fromRawObject(e)) as any,
+            incoherencies: value["incoherencies"] == null ? undefined : value["incoherencies"].map((e: any) => BuildIncoherence.fromRawObject(e)) as any,
             staleness: value["staleness"] == null ? undefined : value["staleness"] as any,
             released: value["released"] == null ? undefined : value["released"] as any,
             stable: value["stable"] == null ? undefined : value["stable"] as any,
@@ -736,6 +746,9 @@ export class Build {
         if (value._dependencies) {
             result["dependencies"] = value._dependencies.map((e: any) => BuildRef.toRawObject(e));
         }
+        if (value._incoherencies) {
+            result["incoherencies"] = value._incoherencies.map((e: any) => BuildIncoherence.toRawObject(e));
+        }
         result["staleness"] = value._staleness;
         result["released"] = value._released;
         result["stable"] = value._stable;
@@ -760,6 +773,7 @@ export class BuildData {
             gitHubBranch,
             released,
             stable,
+            incoherencies,
         }: {
             commit: string,
             assets?: AssetData[],
@@ -775,6 +789,7 @@ export class BuildData {
             gitHubBranch?: string,
             released: boolean,
             stable: boolean,
+            incoherencies?: BuildIncoherence[],
         }
     ) {
         this._commit = commit;
@@ -791,6 +806,7 @@ export class BuildData {
         this._gitHubBranch = gitHubBranch;
         this._released = released;
         this._stable = stable;
+        this._incoherencies = incoherencies;
     }
 
     private _commit: string;
@@ -932,6 +948,16 @@ export class BuildData {
     public set stable(__value: boolean) {
         this._stable = __value;
     }
+
+    private _incoherencies?: BuildIncoherence[];
+
+    public get incoherencies(): BuildIncoherence[] | undefined {
+        return this._incoherencies;
+    }
+
+    public set incoherencies(__value: BuildIncoherence[] | undefined) {
+        this._incoherencies = __value;
+    }
     
     public isValid(): boolean {
         return (
@@ -962,6 +988,7 @@ export class BuildData {
             gitHubBranch: value["gitHubBranch"] == null ? undefined : value["gitHubBranch"] as any,
             released: value["released"] == null ? undefined : value["released"] as any,
             stable: value["stable"] == null ? undefined : value["stable"] as any,
+            incoherencies: value["incoherencies"] == null ? undefined : value["incoherencies"].map((e: any) => BuildIncoherence.fromRawObject(e)) as any,
         });
         return result;
     }
@@ -994,6 +1021,9 @@ export class BuildData {
         }
         result["released"] = value._released;
         result["stable"] = value._stable;
+        if (value._incoherencies) {
+            result["incoherencies"] = value._incoherencies.map((e: any) => BuildIncoherence.toRawObject(e));
+        }
         return result;
     }
 }
@@ -1031,6 +1061,94 @@ export class BuildGraph {
     public static toRawObject(value: BuildGraph): any {
         let result: any = {};
         result["builds"] = Helper.mapValues(value._builds, (v: any) => Build.toRawObject(v));
+        return result;
+    }
+}
+
+export class BuildIncoherence {
+    public constructor(
+        {
+            name,
+            version,
+            repository,
+            commit,
+        }: {
+            name?: string,
+            version?: string,
+            repository?: string,
+            commit?: string,
+        }
+    ) {
+        this._name = name;
+        this._version = version;
+        this._repository = repository;
+        this._commit = commit;
+    }
+
+    private _name?: string;
+
+    public get name(): string | undefined {
+        return this._name;
+    }
+
+    public set name(__value: string | undefined) {
+        this._name = __value;
+    }
+
+    private _version?: string;
+
+    public get version(): string | undefined {
+        return this._version;
+    }
+
+    public set version(__value: string | undefined) {
+        this._version = __value;
+    }
+
+    private _repository?: string;
+
+    public get repository(): string | undefined {
+        return this._repository;
+    }
+
+    public set repository(__value: string | undefined) {
+        this._repository = __value;
+    }
+
+    private _commit?: string;
+
+    public get commit(): string | undefined {
+        return this._commit;
+    }
+
+    public set commit(__value: string | undefined) {
+        this._commit = __value;
+    }
+
+    public static fromRawObject(value: any): BuildIncoherence {
+        let result = new BuildIncoherence({
+            name: value["name"] == null ? undefined : value["name"] as any,
+            version: value["version"] == null ? undefined : value["version"] as any,
+            repository: value["repository"] == null ? undefined : value["repository"] as any,
+            commit: value["commit"] == null ? undefined : value["commit"] as any,
+        });
+        return result;
+    }
+
+    public static toRawObject(value: BuildIncoherence): any {
+        let result: any = {};
+        if (value._name) {
+            result["name"] = value._name;
+        }
+        if (value._version) {
+            result["version"] = value._version;
+        }
+        if (value._repository) {
+            result["repository"] = value._repository;
+        }
+        if (value._commit) {
+            result["commit"] = value._commit;
+        }
         return result;
     }
 }

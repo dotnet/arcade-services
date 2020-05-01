@@ -229,6 +229,12 @@ namespace Maestro.Web
                     IConfigurationSection section = Configuration.GetSection("Kusto");
                     section.Bind(options);
                 });
+
+            // We do not use AddMemoryCache here. We use our own cache because we wish to
+            // use a sized cache and some components, such as EFCore, do not implement their caching
+            // in such a way that will work with sizing.
+            services.AddSingleton<DarcRemoteMemoryCache>();
+
             services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
             services.AddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
 
