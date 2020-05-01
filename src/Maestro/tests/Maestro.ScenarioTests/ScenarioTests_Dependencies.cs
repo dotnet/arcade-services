@@ -75,13 +75,13 @@ namespace Maestro.ScenarioTests
             Build targetBuild1 = await CreateBuildAsync(targetRepoUri, targetBranch, targetCommit, target1BuildNumber, targetAssets, dependencies);
             await AddBuildToChannelAsync(targetBuild1.Id, testChannelName);
             Build newTargetBuild1 = new Build(targetBuild1.Id, targetBuild1.DateProduced, targetBuild1.Staleness, targetBuild1.Released,
-                targetBuild1.PublishUsingPipelines, targetBuild1.Commit, targetBuild1.Channels, targetBuild1.Assets, dependencies);
+                targetBuild1.Stable, targetBuild1.Commit, targetBuild1.Channels, targetBuild1.Assets, dependencies, incoherencies: null);
 
             // Add the target build a second time, should populate the BuildDependencies table and use the previous TimeToInclusion
             Build targetBuild2 = await CreateBuildAsync(targetRepoUri, targetBranch, targetCommit, target2BuildNumber, targetAssets, dependencies);
             await AddBuildToChannelAsync(targetBuild2.Id, testChannelName);
             Build newTargetBuild2 = new Build(targetBuild2.Id, targetBuild2.DateProduced, targetBuild2.Staleness, targetBuild2.Released,
-                targetBuild2.PublishUsingPipelines, targetBuild2.Commit, targetBuild2.Channels, targetBuild2.Assets, dependencies);
+                targetBuild2.Stable, targetBuild2.Commit, targetBuild2.Channels, targetBuild2.Assets, dependencies, incoherencies: null);
 
             Build retrievedBuild1 = await MaestroApi.Builds.GetBuildAsync(targetBuild1.Id);
             Build retrievedBuild2 = await MaestroApi.Builds.GetBuildAsync(targetBuild2.Id);
