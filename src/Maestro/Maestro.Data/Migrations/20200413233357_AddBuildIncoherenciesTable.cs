@@ -7,12 +7,6 @@ namespace Maestro.Data.Migrations
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<bool>(
-                name: "Stable",
-                table: "Builds",
-                nullable: false,
-                defaultValue: false);
-
             migrationBuilder.CreateTable(
                 name: "BuildIncoherencies",
                 columns: table => new
@@ -46,10 +40,6 @@ namespace Maestro.Data.Migrations
         {
             migrationBuilder.DropTable(
                 name: "BuildIncoherencies");
-
-            migrationBuilder.DropColumn(
-                name: "Stable",
-                table: "Builds");
         }
     }
 }
