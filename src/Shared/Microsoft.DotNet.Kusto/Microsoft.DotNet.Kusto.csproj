@@ -4,7 +4,6 @@
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
     <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <SignAssembly>false</SignAssembly>
-    <LangVersion>7.1</LangVersion>
     <RootNamespace>Microsoft.DotNet.Kusto</RootNamespace>
     <AssemblyName>Microsoft.DotNet.Kusto</AssemblyName>
     <IsPackable>true</IsPackable>

@@ -6,7 +6,6 @@
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
     <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <SignAssembly>false</SignAssembly>
-    <LangVersion>7.1</LangVersion>
     <DebugType>Full</DebugType>
   </PropertyGroup>
 

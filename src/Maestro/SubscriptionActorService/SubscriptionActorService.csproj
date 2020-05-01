@@ -10,7 +10,6 @@
     <ServicePackagePrefix>$(MSBuildProjectName)</ServicePackagePrefix>
     <FabActUtilWorkingDir>$(BaseIntermediateOutputPath)\FabActUtilTemp</FabActUtilWorkingDir>
     <SignAssembly>false</SignAssembly>
-    <LangVersion>7.1</LangVersion>
     <DebugType>Full</DebugType>
   </PropertyGroup>
 

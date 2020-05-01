@@ -2,7 +2,6 @@
   <PropertyGroup>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <IsPackable>true</IsPackable>
-    <LangVersion>7.1</LangVersion>
     <!-- Build Tasks should not include any dependencies -->
     <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
   </PropertyGroup>
