@@ -21,11 +21,7 @@ namespace DependencyUpdateErrorProcessor.Tests
         }
 
         public List<RepositoryBranchUpdateHistoryEntry> RepoBranchUpdateInMemory { get; set; }
-        protected override void OnModelCreating(ModelBuilder builder)
-        {
-            base.OnModelCreating(builder);
-            RepositoryBranchUpdateHistory = RepoBranchUpdateInMemory.AsQueryable();
-        }
+        public override IQueryable<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory => RepoBranchUpdateInMemory.AsQueryable();
 
         public override Task<long> GetInstallationId(string repositoryUrl)
         {

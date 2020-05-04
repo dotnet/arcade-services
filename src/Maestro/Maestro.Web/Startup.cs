@@ -291,6 +291,27 @@ namespace Maestro.Web
         private void ConfigureApi(IApplicationBuilder app)
         {
             app.UseExceptionHandler(ConfigureApiExceptions);
+
+            app.UseSwagger(
+                options =>
+                {
+                    options.SerializeAsV2 = true;
+                    options.RouteTemplate = "api/{documentName}/swagger.json";
+                    options.PreSerializeFilters.Add(
+                        (doc, req) =>
+                        {
+                            bool http = HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric();
+                            doc.Servers = new List<OpenApiServer>
+                            {
+                                new OpenApiServer
+                                {
+                                    Url = $"{(http ? "http" : "https")}://{req.Host.Value}/",
+                                },
+                            };
+
+                            req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
+                        });
+                });
             
             app.UseRouting();
             app.UseAuthentication();
@@ -326,34 +347,16 @@ namespace Maestro.Web
 
                     return next();
                 });
-
-            app.UseSwagger(
-                options =>
-                {
-                    options.SerializeAsV2 = true;
-                    options.RouteTemplate = "api/{documentName}/swagger.json";
-                    options.PreSerializeFilters.Add(
-                        (doc, req) =>
-                        {
-                            bool http = HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric();
-                            doc.Servers = new List<OpenApiServer>
-                            {
-                                new OpenApiServer
-                                {
-                                    Url = $"{(http ? "http" : "https")}://{req.Host.Value}/",
-                                },
-                            };
-
-                            req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
-                        });
-                });
         }
 
         // The whole api, only allowing GET requests, with all urls prefixed with _
         private void ConfigureCookieAuthedApi(IApplicationBuilder app)
         {
             app.UseExceptionHandler(ConfigureApiExceptions);
+
+            app.UseRouting();
             app.UseAuthentication();
+            app.UseAuthorization();
 
             app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
 
@@ -361,16 +364,24 @@ namespace Maestro.Web
             if (DoApiRedirect)
             {
                 // when told to not redirect by the request, don't do it.
-                app.MapWhen(ctx => ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _), a =>
-                {
-                    a.UseMvc();
-                });
+                app.MapWhen(ctx => ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _),
+                    a =>
+                    {
+                        a.UseRouting();
+                        a.UseEndpoints(e =>
+                        {
+                            e.MapControllers();
+                        });
+                    });
 
                 app.Run(ApiRedirectHandler);
             }
             else
             {
-                app.UseMvc();
+                app.UseEndpoints(e =>
+                {
+                    e.MapControllers();
+                });
             }
 
         }
@@ -445,13 +456,14 @@ namespace Maestro.Web
 
             app.UseRouting();
             app.UseAuthentication();
+            app.UseAuthorization();
 
             app.UseEndpoints(e =>
                 {
                     e.MapRazorPages();
                     e.MapControllers();
                 }
-                );
+            );
             app.MapWhen(IsGet, AngularIndexHtmlRedirect);
         }
 

@@ -15,7 +15,7 @@
     <PackageReference Update="CommandLineParser" Version="2.2.1" />
     <PackageReference Update="EntityFrameworkCore.Triggers" Version="1.1.1" />
     <PackageReference Update="FluentAssertions" Version="5.4.1" />
-    <PackageReference Update="FluentValidation.AspNetCore" Version="7.6.104" />
+    <PackageReference Update="FluentValidation.AspNetCore" Version="8.6.2" />
     <PackageReference Update="GitHubJwt" Version="0.0.2" />
     <PackageReference Update="Humanizer.Core" Version="2.4.2" />
     <PackageReference Update="JetBrains.Annotations" Version="11.1.0" />

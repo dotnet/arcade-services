@@ -18,6 +18,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
+using Org.BouncyCastle.Crypto.Prng;
 
 namespace Maestro.Data
 {
@@ -71,11 +72,42 @@ namespace Maestro.Data
         public DbSet<Repository> Repositories { get; set; }
         public DbSet<RepositoryBranch> RepositoryBranches { get; set; }
         public DbSet<RepositoryBranchUpdate> RepositoryBranchUpdates { get; set; }
-        public IQueryable<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory { get; set; }
-        public IQueryable<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory { get; set; }
         public DbSet<DependencyFlowEvent> DependencyFlowEvents { get; set; }
         public DbSet<GoalTime> GoalTime { get; set; }
         public DbSet<LongestBuildPath> LongestBuildPaths { get; set; }
+
+        public virtual IQueryable<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory => RepositoryBranchUpdates.FromSqlRaw(@"
+SELECT * FROM [RepositoryBranchUpdates]
+FOR SYSTEM_TIME ALL
+")
+            .Select(
+                u => new RepositoryBranchUpdateHistoryEntry
+                {
+                    Repository = u.RepositoryName,
+                    Branch = u.BranchName,
+                    Action = u.Action,
+                    Success = u.Success,
+                    ErrorMessage = u.ErrorMessage,
+                    Method = u.Method,
+                    Arguments = u.Arguments,
+                    Timestamp = EF.Property<DateTime>(u, "SysStartTime")
+                });
+
+        public IQueryable<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory => SubscriptionUpdates.FromSqlRaw(@"
+SELECT * FROM [SubscriptionUpdates]
+FOR SYSTEM_TIME ALL
+")
+            .Select(
+                u => new SubscriptionUpdateHistoryEntry
+                {
+                    SubscriptionId = u.SubscriptionId,
+                    Action = u.Action,
+                    Success = u.Success,
+                    ErrorMessage = u.ErrorMessage,
+                    Method = u.Method,
+                    Arguments = u.Arguments,
+                    Timestamp = EF.Property<DateTime>(u, "SysStartTime")
+                });
 
         public override Task<int> SaveChangesAsync(
             bool acceptAllChangesOnSuccess,
@@ -90,6 +122,7 @@ namespace Maestro.Data
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.AddDotNetExtensions();
+            base.OnConfiguring(optionsBuilder);
         }
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -239,39 +272,6 @@ namespace Maestro.Data
                 .HasIndex("RepositoryName", "BranchName", "SysEndTime", "SysStartTime");
 
             builder.HasDbFunction(() => JsonExtensions.JsonValue("", "")).HasName("JSON_VALUE").HasSchema("");
-
-            SubscriptionUpdateHistory = SubscriptionUpdates.FromSqlRaw(@"
-SELECT * FROM [SubscriptionUpdates]
-FOR SYSTEM_TIME ALL
-")
-                .Select(
-                    u => new SubscriptionUpdateHistoryEntry
-                    {
-                        SubscriptionId = u.SubscriptionId,
-                        Action = u.Action,
-                        Success = u.Success,
-                        ErrorMessage = u.ErrorMessage,
-                        Method = u.Method,
-                        Arguments = u.Arguments,
-                        Timestamp = EF.Property<DateTime>(u, "SysStartTime")
-                    });
-
-            RepositoryBranchUpdateHistory = RepositoryBranchUpdates.FromSqlRaw(@"
-SELECT * FROM [RepositoryBranchUpdates]
-FOR SYSTEM_TIME ALL
-")
-                .Select(
-                    u => new RepositoryBranchUpdateHistoryEntry
-                    {
-                        Repository = u.RepositoryName,
-                        Branch = u.BranchName,
-                        Action = u.Action,
-                        Success = u.Success,
-                        ErrorMessage = u.ErrorMessage,
-                        Method = u.Method,
-                        Arguments = u.Arguments,
-                        Timestamp = EF.Property<DateTime>(u, "SysStartTime")
-                    });
         }
 
         public virtual Task<long> GetInstallationId(string repositoryUrl)

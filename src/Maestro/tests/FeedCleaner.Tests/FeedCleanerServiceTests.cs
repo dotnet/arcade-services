@@ -41,6 +41,7 @@ namespace FeedCleanerService.Tests
             services.AddLogging();
             services.AddDbContext<BuildAssetRegistryContext>(
                 options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
+            services.AddEntityFrameworkInMemoryDatabase();
             services.Configure<FeedCleanerOptions>(
                 (options) =>
                 {
@@ -103,7 +104,7 @@ namespace FeedCleanerService.Tests
             await cleaner.CleanManagedFeedsAsync();
 
             // Check the assets for the feed where all packages were released.
-            var assetsInDeletedFeed = GetContext().Assets.Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithAllPackagesReleasedName))).ToList();
+            var assetsInDeletedFeed = _context.Value.Assets.Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithAllPackagesReleasedName))).ToList();
             Assert.Equal(4, assetsInDeletedFeed.Count);
             Assert.Contains(assetsInDeletedFeed,
                 a => a.Name.Equals("Newtonsoft.Json") &&
@@ -116,7 +117,7 @@ namespace FeedCleanerService.Tests
                 !a.Locations.Any(l => l.Location.Contains(ReleaseFeedName)));
 
             // "releasedPackage1" should've been released and have its location updated to the released feed.
-            var assetsInRemainingFeed = GetContext().Assets.Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithUnreleasedPackagesName))).ToList();
+            var assetsInRemainingFeed = _context.Value.Assets.Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithUnreleasedPackagesName))).ToList();
             Assert.Equal(2, assetsInRemainingFeed.Count);
             var releasedAssets = assetsInRemainingFeed.Where(a => a.Locations.Any(l => l.Location.Contains(ReleaseFeedName))).ToList();
             Assert.Single(releasedAssets);
@@ -207,7 +208,7 @@ namespace FeedCleanerService.Tests
                 }
             }
 
-            var context = GetContext();
+            var context = _context.Value;
             context.Assets.AddRange(assets);
             context.SaveChanges();
         }
