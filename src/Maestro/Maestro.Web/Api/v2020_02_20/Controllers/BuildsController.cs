@@ -311,7 +311,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             Queue.Post(
                 async () =>
                 {
-                    await SetBuildIncoherencyInfoAsync(buildModel.Id);
+                    await SetBuildIncoherencyInfoAsync(buildModel);
                 });
 
             return CreatedAtRoute(
@@ -328,8 +328,8 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         /// It's goal is to compute the incoherent dependencies that the build have and
         /// persist the list of them in BAR.
         /// </summary>
-        /// <param name="buildId">Build id for which the incoherencies should be computed.</param>
-        private async Task SetBuildIncoherencyInfoAsync(int buildId)
+        /// <param name="build">Build for which the incoherencies should be computed.</param>
+        private async Task SetBuildIncoherencyInfoAsync(Data.Models.Build build)
         {
             DependencyGraphBuildOptions graphBuildOptions = new DependencyGraphBuildOptions()
             {
@@ -343,8 +343,6 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 using (IServiceScope scope = ServiceScopeFactory.CreateScope())
                 {
                     BuildAssetRegistryContext context = scope.ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
-
-                    Data.Models.Build build = await context.Builds.FindAsync(buildId);
 
                     DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                         RemoteFactory,
@@ -367,14 +365,14 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                     }
                     context.Entry<Data.Models.Build>(build).Reload();
                     build.Incoherencies = incoherencies;
-
                     context.Builds.Update(build);
                     await context.SaveChangesAsync();
                 }
             }
             catch (Exception e)
             {
-                Logger.LogWarning(e, $"Problems computing the dependency incoherencies for BAR build {buildId}");
+                Logger.LogWarning(e, $"Problems computing the dependency incoherencies for a new build of " +
+                    $"{build.AzureDevOpsBuildNumber} from {(build.AzureDevOpsRepository ?? build.GitHubRepository)}");
             }
         }
     }
