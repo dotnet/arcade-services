@@ -366,7 +366,6 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                         });
                     }
                     context.Entry<Data.Models.Build>(build).Reload();
-                    build = await context.Builds.FindAsync(buildId);
                     build.Incoherencies = incoherencies;
 
                     context.Builds.Update(build);
