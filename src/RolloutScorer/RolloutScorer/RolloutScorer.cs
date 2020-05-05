@@ -71,7 +71,7 @@ namespace RolloutScorer
                     BuildBreakdowns.Add(new ScorecardBuildBreakdown(build.ToObject<BuildSummary>()));
                 }
             }
-            BuildBreakdowns.OrderBy(x => x.BuildSummary.FinishTime);
+            BuildBreakdowns = BuildBreakdowns.OrderBy(x => x.BuildSummary.FinishTime).ToList();
             await Task.WhenAll(BuildBreakdowns.Select(b => CollectStages(b)));
         }
 
