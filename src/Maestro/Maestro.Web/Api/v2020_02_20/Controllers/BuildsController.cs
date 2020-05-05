@@ -365,6 +365,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                             Commit = incoherence.Commit
                         });
                     }
+                    context.Entry<Data.Models.Build>(build).Reload();
                     build = await context.Builds.FindAsync(buildId);
                     build.Incoherencies = incoherencies;
 
