@@ -129,7 +129,7 @@ namespace RolloutScorer
     {
         public const string IssueLabel = "Rollout Issue";
         public const string HotfixLabel = "Rollout Manual Hotfix";
-        public const string RollbackLabel = "Rollout Rollback";
+        public const string RollbackLabel = "Rollout Manual Rollback";
         public const string DowntimeLabel = "Rollout Downtime";
     }
 
