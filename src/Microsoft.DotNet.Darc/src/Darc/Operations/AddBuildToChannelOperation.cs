@@ -6,14 +6,13 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Threading.Tasks;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
-using Microsoft.DotNet.Services.Utility;
-using System.Text;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -305,7 +304,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <summary>
         /// By default the source branch/SHA for the Build Promotion pipeline will be the branch/SHA
         /// that produced the Arcade.SDK used by the build being promoted. The user can override that
-        /// by specifying both, channel & SHA, on the command line.
+        /// by specifying both, branch & SHA, on the command line.
         /// </summary>
         /// <param name="build">Build for which the Arcade SDK dependency build will be inferred.</param>
         private async Task<(string sourceBranch, string sourceVersion)> GetSourceBranchInfoAsync(Build build)
@@ -316,6 +315,13 @@ namespace Microsoft.DotNet.Darc.Operations
             if (hasSourceBranch)
             {
                 _options.SourceBranch = GitHelpers.NormalizeBranchName(_options.SourceBranch);
+
+                if (_options.SourceBranch.EndsWith("release/3.x", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"Warning: Arcade branch {_options.SourceBranch} doesn't support build promotion. Please try specifiying --source-branch 'master'.");
+                    Console.WriteLine("Switching source branch to Arcade master.");
+                    return ("master", null);
+                }
             }
 
             if (hasSourceBranch && hasSourceSHA)
@@ -368,11 +374,18 @@ namespace Microsoft.DotNet.Darc.Operations
                 return (null, null);
             }
 
+            if (sourceBuildArcadeSDKDepBuild.GitHubBranch.EndsWith("release/3.x", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("Warning: To promote a build that uses a 3.x version of Arcade SDK you need to inform the --source-branch 'master' parameter.");
+                Console.WriteLine("Switching source branch to Arcade master.");
+                return ("master", null);
+            }
+
             var oldestSupportedArcadeSDKDate = new DateTimeOffset(2020, 01, 28, 0, 0, 0, new TimeSpan(0, 0, 0));
             if (DateTimeOffset.Compare(sourceBuildArcadeSDKDepBuild.DateProduced, oldestSupportedArcadeSDKDate) < 0)
             {
                 Console.WriteLine($"The target build uses an SDK released in {sourceBuildArcadeSDKDepBuild.DateProduced}");
-                Console.WriteLine($"The target build needs to use an Arcade SDK version released after {oldestSupportedArcadeSDKDate} otherwise " +
+                Console.WriteLine($"The target build needs to use an Arcade SDK 5.x.x version released after {oldestSupportedArcadeSDKDate} otherwise " +
                     $"you must inform the `source-branch` / `source-sha` parameters to point to a specific Arcade build.");
                 Console.Write($"You can also pass the `skip-assets-publishing` parameter if all you want is to " +
                     $"assign the build to a channel. Note, though, that this will not publish the build assets.");
