@@ -3,18 +3,12 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DotNet.Darc.Helpers;
-using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
@@ -44,6 +38,11 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 Console.WriteLine($"Updated build {_options.Id} with new information.");
                 Console.WriteLine(UxHelpers.GetTextBuildDescription(updatedBuild));
+            }
+            catch (AuthenticationException e)
+            {
+                Console.WriteLine(e.Message);
+                return Constants.ErrorCode;
             }
             catch (Exception e)
             {

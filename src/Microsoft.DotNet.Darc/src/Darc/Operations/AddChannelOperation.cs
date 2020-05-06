@@ -64,6 +64,11 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 return Constants.SuccessCode;
             }
+            catch (AuthenticationException e)
+            {
+                Console.WriteLine(e.Message);
+                return Constants.ErrorCode;
+            }
             catch (RestApiException e) when (e.Response.Status == (int) HttpStatusCode.Conflict)
             {
                 Logger.LogError($"An existing channel with name '{_options.Name}' already exists");
