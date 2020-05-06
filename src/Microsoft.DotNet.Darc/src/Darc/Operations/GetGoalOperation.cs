@@ -5,13 +5,12 @@
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Net;
 using System.Threading.Tasks;
-using System.Linq;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.DotNet.Maestro.Client;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -37,6 +36,11 @@ namespace Microsoft.DotNet.Darc.Operations
                 Goal goalInfo = await remote.GetGoalAsync(_options.Channel, _options.DefinitionId);
                 Console.Write(goalInfo.Minutes);
                 return Constants.SuccessCode;
+            }
+            catch (AuthenticationException e)
+            {
+                Console.WriteLine(e.Message);
+                return Constants.ErrorCode;
             }
             catch (RestApiException e) when (e.Response.Status == (int)HttpStatusCode.NotFound)
             {

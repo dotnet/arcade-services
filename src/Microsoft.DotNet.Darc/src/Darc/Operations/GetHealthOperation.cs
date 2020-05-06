@@ -6,6 +6,7 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.DarcLib.HealthMetrics;
+using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using System;
 using System.Collections.Generic;
@@ -52,75 +53,83 @@ namespace Microsoft.DotNet.Darc.Operations
 
         public override async Task<int> ExecuteAsync()
         {
-            IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
-
-            IEnumerable<Subscription> subscriptions = await remote.GetSubscriptionsAsync();
-            IEnumerable<DefaultChannel> defaultChannels = await remote.GetDefaultChannelsAsync();
-            IEnumerable<Channel> channels = await remote.GetChannelsAsync();
-
-            HashSet<string> channelsToEvaluate = ComputeChannelsToEvaluate(channels);
-            HashSet<string> reposToEvaluate = ComputeRepositoriesToEvaluate(defaultChannels, subscriptions);
-
-            // Print out what will be evaluated. If no channels or repos are in the initial sets, then
-            // this is currently an error. Because different PKPIs apply to different input items differently,
-            // this check may not be useful in the future.
-
-            if (channelsToEvaluate.Any())
+            try
             {
-                Console.WriteLine("Evaluating the following channels:");
-                foreach (string channel in channelsToEvaluate)
+                IRemote remote = RemoteFactory.GetBarOnlyRemote(_options, Logger);
+
+                IEnumerable<Subscription> subscriptions = await remote.GetSubscriptionsAsync();
+                IEnumerable<DefaultChannel> defaultChannels = await remote.GetDefaultChannelsAsync();
+                IEnumerable<Channel> channels = await remote.GetChannelsAsync();
+
+                HashSet<string> channelsToEvaluate = ComputeChannelsToEvaluate(channels);
+                HashSet<string> reposToEvaluate = ComputeRepositoriesToEvaluate(defaultChannels, subscriptions);
+
+                // Print out what will be evaluated. If no channels or repos are in the initial sets, then
+                // this is currently an error. Because different PKPIs apply to different input items differently,
+                // this check may not be useful in the future.
+
+                if (channelsToEvaluate.Any())
                 {
-                    Console.WriteLine($"  {channel}");
+                    Console.WriteLine("Evaluating the following channels:");
+                    foreach (string channel in channelsToEvaluate)
+                    {
+                        Console.WriteLine($"  {channel}");
+                    }
                 }
+                else
+                {
+                    Console.WriteLine($"There were no channels found to evaluate based on inputs, exiting.");
+                    return Constants.ErrorCode;
+                }
+
+                if (reposToEvaluate.Any())
+                {
+                    Console.WriteLine("Evaluating the following repositories:");
+                    foreach (string repo in reposToEvaluate)
+                    {
+                        Console.WriteLine($"  {repo}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"There were no repositories found to evaluate based on inputs, exiting.");
+                    return Constants.ErrorCode;
+                }
+
+                Console.WriteLine();
+
+                // Compute metrics, then run in parallel.
+
+                List<Func<Task<HealthMetricWithOutput>>> metricsToRun = ComputeMetricsToRun(channelsToEvaluate, reposToEvaluate,
+                    subscriptions, defaultChannels, channels);
+
+                // Run the metrics
+                HealthMetricWithOutput[] results = await Task.WhenAll<HealthMetricWithOutput>(metricsToRun.Select(metric => metric()));
+
+                // Walk through and print the results out
+                bool passed = true;
+                foreach (var healthResult in results)
+                {
+                    if (healthResult.Metric.Result != HealthResult.Passed)
+                    {
+                        passed = false;
+                    }
+
+                    Console.WriteLine($"{healthResult.Metric.MetricDescription} - ({healthResult.Metric.Result})");
+                    if (healthResult.Metric.Result != HealthResult.Passed)
+                    {
+                        Console.WriteLine();
+                        Console.WriteLine(healthResult.FormattedConsoleOutput);
+                    }
+                }
+
+                return passed ? Constants.SuccessCode : Constants.ErrorCode;
             }
-            else
+            catch (AuthenticationException e)
             {
-                Console.WriteLine($"There were no channels found to evaluate based on inputs, exiting.");
+                Console.WriteLine(e.Message);
                 return Constants.ErrorCode;
             }
-
-            if (reposToEvaluate.Any())
-            {
-                Console.WriteLine("Evaluating the following repositories:");
-                foreach (string repo in reposToEvaluate)
-                {
-                    Console.WriteLine($"  {repo}");
-                }
-            }
-            else
-            {
-                Console.WriteLine($"There were no repositories found to evaluate based on inputs, exiting.");
-                return Constants.ErrorCode;
-            }
-
-            Console.WriteLine();
-
-            // Compute metrics, then run in parallel.
-
-            List<Func<Task<HealthMetricWithOutput>>> metricsToRun = ComputeMetricsToRun(channelsToEvaluate, reposToEvaluate,
-                subscriptions, defaultChannels, channels);
-
-            // Run the metrics
-            HealthMetricWithOutput[] results = await Task.WhenAll<HealthMetricWithOutput>(metricsToRun.Select(metric => metric()));
-
-            // Walk through and print the results out
-            bool passed = true;
-            foreach (var healthResult in results)
-            {
-                if (healthResult.Metric.Result != HealthResult.Passed)
-                {
-                    passed = false;
-                }
-
-                Console.WriteLine($"{healthResult.Metric.MetricDescription} - ({healthResult.Metric.Result})");
-                if (healthResult.Metric.Result != HealthResult.Passed)
-                {
-                    Console.WriteLine();
-                    Console.WriteLine(healthResult.FormattedConsoleOutput);
-                }
-            }
-
-            return passed ? Constants.SuccessCode : Constants.ErrorCode;
         }
 
         /// <summary>
