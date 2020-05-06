@@ -25,6 +25,28 @@ namespace Microsoft.DotNet.Darc.Operations
                 { "devdiv", ("devdiv", 12603) }
             };
 
+        // These channels are unsupported because the Arcade master branch 
+        // (the branch that has build promotion infra) doesn't have YAML 
+        // implementation for them. There is usually not a high demand for 
+        // promoting builds to these channels.
+        private readonly Dictionary<int, string> UnsupportedChannels = new Dictionary<int, string>()
+        {
+            { 3, ".NET Core 3 Dev" },
+            { 19, ".NET Core 3 Release" },
+            { 129, ".NET Core 3.1 Release" },
+            { 184, ".NET Core 3.0 Internal Servicing" },
+            { 344, ".NET 3 Eng" },
+            { 390, ".NET 3 Eng - Validation" },
+            { 531, ".NET Core 3.1 Blazor Features" },
+            { 550, ".NET Core 3.1 Internal Servicing" },
+            { 555, ".NET Core SDK 3.0.1xx Internal" },
+            { 556, ".NET Core SDK 3.0.1xx" },
+            { 557, ".NET Core SDK 3.1.2xx Internal" },
+            { 558, ".NET Core SDK 3.1.2xx" },
+            { 559, ".NET Core SDK 3.1.1xx Internal" },
+            { 560, ".NET Core SDK 3.1.1xx" }
+        };
+
         AddBuildToChannelCommandLineOptions _options;
         public AddBuildToChannelOperation(AddBuildToChannelCommandLineOptions options)
             : base(options)
@@ -98,13 +120,18 @@ namespace Microsoft.DotNet.Darc.Operations
                     return Constants.SuccessCode;
                 }
 
-                Console.WriteLine($"Assigning build '{build.Id}' to the following channel(s):");
-                foreach (var channel in targetChannels)
+                if (targetChannels.Any(ch => UnsupportedChannels.ContainsKey(ch.Id)))
                 {
-                    Console.WriteLine($"\t{channel.Name}");
+                    Console.WriteLine($"Currently Darc doesn't support build promotion to the following channels:");
+
+                    foreach (var channel in UnsupportedChannels)
+                    {
+                        Console.WriteLine($"\t ({channel.Key}) {channel.Value}");
+                    }
+
+                    Console.WriteLine("Please contact @dnceng to see other options.");
+                    return Constants.ErrorCode;
                 }
-                Console.WriteLine();
-                Console.Write(UxHelpers.GetTextBuildDescription(build));
 
                 // Queues a build of the Build Promotion pipeline that will takes care of making sure
                 // that the build assets are published to the right location and also promoting the build
@@ -116,6 +143,14 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     return Constants.ErrorCode;
                 }
+
+                Console.WriteLine($"Assigning build '{build.Id}' to the following channel(s):");
+                foreach (var channel in targetChannels)
+                {
+                    Console.WriteLine($"\t{channel.Name}");
+                }
+                Console.WriteLine();
+                Console.Write(UxHelpers.GetTextBuildDescription(build));
 
                 // Be helpful. Let the user know what will happen.
                 string buildRepo = build.GitHubRepository ?? build.AzureDevOpsRepository;
