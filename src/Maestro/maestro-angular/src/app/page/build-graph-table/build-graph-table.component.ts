@@ -344,6 +344,10 @@ export class BuildGraphTableComponent implements OnChanges {
     return node.coherent.withProduct;
   }
 
+  public hasIncoherencies(node: BuildData) {
+    return !!(node.build.incoherencies !== undefined && node.build.incoherencies.length)
+  }
+
   public timeToInclusion(node:BuildData) {
     if (node.timeToInclusionInMinutes) {
       return node.timeToInclusionInMinutes.toLocaleString();
