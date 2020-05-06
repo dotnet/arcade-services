@@ -76,7 +76,7 @@
     <ng-container *ngFor="let node of sortedBuilds; trackBy getBuildId">
     <tr *ngIf="(includeToolsets || !node.isToolset) && (showAllDependencies || node.isRootOrImmediateDependency)"
       @insertRemove
-      [ngClass]="{'table-danger': !isCoherent(node), 'table-warning': node.build.incoherencies.length > 0}"
+      [ngClass]="{'table-danger': !isCoherent(node), 'table-warning': hasIncoherencies(node)}"
       (mouseenter)="hover(node.build.id)"
       (mouseleave)="hover(undefined)">
       <td (click)="node.isFocused && toggleLock()" class="graph-icon">
@@ -113,7 +113,7 @@
           [style.visibility]="node.hasCycles ? 'visible' : 'hidden'"></fa-icon>
       </td>
       <td>
-        <span style="cursor: help;" [ngbPopover]="popOver" placement="right" popoverTitle="Incoherent Dependencies" [style.visibility]="(node.build.incoherencies.length > 0) ? 'visible' : 'hidden'">
+        <span style="cursor: help;" [ngbPopover]="popOver" placement="right" popoverTitle="Incoherent Dependencies" [style.visibility]="(hasIncoherencies(node)) ? 'visible' : 'hidden'">
           <fa-icon [icon]="'exclamation-triangle'" 
             [title]="'This build has incoherent dependencies.'"></fa-icon>
         </span>
