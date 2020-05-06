@@ -5,7 +5,7 @@
     "SaveTokens": true,
     "CallbackPath": "/signin/github",
     "UserAgentProduct": "",
-    "ClaimsIssuer": "github" 
+    "ClaimsIssuer": "github"
   },
   "GitHub": {
     "GitHubAppId": "[vault(github-application-id)]",
@@ -45,5 +45,6 @@
     "uri": "https://maestro-prod.westus2.cloudapp.azure.com",
     "token": "[vault(prod-maestro-token)]"
   },
-  "EnableAutoBuildPromotion": "[config(FeatureManagement:AutoBuildPromotion)]" 
+  "GitDownloadLocation": "https://netcorenativeassets.blob.core.windows.net/resource-packages/external/windows/git/Git-2.22.0-64-bit.zip",
+  "EnableAutoBuildPromotion": "[config(FeatureManagement:AutoBuildPromotion)]"
 }

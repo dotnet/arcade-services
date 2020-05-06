@@ -6,7 +6,7 @@ using Kusto.Ingest;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Dotnet.GitHub.Authentication;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Logging;
 using Octokit;
@@ -25,7 +25,7 @@ namespace DarcBot
         private static readonly Regex _darcBotIssueIdentifierRegex = new Regex(@"\[BuildId=(?<buildid>[^,]+),RecordId=(?<recordid>[^,]+),Index=(?<index>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
         // Search for a darcbot property, example = "[Category=foo]"
         private static readonly Regex _darcBotPropertyRegex = new Regex(@"\[(?<key>.+)=(?<value>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
-        private static readonly string _docLink = "[DarcBot documentation](https://github.com/dotnet/arcade-services/blob/master/src/GitHubApps/src/DarcBot/ReadMe.md)";
+        private static readonly string _docLink = "[DarcBot documentation](https://github.com/dotnet/arcade-services/blob/master/src/GitHubApps/DarcBot/ReadMe.md)";
         private static readonly string _darcBotLabelName = "darcbot";
         [FunctionName("GitHubWebHook")]
         public static async Task<IActionResult> Run(

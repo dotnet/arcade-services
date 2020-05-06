@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.ServiceFabric.Actors;
 using Maestro.Web.Api.v2019_01_16.Models;
+using Microsoft.DotNet.ServiceFabric.ServiceHost;
 
 namespace Maestro.Web.Api.v2019_01_16.Controllers
 {
@@ -34,7 +35,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
             BuildAssetRegistryContext context,
             BackgroundQueue queue,
             IDependencyUpdater dependencyUpdater,
-            Func<ActorId, ISubscriptionActor> subscriptionActorFactory)
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
             : base(context, queue, dependencyUpdater, subscriptionActorFactory)
         {
             _context = context;

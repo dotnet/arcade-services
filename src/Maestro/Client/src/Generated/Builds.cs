@@ -15,6 +15,9 @@ namespace Microsoft.DotNet.Maestro.Client
     public partial interface IBuilds
     {
         AsyncPageable<Models.Build> ListBuildsAsync(
+            string azdoAccount = default,
+            int? azdoBuildId = default,
+            string azdoProject = default,
             string buildNumber = default,
             int? channelId = default,
             string commit = default,
@@ -26,6 +29,9 @@ namespace Microsoft.DotNet.Maestro.Client
         );
 
         Task<Page<Models.Build>> ListBuildsPageAsync(
+            string azdoAccount = default,
+            int? azdoBuildId = default,
+            string azdoProject = default,
             string buildNumber = default,
             int? channelId = default,
             string commit = default,
@@ -86,6 +92,9 @@ namespace Microsoft.DotNet.Maestro.Client
         partial void HandleFailedListBuildsRequest(RestApiException ex);
 
         public AsyncPageable<Models.Build> ListBuildsAsync(
+            string azdoAccount = default,
+            int? azdoBuildId = default,
+            string azdoProject = default,
             string buildNumber = default,
             int? channelId = default,
             string commit = default,
@@ -112,6 +121,9 @@ namespace Microsoft.DotNet.Maestro.Client
 
                     try {
                         _page = await ListBuildsPageAsync(
+                            azdoAccount,
+                            azdoBuildId,
+                            azdoProject,
                             buildNumber,
                             channelId,
                             commit,
@@ -141,6 +153,9 @@ namespace Microsoft.DotNet.Maestro.Client
         }
 
         public async Task<Page<Models.Build>> ListBuildsPageAsync(
+            string azdoAccount = default,
+            int? azdoBuildId = default,
+            string azdoProject = default,
             string buildNumber = default,
             int? channelId = default,
             string commit = default,
@@ -154,7 +169,7 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            const string apiVersion = "2019-01-16";
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();
@@ -174,6 +189,18 @@ namespace Microsoft.DotNet.Maestro.Client
             if (!string.IsNullOrEmpty(buildNumber))
             {
                 _url.AppendQuery("buildNumber", Client.Serialize(buildNumber));
+            }
+            if (azdoBuildId != default(int?))
+            {
+                _url.AppendQuery("azdoBuildId", Client.Serialize(azdoBuildId));
+            }
+            if (!string.IsNullOrEmpty(azdoAccount))
+            {
+                _url.AppendQuery("azdoAccount", Client.Serialize(azdoAccount));
+            }
+            if (!string.IsNullOrEmpty(azdoProject))
+            {
+                _url.AppendQuery("azdoProject", Client.Serialize(azdoProject));
             }
             if (channelId != default(int?))
             {
@@ -270,7 +297,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw new ArgumentException("The parameter is not valid", nameof(body));
             }
 
-            const string apiVersion = "2019-01-16";
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();
@@ -351,7 +378,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw new ArgumentNullException(nameof(id));
             }
 
-            const string apiVersion = "2019-01-16";
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();
@@ -426,7 +453,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw new ArgumentNullException(nameof(id));
             }
 
-            const string apiVersion = "2019-01-16";
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();
@@ -502,7 +529,7 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            const string apiVersion = "2019-01-16";
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();
@@ -611,7 +638,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw new ArgumentNullException(nameof(buildId));
             }
 
-            const string apiVersion = "2019-01-16";
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();

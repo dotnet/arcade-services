@@ -4,7 +4,6 @@
 
 using System;
 using System.IO;
-using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
@@ -44,7 +43,6 @@ namespace Maestro.Web
                 {
                     builder.AddDefaultJsonConfiguration((IHostingEnvironment)context.HostingEnvironment);
                 })
-                .ConfigureServices(services => { services.AddAutofac(); })
                 .ConfigureLogging(
                     builder =>
                     {
