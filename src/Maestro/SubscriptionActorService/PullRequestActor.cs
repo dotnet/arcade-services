@@ -677,7 +677,10 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 string baseTitle = $"[{targetBranch}] Update dependencies from";
                 StringBuilder titleBuilder = new StringBuilder(baseTitle);
                 bool prefixComma = false;
-                const int maxTitleLength = 80;
+                // Github title limit -348 
+                // Azdo title limit - 419 
+                // maxTitleLength = 150 to fit 2/3 repo names in the title. 
+                const int maxTitleLength = 150;
                 foreach (Guid subscriptionId in uniqueSubscriptionIds)
                 {
                     string repoName = await GetSourceRepositoryAsync(subscriptionId);
