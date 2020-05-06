@@ -345,7 +345,7 @@ export class BuildGraphTableComponent implements OnChanges {
   }
 
   public hasIncoherencies(node: BuildData) {
-    return (node.build.incoherencies !== undefined && node.build.incoherencies.length > 0)
+    return !!(node.build.incoherencies !== undefined && node.build.incoherencies.length)
   }
 
   public timeToInclusion(node:BuildData) {
