@@ -5,6 +5,8 @@
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using NuGet.Versioning;
+using Octokit;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -163,11 +165,21 @@ namespace Microsoft.DotNet.DarcLib
             return element;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="itemsToUpdate"></param>
+        /// <param name="repoUri"></param>
+        /// <param name="branch"></param>
+        /// <param name="oldDependencies"></param>
+        /// <param name="incomingDotNetSdkVersion"></param>
+        /// <returns></returns>
         public async Task<GitFileContentContainer> UpdateDependencyFiles(
             IEnumerable<DependencyDetail> itemsToUpdate,
             string repoUri,
             string branch,
-            IEnumerable<DependencyDetail> oldDependencies)
+            IEnumerable<DependencyDetail> oldDependencies,
+            SemanticVersion incomingDotNetSdkVersion)
         {
             XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
             XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch);
@@ -238,15 +250,67 @@ namespace Microsoft.DotNet.DarcLib
 
             var updatedNugetConfig = UpdatePackageSources(nugetConfig, managedFeeds);
 
+            // Update the dotnet sdk if necessary
+            Dictionary<GitFileMetadataName, string> globalJsonMetadata = null;
+            if (incomingDotNetSdkVersion != null)
+            {
+                globalJsonMetadata = UpdateDotnetVersionGlobalJson(incomingDotNetSdkVersion, globalJson);
+            }
+
             var fileContainer = new GitFileContentContainer
             {
-                GlobalJson = new GitFile(VersionFiles.GlobalJson, globalJson),
+                GlobalJson = new GitFile(VersionFiles.GlobalJson, globalJson, globalJsonMetadata),
                 VersionDetailsXml = new GitFile(VersionFiles.VersionDetailsXml, versionDetails),
                 VersionProps = new GitFile(VersionFiles.VersionProps, versionProps),
                 NugetConfig = new GitFile(VersionFiles.NugetConfig, updatedNugetConfig)
             };
 
             return fileContainer;
+        }
+
+        /// <summary>
+        /// Updates the global.json entries for tools.dotnet and sdk.version if they are older than an incoming version
+        /// </summary>
+        /// <param name="incomingDotnetVersion">version to compare against</param>
+        /// <param name="repoGlobalJson">Global.Json file to update</param>
+        /// <returns>Updated global.json file if was able to update, or the unchanged global.json if unable to</returns>
+        private Dictionary<GitFileMetadataName, string> UpdateDotnetVersionGlobalJson(SemanticVersion incomingDotnetVersion, JObject globalJson)
+        {
+            try
+            {
+                if (SemanticVersion.TryParse(globalJson.SelectToken("tools.dotnet").ToString(), out SemanticVersion repoDotnetVersion))
+                {
+                    if (repoDotnetVersion.CompareTo(incomingDotnetVersion) < 0)
+                    {
+                        Dictionary<GitFileMetadataName, string> metadata = new Dictionary<GitFileMetadataName, string>();
+
+                        globalJson["tools"]["dotnet"] = incomingDotnetVersion.ToNormalizedString();
+                        metadata.Add(GitFileMetadataName.ToolsDotNetUpdate, incomingDotnetVersion.ToNormalizedString());
+
+                        // Also update and keep sdk.version in sync.
+                        JToken sdkVersion = globalJson.SelectToken("sdk.version");
+                        if (sdkVersion != null)
+                        {
+                            globalJson["sdk"]["version"] = incomingDotnetVersion.ToNormalizedString();
+                            metadata.Add(GitFileMetadataName.SdkVersionUpdate, incomingDotnetVersion.ToNormalizedString());
+                        }
+
+                        return metadata;
+                    }
+                }
+                else
+                {
+                    _logger.LogError("Could not parse the repo's dotnet version from the global.json. Skipping update to dotnet version sections");
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update Dotnet version for global.json. Skipping update to version sections.");
+            }
+
+            // No updates
+            return null;
         }
 
         private bool IsOnlyPresentInMaestroManagedFeed(HashSet<string> locations)
