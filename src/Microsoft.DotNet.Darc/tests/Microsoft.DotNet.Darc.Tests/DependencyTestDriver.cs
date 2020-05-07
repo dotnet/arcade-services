@@ -4,6 +4,7 @@
 
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging.Abstractions;
+using NuGet.Versioning;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -68,13 +69,14 @@ namespace Microsoft.DotNet.Darc.Tests
                 null);
         }
 
-        public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies)
+        public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, SemanticVersion dotNetVersion = null)
         {
             GitFileContentContainer container = await _gitFileManager.UpdateDependencyFiles(
                 dependencies,
                 TemporaryRepositoryPath,
                 null,
-                null);
+                null,
+                dotNetVersion);
             List<GitFile> filesToUpdate = container.GetFilesToCommit();
             await _gitClient.CommitFilesAsync(filesToUpdate, TemporaryRepositoryPath, null, null);
         }
@@ -88,6 +90,7 @@ namespace Microsoft.DotNet.Darc.Tests
             GitFileContentContainer container = await _gitFileManager.UpdateDependencyFiles(
                 dependencies,
                 TemporaryRepositoryPath,
+                null,
                 null,
                 null);
             List<GitFile> filesToUpdate = container.GetFilesToCommit();
