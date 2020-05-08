@@ -153,6 +153,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyUpdateErrorProces
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AzureDevOpsClient", "src\Telemetry\AzureDevOpsClient\AzureDevOpsClient.csproj", "{B9BA1250-C36F-4390-AAB2-D1A7A67889FD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Microsoft.DotNet.Internal.Tools.SynchronizePackageProps", "src\Microsoft.DotNet.Internal.Tools.SynchronizePackageProps\Microsoft.DotNet.Internal.Tools.SynchronizePackageProps.csproj", "{4474FCD8-D81F-446D-8A57-B20DB34F45A9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -747,6 +749,18 @@ Global
 		{B9BA1250-C36F-4390-AAB2-D1A7A67889FD}.Release|x64.Build.0 = Release|Any CPU
 		{B9BA1250-C36F-4390-AAB2-D1A7A67889FD}.Release|x86.ActiveCfg = Release|Any CPU
 		{B9BA1250-C36F-4390-AAB2-D1A7A67889FD}.Release|x86.Build.0 = Release|Any CPU
+		{4474FCD8-D81F-446D-8A57-B20DB34F45A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4474FCD8-D81F-446D-8A57-B20DB34F45A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4474FCD8-D81F-446D-8A57-B20DB34F45A9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4474FCD8-D81F-446D-8A57-B20DB34F45A9}.Debug|x64.Build.0 = Debug|Any CPU
+		{4474FCD8-D81F-446D-8A57-B20DB34F45A9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4474FCD8-D81F-446D-8A57-B20DB34F45A9}.Debug|x86.Build.0 = Debug|Any CPU
+		{4474FCD8-D81F-446D-8A57-B20DB34F45A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4474FCD8-D81F-446D-8A57-B20DB34F45A9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4474FCD8-D81F-446D-8A57-B20DB34F45A9}.Release|x64.ActiveCfg = Release|Any CPU
+		{4474FCD8-D81F-446D-8A57-B20DB34F45A9}.Release|x64.Build.0 = Release|Any CPU
+		{4474FCD8-D81F-446D-8A57-B20DB34F45A9}.Release|x86.ActiveCfg = Release|Any CPU
+		{4474FCD8-D81F-446D-8A57-B20DB34F45A9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
