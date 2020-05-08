@@ -317,16 +317,20 @@ namespace Maestro.Web
             app.UseAuthentication();
             app.UseAuthorization();
 
-            if (HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric())
+            if (HostingEnvironment.IsDevelopment() &&
+                !Program.RunningInServiceFabric() &&
+                !string.Equals(
+                    Configuration["ForceLocalApi"],
+                    true.ToString(),
+                    StringComparison.OrdinalIgnoreCase))
             {
                 // Redirect api requests to prod when running locally outside of service fabric
                 // This is for the `ng serve` local debugging case for the website
                 app.MapWhen(
-                    ctx => IsGet(ctx) && ctx.Request.Path.StartsWithSegments("/api") && ctx.Request.Path != "/api/swagger.json",
-                    a =>
-                    {
-                        a.Run(ApiRedirectHandler);
-                    });
+                    ctx => IsGet(ctx) &&
+                        ctx.Request.Path.StartsWithSegments("/api") &&
+                        ctx.Request.Path != "/api/swagger.json",
+                    a => { a.Run(ApiRedirectHandler); });
             }
 
             app.UseEndpoints(e =>
