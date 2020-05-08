@@ -914,11 +914,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             {
                 message.AppendLine("Dependency coherency updates");
                 message.AppendLine();
-
-                foreach (DependencyUpdate dep in deps)
-                {
-                    message.AppendLine($"- {dep.To.Name}: {dep.From.Version} -> {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
-                }
+                message.AppendLine(string.Join(",", deps.Select(p => p.To.Name)));
+                message.AppendLine($" From Version {deps[0].From.Version} -> To Version {deps[0].To.Version} (parent: {deps[0].To.CoherentParentDependencyName}");
             }
             else
             {
@@ -926,11 +923,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 Build build = await GetBuildAsync(update.BuildId);
                 message.AppendLine($"Update dependencies from {sourceRepository} build {build.AzureDevOpsBuildNumber}");
                 message.AppendLine();
-
-                foreach (DependencyUpdate dep in deps)
-                {
-                    message.AppendLine($"- {dep.To.Name}: {dep.From.Version} -> {dep.To.Version}");
-                }
+                message.AppendLine(string.Join(",", deps.Select(p => p.To.Name)));
+                message.AppendLine($" From Version {deps[0].From.Version} -> To Version {deps[0].To.Version}");
             }
 
             message.AppendLine();
