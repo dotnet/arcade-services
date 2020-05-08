@@ -448,28 +448,6 @@ namespace Microsoft.DotNet.Darc.Tests
         }
 
         /// <summary>
-        /// Update the arcade dependency to a new version, with an associated global.json update.
-        /// </summary>
-        [Fact]
-        public void UpdateArcadeDependencyWithSdkUpdate()
-        {
-            DependencyTestDriver.TestAndCompareOutput(nameof(UpdateArcadeDependencyWithSdkUpdate), async driver =>
-            {
-                await driver.UpdateDependenciesAsync(
-                    new List<DependencyDetail> {
-                        new DependencyDetail
-                        {
-                            Commit = "456",
-                            Name = "Microsoft.DotNet.Arcade.Sdk",
-                            RepoUri = "https://github.com/dotnet/arcade",
-                            Version = "2.0"
-                        }
-                    }, new NuGet.Versioning.SemanticVersion(10, 1, 1, "preview-1234"));
-                await driver.VerifyAsync();
-            });
-        }
-
-        /// <summary>
         ///     Sentinel test for checking that the normal version suffix isn't the end
         ///     of the alternate suffix. While other tests will fail if this is the case,
         ///     this makes diagnosing it easier.

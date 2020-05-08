@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DotNet.Maestro.Client.Models;
-using NuGet.Versioning;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -324,14 +323,6 @@ namespace Microsoft.DotNet.DarcLib
         Task<List<GitFile>> GetCommonScriptFilesAsync(string repoUri, string commit);
 
         /// <summary>
-        /// Get the tools.dotnet section of the global.json from a target repo URI
-        /// </summary>
-        /// <param name="repoUri">repo to get the version from</param>
-        /// <param name="commit">commit sha to query</param>
-        /// <returns></returns>
-        Task<SemanticVersion> GetToolsDotnetVersionAsync(string repoUri, string commit);
-
-        /// <summary>
         ///     Create a new branch in the specified repository.
         /// </summary>
         /// <param name="repoUri">Repository to create a brahc in</param>
@@ -353,12 +344,10 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="repoUri">Repository to update</param>
         /// <param name="branch">Branch of <paramref name="repoUri"/> to update.</param>
-        /// <param name="remoteFactory">Remote factory for obtaining common script files from arcade</param>
         /// <param name="itemsToUpdate">Dependencies that need updating.</param>
         /// <param name="message">Commit message.</param>
         /// <returns>Async task.</returns>
-        Task<List<GitFile>> CommitUpdatesAsync(string repoUri, string branch, IRemoteFactory remoteFactory, 
-            List<DependencyDetail> itemsToUpdate, string message);
+        Task<List<GitFile>> CommitUpdatesAsync(string repoUri, string branch, List<DependencyDetail> itemsToUpdate, string message);
 
         /// <summary>
         ///     Diff two commits in a repository and return information about them.
