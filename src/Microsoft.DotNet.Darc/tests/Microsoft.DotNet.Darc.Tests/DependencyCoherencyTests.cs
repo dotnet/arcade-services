@@ -1533,7 +1533,7 @@ namespace Microsoft.DotNet.Darc.Tests
                     a.Item2,
                     a.Item3?.Select(location => new AssetLocation(GetRandomId(), LocationType.NugetFeed, location)).ToImmutableList()));
 
-            return new Build(buildId, DateTimeOffset.Now, 0, false, false, commit, null, buildAssets.ToImmutableList(), null)
+            return new Build(buildId, DateTimeOffset.Now, 0, false, false, commit, null, buildAssets.ToImmutableList(), null, null)
             {
                 AzureDevOpsRepository = repo,
                 GitHubRepository = repo

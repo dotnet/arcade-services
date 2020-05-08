@@ -94,7 +94,7 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            const string apiVersion = "2019-01-16";
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();
@@ -190,7 +190,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw new ArgumentException("The parameter is not valid", nameof(body));
             }
 
-            const string apiVersion = "2019-01-16";
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();
@@ -271,7 +271,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw new ArgumentNullException(nameof(id));
             }
 
-            const string apiVersion = "2019-01-16";
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();
@@ -346,7 +346,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw new ArgumentNullException(nameof(id));
             }
 
-            const string apiVersion = "2019-01-16";
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();
@@ -422,7 +422,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw new ArgumentNullException(nameof(id));
             }
 
-            const string apiVersion = "2019-01-16";
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();
@@ -503,7 +503,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw new ArgumentNullException(nameof(id));
             }
 
-            const string apiVersion = "2019-01-16";
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();
@@ -572,7 +572,7 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            const string apiVersion = "2019-01-16";
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();
@@ -683,7 +683,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw new ArgumentNullException(nameof(id));
             }
 
-            const string apiVersion = "2019-01-16";
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();
@@ -772,7 +772,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 throw new ArgumentNullException(nameof(timestamp));
             }
 
-            const string apiVersion = "2019-01-16";
+            const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
             var _url = new RequestUriBuilder();

@@ -7,8 +7,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Autofac;
-using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
@@ -19,20 +17,20 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
     internal class ScheduledService<TService>
     {
-        public ILogger<ScheduledService<TService>> Logger { get; }
-        public ILifetimeScope Scope { get; }
+        private readonly ILogger<ScheduledService<TService>> _logger;
+        private readonly IServiceScopeFactory _scopeFactory;
 
-        public static async Task RunScheduleAsync(ILifetimeScope container, CancellationToken cancellationToken)
+        public static async Task RunScheduleAsync(ServiceProvider container, CancellationToken cancellationToken)
         {
-            var provider = container.Resolve<IServiceProvider>();
+            var provider = container.GetRequiredService<IServiceProvider>();
             var scheduler = ActivatorUtilities.CreateInstance<ScheduledService<TService>>(provider);
             await scheduler.RunAsync(cancellationToken);
         }
 
-        public ScheduledService(ILogger<ScheduledService<TService>> logger, ILifetimeScope scope)
+        public ScheduledService(ILogger<ScheduledService<TService>> logger, IServiceScopeFactory scopeFactory)
         {
-            Logger = logger;
-            Scope = scope;
+            _logger = logger;
+            _scopeFactory = scopeFactory;
         }
 
         private IEnumerable<(IJobDetail job, ITrigger trigger)> GetCronJobs(CancellationToken cancellationToken)
@@ -78,13 +76,13 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 }
                 catch (TimeZoneNotFoundException)
                 {
-                    Logger.LogWarning(
+                    _logger.LogWarning(
                         "TimeZoneNotFoundException occurred for timezone string: {requestedTimeZoneName}",
                         attr.TimeZone);
                 }
                 catch (InvalidTimeZoneException)
                 {
-                    Logger.LogWarning(
+                    _logger.LogWarning(
                         "InvalidTimeZoneException occurred for timezone string: {requestedTimeZoneName}",
                         attr.TimeZone);
                 }
@@ -101,13 +99,13 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         private async Task InvokeMethodAsync(MethodInfo method, CancellationToken cancellationToken)
         {
-            using (Logger.BeginScope("Invoking scheduled method {scheduledMethod}", method.ToString()))
+            using (_logger.BeginScope("Invoking scheduled method {scheduledMethod}", method.ToString()))
             {
                 try
                 {
-                    using (ILifetimeScope scope = Scope.BeginLifetimeScope())
+                    using (IServiceScope scope = _scopeFactory.CreateScope())
                     {
-                        var impl = scope.Resolve<TService>();
+                        var impl = scope.ServiceProvider.GetService<TService>();
                         var parameters = method.GetParameters();
                         Task result;
                         if (parameters.Length == 1 && parameters[0].ParameterType == typeof(CancellationToken))
@@ -128,7 +126,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError(ex, "Exception processing scheduled method {scheduledMethod}", method.ToString());
+                    _logger.LogError(ex, "Exception processing scheduled method {scheduledMethod}", method.ToString());
                 }
             }
         }

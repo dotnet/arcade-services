@@ -211,6 +211,29 @@ namespace Maestro.Data.Migrations
                     b.ToTable("BuildDependencies");
                 });
 
+            modelBuilder.Entity("Maestro.Data.Models.BuildIncoherence", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
+
+                    b.Property<int?>("BuildId");
+
+                    b.Property<string>("Commit");
+
+                    b.Property<string>("Name");
+
+                    b.Property<string>("Repository");
+
+                    b.Property<string>("Version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BuildId");
+
+                    b.ToTable("BuildIncoherencies");
+                });
+
             modelBuilder.Entity("Maestro.Data.Models.Channel", b =>
                 {
                     b.Property<int>("Id")
@@ -714,6 +737,13 @@ namespace Maestro.Data.Migrations
                         .WithMany()
                         .HasForeignKey("DependentBuildId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Maestro.Data.Models.BuildIncoherence", b =>
+                {
+                    b.HasOne("Maestro.Data.Models.Build")
+                        .WithMany("Incoherencies")
+                        .HasForeignKey("BuildId");
                 });
 
             modelBuilder.Entity("Maestro.Data.Models.ChannelReleasePipeline", b =>

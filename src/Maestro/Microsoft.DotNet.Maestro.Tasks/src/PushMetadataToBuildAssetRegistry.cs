@@ -13,7 +13,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
@@ -32,8 +31,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         [Required]
         public string MaestroApiEndpoint { get; set; }
-
-        public bool PublishUsingPipelines { get; set; } = false;
 
         private bool IsStableBuild { get; set; } = false;
 
@@ -99,7 +96,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     BuildId = recordedBuild.Id;
 
                     Log.LogMessage(MessageImportance.High, $"Metadata has been pushed. Build id in the Build Asset Registry is '{recordedBuild.Id}'");
-                    Console.WriteLine($"##vso[build.addbuildtag]BAR ID: {recordedBuild.Id}");
+                    Console.WriteLine($"##vso[build.addbuildtag]BAR ID - {recordedBuild.Id}");
 
                     // Only 'create' the AzDO (VSO) variables if running in an AzDO build
                     if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BUILD_BUILDID")))
@@ -309,7 +306,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         azureDevOpsBuildNumber: manifest.AzureDevOpsBuildNumber ?? GetAzDevBuildNumber(),
                         azureDevOpsRepository: manifest.AzureDevOpsRepository ?? GetAzDevRepository(),
                         azureDevOpsBranch: manifest.AzureDevOpsBranch ?? GetAzDevBranch(),
-                        publishUsingPipelines: PublishUsingPipelines,
+                        stable: IsStableBuild,
                         released: false)
                     {
                         Assets = assets.ToImmutableList(),

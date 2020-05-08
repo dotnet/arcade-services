@@ -29,7 +29,6 @@ namespace Microsoft.DotNet.Maestro.Client
         IChannels Channels { get; }
         IDefaultChannels DefaultChannels { get; }
         IGoal Goal { get; }
-        IPipelines Pipelines { get; }
         IRepository Repository { get; }
         ISubscriptions Subscriptions { get; }
     }
@@ -119,8 +118,6 @@ namespace Microsoft.DotNet.Maestro.Client
 
         public IGoal Goal { get; }
 
-        public IPipelines Pipelines { get; }
-
         public IRepository Repository { get; }
 
         public ISubscriptions Subscriptions { get; }
@@ -140,7 +137,6 @@ namespace Microsoft.DotNet.Maestro.Client
             Channels = new Channels(this);
             DefaultChannels = new DefaultChannels(this);
             Goal = new Goal(this);
-            Pipelines = new Pipelines(this);
             Repository = new Repository(this);
             Subscriptions = new Subscriptions(this);
             SerializerSettings = new JsonSerializerSettings
@@ -231,6 +227,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 return (T)(object)value;
             }
+
             return JsonConvert.DeserializeObject<T>(value, SerializerSettings);
         }
 

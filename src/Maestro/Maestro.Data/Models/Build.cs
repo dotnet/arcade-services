@@ -104,6 +104,12 @@ namespace Maestro.Data.Models
         /// </summary>
         public bool Stable { get; set; }
 
+        /// <summary>
+        /// This will store the list of dependency incoherencies of the current build.
+        /// Basically a summary version of the dependencies in DarcLib->DependencyGraph->IncoherentDependencies
+        /// </summary>
+        public List<BuildIncoherence> Incoherencies { get; set; }
+
         [NotMapped]
         public int Staleness { get; set; }
 

@@ -2,14 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
-using Newtonsoft.Json.Linq;
-using System.Threading.Tasks;
-
 
 namespace Microsoft.DotNet.Maestro.Client
 {
@@ -48,6 +46,11 @@ namespace Microsoft.DotNet.Maestro.Client
                 {
                     return;
                 }
+            }
+            else if (ex.Response.Status == (int)HttpStatusCode.Unauthorized)
+            {
+                throw new AuthenticationException("Unauthorized access while trying to access Maestro API. " +
+                    "Please make sure the PAT you're using is valid.");
             }
         }
     }

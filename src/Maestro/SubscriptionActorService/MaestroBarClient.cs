@@ -220,11 +220,23 @@ namespace SubscriptionActorService
                 other.Locations?.Select(l => ToClientAssetLocation(l)).ToImmutableList());
         }
 
+        private BuildIncoherence ToClientModelBuildIncoherence(Maestro.Data.Models.BuildIncoherence incoherence)
+        {
+            return new BuildIncoherence()
+            {
+                Name = incoherence.Name,
+                Repository = incoherence.Repository,
+                Version = incoherence.Version,
+                Commit = incoherence.Commit
+            };
+        }
+
         private Build ToClientModelBuild(Maestro.Data.Models.Build other)
         {
             return new Build(other.Id, other.DateProduced, other.Staleness, false, true, other.Commit,
                 null, other.Assets?.Select(a => ToClientModelAsset(a)).ToImmutableList(),
-                other.DependentBuildIds?.Select(b => new BuildRef(b.BuildId, b.IsProduct, b.TimeToInclusionInMinutes)).ToImmutableList())
+                other.DependentBuildIds?.Select(b => new BuildRef(b.BuildId, b.IsProduct, b.TimeToInclusionInMinutes)).ToImmutableList(),
+                other.Incoherencies?.Select(inc => ToClientModelBuildIncoherence(inc)).ToImmutableList())
             {
                 AzureDevOpsBranch = other.AzureDevOpsBranch,
                 GitHubBranch = other.GitHubBranch,

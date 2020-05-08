@@ -6,18 +6,16 @@ using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Maestro.Client;
-using Newtonsoft.Json.Linq;
-using Microsoft.VisualStudio.Services.FileContainer;
-using Microsoft.Azure.KeyVault.Models;
-using Microsoft.DotNet.Services.Utility;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -209,6 +207,11 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
 
                 return Constants.SuccessCode;
+            }
+            catch (AuthenticationException e)
+            {
+                Console.WriteLine(e.Message);
+                return Constants.ErrorCode;
             }
             catch (RestApiException e) when (e.Response.Status == (int) System.Net.HttpStatusCode.BadRequest)
             {

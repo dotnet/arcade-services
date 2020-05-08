@@ -13,7 +13,9 @@ using Maestro.Data;
 using Maestro.Data.Models;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions.Internal;
@@ -56,8 +58,15 @@ namespace SubscriptionActorService
     ///     A service fabric actor implementation that is responsible for creating and updating pull requests for dependency
     ///     updates.
     /// </summary>
-    public class PullRequestActor : IPullRequestActor, IRemindable, IActionTracker
+    public class PullRequestActor : IPullRequestActor, IRemindable, IActionTracker, IActorImplementation
     {
+        private readonly IMergePolicyEvaluator _mergePolicyEvaluator;
+        private readonly BuildAssetRegistryContext _context;
+        private readonly IRemoteFactory _darcFactory;
+        private readonly ILoggerFactory _loggerFactory;
+        private readonly IActionRunner _actionRunner;
+        private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
+
         /// <summary>
         ///     Creates a new PullRequestActor
         /// </summary>
@@ -70,42 +79,76 @@ namespace SubscriptionActorService
         ///     repository and branch.
         /// </param>
         /// <param name="provider"></param>
-        public PullRequestActor(ActorId id, IServiceProvider provider)
+        public PullRequestActor(
+            IMergePolicyEvaluator mergePolicyEvaluator,
+            BuildAssetRegistryContext context,
+            IRemoteFactory darcFactory,
+            ILoggerFactory loggerFactory,
+            IActionRunner actionRunner,
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
         {
-            Id = id;
-            if (Id.Kind == ActorIdKind.Guid)
+            _mergePolicyEvaluator = mergePolicyEvaluator;
+            _context = context;
+            _darcFactory = darcFactory;
+            _loggerFactory = loggerFactory;
+            _actionRunner = actionRunner;
+            _subscriptionActorFactory = subscriptionActorFactory;
+        }
+
+        public void Initialize(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
+        {
+            Implementation = GetImplementation(actorId, stateManager, reminderManager);
+        }
+
+        private PullRequestActorImplementation GetImplementation(ActorId actorId, IActorStateManager stateManager, IReminderManager reminderManager)
+        {
+            switch (actorId.Kind)
             {
-                Implementation =
-                    ActivatorUtilities.CreateInstance<NonBatchedPullRequestActorImplementation>(provider, id);
-            }
-            else if (Id.Kind == ActorIdKind.String)
-            {
-                Implementation = ActivatorUtilities.CreateInstance<BatchedPullRequestActorImplementation>(provider, id);
+                case ActorIdKind.Guid:
+                    return new NonBatchedPullRequestActorImplementation(actorId,
+                        reminderManager,
+                        stateManager,
+                        _mergePolicyEvaluator,
+                        _context,
+                        _darcFactory,
+                        _loggerFactory,
+                        _actionRunner,
+                        _subscriptionActorFactory);
+                case ActorIdKind.String:
+                    return new BatchedPullRequestActorImplementation(actorId,
+                        reminderManager,
+                        stateManager,
+                        _mergePolicyEvaluator,
+                        _context,
+                        _darcFactory,
+                        _loggerFactory,
+                        _actionRunner,
+                        _subscriptionActorFactory);
+                default:
+                    throw new NotSupportedException("Only actorId's of type Guid and String are supported");
             }
         }
 
-        public PullRequestActorImplementation Implementation { get; }
-
-        public ActorId Id { get; }
+        public PullRequestActorImplementation Implementation { get; private set; }
 
         public Task TrackSuccessfulAction(string action, string result)
         {
-            return ((IActionTracker) Implementation).TrackSuccessfulAction(action, result);
+            return Implementation.TrackSuccessfulAction(action, result);
         }
 
         public Task TrackFailedAction(string action, string result, string method, string arguments)
         {
-            return ((IActionTracker) Implementation).TrackFailedAction(action, result, method, arguments);
+            return Implementation.TrackFailedAction(action, result, method, arguments);
         }
 
         public Task<string> RunActionAsync(string method, string arguments)
         {
-            return ((IPullRequestActor) Implementation).RunActionAsync(method, arguments);
+            return Implementation.RunActionAsync(method, arguments);
         }
 
         public Task UpdateAssetsAsync(Guid subscriptionId, int buildId, string sourceRepo, string sourceSha, List<Asset> assets)
         {
-            return ((IPullRequestActor) Implementation).UpdateAssetsAsync(subscriptionId, buildId, sourceRepo, sourceSha, assets);
+            return Implementation.UpdateAssetsAsync(subscriptionId, buildId, sourceRepo, sourceSha, assets);
         }
 
         public async Task ReceiveReminderAsync(string reminderName, byte[] state, TimeSpan dueTime, TimeSpan period)
@@ -140,7 +183,7 @@ namespace SubscriptionActorService
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
-            Func<ActorId, ISubscriptionActor> subscriptionActorFactory)
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
         {
             Id = id;
             Reminders = reminders;
@@ -161,7 +204,7 @@ namespace SubscriptionActorService
         public BuildAssetRegistryContext Context { get; }
         public IRemoteFactory DarcRemoteFactory { get; }
         public IActionRunner ActionRunner { get; }
-        public Func<ActorId, ISubscriptionActor> SubscriptionActorFactory { get; }
+        public IActorProxyFactory<ISubscriptionActor> SubscriptionActorFactory { get; }
 
         public async Task TrackSuccessfulAction(string action, string result)
         {
@@ -511,7 +554,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         {
             foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
             {
-                ISubscriptionActor actor = SubscriptionActorFactory(new ActorId(update.SubscriptionId));
+                ISubscriptionActor actor = SubscriptionActorFactory.Lookup(new ActorId(update.SubscriptionId));
                 if (!await actor.UpdateForMergedPullRequestAsync(update.BuildId))
                 {
                     Logger.LogInformation($"Failed to update subscription {update.SubscriptionId} for merged PR.");
@@ -532,7 +575,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             
             foreach (SubscriptionPullRequestUpdate update in subscriptionPullRequestUpdates)
             {
-                ISubscriptionActor actor = SubscriptionActorFactory(new ActorId(update.SubscriptionId));
+                ISubscriptionActor actor = SubscriptionActorFactory.Lookup(new ActorId(update.SubscriptionId));
                 if (!await actor.AddDependencyFlowEventAsync(update.BuildId, flowEvent, reason, policy, "PR", prUrl))
                 {
                     Logger.LogInformation($"Failed to add dependency flow event for {update.SubscriptionId}.");
@@ -634,7 +677,10 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 string baseTitle = $"[{targetBranch}] Update dependencies from";
                 StringBuilder titleBuilder = new StringBuilder(baseTitle);
                 bool prefixComma = false;
-                const int maxTitleLength = 80;
+                // Github title limit -348 
+                // Azdo title limit - 419 
+                // maxTitleLength = 150 to fit 2/3 repo names in the title. 
+                const int maxTitleLength = 150;
                 foreach (Guid subscriptionId in uniqueSubscriptionIds)
                 {
                     string repoName = await GetSourceRepositoryAsync(subscriptionId);
@@ -690,7 +736,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 description.AppendLine("This pull request updates the following dependencies");
                 description.AppendLine();
 
-                await CommitUpdatesAsync(requiredUpdates, description, darcRemote, targetRepository, newBranchName);
+                await CommitUpdatesAsync(requiredUpdates, description, DarcRemoteFactory, targetRepository, newBranchName);
 
                 var inProgressPr = new InProgressPullRequest
                 {
@@ -776,14 +822,14 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         ///     A string writer that the PR description should be written to. If this an update
         ///     to an existing PR, this will contain the existing PR description.
         /// </param>
-        /// <param name="darc">Remote darc interface</param>
+        /// <param name="remoteFactory">Remote factory for generating remotes based on repo uri</param>
         /// <param name="targetRepository">Target repository that the updates should be applied to</param>
         /// <param name="newBranchName">Target branch the updates should be to</param>
         /// <returns></returns>
         private async Task CommitUpdatesAsync(
             List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> requiredUpdates,
             StringBuilder description,
-            IRemote darc,
+            IRemoteFactory remoteFactory,
             string targetRepository,
             string newBranchName)
         {
@@ -794,6 +840,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             // Should max one coherency update
             (UpdateAssetsParameters update, List<DependencyUpdate> deps) coherencyUpdate =
                 requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
+
+            IRemote remote = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
 
             // To keep a PR to as few commits as possible, if the number of
             // non-coherency updates is 1 then combine coherency updates with those.
@@ -812,7 +860,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     dependenciesToCommit.AddRange(coherencyUpdate.deps);
                 }
 
-                List<GitFile> committedFiles = await darc.CommitUpdatesAsync(targetRepository, newBranchName, dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
+                List<GitFile> committedFiles = await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
+                    dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
                 await CalculatePRDescription(update, deps, committedFiles, description);
             }
 
@@ -824,7 +873,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
                 await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description);
 
-                await darc.CommitUpdatesAsync(targetRepository, newBranchName, coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
+                await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
+                    coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
             }
         }
 
@@ -1035,7 +1085,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 pr.Url);
 
             var description = new StringBuilder(pullRequest.Description);
-            await CommitUpdatesAsync(requiredUpdates, description, darcRemote, targetRepository, headBranch);
+            await CommitUpdatesAsync(requiredUpdates, description, DarcRemoteFactory, targetRepository, headBranch);
 
             pullRequest.Description = description.ToString();
             pullRequest.Title = await ComputePullRequestTitleAsync(pr, targetBranch);
@@ -1218,7 +1268,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
-            Func<ActorId, ISubscriptionActor> subscriptionActorFactory) : base(
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory) : base(
             id,
             reminders,
             stateManager,
@@ -1294,7 +1344,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             IRemoteFactory darcFactory,
             ILoggerFactory loggerFactory,
             IActionRunner actionRunner,
-            Func<ActorId, ISubscriptionActor> subscriptionActorFactory) : base(
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory) : base(
             id,
             reminders,
             stateManager,
@@ -1318,7 +1368,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         {
             RepositoryBranch repositoryBranch =
                 await Context.RepositoryBranches.FindAsync(Target.repository, Target.branch);
-            return (IReadOnlyList<MergePolicyDefinition>) repositoryBranch.PolicyObject?.MergePolicies ??
+            return (IReadOnlyList<MergePolicyDefinition>) repositoryBranch?.PolicyObject?.MergePolicies ??
                    Array.Empty<MergePolicyDefinition>();
         }
     }

@@ -15,6 +15,7 @@
     <EntryPoint>
       <ExeHost>
         <Program>DependencyUpdateErrorProcessor.exe</Program>
+        <ConsoleRedirection FileRetentionCount="5" FileMaxSizeInKb="2048"/>
       </ExeHost>
     </EntryPoint>
     <EnvironmentVariables>
