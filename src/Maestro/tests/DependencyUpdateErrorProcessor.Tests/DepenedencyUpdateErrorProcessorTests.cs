@@ -38,7 +38,6 @@ namespace DependencyUpdateErrorProcessor.Tests
             services.AddLogging();
             services.AddDbContext<TestBuildAssetRegistryContext>(
                 options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
-            services.AddEntityFrameworkInMemoryDatabase();
             services.AddSingleton(GithubClientFactory.Object);
             services.Configure<DependencyUpdateErrorProcessorOptions>(
                 (options) =>

@@ -39,7 +39,6 @@ namespace DependencyUpdater.Tests
             services.AddLogging();
             services.AddDbContext<BuildAssetRegistryContext>(
                 options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
-            services.AddEntityFrameworkInMemoryDatabase();
             var proxyFactory = new Mock<IActorProxyFactory<ISubscriptionActor>>();
             proxyFactory.Setup(l => l.Lookup(It.IsAny<ActorId>()))
                 .Returns((ActorId id) =>

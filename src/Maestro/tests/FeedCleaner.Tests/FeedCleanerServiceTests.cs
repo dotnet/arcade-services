@@ -41,7 +41,6 @@ namespace FeedCleanerService.Tests
             services.AddLogging();
             services.AddDbContext<BuildAssetRegistryContext>(
                 options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
-            services.AddEntityFrameworkInMemoryDatabase();
             services.Configure<FeedCleanerOptions>(
                 (options) =>
                 {
