@@ -923,7 +923,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 Build build = await GetBuildAsync(update.BuildId);
                 message.AppendLine($"Update dependencies from {sourceRepository} build {build.AzureDevOpsBuildNumber}");
                 message.AppendLine();
-                message.AppendLine(string.Join(",", deps.Select(p => p.To.Name)));
+                message.AppendLine(string.Join(" , ", deps.Select(p => p.To.Name)));
                 message.AppendLine($" From Version {deps[0].From.Version} -> To Version {deps[0].To.Version}");
             }
 
