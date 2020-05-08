@@ -242,7 +242,7 @@ namespace SubscriptionActorService.Tests
                         It.IsAny<IEnumerable<DependencyDetail>>(),
                         It.IsAny<IRemoteFactory>(), CoherencyMode.Legacy))
                 .ReturnsAsync(
-                    (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory) =>
+                    (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory, CoherencyMode coherencyMode) =>
                     {
                         return new List<DependencyUpdate>();
                     });
