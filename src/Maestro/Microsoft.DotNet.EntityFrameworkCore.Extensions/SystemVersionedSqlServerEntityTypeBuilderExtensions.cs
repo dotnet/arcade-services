@@ -7,6 +7,7 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Microsoft.DotNet.EntityFrameworkCore.Extensions
 {
@@ -41,8 +42,8 @@ namespace Microsoft.DotNet.EntityFrameworkCore.Extensions
 
         public static DbContextOptionsBuilder AddDotNetExtensions(this DbContextOptionsBuilder optionsBuilder)
         {
-            ((IDbContextOptionsBuilderInfrastructure) optionsBuilder).AddOrUpdateExtension(
-                new DotNetEntityFrameworkExtension());
+            optionsBuilder.ReplaceService<IMigrationsAnnotationProvider, SystemVersionedSqlServerMigrationsAnnotationProvider>();
+            optionsBuilder.ReplaceService<IMigrationsSqlGenerator, SystemVersionedSqlServerMigrationsSqlGenerator>();
             return optionsBuilder;
         }
     }

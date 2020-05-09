@@ -96,15 +96,5 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             }
             return Ok(new Goal(goal));
         }
-
-        [HttpGet("crash")]
-        [AllowAnonymous]
-        public async Task<IActionResult> Crash()
-        {
-            await using (IDbContextTransaction txn = await _context.Database.BeginTransactionAsync())
-            {
-                return NoContent();
-            }
-        }
     }
 }
