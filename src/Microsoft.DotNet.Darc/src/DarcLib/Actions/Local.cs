@@ -4,6 +4,7 @@
 
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using NuGet.Versioning;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -63,21 +64,26 @@ namespace Microsoft.DotNet.DarcLib
             await barOnlyRemote.AddAssetLocationToDependenciesAsync(oldDependencies);
             await barOnlyRemote.AddAssetLocationToDependenciesAsync(dependencies);
 
-            var fileContainer = await _fileManager.UpdateDependencyFiles(dependencies, _repo, null, oldDependencies);
-            List<GitFile> filesToUpdate = fileContainer.GetFilesToCommit();
-
-            // TODO: This needs to be moved into some consistent handling between local/remote and add/update:
-            // https://github.com/dotnet/arcade/issues/1095
             // If we are updating the arcade sdk we need to update the eng/common files as well
             DependencyDetail arcadeItem = dependencies.FirstOrDefault(
                 i => string.Equals(i.Name, "Microsoft.DotNet.Arcade.Sdk", StringComparison.OrdinalIgnoreCase));
+            SemanticVersion targetDotNetVersion = null;
+            IRemote arcadeRemote = null;
+
+            if (arcadeItem != null)
+            {
+                arcadeRemote = await remoteFactory.GetRemoteAsync(arcadeItem.RepoUri, _logger);
+                targetDotNetVersion = await arcadeRemote.GetToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+            }
+
+            var fileContainer = await _fileManager.UpdateDependencyFiles(dependencies, _repo, null, oldDependencies, targetDotNetVersion);
+            List<GitFile> filesToUpdate = fileContainer.GetFilesToCommit();
 
             if (arcadeItem != null)
             {
                 try
                 {
-                    IRemote remote = await remoteFactory.GetRemoteAsync(arcadeItem.RepoUri, _logger);
-                    List<GitFile> engCommonFiles = await remote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+                    List<GitFile> engCommonFiles = await arcadeRemote.GetCommonScriptFilesAsync(arcadeItem.RepoUri, arcadeItem.Commit);
                     filesToUpdate.AddRange(engCommonFiles);
 
                     List<GitFile> localEngCommonFiles = await _gitClient.GetFilesAtCommitAsync(null, null, "eng/common");

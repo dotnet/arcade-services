@@ -125,6 +125,7 @@ namespace SubscriptionActorService.Tests
                     r => r.CommitUpdatesAsync(
                         TargetRepo,
                         NewBranch ?? InProgressPrHeadBranch,
+                        RemoteFactory.Object,
                         Capture.In(updatedDependencies),
                         It.IsAny<string>()));
             updatedDependencies.Should()
