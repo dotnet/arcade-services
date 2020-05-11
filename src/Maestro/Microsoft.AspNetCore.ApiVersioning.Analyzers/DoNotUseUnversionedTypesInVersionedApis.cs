@@ -100,7 +100,7 @@ namespace Microsoft.AspNetCore.ApiVersioning.Analyzers
                     List<(ExpressionSyntax expression, ITypeSymbol type)> typeParameters =
                         parameters.Select(
                                 p => (expression: p.Expression, type: SemanticModel.GetTypeSymbol(p.Expression)))
-                            .Where(p => p.type.Equals(KnownTypes.Type))
+                            .Where(p => SymbolEqualityComparer.Default.Equals(p.type, KnownTypes.Type))
                             .ToList();
                     if (typeParameters.Count == 0)
                     {
