@@ -674,7 +674,10 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 string baseTitle = $"[{targetBranch}] Update dependencies from";
                 StringBuilder titleBuilder = new StringBuilder(baseTitle);
                 bool prefixComma = false;
-                const int maxTitleLength = 80;
+                // Github title limit -348 
+                // Azdo title limit - 419 
+                // maxTitleLength = 150 to fit 2/3 repo names in the title. 
+                const int maxTitleLength = 150;
                 foreach (Guid subscriptionId in uniqueSubscriptionIds)
                 {
                     string repoName = await GetSourceRepositoryAsync(subscriptionId);
@@ -730,7 +733,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 description.AppendLine("This pull request updates the following dependencies");
                 description.AppendLine();
 
-                await CommitUpdatesAsync(requiredUpdates, description, darcRemote, targetRepository, newBranchName);
+                await CommitUpdatesAsync(requiredUpdates, description, DarcRemoteFactory, targetRepository, newBranchName);
 
                 var inProgressPr = new InProgressPullRequest
                 {
@@ -816,14 +819,14 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
         ///     A string writer that the PR description should be written to. If this an update
         ///     to an existing PR, this will contain the existing PR description.
         /// </param>
-        /// <param name="darc">Remote darc interface</param>
+        /// <param name="remoteFactory">Remote factory for generating remotes based on repo uri</param>
         /// <param name="targetRepository">Target repository that the updates should be applied to</param>
         /// <param name="newBranchName">Target branch the updates should be to</param>
         /// <returns></returns>
         private async Task CommitUpdatesAsync(
             List<(UpdateAssetsParameters update, List<DependencyUpdate> deps)> requiredUpdates,
             StringBuilder description,
-            IRemote darc,
+            IRemoteFactory remoteFactory,
             string targetRepository,
             string newBranchName)
         {
@@ -834,6 +837,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             // Should max one coherency update
             (UpdateAssetsParameters update, List<DependencyUpdate> deps) coherencyUpdate =
                 requiredUpdates.Where(u => u.update.IsCoherencyUpdate).SingleOrDefault();
+
+            IRemote remote = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
 
             // To keep a PR to as few commits as possible, if the number of
             // non-coherency updates is 1 then combine coherency updates with those.
@@ -852,7 +857,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                     dependenciesToCommit.AddRange(coherencyUpdate.deps);
                 }
 
-                List<GitFile> committedFiles = await darc.CommitUpdatesAsync(targetRepository, newBranchName, dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
+                List<GitFile> committedFiles = await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
+                    dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
                 await CalculatePRDescription(update, deps, committedFiles, description);
             }
 
@@ -864,7 +870,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
                 await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description);
 
-                await darc.CommitUpdatesAsync(targetRepository, newBranchName, coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
+                await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
+                    coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
             }
         }
 
@@ -1075,7 +1082,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 pr.Url);
 
             var description = new StringBuilder(pullRequest.Description);
-            await CommitUpdatesAsync(requiredUpdates, description, darcRemote, targetRepository, headBranch);
+            await CommitUpdatesAsync(requiredUpdates, description, DarcRemoteFactory, targetRepository, headBranch);
 
             pullRequest.Description = description.ToString();
             pullRequest.Title = await ComputePullRequestTitleAsync(pr, targetBranch);

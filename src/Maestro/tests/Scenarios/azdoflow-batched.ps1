@@ -130,7 +130,7 @@ try {
     )
 
     Write-Host "Waiting on PR to be opened in $targetRepoUri"
-    $success = Check-Batched-AzDO-PullRequest 2 $targetRepoName $targetBranch $expectedDependencies
+    $success = Check-Batched-AzDO-PullRequest $source1RepoName $source2RepoName $targetRepoName $targetBranch $expectedDependencies
     if (!$success) {
         throw "Pull request failed to open."
     } else {

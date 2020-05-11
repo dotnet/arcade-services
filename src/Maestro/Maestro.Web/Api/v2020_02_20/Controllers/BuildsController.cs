@@ -311,7 +311,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             Queue.Post(
                 async () =>
                 {
-                    await SetBuildIncoherencyInfoAsync(buildModel);
+                    await SetBuildIncoherencyInfoAsync(buildModel.Id);
                 });
 
             return CreatedAtRoute(
@@ -328,8 +328,8 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         /// It's goal is to compute the incoherent dependencies that the build have and
         /// persist the list of them in BAR.
         /// </summary>
-        /// <param name="build">Build for which the incoherencies should be computed.</param>
-        private async Task SetBuildIncoherencyInfoAsync(Data.Models.Build build)
+        /// <param name="buildId">Build id for which the incoherencies should be computed.</param>
+        private async Task SetBuildIncoherencyInfoAsync(int buildId)
         {
             DependencyGraphBuildOptions graphBuildOptions = new DependencyGraphBuildOptions()
             {
@@ -344,6 +344,8 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 {
                     BuildAssetRegistryContext context = scope.ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
 
+                    Data.Models.Build build = await context.Builds.FindAsync(buildId);
+
                     DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
                         RemoteFactory,
                         build.GitHubRepository ?? build.AzureDevOpsRepository,
@@ -351,7 +353,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                         graphBuildOptions,
                         Logger);
 
-                    build.Incoherencies = new List<Data.Models.BuildIncoherence>();
+                    var incoherencies = new List<Data.Models.BuildIncoherence>();
 
                     foreach (var incoherence in graph.IncoherentDependencies)
                     {
@@ -363,6 +365,8 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                             Commit = incoherence.Commit
                         });
                     }
+                    context.Entry<Data.Models.Build>(build).Reload();
+                    build.Incoherencies = incoherencies;
 
                     context.Builds.Update(build);
                     await context.SaveChangesAsync();
@@ -370,8 +374,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             }
             catch (Exception e)
             {
-                Logger.LogWarning(e, $"Problems computing the dependency incoherencies for a new build of " +
-                    $"{build.AzureDevOpsBuildNumber} from {(build.AzureDevOpsRepository ?? build.GitHubRepository)}");
+                Logger.LogWarning(e, $"Problems computing the dependency incoherencies for BAR build {buildId}");
             }
         }
     }

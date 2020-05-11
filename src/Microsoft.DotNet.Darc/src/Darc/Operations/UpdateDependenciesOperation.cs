@@ -219,6 +219,11 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 return Constants.SuccessCode;
             }
+            catch (AuthenticationException e)
+            {
+                Console.WriteLine(e.Message);
+                return Constants.ErrorCode;
+            }
             catch (Exception e)
             {
                 Logger.LogError(e, "Error: Failed to update dependencies.");

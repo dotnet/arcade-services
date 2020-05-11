@@ -4,6 +4,7 @@
 
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging.Abstractions;
+using NuGet.Versioning;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -34,6 +35,7 @@ namespace Microsoft.DotNet.Darc.Tests
         public string TemporaryRepositoryPath { get; private set; }
         public string RootInputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, _testName, inputDir); }
         public string RootExpectedOutputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, _testName, outputDir); }
+        public string TemporaryRepositoryOutputsPath { get => Path.Combine(TemporaryRepositoryPath, outputDir); }
         public LocalGitClient GitClient { get => _gitClient; }
         public GitFileManager GitFileManager { get => _gitFileManager; }
 
@@ -48,12 +50,19 @@ namespace Microsoft.DotNet.Darc.Tests
         /// </summary>
         public void Setup()
         {
-            // Create the temp repo dir
+            // Create the temp repo and output dirs
             TemporaryRepositoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
             Directory.CreateDirectory(TemporaryRepositoryPath);
 
-            // Copy all inputs to that temp repo
-            CopyDirectory(RootInputsPath, TemporaryRepositoryPath);
+            // Copy /rename all inputs to that temp repo
+            CopyDirectoryAndRenameTestAssets(RootInputsPath, TemporaryRepositoryPath);
+
+            // Copy /rename all outputs (if they exist) to the temp repo
+            if (Directory.Exists(RootExpectedOutputsPath))
+            {
+                Directory.CreateDirectory(TemporaryRepositoryOutputsPath);
+                CopyDirectoryAndRenameTestAssets(RootExpectedOutputsPath, TemporaryRepositoryOutputsPath);
+            }
 
             // Set up a git file manager
             _gitClient = new LocalGitClient("git", NullLogger.Instance);
@@ -68,13 +77,14 @@ namespace Microsoft.DotNet.Darc.Tests
                 null);
         }
 
-        public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies)
+        public async Task UpdateDependenciesAsync(List<DependencyDetail> dependencies, SemanticVersion dotNetVersion = null)
         {
             GitFileContentContainer container = await _gitFileManager.UpdateDependencyFiles(
                 dependencies,
                 TemporaryRepositoryPath,
                 null,
-                null);
+                null,
+                dotNetVersion);
             List<GitFile> filesToUpdate = container.GetFilesToCommit();
             await _gitClient.CommitFilesAsync(filesToUpdate, TemporaryRepositoryPath, null, null);
         }
@@ -88,6 +98,7 @@ namespace Microsoft.DotNet.Darc.Tests
             GitFileContentContainer container = await _gitFileManager.UpdateDependencyFiles(
                 dependencies,
                 TemporaryRepositoryPath,
+                null,
                 null,
                 null);
             List<GitFile> filesToUpdate = container.GetFilesToCommit();
@@ -271,7 +282,7 @@ namespace Microsoft.DotNet.Darc.Tests
         /// <param name="expectedOutputPath">Subpath to the expected outputs</param>
         public async Task AssertEqual(string actualOutputPath, string expectedOutputPath)
         {
-            string expectedOutputFilePath = Path.Combine(RootExpectedOutputsPath, expectedOutputPath);
+            string expectedOutputFilePath = Path.Combine(TemporaryRepositoryOutputsPath, expectedOutputPath);
             string actualOutputFilePath = Path.Combine(TemporaryRepositoryPath, actualOutputPath);
             using (StreamReader expectedOutputsReader = new StreamReader(expectedOutputFilePath))
             using (StreamReader actualOutputsReader = new StreamReader(actualOutputFilePath))
@@ -294,10 +305,11 @@ namespace Microsoft.DotNet.Darc.Tests
 
         /// <summary>
         ///     Copy a directory, subdirectories and files from <paramref name="source"/> to <paramref name="destination"/>
+        ///     the ".test" extension will be removed from any input files
         /// </summary>
         /// <param name="source">Source directory to copy</param>
         /// <param name="destination">Destination directory to copy</param>
-        private void CopyDirectory(string source, string destination)
+        private void CopyDirectoryAndRenameTestAssets(string source, string destination)
         {
             if (!Directory.Exists(destination))
             {
@@ -309,13 +321,13 @@ namespace Microsoft.DotNet.Darc.Tests
             FileInfo[] files = sourceDir.GetFiles();
             foreach (FileInfo file in files)
             {
-                file.CopyTo(Path.Combine(destination, file.Name), true);
+                file.CopyTo(Path.Combine(destination, file.Name.Replace(".test", "")), true);
             }
 
             DirectoryInfo[] subDirs = sourceDir.GetDirectories();
             foreach (DirectoryInfo dir in subDirs)
             {
-                CopyDirectory(dir.FullName, Path.Combine(destination, dir.Name));
+                CopyDirectoryAndRenameTestAssets(dir.FullName, Path.Combine(destination, dir.Name));
             }
         }
     }

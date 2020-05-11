@@ -41,7 +41,7 @@ namespace Microsoft.DotNet.Maestro.Client
     public partial class MaestroApiOptions : ClientOptions
     {
         public MaestroApiOptions()
-            : this(new Uri("https://localhost:4430"))
+            : this(new Uri("https://maestro-int.westus2.cloudapp.azure.com"))
         {
         }
 
@@ -51,7 +51,7 @@ namespace Microsoft.DotNet.Maestro.Client
         }
 
         public MaestroApiOptions(TokenCredential credentials)
-            : this(new Uri("https://localhost:4430"), credentials)
+            : this(new Uri("https://maestro-int.westus2.cloudapp.azure.com"), credentials)
         {
         }
 
@@ -223,6 +223,11 @@ namespace Microsoft.DotNet.Maestro.Client
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public T Deserialize<T>(string value)
         {
+            if (typeof(T) == typeof(string))
+            {
+                return (T)(object)value;
+            }
+
             return JsonConvert.DeserializeObject<T>(value, SerializerSettings);
         }
 
