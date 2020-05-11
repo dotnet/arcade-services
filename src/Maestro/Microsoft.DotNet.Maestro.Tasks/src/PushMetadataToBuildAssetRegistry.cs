@@ -420,7 +420,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             var distinctAssets = mergedBuild.Assets.Distinct(new AssetDataComparer()).ToImmutableList();
             if (distinctAssets.Count < mergedBuild.Assets.Count)
             {
-                var dupes = mergedBuild.Assets.GroupBy(p => p)
+                var dupes = mergedBuild.Assets.GroupBy(p => p, new AssetDataComparer())
                       .Where(g => g.Count() > 1)
                       .Select(g => g.Key)
                       .ToImmutableList();
