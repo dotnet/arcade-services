@@ -292,6 +292,22 @@ namespace Maestro.Web
         {
             app.UseExceptionHandler(ConfigureApiExceptions);
 
+            if (HostingEnvironment.IsDevelopment() &&
+                !Program.RunningInServiceFabric() &&
+                !string.Equals(
+                    Configuration["ForceLocalApi"],
+                    true.ToString(),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                // Redirect api requests to prod when running locally outside of service fabric
+                // This is for the `ng serve` local debugging case for the website
+                app.MapWhen(
+                    ctx => IsGet(ctx) &&
+                        ctx.Request.Path.StartsWithSegments("/api") &&
+                        ctx.Request.Path != "/api/swagger.json",
+                    a => { a.Run(ApiRedirectHandler); });
+            }
+
             app.UseSwagger(
                 options =>
                 {
@@ -316,23 +332,6 @@ namespace Maestro.Web
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
-
-            if (HostingEnvironment.IsDevelopment() &&
-                !Program.RunningInServiceFabric() &&
-                !string.Equals(
-                    Configuration["ForceLocalApi"],
-                    true.ToString(),
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                // Redirect api requests to prod when running locally outside of service fabric
-                // This is for the `ng serve` local debugging case for the website
-                app.MapWhen(
-                    ctx => IsGet(ctx) &&
-                        ctx.Request.Path.StartsWithSegments("/api") &&
-                        ctx.Request.Path != "/api/swagger.json",
-                    a => { a.Run(ApiRedirectHandler); });
-            }
-
             app.UseEndpoints(e =>
             {
                 e.MapRazorPages();
