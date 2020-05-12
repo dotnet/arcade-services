@@ -200,10 +200,6 @@ namespace DotNet.Status.Web
             services.AddScoped<SimpleSigninMiddleware>();
             services.AddGitHubTokenProvider();
             services.AddSingleton<IInstallationLookup, InMemoryCacheInstallationLookup>();
-            //services.AddContextAwareAuthenticationScheme(o =>
-            //{
-            //    o.SelectScheme = p => p.StartsWithSegments("/api") ? "github-token" : IdentityConstants.ApplicationScheme;
-            //});
 
             services.AddSingleton<ZenHubClient>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
