@@ -1067,7 +1067,7 @@ namespace Microsoft.DotNet.DarcLib
                 $"_apis/release/definitions/",
                 _logger,
                 body,
-                versionOverride: "5.0-preview.3",
+                versionOverride: "5.0",
                 baseAddressSubpath: "vsrm.");
 
             return content.ToObject<AzureDevOpsReleaseDefinition>();
@@ -1092,7 +1092,7 @@ namespace Microsoft.DotNet.DarcLib
                 $"_apis/release/releases/",
                 _logger,
                 body,
-                versionOverride: "5.0-preview.3",
+                versionOverride: "5.0",
                 baseAddressSubpath: "vsrm.");
 
             return content.GetValue("id").ToObject<int>();
@@ -1314,7 +1314,7 @@ namespace Microsoft.DotNet.DarcLib
                 projectName,
                 $"_apis/build/builds/{buildId}",
                 _logger,
-                versionOverride: "5.0-preview.3");
+                versionOverride: "5.0");
 
             return content.ToObject<AzureDevOpsBuild>();
         }
@@ -1334,7 +1334,7 @@ namespace Microsoft.DotNet.DarcLib
                 projectName,
                 $"_apis/release/definitions/{releaseDefinitionId}",
                 _logger,
-                versionOverride: "5.0-preview.3",
+                versionOverride: "5.0",
                 baseAddressSubpath: "vsrm.");
 
             return content.ToObject<AzureDevOpsReleaseDefinition>();
