@@ -229,12 +229,11 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
         {
             var assembly = Assembly.GetEntryAssembly();
             var client = new GitHubClient(new ProductHeaderValue(
-                "Microsoft.DotNet.Internal.Tools.SynchronizePackageProps",
+                assembly.GetName().Name,
                 assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ??
                 assembly.GetName().Version.ToString()));
 
-            var
-                remotePackages = new Dictionary<string, Dictionary<string, string>>();
+            var remotePackages = new Dictionary<string, Dictionary<string, string>>();
             foreach ((string repo, Dependency dep) in remoteDependencies)
             {
                 Match repoMatch = Regex.Match(repo, "^https://github.com/([^/]*)/(.*?)/?$");
@@ -305,7 +304,7 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
                         if (prop.Attribute("Condition") != null)
                         {
                             WriteWarning(
-                                $"{repoName} Packages.prop property {prop.Name.LocalName} has Conditional PropertyGroup, which is not supported");
+                                $"{repoName} Packages.prop property {prop.Name.LocalName} has Conditional Property, which is not supported");
                             continue;
                         }
 

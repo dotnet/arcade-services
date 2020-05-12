@@ -4,5 +4,5 @@
   "BuildAssetRegistry": {
     "ConnectionString": "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true"
   },
-  "ForceLocalApi": true
+  "ForceLocalApi": false
 }

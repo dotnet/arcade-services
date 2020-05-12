@@ -18,7 +18,7 @@
     <PackageReference Update="FluentValidation.AspNetCore" Version="8.6.2" />
     <PackageReference Update="GitHubJwt" Version="0.0.2" />
     <PackageReference Update="Humanizer.Core" Version="2.4.2" />
-    <PackageReference Update="JetBrains.Annotations" Version="11.1.0" />
+    <PackageReference Update="JetBrains.Annotations" Version="11.1.0" PrivateAssets="All" />
     <PackageReference Update="LibGit2Sharp" Version="0.27.0-preview-0024" />
     <PackageReference Update="Microsoft.ApplicationInsights" Version="2.13.1" />
     <PackageReference Update="Microsoft.ApplicationInsights.AspNetCore" Version="2.8.2" />
