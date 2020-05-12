@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class AzureDevOpsClient : RemoteRepoBase, IGitRepo, IAzureDevOpsClient
     {
-        private const string DefaultApiVersion = "5.0-preview.1";
+        private const string DefaultApiVersion = "5.0";
 
         private static readonly string AzureDevOpsHostPattern = @"dev\.azure\.com\";
 
