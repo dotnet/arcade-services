@@ -165,7 +165,7 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
                 // The name of IOptions<Pizza> is "IOptions`1"
                 // The full name has the other types, but they are all fully qualified (and also still have the `1 on them)
                 string baseName = type.Name.Split('`')[0];
-                return $"{baseName}<{string.Join(",", type.GetGenericArguments().Select(GetDisplayName))}>";
+                return $"{baseName}<{string.Join(", ", type.GetGenericArguments().Select(GetDisplayName))}>";
             }
 
             return type.Name;
