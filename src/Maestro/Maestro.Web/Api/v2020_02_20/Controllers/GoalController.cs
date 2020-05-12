@@ -45,7 +45,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         public virtual async Task<IActionResult> Create([FromBody, Required] Goal.GoalRequestJson goalData, [Required] String channelName, [Required] int definitionId)
         {
             Data.Models.Channel channel = await _context.Channels
-                .FirstOrDefaultAsync(c => c.Name.Equals(channelName));
+                .FirstOrDefaultAsync(c => c.Name == channelName);
             if (channel == null)
             {
                 return NotFound();
@@ -83,7 +83,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         public override async Task<IActionResult> GetGoalTimes([Required]int definitionId, [Required]string channelName)
         {
             Data.Models.Channel channel = await _context.Channels
-                .FirstOrDefaultAsync(c => c.Name.Equals(channelName));
+                .FirstOrDefaultAsync(c => c.Name == channelName);
             if (channel == null)
             {
                 return NotFound();
