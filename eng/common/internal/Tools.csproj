@@ -2,13 +2,14 @@
 <!-- Copyright (c)  Microsoft.  All Rights Reserved.  Licensed under the Apache License, Version 2.0.  See License.txt in the project root for license information. -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
     <ImportDirectoryBuildTargets>false</ImportDirectoryBuildTargets>
   </PropertyGroup>
   <ItemGroup>
     <!-- Clear references, the SDK may add some depending on UsuingToolXxx settings, but we only want to restore the following -->
     <PackageReference Remove="@(PackageReference)"/>
-    <PackageReference Include="Microsoft.DotNet.IBCMerge" Condition="'$(UsingToolIbcOptimization)' == 'true'" />
-    <PackageReference Include="Drop.App" ExcludeAssets="all" Condition="'$(UsingToolVisualStudioIbcTraining)' == 'true'"/>
+    <PackageReference Include="Microsoft.DotNet.IBCMerge" Version="$(MicrosoftDotNetIBCMergeVersion)" Condition="'$(UsingToolIbcOptimization)' == 'true'" />
+    <PackageReference Include="Drop.App" Version="$(DropAppVersion)" ExcludeAssets="all" Condition="'$(UsingToolVisualStudioIbcTraining)' == 'true'"/>
   </ItemGroup>
   <PropertyGroup>
     <RestoreSources></RestoreSources>
