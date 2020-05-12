@@ -16,6 +16,7 @@ using Microsoft.DotNet.EntityFrameworkCore.Extensions;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
 using Org.BouncyCastle.Crypto.Prng;
@@ -271,7 +272,8 @@ FOR SYSTEM_TIME ALL
             builder.Entity<RepositoryBranchUpdateHistory>()
                 .HasIndex("RepositoryName", "BranchName", "SysEndTime", "SysStartTime");
 
-            builder.HasDbFunction(() => JsonExtensions.JsonValue("", "")).HasName("JSON_VALUE").HasSchema("");
+            builder.HasDbFunction(() => JsonExtensions.JsonValue("", ""))
+                .HasTranslation(args => SqlFunctionExpression.Create("JSON_VALUE", args, typeof(string), null));
         }
 
         public virtual Task<long> GetInstallationId(string repositoryUrl)
