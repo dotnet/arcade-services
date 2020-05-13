@@ -111,6 +111,7 @@ stages:
           inputs:
             command: restore
             solution: "**/*.sln"
+            feedstoUse: config
 
         - powershell: eng\set-version-parameters.ps1
           displayName: Calculate release version variables

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -20,7 +21,7 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
         public ConfigureSwaggerVersions(
             VersionedControllerProvider controllerProvider,
             IOptions<ApiVersioningOptions> versioningOptionsAccessor,
-            Action<string, Info> configureVersionInfo)
+            Action<string, OpenApiInfo> configureVersionInfo)
         {
             ControllerProvider = controllerProvider;
             ConfigureVersionInfo = configureVersionInfo;
@@ -31,14 +32,14 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
 
         private VersionedControllerProvider ControllerProvider { get; }
 
-        private Action<string, Info> ConfigureVersionInfo { get; }
+        private Action<string, OpenApiInfo> ConfigureVersionInfo { get; }
 
         public void Configure(SwaggerGenOptions options)
         {
             ConfigureSwaggerVersioningParameters(options, VersioningOptions.VersioningScheme);
             foreach (string version in ControllerProvider.Versions.Keys)
             {
-                var info = new Info
+                var info = new OpenApiInfo
                 {
                     Version = version,
                     Title = $"Version {version}",
@@ -105,7 +106,7 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
 
     public class SwaggerNamingOperationFilter : IOperationFilter
     {
-        public void Apply(Operation operation, OperationFilterContext context)
+        public void Apply(OpenApiOperation operation, OperationFilterContext context)
         {
             if (context.ApiDescription.ActionDescriptor is ControllerActionDescriptor desc)
             {

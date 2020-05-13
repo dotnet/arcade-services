@@ -7,8 +7,8 @@ using System.Reflection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using IHostingEnvironment = Microsoft.Extensions.Hosting.IHostingEnvironment;
 
 namespace DotNet.Status.Web
 {
@@ -16,8 +16,13 @@ namespace DotNet.Status.Web
     {
         public static void Main(string[] args)
         {
-            new WebHostBuilder()
-                .UseKestrel()
+            Host.CreateDefaultBuilder()
+                .ConfigureWebHostDefaults(host =>
+                {
+                    host.UseStartup<Startup>()
+                        .UseUrls("http://localhost:5000/")
+                        .CaptureStartupErrors(true);
+                })
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .ConfigureAppConfiguration((host, config) =>
                 {
@@ -25,7 +30,7 @@ namespace DotNet.Status.Web
                         .AddCommandLine(args)
                         .AddUserSecrets(Assembly.GetEntryAssembly())
                         .AddEnvironmentVariables()
-                        .AddDefaultJsonConfiguration((IHostingEnvironment)host.HostingEnvironment, "appsettings{0}.json");
+                        .AddDefaultJsonConfiguration(host.HostingEnvironment, "appsettings{0}.json");
                 })
                 .ConfigureLogging(
                     builder =>
@@ -33,9 +38,6 @@ namespace DotNet.Status.Web
                         builder.AddFilter(level => level > LogLevel.Debug);
                         builder.AddConsole();
                     })
-                .UseStartup<Startup>()
-                .UseUrls("http://localhost:5000/")
-                .CaptureStartupErrors(true)
                 .Build()
                 .Run();
         }

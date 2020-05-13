@@ -1,4 +1,3 @@
-#if NETCOREAPP3_1
 using System;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.DncEng.Configuration.Extensions;
@@ -64,4 +63,3 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         }
     }
 }
-#endif
