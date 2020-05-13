@@ -21,7 +21,11 @@ namespace Maestro.Data.Tests
                     {
                         s.AddSingleton<IHostEnvironment>(new HostingEnvironment{EnvironmentName = 
                             Environments.Development});
-                        s.AddBuildAssetRegistry(options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
+                        s.AddBuildAssetRegistry(options =>
+                        {
+                            options.UseInMemoryDatabase("BuildAssetRegistry");
+                            options.EnableServiceProviderCaching(false);
+                        });
                     },
                     out string message),
                 message);

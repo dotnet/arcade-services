@@ -38,7 +38,11 @@ namespace DependencyUpdater.Tests
             services.AddSingleton<IReliableStateManager>(StateManager);
             services.AddLogging();
             services.AddDbContext<BuildAssetRegistryContext>(
-                options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
+                options =>
+                {
+                    options.UseInMemoryDatabase("BuildAssetRegistry");
+                    options.EnableServiceProviderCaching(false);
+                });
             var proxyFactory = new Mock<IActorProxyFactory<ISubscriptionActor>>();
             proxyFactory.Setup(l => l.Lookup(It.IsAny<ActorId>()))
                 .Returns((ActorId id) =>

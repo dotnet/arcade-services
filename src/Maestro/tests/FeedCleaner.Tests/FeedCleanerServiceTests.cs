@@ -40,7 +40,11 @@ namespace FeedCleanerService.Tests
             services.AddSingleton(Env.Object);
             services.AddLogging();
             services.AddDbContext<BuildAssetRegistryContext>(
-                options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
+                options =>
+                {
+                    options.UseInMemoryDatabase("BuildAssetRegistry");
+                    options.EnableServiceProviderCaching(false);
+                });
             services.Configure<FeedCleanerOptions>(
                 (options) =>
                 {

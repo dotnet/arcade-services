@@ -51,7 +51,11 @@ namespace SubscriptionActorService.Tests
         {
             services.AddSingleton(HostingEnvironment.Object);
             services.AddSingleton(ActionRunner.Object);
-            services.AddBuildAssetRegistry(options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
+            services.AddBuildAssetRegistry(options =>
+            {
+                options.UseInMemoryDatabase("BuildAssetRegistry");
+                options.EnableServiceProviderCaching(false);
+            });
             base.RegisterServices(services);
         }
 
