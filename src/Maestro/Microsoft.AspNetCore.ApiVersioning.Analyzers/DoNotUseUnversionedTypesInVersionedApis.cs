@@ -68,14 +68,14 @@ namespace Microsoft.AspNetCore.ApiVersioning.Analyzers
             public override void VisitClassDeclaration(ClassDeclarationSyntax node)
             {
                 IImmutableList<ITypeSymbol> baseTypes = SemanticModel.GetAllBaseTypeSymbols(node);
-                bool isController = baseTypes.Any(t => t.Equals(KnownTypes.Controller));
+                bool isController = baseTypes.Any(t => SymbolEqualityComparer.Default.Equals(t, KnownTypes.Controller));
                 if (!isController)
                 {
                     return;
                 }
 
                 IImmutableList<AttributeUsageInfo> attributeInfo = SemanticModel.GetAttributeInfo(node.AttributeLists);
-                bool isVersioned = attributeInfo.Any(info => info.AttributeType.Equals(KnownTypes.ApiVersionAttribute));
+                bool isVersioned = attributeInfo.Any(info => SymbolEqualityComparer.Default.Equals(info.AttributeType, KnownTypes.ApiVersionAttribute));
                 if (!isVersioned)
                 {
                     return;
