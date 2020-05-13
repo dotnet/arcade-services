@@ -19,6 +19,7 @@
     <PackageReference Include="EntityFrameworkCore.Triggers" />
     <PackageReference Include="FluentValidation.AspNetCore" />
     <PackageReference Include="Humanizer.Core" /> 
+    <PackageReference Include="JetBrains.Annotations" /> 
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureKeyVault" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.Azurestorage" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
