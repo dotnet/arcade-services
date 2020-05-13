@@ -235,7 +235,7 @@ namespace Maestro.Web
             // in such a way that will work with sizing.
             services.AddSingleton<DarcRemoteMemoryCache>();
 
-            services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
+            services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
             services.AddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
 
             services.AddMergePolicies();

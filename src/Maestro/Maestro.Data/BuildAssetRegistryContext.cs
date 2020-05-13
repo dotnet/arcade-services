@@ -13,7 +13,6 @@ using Maestro.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.DotNet.EntityFrameworkCore.Extensions;
-using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
@@ -48,7 +47,7 @@ namespace Maestro.Data
         }
     }
 
-    public class BuildAssetRegistryContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>, IInstallationLookup
+    public class BuildAssetRegistryContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
     {
         public BuildAssetRegistryContext(IHostEnvironment hostingEnvironment, DbContextOptions options) : base(
             options)
