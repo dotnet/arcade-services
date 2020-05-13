@@ -554,8 +554,8 @@ function Check-NonBatched-AzDO-PullRequest($sourceRepoName, $targetRepoName, $ta
         -notExpectedFeeds $notExpectedFeeds
 }
 
-function Check-Batched-AzDO-PullRequest($sourceRepoCount, $targetRepoName, $targetBranch, $expectedDependencies, $expectedFeeds = @(), $notExpectedFeeds = @()) {
-    $expectedPRTitle = "[$targetBranch] Update dependencies from $sourceRepoCount repositories"
+function Check-Batched-AzDO-PullRequest($source1RepoName, $source2RepoName, $targetRepoName, $targetBranch, $expectedDependencies, $expectedFeeds = @(), $notExpectedFeeds = @()) {
+    $expectedPRTitle = "[$targetBranch] Update dependencies from $azdoAccount/$azdoProject/$source1RepoName $azdoAccount/$azdoProject/$source2RepoName"
     return Check-AzDO-PullRequest `
         -expectedPRTitle $expectedPRTitle `
         -targetRepoName $targetRepoName `
@@ -760,8 +760,8 @@ function Check-NonBatched-Github-PullRequest($sourceRepoName, $targetRepoName, $
     return Check-Github-PullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies $complete
 }
 
-function Check-Batched-Github-PullRequest($sourceRepoCount, $targetRepoName, $targetBranch, $expectedDependencies) {
-    $expectedPRTitle = "[$targetBranch] Update dependencies from $sourceRepoCount repositories"
+function Check-Batched-Github-PullRequest($source1RepoName, $source2RepoName, $targetRepoName, $targetBranch, $expectedDependencies) {
+    $expectedPRTitle = "[$targetBranch] Update dependencies from $githubTestOrg/$source1RepoName $githubTestOrg/$source2RepoName"
     return Check-Github-PullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies $false
 }
 

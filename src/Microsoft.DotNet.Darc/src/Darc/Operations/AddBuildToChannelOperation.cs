@@ -5,15 +5,15 @@
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Threading.Tasks;
-using System.Linq;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
-using Microsoft.DotNet.Services.Utility;
-using System.Text;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -25,6 +25,28 @@ namespace Microsoft.DotNet.Darc.Operations
                 { "dnceng", ("internal", 750) },
                 { "devdiv", ("devdiv", 12603) }
             };
+
+        // These channels are unsupported because the Arcade master branch 
+        // (the branch that has build promotion infra) doesn't have YAML 
+        // implementation for them. There is usually not a high demand for 
+        // promoting builds to these channels.
+        private readonly Dictionary<int, string> UnsupportedChannels = new Dictionary<int, string>()
+        {
+            { 3, ".NET Core 3 Dev" },
+            { 19, ".NET Core 3 Release" },
+            { 129, ".NET Core 3.1 Release" },
+            { 184, ".NET Core 3.0 Internal Servicing" },
+            { 344, ".NET 3 Eng" },
+            { 390, ".NET 3 Eng - Validation" },
+            { 531, ".NET Core 3.1 Blazor Features" },
+            { 550, ".NET Core 3.1 Internal Servicing" },
+            { 555, ".NET Core SDK 3.0.1xx Internal" },
+            { 556, ".NET Core SDK 3.0.1xx" },
+            { 557, ".NET Core SDK 3.1.2xx Internal" },
+            { 558, ".NET Core SDK 3.1.2xx" },
+            { 559, ".NET Core SDK 3.1.1xx Internal" },
+            { 560, ".NET Core SDK 3.1.1xx" }
+        };
 
         AddBuildToChannelCommandLineOptions _options;
         public AddBuildToChannelOperation(AddBuildToChannelCommandLineOptions options)
@@ -99,13 +121,18 @@ namespace Microsoft.DotNet.Darc.Operations
                     return Constants.SuccessCode;
                 }
 
-                Console.WriteLine($"Assigning build '{build.Id}' to the following channel(s):");
-                foreach (var channel in targetChannels)
+                if (targetChannels.Any(ch => UnsupportedChannels.ContainsKey(ch.Id)))
                 {
-                    Console.WriteLine($"\t{channel.Name}");
+                    Console.WriteLine($"Currently Darc doesn't support build promotion to the following channels:");
+
+                    foreach (var channel in UnsupportedChannels)
+                    {
+                        Console.WriteLine($"\t ({channel.Key}) {channel.Value}");
+                    }
+
+                    Console.WriteLine("Please contact @dnceng to see other options.");
+                    return Constants.ErrorCode;
                 }
-                Console.WriteLine();
-                Console.Write(UxHelpers.GetTextBuildDescription(build));
 
                 // Queues a build of the Build Promotion pipeline that will takes care of making sure
                 // that the build assets are published to the right location and also promoting the build
@@ -117,6 +144,14 @@ namespace Microsoft.DotNet.Darc.Operations
                 {
                     return Constants.ErrorCode;
                 }
+
+                Console.WriteLine($"Assigning build '{build.Id}' to the following channel(s):");
+                foreach (var channel in targetChannels)
+                {
+                    Console.WriteLine($"\t{channel.Name}");
+                }
+                Console.WriteLine();
+                Console.Write(UxHelpers.GetTextBuildDescription(build));
 
                 // Be helpful. Let the user know what will happen.
                 string buildRepo = build.GitHubRepository ?? build.AzureDevOpsRepository;
@@ -134,6 +169,11 @@ namespace Microsoft.DotNet.Darc.Operations
                 PrintSubscriptionInfo(applicableSubscriptions);
 
                 return Constants.SuccessCode;
+            }
+            catch (AuthenticationException e)
+            {
+                Console.WriteLine(e.Message);
+                return Constants.ErrorCode;
             }
             catch (Exception e)
             {
@@ -305,7 +345,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <summary>
         /// By default the source branch/SHA for the Build Promotion pipeline will be the branch/SHA
         /// that produced the Arcade.SDK used by the build being promoted. The user can override that
-        /// by specifying both, channel & SHA, on the command line.
+        /// by specifying both, branch & SHA, on the command line.
         /// </summary>
         /// <param name="build">Build for which the Arcade SDK dependency build will be inferred.</param>
         private async Task<(string sourceBranch, string sourceVersion)> GetSourceBranchInfoAsync(Build build)
@@ -316,6 +356,13 @@ namespace Microsoft.DotNet.Darc.Operations
             if (hasSourceBranch)
             {
                 _options.SourceBranch = GitHelpers.NormalizeBranchName(_options.SourceBranch);
+
+                if (_options.SourceBranch.EndsWith("release/3.x", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"Warning: Arcade branch {_options.SourceBranch} doesn't support build promotion. Please try specifiying --source-branch 'master'.");
+                    Console.WriteLine("Switching source branch to Arcade master.");
+                    return ("master", null);
+                }
             }
 
             if (hasSourceBranch && hasSourceSHA)
@@ -368,11 +415,18 @@ namespace Microsoft.DotNet.Darc.Operations
                 return (null, null);
             }
 
+            if (sourceBuildArcadeSDKDepBuild.GitHubBranch.EndsWith("release/3.x", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("Warning: To promote a build that uses a 3.x version of Arcade SDK you need to inform the --source-branch 'master' parameter.");
+                Console.WriteLine("Switching source branch to Arcade master.");
+                return ("master", null);
+            }
+
             var oldestSupportedArcadeSDKDate = new DateTimeOffset(2020, 01, 28, 0, 0, 0, new TimeSpan(0, 0, 0));
             if (DateTimeOffset.Compare(sourceBuildArcadeSDKDepBuild.DateProduced, oldestSupportedArcadeSDKDate) < 0)
             {
                 Console.WriteLine($"The target build uses an SDK released in {sourceBuildArcadeSDKDepBuild.DateProduced}");
-                Console.WriteLine($"The target build needs to use an Arcade SDK version released after {oldestSupportedArcadeSDKDate} otherwise " +
+                Console.WriteLine($"The target build needs to use an Arcade SDK 5.x.x version released after {oldestSupportedArcadeSDKDate} otherwise " +
                     $"you must inform the `source-branch` / `source-sha` parameters to point to a specific Arcade build.");
                 Console.Write($"You can also pass the `skip-assets-publishing` parameter if all you want is to " +
                     $"assign the build to a channel. Note, though, that this will not publish the build assets.");
