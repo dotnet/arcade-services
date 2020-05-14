@@ -192,7 +192,7 @@ stages:
             artifact: DarcBot
             displayName: Publish DarcBot Artifacts
 
-          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\RolloutScorerAzureFunction\publish -f netcoreapp3.0
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\RolloutScorerAzureFunction\publish -f netcoreapp3.1
             workingDirectory: src/RolloutScorer/RolloutScorerAzureFunction
             displayName: dotnet publish RolloutScorerAzureFunction
 
