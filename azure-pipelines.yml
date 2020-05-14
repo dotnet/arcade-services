@@ -168,7 +168,7 @@ stages:
             artifact: TelemetryApplication
             displayName: Publish TelemetryApplication
 
-          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\DotNet.Status.Web\publish -f netcoreapp3.1
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\DotNet.Status.Web\publish -r win-64 -f netcoreapp3.1
             workingDirectory: src/DotNet.Status.Web
             displayName: dotnet publish DotNet.Status.Web
 
@@ -192,7 +192,7 @@ stages:
             artifact: DarcBot
             displayName: Publish DarcBot Artifacts
 
-          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\RolloutScorerAzureFunction\publish -f netcoreapp3.1
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\RolloutScorerAzureFunction\publish -r win-64 -f netcoreapp3.1
             workingDirectory: src/RolloutScorer/RolloutScorerAzureFunction
             displayName: dotnet publish RolloutScorerAzureFunction
 
@@ -209,7 +209,7 @@ stages:
             displayName: Publish RolloutScorerAzureFunction
           
           ## Prepare database update artifact
-          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp3.1
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -r win-64 -f netcoreapp3.1
             workingDirectory: src/Maestro/Maestro.Data
             displayName: Create Data Package
             
