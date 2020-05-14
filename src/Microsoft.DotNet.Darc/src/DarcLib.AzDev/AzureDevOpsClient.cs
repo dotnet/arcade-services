@@ -651,7 +651,8 @@ namespace Microsoft.DotNet.DarcLib
                 accountName,
                 projectName,
                 statusesPath,
-                _logger);
+                _logger,
+                versionOverride: "5.0-preview.1");
 
             JArray values = JArray.Parse(content["value"].ToString());
 
