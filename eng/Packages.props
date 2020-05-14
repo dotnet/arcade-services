@@ -50,6 +50,7 @@
     <PackageReference Update="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="$(MicrosoftDotNetSwaggerGeneratorMSBuildVersion)" PrivateAssets="all" />
     <PackageReference Update="Microsoft.DotNet.VersionTools" Version="$(MicrosoftDotNetVersionToolsVersion)" />
     <PackageReference Update="Microsoft.EntityFrameworkCore" Version="$(DotNetAssemblyVersion)" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Design" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.EntityFrameworkCore.InMemory" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.EntityFrameworkCore.SqlServer" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.Caching.Abstractions" Version="$(DotNetAssemblyVersion)" />
