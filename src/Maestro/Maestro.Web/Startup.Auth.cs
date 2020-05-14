@@ -42,7 +42,13 @@ namespace Maestro.Web
                     options => { options.Lockout.AllowedForNewUsers = false; })
                 .AddEntityFrameworkStores<BuildAssetRegistryContext>();
             
-            services.AddAuthentication("Contextual")
+            services.AddAuthentication(options =>
+                {
+                    options.DefaultScheme = "Contextual";
+                    options.DefaultChallengeScheme = null;
+                    options.DefaultAuthenticateScheme = null;
+                    options.DefaultSignInScheme = null;
+                })
                 .AddPolicyScheme("Contextual","Contextual",
                     policyOptions => { policyOptions.ForwardDefaultSelector = ctx => ctx.Request.Path.StartsWithSegments("/api") ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme; })
                 .AddGitHubOAuth(Configuration.GetSection("GitHubAuthentication"), GitHubScheme)
