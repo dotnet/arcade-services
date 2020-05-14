@@ -45,11 +45,11 @@
     <WindowsAzureStorageVersion>8.5.0</WindowsAzureStorageVersion>
     <XUnitVersion>2.4.1-pre.build.4059</XUnitVersion>
     <XUnitVSRunnerVersion>2.4.1-pre.build.4059</XUnitVSRunnerVersion>
-    <MicrosoftDotNetSignToolVersion>5.0.0-beta.20258.8</MicrosoftDotNetSignToolVersion>
-    <MicrosoftDotNetBuildTasksFeedVersion>5.0.0-beta.20258.8</MicrosoftDotNetBuildTasksFeedVersion>
-    <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>5.0.0-beta.20258.8</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
-    <MicrosoftDotNetGitIssueManagerVersion>5.0.0-beta.20258.8</MicrosoftDotNetGitIssueManagerVersion>
-    <MicrosoftDotNetVersionToolsVersion>5.0.0-beta.20258.8</MicrosoftDotNetVersionToolsVersion>
+    <MicrosoftDotNetSignToolVersion>5.0.0-beta.20261.9</MicrosoftDotNetSignToolVersion>
+    <MicrosoftDotNetBuildTasksFeedVersion>5.0.0-beta.20261.9</MicrosoftDotNetBuildTasksFeedVersion>
+    <MicrosoftDotNetSwaggerGeneratorMSBuildVersion>5.0.0-beta.20261.9</MicrosoftDotNetSwaggerGeneratorMSBuildVersion>
+    <MicrosoftDotNetGitIssueManagerVersion>5.0.0-beta.20261.9</MicrosoftDotNetGitIssueManagerVersion>
+    <MicrosoftDotNetVersionToolsVersion>5.0.0-beta.20261.9</MicrosoftDotNetVersionToolsVersion>
   </PropertyGroup>
   <!--Package names-->
   <PropertyGroup>
