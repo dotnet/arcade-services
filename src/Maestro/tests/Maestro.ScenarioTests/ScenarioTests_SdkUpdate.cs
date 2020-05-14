@@ -12,8 +12,25 @@ namespace Maestro.ScenarioTests
     [TestFixture]
     public class ScenarioTests_SdkUpdate : MaestroScenarioTestBase
     {
-        public ScenarioTests_SdkUpdate() : base()
+        private TestParameters _parameters;
+        private Random _random = new Random();
+
+        public ScenarioTests_SdkUpdate()
         {
+        }
+
+        [SetUp]
+        public async Task InitializeAsync()
+        {
+            _parameters = await TestParameters.GetAsync();
+            SetTestParameters(_parameters);
+        }
+
+        [TearDown]
+        public Task DisposeAsync()
+        {
+            _parameters.Dispose();
+            return Task.CompletedTask;
         }
 
         [Test]
@@ -35,8 +52,8 @@ namespace Maestro.ScenarioTests
             var targetBranch = _random.Next(int.MaxValue).ToString();
             await using AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
             await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none");
-            int buildId = await CreateBuildAsync(GetRepoUrl("dotnet", sourceRepo), sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
-            await using IAsyncDisposable _ = await AddBuildToChannelAsync(buildId, testChannelName);
+            Build build = await CreateBuildAsync(GetRepoUrl("dotnet", sourceRepo), sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
+            await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
 
             using TemporaryDirectory repo = await CloneRepositoryAsync(targetRepo);
             using (ChangeDirectory(repo.Directory))

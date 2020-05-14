@@ -211,7 +211,7 @@ namespace ServiceFabricMocks
             throw new NotImplementedException();
         }
 
-        IAsyncEnumerator<IReliableState> IAsyncEnumerable<IReliableState>.GetAsyncEnumerator()
+        Microsoft.ServiceFabric.Data.IAsyncEnumerator<IReliableState> Microsoft.ServiceFabric.Data.IAsyncEnumerable<IReliableState>.GetAsyncEnumerator()
         {
             throw new NotImplementedException();
         }
@@ -240,9 +240,9 @@ namespace ServiceFabricMocks
             return new Uri("mock://" + name, UriKind.Absolute);
         }
 
-        public IAsyncEnumerator<IReliableState> GetAsyncEnumerator()
+        public Microsoft.ServiceFabric.Data.IAsyncEnumerator<IReliableState> GetAsyncEnumerator()
         {
-            return new MockAsyncEnumerator<IReliableState>(store.Values.GetEnumerator());
+            return new SyncAsyncEnumerator<IReliableState>(store.Values.GetEnumerator());
         }
 
 #pragma warning disable 0067

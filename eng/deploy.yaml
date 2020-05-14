@@ -210,7 +210,6 @@ stages:
     - job: deployDarcBot
       displayName: Deploy DarcBot GitHub app
       dependsOn:
-      - approval
       variables:
       - group: ${{ parameters.DarcBotVariableGroup }}
       - name: IngestConnectionString

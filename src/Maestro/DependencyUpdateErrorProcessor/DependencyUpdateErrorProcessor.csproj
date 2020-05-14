@@ -2,12 +2,10 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
     <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
     <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <SignAssembly>false</SignAssembly>
-    <LangVersion>7.1</LangVersion>
     <DebugType>Full</DebugType>
   </PropertyGroup>
 
@@ -18,13 +16,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
-    <PackageReference Include="Microsoft.ServiceFabric" Version="6.5.677" />
-    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="3.4.677" />
-    <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" Version="3.4.677" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.AzureAppConfiguration" Version="3.0.0-preview-011100001-1152" />
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.ServiceFabric" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services.Remoting" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.AzureAppConfiguration" />
   </ItemGroup>
 
   <ItemGroup>

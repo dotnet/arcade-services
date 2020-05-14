@@ -2,6 +2,22 @@
   "BuildAssetRegistry": {
     "ConnectionString": "[vault(build-asset-registry-sql-connection-string)]"
   },
+  "GitHub": {
+    "GitHubAppId": "[vault(github-application-id)]",
+    "PrivateKey": "[vault(github-application-private-key)]"
+  },
+  "AzureDevOps": {
+    "Tokens": [
+      {
+        "Account": "dnceng",
+        "Token": "[vault(dn-bot-dnceng-build-rw-code-rw-release-rw)]"
+      },
+      {
+        "Account": "devdiv",
+        "Token": "[vault(dn-bot-devdiv-build-rw-code-rw-release-rw)]"
+      }
+    ]
+  },
   "Kusto": {
     "Database": "engineeringdata",
     "QueryConnectionString": "[vault(nethelix-engsrv-kusto-connection-string-query)]"

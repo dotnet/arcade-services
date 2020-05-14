@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Logging;
-using IHostingEnvironment = Microsoft.Extensions.Hosting.IHostingEnvironment;
 
 namespace Maestro.Web
 {
@@ -41,7 +40,7 @@ namespace Maestro.Web
                 .UseContentRoot(Directory.GetCurrentDirectory())
                 .ConfigureAppConfiguration((context, builder) =>
                 {
-                    builder.AddDefaultJsonConfiguration((IHostingEnvironment)context.HostingEnvironment);
+                    builder.AddDefaultJsonConfiguration(context.HostingEnvironment);
                 })
                 .ConfigureLogging(
                     builder =>
@@ -63,7 +62,7 @@ namespace Maestro.Web
                 {
                     hostBuilder.ConfigureAppConfiguration((context, builder) =>
                     {
-                        builder.AddDefaultJsonConfiguration((IHostingEnvironment) context.HostingEnvironment);
+                        builder.AddDefaultJsonConfiguration(context.HostingEnvironment);
                     });
                 }));
         }

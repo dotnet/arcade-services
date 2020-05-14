@@ -19,6 +19,7 @@ using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
 
@@ -43,7 +44,7 @@ namespace SubscriptionActorService.Tests
 
         private string NewBranch;
 
-        public PullRequestActorTests()
+        public PullRequestActorTests(ITestOutputHelper output) : base(output)
         {
             MergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
             RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
@@ -125,6 +126,7 @@ namespace SubscriptionActorService.Tests
                     r => r.CommitUpdatesAsync(
                         TargetRepo,
                         NewBranch ?? InProgressPrHeadBranch,
+                        RemoteFactory.Object,
                         Capture.In(updatedDependencies),
                         It.IsAny<string>()));
             updatedDependencies.Should()
@@ -384,6 +386,10 @@ namespace SubscriptionActorService.Tests
 
         public class ProcessPendingUpdatesAsync : PullRequestActorTests
         {
+            public ProcessPendingUpdatesAsync(ITestOutputHelper output) : base(output)
+            {
+            }
+
             private async Task WhenProcessPendingUpdatesAsyncIsCalled()
             {
                 await Execute(
@@ -517,6 +523,10 @@ namespace SubscriptionActorService.Tests
 
         public class UpdateAssetsAsync : PullRequestActorTests
         {
+            public UpdateAssetsAsync(ITestOutputHelper output) : base(output)
+            {
+            }
+
             private async Task WhenUpdateAssetsAsyncIsCalled(Build forBuild)
             {
                 await Execute(

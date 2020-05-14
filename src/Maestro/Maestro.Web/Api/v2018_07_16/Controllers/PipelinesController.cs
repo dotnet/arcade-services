@@ -125,8 +125,8 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             Data.Models.ReleasePipeline pipeline = await _context.ReleasePipelines
                 .FirstOrDefaultAsync(rp => 
                     rp.PipelineIdentifier == pipelineIdentifier && 
-                    rp.Organization.Equals(organization, StringComparison.OrdinalIgnoreCase) && 
-                    rp.Project.Equals(project, StringComparison.OrdinalIgnoreCase)
+                    rp.Organization == organization && 
+                    rp.Project == project
                 );
 
             // If an release pipeline with same values already exist then do nothing

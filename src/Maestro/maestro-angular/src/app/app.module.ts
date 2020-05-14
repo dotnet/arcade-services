@@ -38,6 +38,7 @@ import { ChannelComponent } from './page/channel/channel.component';
 import { MainComponent } from "./page/main/main.component";
 import { SideBarChannelComponent } from "./widget/side-bar-channel/side-bar-channel.component";
 import { SideBarComponent } from "./widget/side-bar/side-bar.component";
+import { PopIncoherenciesComponent } from './page/build-graph-table/popIncoherencies.component';
 
 import { maestroOptions } from "src/environments/environment";
 import { BuildGraphTableComponent } from './page/build-graph-table/build-graph-table.component';
@@ -78,6 +79,7 @@ import { ChannelGraphComponent } from './page/channel-graph/channel-graph.compon
     SubscriptionsTableComponent,
     ChannelComponent,
     ChannelGraphComponent,
+    PopIncoherenciesComponent
   ],
   imports: [
     BrowserModule,

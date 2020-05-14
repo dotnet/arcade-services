@@ -15,7 +15,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
@@ -126,9 +125,9 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             IRemote verifyRemote = RemoteFactory.GetRemote(_options, repository, Logger);
-            var targetRepository = await verifyRemote.GetRepositoriesAsync(repository);
+            IEnumerable<RepositoryBranch> targetRepository = await verifyRemote.GetRepositoriesAsync(repository);
 
-            if (targetRepository.IsNullOrEmpty())
+            if (targetRepository == null || !targetRepository.Any())
             {
                 Console.WriteLine($"The target repository '{repository}' doesn't have a Maestro installation. Aborting merge policy creation.");
                 return Constants.ErrorCode;
@@ -146,6 +145,11 @@ namespace Microsoft.DotNet.Darc.Operations
                     repository, branch, mergePolicies);
                 Console.WriteLine($"Successfully updated merge policies for {repository}@{branch}.");
                 return Constants.SuccessCode;
+            }
+            catch (AuthenticationException e)
+            {
+                Console.WriteLine(e.Message);
+                return Constants.ErrorCode;
             }
             catch (RestApiException e) when (e.Response.Status == (int) System.Net.HttpStatusCode.BadRequest)
             {

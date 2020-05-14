@@ -13,7 +13,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
@@ -32,8 +31,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         [Required]
         public string MaestroApiEndpoint { get; set; }
-
-        public bool PublishUsingPipelines { get; set; } = false;
 
         private bool IsStableBuild { get; set; } = false;
 
@@ -309,7 +306,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         azureDevOpsBuildNumber: manifest.AzureDevOpsBuildNumber ?? GetAzDevBuildNumber(),
                         azureDevOpsRepository: manifest.AzureDevOpsRepository ?? GetAzDevRepository(),
                         azureDevOpsBranch: manifest.AzureDevOpsBranch ?? GetAzDevBranch(),
-                        publishUsingPipelines: PublishUsingPipelines,
+                        stable: IsStableBuild,
                         released: false)
                     {
                         Assets = assets.ToImmutableList(),
@@ -413,15 +410,27 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     mergedBuild.Commit != build.Commit ||
                     mergedBuild.AzureDevOpsRepository != build.AzureDevOpsRepository)
                 {
-                    throw new Exception("Can't merge if one or more manifests have different branch, build number, commit or repository values.");
+                    throw new Exception("Can't merge if one or more manifests have different branch, build number, commit, or repository values.");
                 }
 
                 mergedBuild.Assets = mergedBuild.Assets.AddRange(build.Assets);
             }
 
-            // Remove duplicated assets based on the top level properties of the asset.
-            // The AssetLocations property isn't set at this point yet.
-            mergedBuild.Assets = mergedBuild.Assets.Distinct(new AssetDataComparer()).ToImmutableList();
+            // Error out for any duplicated assets based on the top level properties of the asset.
+            var distinctAssets = mergedBuild.Assets.Distinct(new AssetDataComparer()).ToImmutableList();
+            if (distinctAssets.Count < mergedBuild.Assets.Count)
+            {
+                var dupes = mergedBuild.Assets.GroupBy(p => p, new AssetDataComparer())
+                      .Where(g => g.Count() > 1)
+                      .Select(g => g.Key)
+                      .ToImmutableList();
+                foreach (var dupe in dupes)
+                {
+                    Log.LogError($"Repeated Asset entry: '{dupe.Name}' - '{dupe.Version}' ");
+                }
+                // throw to stop, as this is invalid.
+                throw new InvalidOperationException("Duplicate entries are not allowed for publishing to BAR, as this can cause race conditions and unexpected behavior");
+            }
 
             LookupForMatchingGitHubRepository(mergedBuild);
 
@@ -431,7 +440,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <summary>
         /// When we flow dependencies we expect source and target repos to be the same i.e github.com or dev.azure.com/dnceng. 
         /// When this task is executed the repository is an Azure DevOps repository even though the real source is GitHub 
-        /// since we just mirror the code. When we detect an Azure DevOps repository we check if the latest commit exist in 
+        /// since we just mirror the code. When we detect an Azure DevOps repository we check if the latest commit exists in 
         /// GitHub to determine if the source is GitHub or not. If the commit exists in the repo we transform the Url from 
         /// Azure DevOps to GitHub. If not we continue to work with the original Url.
         /// </summary>
