@@ -5,7 +5,6 @@
 using Microsoft.DotNet.Darc.Models;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.Work.WebApi;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

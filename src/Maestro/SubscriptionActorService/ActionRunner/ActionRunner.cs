@@ -11,7 +11,6 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Internal;
 using Newtonsoft.Json;
 
 namespace SubscriptionActorService
@@ -86,7 +85,7 @@ namespace SubscriptionActorService
             object[]
                 argumentsForFormat =
                     arguments.ToArray(); // copy the array because formatted log values modifies the array.
-            string actionMessage = new FormattedLogValues(method.MessageFormat, argumentsForFormat).ToString();
+            string actionMessage = FormattableStringFormatter.Format(method.MessageFormat, argumentsForFormat);
 
             using (Logger.BeginScope(method.MessageFormat, argumentsForFormat))
             {
@@ -152,6 +151,42 @@ namespace SubscriptionActorService
             }
 
             throw new NotImplementedException();
+        }
+    }
+
+    public static class FormattableStringFormatter
+    {
+        private class FormattingLogger : ILogger, IDisposable
+        {
+            public string LastLog;
+            public string LastScope;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+            {
+                LastLog = formatter(state, exception);
+            }
+
+            public bool IsEnabled(LogLevel logLevel)
+            {
+                return true;
+            }
+
+            public IDisposable BeginScope<TState>(TState state)
+            {
+                LastScope = state.ToString();
+                return this;
+            }
+
+            public void Dispose()
+            {
+            }
+        }
+
+        public static string Format(string logFormatString, object[] args)
+        {
+            var logger = new FormattingLogger();
+            logger.Log(LogLevel.Error, logFormatString, args);
+            return logger.LastLog;
         }
     }
 }

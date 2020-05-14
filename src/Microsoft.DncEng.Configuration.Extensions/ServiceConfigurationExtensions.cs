@@ -8,11 +8,7 @@ using Azure.Identity;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-#if NETCOREAPP2_1
-using IHostEnvironment = Microsoft.Extensions.Hosting.IHostingEnvironment;
-#else
 using IHostEnvironment = Microsoft.Extensions.Hosting.IHostEnvironment;
-#endif
 
 namespace Microsoft.DncEng.Configuration.Extensions
 {

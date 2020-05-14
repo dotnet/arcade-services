@@ -9,7 +9,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.Common;
 using NuGet.Packaging;
 using System;
 using System.Collections.Concurrent;
@@ -122,7 +121,7 @@ namespace Microsoft.DotNet.Darc.Operations
                         await CoherencyUpdatesAsync(barOnlyRemote, remoteFactory, currentDependencies, dependenciesToUpdate)
                             .ConfigureAwait(false);
 
-                        finalMessage = finalMessage.IsNullOrEmpty() ? "Local dependencies successfully updated." : finalMessage;
+                        finalMessage = string.IsNullOrEmpty(finalMessage) ? "Local dependencies successfully updated." : finalMessage;
                     }
                     catch (RestApiException e) when (e.Response.Status == 404)
                     {
