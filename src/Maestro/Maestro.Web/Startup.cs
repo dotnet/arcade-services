@@ -370,7 +370,6 @@ namespace Maestro.Web
                 app.MapWhen(ctx => ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _),
                     a =>
                     {
-                        a.UseRouting();
                         a.UseEndpoints(e =>
                         {
                             e.MapControllers();
@@ -474,6 +473,8 @@ namespace Maestro.Web
         {
             app.UseRewriter(new RewriteOptions().AddRewrite(".*", "Index", true));
             app.UseRouting();
+            app.UseAuthentication();
+            app.UseAuthorization();
             app.UseEndpoints(e => { e.MapRazorPages(); });
         }
     }
