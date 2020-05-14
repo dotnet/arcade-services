@@ -15,10 +15,7 @@ using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
-using Microsoft.DotNet.Services.Utility;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions.Internal;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.ServiceFabric.Data;
@@ -193,7 +190,7 @@ namespace SubscriptionActorService
             DarcRemoteFactory = darcFactory;
             ActionRunner = actionRunner;
             SubscriptionActorFactory = subscriptionActorFactory;
-            Logger = loggerFactory.CreateLogger(TypeNameHelper.GetTypeDisplayName(GetType()));
+            Logger = loggerFactory.CreateLogger(GetType());
         }
 
         public ILogger Logger { get; }
@@ -257,7 +254,7 @@ namespace SubscriptionActorService
         /// <returns>Build</returns>
         private Task<Build> GetBuildAsync(int buildId)
         {
-            return Context.Builds.FindAsync(buildId);
+            return Context.Builds.FindAsync(buildId).AsTask();
         }
 
         public Task RunProcessPendingUpdatesAsync()
@@ -914,11 +911,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             {
                 message.AppendLine("Dependency coherency updates");
                 message.AppendLine();
-
-                foreach (DependencyUpdate dep in deps)
-                {
-                    message.AppendLine($"- {dep.To.Name}: {dep.From.Version} -> {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
-                }
+                message.AppendLine(string.Join(",", deps.Select(p => p.To.Name)));
+                message.AppendLine($" From Version {deps[0].From.Version} -> To Version {deps[0].To.Version} (parent: {deps[0].To.CoherentParentDependencyName}");
             }
             else
             {
@@ -926,11 +920,8 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 Build build = await GetBuildAsync(update.BuildId);
                 message.AppendLine($"Update dependencies from {sourceRepository} build {build.AzureDevOpsBuildNumber}");
                 message.AppendLine();
-
-                foreach (DependencyUpdate dep in deps)
-                {
-                    message.AppendLine($"- {dep.To.Name}: {dep.From.Version} -> {dep.To.Version}");
-                }
+                message.AppendLine(string.Join(" , ", deps.Select(p => p.To.Name)));
+                message.AppendLine($" From Version {deps[0].From.Version} -> To Version {deps[0].To.Version}");
             }
 
             message.AppendLine();

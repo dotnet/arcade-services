@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -12,7 +11,6 @@ using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Octokit;
 
 namespace Microsoft.DotNet.Web.Authentication.GitHub
 {
@@ -26,7 +24,6 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
                 scheme,
                 options =>
                 {
-
                     options.Events = new OAuthEvents
                     {
                         OnCreatingTicket = async context =>

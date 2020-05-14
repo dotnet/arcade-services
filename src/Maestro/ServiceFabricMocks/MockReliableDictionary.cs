@@ -282,17 +282,17 @@ namespace ServiceFabricMocks
             return Task.FromResult((long) dictionary.Count);
         }
 
-        public Task<IAsyncEnumerable<TKey>> CreateKeyEnumerableAsync(ITransaction txn)
+        public Task<Microsoft.ServiceFabric.Data.IAsyncEnumerable<TKey>> CreateKeyEnumerableAsync(ITransaction txn)
         {
             throw new NotImplementedException();
         }
 
-        public Task<IAsyncEnumerable<TKey>> CreateKeyEnumerableAsync(ITransaction txn, EnumerationMode enumerationMode)
+        public Task<Microsoft.ServiceFabric.Data.IAsyncEnumerable<TKey>> CreateKeyEnumerableAsync(ITransaction txn, EnumerationMode enumerationMode)
         {
             throw new NotImplementedException();
         }
 
-        public Task<IAsyncEnumerable<TKey>> CreateKeyEnumerableAsync(
+        public Task<Microsoft.ServiceFabric.Data.IAsyncEnumerable<TKey>> CreateKeyEnumerableAsync(
             ITransaction txn,
             EnumerationMode enumerationMode,
             TimeSpan timeout,
@@ -301,31 +301,31 @@ namespace ServiceFabricMocks
             throw new NotImplementedException();
         }
 
-        Task<IAsyncEnumerable<KeyValuePair<TKey, TValue>>> IReliableDictionary<TKey, TValue>.CreateEnumerableAsync(
+        Task<Microsoft.ServiceFabric.Data.IAsyncEnumerable<KeyValuePair<TKey, TValue>>> IReliableDictionary<TKey, TValue>.CreateEnumerableAsync(
             ITransaction txn)
         {
-            return Task.FromResult<IAsyncEnumerable<KeyValuePair<TKey, TValue>>>(
-                new MockAsyncEnumerable<KeyValuePair<TKey, TValue>>(dictionary));
+            return Task.FromResult<Microsoft.ServiceFabric.Data.IAsyncEnumerable<KeyValuePair<TKey, TValue>>>(
+                new SyncAsyncEnumerable<KeyValuePair<TKey, TValue>>(dictionary));
         }
 
-        Task<IAsyncEnumerable<KeyValuePair<TKey, TValue>>> IReliableDictionary<TKey, TValue>.CreateEnumerableAsync(
+        Task<Microsoft.ServiceFabric.Data.IAsyncEnumerable<KeyValuePair<TKey, TValue>>> IReliableDictionary<TKey, TValue>.CreateEnumerableAsync(
             ITransaction txn,
             EnumerationMode enumerationMode)
         {
-            return Task.FromResult<IAsyncEnumerable<KeyValuePair<TKey, TValue>>>(
-                new MockAsyncEnumerable<KeyValuePair<TKey, TValue>>(
+            return Task.FromResult<Microsoft.ServiceFabric.Data.IAsyncEnumerable<KeyValuePair<TKey, TValue>>>(
+                new SyncAsyncEnumerable<KeyValuePair<TKey, TValue>>(
                     enumerationMode == EnumerationMode.Unordered
                         ? (IEnumerable<KeyValuePair<TKey, TValue>>) dictionary
                         : dictionary.OrderBy(x => x.Key)));
         }
 
-        Task<IAsyncEnumerable<KeyValuePair<TKey, TValue>>> IReliableDictionary<TKey, TValue>.CreateEnumerableAsync(
+        Task<Microsoft.ServiceFabric.Data.IAsyncEnumerable<KeyValuePair<TKey, TValue>>> IReliableDictionary<TKey, TValue>.CreateEnumerableAsync(
             ITransaction txn,
             Func<TKey, bool> filter,
             EnumerationMode enumerationMode)
         {
-            return Task.FromResult<IAsyncEnumerable<KeyValuePair<TKey, TValue>>>(
-                new MockAsyncEnumerable<KeyValuePair<TKey, TValue>>(
+            return Task.FromResult<Microsoft.ServiceFabric.Data.IAsyncEnumerable<KeyValuePair<TKey, TValue>>>(
+                new SyncAsyncEnumerable<KeyValuePair<TKey, TValue>>(
                     enumerationMode == EnumerationMode.Unordered
                         ? dictionary.Where(x => filter(x.Key))
                         : dictionary.Where(x => filter(x.Key)).OrderBy(x => x.Key)));

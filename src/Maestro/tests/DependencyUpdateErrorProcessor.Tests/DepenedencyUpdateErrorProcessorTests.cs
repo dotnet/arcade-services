@@ -3,11 +3,11 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Data;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.Extensions.Hosting;
 using Moq;
 using Octokit;
 using ServiceFabricMocks;
@@ -17,7 +17,7 @@ namespace DependencyUpdateErrorProcessor.Tests
     public class DependencyUpdateErrorProcessorTests : IDisposable
     {
         private readonly Lazy<TestBuildAssetRegistryContext> _context;
-        protected readonly Mock<IHostingEnvironment> Env;
+        protected readonly Mock<IHostEnvironment> Env;
         protected readonly ServiceProvider Provider;
         protected readonly IServiceScope Scope;
         protected readonly MockReliableStateManager StateManager;
@@ -28,7 +28,7 @@ namespace DependencyUpdateErrorProcessor.Tests
         {
             var services = new ServiceCollection();
             StateManager = new MockReliableStateManager();
-            Env = new Mock<IHostingEnvironment>(MockBehavior.Strict);
+            Env = new Mock<IHostEnvironment>(MockBehavior.Strict);
             GithubClient = new Mock<IGitHubClient>();
             GithubClientFactory = new Mock<IGitHubClientFactory>();
             GithubClientFactory.Setup(x => x.CreateGitHubClientAsync(It.IsAny<string>(), It.IsAny<string>()))
@@ -37,7 +37,11 @@ namespace DependencyUpdateErrorProcessor.Tests
             services.AddSingleton<IReliableStateManager>(StateManager);
             services.AddLogging();
             services.AddDbContext<TestBuildAssetRegistryContext>(
-                options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
+                options =>
+                {
+                    options.UseInMemoryDatabase("BuildAssetRegistry");
+                    options.EnableServiceProviderCaching(false);
+                });
             services.AddSingleton(GithubClientFactory.Object);
             services.Configure<DependencyUpdateErrorProcessorOptions>(
                 (options) =>

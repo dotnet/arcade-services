@@ -5,7 +5,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.ServiceFabric.Data;
 
 namespace ServiceFabricMocks
 {
@@ -13,18 +12,18 @@ namespace ServiceFabricMocks
     ///     Simple wrapper for a synchronous IEnumerable of T.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    internal class MockAsyncEnumerable<T> : IAsyncEnumerable<T>
+    internal class SyncAsyncEnumerable<T> : Microsoft.ServiceFabric.Data.IAsyncEnumerable<T>
     {
         private readonly IEnumerable<T> enumerable;
 
-        public MockAsyncEnumerable(IEnumerable<T> enumerable)
+        public SyncAsyncEnumerable(IEnumerable<T> enumerable)
         {
             this.enumerable = enumerable;
         }
 
-        public IAsyncEnumerator<T> GetAsyncEnumerator()
+        public Microsoft.ServiceFabric.Data.IAsyncEnumerator<T> GetAsyncEnumerator()
         {
-            return new MockAsyncEnumerator<T>(enumerable.GetEnumerator());
+            return new SyncAsyncEnumerator<T>(enumerable.GetEnumerator());
         }
     }
 
@@ -32,11 +31,11 @@ namespace ServiceFabricMocks
     ///     Simply wrapper for a synchronous IEnumerator of T.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    internal class MockAsyncEnumerator<T> : IAsyncEnumerator<T>
+    internal class SyncAsyncEnumerator<T> : Microsoft.ServiceFabric.Data.IAsyncEnumerator<T>
     {
         private readonly IEnumerator<T> enumerator;
 
-        public MockAsyncEnumerator(IEnumerator<T> enumerator)
+        public SyncAsyncEnumerator(IEnumerator<T> enumerator)
         {
             this.enumerator = enumerator;
         }

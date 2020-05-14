@@ -105,7 +105,7 @@ namespace Maestro.DataProviders
 
             if (!string.IsNullOrEmpty(channel))
             {
-                query = query.Where(dc => dc.Channel.Name.Equals(channel, StringComparison.OrdinalIgnoreCase));
+                query = query.Where(dc => dc.Channel.Name == channel);
             }
 
             var defaultChannels = await query.ToListAsync();
