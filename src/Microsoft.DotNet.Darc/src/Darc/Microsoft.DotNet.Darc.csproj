@@ -13,14 +13,6 @@
     <DebugType>Full</DebugType>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp2.1'">
-    <ProjectReference Include="..\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" AdditionalProperties="TargetFramework=netstandard2.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp3.0'">
-    <ProjectReference Include="..\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" AdditionalProperties="TargetFramework=netstandard2.1" />
-  </ItemGroup>
-
   <ItemGroup>
     <ProjectReference Include="..\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
   </ItemGroup>

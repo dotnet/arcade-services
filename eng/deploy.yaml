@@ -279,7 +279,7 @@ stages:
       displayName: Install Correct .NET Version
       inputs:
         useGlobalJson: true
-    - script: dotnet publish $(Build.SourcesDirectory)\src\Monitoring\Sdk\Microsoft.DotNet.Monitoring.Sdk.csproj -f netcoreapp2.1
+    - script: dotnet publish $(Build.SourcesDirectory)\src\Monitoring\Sdk\Microsoft.DotNet.Monitoring.Sdk.csproj -f netcoreapp3.1
     - script: dotnet build $(Build.SourcesDirectory)\src\Monitoring\Monitoring.ArcadeServices\Monitoring.ArcadeServices.proj -t:PublishGrafana -p:GrafanaAccessToken=$(grafana-admin-api-key) -p:GrafanaHost=$(GrafanaHost) -p:GrafanaKeyVaultName=$(GrafanaKeyVault) -p:GrafanaKeyVaultAppId=2bdfceef-194a-4775-99d9-b5575c77bc6b -p:GrafanaKeyVaultAppSecret=$(key-vault-app-secret) -p:GrafanaEnvironment=$(DeploymentEnvironment) -v:normal
 
 - stage: validateDeployment
