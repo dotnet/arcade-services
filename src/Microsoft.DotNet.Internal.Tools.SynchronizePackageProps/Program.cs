@@ -52,6 +52,11 @@ namespace Microsoft.DotNet.Internal.Tools.SynchronizePackageProps
                 dir = Path.GetFullPath(args[0]);
             }
 
+            if (string.IsNullOrEmpty(dir))
+            {
+                dir = Environment.CurrentDirectory;
+            }
+
             string engDir = dir;
             string packageFile = Path.Combine(engDir, "Packages.props");
             if (!File.Exists(packageFile))
