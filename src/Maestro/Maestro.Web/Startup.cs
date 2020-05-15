@@ -308,6 +308,18 @@ namespace Maestro.Web
                     a => { a.Run(ApiRedirectHandler); });
             }
 
+            app.Use(
+                (ctx, next) =>
+                {
+                    if (ctx.Request.Path == "/api/swagger.json")
+                    {
+                        var vcp = ctx.RequestServices.GetRequiredService<VersionedControllerProvider>();
+                        string highestVersion = vcp.Versions.Keys.OrderByDescending(n => n).First();
+                        ctx.Request.Path = $"/api/{highestVersion}/swagger.json";
+                    }
+
+                    return next();
+                });
             app.UseSwagger(
                 options =>
                 {
@@ -337,19 +349,6 @@ namespace Maestro.Web
                 e.MapRazorPages();
                 e.MapControllers();
             });
-
-            app.Use(
-                (ctx, next) =>
-                {
-                    if (ctx.Request.Path == "/api/swagger.json")
-                    {
-                        var vcp = ctx.RequestServices.GetRequiredService<VersionedControllerProvider>();
-                        string highestVersion = vcp.Versions.Keys.OrderByDescending(n => n).First();
-                        ctx.Request.Path = $"/api/{highestVersion}/swagger.json";
-                    }
-
-                    return next();
-                });
         }
 
         // The whole api, only allowing GET requests, with all urls prefixed with _
@@ -357,35 +356,26 @@ namespace Maestro.Web
         {
             app.UseExceptionHandler(ConfigureApiExceptions);
 
+            app.MapWhen(ctx => DoApiRedirect && !ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _),
+                redirectedApp =>
+                {
+                    app.UseRouting();
+                    app.UseAuthentication();
+                    app.UseAuthorization();
+
+                    app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
+                    app.Run(ApiRedirectHandler);
+                });
+
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
-
-            // Redirect the entire cookie-authed api if it is in settings.
-            if (DoApiRedirect)
+            app.UseEndpoints(e =>
             {
-                // when told to not redirect by the request, don't do it.
-                app.MapWhen(ctx => ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _),
-                    a =>
-                    {
-                        a.UseEndpoints(e =>
-                        {
-                            e.MapControllers();
-                        });
-                    });
-
-                app.Run(ApiRedirectHandler);
-            }
-            else
-            {
-                app.UseEndpoints(e =>
-                {
-                    e.MapControllers();
-                });
-            }
-
+                e.MapControllers();
+            });
         }
 
         private static bool IsGet(HttpContext context)
