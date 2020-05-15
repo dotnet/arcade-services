@@ -43,12 +43,11 @@ namespace Maestro.Web
                 .AddEntityFrameworkStores<BuildAssetRegistryContext>();
             
             services.AddAuthentication(options =>
-                {
-                    options.DefaultScheme = "Contextual";
-                    options.DefaultChallengeScheme = null;
-                    options.DefaultAuthenticateScheme = null;
-                    options.DefaultSignInScheme = null;
-                })
+                    {
+                        // The "AddIdentity" above messed with these, so we need to re-mess with them.
+                        options.DefaultChallengeScheme = options.DefaultAuthenticateScheme =
+                            options.DefaultSignInScheme = options.DefaultScheme = "Contextual";
+                    })
                 .AddPolicyScheme("Contextual","Contextual",
                     policyOptions => { policyOptions.ForwardDefaultSelector = ctx => ctx.Request.Path.StartsWithSegments("/api") ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme; })
                 .AddGitHubOAuth(Configuration.GetSection("GitHubAuthentication"), GitHubScheme)
