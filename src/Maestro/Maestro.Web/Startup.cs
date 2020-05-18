@@ -46,6 +46,7 @@ using Microsoft.DotNet.Kusto;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace Maestro.Web
@@ -82,9 +83,7 @@ namespace Maestro.Web
                     if (hasAssetsWithPublishedLocations || ReposWithoutAssetLocationAllowList.Contains(build.GitHubRepository))
                     {
                         var queue = context.GetService<BackgroundQueue>();
-                        var dependencyUpdater = context.GetService<IDependencyUpdater>();
-
-                        queue.Post(() => dependencyUpdater.StartUpdateDependenciesAsync(entity.BuildId, entity.ChannelId));
+                        queue.Post<StartDependencyUpdate>(StartDependencyUpdate.CreateArgs(entity));
                     }
                     else
                     {
@@ -92,6 +91,33 @@ namespace Maestro.Web
                     }
                 }
             };
+        }
+
+        private class StartDependencyUpdate : IBackgroundWorkItem
+        {
+            private readonly IDependencyUpdater _updater;
+
+            public StartDependencyUpdate(IDependencyUpdater updater)
+            {
+                _updater = updater;
+            }
+
+            public Task ProcessAsync(JToken argumentToken)
+            {
+                var argVal = argumentToken.ToObject<Arguments>();
+                return _updater.StartUpdateDependenciesAsync(argVal.BuildId, argVal.ChannelId);
+            }
+
+            public static JToken CreateArgs(BuildChannel channel)
+            {
+                return JToken.FromObject(new Arguments {BuildId = channel.BuildId, ChannelId = channel.ChannelId});
+            }
+
+            private struct Arguments
+            {
+                public int BuildId;
+                public int ChannelId;
+            }
         }
 
         public Startup(IConfiguration configuration, IHostEnvironment env)

@@ -115,20 +115,10 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         [ValidateModelState]
         public override async Task<IActionResult> TriggerSubscription(Guid id)
         {
-            Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
-                .Include(sub => sub.Channel)
-                .FirstOrDefaultAsync(sub => sub.Id == id);
+            Data.Models.Subscription subscription = await TriggerSubscriptionCore(id);
 
             if (subscription == null)
-            {
                 return NotFound();
-            }
-
-            _queue.Post(
-                async () =>
-                {
-                    await _dependencyUpdater.StartSubscriptionUpdateAsync(id);
-                });
 
             return Accepted(new Subscription(subscription));
         }

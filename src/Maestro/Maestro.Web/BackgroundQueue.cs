@@ -6,26 +6,43 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Maestro.Web
 {
+    public interface IBackgroundWorkItem
+    {
+        Task ProcessAsync(JToken argumentToken);
+    }
+
     public class BackgroundQueue : BackgroundService
     {
-        private readonly BlockingCollection<Func<Task>> _workItems = new BlockingCollection<Func<Task>>();
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly BlockingCollection<(Type type, JToken args)> _workItems = new BlockingCollection<(Type type, JToken args)>();
 
-        public BackgroundQueue(ILogger<BackgroundQueue> logger)
+        public BackgroundQueue(IServiceScopeFactory scopeFactory,
+            ILogger<BackgroundQueue> logger)
         {
+            _scopeFactory = scopeFactory;
             Logger = logger;
         }
 
         public ILogger<BackgroundQueue> Logger { get; }
 
-        public void Post(Func<Task> workItem)
+        public void Post<T>() where T : IBackgroundWorkItem
         {
-            Logger.LogInformation($"Posted work to BackgroundQueue: {workItem}");
-            _workItems.Add(workItem);
+            Post<T>("");
+        }
+
+        public void Post<T>(JToken args) where T : IBackgroundWorkItem
+        {
+            Logger.LogInformation(
+                $"Posted work to BackgroundQueue: {typeof(T).Name}.ProcessAsync({args.ToString(Formatting.None)})");
+            _workItems.Add((typeof(T), args));
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -45,14 +62,15 @@ namespace Maestro.Web
                                 _workItems.CompleteAdding();
                             }
 
-                            _workItems.TryTake(out Func<Task> item, 1000);
-                            if (item != null)
+                            if (_workItems.TryTake(out (Type type, JToken args) item, 1000))
                             {
-                                using (Logger.BeginScope("Executing background work: {item}", item.ToString()))
+                                using (Logger.BeginScope("Executing background work: {item} ({args})", item.type.Name, item.args.ToString(Formatting.None)))
+                                using (IServiceScope scope = _scopeFactory.CreateScope())
                                 {
                                     try
                                     {
-                                        await item();
+                                        var instance = (IBackgroundWorkItem) ActivatorUtilities.CreateInstance(scope.ServiceProvider, item.type);
+                                        await instance.ProcessAsync(item.args);
                                     }
                                     catch (Exception ex)
                                     {
