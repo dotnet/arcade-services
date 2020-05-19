@@ -13,12 +13,12 @@ namespace Maestro.Data
             _scopeFactory = scopeFactory;
         }
 
-        public Task<long> GetInstallationId(string repositoryUrl)
+        public async Task<long> GetInstallationId(string repositoryUrl)
         {
             using (var scope = _scopeFactory.CreateScope())
             {
                 var ctx = scope.ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
-                return ctx.GetInstallationId(repositoryUrl);
+                return await ctx.GetInstallationId(repositoryUrl);
             }
         }
     }
