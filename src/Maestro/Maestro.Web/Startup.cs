@@ -44,6 +44,7 @@ using Newtonsoft.Json;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -263,6 +264,8 @@ namespace Maestro.Web
 
             services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
             services.AddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
+
+            services.EnableLazy();
 
             services.AddMergePolicies();
 
