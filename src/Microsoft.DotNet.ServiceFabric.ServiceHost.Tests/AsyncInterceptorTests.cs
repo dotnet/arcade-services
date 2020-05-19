@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Castle.DynamicProxy;
 using Moq;
@@ -36,16 +38,18 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 (object) null,
                 interceptor.Object);
 
-            var returned = impl.GetType().GetMethod(method).Invoke(impl, args);
+            MethodInfo methodInfo = impl.GetType().GetMethod(method);
+            var returned = methodInfo.Invoke(impl, args);
             if (!ReferenceEquals(retValue, typeof(void)))
             {
                 Assert.Equal(retValue, returned);
             }
 
-            interceptor.Verify(i =>
-                    i.Intercept(It.Is<IInvocation>(inv => inv.Method == typeof(IInter).GetMethod(nameof(method)))),
+            interceptor.Verify(
+                i => i.Intercept(It.Is<IInvocation>(inv => inv.Method == typeof(AsyncInterceptor).GetMethod(nameof(AsyncInterceptor.Intercept)))),
                 Times.Once
             );
+
             interceptor.VerifyNoOtherCalls();
         }
 
