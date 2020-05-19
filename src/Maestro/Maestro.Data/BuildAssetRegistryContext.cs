@@ -62,8 +62,6 @@ namespace Maestro.Data
         public DbSet<Build> Builds { get; set; }
         public DbSet<BuildChannel> BuildChannels { get; set; }
         public DbSet<BuildDependency> BuildDependencies { get; set; }
-        public DbSet<ChannelReleasePipeline> ChannelReleasePipelines { get; set; }
-        public DbSet<ReleasePipeline> ReleasePipelines { get; set; }
         public DbSet<Channel> Channels { get; set; }
         public DbSet<DefaultChannel> DefaultChannels { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
@@ -164,21 +162,6 @@ FOR SYSTEM_TIME ALL
                 .HasOne(d => d.DependentBuild)
                 .WithMany()
                 .HasForeignKey(d => d.DependentBuildId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<ChannelReleasePipeline>()
-                .HasKey(crp => new {crp.ChannelId, crp.ReleasePipelineId});
-
-            builder.Entity<ChannelReleasePipeline>()
-                .HasOne(crp => crp.Channel)
-                .WithMany(c => c.ChannelReleasePipelines)
-                .HasForeignKey(rcp => rcp.ChannelId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder.Entity<ChannelReleasePipeline>()
-                .HasOne(crp => crp.ReleasePipeline)
-                .WithMany(rp => rp.ChannelReleasePipelines)
-                .HasForeignKey(crp => crp.ReleasePipelineId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<ApplicationUserPersonalAccessToken>()
