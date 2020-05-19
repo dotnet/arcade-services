@@ -425,7 +425,7 @@ namespace Microsoft.DotNet.DarcLib
             string testPath)
         {
             List<DependencyDetail> rootDependencyList = rootDependencies?.ToList();
-            List<string> remotesList = remotesMap.ToList();
+            List<string> remotesList = remotesMap?.ToList();
             ValidateBuildOptions(remoteFactory,
                 rootDependencyList,
                 repoUri,
