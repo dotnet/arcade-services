@@ -245,8 +245,6 @@ namespace Maestro.DataProviders
         public async Task<Channel> GetChannelAsync(int channelId)
         {
             Data.Models.Channel channel = await _context.Channels
-                .Include(ch => ch.ChannelReleasePipelines)
-                .ThenInclude(crp => crp.ReleasePipeline)
                 .Where(c => c.Id == channelId).FirstOrDefaultAsync();
 
             if (channel != null)
