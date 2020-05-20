@@ -171,6 +171,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotNet.Status.Web.Tests", "
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Web.Authentication.Tests", "src\Shared\Microsoft.DotNet.Web.Authentication.Tests\Microsoft.DotNet.Web.Authentication.Tests.csproj", "{EF010671-D397-4EE0-8CA8-1893E4A1C68D}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DotNet.Status.Web.Tests2", "src\DotNet.Status.Web\tests\DotNet.Status.Web.Tests\DotNet.Status.Web.Tests.csproj", "{FCD1E831-A9F2-4448-89B2-D0F8C94DDD27}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -887,6 +889,20 @@ Global
 		{EF010671-D397-4EE0-8CA8-1893E4A1C68D}.Release|x64.Build.0 = Release|Any CPU
 		{EF010671-D397-4EE0-8CA8-1893E4A1C68D}.Release|x86.ActiveCfg = Release|Any CPU
 		{EF010671-D397-4EE0-8CA8-1893E4A1C68D}.Release|x86.Build.0 = Release|Any CPU
+
+		{FCD1E831-A9F2-4448-89B2-D0F8C94DDD27}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCD1E831-A9F2-4448-89B2-D0F8C94DDD27}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCD1E831-A9F2-4448-89B2-D0F8C94DDD27}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{FCD1E831-A9F2-4448-89B2-D0F8C94DDD27}.Debug|x64.Build.0 = Debug|Any CPU
+		{FCD1E831-A9F2-4448-89B2-D0F8C94DDD27}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FCD1E831-A9F2-4448-89B2-D0F8C94DDD27}.Debug|x86.Build.0 = Debug|Any CPU
+		{FCD1E831-A9F2-4448-89B2-D0F8C94DDD27}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCD1E831-A9F2-4448-89B2-D0F8C94DDD27}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FCD1E831-A9F2-4448-89B2-D0F8C94DDD27}.Release|x64.ActiveCfg = Release|Any CPU
+		{FCD1E831-A9F2-4448-89B2-D0F8C94DDD27}.Release|x64.Build.0 = Release|Any CPU
+		{FCD1E831-A9F2-4448-89B2-D0F8C94DDD27}.Release|x86.ActiveCfg = Release|Any CPU
+		{FCD1E831-A9F2-4448-89B2-D0F8C94DDD27}.Release|x86.Build.0 = Release|Any CPU
+
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

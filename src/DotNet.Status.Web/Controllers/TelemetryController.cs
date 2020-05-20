@@ -16,6 +16,7 @@ namespace DotNet.Status.Web.Controllers
     {
         private readonly ILogger<TelemetryController> _logger;
         private readonly IOptionsSnapshot<TelemetryOptions> _options;
+<<<<<<< HEAD
         private readonly IKustoIngestClient _client;
 
         public TelemetryController(
@@ -40,6 +41,38 @@ namespace DotNet.Status.Web.Controllers
             }
 
             IKustoIngestClient ingest = _client ?? KustoIngestFactory.CreateQueuedIngestClient(options.KustoIngestConnectionString);
+=======
+
+        public TelemetryController(
+            ILogger<TelemetryController> logger,
+            IOptionsSnapshot<TelemetryOptions> options)
+        {
+            _logger = logger;
+            _options = options;
+        }
+
+        [HttpGet("bleh")]
+        public IActionResult Test()
+        {
+            return Ok("blerg");
+        }
+
+        [HttpPost("collect/ArcadeValidation")]
+        public async Task<IActionResult> CollectArcadeValidation([Required] ArcadeValidationData data)
+        {
+            _logger.LogInformation("");
+
+            TelemetryOptions options = _options.Value;
+
+            if (string.IsNullOrEmpty(options.KustoIngestConnectionString))
+            {
+                _logger.LogError("No KustoIngestConnectionString set");
+                return BadRequest();
+            }
+
+            IKustoIngestClient ingest =
+                KustoIngestFactory.CreateQueuedIngestClient(options.KustoIngestConnectionString);
+>>>>>>> Initial commit for new API and test project
 
             List<ArcadeValidationData> arcadeValidationDatas = new List<ArcadeValidationData>{ data };
 
@@ -62,7 +95,11 @@ namespace DotNet.Status.Web.Controllers
                     new KustoValue("ArcadeDiffLink", b.ArcadeDiffLink, KustoDataTypes.String)
                 });
 
+<<<<<<< HEAD
             return Ok();
+=======
+            return NoContent();
+>>>>>>> Initial commit for new API and test project
         }
     }
 }
