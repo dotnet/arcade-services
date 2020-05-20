@@ -11,27 +11,25 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
         [Fact]
         public async Task TestVoidNoArg()
         {
-            await TestInterception((impl, target) =>
-            {
-                impl.VoidNoArgs();
-                Assert.Equal(0, target.IntParam);
-                Assert.Null(target.StringParam);
-                Assert.Equal(1, target.CallCount);
-                return Task.CompletedTask;
-            });
+            await Assert.ThrowsAsync<NotSupportedException>(() =>
+                TestInterception((impl, target) =>
+                {
+                    impl.VoidNoArgs();
+                    return Task.CompletedTask;
+                })
+            );
         }
 
         [Fact]
         public async Task TestVoidArgs()
         {
-            await TestInterception((impl, target) =>
-            {
-                impl.VoidArgs(123, "TestParam");
-                Assert.Equal(123, target.IntParam);
-                Assert.Equal("TestParam", target.StringParam);
-                Assert.Equal(1, target.CallCount);
-                return Task.CompletedTask;
-            });
+            await Assert.ThrowsAsync<NotSupportedException>(() =>
+                TestInterception((impl, target) =>
+                {
+                    impl.VoidArgs(123, "TestParam");
+                    return Task.CompletedTask;
+                })
+            );
         }
 
         [Fact]
@@ -160,13 +158,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 
         private static async Task TestInterception(Func<IInter, Inter, Task> test)
         {
-            var interceptor = new Mock<AsyncInterceptor>();
-            interceptor.Setup(i => i.Intercept(It.IsAny<IInvocation>()))
-                .Callback<IInvocation>(i =>
-                {
-                    i.ReturnValue = i.MethodInvocationTarget.Invoke(i.InvocationTarget, i.Arguments);
-                })
-                .Verifiable();
+            var interceptor = new TestInterceptor();
 
             Inter inter = new Inter();
             var gen = new ProxyGenerator();
@@ -174,13 +166,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 typeof(IInter),
                 new Type[0],
                 inter,
-                interceptor.Object);
+                interceptor);
 
             await test(impl, inter);
 
-            interceptor.Verify(i => i.Intercept(It.IsAny<IInvocation>()), Times.Once);
-
-            interceptor.VerifyNoOtherCalls();
+            Assert.Equal(1, interceptor.Count);
         }
 
         public static object[][] CreateCalls()
@@ -190,6 +180,16 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 new object[] {nameof(IInter.VoidNoArgs), typeof(void), null},
                 new object[] {nameof(IInter.IntNoArgs), Inter.IntReturn, null},
             };
+        }
+
+        public class TestInterceptor : AsyncInterceptor
+        {
+            public int Count = 0;
+            protected override Task<T> InterceptAsync<T>(IInvocation invocation, Func<Task<T>> call)
+            {
+                Count++;
+                return call();
+            }
         }
 
         // ReSharper disable once MemberCanBePrivate.Global This is Mocked, so much be public

@@ -1,5 +1,6 @@
 using System;
 using System.Fabric;
+using System.Reflection;
 using Castle.DynamicProxy;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
@@ -58,8 +59,53 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             client.Flush();
             Assert.Equal(1, telemetryChannel.HitCount);
             Assert.NotNull(telemetryChannel.RequestName);
+            Assert.True(telemetryChannel.RequestSuccess);
             Assert.Contains("IFakeService", telemetryChannel.RequestName, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("service://TestName", telemetryChannel.RequestName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public void InterceptCatchedExceptions()
+        {
+            var telemetryChannel = new FakeChannel();
+            var config = new TelemetryConfiguration("00000000-0000-0000-0000-000000000001", telemetryChannel);
+            var client = new TelemetryClient(config);
+
+            var ctx = new Mock<ServiceContext>(
+                new NodeContext("IGNORED", new NodeId(1, 1), 1, "IGNORED", "IGNORED.test"),
+                Mock.Of<ICodePackageActivationContext>(),
+                "TestService",
+                new Uri("service://TestName"),
+                new byte[0],
+                Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                1);
+
+            Mock<IFakeService> service = new Mock<IFakeService>();
+            service.Setup(s => s.Test()).Throws(new InvalidOperationException("Test Exception Text"));
+            
+            var collection = new ServiceCollection();
+            collection.AddSingleton(client);
+            collection.AddSingleton(ctx.Object);
+            collection.AddSingleton(service.Object);
+            ServiceProvider provider = collection.BuildServiceProvider();
+
+            var gen = new ProxyGenerator();
+            var impl = (IFakeService) gen.CreateInterfaceProxyWithTargetInterface(
+                typeof(IFakeService),
+                new Type[0],
+                (object) null,
+                new InvokeInNewScopeInterceptor<IFakeService>(provider));
+
+            var ex = Assert.ThrowsAny<Exception>(() => impl.Test());
+            Assert.IsAssignableFrom<TargetInvocationException>(ex);
+            Assert.NotNull(ex.InnerException);
+            Assert.IsAssignableFrom<InvalidOperationException>(ex.InnerException);
+            Assert.Equal("Test Exception Text", ex.InnerException.Message);
+
+            client.Flush();
+
+            Assert.False(telemetryChannel.RequestSuccess);
+            Assert.Same(ex.InnerException, telemetryChannel.Exception);
         }
 
         
@@ -87,6 +133,12 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 if (item is RequestTelemetry req)
                 {
                     RequestName = req.Name;
+                    RequestSuccess = req.Success ?? true;
+                }
+
+                if (item is ExceptionTelemetry ex)
+                {
+                    Exception = ex.Exception;
                 }
             }
 
@@ -99,6 +151,9 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 
             public int HitCount { get; private set; }
             public string RequestName { get; private set; }
+            public bool RequestSuccess { get; private set; }
+
+            public Exception Exception { get; private set; }
         }
         
         // ReSharper disable once MemberCanBePrivate.Global This is Proxied, so much be public

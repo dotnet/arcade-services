@@ -38,6 +38,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         public virtual void Intercept(IInvocation invocation)
         {
             Type retType = invocation.Method.ReturnType;
+            if (retType == typeof(void))
+            {
+                throw new NotSupportedException("Void returning methods are not supported");
+            }
+
             if (retType == typeof(Task))
             {
                 invocation.ReturnValue = InterceptAsync(
@@ -110,7 +115,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         protected T Intercept<T>(IInvocation invocation, Func<T> call)
         {
-            // The only asny thing in the code above is the away to this callback
+            // The only asnyc thing in the code above is the away to this callback
             Task<T> task = InterceptAsync(invocation, () => Task.FromResult(call()));
             if (!task.IsCompleted)
             {
