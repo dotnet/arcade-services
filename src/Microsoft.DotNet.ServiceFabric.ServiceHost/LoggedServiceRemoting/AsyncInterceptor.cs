@@ -119,5 +119,23 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
             return task.GetAwaiter().GetResult();
         }
+
+        private Func<Task<T>> MakeCallAsyncMethod<T>(IInvocation invocation)
+        {
+            return () =>
+            {
+                Proceed(invocation);
+                return (Task<T>) invocation.ReturnValue;
+            };
+        }
+
+        private Func<T> MakeCallMethod<T>(IInvocation invocation)
+        {
+            return () =>
+            {
+                Proceed(invocation);
+                return (T) invocation.ReturnValue;
+            };
+        }
     }
 }
