@@ -78,6 +78,7 @@ namespace DotNet.Status.Web
             services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth").Bind);
             services.Configure<ZenHubOptions>(Configuration.GetSection("ZenHub").Bind);
             services.Configure<BuildMonitorOptions>(Configuration.GetSection("BuildMonitor").Bind);
+            services.Configure<TelemetryOptions>(Configuration.GetSection("Telemetry").Bind);
 
             services.Configure<SimpleSigninOptions>(o => { o.ChallengeScheme = GitHubScheme; });
             services.ConfigureExternalCookie(options =>
