@@ -14,30 +14,30 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
         }
 
         [Fact]
-        public void WithoutCancellingNotComplete()
+        public void PostCancellationChangesStateCompleted()
         {
-            CancellationTokenSource source = new CancellationTokenSource();
+            var source = new CancellationTokenSource();
             Task task = source.Token.AsTask();
             Assert.False(task.IsCompleted);
+            source.Cancel();
+            Assert.True(task.IsCompleted);
         }
 
         [Fact]
         public void PreCancelledReturnsCompleted()
         {
-            CancellationTokenSource source = new CancellationTokenSource();
+            var source = new CancellationTokenSource();
             source.Cancel();
             Task task = source.Token.AsTask();
             Assert.True(task.IsCompleted);
         }
 
         [Fact]
-        public void PostCancellationChangesStateCompleted()
+        public void WithoutCancellingNotComplete()
         {
-            CancellationTokenSource source = new CancellationTokenSource();
+            var source = new CancellationTokenSource();
             Task task = source.Token.AsTask();
             Assert.False(task.IsCompleted);
-            source.Cancel();
-            Assert.True(task.IsCompleted);
         }
     }
 }

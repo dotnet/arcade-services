@@ -1,166 +1,17 @@
 using System;
 using System.Threading.Tasks;
 using Castle.DynamicProxy;
-using Moq;
 using Xunit;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 {
     public class AsyncInterceptorTests
     {
-        [Fact]
-        public async Task TestVoidNoArg()
-        {
-            await Assert.ThrowsAsync<NotSupportedException>(() =>
-                TestInterception((impl, target) =>
-                {
-                    impl.VoidNoArgs();
-                    return Task.CompletedTask;
-                })
-            );
-        }
-
-        [Fact]
-        public async Task TestVoidArgs()
-        {
-            await Assert.ThrowsAsync<NotSupportedException>(() =>
-                TestInterception((impl, target) =>
-                {
-                    impl.VoidArgs(123, "TestParam");
-                    return Task.CompletedTask;
-                })
-            );
-        }
-
-        [Fact]
-        public async Task TestIntNoArg()
-        {
-            await TestInterception((impl, target) =>
-            {
-                impl.IntNoArgs();
-                Assert.Equal(0, target.IntParam);
-                Assert.Null(target.StringParam);
-                Assert.Equal(1, target.CallCount);
-                return Task.CompletedTask;
-            });
-        }
-
-        [Fact]
-        public async Task TestIntArg()
-        {
-            await TestInterception((impl, target) =>
-            {
-                Assert.Equal(Inter.IntReturn, impl.IntArgs(123, "TestParam"));
-                Assert.Equal(123, target.IntParam);
-                Assert.Equal("TestParam", target.StringParam);
-                Assert.Equal(1, target.CallCount);
-                return Task.CompletedTask;
-            });
-        }
-
-        [Fact]
-        public async Task TestStringNoArg()
-        {
-            await TestInterception((impl, target) =>
-            {
-                Assert.Equal(Inter.StringReturn, impl.StringNoArgs());
-                Assert.Equal(0, target.IntParam);
-                Assert.Null(target.StringParam);
-                Assert.Equal(1, target.CallCount);
-                return Task.CompletedTask;
-            });
-        }
-
-        [Fact]
-        public async Task TestStringArg()
-        {
-            await TestInterception((impl, target) =>
-            {
-                Assert.Equal(Inter.StringReturn, impl.StringArgs(123, "TestParam"));
-                Assert.Equal(123, target.IntParam);
-                Assert.Equal("TestParam", target.StringParam);
-                Assert.Equal(1, target.CallCount);
-                return Task.CompletedTask;
-            });
-        }
-
-        [Fact]
-        public async Task TestTaskNoArg()
-        {
-            await TestInterception(async (impl, target) =>
-            {
-                await impl.TaskNoArgs();
-                Assert.Equal(0, target.IntParam);
-                Assert.Null(target.StringParam);
-                Assert.Equal(1, target.CallCount);
-            });
-        }
-
-        [Fact]
-        public async Task TestTaskArg()
-        {
-            await TestInterception(async (impl, target) =>
-            {
-                await impl.TaskArgs(123, "TestParam");
-                Assert.Equal(123, target.IntParam);
-                Assert.Equal("TestParam", target.StringParam);
-                Assert.Equal(1, target.CallCount);
-            });
-        }
-
-        [Fact]
-        public async Task TestIntTaskNoArg()
-        {
-            await TestInterception(async (impl, target) =>
-            {
-                Assert.Equal(Inter.IntReturn, await impl.IntTaskNoArgs());
-                Assert.Equal(0, target.IntParam);
-                Assert.Null(target.StringParam);
-                Assert.Equal(1, target.CallCount);
-            });
-        }
-
-        [Fact]
-        public async Task TestIntTaskArg()
-        {
-            await TestInterception(async (impl, target) =>
-            {
-                Assert.Equal(Inter.IntReturn, await impl.IntTaskArgs(123, "TestParam"));
-                Assert.Equal(123, target.IntParam);
-                Assert.Equal("TestParam", target.StringParam);
-                Assert.Equal(1, target.CallCount);
-            });
-        }
-
-        [Fact]
-        public async Task TestStringTaskNoArg()
-        {
-            await TestInterception(async (impl, target) =>
-            {
-                Assert.Equal(Inter.StringReturn, await impl.StringTaskNoArgs());
-                Assert.Equal(0, target.IntParam);
-                Assert.Null(target.StringParam);
-                Assert.Equal(1, target.CallCount);
-            });
-        }
-
-        [Fact]
-        public async Task TestStringTaskArg()
-        {
-            await TestInterception(async (impl, target) =>
-            {
-                Assert.Equal(Inter.StringReturn, await impl.StringTaskArgs(123, "TestParam"));
-                Assert.Equal(123, target.IntParam);
-                Assert.Equal("TestParam", target.StringParam);
-                Assert.Equal(1, target.CallCount);
-            });
-        }
-
         private static async Task TestInterception(Func<IInter, Inter, Task> test)
         {
             var interceptor = new TestInterceptor();
 
-            Inter inter = new Inter();
+            var inter = new Inter();
             var gen = new ProxyGenerator();
             var impl = (IInter) gen.CreateInterfaceProxyWithTargetInterface(
                 typeof(IInter),
@@ -184,7 +35,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 
         public class TestInterceptor : AsyncInterceptor
         {
-            public int Count = 0;
+            public int Count;
+
             protected override Task<T> InterceptAsync<T>(IInvocation invocation, Func<Task<T>> call)
             {
                 Count++;
@@ -208,14 +60,14 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             Task<string> StringTaskNoArgs();
             Task<string> StringTaskArgs(int i, string s);
         }
+
         public class Inter : IInter
         {
+            public const int IntReturn = 483;
+            public const string StringReturn = "8f7ehc";
             public int CallCount;
             public int IntParam;
             public string StringParam;
-
-            public const int IntReturn = 483;
-            public const string StringReturn = "8f7ehc";
 
             public void VoidNoArgs()
             {
@@ -298,6 +150,154 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 StringParam = s;
                 return Task.FromResult(StringReturn);
             }
+        }
+
+        [Fact]
+        public async Task TestIntArg()
+        {
+            await TestInterception((impl, target) =>
+            {
+                Assert.Equal(Inter.IntReturn, impl.IntArgs(123, "TestParam"));
+                Assert.Equal(123, target.IntParam);
+                Assert.Equal("TestParam", target.StringParam);
+                Assert.Equal(1, target.CallCount);
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact]
+        public async Task TestIntNoArg()
+        {
+            await TestInterception((impl, target) =>
+            {
+                impl.IntNoArgs();
+                Assert.Equal(0, target.IntParam);
+                Assert.Null(target.StringParam);
+                Assert.Equal(1, target.CallCount);
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact]
+        public async Task TestIntTaskArg()
+        {
+            await TestInterception(async (impl, target) =>
+            {
+                Assert.Equal(Inter.IntReturn, await impl.IntTaskArgs(123, "TestParam"));
+                Assert.Equal(123, target.IntParam);
+                Assert.Equal("TestParam", target.StringParam);
+                Assert.Equal(1, target.CallCount);
+            });
+        }
+
+        [Fact]
+        public async Task TestIntTaskNoArg()
+        {
+            await TestInterception(async (impl, target) =>
+            {
+                Assert.Equal(Inter.IntReturn, await impl.IntTaskNoArgs());
+                Assert.Equal(0, target.IntParam);
+                Assert.Null(target.StringParam);
+                Assert.Equal(1, target.CallCount);
+            });
+        }
+
+        [Fact]
+        public async Task TestStringArg()
+        {
+            await TestInterception((impl, target) =>
+            {
+                Assert.Equal(Inter.StringReturn, impl.StringArgs(123, "TestParam"));
+                Assert.Equal(123, target.IntParam);
+                Assert.Equal("TestParam", target.StringParam);
+                Assert.Equal(1, target.CallCount);
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact]
+        public async Task TestStringNoArg()
+        {
+            await TestInterception((impl, target) =>
+            {
+                Assert.Equal(Inter.StringReturn, impl.StringNoArgs());
+                Assert.Equal(0, target.IntParam);
+                Assert.Null(target.StringParam);
+                Assert.Equal(1, target.CallCount);
+                return Task.CompletedTask;
+            });
+        }
+
+        [Fact]
+        public async Task TestStringTaskArg()
+        {
+            await TestInterception(async (impl, target) =>
+            {
+                Assert.Equal(Inter.StringReturn, await impl.StringTaskArgs(123, "TestParam"));
+                Assert.Equal(123, target.IntParam);
+                Assert.Equal("TestParam", target.StringParam);
+                Assert.Equal(1, target.CallCount);
+            });
+        }
+
+        [Fact]
+        public async Task TestStringTaskNoArg()
+        {
+            await TestInterception(async (impl, target) =>
+            {
+                Assert.Equal(Inter.StringReturn, await impl.StringTaskNoArgs());
+                Assert.Equal(0, target.IntParam);
+                Assert.Null(target.StringParam);
+                Assert.Equal(1, target.CallCount);
+            });
+        }
+
+        [Fact]
+        public async Task TestTaskArg()
+        {
+            await TestInterception(async (impl, target) =>
+            {
+                await impl.TaskArgs(123, "TestParam");
+                Assert.Equal(123, target.IntParam);
+                Assert.Equal("TestParam", target.StringParam);
+                Assert.Equal(1, target.CallCount);
+            });
+        }
+
+        [Fact]
+        public async Task TestTaskNoArg()
+        {
+            await TestInterception(async (impl, target) =>
+            {
+                await impl.TaskNoArgs();
+                Assert.Equal(0, target.IntParam);
+                Assert.Null(target.StringParam);
+                Assert.Equal(1, target.CallCount);
+            });
+        }
+
+        [Fact]
+        public async Task TestVoidArgs()
+        {
+            await Assert.ThrowsAsync<NotSupportedException>(() =>
+                TestInterception((impl, target) =>
+                {
+                    impl.VoidArgs(123, "TestParam");
+                    return Task.CompletedTask;
+                })
+            );
+        }
+
+        [Fact]
+        public async Task TestVoidNoArg()
+        {
+            await Assert.ThrowsAsync<NotSupportedException>(() =>
+                TestInterception((impl, target) =>
+                {
+                    impl.VoidNoArgs();
+                    return Task.CompletedTask;
+                })
+            );
         }
     }
 }
