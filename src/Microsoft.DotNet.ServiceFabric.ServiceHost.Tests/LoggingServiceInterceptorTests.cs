@@ -6,7 +6,6 @@ using Castle.DynamicProxy;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
-using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using Xunit;
 
@@ -30,7 +29,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 Mock.Of<IFakeService>(),
                 new LoggingServiceInterceptor(ctx.Object, client));
 
-            impl.Test();
+            impl.TestServiceMethod();
             client.Flush();
             RequestTelemetry requestTelemetry = telemetryChannel.Telemetry.OfType<RequestTelemetry>().FirstOrDefault();
             Assert.NotNull(requestTelemetry);
@@ -49,7 +48,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             Mock<ServiceContext> ctx = MockBuilder.MockServiceContext();
 
             Mock<IFakeService> fakeService = new Mock<IFakeService>();
-            fakeService.Setup(s => s.Test()).Throws(new InvalidOperationException("Test Exception Text"));
+            fakeService.Setup(s => s.TestServiceMethod()).Throws(new InvalidOperationException("Test Exception Text"));
 
             var gen = new ProxyGenerator();
             var impl = (IFakeService) gen.CreateInterfaceProxyWithTargetInterface(
@@ -58,11 +57,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 fakeService.Object,
                 new LoggingServiceInterceptor(ctx.Object, client));
             
-            var ex = Assert.ThrowsAny<Exception>(() => impl.Test());
-            Assert.IsAssignableFrom<TargetInvocationException>(ex);
-            Assert.NotNull(ex.InnerException);
-            Assert.IsAssignableFrom<InvalidOperationException>(ex.InnerException);
-            Assert.Equal("Test Exception Text", ex.InnerException.Message);
+            var ex = Assert.ThrowsAny<InvalidOperationException>(() => impl.TestServiceMethod());
+            Assert.Equal("Test Exception Text", ex.Message);
             
             client.Flush();
             RequestTelemetry requestTelemetry = telemetryChannel.Telemetry.OfType<RequestTelemetry>().FirstOrDefault();
@@ -70,7 +66,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             Assert.False(requestTelemetry.Success);
             ExceptionTelemetry exceptionTelemetry = telemetryChannel.Telemetry.OfType<ExceptionTelemetry>().FirstOrDefault();
             Assert.NotNull(exceptionTelemetry);
-            Assert.Same(ex.InnerException, exceptionTelemetry.Exception);
+            Assert.Same(ex, exceptionTelemetry.Exception);
         }
     }
 }

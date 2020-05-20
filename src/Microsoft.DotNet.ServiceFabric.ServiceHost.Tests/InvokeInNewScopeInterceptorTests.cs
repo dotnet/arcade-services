@@ -44,7 +44,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 
             public static int Calls { get; private set; }
 
-            public string Test()
+            public string TestServiceMethod()
             {
                 _action(_thing);
                 Calls++;
@@ -63,7 +63,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             Mock<ServiceContext> ctx = MockBuilder.MockServiceContext();
 
             var service = new Mock<IFakeService>();
-            service.Setup(s => s.Test()).Throws(new InvalidOperationException("Test Exception Text"));
+            service.Setup(s => s.TestServiceMethod()).Throws(new InvalidOperationException("Test Exception Text"));
 
             var collection = new ServiceCollection();
             collection.AddSingleton(client);
@@ -78,11 +78,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 (object) null,
                 new InvokeInNewScopeInterceptor<IFakeService>(provider));
 
-            var ex = Assert.ThrowsAny<Exception>(() => impl.Test());
-            Assert.IsAssignableFrom<TargetInvocationException>(ex);
-            Assert.NotNull(ex.InnerException);
-            Assert.IsAssignableFrom<InvalidOperationException>(ex.InnerException);
-            Assert.Equal("Test Exception Text", ex.InnerException.Message);
+            var ex = Assert.Throws<InvalidOperationException>(() => impl.TestServiceMethod());
+            Assert.Equal("Test Exception Text", ex.Message);
 
             client.Flush();
 
@@ -91,7 +88,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             Assert.False(requestTelemetry.Success);
             ExceptionTelemetry exceptionTelemetry = telemetryChannel.Telemetry.OfType<ExceptionTelemetry>().FirstOrDefault();
             Assert.NotNull(exceptionTelemetry);
-            Assert.Same(ex.InnerException, exceptionTelemetry.Exception);
+            Assert.Same(ex, exceptionTelemetry.Exception);
         }
 
         [Fact]
@@ -122,7 +119,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 (object) null,
                 new InvokeInNewScopeInterceptor<IFakeService>(provider));
 
-            Assert.Equal(FakeService.RetValue, impl.Test());
+            Assert.Equal(FakeService.RetValue, impl.TestServiceMethod());
             Assert.Equal(1, FakeService.Calls);
             Assert.NotNull(innerThing);
 

@@ -5,6 +5,7 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Castle.DynamicProxy;
 
@@ -55,26 +56,42 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             }
             else if (IsTaskOfT(retType, out Type t))
             {
-                invocation.ReturnValue = s_interceptAsyncMethod.MakeGenericMethod(t)
-                    .Invoke(
-                        this,
-                        new[]
-                        {
-                            invocation,
-                            s_makeCallAsyncMethodMethod.MakeGenericMethod(t).Invoke(this, new object[] {invocation})
-                        });
+                try
+                {
+                    invocation.ReturnValue = s_interceptAsyncMethod.MakeGenericMethod(t)
+                        .Invoke(
+                            this,
+                            new[]
+                            {
+                                invocation,
+                                s_makeCallAsyncMethodMethod.MakeGenericMethod(t).Invoke(this, new object[] {invocation})
+                            });
+                }
+                catch (TargetInvocationException e) when (e.InnerException != null)
+                {
+                    // We want to unwrap the reflection exception we created with the MethodInfo.Invoke
+                    ExceptionDispatchInfo.Capture(e.InnerException).Throw();
+                }
             }
             else
             {
-                invocation.ReturnValue = s_interceptMethod.MakeGenericMethod(retType)
-                    .Invoke(
-                        this,
-                        new[]
-                        {
-                            invocation,
-                            s_makeCallMethodMethod.MakeGenericMethod(retType)
-                                .Invoke(this, new object[] {invocation})
-                        });
+                try
+                {
+                    invocation.ReturnValue = s_interceptMethod.MakeGenericMethod(retType)
+                        .Invoke(
+                            this,
+                            new[]
+                            {
+                                invocation,
+                                s_makeCallMethodMethod.MakeGenericMethod(retType)
+                                    .Invoke(this, new object[] {invocation})
+                            });
+                }
+                catch (TargetInvocationException e) when (e.InnerException != null)
+                {
+                    // We want to unwrap the reflection exception we created with the MethodInfo.Invoke
+                    ExceptionDispatchInfo.Capture(e.InnerException).Throw();
+                }
             }
         }
 
