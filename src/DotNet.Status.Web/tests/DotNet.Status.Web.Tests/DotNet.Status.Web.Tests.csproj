@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Shared\Microsoft.DotNet.Internal.DependencyInjection.Testing\Microsoft.DotNet.Internal.DependencyInjection.Testing.csproj" />
     <ProjectReference Include="..\..\DotNet.Status.Web.csproj" />
   </ItemGroup>
 
