@@ -8,13 +8,11 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Maestro.Contracts;
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.ServiceFabric.Actors;
 using Maestro.Web.Api.v2019_01_16.Models;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 
@@ -28,19 +26,13 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
     public class SubscriptionsController : v2018_07_16.Controllers.SubscriptionsController
     {
         private readonly BuildAssetRegistryContext _context;
-        private readonly BackgroundQueue _queue;
-        private readonly IDependencyUpdater _dependencyUpdater;
 
         public SubscriptionsController(
             BuildAssetRegistryContext context,
-            BackgroundQueue queue,
-            IDependencyUpdater dependencyUpdater,
-            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
-            : base(context, queue, dependencyUpdater, subscriptionActorFactory)
+            BackgroundQueue queue)
+            : base(context, queue)
         {
             _context = context;
-            _queue = queue;
-            _dependencyUpdater = dependencyUpdater;
         }
 
         /// <summary>
@@ -115,21 +107,10 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         [ValidateModelState]
         public override async Task<IActionResult> TriggerSubscription(Guid id)
         {
-            Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
-                .Include(sub => sub.Channel)
-                .FirstOrDefaultAsync(sub => sub.Id == id);
+            Data.Models.Subscription subscription = await TriggerSubscriptionCore(id);
 
             if (subscription == null)
-            {
                 return NotFound();
-            }
-
-            _queue.Post(
-                async () =>
-                {
-                    await _dependencyUpdater.StartSubscriptionUpdateAsync(id);
-                });
-
             return Accepted(new Subscription(subscription));
         }
 

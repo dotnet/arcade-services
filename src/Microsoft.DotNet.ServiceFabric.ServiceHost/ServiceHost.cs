@@ -221,7 +221,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         public static void ConfigureDefaultServices(IServiceCollection services)
         {
             services.AddOptions();
-            services.SetupConfiguration();
             services.TryAddSingleton(InitializeEnvironment());
             services.TryAddSingleton(b => (IHostEnvironment) b.GetService<HostEnvironment>());
             services.TryAddSingleton(b => (IWebHostEnvironment) b.GetService<HostEnvironment>());
