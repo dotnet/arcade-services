@@ -475,20 +475,16 @@ namespace Microsoft.DotNet.DarcLib
                 // We will still visit all the elements in the chain eventually in this algorithm:
                 // Consider A->B(pinned)->C(pinned)->D.
                 Stack<DependencyDetail> updateStack = new Stack<DependencyDetail>();
+                DependencyDetail currentDependency = dependency;
+                while (!string.IsNullOrEmpty(currentDependency.CoherentParentDependencyName) && !currentDependency.Pinned)
                 {
-                    DependencyDetail currentDependency = dependency;
-                    while (!string.IsNullOrEmpty(currentDependency.CoherentParentDependencyName) && !currentDependency.Pinned)
-                    {
-                        updateStack.Push(currentDependency);
-                        DependencyDetail parentCoherentDependency = dependencies.FirstOrDefault(d =>
-                            d.Name.Equals(currentDependency.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
-                        currentDependency = parentCoherentDependency ?? throw new DarcException($"Dependency {currentDependency.Name} has non-existent parent " +
-                                $"dependency {currentDependency.CoherentParentDependencyName}");
-                    }
+                    updateStack.Push(currentDependency);
+                    DependencyDetail parentCoherentDependency = dependencies.FirstOrDefault(d =>
+                        d.Name.Equals(currentDependency.CoherentParentDependencyName, StringComparison.OrdinalIgnoreCase));
+                    currentDependency = parentCoherentDependency ?? throw new DarcException($"Dependency {currentDependency.Name} has non-existent parent " +
+                            $"dependency {currentDependency.CoherentParentDependencyName}");
                 }
 
-                // Walk the update stack and do the update. Ensure that when we are looking
-                // up dependencies, that we 
                 while (updateStack.Count > 0)
                 {
                     DependencyDetail dependencyToUpdate = updateStack.Pop();
@@ -548,10 +544,10 @@ namespace Microsoft.DotNet.DarcLib
                     }
 
                     // Check whether it is already up to date.
-                    if (dependencyToUpdate.Name == cpdDependency.Name &&
-                        dependencyToUpdate.Version == cpdDependency.Version &&
-                        dependencyToUpdate.Commit == cpdDependency.Commit &&
-                        dependencyToUpdate.RepoUri == cpdDependency.RepoUri)
+                    if (dependencyToUpdate.Name.Equals(cpdDependency.Name) &&
+                        dependencyToUpdate.Version.Equals(cpdDependency.Version) &&
+                        dependencyToUpdate.Commit.Equals(cpdDependency.Commit) &&
+                        dependencyToUpdate.RepoUri.Equals(cpdDependency.RepoUri))
                     {
                         continue;
                     }
@@ -594,8 +590,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="remoteFactory">Remote factory for looking up the nuget config.</param>
         /// <param name="buildCache">Cache of builds</param>
         /// <param name="nugetConfigCache">Cache of nuget config files</param>
-        /// <param name="parentCoherentDependency"></param>
-        /// <param name="parentCoherentDependencyCacheKey"></param>
+        /// <param name="parentCoherentDependency">Parent dependency of <paramref name="cpdDependency"/></param>
         /// <param name="cpdDependency">Dependency to disambiguate on.</param>
         /// <returns>Asset if a match to nuget.config is found. Asset from newest build is returned </returns>
         private async Task<Asset> DisambiguateAssetsAsync(IRemoteFactory remoteFactory,
@@ -672,7 +667,7 @@ namespace Microsoft.DotNet.DarcLib
                 }
 
                 // Find assets with locations that match any feed in the nuget.config file.
-                var assetsWithMatchingLoctions = allMatchingAssets.Where(asset =>
+                var assetsWithMatchingLocations = allMatchingAssets.Where(asset =>
                 {
                     if (asset.Locations != null)
                     {
@@ -681,7 +676,7 @@ namespace Microsoft.DotNet.DarcLib
                     return false;
                 }).ToList();
 
-                if (assetsWithMatchingLoctions.Count != 1)
+                if (assetsWithMatchingLocations.Count != 1)
                 {
                     // Find the newest build in the matching assets
                     return buildsWithMatchingAssets.First().Assets.FirstOrDefault(
@@ -689,7 +684,7 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 else
                 {
-                    coherentAsset = assetsWithMatchingLoctions.First();
+                    coherentAsset = assetsWithMatchingLocations.First();
                 }
             }
             // Fallback - No builds. Do nothing
@@ -936,7 +931,6 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="assets">Assets as inputs for the update.</param>
         /// <param name="dependencies">Current set of the dependencies.</param>
         /// <param name="sourceRepoUri">Repository the assets came from.</param>
-        /// <param name="currentInputFeeds">Current set of input feeds in this repo. Compared against the </param>
         /// <returns>Map of existing dependency->updated dependency</returns>
         public Task<List<DependencyUpdate>> GetRequiredNonCoherencyUpdatesAsync(
             string sourceRepoUri,
@@ -1007,6 +1001,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="dependencies">Current set of dependencies.</param>
         /// <param name="remoteFactory">Remote factory for remote queries.</param>
+        /// <param name="coherencyMode">Coherency algorithm that should be used</param>
         /// <returns>List of dependency updates.</returns>
         public async Task<List<DependencyUpdate>> GetRequiredCoherencyUpdatesAsync(
             IEnumerable<DependencyDetail> dependencies,
