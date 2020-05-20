@@ -1,9 +1,9 @@
 using System;
 using System.Fabric;
+using System.Linq;
 using System.Reflection;
 using Castle.DynamicProxy;
 using Microsoft.ApplicationInsights;
-using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,50 +26,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
         }
 
         // ReSharper disable once MemberCanBePrivate.Global This is Mocked, so much be public
-        public class FakeChannel : ITelemetryChannel
-        {
-            public int HitCount { get; private set; }
-            public string RequestName { get; private set; }
-            public bool RequestSuccess { get; private set; }
-
-            public Exception Exception { get; private set; }
-
-            public void Dispose()
-            {
-            }
-
-            public void Send(ITelemetry item)
-            {
-                if (item is EventTelemetry ev && ev.Name == "TestEvent")
-                {
-                    HitCount++;
-                }
-
-                if (item is RequestTelemetry req)
-                {
-                    RequestName = req.Name;
-                    RequestSuccess = req.Success ?? true;
-                }
-
-                if (item is ExceptionTelemetry ex)
-                {
-                    Exception = ex.Exception;
-                }
-            }
-
-            public void Flush()
-            {
-            }
-
-            public bool? DeveloperMode { get; set; }
-            public string EndpointAddress { get; set; }
-        }
-
-        // ReSharper disable once MemberCanBePrivate.Global This is Proxied, so much be public
-        public interface IFakeService
-        {
-            string Test();
-        }
 
         private class FakeService : IFakeService
         {
@@ -130,8 +86,12 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 
             client.Flush();
 
-            Assert.False(telemetryChannel.RequestSuccess);
-            Assert.Same(ex.InnerException, telemetryChannel.Exception);
+            RequestTelemetry requestTelemetry = telemetryChannel.Telemetry.OfType<RequestTelemetry>().FirstOrDefault();
+            Assert.NotNull(requestTelemetry);
+            Assert.False(requestTelemetry.Success);
+            ExceptionTelemetry exceptionTelemetry = telemetryChannel.Telemetry.OfType<ExceptionTelemetry>().FirstOrDefault();
+            Assert.NotNull(exceptionTelemetry);
+            Assert.Same(ex.InnerException, exceptionTelemetry.Exception);
         }
 
         [Fact]
@@ -140,15 +100,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             var telemetryChannel = new FakeChannel();
             var config = new TelemetryConfiguration("00000000-0000-0000-0000-000000000001", telemetryChannel);
             var client = new TelemetryClient(config);
-
-            var ctx = new Mock<ServiceContext>(
-                new NodeContext("IGNORED", new NodeId(1, 1), 1, "IGNORED", "IGNORED.test"),
-                Mock.Of<ICodePackageActivationContext>(),
-                "TestService",
-                new Uri("service://TestName"),
-                new byte[0],
-                Guid.Parse("00000000-0000-0000-0000-000000000001"),
-                1);
+            
+            Mock<ServiceContext> ctx = MockBuilder.MockServiceContext();
 
             Thing innerThing = null;
 
@@ -177,11 +130,15 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             Assert.NotEqual(outerThing, innerThing);
 
             client.Flush();
-            Assert.Equal(1, telemetryChannel.HitCount);
-            Assert.NotNull(telemetryChannel.RequestName);
-            Assert.True(telemetryChannel.RequestSuccess);
-            Assert.Contains("IFakeService", telemetryChannel.RequestName, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("service://TestName", telemetryChannel.RequestName, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(1, telemetryChannel.Telemetry.OfType<EventTelemetry>().Count(e => e.Name == "TestEvent"));
+            RequestTelemetry requestTelemetry = telemetryChannel.Telemetry.OfType<RequestTelemetry>().FirstOrDefault();
+            Assert.NotNull(requestTelemetry);
+            Assert.NotNull(requestTelemetry.Name);
+            Assert.True(requestTelemetry.Success ?? true);
+            Assert.Contains("IFakeService", requestTelemetry.Name, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("service://TestName", requestTelemetry.Name, StringComparison.OrdinalIgnoreCase);
         }
     }
+
+    // ReSharper disable once MemberCanBePrivate.Global This is Proxied, so much be public
 }
