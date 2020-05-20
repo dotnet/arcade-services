@@ -41,7 +41,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             Type retType = invocation.Method.ReturnType;
             if (retType == typeof(void))
             {
-                throw new NotSupportedException("Void returning methods are not supported");
+                throw new NotSupportedException($"Void returning methods are not supported by {nameof(AsyncInterceptor)}");
             }
 
             if (retType == typeof(Task))
@@ -54,38 +54,34 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                         return (Task) invocation.ReturnValue;
                     });
             }
-            else if (IsTaskOfT(retType, out Type t))
-            {
-                try
-                {
-                    invocation.ReturnValue = s_interceptAsyncMethod.MakeGenericMethod(t)
-                        .Invoke(
-                            this,
-                            new[]
-                            {
-                                invocation,
-                                s_makeCallAsyncMethodMethod.MakeGenericMethod(t).Invoke(this, new object[] {invocation})
-                            });
-                }
-                catch (TargetInvocationException e) when (e.InnerException != null)
-                {
-                    // We want to unwrap the reflection exception we created with the MethodInfo.Invoke
-                    ExceptionDispatchInfo.Capture(e.InnerException).Throw();
-                }
-            }
             else
             {
                 try
                 {
-                    invocation.ReturnValue = s_interceptMethod.MakeGenericMethod(retType)
-                        .Invoke(
-                            this,
-                            new[]
-                            {
-                                invocation,
-                                s_makeCallMethodMethod.MakeGenericMethod(retType)
-                                    .Invoke(this, new object[] {invocation})
-                            });
+                    if (IsTaskOfT(retType, out Type t))
+                    {
+                        invocation.ReturnValue = s_interceptAsyncMethod.MakeGenericMethod(t)
+                            .Invoke(
+                                this,
+                                new[]
+                                {
+                                    invocation,
+                                    s_makeCallAsyncMethodMethod.MakeGenericMethod(t)
+                                        .Invoke(this, new object[] {invocation})
+                                });
+                    }
+                    else
+                    {
+                        invocation.ReturnValue = s_interceptMethod.MakeGenericMethod(retType)
+                            .Invoke(
+                                this,
+                                new[]
+                                {
+                                    invocation,
+                                    s_makeCallMethodMethod.MakeGenericMethod(retType)
+                                        .Invoke(this, new object[] {invocation})
+                                });
+                    }
                 }
                 catch (TargetInvocationException e) when (e.InnerException != null)
                 {

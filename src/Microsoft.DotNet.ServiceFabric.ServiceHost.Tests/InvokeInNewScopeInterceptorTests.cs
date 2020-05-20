@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Fabric;
 using System.Linq;
-using System.Reflection;
 using Castle.DynamicProxy;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
@@ -26,7 +25,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             }
         }
 
-        // ReSharper disable once MemberCanBePrivate.Global This is Mocked, so much be public
+        // ReSharper disable once MemberCanBePrivate.Global This is Mocked, so must be public
 
         private class FakeService : IFakeService
         {
@@ -141,6 +140,4 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             Assert.Empty(telemetryChannel.Telemetry.OfType<ExceptionTelemetry>());
         }
     }
-
-    // ReSharper disable once MemberCanBePrivate.Global This is Proxied, so much be public
 }
