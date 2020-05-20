@@ -7,10 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+<<<<<<< HEAD
     <PackageReference Include="Moq" />
   </ItemGroup>
 
   <ItemGroup>
+=======
+>>>>>>> handling merge conflicts for test project
     <ProjectReference Include="..\..\..\Shared\Microsoft.DotNet.Internal.DependencyInjection.Testing\Microsoft.DotNet.Internal.DependencyInjection.Testing.csproj" />
     <ProjectReference Include="..\..\DotNet.Status.Web.csproj" />
   </ItemGroup>
