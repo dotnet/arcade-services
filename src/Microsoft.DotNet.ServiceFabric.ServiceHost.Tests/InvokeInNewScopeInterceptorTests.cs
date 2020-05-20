@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Fabric;
 using System.Linq;
 using System.Reflection;
@@ -128,12 +129,16 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 
             client.Flush();
             Assert.Equal(1, telemetryChannel.Telemetry.OfType<EventTelemetry>().Count(e => e.Name == "TestEvent"));
-            RequestTelemetry requestTelemetry = telemetryChannel.Telemetry.OfType<RequestTelemetry>().FirstOrDefault();
-            Assert.NotNull(requestTelemetry);
+            List<RequestTelemetry> requestTelemetries =
+                telemetryChannel.Telemetry.OfType<RequestTelemetry>().ToList();
+            Assert.Single(requestTelemetries);
+            RequestTelemetry requestTelemetry = requestTelemetries[0];
             Assert.NotNull(requestTelemetry.Name);
             Assert.True(requestTelemetry.Success ?? true);
             Assert.Contains("IFakeService", requestTelemetry.Name, StringComparison.OrdinalIgnoreCase);
             Assert.Contains("service://TestName", requestTelemetry.Name, StringComparison.OrdinalIgnoreCase);
+            
+            Assert.Empty(telemetryChannel.Telemetry.OfType<ExceptionTelemetry>());
         }
     }
 

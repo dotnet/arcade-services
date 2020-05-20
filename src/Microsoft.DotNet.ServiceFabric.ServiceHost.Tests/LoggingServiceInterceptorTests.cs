@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Fabric;
 using System.Linq;
 using System.Reflection;
@@ -36,6 +37,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             Assert.True(requestTelemetry.Success ?? true);
             Assert.StartsWith(ctx.Object.ServiceName.AbsoluteUri, requestTelemetry.Url.AbsoluteUri, StringComparison.OrdinalIgnoreCase);
             Assert.Contains(nameof(IFakeService), requestTelemetry.Url.AbsoluteUri, StringComparison.OrdinalIgnoreCase);
+            Assert.Empty(telemetryChannel.Telemetry.OfType<ExceptionTelemetry>());
         }
 
         [Fact]
@@ -61,8 +63,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             Assert.Equal("Test Exception Text", ex.Message);
             
             client.Flush();
-            RequestTelemetry requestTelemetry = telemetryChannel.Telemetry.OfType<RequestTelemetry>().FirstOrDefault();
-            Assert.NotNull(requestTelemetry);
+            List<RequestTelemetry> requestTelemetries =
+                telemetryChannel.Telemetry.OfType<RequestTelemetry>().ToList();
+            Assert.Single(requestTelemetries);
+            RequestTelemetry requestTelemetry = requestTelemetries[0];
             Assert.False(requestTelemetry.Success);
             ExceptionTelemetry exceptionTelemetry = telemetryChannel.Telemetry.OfType<ExceptionTelemetry>().FirstOrDefault();
             Assert.NotNull(exceptionTelemetry);
