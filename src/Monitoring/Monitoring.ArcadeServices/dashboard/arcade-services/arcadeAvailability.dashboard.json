@@ -3015,8 +3015,7 @@
     },
     {
       "alert": {
-        "alertRuleTags": {
-        },
+        "alertRuleTags": {},
         "conditions": [
           {
             "evaluator": {
@@ -3036,8 +3035,7 @@
               ]
             },
             "reducer": {
-              "params": [
-              ],
+              "params": [],
               "type": "sum"
             },
             "type": "query"
@@ -3048,7 +3046,7 @@
         "frequency": "5m",
         "handler": 1,
         "message": "Certificate has expired.",
-        "name": "Certificate Expiration Internal",
+        "name": "Pool Provider (Internal) AuthenticationException",
         "noDataState": "ok",
         "notifications": [
           {
@@ -3056,8 +3054,7 @@
           }
         ]
       },
-      "aliasColors": {
-      },
+      "aliasColors": {},
       "bars": false,
       "dashLength": 10,
       "dashes": false,
@@ -3086,15 +3083,13 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": [
-        ]
+        "dataLinks": []
       },
       "percentage": false,
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -3155,8 +3150,7 @@
             "resultFormat": "time_series"
           },
           "azureMonitor": {
-            "aggOptions": [
-            ],
+            "aggOptions": [],
             "dimensionFilter": "*",
             "metricDefinition": "select",
             "metricName": "select",
@@ -3164,8 +3158,7 @@
             "resourceGroup": "select",
             "resourceName": "select",
             "timeGrain": "auto",
-            "timeGrains": [
-            ],
+            "timeGrains": [],
             "top": "10"
           },
           "queryType": "Application Insights",
@@ -3183,10 +3176,9 @@
         }
       ],
       "timeFrom": null,
-      "timeRegions": [
-      ],
+      "timeRegions": [],
       "timeShift": null,
-      "title": "Certificate Expiration - Internal",
+      "title": "Pool Provider (Internal) AuthenticationException",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -3198,8 +3190,7 @@
         "mode": "time",
         "name": null,
         "show": true,
-        "values": [
-        ]
+        "values": []
       },
       "yaxes": [
         {
@@ -3226,8 +3217,7 @@
     },
     {
       "alert": {
-        "alertRuleTags": {
-        },
+        "alertRuleTags": {},
         "conditions": [
           {
             "evaluator": {
@@ -3247,8 +3237,7 @@
               ]
             },
             "reducer": {
-              "params": [
-              ],
+              "params": [],
               "type": "sum"
             },
             "type": "query"
@@ -3259,7 +3248,7 @@
         "frequency": "5m",
         "handler": 1,
         "message": "Certificate has expired.",
-        "name": "Certificate Expiration Public",
+        "name": "Pool Provider (Public) AuthenticationException",
         "noDataState": "ok",
         "notifications": [
           {
@@ -3267,8 +3256,7 @@
           }
         ]
       },
-      "aliasColors": {
-      },
+      "aliasColors": {},
       "bars": false,
       "dashLength": 10,
       "dashes": false,
@@ -3296,15 +3284,13 @@
       "linewidth": 1,
       "nullPointMode": "null",
       "options": {
-        "dataLinks": [
-        ]
+        "dataLinks": []
       },
       "percentage": false,
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
-      "seriesOverrides": [
-      ],
+      "seriesOverrides": [],
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
@@ -3379,8 +3365,7 @@
             "resultFormat": "time_series"
           },
           "azureMonitor": {
-            "aggOptions": [
-            ],
+            "aggOptions": [],
             "dimensionFilter": "*",
             "metricDefinition": "select",
             "metricName": "select",
@@ -3388,8 +3373,7 @@
             "resourceGroup": "select",
             "resourceName": "select",
             "timeGrain": "auto",
-            "timeGrains": [
-            ],
+            "timeGrains": [],
             "top": "10"
           },
           "queryType": "Application Insights",
@@ -3403,15 +3387,13 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 10,
-          "yaxis": "left"
+          "value": 10
         }
       ],
       "timeFrom": null,
-      "timeRegions": [
-      ],
+      "timeRegions": [],
       "timeShift": null,
-      "title": "Certificate Expiration Public",
+      "title": "Pool Provider (Public) AuthenticationException",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -3423,8 +3405,7 @@
         "mode": "time",
         "name": null,
         "show": true,
-        "values": [
-        ]
+        "values": []
       },
       "yaxes": [
         {
