@@ -652,7 +652,7 @@ namespace Microsoft.DotNet.DarcLib
                 projectName,
                 statusesPath,
                 _logger,
-                versionOverride: "5.0-preview.1");
+                versionOverride: "5.1-preview.1");
 
             JArray values = JArray.Parse(content["value"].ToString());
 
