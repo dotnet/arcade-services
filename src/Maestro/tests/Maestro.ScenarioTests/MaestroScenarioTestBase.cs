@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client;
@@ -85,13 +86,40 @@ namespace Maestro.ScenarioTests
             return $"https://{_parameters.GitHubUser}:{_parameters.GitHubToken}@github.com/{org}/{repository}";
         }
 
-        public Task<string> RunDarcAsync(params string[] args)
+        public string GetAzDoRepoUrl(string repoName, string azdoAccount = "", string azdoProject = "")
         {
-            return TestHelpers.RunExecutableAsync(_parameters.DarcExePath, args.Concat(new[]
+            if (String.IsNullOrEmpty(azdoAccount))
             {
+                azdoAccount = "dnceng";
+            }
+
+            if (string.IsNullOrEmpty(azdoProject))
+            {
+                azdoProject = "internal";
+            }
+
+            return $"https://dev.azure.com/{azdoAccount}/{azdoProject}/_git/{repoName}";
+        }
+
+        public Task<string> RunDarcAsyncWithInput(string input, params string[] args)
+        {
+            return TestHelpers.RunExecutableAsyncWithInput(_parameters.DarcExePath, input, args.Concat(new[]
+{
                 "-p", _parameters.MaestroToken,
                 "--bar-uri", _parameters.MaestroBaseUri,
                 "--github-pat", _parameters.GitHubToken,
+                "--azdev-pat", _parameters.AzDoToken,
+            }).ToArray());
+        }
+
+        public Task<string> RunDarcAsync(params string[] args)
+        {
+            return TestHelpers.RunExecutableAsync(_parameters.DarcExePath, args.Concat(new[]
+{
+                "-p", _parameters.MaestroToken,
+                "--bar-uri", _parameters.MaestroBaseUri,
+                "--github-pat", _parameters.GitHubToken,
+                "--azdev-pat", _parameters.AzDoToken,
             }).ToArray());
         }
 
@@ -153,14 +181,25 @@ namespace Maestro.ScenarioTests
             await RunDarcAsync("delete-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branch).ConfigureAwait(false);
         }
 
-        public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string sourceChannelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency)
+        public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string sourceChannelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency, string sourceOrg = "dotnet",
+            List<string> additionalOptions = null, bool sourceIsAzDo = false, bool targetIsAzDo = false)
         {
-            string output = await RunDarcAsync("add-subscription", "-q", "--no-trigger",
+            string sourceUrl = sourceIsAzDo ? GetAzDoRepoUrl(sourceRepo, azdoProject: sourceOrg) : GetRepoUrl(sourceOrg, sourceRepo);
+            string targetUrl = targetIsAzDo ? GetAzDoRepoUrl(targetRepo) : GetRepoUrl(targetRepo);
+
+            string[] command = {"add-subscription", "-q", "--no-trigger",
                 "--channel", sourceChannelName,
-                "--source-repo", GetRepoUrl("dotnet", sourceRepo),
-                "--target-repo", GetRepoUrl(targetRepo),
+                "--source-repo", sourceUrl,
+                "--target-repo", targetUrl,
                 "--target-branch", targetBranch,
-                "--update-frequency", updateFrequency).ConfigureAwait(false);
+                "--update-frequency", updateFrequency};
+
+            if (additionalOptions != null)
+            {
+                command = command.Concat(additionalOptions).ToArray();
+            }
+
+            string output = await RunDarcAsync(command).ConfigureAwait(false);
 
             Match match = Regex.Match(output, "Successfully created new subscription with id '([a-f0-9-]+)'");
             if (match.Success)
@@ -169,11 +208,84 @@ namespace Maestro.ScenarioTests
                 return AsyncDisposableValue.Create(subscriptionId, async () =>
                 {
                     TestContext.WriteLine($"Cleaning up Test Subscription {subscriptionId}");
-                    await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet").ConfigureAwait(false);
+                    try
+                    {
+                        await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet").ConfigureAwait(false);
+                    }
+                    catch (MaestroTestException)
+                    {
+                        // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
+                    }
                 });
             }
 
             throw new MaestroTestException("Unable to create subscription.");
+        }
+
+        public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string yamlDefinition)
+        {
+            string output = await RunDarcAsyncWithInput(yamlDefinition, "add-subscription", "-q", "--read-stdin", "--no-trigger").ConfigureAwait(false);
+
+            Match match = Regex.Match(output, "Successfully created new subscription with id '([a-f0-9-]+)'");
+            if (match.Success)
+            {
+                string subscriptionId = match.Groups[1].Value;
+                return AsyncDisposableValue.Create(subscriptionId, async () =>
+                {
+                    TestContext.WriteLine($"Cleaning up Test Subscription {subscriptionId}");
+                    try
+                    {
+                        await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet").ConfigureAwait(false);
+                    }
+                    catch (MaestroTestException)
+                    {
+                        // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
+                    }
+                });
+            }
+
+            throw new MaestroTestException("Unable to create subscription.");
+        }
+
+        public async Task<string> GetSubscriptionInfo(string subscriptionId)
+        {
+            return await RunDarcAsync("get-subscriptions", "--ids", subscriptionId).ConfigureAwait(false);
+        }
+
+        public async Task<string> GetSubscriptions(string channelName)
+        {
+            return await RunDarcAsync("get-subscriptions", "--channel", $"\"{channelName}\"");
+        }
+
+        public async Task ValidateSubscriptionInfo(string subscriptionId, string expectedSubscriptionInfo)
+        {
+            string subscriptionInfo = await GetSubscriptionInfo(subscriptionId);
+            StringAssert.AreEqualIgnoringCase(expectedSubscriptionInfo, subscriptionInfo);
+        }
+
+        public async Task SetSubscriptionStatus(bool enableSub, string subscriptionId = null, string channelName = null)
+        {
+            string actionToTake = enableSub ? "--enable" : "-d";
+
+            if (channelName != null)
+            {
+                await RunDarcAsync("subscription-status", actionToTake, "--channel", channelName, "--quiet").ConfigureAwait(false);
+            }
+            else
+            {
+                await RunDarcAsync("subscription-status", "--id", subscriptionId, actionToTake, "--quiet").ConfigureAwait(false);
+            }
+        }
+
+        public async Task<string> DeleteSubscriptionsForChannel(string channelName)
+        {
+            string[] parameters = { "delete-subscriptions", "--channel", $"\"{channelName}\"", "--quiet" };
+            return await RunDarcAsync("delete-subscriptions", "--channel", $"{channelName}", "--quiet");
+        }
+
+        public async Task<string> DeleteSubscriptionById(string subscriptionId)
+        {
+            return await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet").ConfigureAwait(false);
         }
 
         public Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets)
@@ -280,6 +392,20 @@ namespace Maestro.ScenarioTests
             return shareable.TryTake()!;
         }
 
+        public async Task DarcCloneRepositoryAsync(string sourceRepoUri, string sourceRepoVersion, string gitDirFolder,
+            string reposToIgnore, string reposFolder, int depth, bool includeToolset)
+        {
+            string[] parameters = {"clone", "--repo", sourceRepoUri, "--version", sourceRepoVersion, "--git-dir-folder",
+               gitDirFolder, "--ignore-repos", reposToIgnore, "--repos-folder", reposFolder, "--depth", depth.ToString() };
+
+            if (includeToolset)
+            {
+                parameters.Append("--include-toolset");
+            }
+
+            await RunDarcAsync(parameters);
+        }
+
         public async Task CheckoutRemoteRefAsync(string commit)
         {
             await RunGitAsync("fetch", "origin", commit);
@@ -322,6 +448,88 @@ namespace Maestro.ScenarioTests
         public async Task<string> GetRepositoryPolicies(string repoUri, string branchName)
         {
             return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
+        }
+
+        public void CheckGitDirectory(string path, string gitDirFolder)
+        {
+            string[] expectedFolders = { "hooks", "info", "logs", "objects", "refs" };
+            foreach (string folder in expectedFolders)
+            {
+                string folderPath = Path.Combine(gitDirFolder, folder);
+                Assert.IsTrue(Directory.Exists(folderPath), $"{path} does not appear to be a valid .gitdir: missing folder '{folder}'");
+            }
+
+            string[] expectedFiles = { "config", "description", "FETCH_HEAD", "HEAD", "index" };
+            foreach (string file in expectedFiles)
+            {
+                string filePath = Path.Combine(gitDirFolder, file);
+                Assert.IsTrue(File.Exists(filePath), $"{path} does not appear to be a valid .gitdir: missing file '{file}'");
+            }
+        }
+
+        public void VerifyClonedDirectories(Dictionary<string, string> repos, List<string> masterRepos, List<string> gitDirs, string gitDirFolder, string reposFolder)
+        {
+            foreach (string name in repos.Keys)
+            {
+                string path = Path.Combine(reposFolder, name);
+                bool checkDir = Directory.Exists(path);
+                Assert.IsTrue(Directory.Exists(path), $"Expected cloned repo '{name}' but not found at '{path}'");
+
+                string versionDetailsPath = Path.Combine(path, "eng", "Version.Details.xml");
+                if (File.Exists(versionDetailsPath))
+                {
+                    using (FileStream stream = File.OpenRead(versionDetailsPath))
+                    {
+                        SHA256 Sha256 = SHA256.Create();
+                        byte[] hash = Sha256.ComputeHash(stream);
+                        string hashString = BitConverter.ToString(hash);
+                        Assert.AreEqual(hashString, repos[name], $"Expected {versionDetailsPath} to have hash '{repos[name]}', actual hash '{hashString}'");
+                    }
+                }
+                else
+                {
+                    Assert.AreEqual(repos[name], "", $"Expected a '{versionDetailsPath}' but it is missing");
+                }
+            }
+
+            foreach (string repo in masterRepos)
+            {
+                string repoPath = Path.Combine(reposFolder, repo);
+                Assert.IsTrue(Directory.Exists(repoPath), $"Expected cloned master repo '{repo}' but not found at '{repoPath}'");
+
+                string gitRedirectPath = Path.Combine(repoPath, ".git");
+                string expectedGitDir = Path.Combine(gitDirFolder, repoPath);
+                string expectedRedirect = $"gitdir: {expectedGitDir}.git";
+                string actualRedirect = Directory.GetFiles(gitRedirectPath).First();
+                StringAssert.AreEqualIgnoringCase(expectedRedirect, actualRedirect, $"Expected '{repoPath}' to have a .gitdir redirect of '{expectedRedirect}', actual '{actualRedirect}'");
+            }
+
+            string[] actualRepos = Directory.GetDirectories(TestContext.CurrentContext.TestDirectory, ".");
+            string[] actualMasterRepos = Directory.GetDirectories(TestContext.CurrentContext.TestDirectory).Where(dir => !dir.Contains(".")).ToArray();
+
+            foreach (string repo in actualRepos)
+            {
+                Assert.Contains(repo, repos.Keys, $"Found unexpected repo folder '{repo}'");
+            }
+
+            foreach (string repo in actualMasterRepos)
+            {
+                Assert.Contains(repo, masterRepos, $"Found unexpected master repo folder '{repo}'");
+            }
+
+            foreach (string gitDir in gitDirs)
+            {
+                string gdPath = Path.Combine(gitDirFolder, gitDir);
+                Assert.IsTrue(Directory.Exists(gdPath), $"Expected a .gitdir for '{gitDir}' but not found at '{gdPath}'");
+            }
+
+            string[] actualGitDirs = Directory.GetDirectories(gitDirFolder);
+
+            foreach (string gitDir in actualGitDirs)
+            {
+                Assert.Contains(gitDir, actualGitDirs, $"Found unexpected .gitdir '{gitDir}'");
+                CheckGitDirectory(gitDir, gitDirFolder);
+            }
         }
     }
 }
