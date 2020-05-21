@@ -12,7 +12,7 @@ namespace ServiceFabricMocks
     ///     Simple wrapper for a synchronous IEnumerable of T.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    internal class SyncAsyncEnumerable<T> : Microsoft.ServiceFabric.Data.IAsyncEnumerable<T>
+    public class SyncAsyncEnumerable<T> : Microsoft.ServiceFabric.Data.IAsyncEnumerable<T>
     {
         private readonly IEnumerable<T> enumerable;
 
@@ -50,6 +50,7 @@ namespace ServiceFabricMocks
 
         public Task<bool> MoveNextAsync(CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             return Task.FromResult(enumerator.MoveNext());
         }
 

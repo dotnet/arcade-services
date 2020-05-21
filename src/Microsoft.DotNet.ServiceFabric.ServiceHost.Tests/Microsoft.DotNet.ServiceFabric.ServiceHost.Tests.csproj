@@ -8,6 +8,7 @@
     <PackageReference Include="Moq" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Maestro\ServiceFabricMocks\ServiceFabricMocks.csproj" />
     <ProjectReference Include="..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
   </ItemGroup>
 </Project>

@@ -21,21 +21,21 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             var config = new TelemetryConfiguration("00000000-0000-0000-0000-000000000001", telemetryChannel);
             var client = new TelemetryClient(config);
 
-            Mock<ServiceContext> ctx = MockBuilder.MockServiceContext();
+            StatelessServiceContext ctx = MockBuilder.StatelessServiceContext();
 
             var gen = new ProxyGenerator();
             var impl = (IFakeService) gen.CreateInterfaceProxyWithTargetInterface(
                 typeof(IFakeService),
                 new Type[0],
                 Mock.Of<IFakeService>(),
-                new LoggingServiceInterceptor(ctx.Object, client));
+                new LoggingServiceInterceptor(ctx, client));
 
             impl.TestServiceMethod();
             client.Flush();
             RequestTelemetry requestTelemetry = telemetryChannel.Telemetry.OfType<RequestTelemetry>().FirstOrDefault();
             Assert.NotNull(requestTelemetry);
             Assert.True(requestTelemetry.Success ?? true);
-            Assert.StartsWith(ctx.Object.ServiceName.AbsoluteUri, requestTelemetry.Url.AbsoluteUri, StringComparison.OrdinalIgnoreCase);
+            Assert.StartsWith(ctx.ServiceName.AbsoluteUri, requestTelemetry.Url.AbsoluteUri, StringComparison.OrdinalIgnoreCase);
             Assert.Contains(nameof(IFakeService), requestTelemetry.Url.AbsoluteUri, StringComparison.OrdinalIgnoreCase);
             Assert.Empty(telemetryChannel.Telemetry.OfType<ExceptionTelemetry>());
         }
@@ -47,7 +47,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             var config = new TelemetryConfiguration("00000000-0000-0000-0000-000000000001", telemetryChannel);
             var client = new TelemetryClient(config);
 
-            Mock<ServiceContext> ctx = MockBuilder.MockServiceContext();
+            StatelessServiceContext ctx = MockBuilder.StatelessServiceContext();
 
             Mock<IFakeService> fakeService = new Mock<IFakeService>();
             fakeService.Setup(s => s.TestServiceMethod()).Throws(new InvalidOperationException("Test Exception Text"));
@@ -57,7 +57,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 typeof(IFakeService),
                 new Type[0],
                 fakeService.Object,
-                new LoggingServiceInterceptor(ctx.Object, client));
+                new LoggingServiceInterceptor(ctx, client));
             
             var ex = Assert.ThrowsAny<InvalidOperationException>(() => impl.TestServiceMethod());
             Assert.Equal("Test Exception Text", ex.Message);
