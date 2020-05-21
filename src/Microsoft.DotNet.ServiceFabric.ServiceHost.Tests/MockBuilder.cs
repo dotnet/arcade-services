@@ -1,5 +1,6 @@
 using System;
 using System.Fabric;
+using Microsoft.Extensions.DependencyInjection;
 using Moq;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
@@ -27,6 +28,20 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 new byte[0],
                 Guid.Parse("00000000-0000-0000-0000-000000000001"),
                 1);
+        }
+
+        public static StatelessServiceContext RegisterStatelessServiceContext(ServiceCollection collection)
+        {
+            StatelessServiceContext ctx = StatelessServiceContext();
+            collection.AddSingleton(ctx).AddSingleton<ServiceContext>(ctx);
+            return ctx;
+        }
+
+        public static StatefulServiceContext RegisterStatefulServiceContext(ServiceCollection collection)
+        {
+            StatefulServiceContext ctx = StatefulServiceContext();
+            collection.AddSingleton(ctx).AddSingleton<ServiceContext>(ctx);
+            return ctx;
         }
     }
 }

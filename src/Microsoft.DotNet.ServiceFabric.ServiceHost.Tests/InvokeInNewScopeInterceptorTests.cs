@@ -60,14 +60,13 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             var config = new TelemetryConfiguration("00000000-0000-0000-0000-000000000001", telemetryChannel);
             var client = new TelemetryClient(config);
 
-            StatelessServiceContext ctx = MockBuilder.StatelessServiceContext();
 
             var service = new Mock<IFakeService>();
             service.Setup(s => s.TestServiceMethod()).Throws(new InvalidOperationException("Test Exception Text"));
 
             var collection = new ServiceCollection();
             collection.AddSingleton(client);
-            collection.AddSingleton(ctx);
+            MockBuilder.RegisterStatelessServiceContext(collection);
             collection.AddSingleton(service.Object);
             ServiceProvider provider = collection.BuildServiceProvider();
 
@@ -98,14 +97,13 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             var config = new TelemetryConfiguration("00000000-0000-0000-0000-000000000001", telemetryChannel);
             var client = new TelemetryClient(config);
             
-            StatelessServiceContext ctx = MockBuilder.StatelessServiceContext();
 
             Thing innerThing = null;
 
             var collection = new ServiceCollection();
             collection.AddSingleton(client);
             collection.AddScoped<IFakeService, FakeService>();
-            collection.AddSingleton(ctx);
+            MockBuilder.RegisterStatelessServiceContext(collection);
             collection.AddScoped<Thing>();
             collection.AddSingleton<Action<Thing>>(t => innerThing = t);
             ServiceProvider provider = collection.BuildServiceProvider();
