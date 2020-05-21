@@ -55,7 +55,7 @@ namespace Maestro.ScenarioTests
             process.Start();
 
             Task<bool> exitTask = tcs.Task;
-            Task stdin = Task.Run(async () => { process.StandardInput.Write(input); process.StandardInput.Close(); });
+            Task stdin = Task.Run(() => { process.StandardInput.Write(input); process.StandardInput.Close(); });
             Task<string> stdout = process.StandardOutput.ReadLineAsync();
             Task<string> stderr = process.StandardError.ReadLineAsync();
             var list = new List<Task> { exitTask, stdout, stderr, stdin };
