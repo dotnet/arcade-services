@@ -44,8 +44,10 @@ using Newtonsoft.Json;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace Maestro.Web
@@ -82,9 +84,7 @@ namespace Maestro.Web
                     if (hasAssetsWithPublishedLocations || ReposWithoutAssetLocationAllowList.Contains(build.GitHubRepository))
                     {
                         var queue = context.GetService<BackgroundQueue>();
-                        var dependencyUpdater = context.GetService<IDependencyUpdater>();
-
-                        queue.Post(() => dependencyUpdater.StartUpdateDependenciesAsync(entity.BuildId, entity.ChannelId));
+                        queue.Post<StartDependencyUpdate>(StartDependencyUpdate.CreateArgs(entity));
                     }
                     else
                     {
@@ -92,6 +92,33 @@ namespace Maestro.Web
                     }
                 }
             };
+        }
+
+        private class StartDependencyUpdate : IBackgroundWorkItem
+        {
+            private readonly IDependencyUpdater _updater;
+
+            public StartDependencyUpdate(IDependencyUpdater updater)
+            {
+                _updater = updater;
+            }
+
+            public Task ProcessAsync(JToken argumentToken)
+            {
+                var argVal = argumentToken.ToObject<Arguments>();
+                return _updater.StartUpdateDependenciesAsync(argVal.BuildId, argVal.ChannelId);
+            }
+
+            public static JToken CreateArgs(BuildChannel channel)
+            {
+                return JToken.FromObject(new Arguments {BuildId = channel.BuildId, ChannelId = channel.ChannelId});
+            }
+
+            private struct Arguments
+            {
+                public int BuildId;
+                public int ChannelId;
+            }
         }
 
         public Startup(IConfiguration configuration, IHostEnvironment env)
@@ -238,6 +265,8 @@ namespace Maestro.Web
             services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
             services.AddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
 
+            services.EnableLazy();
+
             services.AddMergePolicies();
 
         }
@@ -308,6 +337,18 @@ namespace Maestro.Web
                     a => { a.Run(ApiRedirectHandler); });
             }
 
+            app.Use(
+                (ctx, next) =>
+                {
+                    if (ctx.Request.Path == "/api/swagger.json")
+                    {
+                        var vcp = ctx.RequestServices.GetRequiredService<VersionedControllerProvider>();
+                        string highestVersion = vcp.Versions.Keys.OrderByDescending(n => n).First();
+                        ctx.Request.Path = $"/api/{highestVersion}/swagger.json";
+                    }
+
+                    return next();
+                });
             app.UseSwagger(
                 options =>
                 {
@@ -337,19 +378,6 @@ namespace Maestro.Web
                 e.MapRazorPages();
                 e.MapControllers();
             });
-
-            app.Use(
-                (ctx, next) =>
-                {
-                    if (ctx.Request.Path == "/api/swagger.json")
-                    {
-                        var vcp = ctx.RequestServices.GetRequiredService<VersionedControllerProvider>();
-                        string highestVersion = vcp.Versions.Keys.OrderByDescending(n => n).First();
-                        ctx.Request.Path = $"/api/{highestVersion}/swagger.json";
-                    }
-
-                    return next();
-                });
         }
 
         // The whole api, only allowing GET requests, with all urls prefixed with _
@@ -357,36 +385,26 @@ namespace Maestro.Web
         {
             app.UseExceptionHandler(ConfigureApiExceptions);
 
+            app.MapWhen(ctx => DoApiRedirect && !ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _),
+                redirectedApp =>
+                {
+                    app.UseRouting();
+                    app.UseAuthentication();
+                    app.UseAuthorization();
+
+                    app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
+                    app.Run(ApiRedirectHandler);
+                });
+
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
-
-            // Redirect the entire cookie-authed api if it is in settings.
-            if (DoApiRedirect)
+            app.UseEndpoints(e =>
             {
-                // when told to not redirect by the request, don't do it.
-                app.MapWhen(ctx => ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _),
-                    a =>
-                    {
-                        a.UseRouting();
-                        a.UseEndpoints(e =>
-                        {
-                            e.MapControllers();
-                        });
-                    });
-
-                app.Run(ApiRedirectHandler);
-            }
-            else
-            {
-                app.UseEndpoints(e =>
-                {
-                    e.MapControllers();
-                });
-            }
-
+                e.MapControllers();
+            });
         }
 
         private static bool IsGet(HttpContext context)
@@ -474,6 +492,8 @@ namespace Maestro.Web
         {
             app.UseRewriter(new RewriteOptions().AddRewrite(".*", "Index", true));
             app.UseRouting();
+            app.UseAuthentication();
+            app.UseAuthorization();
             app.UseEndpoints(e => { e.MapRazorPages(); });
         }
     }
