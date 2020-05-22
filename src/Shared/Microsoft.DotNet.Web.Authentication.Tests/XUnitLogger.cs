@@ -2,7 +2,7 @@ using System;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
-namespace SubscriptionActorService.Tests
+namespace Microsoft.DotNet.Web.Authentication.Tests
 {
     internal class XUnitLogger : ILogger, ILoggerProvider
     {
