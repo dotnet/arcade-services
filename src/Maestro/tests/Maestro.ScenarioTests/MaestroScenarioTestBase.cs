@@ -104,7 +104,7 @@ namespace Maestro.ScenarioTests
         public Task<string> RunDarcAsyncWithInput(string input, params string[] args)
         {
             return TestHelpers.RunExecutableAsyncWithInput(_parameters.DarcExePath, input, args.Concat(new[]
-{
+            {
                 "-p", _parameters.MaestroToken,
                 "--bar-uri", _parameters.MaestroBaseUri,
                 "--github-pat", _parameters.GitHubToken,
@@ -115,7 +115,7 @@ namespace Maestro.ScenarioTests
         public Task<string> RunDarcAsync(params string[] args)
         {
             return TestHelpers.RunExecutableAsync(_parameters.DarcExePath, args.Concat(new[]
-{
+            {
                 "-p", _parameters.MaestroToken,
                 "--bar-uri", _parameters.MaestroBaseUri,
                 "--github-pat", _parameters.GitHubToken,
@@ -181,8 +181,16 @@ namespace Maestro.ScenarioTests
             await RunDarcAsync("delete-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branch).ConfigureAwait(false);
         }
 
-        public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string sourceChannelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency, string sourceOrg = "dotnet",
-            List<string> additionalOptions = null, bool sourceIsAzDo = false, bool targetIsAzDo = false)
+        public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(
+            string sourceChannelName,
+            string sourceRepo,
+            string targetRepo,
+            string targetBranch,
+            string updateFrequency,
+            string sourceOrg = "dotnet",
+            List<string> additionalOptions = null,
+            bool sourceIsAzDo = false,
+            bool targetIsAzDo = false)
         {
             string sourceUrl = sourceIsAzDo ? GetAzDoRepoUrl(sourceRepo, azdoProject: sourceOrg) : GetRepoUrl(sourceOrg, sourceRepo);
             string targetUrl = targetIsAzDo ? GetAzDoRepoUrl(targetRepo) : GetRepoUrl(targetRepo);
@@ -254,7 +262,7 @@ namespace Maestro.ScenarioTests
 
         public async Task<string> GetSubscriptions(string channelName)
         {
-            return await RunDarcAsync("get-subscriptions", "--channel", $"\"{channelName}\"");
+            return await RunDarcAsync("get-subscriptions", "--channel", channelName);
         }
 
         public async Task ValidateSubscriptionInfo(string subscriptionId, string expectedSubscriptionInfo)
@@ -279,8 +287,7 @@ namespace Maestro.ScenarioTests
 
         public async Task<string> DeleteSubscriptionsForChannel(string channelName)
         {
-            string[] parameters = { "delete-subscriptions", "--channel", $"\"{channelName}\"", "--quiet" };
-            return await RunDarcAsync("delete-subscriptions", "--channel", $"{channelName}", "--quiet");
+            return await RunDarcAsync("delete-subscriptions", "--channel", channelName, "--quiet");
         }
 
         public async Task<string> DeleteSubscriptionById(string subscriptionId)
@@ -395,8 +402,15 @@ namespace Maestro.ScenarioTests
         public async Task DarcCloneRepositoryAsync(string sourceRepoUri, string sourceRepoVersion, string gitDirFolder,
             string reposToIgnore, string reposFolder, int depth, bool includeToolset)
         {
-            string[] parameters = {"clone", "--repo", sourceRepoUri, "--version", sourceRepoVersion, "--git-dir-folder",
-               gitDirFolder, "--ignore-repos", reposToIgnore, "--repos-folder", reposFolder, "--depth", depth.ToString() };
+            string[] parameters = {
+                "clone",
+                "--repo", sourceRepoUri,
+                "--version", sourceRepoVersion,
+                "--git-dir-folder", gitDirFolder,
+                "--ignore-repos", reposToIgnore,
+                "--repos-folder", reposFolder,
+                "--depth", depth.ToString()
+            };
 
             if (includeToolset)
             {
@@ -456,40 +470,29 @@ namespace Maestro.ScenarioTests
             foreach (string folder in expectedFolders)
             {
                 string folderPath = Path.Combine(gitDirFolder, folder);
-                Assert.IsTrue(Directory.Exists(folderPath), $"{path} does not appear to be a valid .gitdir: missing folder '{folder}'");
+                DirectoryAssert.Exists((folderPath), $"{path} does not appear to be a valid .gitdir: missing folder '{folder}'");
             }
 
             string[] expectedFiles = { "config", "description", "FETCH_HEAD", "HEAD", "index" };
             foreach (string file in expectedFiles)
             {
                 string filePath = Path.Combine(gitDirFolder, file);
-                Assert.IsTrue(File.Exists(filePath), $"{path} does not appear to be a valid .gitdir: missing file '{file}'");
+                FileAssert.Exists((filePath), $"{path} does not appear to be a valid .gitdir: missing file '{file}'");
             }
         }
 
-        public void VerifyClonedDirectories(Dictionary<string, string> repos, List<string> masterRepos, List<string> gitDirs, string gitDirFolder, string reposFolder)
+        public void VerifyClonedDirectories(Dictionary<string, FileInfo> repos, List<string> masterRepos, List<string> gitDirs, string gitDirFolder, string reposFolder)
         {
             foreach (string name in repos.Keys)
             {
                 string path = Path.Combine(reposFolder, name);
                 bool checkDir = Directory.Exists(path);
-                Assert.IsTrue(Directory.Exists(path), $"Expected cloned repo '{name}' but not found at '{path}'");
+                DirectoryAssert.Exists((path), $"Expected cloned repo '{name}' but not found at '{path}'");
 
                 string versionDetailsPath = Path.Combine(path, "eng", "Version.Details.xml");
-                if (File.Exists(versionDetailsPath))
-                {
-                    using (FileStream stream = File.OpenRead(versionDetailsPath))
-                    {
-                        SHA256 Sha256 = SHA256.Create();
-                        byte[] hash = Sha256.ComputeHash(stream);
-                        string hashString = BitConverter.ToString(hash);
-                        Assert.AreEqual(hashString, repos[name], $"Expected {versionDetailsPath} to have hash '{repos[name]}', actual hash '{hashString}'");
-                    }
-                }
-                else
-                {
-                    Assert.AreEqual(repos[name], "", $"Expected a '{versionDetailsPath}' but it is missing");
-                }
+                FileAssert.Exists(versionDetailsPath, $"Expected a '{versionDetailsPath}' but it is missing");
+
+                FileAssert.AreEqual(repos[name], new FileInfo(versionDetailsPath));
             }
 
             foreach (string repo in masterRepos)
@@ -520,14 +523,14 @@ namespace Maestro.ScenarioTests
             foreach (string gitDir in gitDirs)
             {
                 string gdPath = Path.Combine(gitDirFolder, gitDir);
-                Assert.IsTrue(Directory.Exists(gdPath), $"Expected a .gitdir for '{gitDir}' but not found at '{gdPath}'");
+                DirectoryAssert.Exists(gdPath, $"Expected a .gitdir for '{gitDir}' but not found at '{gdPath}'");
             }
 
             string[] actualGitDirs = Directory.GetDirectories(gitDirFolder);
 
             foreach (string gitDir in actualGitDirs)
             {
-                Assert.Contains(gitDir, actualGitDirs, $"Found unexpected .gitdir '{gitDir}'");
+               // Assert.Contains(gitDir, actualGitDirs, $"Found unexpected .gitdir '{gitDir}'");
                 CheckGitDirectory(gitDir, gitDirFolder);
             }
         }
