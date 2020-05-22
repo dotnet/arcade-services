@@ -412,9 +412,10 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
         }
     }
 
-    public class TestClock : ISystemClock
+    public class TestClock : ISystemClock, Extensions.Internal.ISystemClock
     {
-        public DateTimeOffset UtcNow { get; set; } = DateTime.Parse("2001-02-03T16:05:06Z");
+        public static readonly DateTime BaseTime = DateTime.Parse("2001-02-03T16:05:06Z");
+        public DateTimeOffset UtcNow { get; set; } = BaseTime;
     }
 
     public class TestUser
