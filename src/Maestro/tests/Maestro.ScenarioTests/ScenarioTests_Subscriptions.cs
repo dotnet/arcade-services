@@ -9,6 +9,8 @@ using NUnit.Framework.Internal;
 
 namespace Maestro.ScenarioTests
 {
+    [TestFixture]
+    [Category("ScenarioTest")]
     public class ScenarioTests_Subscriptions : MaestroScenarioTestBase
     {
         private TestParameters _parameters;
@@ -72,11 +74,15 @@ namespace Maestro.ScenarioTests
                     expectedSubscription2.Channel = new Channel(42, channel1Name, "test");
                     expectedSubscription2.Policy = new SubscriptionPolicy(false, UpdateFrequency.None);
 
-                    string expectedPoliciesSub2 = "  - Merge Policies:\r\n    NoExtraCommits\r\n    AllChecksSuccessful\r\n      ignoreChecks = \r\n" +
-    "                       [\r\n" +
-    "                         \"WIP\",\r\n" +
-    "                         \"license/cla\"\r\n" +
-    "                       ]\r\n    NoRequestedChanges";
+                    string expectedPoliciesSub2 = @"  - Merge Policies:
+    NoExtraCommits
+    AllChecksSuccessful
+      ignoreChecks = 
+                       [
+                         ""WIP"",
+                         ""license/cla""
+                       ]
+    NoRequestedChanges";
 
                     string expectedSubscription2Info = SubscriptionStringBuilder.GetSubscriptionString(expectedSubscription2, expectedPoliciesSub2);
 
