@@ -399,27 +399,6 @@ namespace Maestro.ScenarioTests
             return shareable.TryTake()!;
         }
 
-        public async Task DarcCloneRepositoryAsync(string sourceRepoUri, string sourceRepoVersion, string gitDirFolder,
-            string reposToIgnore, string reposFolder, int depth, bool includeToolset)
-        {
-            string[] parameters = {
-                "clone",
-                "--repo", sourceRepoUri,
-                "--version", sourceRepoVersion,
-                "--git-dir-folder", gitDirFolder,
-                "--ignore-repos", reposToIgnore,
-                "--repos-folder", reposFolder,
-                "--depth", depth.ToString()
-            };
-
-            if (includeToolset)
-            {
-                parameters.Append("--include-toolset");
-            }
-
-            await RunDarcAsync(parameters);
-        }
-
         public async Task CheckoutRemoteRefAsync(string commit)
         {
             await RunGitAsync("fetch", "origin", commit);
@@ -462,77 +441,6 @@ namespace Maestro.ScenarioTests
         public async Task<string> GetRepositoryPolicies(string repoUri, string branchName)
         {
             return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
-        }
-
-        public void CheckGitDirectory(string path, string gitDirFolder)
-        {
-            string[] expectedFolders = { "hooks", "info", "logs", "objects", "refs" };
-            foreach (string folder in expectedFolders)
-            {
-                string folderPath = Path.Combine(gitDirFolder, folder);
-                DirectoryAssert.Exists((folderPath), $"{path} does not appear to be a valid .gitdir: missing folder '{folder}'");
-            }
-
-            string[] expectedFiles = { "config", "description", "FETCH_HEAD", "HEAD", "index" };
-            foreach (string file in expectedFiles)
-            {
-                string filePath = Path.Combine(gitDirFolder, file);
-                FileAssert.Exists((filePath), $"{path} does not appear to be a valid .gitdir: missing file '{file}'");
-            }
-        }
-
-        public void VerifyClonedDirectories(Dictionary<string, FileInfo> repos, List<string> masterRepos, List<string> gitDirs, string gitDirFolder, string reposFolder)
-        {
-            foreach (string name in repos.Keys)
-            {
-                string path = Path.Combine(reposFolder, name);
-                bool checkDir = Directory.Exists(path);
-                DirectoryAssert.Exists((path), $"Expected cloned repo '{name}' but not found at '{path}'");
-
-                string versionDetailsPath = Path.Combine(path, "eng", "Version.Details.xml");
-                FileAssert.Exists(versionDetailsPath, $"Expected a '{versionDetailsPath}' but it is missing");
-
-                FileAssert.AreEqual(repos[name], new FileInfo(versionDetailsPath));
-            }
-
-            foreach (string repo in masterRepos)
-            {
-                string repoPath = Path.Combine(reposFolder, repo);
-                Assert.IsTrue(Directory.Exists(repoPath), $"Expected cloned master repo '{repo}' but not found at '{repoPath}'");
-
-                string gitRedirectPath = Path.Combine(repoPath, ".git");
-                string expectedGitDir = Path.Combine(gitDirFolder, repoPath);
-                string expectedRedirect = $"gitdir: {expectedGitDir}.git";
-                string actualRedirect = Directory.GetFiles(gitRedirectPath).First();
-                StringAssert.AreEqualIgnoringCase(expectedRedirect, actualRedirect, $"Expected '{repoPath}' to have a .gitdir redirect of '{expectedRedirect}', actual '{actualRedirect}'");
-            }
-
-            string[] actualRepos = Directory.GetDirectories(TestContext.CurrentContext.TestDirectory, ".");
-            string[] actualMasterRepos = Directory.GetDirectories(TestContext.CurrentContext.TestDirectory).Where(dir => !dir.Contains(".")).ToArray();
-
-            foreach (string repo in actualRepos)
-            {
-                Assert.Contains(repo, repos.Keys, $"Found unexpected repo folder '{repo}'");
-            }
-
-            foreach (string repo in actualMasterRepos)
-            {
-                Assert.Contains(repo, masterRepos, $"Found unexpected master repo folder '{repo}'");
-            }
-
-            foreach (string gitDir in gitDirs)
-            {
-                string gdPath = Path.Combine(gitDirFolder, gitDir);
-                DirectoryAssert.Exists(gdPath, $"Expected a .gitdir for '{gitDir}' but not found at '{gdPath}'");
-            }
-
-            string[] actualGitDirs = Directory.GetDirectories(gitDirFolder);
-
-            foreach (string gitDir in actualGitDirs)
-            {
-               // Assert.Contains(gitDir, actualGitDirs, $"Found unexpected .gitdir '{gitDir}'");
-                CheckGitDirectory(gitDir, gitDirFolder);
-            }
         }
     }
 }
