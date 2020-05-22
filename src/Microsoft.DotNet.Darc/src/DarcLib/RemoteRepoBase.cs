@@ -155,10 +155,11 @@ namespace Microsoft.DotNet.DarcLib
                     Password = pat
                 },
             };
-            using (_logger.BeginScope($"Cloning {repoUri} to {targetDirectory}"))
+            using (_logger.BeginScope("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory))
             {
                 try
                 {
+                    _logger.LogDebug($"Cloning {repoUri} to {targetDirectory}");
                     string repoPath = LibGit2Sharp.Repository.Clone(
                         repoUri,
                         targetDirectory,
