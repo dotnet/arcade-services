@@ -6,9 +6,7 @@ using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -47,8 +45,8 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
         [Theory]
         public async Task NoUser(string route, HttpStatusCode expectedCode, string body = null)
         {
-            HttpClient client = CreateHttpClient();
-            HttpResponseMessage response = await client.GetAsync($"https://example.test/test-auth/{route}");
+            using HttpClient client = CreateHttpClient();
+            using HttpResponseMessage response = await client.GetAsync($"https://example.test/test-auth/{route}");
             Assert.Equal(expectedCode, response.StatusCode);
             if (body != null)
             {
@@ -75,8 +73,8 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
         [Theory]
         public async Task UserBadRole(string route, HttpStatusCode expectedCode, string body = null)
         {
-            HttpClient client = CreateHttpClient("TestUser", "BadRole");
-            HttpResponseMessage response = await client.GetAsync($"https://example.test/test-auth/{route}");
+            using HttpClient client = CreateHttpClient("TestUser", "BadRole");
+            using HttpResponseMessage response = await client.GetAsync($"https://example.test/test-auth/{route}");
             Assert.Equal(expectedCode, response.StatusCode);
             if (body != null)
             {
@@ -103,8 +101,8 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
         [Theory]
         public async Task UserControllerRole(string route, HttpStatusCode expectedCode, string body = null)
         {
-            HttpClient client = CreateHttpClient("TestUser", "ControllerRole");
-            HttpResponseMessage response = await client.GetAsync($"https://example.test/test-auth/{route}");
+            using HttpClient client = CreateHttpClient("TestUser", "ControllerRole");
+            using HttpResponseMessage response = await client.GetAsync($"https://example.test/test-auth/{route}");
             Assert.Equal(expectedCode, response.StatusCode);
             if (body != null)
             {
@@ -131,8 +129,8 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
         [Theory]
         public async Task UserActionRole(string route, HttpStatusCode expectedCode, string body = null)
         {
-            HttpClient client = CreateHttpClient("TestUser", "ActionRole");
-            HttpResponseMessage response = await client.GetAsync($"https://example.test/test-auth/{route}");
+            using HttpClient client = CreateHttpClient("TestUser", "ActionRole");
+            using HttpResponseMessage response = await client.GetAsync($"https://example.test/test-auth/{route}");
             Assert.Equal(expectedCode, response.StatusCode);
             if (body != null)
             {
@@ -159,8 +157,8 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
         [Theory]
         public async Task UserBothRole(string route, HttpStatusCode expectedCode, string body = null)
         {
-            HttpClient client = CreateHttpClient("TestUser", "ControllerRole;ActionRole");
-            HttpResponseMessage response = await client.GetAsync($"https://example.test/test-auth/{route}");
+            using HttpClient client = CreateHttpClient("TestUser", "ControllerRole;ActionRole");
+            using HttpResponseMessage response = await client.GetAsync($"https://example.test/test-auth/{route}");
             Assert.Equal(expectedCode, response.StatusCode);
             if (body != null)
             {
@@ -252,133 +250,5 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
     {
         public string UserName { get; set; }
         public string Role { get; set; }
-    }
-
-    [Route("test-auth/no")]
-    public class NoAttributeController : ControllerBase
-    {
-        [Route("no")]
-        public IActionResult NoAttribute()
-        {
-            return Ok("No:No:Value");
-        }
-
-        [AllowAnonymous]
-        [Route("anonymous")]
-        public IActionResult AnonymousAttribute()
-        {
-            return Ok("No:Anonymous:Value");
-        }
-
-        [Authorize]
-        [Route("any")]
-        public IActionResult Any()
-        {
-            return Ok("No:Any:Value");
-        }
-
-        [Authorize(Roles = "ActionRole")]
-        [Route("role")]
-        public IActionResult RoleAttribute()
-        {
-            return Ok("No:Role:Value");
-        }
-    }
-
-    [Route("test-auth/anonymous")]
-    [AllowAnonymous]
-    public class AnonymousAttributeController : ControllerBase
-    {
-        [Route("no")]
-        public IActionResult NoAttribute()
-        {
-            return Ok("Anonymous:No:Value");
-        }
-
-        [AllowAnonymous]
-        [Route("anonymous")]
-        public IActionResult AnonymousAttribute()
-        {
-            return Ok("Anonymous:Anonymous:Value");
-        }
-
-        [Authorize]
-        [Route("any")]
-        public IActionResult Any()
-        {
-            return Ok("Anonymous:Any:Value");
-        }
-
-        [Authorize(Roles = "ActionRole")]
-        [Route("role")]
-        public IActionResult RoleAttribute()
-        {
-            return Ok("Anonymous:Role:Value");
-        }
-    }
-
-    [Route("test-auth/any")]
-    [Authorize]
-    public class AnyAttributeController : ControllerBase
-    {
-        [Route("no")]
-        public IActionResult NoAttribute()
-        {
-            return Ok("Any:No:Value");
-        }
-
-        [AllowAnonymous]
-        [Route("anonymous")]
-        public IActionResult AnonymousAttribute()
-        {
-            return Ok("Any:Anonymous:Value");
-        }
-
-        [Authorize]
-        [Route("any")]
-        [HttpGet]
-        public IActionResult Any()
-        {
-            return Ok("Any:Any:Value");
-        }
-
-        [Authorize(Roles = "ActionRole")]
-        [Route("role")]
-        public IActionResult RoleAttribute()
-        {
-            return Ok("Any:Role:Value");
-        }
-    }
-
-    [Route("test-auth/role")]
-    [Authorize(Roles = "ControllerRole")]
-    public class RoleAttributeController : ControllerBase
-    {
-        [Route("no")]
-        public IActionResult NoAttribute()
-        {
-            return Ok("Role:No:Value");
-        }
-
-        [AllowAnonymous]
-        [Route("anonymous")]
-        public IActionResult AnonymousAttribute()
-        {
-            return Ok("Role:Anonymous:Value");
-        }
-
-        [Authorize]
-        [Route("any")]
-        public IActionResult Any()
-        {
-            return Ok("Role:Any:Value");
-        }
-
-        [Authorize(Roles = "ActionRole")]
-        [Route("role")]
-        public IActionResult RoleAttribute()
-        {
-            return Ok("Role:Role:Value");
-        }
     }
 }
