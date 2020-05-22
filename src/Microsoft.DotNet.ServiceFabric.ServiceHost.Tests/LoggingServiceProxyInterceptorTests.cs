@@ -21,7 +21,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             var config = new TelemetryConfiguration("00000000-0000-0000-0000-000000000001", telemetryChannel);
             var client = new TelemetryClient(config);
 
-            Mock<ServiceContext> ctx = MockBuilder.MockServiceContext();
+            StatelessServiceContext ctx = MockBuilder.StatelessServiceContext();
 
             var service = new Mock<IFakeService>();
             service.Setup(s => s.TestServiceMethod())
@@ -32,7 +32,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 typeof(IFakeService),
                 new Type[0],
                 service.Object,
-                new LoggingServiceProxyInterceptor(client, ctx.Object, "other://uri.test"));
+                new LoggingServiceProxyInterceptor(client, ctx, "other://uri.test"));
 
             var invocationException = Assert.Throws<InvalidOperationException>(() => impl.TestServiceMethod());
             client.Flush();
@@ -63,7 +63,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             var config = new TelemetryConfiguration("00000000-0000-0000-0000-000000000001", telemetryChannel);
             var client = new TelemetryClient(config);
 
-            Mock<ServiceContext> ctx = MockBuilder.MockServiceContext();
+            StatelessServiceContext ctx = MockBuilder.StatelessServiceContext();
 
             var service = new Mock<IFakeService>();
             service.Setup(s => s.TestServiceMethod())
@@ -75,7 +75,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 typeof(IFakeService),
                 new Type[0],
                 service.Object,
-                new LoggingServiceProxyInterceptor(client, ctx.Object, "other://uri.test"));
+                new LoggingServiceProxyInterceptor(client, ctx, "other://uri.test"));
 
             var invocationException = Assert.Throws<AggregateException>(() => impl.TestServiceMethod());
             client.Flush();
@@ -106,7 +106,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             var config = new TelemetryConfiguration("00000000-0000-0000-0000-000000000001", telemetryChannel);
             var client = new TelemetryClient(config);
 
-            Mock<ServiceContext> ctx = MockBuilder.MockServiceContext();
+            StatelessServiceContext ctx = MockBuilder.StatelessServiceContext();
 
             var service = new Mock<IFakeService>();
             service.Setup(s => s.TestServiceMethod()).Throws(new InvalidOperationException("Test exception text"));
@@ -116,7 +116,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 typeof(IFakeService),
                 new Type[0],
                 service.Object,
-                new LoggingServiceProxyInterceptor(client, ctx.Object, "other://uri.test"));
+                new LoggingServiceProxyInterceptor(client, ctx, "other://uri.test"));
 
             var invocationException = Assert.Throws<InvalidOperationException>(() => impl.TestServiceMethod());
             client.Flush();
@@ -147,14 +147,14 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             var config = new TelemetryConfiguration("00000000-0000-0000-0000-000000000001", telemetryChannel);
             var client = new TelemetryClient(config);
 
-            Mock<ServiceContext> ctx = MockBuilder.MockServiceContext();
+            StatelessServiceContext ctx = MockBuilder.StatelessServiceContext();
 
             var gen = new ProxyGenerator();
             var impl = (IFakeService) gen.CreateInterfaceProxyWithTargetInterface(
                 typeof(IFakeService),
                 new Type[0],
                 Mock.Of<IFakeService>(),
-                new LoggingServiceProxyInterceptor(client, ctx.Object, "other://uri.test"));
+                new LoggingServiceProxyInterceptor(client, ctx, "other://uri.test"));
 
             impl.TestServiceMethod();
             client.Flush();
