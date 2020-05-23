@@ -198,6 +198,28 @@ namespace Microsoft.DotNet.Darc
             return builder.ToString();
         }
 
+        public static string GetTextSubscriptionDescription(Subscription subscription, IEnumerable<MergePolicy> mergePolicies = null)
+        {
+            StringBuilder subInfo = new StringBuilder();
+            subInfo.AppendLine($"{subscription.SourceRepository} ({subscription.Channel.Name}) ==> '{subscription.TargetRepository}' ('{subscription.TargetBranch}')");
+            subInfo.AppendLine($"  - Id: {subscription.Id}");
+            subInfo.AppendLine($"  - Update Frequency: {subscription.Policy.UpdateFrequency}");
+            subInfo.AppendLine($"  - Enabled: {subscription.Enabled}");
+            subInfo.AppendLine($"  - Batchable: {subscription.Policy.Batchable}");
+
+            IEnumerable<MergePolicy> policies = mergePolicies ?? subscription.Policy.MergePolicies;
+            subInfo.Append(UxHelpers.GetMergePoliciesDescription(policies, "  "));
+
+            // Currently the API only returns the last applied build for requests to specific subscriptions.
+            // This will be fixed, but for now, don't print the last applied build otherwise.
+            if (subscription.LastAppliedBuild != null)
+            {
+                subInfo.AppendLine($"  - Last Build: {subscription.LastAppliedBuild.AzureDevOpsBuildNumber} ({subscription.LastAppliedBuild.Commit})");
+            }
+
+            return subInfo.ToString();
+        }
+
         public static string GetSimpleRepoName(string repoUri)
         {
             int lastSlash = repoUri.LastIndexOf("/");
