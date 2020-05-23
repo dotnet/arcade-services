@@ -24,12 +24,12 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
 
         public void ConfigureServices(Action<IServiceCollection> configureServices)
         {
-            _configureServices = configureServices;
+            _configureServices += configureServices;
         }
 
         public void ConfigureBuilder(Action<IApplicationBuilder> configureBuilder)
         {
-            _configureBuilder = configureBuilder;
+            _configureBuilder += configureBuilder;
         }
 
         protected override IWebHostBuilder CreateWebHostBuilder()

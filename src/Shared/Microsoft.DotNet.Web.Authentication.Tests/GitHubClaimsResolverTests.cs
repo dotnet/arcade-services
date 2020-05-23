@@ -74,33 +74,6 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
         }
 
         [Fact]
-        public async Task UserInformationIsCached()
-        {
-            using IDisposable scope =
-                ConfigureResolver(out FakeHandler handler, out _, out GitHubClaimResolver resolver);
-
-            handler.AddCannedResponse("https://api.github.test/user",
-                new JObject
-                {
-                    {"id", 146},
-                    {"login", "TestUser"},
-                    {"email", "TestEmail@microsoft.test"},
-                    {"name", "A Real Fake Name"},
-                    {"url", "https://github.test/TestUser"},
-                });
-
-            IEnumerable<Claim> userInformation = await resolver.GetUserInformationClaims("FAKE-TOKEN");
-            var id = new ClaimsIdentity(userInformation, "TEST");
-            Assert.Equal("TestUser", id.Name);
-
-            userInformation = await resolver.GetUserInformationClaims("FAKE-TOKEN");
-            id = new ClaimsIdentity(userInformation, "TEST");
-            Assert.Equal("TestUser", id.Name);
-
-            handler.AssertCompleted();
-        }
-
-        [Fact]
         public async Task ExpiredUserInformationIsFetchedAgain()
         {
             using IDisposable scope = ConfigureResolver(out FakeHandler handler,
@@ -137,6 +110,38 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             id = new ClaimsIdentity(userInformation, "TEST");
             Assert.Equal("TestUser", id.Name);
             Assert.Equal("OtherEmail@microsoft.test", id.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value);
+
+            handler.AssertCompleted();
+        }
+
+        [Fact]
+        public async Task UserInformationIsCached()
+        {
+            using IDisposable scope =
+                ConfigureResolver(out FakeHandler handler, out _, out GitHubClaimResolver resolver);
+
+            handler.AddCannedResponse("https://api.github.test/user",
+                new JObject
+                {
+                    {"id", 146},
+                    {"login", "TestUser"},
+                    {"email", "TestEmail@microsoft.test"},
+                    {"name", "A Real Fake Name"},
+                    {"url", "https://github.test/TestUser"},
+                });
+
+            IEnumerable<Claim> userInformation = await resolver.GetUserInformationClaims("FAKE-TOKEN");
+            var id = new ClaimsIdentity(userInformation, "TEST");
+            Assert.Equal("TestUser", id.Name);
+
+            // Combining the proven behaviors of GitHubErrorFailedAuth and ExpiredUserInformationIsFetchedAgain
+            // we know this would crash if it attempted another lookup
+            // * ExpiredUserInformationIsFetchedAgain proves each response is only used once
+            // * GitHubErrorFailedAuth proves that the 404 we'll get (because we used all the responses now) will throw
+            // So this not throwing and returning a valid answer proves it must have pulled from a cache
+            userInformation = await resolver.GetUserInformationClaims("FAKE-TOKEN");
+            id = new ClaimsIdentity(userInformation, "TEST");
+            Assert.Equal("TestUser", id.Name);
 
             handler.AssertCompleted();
         }
