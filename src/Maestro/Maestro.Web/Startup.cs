@@ -49,6 +49,7 @@ using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using Swashbuckle.AspNetCore.Swagger;
 
 namespace Maestro.Web
 {
@@ -268,7 +269,25 @@ namespace Maestro.Web
             services.EnableLazy();
 
             services.AddMergePolicies();
+            services.Configure<SwaggerOptions>(options =>
+            {
+                options.SerializeAsV2 = true;
+                options.RouteTemplate = "api/{documentName}/swagger.json";
+                options.PreSerializeFilters.Add(
+                    (doc, req) =>
+                    {
+                        bool http = HostingEnvironment.IsDevelopment() && !ServiceFabricHelpers.RunningInServiceFabric();
+                        doc.Servers = new List<OpenApiServer>
+                        {
+                            new OpenApiServer
+                            {
+                                Url = $"{(http ? "http" : "https")}://{req.Host.Value}/",
+                            },
+                        };
 
+                        req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
+                    });
+            });
         }
 
         private void ConfigureApiExceptions(IApplicationBuilder app)
@@ -349,26 +368,7 @@ namespace Maestro.Web
 
                     return next();
                 });
-            app.UseSwagger(
-                options =>
-                {
-                    options.SerializeAsV2 = true;
-                    options.RouteTemplate = "api/{documentName}/swagger.json";
-                    options.PreSerializeFilters.Add(
-                        (doc, req) =>
-                        {
-                            bool http = HostingEnvironment.IsDevelopment() && !ServiceFabricHelpers.RunningInServiceFabric();
-                            doc.Servers = new List<OpenApiServer>
-                            {
-                                new OpenApiServer
-                                {
-                                    Url = $"{(http ? "http" : "https")}://{req.Host.Value}/",
-                                },
-                            };
-
-                            req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
-                        });
-                });
+            app.UseSwagger();
             
             app.UseRouting();
             app.UseAuthentication();

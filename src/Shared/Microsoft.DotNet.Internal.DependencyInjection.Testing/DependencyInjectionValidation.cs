@@ -14,14 +14,21 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
             "System.Fabric.ServiceContext",
             "Microsoft.Extensions.Options.IConfigureOptions`1",
             "Microsoft.Extensions.Caching.Memory.MemoryCacheOptions",
-            "Microsoft.Extensions.DependencyInjection.IServiceScopeFactory"
+            "Microsoft.Extensions.Caching.Memory.MemoryDistributedCacheOptions",
+            "Microsoft.Extensions.DependencyInjection.IServiceScopeFactory",
+            "System.IServiceProvider"
         );
 
         private static readonly ImmutableList<string> s_exemptNamespaces = ImmutableList.Create(
-            "Microsoft.ApplicationInsights.AspNetCore"
+            "Microsoft.ApplicationInsights.AspNetCore",
+            "Microsoft.AspNetCore"
         );
 
-        public static bool IsDependencyResolutionCoherent(Action<ServiceCollection> register, out string errorMessage)
+        public static bool IsDependencyResolutionCoherent(
+            Action<ServiceCollection> register,
+            out string errorMessage,
+            IEnumerable<Type> additionalScopedTypes = null,
+            IEnumerable<Type> additionalSingletonTypes = null)
         {
             errorMessage = null;
 
@@ -47,6 +54,22 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
                 }
 
                 if (!IsTypeResolvable(service.ImplementationType, services, allErrors, service.Lifetime))
+                {
+                    allResolved = false;
+                }
+            }
+
+            foreach (Type scopedType in additionalScopedTypes ?? Enumerable.Empty<Type>())
+            {
+                if (!IsTypeResolvable(scopedType, services, allErrors, ServiceLifetime.Scoped))
+                {
+                    allResolved = false;
+                }
+            }
+
+            foreach (Type scopedType in additionalSingletonTypes ?? Enumerable.Empty<Type>())
+            {
+                if (!IsTypeResolvable(scopedType, services, allErrors, ServiceLifetime.Singleton))
                 {
                     allResolved = false;
                 }
@@ -83,7 +106,7 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
                     return true;
                 }
 
-                errorMessage = ctorMsg;
+                errorMessage ??= ctorMsg;
             }
             
             msgBuilder.AppendLine();
