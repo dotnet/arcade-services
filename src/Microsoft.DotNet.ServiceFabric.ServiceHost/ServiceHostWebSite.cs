@@ -9,19 +9,13 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
     public static class ServiceHostWebSite<TStartup>
         where TStartup : class
     {
-        private static bool RunningInServiceFabric()
-        {
-            string fabricApplication = Environment.GetEnvironmentVariable("Fabric_ApplicationName");
-            return !string.IsNullOrEmpty(fabricApplication);
-        }
-
         /// <summary>
         ///     This is the entry point of the service host process.
         /// </summary>
         [PublicAPI]
         public static void Run(string serviceTypeName)
         {
-            if (RunningInServiceFabric())
+            if (ServiceFabricHelpers.RunningInServiceFabric())
             {
                 ServiceFabricMain(serviceTypeName);
             }
