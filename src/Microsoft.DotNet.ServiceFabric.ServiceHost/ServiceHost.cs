@@ -67,6 +67,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         /// </summary>
         public static void Run(Action<ServiceHost> configure)
         {
+            // Because of this issue, the activity tracking causes
+            // arbitrarily HttpClient calls to crash, so disable it until
+            // it is fixed
+            // https://github.com/dotnet/runtime/issues/36908
+            AppContext.SetSwitch("ystem.Net.Http.EnableActivityPropagation", false);
             CodePackageActivationContext packageActivationContext = FabricRuntime.GetActivationContext();
             try
             {
