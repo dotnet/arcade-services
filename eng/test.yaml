@@ -3,7 +3,7 @@ steps:
 - task: VSTest@2
   inputs:
     searchFolder: $(Build.SourcesDirectory)/artifacts/bin
-    testAssemblyVer2: '**.\*.Tests.dll'
+    testAssemblyVer2: '**\*.Tests.dll'
     testFiltercriteria: Category!=ScenarioTest
     codeCoverageEnabled: true
     configuration: $(_BuildConfig)
