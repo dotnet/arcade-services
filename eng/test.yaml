@@ -11,7 +11,7 @@ steps:
       --configuration $(_BuildConfig)
       --collect:"Code Coverage"
       --settings:CodeCoverage.runsettings
-      --filter "TestCategory!=PostDeployment&TestCategory!=Nightly&TestCategory!=PreDeployment"
+      --filter "Category!=ScenarioTest"
       --no-build
   env:
     NUGET_PACKAGES: '$(Build.SourcesDirectory)/.packages'
