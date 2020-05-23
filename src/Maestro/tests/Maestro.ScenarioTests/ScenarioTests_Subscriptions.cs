@@ -1,8 +1,7 @@
-using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Maestro.ScenarioTests.ObjectHelpers;
+using Microsoft.DotNet.Darc;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
@@ -56,12 +55,9 @@ namespace Maestro.ScenarioTests
                     await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(
                         channel1Name, repo1Name, repo2Name, targetBranch, "everyWeek", "maestro-auth-test");
 
-                    Subscription expectedSubscription1 = new Subscription(Guid.Parse(subscription1Id.Value), true, repo1Uri, repo2Uri, targetBranch);
-                    expectedSubscription1.Channel = new Channel(42, channel1Name, "test");
-                    expectedSubscription1.Policy = new SubscriptionPolicy(false, UpdateFrequency.EveryWeek);
-                    expectedSubscription1.Policy.MergePolicies = ImmutableList<MergePolicy>.Empty;
+                    Subscription expectedSubscription1 = SubscriptionBuilder.BuildSubscription(repo1Uri, repo2Uri, targetBranch, channel1Name, subscription1Id.Value, UpdateFrequency.EveryWeek, false, false, false, false, false, null);
 
-                    string expectedSubscription1Info = SubscriptionStringBuilder.GetSubscriptionString(expectedSubscription1);
+                    string expectedSubscription1Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription1, null);
 
                     await ValidateSubscriptionInfo(subscription1Id.Value, expectedSubscription1Info);
 
@@ -70,21 +66,9 @@ namespace Maestro.ScenarioTests
                         new List<string>
                         { "--all-checks-passed", "--no-extra-commits", "--no-requested-changes", "--ignore-checks", "WIP,license/cla" }, targetIsAzDo: true);
 
-                    Subscription expectedSubscription2 = new Subscription(Guid.Parse(subscription2Id.Value), true, repo1Uri, repo1AzDoUri, targetBranch);
-                    expectedSubscription2.Channel = new Channel(42, channel1Name, "test");
-                    expectedSubscription2.Policy = new SubscriptionPolicy(false, UpdateFrequency.None);
+                    Subscription expectedSubscription2 = SubscriptionBuilder.BuildSubscription(repo1Uri, repo1AzDoUri, targetBranch, channel1Name, subscription2Id.Value, UpdateFrequency.None, false, false, true, true, true, new List<string> { "WIP", "license/cla" });
 
-                    string expectedPoliciesSub2 = @"  - Merge Policies:
-    NoExtraCommits
-    AllChecksSuccessful
-      ignoreChecks = 
-                       [
-                         ""WIP"",
-                         ""license/cla""
-                       ]
-    NoRequestedChanges";
-
-                    string expectedSubscription2Info = SubscriptionStringBuilder.GetSubscriptionString(expectedSubscription2, expectedPoliciesSub2);
+                    string expectedSubscription2Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription2, null);
 
                     await ValidateSubscriptionInfo(subscription2Id.Value, expectedSubscription2Info);
 
@@ -93,11 +77,9 @@ namespace Maestro.ScenarioTests
                         new List<string>
                         { "--all-checks-passed", "--no-extra-commits", "--no-requested-changes", "--ignore-checks", "WIP,license/cla" });
 
-                    Subscription expectedSubscription3 = new Subscription(Guid.Parse(subscription3Id.Value), true, repo1Uri, repo2Uri, targetBranch);
-                    expectedSubscription3.Channel = new Channel(42, channel2Name, "test");
-                    expectedSubscription3.Policy = new SubscriptionPolicy(false, UpdateFrequency.None);
+                    Subscription expectedSubscription3 = SubscriptionBuilder.BuildSubscription(repo1Uri, repo2Uri, targetBranch, channel2Name, subscription3Id.Value, UpdateFrequency.None, false, false, true, true, true, new List<string> { "WIP", "license/cla" });
 
-                    string expectedSubscription3Info = SubscriptionStringBuilder.GetSubscriptionString(expectedSubscription3, expectedPoliciesSub2);
+                    string expectedSubscription3Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription3, null);
 
                     await ValidateSubscriptionInfo(subscription3Id.Value, expectedSubscription3Info);
 
@@ -139,11 +121,9 @@ namespace Maestro.ScenarioTests
                     await using AsyncDisposableValue<string> batchSubscriptionId = await CreateSubscriptionAsync(
                         channel1Name, repo1Name, repo2Name, targetBranch, "everyWeek", "maestro-auth-test", additionalOptions: new List<string> { "--batchable" });
 
-                    Subscription expectedBatchedSubscription = new Subscription(Guid.Parse(batchSubscriptionId.Value), true, repo1Uri, repo2Uri, targetBranch);
-                    expectedBatchedSubscription.Channel = new Channel(42, channel1Name, "test");
-                    expectedBatchedSubscription.Policy = new SubscriptionPolicy(true, UpdateFrequency.EveryWeek);
+                    Subscription expectedBatchedSubscription = SubscriptionBuilder.BuildSubscription(repo1Uri, repo2Uri, targetBranch, channel1Name, batchSubscriptionId.Value, UpdateFrequency.EveryWeek, true, false, false, false, false, null);
 
-                    string expectedBatchedSubscriptionInfo = SubscriptionStringBuilder.GetSubscriptionString(expectedBatchedSubscription, "  - Merge Policies: []");
+                    string expectedBatchedSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedBatchedSubscription, null);
 
                     await ValidateSubscriptionInfo(batchSubscriptionId.Value, expectedBatchedSubscriptionInfo);
                     await DeleteSubscriptionById(batchSubscriptionId.Value);
@@ -163,13 +143,8 @@ namespace Maestro.ScenarioTests
 
                     await using AsyncDisposableValue<string> yamlSubscriptionId = await CreateSubscriptionAsync(yamlDefinition);
 
-                    Subscription expectedYamlSubscription = new Subscription(Guid.Parse(yamlSubscriptionId.Value), true, repo1Uri, repo2Uri, targetBranch);
-                    expectedYamlSubscription.Channel = new Channel(42, channel1Name, "test");
-                    expectedYamlSubscription.Policy = new SubscriptionPolicy(false, UpdateFrequency.EveryWeek);
-                    MergePolicy standardPolicy = new MergePolicy { Name = "Standard" };
-                    expectedYamlSubscription.Policy.MergePolicies = ImmutableList.Create(standardPolicy);
-
-                    string expectedYamlSubscriptionInfo = SubscriptionStringBuilder.GetSubscriptionString(expectedYamlSubscription, "  - Merge Policies:\r\n    Standard");
+                    Subscription expectedYamlSubscription = SubscriptionBuilder.BuildSubscription(repo1Uri, repo2Uri, targetBranch, channel1Name, yamlSubscriptionId.Value, UpdateFrequency.EveryWeek, false, true, false, false, false, null);
+                    string expectedYamlSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription, null);
 
                     await ValidateSubscriptionInfo(yamlSubscriptionId.Value, expectedYamlSubscriptionInfo);
                     await DeleteSubscriptionById(yamlSubscriptionId.Value);
@@ -189,12 +164,9 @@ namespace Maestro.ScenarioTests
 
                     await using AsyncDisposableValue<string> yamlSubscription2Id = await CreateSubscriptionAsync(yamlDefinition2);
 
-                    Subscription expectedYamlSubscription2 = new Subscription(Guid.Parse(yamlSubscription2Id.Value), true, repo1Uri, repo2Uri, targetBranch);
-                    expectedYamlSubscription2.Channel = new Channel(42, channel1Name, "test");
-                    expectedYamlSubscription2.Policy = new SubscriptionPolicy(false, UpdateFrequency.EveryWeek);
-                    expectedYamlSubscription2.Policy.MergePolicies = ImmutableList.Create(standardPolicy);
+                    Subscription expectedYamlSubscription2 = SubscriptionBuilder.BuildSubscription(repo1Uri, repo2Uri, targetBranch, channel1Name, yamlSubscription2Id.Value, UpdateFrequency.EveryWeek, false, true, false, false, false, null);
 
-                    string expectedYamlSubscriptionInfo2 = SubscriptionStringBuilder.GetSubscriptionString(expectedYamlSubscription2, "  - Merge Policies:\r\n    standard");
+                    string expectedYamlSubscriptionInfo2 = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription2, null);
 
                     await ValidateSubscriptionInfo(yamlSubscription2Id.Value, expectedYamlSubscriptionInfo2);
                     await DeleteSubscriptionById(yamlSubscription2Id.Value);
