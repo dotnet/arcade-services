@@ -276,7 +276,7 @@ namespace Maestro.Web
                 options.PreSerializeFilters.Add(
                     (doc, req) =>
                     {
-                        bool http = HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric();
+                        bool http = HostingEnvironment.IsDevelopment() && !ServiceFabricHelpers.RunningInServiceFabric();
                         doc.Servers = new List<OpenApiServer>
                         {
                             new OpenApiServer
@@ -341,7 +341,7 @@ namespace Maestro.Web
             app.UseExceptionHandler(ConfigureApiExceptions);
 
             if (HostingEnvironment.IsDevelopment() &&
-                !Program.RunningInServiceFabric() &&
+                !ServiceFabricHelpers.RunningInServiceFabric() &&
                 !string.Equals(
                     Configuration["ForceLocalApi"],
                     true.ToString(),
@@ -456,14 +456,14 @@ namespace Maestro.Web
                     return next();
                 });
 
-            if (HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric())
+            if (HostingEnvironment.IsDevelopment() && !ServiceFabricHelpers.RunningInServiceFabric())
             {
                 // In local dev with the `ng serve` scenario, just redirect /_/api to /api
                 app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
             }
 
             app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/api"), ConfigureApi);
-            if (Program.RunningInServiceFabric())
+            if (ServiceFabricHelpers.RunningInServiceFabric())
             {
                 app.MapWhen(
                     ctx => ctx.Request.Path.StartsWithSegments("/_/api") && IsGet(ctx),
