@@ -1,44 +1,12 @@
 steps: 
 
-- task: DotNetCoreCLI@2
-  displayName: Test C# (dotnet test)
+- task: VSTest@2
   inputs:
-    command: 'custom'
-    projects: |
-      src/**/*.Tests.csproj
-    custom: 'test'
-    arguments: > 
-      --configuration $(_BuildConfig)
-      --collect:"Code Coverage"
-      --settings:CodeCoverage.runsettings
-      --filter "Category!=ScenarioTest"
-      --no-build
-  env:
-    NUGET_PACKAGES: '$(Build.SourcesDirectory)/.packages'
-  condition: succeededOrFailed()
-
-- task: Powershell@2
-  inputs: 
-    targetType: 'filePath'
-    filePath: eng\convert-codecoveragetoxml.ps1
-    arguments: -Path "$(system.defaultworkingdirectory)" -NugetPackagesPath "$(Build.SourcesDirectory)\.packages"
-  displayName: Convert Code Coverage to XML (powershell)
-
-- task: Palmmedia.reportgenerator.reportgenerator-build-release-task.reportgenerator@4
-  displayName: ReportGenerator
-  inputs:
-    reports: '$(system.defaultworkingdirectory)\codecoverage.coveragexml'
-    targetdir: '$(Build.SourcesDirectory)\CodeCoverage'
-    reporttypes: 'HtmlInline_AzurePipelines;Cobertura'
-    sourcedirs: '$(Build.SourcesDirectory)'
-
-- task: PublishCodeCoverageResults@1
-  displayName: 'Publish Code Coverage'
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: '$(Build.SourcesDirectory)\CodeCoverage\Cobertura.xml'
-    pathToSources: '$(Build.SourcesDirectory)'
-    publishRunAttachments: true
+    searchFolder: $(Build.SourcesDirectory)/artifacts/bin
+    testSelector: '**.\*.Tests.dll'
+    testFiltercriteria: Category!=ScenarioTest
+    codeCoverageEnabled: true
+    configuration: $(_BuildConfig)
 
 - script: echo export const token = ''; > src/environments/token.ts
   workingDirectory: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
