@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 
         private static void CleanTempFolderForTest()
         {
-            using (var tempFiles = new TemporaryFiles(MockBuilder.MockServiceContext().Object,
+            using (var tempFiles = new TemporaryFiles(MockBuilder.StatelessServiceContext(),
                 NullLogger<TemporaryFiles>.Instance))
             {
                 tempFiles.Initialize();
@@ -40,7 +40,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             try
             {
                 string parent;
-                using (var tempFiles = new TemporaryFiles(MockBuilder.MockServiceContext().Object,
+                using (var tempFiles = new TemporaryFiles(MockBuilder.StatelessServiceContext(),
                     NullLogger<TemporaryFiles>.Instance))
                 {
                     tempFiles.Initialize();
@@ -61,7 +61,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
         public void DisposeCleansUp()
         {
             string parent;
-            using (var tempFiles = new TemporaryFiles(MockBuilder.MockServiceContext().Object,
+            using (var tempFiles = new TemporaryFiles(MockBuilder.StatelessServiceContext(),
                 NullLogger<TemporaryFiles>.Instance))
             {
                 tempFiles.Initialize();
@@ -76,7 +76,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
         [Fact]
         public void InitializeCreatedRoot()
         {
-            using (var tempFiles = new TemporaryFiles(MockBuilder.MockServiceContext().Object,
+            using (var tempFiles = new TemporaryFiles(MockBuilder.StatelessServiceContext(),
                 NullLogger<TemporaryFiles>.Instance))
             {
                 tempFiles.Initialize();
@@ -89,7 +89,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
         [Fact]
         public void PreInitializeIsNoop()
         {
-            using (var tempFiles = new TemporaryFiles(MockBuilder.MockServiceContext().Object,
+            using (var tempFiles = new TemporaryFiles(MockBuilder.StatelessServiceContext(),
                 NullLogger<TemporaryFiles>.Instance))
             {
                 string testPath = tempFiles.GetFilePath("asdfpoiu");
@@ -105,7 +105,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             string parent;
             try
             {
-                using (var tempFiles = new TemporaryFiles(MockBuilder.MockServiceContext().Object,
+                using (var tempFiles = new TemporaryFiles(MockBuilder.StatelessServiceContext(),
                     NullLogger<TemporaryFiles>.Instance))
                 {
                     tempFiles.Initialize();
@@ -118,7 +118,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 writer?.Dispose();
             }
 
-            using (var tempFiles = new TemporaryFiles(MockBuilder.MockServiceContext().Object,
+            using (var tempFiles = new TemporaryFiles(MockBuilder.StatelessServiceContext(),
                 NullLogger<TemporaryFiles>.Instance))
             {
                 tempFiles.Initialize();
