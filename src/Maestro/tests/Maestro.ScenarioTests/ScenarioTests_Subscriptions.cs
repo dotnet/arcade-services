@@ -35,6 +35,7 @@ namespace Maestro.ScenarioTests
         }
 
         [Test]
+        [Category("ScenarioTest")]
         public async Task Subscriptions_EndToEnd()
         {
             TestContext.WriteLine("Subscription management tests...");
