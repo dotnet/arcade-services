@@ -71,7 +71,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             // arbitrarily HttpClient calls to crash, so disable it until
             // it is fixed
             // https://github.com/dotnet/runtime/issues/36908
-            AppContext.SetSwitch("ystem.Net.Http.EnableActivityPropagation", false);
+            AppContext.SetSwitch("System.Net.Http.EnableActivityPropagation", false);
             CodePackageActivationContext packageActivationContext = FabricRuntime.GetActivationContext();
             try
             {
