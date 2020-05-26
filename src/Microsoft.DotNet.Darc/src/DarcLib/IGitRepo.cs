@@ -10,6 +10,8 @@ namespace Microsoft.DotNet.DarcLib
 {
     public interface IGitRepo
     {
+        public bool AllowRetries { get; set; }
+
         /// <summary>
         /// Checks that a repository exists
         /// </summary>
