@@ -13,9 +13,22 @@ steps:
       --settings:CodeCoverage.runsettings
       --filter "TestCategory!=PostDeployment&TestCategory!=Nightly&TestCategory!=PreDeployment"
       --no-build
+      --logger "trx;LogFilePrefix=TestResults-"
+      --
+      "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
   env:
     NUGET_PACKAGES: '$(Build.SourcesDirectory)/.packages'
   condition: succeededOrFailed()
+
+- task: PublishTestResults@2
+  displayName: Publish Core Test Results
+  condition: succeededOrFailed()
+  inputs:
+    testResultsFormat: VSTest
+    testResultsFiles: '**/TestResults-*' 
+    searchFolder: $(Build.ArtifactStagingDirectory)\TestResults
+    testRunTitle: Basic Tests
+    buildConfiguration: $(_BuildConfig)
 
 - task: Powershell@2
   inputs: 
