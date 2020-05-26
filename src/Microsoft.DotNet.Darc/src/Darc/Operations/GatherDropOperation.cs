@@ -1636,7 +1636,7 @@ namespace Microsoft.DotNet.Darc.Operations
             }
             catch (OperationCanceledException e)
             {
-                errors.Add($"The download operation was cancelled: {e.Message}");
+                errors.Add($"While trying to download from {sourceUri} the download operation was cancelled: {e.Message}");
             }
             finally
             {
