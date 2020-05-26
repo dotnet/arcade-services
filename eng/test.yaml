@@ -3,10 +3,10 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: Test C# (dotnet test)
   inputs:
-    command: 'custom'
+    command: custom
     projects: |
       src/**/*.Tests.csproj
-    custom: 'test'
+    custom: test
     arguments: > 
       --configuration $(_BuildConfig)
       --collect:"Code Coverage"
@@ -14,10 +14,12 @@ steps:
       --filter "TestCategory!=PostDeployment&TestCategory!=Nightly&TestCategory!=PreDeployment"
       --no-build
       --logger "trx;LogFilePrefix=TestResults-"
+      -v normal
       --
       "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
+      RunConfiguration.MapCpuCount=4
   env:
-    NUGET_PACKAGES: '$(Build.SourcesDirectory)/.packages'
+    NUGET_PACKAGES: $(Build.SourcesDirectory)/.packages
   condition: succeededOrFailed()
 
 - task: PublishTestResults@2
@@ -31,9 +33,17 @@ steps:
     mergeTestResults: true
     buildConfiguration: $(_BuildConfig)
 
+- task: PublishCodeCoverageResults@1
+  displayName: Publish Code Coverage
+  inputs:
+    codeCoverageTool: Cobertura
+    summaryFileLocation: $(Build.ArtifactStagingDirectory)\CodeCoverage\Cobertura.xml
+    pathToSources: $(Build.SourcesDirectory)
+    publishRunAttachments: true
+
 - task: Powershell@2
   inputs: 
-    targetType: 'filePath'
+    targetType: filePath
     filePath: eng\convert-codecoveragetoxml.ps1
     arguments: -Path "$(Build.ArtifactStagingDirectory)\TestResults" -NugetPackagesPath "$(Build.SourcesDirectory)\.packages"
   displayName: Convert Code Coverage to XML (powershell)
@@ -41,18 +51,10 @@ steps:
 - task: Palmmedia.reportgenerator.reportgenerator-build-release-task.reportgenerator@4
   displayName: ReportGenerator
   inputs:
-    reports: '$(Build.ArtifactStagingDirectory)\TestResults\codecoverage.coveragexml'
-    targetdir: '$(Build.ArtifactStagingDirectory)\CodeCoverage'
-    reporttypes: 'HtmlInline_AzurePipelines;Cobertura'
-    sourcedirs: '$(Build.SourcesDirectory)'
-
-- task: PublishCodeCoverageResults@1
-  displayName: 'Publish Code Coverage'
-  inputs:
-    codeCoverageTool: Cobertura
-    summaryFileLocation: $(Build.ArtifactStagingDirectory)\CodeCoverage\Cobertura.xml
-    pathToSources: '$(Build.SourcesDirectory)'
-    publishRunAttachments: true
+    reports: $(Build.ArtifactStagingDirectory)\TestResults\codecoverage.coveragexml
+    targetdir: $(Build.ArtifactStagingDirectory)\CodeCoverage
+    reporttypes: HtmlInline_AzurePipelines;Cobertura
+    sourcedirs: $(Build.SourcesDirectory)
 
 - script: echo export const token = ''; > src/environments/token.ts
   workingDirectory: $(Build.SourcesDirectory)/src/Maestro/maestro-angular
