@@ -158,7 +158,8 @@ namespace Maestro.Web
                         "Bearer",
                         new OpenApiSecurityScheme
                         {
-                            Type = SecuritySchemeType.Http,
+                            Type = SecuritySchemeType.ApiKey,
+                            In = ParameterLocation.Header,
                             Scheme = "bearer",
                         });
                 });
