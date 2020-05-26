@@ -28,20 +28,21 @@ steps:
     testResultsFiles: '**/TestResults-*' 
     searchFolder: $(Build.ArtifactStagingDirectory)\TestResults
     testRunTitle: Basic Tests
+    mergeTestResults: true
     buildConfiguration: $(_BuildConfig)
 
 - task: Powershell@2
   inputs: 
     targetType: 'filePath'
     filePath: eng\convert-codecoveragetoxml.ps1
-    arguments: -Path "$(system.defaultworkingdirectory)" -NugetPackagesPath "$(Build.SourcesDirectory)\.packages"
+    arguments: -Path "$(Build.ArtifactStagingDirectory)\TestResults" -NugetPackagesPath "$(Build.SourcesDirectory)\.packages"
   displayName: Convert Code Coverage to XML (powershell)
 
 - task: Palmmedia.reportgenerator.reportgenerator-build-release-task.reportgenerator@4
   displayName: ReportGenerator
   inputs:
-    reports: '$(system.defaultworkingdirectory)\codecoverage.coveragexml'
-    targetdir: '$(Build.SourcesDirectory)\CodeCoverage'
+    reports: '$(Build.ArtifactStagingDirectory)\TestResults\codecoverage.coveragexml'
+    targetdir: '$(Build.ArtifactStagingDirectory)\CodeCoverage'
     reporttypes: 'HtmlInline_AzurePipelines;Cobertura'
     sourcedirs: '$(Build.SourcesDirectory)'
 
@@ -49,7 +50,7 @@ steps:
   displayName: 'Publish Code Coverage'
   inputs:
     codeCoverageTool: Cobertura
-    summaryFileLocation: '$(Build.SourcesDirectory)\CodeCoverage\Cobertura.xml'
+    summaryFileLocation: $(Build.ArtifactStagingDirectory)\CodeCoverage\Cobertura.xml'
     pathToSources: '$(Build.SourcesDirectory)'
     publishRunAttachments: true
 
