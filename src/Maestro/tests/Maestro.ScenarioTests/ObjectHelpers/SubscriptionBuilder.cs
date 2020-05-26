@@ -22,50 +22,51 @@ namespace Maestro.ScenarioTests.ObjectHelpers
 
             List<MergePolicy> mergePolicies = new List<MergePolicy>();
 
-            if (mergePolicyNames != null)
+            if (mergePolicyNames == null)
             {
-
-                if (mergePolicyNames.Contains(Constants.StandardMergePolicyName))
-                {
-                    mergePolicies.Add(new MergePolicy
-                    {
-                        Name = Constants.StandardMergePolicyName
-                    });
-                }
-
-                if (mergePolicyNames.Contains(Constants.NoExtraCommitsMergePolicyName))
-                {
-                    mergePolicies.Add(
-                        new MergePolicy
-                        {
-                            Name = Constants.NoExtraCommitsMergePolicyName
-                        });
-                }
-
-                if (mergePolicyNames.Contains(Constants.AllCheckSuccessfulMergePolicyName) && ignoreChecks.Any())
-                {
-                    mergePolicies.Add(
-                        new MergePolicy
-                        {
-                            Name = Constants.AllCheckSuccessfulMergePolicyName,
-                            Properties = ImmutableDictionary.Create<string, JToken>()
-                                .Add(Constants.IgnoreChecksMergePolicyPropertyName, JToken.FromObject(ignoreChecks))
-                        });
-                }
-
-                if (mergePolicyNames.Contains(Constants.NoRequestedChangesMergePolicyName))
-                {
-                    mergePolicies.Add(
-                        new MergePolicy
-                        {
-                            Name = Constants.NoRequestedChangesMergePolicyName,
-                            Properties = ImmutableDictionary.Create<string, JToken>()
-                        });
-                }
+                expectedSubscription.Policy.MergePolicies = mergePolicies.ToImmutableList<MergePolicy>();
+                return expectedSubscription;
             }
 
-            expectedSubscription.Policy.MergePolicies = mergePolicies.ToImmutableList<MergePolicy>(); ;
+            if (mergePolicyNames.Contains(Constants.StandardMergePolicyName))
+            {
+                mergePolicies.Add(new MergePolicy
+                {
+                    Name = Constants.StandardMergePolicyName
+                });
+            }
 
+            if (mergePolicyNames.Contains(Constants.NoExtraCommitsMergePolicyName))
+            {
+                mergePolicies.Add(
+                    new MergePolicy
+                    {
+                        Name = Constants.NoExtraCommitsMergePolicyName
+                    });
+            }
+
+            if (mergePolicyNames.Contains(Constants.AllCheckSuccessfulMergePolicyName) && ignoreChecks.Any())
+            {
+                mergePolicies.Add(
+                    new MergePolicy
+                    {
+                        Name = Constants.AllCheckSuccessfulMergePolicyName,
+                        Properties = ImmutableDictionary.Create<string, JToken>()
+                            .Add(Constants.IgnoreChecksMergePolicyPropertyName, JToken.FromObject(ignoreChecks))
+                    });
+            }
+
+            if (mergePolicyNames.Contains(Constants.NoRequestedChangesMergePolicyName))
+            {
+                mergePolicies.Add(
+                    new MergePolicy
+                    {
+                        Name = Constants.NoRequestedChangesMergePolicyName,
+                        Properties = ImmutableDictionary.Create<string, JToken>()
+                    });
+            }
+
+            expectedSubscription.Policy.MergePolicies = mergePolicies.ToImmutableList<MergePolicy>();
             return expectedSubscription;
         }
     }
