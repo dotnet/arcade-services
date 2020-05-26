@@ -30,7 +30,6 @@ steps:
     testResultsFiles: '**/TestResults-*' 
     searchFolder: $(Build.ArtifactStagingDirectory)\TestResults
     testRunTitle: Basic Tests
-    mergeTestResults: true
     buildConfiguration: $(_BuildConfig)
 
 - task: PublishCodeCoverageResults@1
