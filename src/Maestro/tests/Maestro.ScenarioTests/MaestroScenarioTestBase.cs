@@ -210,24 +210,24 @@ namespace Maestro.ScenarioTests
             string output = await RunDarcAsync(command).ConfigureAwait(false);
 
             Match match = Regex.Match(output, "Successfully created new subscription with id '([a-f0-9-]+)'");
-            if (match.Success)
+            if (!match.Success)
             {
-                string subscriptionId = match.Groups[1].Value;
-                return AsyncDisposableValue.Create(subscriptionId, async () =>
-                {
-                    TestContext.WriteLine($"Cleaning up Test Subscription {subscriptionId}");
-                    try
-                    {
-                        await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet").ConfigureAwait(false);
-                    }
-                    catch (MaestroTestException)
-                    {
-                        // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
-                    }
-                });
+                throw new MaestroTestException("Unable to create subscription.");
             }
 
-            throw new MaestroTestException("Unable to create subscription.");
+            string subscriptionId = match.Groups[1].Value;
+            return AsyncDisposableValue.Create(subscriptionId, async () =>
+            {
+                TestContext.WriteLine($"Cleaning up Test Subscription {subscriptionId}");
+                try
+                {
+                    await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet").ConfigureAwait(false);
+                }
+                catch (MaestroTestException)
+                {
+                        // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
+                    }
+            });
         }
 
         public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string yamlDefinition)
