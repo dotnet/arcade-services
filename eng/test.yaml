@@ -50,7 +50,7 @@ steps:
   displayName: 'Publish Code Coverage'
   inputs:
     codeCoverageTool: Cobertura
-    summaryFileLocation: $(Build.ArtifactStagingDirectory)\CodeCoverage\Cobertura.xml'
+    summaryFileLocation: $(Build.ArtifactStagingDirectory)\CodeCoverage\Cobertura.xml
     pathToSources: '$(Build.SourcesDirectory)'
     publishRunAttachments: true
 
