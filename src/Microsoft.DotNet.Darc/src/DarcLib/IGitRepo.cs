@@ -10,6 +10,10 @@ namespace Microsoft.DotNet.DarcLib
 {
     public interface IGitRepo
     {
+        /// <summary>
+        /// Specifies whether functions with a retry field should employ retries
+        /// Should default to true
+        /// </summary>
         public bool AllowRetries { get; set; }
 
         /// <summary>
