@@ -11,8 +11,11 @@ namespace DotNet.Status.Web.Tests
 {
     public class TelemetryControllerTests
     {
+<<<<<<< HEAD
         // TODO: Test for required values in data
 
+=======
+>>>>>>> Adding API for collecting telemetry from Arcade Validation runs; test project for DotNet.Status.Web
         [Fact]
         public void TestArcadeValidationTelemetryCollection()
         {

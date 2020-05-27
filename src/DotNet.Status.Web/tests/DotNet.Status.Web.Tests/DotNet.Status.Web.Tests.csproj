@@ -8,12 +8,18 @@
 
   <ItemGroup>
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> Adding API for collecting telemetry from Arcade Validation runs; test project for DotNet.Status.Web
     <PackageReference Include="Moq" />
   </ItemGroup>
 
   <ItemGroup>
+<<<<<<< HEAD
 =======
 >>>>>>> handling merge conflicts for test project
+=======
+>>>>>>> Adding API for collecting telemetry from Arcade Validation runs; test project for DotNet.Status.Web
     <ProjectReference Include="..\..\..\Shared\Microsoft.DotNet.Internal.DependencyInjection.Testing\Microsoft.DotNet.Internal.DependencyInjection.Testing.csproj" />
     <ProjectReference Include="..\..\DotNet.Status.Web.csproj" />
   </ItemGroup>

@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -8,16 +9,18 @@ using Microsoft.AspNetCore.Hosting;
 =======
 using System.Collections.Generic;
 using Microsoft.DotNet.EntityFrameworkCore.Extensions;
+=======
+>>>>>>> Adding API for collecting telemetry from Arcade Validation runs; test project for DotNet.Status.Web
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Hosting.Internal;
 using Xunit;
+<<<<<<< HEAD
 >>>>>>> Initial commit for new API and test project
+=======
+using Dotnet.Status.Web;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Hosting;
+>>>>>>> Adding API for collecting telemetry from Arcade Validation runs; test project for DotNet.Status.Web
 
 namespace Dotnet.Status.Web.Tests
 {
@@ -28,6 +31,7 @@ namespace Dotnet.Status.Web.Tests
         {
             Assert.True(DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
             {
+<<<<<<< HEAD
 <<<<<<< HEAD
                 s.AddSingleton<IConfiguration>();
                 s.AddSingleton<IWebHostEnvironment>();
@@ -43,6 +47,10 @@ namespace Dotnet.Status.Web.Tests
                     options.EnableServiceProviderCaching(false);
                 });
 >>>>>>> Initial commit for new API and test project
+=======
+                s.AddSingleton<IConfiguration>();
+                s.AddSingleton<IWebHostEnvironment>();
+>>>>>>> Adding API for collecting telemetry from Arcade Validation runs; test project for DotNet.Status.Web
             },
                     out string message),
                 message);
