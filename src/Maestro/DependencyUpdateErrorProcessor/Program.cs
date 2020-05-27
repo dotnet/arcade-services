@@ -9,11 +9,12 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Octokit;
 
 namespace DependencyUpdateErrorProcessor
 {
-    public static class Program
+    public class Program
     {
         /// <summary>
         /// This is the entry point of the service host process.
@@ -48,7 +49,11 @@ namespace DependencyUpdateErrorProcessor
                 (options, provider) =>
                 {
                     var config = provider.GetRequiredService<IConfiguration>();
-                    options.IsEnabled = bool.Parse(config["EnableDependencyUpdateErrorProcessor"]);
+                    bool.TryParse(config["EnableDependencyUpdateErrorProcessor"], out bool errorProcessorFlag);
+                    options.IsEnabled = errorProcessorFlag;
+                    var logger = provider.GetRequiredService<ILogger<Program>>();
+                    // Logging statement is added to track the feature flag returns. 
+                    logger.LogInformation($"Value of the dependency update error processor feature flag {config["EnableDependencyUpdateErrorProcessor"]}");
                     options.GithubUrl = config["GithubUrl"];
                     options.FyiHandle = config["FyiHandle"];
                 });
