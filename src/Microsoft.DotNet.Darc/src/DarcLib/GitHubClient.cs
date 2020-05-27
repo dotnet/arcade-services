@@ -65,8 +65,6 @@ namespace Microsoft.DotNet.DarcLib
 
         public virtual Octokit.IGitHubClient Client => _lazyClient.Value;
 
-        public bool AllowRetries { get; set; } = true;
-
         /// <summary>
         ///     Retrieve the contents of a repository file as a string
         /// </summary>
@@ -526,10 +524,6 @@ namespace Microsoft.DotNet.DarcLib
             int retryCount = 15,
             bool logFailure = true)
         {
-            if (!AllowRetries)
-            {
-                retryCount = 0;
-            }
             using (HttpClient client = CreateHttpClient())
             {
                 var requestManager = new HttpRequestManager(client, method, requestUri, logger, body, versionOverride, logFailure);
