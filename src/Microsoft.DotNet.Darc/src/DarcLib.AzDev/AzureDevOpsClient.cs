@@ -41,6 +41,7 @@ namespace Microsoft.DotNet.DarcLib
 
         // Azure DevOps uses this id when creating a new branch as well as when deleting a branch
         private static readonly string BaseObjectId = "0000000000000000000000000000000000000000";
+
         private readonly ILogger _logger;
         private readonly string _personalAccessToken;
         private readonly JsonSerializerSettings _serializerSettings;
@@ -66,8 +67,6 @@ namespace Microsoft.DotNet.DarcLib
                 NullValueHandling = NullValueHandling.Ignore
             };
         }
-
-        public bool AllowRetries { get; set; } = true;
 
         /// <summary>
         /// Retrieve the contents of a text file in a repo on a specific branch
@@ -779,10 +778,6 @@ namespace Microsoft.DotNet.DarcLib
             string baseAddressSubpath = null,
             int retryCount = 15)
         {
-            if (!AllowRetries)
-            {
-                retryCount = 0;
-            }
             using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride, baseAddressSubpath))
             {
                 HttpRequestManager requestManager = new HttpRequestManager(client,
