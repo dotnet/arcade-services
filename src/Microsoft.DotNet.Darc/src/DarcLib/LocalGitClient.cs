@@ -29,6 +29,8 @@ namespace Microsoft.DotNet.DarcLib
             _logger = logger;
         }
 
+        public bool AllowRetries { get; set; } = true;
+
         public Task<string> CheckIfFileExistsAsync(string repoUri, string filePath, string branch)
         {
             throw new NotImplementedException();
