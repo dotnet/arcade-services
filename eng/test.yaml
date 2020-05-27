@@ -30,7 +30,10 @@ steps:
     testResultsFiles: '**/TestResults-*' 
     searchFolder: $(Build.ArtifactStagingDirectory)\TestResults
     testRunTitle: Basic Tests
-    mergeTestResults: true
+    # This seems to cause a null ref inside the PublishTestResults
+    # https://github.com/microsoft/azure-pipelines-tasks/issues/13007
+    # Disable it for now... we'll have a bunch of "XUnit_7" test runs
+    #mergeTestResults: true
     buildConfiguration: $(_BuildConfig)
 
 - task: Powershell@2
