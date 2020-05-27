@@ -10,6 +10,7 @@ using Moq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Microsoft.DotNet.Darc.Tests
@@ -89,7 +90,7 @@ namespace Microsoft.DotNet.Darc.Tests
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
-        private async void TreeItemCacheTest(bool enableCache)
+        private async Task TreeItemCacheTest(bool enableCache)
         {
             SimpleCache cache = enableCache ? new SimpleCache() : null;
             Mock<GitHubClient> client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, cache);

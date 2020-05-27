@@ -4,6 +4,7 @@
 
 using Microsoft.DotNet.DarcLib;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace Microsoft.DotNet.Darc.Tests
@@ -15,9 +16,9 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     Should format the xml to canonical form though.
         /// </summary>
         [Fact]
-        public void EmptyVersions1()
+        public async Task EmptyVersions1()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(EmptyVersions1), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(EmptyVersions1), async driver =>
             {
                 await driver.UpdateDependenciesAsync(new List<DependencyDetail>());
                 await driver.VerifyAsync();
@@ -28,9 +29,9 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     Verifies that non-empty versions don't get reformatted in odd ways.
         /// </summary>
         [Fact]
-        public void EmptyVersions2()
+        public async Task EmptyVersions2()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(EmptyVersions2), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(EmptyVersions2), async driver =>
             {
                 await driver.UpdateDependenciesAsync(new List<DependencyDetail>());
                 await driver.VerifyAsync();
@@ -41,9 +42,9 @@ namespace Microsoft.DotNet.Darc.Tests
         /// Add a basic dependency.  Versions.props has a default xmlns on the Project element.
         /// </summary>
         [Fact]
-        public void AddProductDependency1()
+        public async Task AddProductDependency1()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependency1), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependency1), async driver =>
             {
                 await driver.AddDependencyAsync(
                     new DependencyDetail
@@ -62,9 +63,9 @@ namespace Microsoft.DotNet.Darc.Tests
         /// Add a basic dependency.  Versions.props
         /// </summary>
         [Fact]
-        public void AddProductDependency2()
+        public async Task AddProductDependency2()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependency2), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependency2), async driver =>
             {
                 await driver.AddDependencyAsync(
                     new DependencyDetail
@@ -84,10 +85,10 @@ namespace Microsoft.DotNet.Darc.Tests
         /// 
         /// </summary>
         [Fact]
-        public void AddProductDependency3()
+        public async Task AddProductDependency3()
         {
             // Use assets from #2.
-            DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependency2), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependency2), async driver =>
             {
                 await driver.AddDependencyAsync(
                     new DependencyDetail
@@ -101,24 +102,24 @@ namespace Microsoft.DotNet.Darc.Tests
 
                 await Assert.ThrowsAsync<DependencyException>(
                     async () => await driver.AddDependencyAsync(
-                    new DependencyDetail
-                    {
-                        Commit = "67890",
-                        Name = "Foo.Bar",
-                        RepoUri = "https://foo.com/foo/bar",
-                        Version = "1.2.4",
-                        Pinned = false,
-                        Type = DependencyType.Product
-                    }));
+                        new DependencyDetail
+                        {
+                            Commit = "67890",
+                            Name = "Foo.Bar",
+                            RepoUri = "https://foo.com/foo/bar",
+                            Version = "1.2.4",
+                            Pinned = false,
+                            Type = DependencyType.Product
+                        }));
 
                 await driver.VerifyAsync();
             });
         }
 
         [Fact]
-        public void AddProductDependency4()
+        public async Task AddProductDependency4()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependency4), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependency4), async driver =>
             {
                 await driver.AddDependencyAsync(
                     new DependencyDetail
@@ -159,9 +160,9 @@ namespace Microsoft.DotNet.Darc.Tests
         /// This this case, should update Versions.props
         /// </summary>
         [Fact]
-        public void AddProductDependency5()
+        public async Task AddProductDependency5()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependency5), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependency5), async driver =>
             {
                 await driver.AddDependencyAsync(
                     new DependencyDetail
@@ -180,9 +181,9 @@ namespace Microsoft.DotNet.Darc.Tests
         /// Add a basic dependency that has dashes in the name.
         /// </summary>
         [Fact]
-        public void AddProductDependency6()
+        public async Task AddProductDependency6()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependency6), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(AddProductDependency6), async driver =>
             {
                 await driver.AddDependencyAsync(
                     new DependencyDetail
@@ -202,9 +203,9 @@ namespace Microsoft.DotNet.Darc.Tests
         /// Update a dependency only existing in Versions.Details.xml
         /// </summary>
         [Fact]
-        public void UpdateDependencies1()
+        public async Task UpdateDependencies1()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(UpdateDependencies1), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateDependencies1), async driver =>
             {
                 await driver.UpdateDependenciesAsync(
                     new List<DependencyDetail> {
@@ -224,10 +225,10 @@ namespace Microsoft.DotNet.Darc.Tests
         /// Attempt to update a non-existing dependency
         /// </summary>
         [Fact]
-        public void UpdateDependencies2()
+        public async Task UpdateDependencies2()
         {
             // Use inputs from previous test.
-            DependencyTestDriver.TestNoCompare(nameof(UpdateDependencies1), async driver =>
+            await DependencyTestDriver.TestNoCompare(nameof(UpdateDependencies1), async driver =>
             {
                 await Assert.ThrowsAsync<DependencyException>(async () => await driver.UpdateDependenciesAsync(
                     new List<DependencyDetail> {
@@ -246,10 +247,10 @@ namespace Microsoft.DotNet.Darc.Tests
         /// Update a dependency with new casing.
         /// </summary>
         [Fact]
-        public void UpdateDependencies3()
+        public async Task UpdateDependencies3()
         {
             // Use inputs from previous test.
-            DependencyTestDriver.TestAndCompareOutput(nameof(UpdateDependencies3), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateDependencies3), async driver =>
             {
                 await driver.UpdateDependenciesAsync(
                     new List<DependencyDetail> {
@@ -269,10 +270,10 @@ namespace Microsoft.DotNet.Darc.Tests
         /// Update a dependency with new casing and alternate property names
         /// </summary>
         [Fact]
-        public void UpdateDependencies4()
+        public async Task UpdateDependencies4()
         {
             // Use inputs from previous test.
-            DependencyTestDriver.TestAndCompareOutput(nameof(UpdateDependencies4), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateDependencies4), async driver =>
             {
                 await driver.UpdateDependenciesAsync(
                     new List<DependencyDetail> {
@@ -292,9 +293,9 @@ namespace Microsoft.DotNet.Darc.Tests
         /// Update dependencies including a pinned dependency which should not be updated
         /// </summary>
         [Fact]
-        public void UpdateDependencies5()
+        public async Task UpdateDependencies5()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(UpdateDependencies5), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateDependencies5), async driver =>
             {
                 await driver.UpdatePinnedDependenciesAsync();
                 await driver.VerifyAsync();
@@ -306,9 +307,9 @@ namespace Microsoft.DotNet.Darc.Tests
         /// When adding, use what's already in the file.
         /// </summary>
         [Fact]
-        public void SupportAlternateVersionPropertyFormats1()
+        public async Task SupportAlternateVersionPropertyFormats1()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(SupportAlternateVersionPropertyFormats1), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(SupportAlternateVersionPropertyFormats1), async driver =>
             {
                 await driver.AddDependencyAsync(
                     new DependencyDetail
@@ -328,9 +329,9 @@ namespace Microsoft.DotNet.Darc.Tests
         /// Support both Version and PackageVersion properties in Versions.props.
         /// </summary>
         [Fact]
-        public void SupportAlternateVersionPropertyFormats2()
+        public async Task SupportAlternateVersionPropertyFormats2()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(SupportAlternateVersionPropertyFormats2), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(SupportAlternateVersionPropertyFormats2), async driver =>
             {
                 await driver.AddDependencyAsync(
                     new DependencyDetail
@@ -361,9 +362,9 @@ namespace Microsoft.DotNet.Darc.Tests
         /// - Does not currently test script download
         /// </summary>
         [Fact]
-        public void AddArcadeDependency1()
+        public async Task AddArcadeDependency1()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(AddArcadeDependency1), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(AddArcadeDependency1), async driver =>
             {
                 await driver.AddDependencyAsync(
                     new DependencyDetail
@@ -384,9 +385,9 @@ namespace Microsoft.DotNet.Darc.Tests
         /// - Does not currently test script download
         /// </summary>
         [Fact(Skip = "Not able to update existing version info when adding new dependency. https://github.com/dotnet/arcade/issues/1095")]
-        public void AddArcadeDependency2()
+        public async Task AddArcadeDependency2()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(AddArcadeDependency1), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(AddArcadeDependency1), async driver =>
             {
                 await driver.AddDependencyAsync(
                     new DependencyDetail
@@ -407,9 +408,9 @@ namespace Microsoft.DotNet.Darc.Tests
         /// - Does not currently test script download
         /// </summary>
         [Fact]
-        public void UpdateArcadeDependency1()
+        public async Task UpdateArcadeDependency1()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(UpdateArcadeDependency1), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateArcadeDependency1), async driver =>
             {
                 await driver.UpdateDependenciesAsync(
                     new List<DependencyDetail> {
@@ -429,9 +430,9 @@ namespace Microsoft.DotNet.Darc.Tests
         /// Update the arcade dependency to a new version, though it's not in global.json
         /// </summary>
         [Fact]
-        public void UpdateArcadeDependency2()
+        public async Task UpdateArcadeDependency2()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(UpdateArcadeDependency2), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateArcadeDependency2), async driver =>
             {
                 await driver.UpdateDependenciesAsync(
                     new List<DependencyDetail> {
@@ -451,9 +452,9 @@ namespace Microsoft.DotNet.Darc.Tests
         /// Update the arcade dependency to a new version, with an associated global.json update.
         /// </summary>
         [Fact]
-        public void UpdateArcadeDependencyWithSdkUpdate()
+        public async Task UpdateArcadeDependencyWithSdkUpdate()
         {
-            DependencyTestDriver.TestAndCompareOutput(nameof(UpdateArcadeDependencyWithSdkUpdate), async driver =>
+            await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateArcadeDependencyWithSdkUpdate), async driver =>
             {
                 await driver.UpdateDependenciesAsync(
                     new List<DependencyDetail> {
@@ -475,7 +476,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     this makes diagnosing it easier.
         /// </summary>
         [Fact]
-        public void CheckAlternateSuffix()
+        public async Task CheckAlternateSuffix()
         {
             Assert.False(VersionFiles.VersionPropsAlternateVersionElementSuffix.EndsWith(
                          VersionFiles.VersionPropsVersionElementSuffix),

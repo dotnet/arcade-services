@@ -57,6 +57,18 @@ namespace Microsoft.DotNet.DarcLib
         public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoUri, string branch)
         {
             string fullPath = Path.Combine(repoUri, relativeFilePath);
+            if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
+            {
+                if (Directory.Exists(Path.GetDirectoryName(Path.GetDirectoryName(fullPath))))
+                {
+                    throw new Exception("Pizza");
+                }
+                else
+                {
+                    throw new Exception("Banana");
+                }
+            }
+
             using (var streamReader = new StreamReader(fullPath))
             {
                 return await streamReader.ReadToEndAsync();

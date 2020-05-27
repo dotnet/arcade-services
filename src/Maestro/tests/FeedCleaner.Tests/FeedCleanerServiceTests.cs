@@ -84,7 +84,7 @@ namespace FeedCleanerService.Tests
         }
 
         [Fact]
-        public async void OnlyDeletesReleasedPackagesFromManagedFeeds()
+        public async Task OnlyDeletesReleasedPackagesFromManagedFeeds()
         {
             FeedCleanerService cleaner = ConfigureFeedCleaner();
             await cleaner.CleanManagedFeedsAsync();
@@ -92,16 +92,16 @@ namespace FeedCleanerService.Tests
             Assert.Equal(2, unreleasedFeed.Packages.Count);
             var packagesWithDeletedVersions = unreleasedFeed.Packages.Where(p => p.Versions.Any(v => v.IsDeleted)).ToList();
             Assert.Single(packagesWithDeletedVersions);
-            Assert.Equal("releasedPackage1", packagesWithDeletedVersions.FirstOrDefault().Name);
-            var deletedVersions = packagesWithDeletedVersions.FirstOrDefault().Versions.Where(v => v.IsDeleted);
+            Assert.Equal("releasedPackage1", packagesWithDeletedVersions.First().Name);
+            var deletedVersions = packagesWithDeletedVersions.First().Versions.Where(v => v.IsDeleted).ToList();
             Assert.Single(deletedVersions);
-            Assert.Equal("1.0", deletedVersions.FirstOrDefault().Version);
+            Assert.Equal("1.0", deletedVersions.First().Version);
 
             Assert.DoesNotContain(Feeds[UnmanagedFeedName].Packages, p => p.Versions.Any(v => v.IsDeleted));
         }
 
         [Fact]
-        public async void UpdatesAssetLocationsForReleasedPackages()
+        public async Task UpdatesAssetLocationsForReleasedPackages()
         {
             FeedCleanerService cleaner = ConfigureFeedCleaner();
             await cleaner.CleanManagedFeedsAsync();
@@ -124,8 +124,8 @@ namespace FeedCleanerService.Tests
             Assert.Equal(2, assetsInRemainingFeed.Count);
             var releasedAssets = assetsInRemainingFeed.Where(a => a.Locations.Any(l => l.Location.Contains(ReleaseFeedName))).ToList();
             Assert.Single(releasedAssets);
-            Assert.Equal("releasedPackage1", releasedAssets.FirstOrDefault().Name);
-            Assert.Equal("1.0", releasedAssets.FirstOrDefault().Version);
+            Assert.Equal("releasedPackage1", releasedAssets.First().Name);
+            Assert.Equal("1.0", releasedAssets.First().Version);
 
             // "unreleasedPackage1" hasn't been released, should only have the stable feed as its location
             var unreleasedAssets = assetsInRemainingFeed.Where(a => a.Locations.All(l => l.Location.Contains(FeedWithUnreleasedPackagesName))).ToList();

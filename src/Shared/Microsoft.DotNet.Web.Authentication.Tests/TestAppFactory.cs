@@ -13,7 +13,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
     public class TestAppFactory : WebApplicationFactory<EmptyTestStartup>
     {
         private readonly ITestOutputHelper _output;
-        private readonly string _path = Path.GetTempPath();
+        private readonly string _rootPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         private Action<IServiceCollection> _configureServices;
         private Action<IApplicationBuilder> _configureBuilder;
 
@@ -39,7 +39,8 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
 
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            builder.UseContentRoot(_path).UseWebRoot(_path);
+            Directory.CreateDirectory(_rootPath);
+            builder.UseContentRoot(_rootPath).UseWebRoot(_rootPath);
             builder.ConfigureLogging(l =>
             {
                 l.SetMinimumLevel(LogLevel.Trace);
@@ -56,7 +57,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
         {
             try
             {
-                Directory.Delete(_path, true);
+                Directory.Delete(_rootPath, true);
             }
             catch
             {
