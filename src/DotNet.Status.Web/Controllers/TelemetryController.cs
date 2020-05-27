@@ -16,36 +16,38 @@ namespace DotNet.Status.Web.Controllers
     {
         private readonly ILogger<TelemetryController> _logger;
         private readonly IOptionsSnapshot<TelemetryOptions> _options;
+        private readonly IKustoIngestClient _client;
 
         public TelemetryController(
             ILogger<TelemetryController> logger,
-            IOptionsSnapshot<TelemetryOptions> options)
+            IOptionsSnapshot<TelemetryOptions> options,
+            IKustoIngestClient client = null)
         {
             _logger = logger;
             _options = options;
-        }
-
-        [HttpGet("bleh")]
-        public IActionResult Test()
-        {
-            return Ok("blerg");
+            _client = client;
         }
 
         [HttpPost("collect/ArcadeValidation")]
         public async Task<IActionResult> CollectArcadeValidation([Required] ArcadeValidationData data)
         {
-            _logger.LogInformation("");
+            _logger.LogInformation("Start Collect Arcade Validation data");
 
             TelemetryOptions options = _options.Value;
 
-            if (string.IsNullOrEmpty(options.KustoIngestConnectionString))
+            if(null == options)
             {
-                _logger.LogError("No KustoIngestConnectionString set");
-                return BadRequest();
+                _logger.LogError("TelemetryOptions were not loaded.");
+                return StatusCode(500);
             }
 
-            IKustoIngestClient ingest =
-                KustoIngestFactory.CreateQueuedIngestClient(options.KustoIngestConnectionString);
+            if (null == _client && string.IsNullOrEmpty(options.KustoIngestConnectionString))
+            {
+                _logger.LogError("No KustoIngestConnectionString set");
+                return StatusCode(500);
+            }
+
+            IKustoIngestClient ingest = _client ?? KustoIngestFactory.CreateQueuedIngestClient(options.KustoIngestConnectionString);
 
             List<ArcadeValidationData> arcadeValidationDatas = new List<ArcadeValidationData>{ data };
 
@@ -68,7 +70,9 @@ namespace DotNet.Status.Web.Controllers
                     new KustoValue("ArcadeDiffLink", b.ArcadeDiffLink, KustoDataTypes.String)
                 });
 
-            return NoContent();
+            _logger.LogInformation("End Collect Arcade Validation data");
+
+            return Ok();
         }
     }
 }

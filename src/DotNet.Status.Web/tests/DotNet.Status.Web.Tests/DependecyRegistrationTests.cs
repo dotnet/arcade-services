@@ -1,14 +1,9 @@
-using System.Collections.Generic;
-using Microsoft.DotNet.EntityFrameworkCore.Extensions;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Hosting.Internal;
 using Xunit;
+using Dotnet.Status.Web;
+using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Hosting;
 
 namespace Dotnet.Status.Web.Tests
 {
@@ -19,16 +14,8 @@ namespace Dotnet.Status.Web.Tests
         {
             Assert.True(DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
             {
-                s.AddSingleton<IHostEnvironment>(new HostingEnvironment
-                {
-                    EnvironmentName =
-                    Environments.Development
-                });
-                s.AddBuildAssetRegistry(options =>
-                {
-                    options.UseInMemoryDatabase("BuildAssetRegistry");
-                    options.EnableServiceProviderCaching(false);
-                });
+                s.AddSingleton<IConfiguration>();
+                s.AddSingleton<IWebHostEnvironment>();
             },
                     out string message),
                 message);
