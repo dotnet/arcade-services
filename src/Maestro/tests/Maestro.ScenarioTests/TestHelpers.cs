@@ -13,6 +13,11 @@ namespace Maestro.ScenarioTests
     {
         public static async Task<string> RunExecutableAsync(string executable, params string[] args)
         {
+            return await RunExecutableAsyncWithInput(executable, "", args);
+        }
+
+        public static async Task<string> RunExecutableAsyncWithInput(string executable, string input, params string[] args)
+        {
             TestContext.WriteLine(FormatExecutableCall(executable, args));
             var output = new StringBuilder();
 
@@ -30,7 +35,10 @@ namespace Maestro.ScenarioTests
             {
                 RedirectStandardError = true,
                 RedirectStandardOutput = true,
+                RedirectStandardInput = true,
+                UseShellExecute = false
             };
+
             foreach (string arg in args)
             {
                 psi.ArgumentList.Add(arg);
@@ -40,15 +48,17 @@ namespace Maestro.ScenarioTests
             {
                 StartInfo = psi
             };
+
             var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             process.EnableRaisingEvents = true;
             process.Exited += (s, e) => { tcs.TrySetResult(true); };
             process.Start();
 
             Task<bool> exitTask = tcs.Task;
+            Task stdin = Task.Run(() => { process.StandardInput.Write(input); process.StandardInput.Close(); });
             Task<string> stdout = process.StandardOutput.ReadLineAsync();
             Task<string> stderr = process.StandardError.ReadLineAsync();
-            var list = new List<Task> { exitTask, stdout, stderr };
+            var list = new List<Task> { exitTask, stdout, stderr, stdin };
             while (list.Count != 0)
             {
                 var done = await Task.WhenAny(list);
@@ -77,6 +87,18 @@ namespace Maestro.ScenarioTests
                     {
                         list.Add(stderr = process.StandardError.ReadLineAsync());
                     }
+                    continue;
+                }
+
+                if (done == stdin)
+                {
+                    await stdin;
+                    continue;
+                }
+
+                if (done == stdin)
+                {
+                    await stdin;
                     continue;
                 }
 
