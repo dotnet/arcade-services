@@ -22,19 +22,15 @@ steps:
     NUGET_PACKAGES: $(Build.SourcesDirectory)/.packages
   condition: succeededOrFailed()
 
-- task: PublishTestResults@2
+- task: PublishTestResults@1
   displayName: Publish Core Test Results
   condition: succeededOrFailed()
   inputs:
-    testResultsFormat: VSTest
-    testResultsFiles: '**/TestResults-*' 
-    searchFolder: $(Build.ArtifactStagingDirectory)\TestResults
+    testRunner: VSTest
+    testResultsFiles: $(Build.ArtifactStagingDirectory)\TestResults\**\TestResults-*
     testRunTitle: Basic Tests
-    # This seems to cause a null ref inside the PublishTestResults
-    # https://github.com/microsoft/azure-pipelines-tasks/issues/13007
-    # Disable it for now... we'll have a bunch of "XUnit_7" test runs
-    #mergeTestResults: true
-    buildConfiguration: $(_BuildConfig)
+    mergeTestResults: true
+    configuration: $(_BuildConfig)
 
 - task: Powershell@2
   inputs: 
