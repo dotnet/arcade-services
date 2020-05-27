@@ -22,16 +22,6 @@ steps:
     NUGET_PACKAGES: $(Build.SourcesDirectory)/.packages
   condition: succeededOrFailed()
 
-- task: PublishTestResults@1
-  displayName: Publish Core Test Results
-  condition: succeededOrFailed()
-  inputs:
-    testRunner: VSTest
-    testResultsFiles: $(Build.ArtifactStagingDirectory)\TestResults\**\TestResults-*
-    testRunTitle: Basic Tests
-    mergeTestResults: true
-    configuration: $(_BuildConfig)
-
 - task: Powershell@2
   inputs: 
     targetType: filePath
@@ -46,6 +36,17 @@ steps:
     targetdir: $(Build.ArtifactStagingDirectory)\CodeCoverage
     reporttypes: HtmlInline_AzurePipelines;Cobertura
     sourcedirs: $(Build.SourcesDirectory)
+
+- task: PublishTestResults@2
+  displayName: Publish Core Test Results
+  condition: succeededOrFailed()
+  inputs:
+    testRunner: VSTest
+    testResultsFiles: '**/TestResults-*' 
+    searchFolder: $(Build.ArtifactStagingDirectory)\TestResults
+    testRunTitle: Basic Tests
+    mergeTestResults: true
+    configuration: $(_BuildConfig)
 
 - task: PublishCodeCoverageResults@1
   displayName: Publish Code Coverage
