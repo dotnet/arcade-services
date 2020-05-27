@@ -96,12 +96,6 @@ namespace Maestro.ScenarioTests
                     continue;
                 }
 
-                if (done == stdin)
-                {
-                    await stdin;
-                    continue;
-                }
-
                 throw new InvalidOperationException("Unexpected Task completed.");
             }
 

@@ -14,7 +14,7 @@ namespace Maestro.ScenarioTests.ObjectHelpers
         /// Creates a subscription object based on a standard set of test inputs
         /// </summary>
         public static Subscription BuildSubscription(string repo1Uri, string repo2Uri, string targetBranch, string channelName, string subscriptionId,
-            UpdateFrequency updateFrequency, bool batchable, List<string> mergePolicyNames, List<string> ignoreChecks)
+            UpdateFrequency updateFrequency, bool batchable, List<string> mergePolicyNames = null, List<string> ignoreChecks = null)
         {
             Subscription expectedSubscription = new Subscription(Guid.Parse(subscriptionId), true, repo1Uri, repo2Uri, targetBranch);
             expectedSubscription.Channel = new Channel(42, channelName, "test");

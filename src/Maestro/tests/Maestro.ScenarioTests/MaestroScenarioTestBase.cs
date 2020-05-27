@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client;
@@ -86,18 +85,8 @@ namespace Maestro.ScenarioTests
             return $"https://{_parameters.GitHubUser}:{_parameters.GitHubToken}@github.com/{org}/{repository}";
         }
 
-        public string GetAzDoRepoUrl(string repoName, string azdoAccount = "", string azdoProject = "")
+        public string GetAzDoRepoUrl(string repoName, string azdoAccount = "dnceng", string azdoProject = "internal")
         {
-            if (String.IsNullOrEmpty(azdoAccount))
-            {
-                azdoAccount = "dnceng";
-            }
-
-            if (string.IsNullOrEmpty(azdoProject))
-            {
-                azdoProject = "internal";
-            }
-
             return $"https://dev.azure.com/{azdoAccount}/{azdoProject}/_git/{repoName}";
         }
 
@@ -225,8 +214,8 @@ namespace Maestro.ScenarioTests
                 }
                 catch (MaestroTestException)
                 {
-                        // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
-                    }
+                    // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
+                }
             });
         }
 

@@ -63,9 +63,7 @@ namespace Maestro.ScenarioTests
                         channel1Name, 
                         subscription1Id.Value, 
                         UpdateFrequency.EveryWeek, 
-                        false, 
-                        null, 
-                        null);
+                        false);
 
                     string expectedSubscription1Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription1, null);
 
@@ -156,9 +154,7 @@ namespace Maestro.ScenarioTests
                         channel1Name, 
                         batchSubscriptionId.Value, 
                         UpdateFrequency.EveryWeek, 
-                        true, 
-                        null, 
-                        null);
+                        true);
 
                     string expectedBatchedSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedBatchedSubscription, null);
 
@@ -188,8 +184,7 @@ namespace Maestro.ScenarioTests
                         yamlSubscriptionId.Value, 
                         UpdateFrequency.EveryWeek, 
                         false, 
-                        new List<string> { Constants.StandardMergePolicyName }, 
-                        null);
+                        new List<string> { Constants.StandardMergePolicyName });
 
                     string expectedYamlSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription, null);
 
@@ -218,8 +213,7 @@ namespace Maestro.ScenarioTests
                         channel1Name, 
                         yamlSubscription2Id.Value, 
                         UpdateFrequency.EveryWeek, false, 
-                        new List<string> { Constants.StandardMergePolicyName }, 
-                        null);
+                        new List<string> { Constants.StandardMergePolicyName });
 
                     string expectedYamlSubscriptionInfo2 = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription2, null);
 
