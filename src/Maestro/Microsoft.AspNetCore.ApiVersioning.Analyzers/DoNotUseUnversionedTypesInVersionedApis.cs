@@ -68,14 +68,14 @@ namespace Microsoft.AspNetCore.ApiVersioning.Analyzers
             public override void VisitClassDeclaration(ClassDeclarationSyntax node)
             {
                 IImmutableList<ITypeSymbol> baseTypes = SemanticModel.GetAllBaseTypeSymbols(node);
-                bool isController = baseTypes.Any(t => SymbolEqualityComparer.Default.Equals(t, KnownTypes.Controller));
+                bool isController = baseTypes.Any(t => t.Equals(KnownTypes.Controller));
                 if (!isController)
                 {
                     return;
                 }
 
                 IImmutableList<AttributeUsageInfo> attributeInfo = SemanticModel.GetAttributeInfo(node.AttributeLists);
-                bool isVersioned = attributeInfo.Any(info => SymbolEqualityComparer.Default.Equals(info.AttributeType, KnownTypes.ApiVersionAttribute));
+                bool isVersioned = attributeInfo.Any(info => info.AttributeType.Equals(KnownTypes.ApiVersionAttribute));
                 if (!isVersioned)
                 {
                     return;
@@ -100,7 +100,7 @@ namespace Microsoft.AspNetCore.ApiVersioning.Analyzers
                     List<(ExpressionSyntax expression, ITypeSymbol type)> typeParameters =
                         parameters.Select(
                                 p => (expression: p.Expression, type: SemanticModel.GetTypeSymbol(p.Expression)))
-                            .Where(p => SymbolEqualityComparer.Default.Equals(p.type, KnownTypes.Type))
+                            .Where(p => p.type.Equals(KnownTypes.Type))
                             .ToList();
                     if (typeParameters.Count == 0)
                     {
