@@ -476,7 +476,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     this makes diagnosing it easier.
         /// </summary>
         [Fact]
-        public async Task CheckAlternateSuffix()
+        public void CheckAlternateSuffix()
         {
             Assert.False(VersionFiles.VersionPropsAlternateVersionElementSuffix.EndsWith(
                          VersionFiles.VersionPropsVersionElementSuffix),
