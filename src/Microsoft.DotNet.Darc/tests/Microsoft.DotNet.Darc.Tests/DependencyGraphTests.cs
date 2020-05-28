@@ -20,13 +20,14 @@ namespace Microsoft.DotNet.Darc.Tests
         [InlineData("core-sdk", "36e48aa03cb568c128f387a090ad5ece86933c1c", false)]
         [InlineData("corefx", "bc0cfc49d1a8c1681fb09603f3389ef65342d542", true)]
         [InlineData("corefx", "bc0cfc49d1a8c1681fb09603f3389ef65342d542", false)]
-        public void ValidateGraph(string rootRepo, string rootCommit, bool includeToolset)
+        public async Task ValidateGraph(string rootRepo, string rootCommit, bool includeToolset)
         {
-            DependencyTestDriver.GetGraphAndCompare("DependencyGraph", async driver =>
-            {
-                return await driver.GetDependencyGraph(rootRepo, rootCommit, includeToolset);
-            },
-            Path.Combine(rootRepo, rootCommit, includeToolset ? "graph-with-toolset.xml" : "graph-without-toolset.xml"));
+            await DependencyTestDriver.GetGraphAndCompare("DependencyGraph",
+                driver => driver.GetDependencyGraph(rootRepo, rootCommit, includeToolset),
+                Path.Combine(rootRepo,
+                    rootCommit,
+                    includeToolset ? "graph-with-toolset.xml" : "graph-without-toolset.xml")
+            );
         }
     }
 }
