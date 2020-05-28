@@ -31,6 +31,7 @@ namespace DotNet.Status.Web.Controllers
         }
 
         [HttpPost("collect/arcade-validation")]
+<<<<<<< HEAD
         public async Task<IActionResult> CollectArcadeValidation([Required] ArcadeValidationData data)
         {
             TelemetryOptions options = _options.Value;
@@ -58,19 +59,13 @@ namespace DotNet.Status.Web.Controllers
         }
 
         [HttpPost("collect/ArcadeValidation")]
+=======
+>>>>>>> Addressing minor code review feedback
         public async Task<IActionResult> CollectArcadeValidation([Required] ArcadeValidationData data)
         {
-            _logger.LogInformation("Start Collect Arcade Validation data");
-
             TelemetryOptions options = _options.Value;
 
-            if(null == options)
-            {
-                _logger.LogError("TelemetryOptions were not loaded.");
-                return StatusCode(500);
-            }
-
-            if (null == _client && string.IsNullOrEmpty(options.KustoIngestConnectionString))
+            if (_client == null && string.IsNullOrEmpty(options.KustoIngestConnectionString))
             {
                 _logger.LogError("No KustoIngestConnectionString set");
                 return StatusCode(500);
@@ -107,6 +102,7 @@ namespace DotNet.Status.Web.Controllers
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             return Ok();
 =======
             return NoContent();
@@ -114,6 +110,8 @@ namespace DotNet.Status.Web.Controllers
 =======
             _logger.LogInformation("End Collect Arcade Validation data");
 
+=======
+>>>>>>> Addressing minor code review feedback
             return Ok();
 >>>>>>> Adding API for collecting telemetry from Arcade Validation runs; test project for DotNet.Status.Web
         }
