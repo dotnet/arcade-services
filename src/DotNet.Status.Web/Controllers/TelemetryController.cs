@@ -16,8 +16,6 @@ namespace DotNet.Status.Web.Controllers
     {
         private readonly ILogger<TelemetryController> _logger;
         private readonly IOptionsSnapshot<TelemetryOptions> _options;
-<<<<<<< HEAD
-<<<<<<< HEAD
         private readonly IKustoIngestClient _client;
 
         public TelemetryController(
@@ -31,7 +29,6 @@ namespace DotNet.Status.Web.Controllers
         }
 
         [HttpPost("collect/arcade-validation")]
-<<<<<<< HEAD
         public async Task<IActionResult> CollectArcadeValidation([Required] ArcadeValidationData data)
         {
             TelemetryOptions options = _options.Value;
@@ -43,41 +40,6 @@ namespace DotNet.Status.Web.Controllers
             }
 
             IKustoIngestClient ingest = _client ?? KustoIngestFactory.CreateQueuedIngestClient(options.KustoIngestConnectionString);
-=======
-=======
-        private readonly IKustoIngestClient _client;
->>>>>>> Adding API for collecting telemetry from Arcade Validation runs; test project for DotNet.Status.Web
-
-        public TelemetryController(
-            ILogger<TelemetryController> logger,
-            IOptionsSnapshot<TelemetryOptions> options,
-            IKustoIngestClient client = null)
-        {
-            _logger = logger;
-            _options = options;
-            _client = client;
-        }
-
-        [HttpPost("collect/ArcadeValidation")]
-=======
->>>>>>> Addressing minor code review feedback
-        public async Task<IActionResult> CollectArcadeValidation([Required] ArcadeValidationData data)
-        {
-            TelemetryOptions options = _options.Value;
-
-            if (_client == null && string.IsNullOrEmpty(options.KustoIngestConnectionString))
-            {
-                _logger.LogError("No KustoIngestConnectionString set");
-                return StatusCode(500);
-            }
-
-<<<<<<< HEAD
-            IKustoIngestClient ingest =
-                KustoIngestFactory.CreateQueuedIngestClient(options.KustoIngestConnectionString);
->>>>>>> Initial commit for new API and test project
-=======
-            IKustoIngestClient ingest = _client ?? KustoIngestFactory.CreateQueuedIngestClient(options.KustoIngestConnectionString);
->>>>>>> Adding API for collecting telemetry from Arcade Validation runs; test project for DotNet.Status.Web
 
             List<ArcadeValidationData> arcadeValidationDatas = new List<ArcadeValidationData>{ data };
 
@@ -100,20 +62,8 @@ namespace DotNet.Status.Web.Controllers
                     new KustoValue("ArcadeDiffLink", b.ArcadeDiffLink, KustoDataTypes.String)
                 });
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
             return Ok();
-=======
-            return NoContent();
->>>>>>> Initial commit for new API and test project
-=======
-            _logger.LogInformation("End Collect Arcade Validation data");
 
-=======
->>>>>>> Addressing minor code review feedback
-            return Ok();
->>>>>>> Adding API for collecting telemetry from Arcade Validation runs; test project for DotNet.Status.Web
         }
     }
 }
