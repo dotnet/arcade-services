@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using DotNet.Status.Web.Options;
+using Kusto.Ingest;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
@@ -204,6 +205,8 @@ namespace DotNet.Status.Web
 
             services.AddSingleton<ZenHubClient>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
+
+            services.AddSingleton<IKustoIngestClient>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

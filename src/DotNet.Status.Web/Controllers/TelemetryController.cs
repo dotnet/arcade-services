@@ -28,20 +28,12 @@ namespace DotNet.Status.Web.Controllers
             _client = client;
         }
 
-        [HttpPost("collect/ArcadeValidation")]
+        [HttpPost("collect/arcade-validation")]
         public async Task<IActionResult> CollectArcadeValidation([Required] ArcadeValidationData data)
         {
-            _logger.LogInformation("Start Collect Arcade Validation data");
-
             TelemetryOptions options = _options.Value;
 
-            if(null == options)
-            {
-                _logger.LogError("TelemetryOptions were not loaded.");
-                return StatusCode(500);
-            }
-
-            if (null == _client && string.IsNullOrEmpty(options.KustoIngestConnectionString))
+            if (_client == null && string.IsNullOrEmpty(options.KustoIngestConnectionString))
             {
                 _logger.LogError("No KustoIngestConnectionString set");
                 return StatusCode(500);
@@ -69,8 +61,6 @@ namespace DotNet.Status.Web.Controllers
                     new KustoValue("ProductRepoBuildResult", b.ProductRepoBuildResult, KustoDataTypes.String),
                     new KustoValue("ArcadeDiffLink", b.ArcadeDiffLink, KustoDataTypes.String)
                 });
-
-            _logger.LogInformation("End Collect Arcade Validation data");
 
             return Ok();
         }

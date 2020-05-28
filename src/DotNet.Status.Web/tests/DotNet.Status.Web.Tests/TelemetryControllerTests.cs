@@ -11,6 +11,8 @@ namespace DotNet.Status.Web.Tests
 {
     public class TelemetryControllerTests
     {
+        // TODO: Test for required values in data
+
         [Fact]
         public void TestArcadeValidationTelemetryCollection()
         {
