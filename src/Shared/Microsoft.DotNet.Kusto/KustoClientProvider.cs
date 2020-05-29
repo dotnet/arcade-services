@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Kusto
 {
-    public class KustoClientProvider : IKustoClientProvider
+    public sealed class KustoClientProvider : IKustoClientProvider, IDisposable
     {
         private readonly IOptions<KustoClientProviderOptions> _options;
         private readonly ICslQueryProvider _kustoQueryProvider;
@@ -76,6 +76,11 @@ namespace Microsoft.DotNet.Kusto
             {
                 return null;
             }
+        }
+
+        public void Dispose()
+        {
+            _kustoQueryProvider.Dispose();
         }
     }
 }
