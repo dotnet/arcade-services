@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +15,9 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
+using Octokit;
+using Octokit.Internal;
+using ProductHeaderValue = Octokit.ProductHeaderValue;
 
 namespace Microsoft.DotNet.Web.Authentication.GitHub
 {
@@ -165,36 +169,26 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
                     }
                 }
 
+                string version = GetType().Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
+                var client = new GitHubClient(new ProductHeaderValue(GetType().FullName, version), new InMemoryCredentialStore(new Credentials(accessToken)));
                 {
-                    JArray orgPayload = await GetResponseJsonPayloadAsync(options.OrganizationEndpoint,
-                        accessToken,
-                        options,
-                        async r => JArray.Parse(await r.Content.ReadAsStringAsync()),
-                        cancellationToken);
-
-                    _logger.LogInformation("Fetched {orgCount} orgs", orgPayload.Count);
-
-                    foreach (JToken org in orgPayload)
+                    IReadOnlyList<Organization> organizations = await client.Organization.GetAllForCurrent();
+                    _logger.LogInformation("Fetched {orgCount} orgs", organizations.Count);
+                    foreach (Organization org in organizations)
                     {
-                        string orgLogin = org.Value<string>("login")?.ToLowerInvariant();
+                        string orgLogin = org.Login?.ToLowerInvariant();
                         AddClaim(ClaimTypes.Role, GetOrganizationRole(orgLogin));
                         AddClaim("urn:github:org", orgLogin);
                     }
                 }
 
                 {
-                    JArray teamPayload = await GetResponseJsonPayloadAsync(options.TeamsEndpoint,
-                        accessToken,
-                        options,
-                        async r => JArray.Parse(await r.Content.ReadAsStringAsync()),
-                        cancellationToken);
-
-                    _logger.LogInformation("Fetched {teamCount} teams", teamPayload.Count);
-
-                    foreach (JToken team in teamPayload)
+                    IReadOnlyList<Team> teams = await client.Organization.Team.GetAllForCurrent();
+                    _logger.LogInformation("Fetched {teamCount} teams", teams.Count);
+                    foreach (Team team in teams)
                     {
-                        string teamName = team.Value<string>("name")?.ToLowerInvariant();
-                        string orgName = team["organization"]?.Value<string>("login")?.ToLowerInvariant();
+                        string teamName = team.Name?.ToLowerInvariant();
+                        string orgName = team.Organization.Login?.ToLowerInvariant();
                         string fullName = orgName + ":" + teamName;
                         AddClaim(ClaimTypes.Role, GetTeamRole(orgName, teamName));
                         AddClaim("urn:github:team", fullName);
