@@ -442,7 +442,7 @@ namespace Maestro.ScenarioTests
 
         public async Task CheckoutBranchAsync(string branchName)
         {
-            await RunGitAsync("checkout", "-B", branchName);
+            await RunGitAsync("checkout", branchName);
         }
 
         internal IImmutableList<AssetData> GetAssetData(string asset1Name, string asset1Version, string asset2Name, string asset2Version)
