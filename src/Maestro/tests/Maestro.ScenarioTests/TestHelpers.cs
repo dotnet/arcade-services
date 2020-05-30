@@ -18,6 +18,7 @@ namespace Maestro.ScenarioTests
 
         public static async Task<string> RunExecutableAsyncWithInput(string executable, string input, params string[] args)
         {
+            string call = FormatExecutableCall(executable, args);
             TestContext.WriteLine(FormatExecutableCall(executable, args));
             var output = new StringBuilder();
 

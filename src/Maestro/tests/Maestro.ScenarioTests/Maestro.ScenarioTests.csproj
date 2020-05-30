@@ -21,6 +21,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\Microsoft.DotNet.Darc\src\Darc\Microsoft.DotNet.Darc.csproj" />
+    <ProjectReference Include="..\..\..\Microsoft.DotNet.Darc\src\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
     <ProjectReference Include="..\..\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
   </ItemGroup>
 

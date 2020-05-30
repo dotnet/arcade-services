@@ -2,14 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.DotNet.Darc.Options;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.DarcLib.Helpers;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Darc.Options;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -69,16 +68,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
         private void LogDependency(DependencyDetail dependency)
         {
-            Console.WriteLine($"Name:             {dependency.Name}");
-            Console.WriteLine($"Version:          {dependency.Version}");
-            Console.WriteLine($"Repo:             {dependency.RepoUri}");
-            Console.WriteLine($"Commit:           {dependency.Commit}");
-            Console.WriteLine($"Type:             {dependency.Type}");
-            Console.WriteLine($"Pinned:           {dependency.Pinned}");
-            if (!string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
-            {
-                Console.WriteLine($"Coherent Parent:  {dependency.CoherentParentDependencyName}");
-            }
+            Console.Write(UxHelpers.DependencyToString(dependency));
         }
     }
 }
