@@ -55,6 +55,41 @@ namespace Maestro.ScenarioTests
             throw new MaestroTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
         }
 
+        public async Task CheckBatchedGitHubPullRequest(string targetBranch, string source1RepoName, string source2RepoName,
+            string targetRepoName, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory)
+        {
+            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{source1RepoName} {_parameters.GitHubTestOrg}/{source2RepoName}";
+            await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false);
+        }
+
+        public async Task CheckNonBatchedGitHubPullRequest(string targetbranch, string sourceRepoName, string targetRepoName, string targetBranch,
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete = false)
+        {
+            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
+            await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete);
+        }
+
+        public async Task CheckGitHubPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete)
+        {
+            TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
+            PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
+
+            StringAssert.AreEqualIgnoringCase(expectedPRTitle, pullRequest.Title);
+            ItemState expectedPRState = complete ? ItemState.Closed : ItemState.Open;
+            Assert.AreEqual(expectedPRState, pullRequest.State);
+
+            using (ChangeDirectory(repoDirectory))
+            {
+
+            }
+        }
+
+        public async Task GitCommitAsync(string message)
+        {
+            await RunGitAsync("commit", "-am", message);
+        }
+
         public async Task<IAsyncDisposable> PushGitBranchAsync(string remote, string branch)
         {
             await RunGitAsync("push", remote, branch);
@@ -324,6 +359,17 @@ namespace Maestro.ScenarioTests
             return buildString;
         }
 
+        public async Task AddDependenciesToLocalRepo(string repoPath, List<AssetData> dependencies, string repoUri)
+        {
+            using (ChangeDirectory(repoPath))
+            {
+                foreach (AssetData asset in dependencies)
+                {
+                    await RunDarcAsync("add-dependency", "--name", asset.Name, "--type", "product", "--repo", repoUri);
+                }
+            }
+        }
+
         public async Task<string> GatherDrop(int buildId, string outputDir, bool includeReleased)
         {
             string[] args = new[] { "gather-drop", "--id", buildId.ToString(), "--dry-run", "--output-dir", outputDir };
@@ -392,6 +438,11 @@ namespace Maestro.ScenarioTests
         {
             await RunGitAsync("fetch", "origin", commit);
             await RunGitAsync("checkout", commit);
+        }
+
+        public async Task CheckoutBranchAsync(string branchName)
+        {
+            await RunGitAsync("checkout", "-B", branchName);
         }
 
         internal IImmutableList<AssetData> GetAssetData(string asset1Name, string asset1Version, string asset2Name, string asset2Version)
