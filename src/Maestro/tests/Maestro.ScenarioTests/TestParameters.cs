@@ -25,7 +25,6 @@ namespace Maestro.ScenarioTests
             string maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
             string githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
             string darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE");
-            string azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"];
 
             using var testDir = Shareable.Create(TemporaryDirectory.Get());
 
@@ -33,8 +32,7 @@ namespace Maestro.ScenarioTests
                 ? ApiFactory.GetAnonymous(maestroBaseUri)
                 : ApiFactory.GetAuthenticated(maestroBaseUri, maestroToken);
 
-            //   string darcVersion = await maestroApi.Assets.GetDarcVersionAsync();
-            string darcVersion = "1.1.0-beta.20351.2";
+            string darcVersion = await maestroApi.Assets.GetDarcVersionAsync();
             string dotnetExe = await TestHelpers.Which("dotnet");
 
             var toolInstallArgs = new List<string>
@@ -81,7 +79,7 @@ namespace Maestro.ScenarioTests
 
         public string DarcExePath { get; }
 
-        public string GitExePath { get; }
+        public string GitExePath { get;  }
 
         public string GitHubUser { get; } = "dotnet-maestro-bot";
 
@@ -106,8 +104,6 @@ namespace Maestro.ScenarioTests
         public string AzureDevOpsAccount { get; } = "dnceng";
 
         public string AzureDevOpsProject { get; } = "internal";
-
-        public string AzDoToken { get; }
 
         public void Dispose()
         {
