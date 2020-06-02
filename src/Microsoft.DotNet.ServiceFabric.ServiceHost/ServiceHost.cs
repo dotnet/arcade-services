@@ -239,7 +239,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 builder =>
                 {
                     builder.AddDebug();
-                    //builder.AddFixedApplicationInsights(LogLevel.Information);
                 });
             services.TryAddSingleton<IMetricTracker, ApplicationInsightsMetricTracker>();
             services.TryAddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
