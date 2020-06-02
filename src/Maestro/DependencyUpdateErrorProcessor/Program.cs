@@ -14,7 +14,7 @@ using Octokit;
 
 namespace DependencyUpdateErrorProcessor
 {
-    public class Program
+    public static class Program
     {
         /// <summary>
         /// This is the entry point of the service host process.
@@ -50,8 +50,8 @@ namespace DependencyUpdateErrorProcessor
                 {
                     var config = provider.GetRequiredService<IConfiguration>();
                     if (!bool.TryParse(config["EnableDependencyUpdateErrorProcessor"], out var errorProcessorFlag))
-                    { 
-                        var logger = provider.GetRequiredService<ILogger<Program>>();
+                    {
+                        var logger = provider.GetRequiredService<ILoggerProvider>().CreateLogger(nameof(Program));
                         // Logging statement is added to track the feature flag returns. 
                         logger.LogError(
                             $"Value of the dependency update error processor feature flag '{config["EnableDependencyUpdateErrorProcessor"]}'");
