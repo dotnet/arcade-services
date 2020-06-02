@@ -51,14 +51,12 @@ namespace DependencyUpdateErrorProcessor
                 (options, provider) =>
                 {
                     var config = provider.GetRequiredService<IConfiguration>();
-                    //bool errorProcessorFlag = false;
                     if (!bool.TryParse(config["EnableDependencyUpdateErrorProcessor"], out var errorProcessorFlag))
                     { 
                         var logger = provider.GetRequiredService<ILogger<Program>>();
                         // Logging statement is added to track the feature flag returns. 
                         logger.LogError(
-                            $"Value of the dependency update error processor feature flag {config["EnableDependencyUpdateErrorProcessor"]}");
-                        return;
+                            $"Value of the dependency update error processor feature flag '{config["EnableDependencyUpdateErrorProcessor"]}'");
                     }
                     options.IsEnabled = errorProcessorFlag;
                     options.GithubUrl = config["GithubUrl"];
