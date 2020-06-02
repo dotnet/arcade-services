@@ -10,6 +10,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Internal.Logging;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -23,9 +24,12 @@ namespace SubscriptionActorService
         private static readonly MethodInfo InvokeActionMethod =
             typeof(ActionRunner).GetRuntimeMethods().Single(m => m.Name == nameof(InvokeAction));
 
-        public ActionRunner(ILogger<ActionRunner> logger)
+        private readonly OperationManager _operations;
+
+        public ActionRunner(OperationManager operations, ILogger<ActionRunner> logger)
         {
             Logger = logger;
+            _operations = operations;
         }
 
         protected ILogger Logger { get; }
@@ -87,7 +91,7 @@ namespace SubscriptionActorService
                     arguments.ToArray(); // copy the array because formatted log values modifies the array.
             string actionMessage = FormattableStringFormatter.Format(method.MessageFormat, argumentsForFormat);
 
-            using (Logger.BeginScope(method.MessageFormat, argumentsForFormat))
+            using (_operations.BeginOperation(method.MessageFormat, argumentsForFormat))
             {
                 try
                 {
