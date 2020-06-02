@@ -22,15 +22,11 @@ namespace Maestro.Web
 
     public class BackgroundQueue : BackgroundService
     {
-        private readonly IServiceScopeFactory _scopeFactory;
         private readonly BlockingCollection<(Type type, JToken args)> _workItems = new BlockingCollection<(Type type, JToken args)>();
         private readonly OperationManager _operations;
 
-        public BackgroundQueue(IServiceScopeFactory scopeFactory,
-            ILogger<BackgroundQueue> logger,
-            OperationManager operations)
+        public BackgroundQueue(OperationManager operations, ILogger<BackgroundQueue> logger)
         {
-            _scopeFactory = scopeFactory;
             Logger = logger;
             _operations = operations;
         }

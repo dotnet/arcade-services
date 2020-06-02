@@ -20,7 +20,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
     {
         private readonly OperationManager _operations;
         private readonly ILogger<ScheduledService<TService>> _logger;
-        private readonly IServiceScopeFactory _scopeFactory;
 
         public static async Task RunScheduleAsync(ServiceProvider container, CancellationToken cancellationToken)
         {
