@@ -52,6 +52,7 @@ namespace DependencyUpdateErrorProcessor
                     options.GithubUrl = config["GithubUrl"];
                     options.FyiHandle = config["FyiHandle"];
                 });
+            services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         }
     }
