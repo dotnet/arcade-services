@@ -8,6 +8,7 @@ using Maestro.AzureDevOps;
 using Maestro.Data;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.Configuration;
@@ -24,10 +25,12 @@ namespace SubscriptionActorService
             DarcRemoteMemoryCache memoryCache,
             BuildAssetRegistryContext context,
             TemporaryFiles tempFiles,
-            ILocalGit localGit)
+            ILocalGit localGit,
+            OperationManager operations)
         {
             _tempFiles = tempFiles;
             _localGit = localGit;
+            _operations = operations;
             _configuration = configuration;
             _gitHubTokenProvider = gitHubTokenProvider;
             _azureDevOpsTokenProvider = azureDevOpsTokenProvider;
@@ -43,6 +46,7 @@ namespace SubscriptionActorService
 
         private readonly TemporaryFiles _tempFiles;
         private readonly ILocalGit _localGit;
+        private readonly OperationManager _operations;
 
 
         public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
@@ -52,7 +56,7 @@ namespace SubscriptionActorService
 
         public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
         {
-            using (logger.BeginScope($"Getting remote for repo {repoUrl}."))
+            using (_operations.BeginOperation($"Getting remote for repo {repoUrl}."))
             {
                 // Normalize the url with the AzDO client prior to attempting to
                 // get a token. When we do coherency updates we build a repo graph and

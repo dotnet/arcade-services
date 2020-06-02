@@ -234,11 +234,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             services.TryAddSingleton(b => (Microsoft.Extensions.Hosting.IHostingEnvironment) b.GetService<HostEnvironment>());
 #pragma warning restore 618
             ConfigureApplicationInsights(services);
+            services.AddOperationTracking(o => { });
             services.AddLogging(
                 builder =>
                 {
                     builder.AddDebug();
-                    builder.AddFixedApplicationInsights(LogLevel.Information);
                 });
             services.TryAddSingleton<IMetricTracker, ApplicationInsightsMetricTracker>();
             services.TryAddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
