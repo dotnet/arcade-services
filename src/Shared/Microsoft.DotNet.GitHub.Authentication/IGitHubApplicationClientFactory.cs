@@ -2,14 +2,13 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using Microsoft.AspNetCore.Authentication.OAuth;
-using Microsoft.DotNet.GitHub.Authentication;
+using System.Threading.Tasks;
 using Octokit;
 
-namespace Microsoft.DotNet.Web.Authentication.GitHub
+namespace Microsoft.DotNet.GitHub.Authentication
 {
-    public class GitHubAuthenticationOptions : OAuthOptions
-    {
+    public interface IGitHubApplicationClientFactory
+    { 
+        Task<IGitHubClient> CreateGitHubClientAsync(string owner, string repo);
     }
 }
