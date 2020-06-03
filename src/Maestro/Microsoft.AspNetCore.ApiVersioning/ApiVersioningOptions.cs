@@ -16,14 +16,12 @@ namespace Microsoft.AspNetCore.ApiVersioning
         public Func<TypeInfo, string> GetName { get; set; } = DefaultGetName;
         public IVersioningScheme VersioningScheme { get; set; } = new PathVersioningScheme();
 
-        [CanBeNull]
         public static string DefaultGetVersion(TypeInfo controllerType)
         {
             var attribute = controllerType.GetCustomAttribute<ApiVersionAttribute>(false);
             return attribute?.Version;
         }
 
-        [NotNull]
         private static string DefaultGetName(TypeInfo controllerType)
         {
             return controllerType.Name.Substring(0, controllerType.Name.Length - 10);

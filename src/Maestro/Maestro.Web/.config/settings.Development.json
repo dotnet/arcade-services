@@ -3,6 +3,5 @@
   "AppConfigurationUri": "https://maestrolocal.azconfig.io/",
   "BuildAssetRegistry": {
     "ConnectionString": "Data Source=localhost\\SQLEXPRESS;Initial Catalog=BuildAssetRegistry;Integrated Security=true"
-  },
-  "ForceLocalApi": false
+  }
 }

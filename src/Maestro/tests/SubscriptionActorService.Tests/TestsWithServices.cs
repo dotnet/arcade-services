@@ -8,20 +8,11 @@ using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Logging;
-using Xunit.Abstractions;
 
 namespace SubscriptionActorService.Tests
 {
-    public abstract class TestsWithServices : TestsWithMocks
+    public class TestsWithServices : TestsWithMocks
     {
-        private readonly ITestOutputHelper _output;
-
-        protected TestsWithServices(ITestOutputHelper output)
-        {
-            _output = output;
-        }
-
         protected virtual void RegisterServices(IServiceCollection services)
         {
         }
@@ -36,7 +27,6 @@ namespace SubscriptionActorService.Tests
             var services = new ServiceCollection();
             Environment.SetEnvironmentVariable("ENVIRONMENT", "XUNIT");
             services.TryAddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
-            services.AddLogging(l => l.AddProvider(new XUnitLogger(_output)));
             RegisterServices(services);
             using (ServiceProvider container = services.BuildServiceProvider())
             using (IServiceScope scope = container.GetRequiredService<IServiceScopeFactory>().CreateScope())

@@ -1,5 +1,5 @@
+#if NETCOREAPP3_1
 using System;
-using JetBrains.Annotations;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.Extensions.Logging;
@@ -9,13 +9,18 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
     public static class ServiceHostWebSite<TStartup>
         where TStartup : class
     {
+        private static bool RunningInServiceFabric()
+        {
+            string fabricApplication = Environment.GetEnvironmentVariable("Fabric_ApplicationName");
+            return !string.IsNullOrEmpty(fabricApplication);
+        }
+
         /// <summary>
         ///     This is the entry point of the service host process.
         /// </summary>
-        [PublicAPI]
         public static void Run(string serviceTypeName)
         {
-            if (ServiceFabricHelpers.RunningInServiceFabric())
+            if (RunningInServiceFabric())
             {
                 ServiceFabricMain(serviceTypeName);
             }
@@ -33,7 +38,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 {
                     builder.AddDefaultJsonConfiguration(context.HostingEnvironment);
                 })
-                .ConfigureServices(ServiceHost.ConfigureDefaultServices)
                 .ConfigureLogging(
                     builder =>
                     {
@@ -60,3 +64,4 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         }
     }
 }
+#endif

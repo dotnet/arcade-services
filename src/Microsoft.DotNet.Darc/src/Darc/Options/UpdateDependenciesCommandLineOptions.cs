@@ -36,9 +36,6 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("coherency-only", HelpText = "Only do coherency updates.")]
         public bool CoherencyOnly { get; set; }
 
-        [Option("strict-coherency", HelpText = "Use strict coherency.")]
-        public bool StrictCoherency { get; set; }
-
         public override Operation GetOperation()
         {
             return new UpdateDependenciesOperation(this);

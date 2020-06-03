@@ -97,7 +97,7 @@ stages:
 
         - task: NuGetToolInstaller@0
           inputs:
-            versionSpec: 5.5.x
+            versionSpec: 5.4.0
 
         - task: NodeTool@0
           inputs:
@@ -108,7 +108,6 @@ stages:
           inputs:
             command: restore
             solution: "**/*.sln"
-            feedstoUse: config
 
         - powershell: eng\set-version-parameters.ps1
           displayName: Calculate release version variables
@@ -167,7 +166,7 @@ stages:
             artifact: TelemetryApplication
             displayName: Publish TelemetryApplication
 
-          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\DotNet.Status.Web\publish -f netcoreapp3.1
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\DotNet.Status.Web\publish -f netcoreapp2.1
             workingDirectory: src/DotNet.Status.Web
             displayName: dotnet publish DotNet.Status.Web
 
@@ -191,7 +190,7 @@ stages:
             artifact: DarcBot
             displayName: Publish DarcBot Artifacts
 
-          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\RolloutScorerAzureFunction\publish -f netcoreapp3.1
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\RolloutScorerAzureFunction\publish -f netcoreapp3.0
             workingDirectory: src/RolloutScorer/RolloutScorerAzureFunction
             displayName: dotnet publish RolloutScorerAzureFunction
 
@@ -208,7 +207,7 @@ stages:
             displayName: Publish RolloutScorerAzureFunction
           
           ## Prepare database update artifact
-          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp3.1
+          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\Maestro.Data -f netcoreapp2.1
             workingDirectory: src/Maestro/Maestro.Data
             displayName: Create Data Package
             
@@ -253,7 +252,7 @@ stages:
               ArtifactName: ScenarioTests
               ArtifactType: Container
 
-          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\netcoreapp3.1\publish
+          - publish: $(Build.SourcesDirectory)\artifacts\bin\Maestro.ScenarioTests\$(_BuildConfig)\netcoreapp2.1\publish
             artifact: Maestro.ScenarioTests
 
           # Reenable tagging when stable package versions can be generated.

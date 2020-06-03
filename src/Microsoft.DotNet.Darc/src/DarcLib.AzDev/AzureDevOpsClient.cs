@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class AzureDevOpsClient : RemoteRepoBase, IGitRepo, IAzureDevOpsClient
     {
-        private const string DefaultApiVersion = "5.0";
+        private const string DefaultApiVersion = "5.0-preview.1";
 
         private static readonly string AzureDevOpsHostPattern = @"dev\.azure\.com\";
 
@@ -41,6 +41,7 @@ namespace Microsoft.DotNet.DarcLib
 
         // Azure DevOps uses this id when creating a new branch as well as when deleting a branch
         private static readonly string BaseObjectId = "0000000000000000000000000000000000000000";
+
         private readonly ILogger _logger;
         private readonly string _personalAccessToken;
         private readonly JsonSerializerSettings _serializerSettings;
@@ -66,8 +67,6 @@ namespace Microsoft.DotNet.DarcLib
                 NullValueHandling = NullValueHandling.Ignore
             };
         }
-
-        public bool AllowRetries { get; set; } = true;
 
         /// <summary>
         /// Retrieve the contents of a text file in a repo on a specific branch
@@ -652,8 +651,7 @@ namespace Microsoft.DotNet.DarcLib
                 accountName,
                 projectName,
                 statusesPath,
-                _logger,
-                versionOverride: "5.1-preview.1");
+                _logger);
 
             JArray values = JArray.Parse(content["value"].ToString());
 
@@ -779,10 +777,6 @@ namespace Microsoft.DotNet.DarcLib
             string baseAddressSubpath = null,
             int retryCount = 15)
         {
-            if (!AllowRetries)
-            {
-                retryCount = 0;
-            }
             using (HttpClient client = CreateHttpClient(accountName, projectName, versionOverride, baseAddressSubpath))
             {
                 HttpRequestManager requestManager = new HttpRequestManager(client,
@@ -1073,7 +1067,7 @@ namespace Microsoft.DotNet.DarcLib
                 $"_apis/release/definitions/",
                 _logger,
                 body,
-                versionOverride: "5.0",
+                versionOverride: "5.0-preview.3",
                 baseAddressSubpath: "vsrm.");
 
             return content.ToObject<AzureDevOpsReleaseDefinition>();
@@ -1098,7 +1092,7 @@ namespace Microsoft.DotNet.DarcLib
                 $"_apis/release/releases/",
                 _logger,
                 body,
-                versionOverride: "5.0",
+                versionOverride: "5.0-preview.3",
                 baseAddressSubpath: "vsrm.");
 
             return content.GetValue("id").ToObject<int>();
@@ -1320,7 +1314,7 @@ namespace Microsoft.DotNet.DarcLib
                 projectName,
                 $"_apis/build/builds/{buildId}",
                 _logger,
-                versionOverride: "5.0");
+                versionOverride: "5.0-preview.3");
 
             return content.ToObject<AzureDevOpsBuild>();
         }
@@ -1340,7 +1334,7 @@ namespace Microsoft.DotNet.DarcLib
                 projectName,
                 $"_apis/release/definitions/{releaseDefinitionId}",
                 _logger,
-                versionOverride: "5.0",
+                versionOverride: "5.0-preview.3",
                 baseAddressSubpath: "vsrm.");
 
             return content.ToObject<AzureDevOpsReleaseDefinition>();

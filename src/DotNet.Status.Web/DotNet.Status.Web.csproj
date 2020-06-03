@@ -1,25 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
     <UserSecretsId>65a272ca-730a-4afd-b68b-d256719c2db2</UserSecretsId>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SignAssembly>false</SignAssembly>
-    <AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="GitHubJwt" />
-    <PackageReference Include="Azure.Storage.Blobs" />
-    <PackageReference Include="Azure.Storage.Queues" />
-    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureKeyVault" />
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection.AzureStorage" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" />
-    <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" />
-    <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.AzureKeyVault" />
-    <PackageReference Include="Octokit" />
-    <PackageReference Include="WindowsAzure.Storage" /> 
+    <PackageReference Include="GitHubJwt" Version="0.0.2" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.0.0" />
+    <PackageReference Include="Azure.Storage.Queues" Version="12.0.0" />
+    <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" Version="2.8.2" />
+    <PackageReference Include="Microsoft.AspNetCore.All" />
+    <PackageReference Include="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" Version="1.0.0-preview2-final" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.AzureKeyVault" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.2.0" />
+    <PackageReference Include="Octokit" Version="$(OctokitVersion)" />
+    <PackageReference Include="WindowsAzure.Storage" Version="9.3.3" />
   </ItemGroup>
 
   <ItemGroup>

@@ -76,7 +76,7 @@ namespace DependencyUpdater
             // in such a way that will work with sizing.
             services.AddSingleton<DarcRemoteMemoryCache>();
 
-            services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
+            services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
             services.AddKustoClientProvider((provider, options) =>
             {
                 var config = provider.GetRequiredService<IConfiguration>();

@@ -13,7 +13,6 @@ using Microsoft.EntityFrameworkCore.SqlServer.Metadata.Internal;
 
 namespace Microsoft.DotNet.EntityFrameworkCore.Extensions
 {
-    #pragma warning disable EF1001
     public class SystemVersionedSqlServerMigrationsSqlGenerator : SqlServerMigrationsSqlGenerator
     {
         public SystemVersionedSqlServerMigrationsSqlGenerator(
@@ -73,10 +72,71 @@ namespace Microsoft.DotNet.EntityFrameworkCore.Extensions
         }
 
         protected override void Generate(
+            CreateTableOperation operation,
+            IModel model,
+            MigrationCommandListBuilder builder)
+        {
+            Generate(operation, model, builder, false);
+
+            bool memoryOptimized = operation[SqlServerAnnotationNames.MemoryOptimized] as bool? == true;
+            var historyEntityTypeName = operation[DotNetExtensionsAnnotationNames.SystemVersioned] as string;
+            var tableOptions = new List<string>();
+            if (memoryOptimized)
+            {
+                tableOptions.Add("MEMORY_OPTIMIZED = ON");
+            }
+
+            if (historyEntityTypeName != null)
+            {
+                IEntityType historyEntityType = model.FindEntityType(historyEntityTypeName);
+                var versioningOptions = new List<string>
+                {
+                    $"HISTORY_TABLE = {Dependencies.SqlGenerationHelper.DelimitIdentifier(historyEntityType[RelationalAnnotationNames.TableName] as string, operation.Schema ?? "dbo")}"
+                };
+                var retentionPeriod = operation[DotNetExtensionsAnnotationNames.RetentionPeriod] as string;
+                if (retentionPeriod != null)
+                {
+                    versioningOptions.Add($"HISTORY_RETENTION_PERIOD = {retentionPeriod}");
+                }
+
+                tableOptions.Add($"SYSTEM_VERSIONING = ON ({string.Join(", ", versioningOptions)})");
+            }
+
+            if (tableOptions.Any())
+            {
+                builder.AppendLine();
+                using (builder.Indent())
+                {
+                    builder.AppendLine("WITH (");
+                    using (builder.Indent())
+                    {
+                        for (var i = 0; i < tableOptions.Count; i++)
+                        {
+                            string option = tableOptions[i];
+                            builder.Append(option);
+                            if (i + 1 != tableOptions.Count)
+                            {
+                                builder.AppendLine(",");
+                            }
+                            else
+                            {
+                                builder.AppendLine();
+                            }
+                        }
+                    }
+
+                    builder.Append(")");
+                }
+            }
+
+            builder.AppendLine(Dependencies.SqlGenerationHelper.StatementTerminator).EndCommand(memoryOptimized);
+        }
+
+        protected override void Generate(
             [NotNull] CreateTableOperation operation,
             [CanBeNull] IModel model,
             [NotNull] MigrationCommandListBuilder builder,
-            bool terminate = true)
+            bool terminate)
         {
             if (operation == null)
             {
@@ -137,59 +197,6 @@ namespace Microsoft.DotNet.EntityFrameworkCore.Extensions
             }
 
             builder.Append(")");
-
-            bool memoryOptimized = operation[SqlServerAnnotationNames.MemoryOptimized] as bool? == true;
-            var historyEntityTypeName = operation[DotNetExtensionsAnnotationNames.SystemVersioned] as string;
-            var tableOptions = new List<string>();
-            if (memoryOptimized)
-            {
-                tableOptions.Add("MEMORY_OPTIMIZED = ON");
-            }
-
-            if (historyEntityTypeName != null)
-            {
-                IEntityType historyEntityType = model.FindEntityType(historyEntityTypeName);
-                var versioningOptions = new List<string>
-                {
-                    $"HISTORY_TABLE = {Dependencies.SqlGenerationHelper.DelimitIdentifier(historyEntityType[RelationalAnnotationNames.TableName] as string, operation.Schema ?? "dbo")}"
-                };
-                var retentionPeriod = operation[DotNetExtensionsAnnotationNames.RetentionPeriod] as string;
-                if (retentionPeriod != null)
-                {
-                    versioningOptions.Add($"HISTORY_RETENTION_PERIOD = {retentionPeriod}");
-                }
-
-                tableOptions.Add($"SYSTEM_VERSIONING = ON ({string.Join(", ", versioningOptions)})");
-            }
-
-            if (tableOptions.Any())
-            {
-                builder.AppendLine();
-                using (builder.Indent())
-                {
-                    builder.AppendLine("WITH (");
-                    using (builder.Indent())
-                    {
-                        for (var i = 0; i < tableOptions.Count; i++)
-                        {
-                            string option = tableOptions[i];
-                            builder.Append(option);
-                            if (i + 1 != tableOptions.Count)
-                            {
-                                builder.AppendLine(",");
-                            }
-                            else
-                            {
-                                builder.AppendLine();
-                            }
-                        }
-                    }
-
-                    builder.Append(")");
-                }
-            }
-
-            builder.AppendLine(Dependencies.SqlGenerationHelper.StatementTerminator).EndCommand(memoryOptimized);
 
             if (terminate)
             {

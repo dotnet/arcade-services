@@ -5,10 +5,9 @@
 using System;
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations;
-using System.IO;
 using System.Net.Http;
+using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using DotNet.Status.Web.Options;
@@ -29,14 +28,14 @@ namespace DotNet.Status.Web.Controllers
     [Route("api/deployment")]
     public class DeploymentController : ControllerBase
     {
-        private readonly IHostEnvironment _env;
+        private readonly IHostingEnvironment _env;
         private readonly IOptionsMonitor<GrafanaOptions> _grafanaOptions;
         private readonly ILogger<DeploymentController> _logger;
 
         public DeploymentController(
             IOptionsMonitor<GrafanaOptions> grafanaOptions,
             ILogger<DeploymentController> logger,
-            IHostEnvironment env)
+            IHostingEnvironment env)
         {
             _grafanaOptions = grafanaOptions;
             _logger = logger;
@@ -67,13 +66,14 @@ namespace DotNet.Status.Web.Controllers
                             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                             request.Headers.Authorization =
                                 new AuthenticationHeaderValue("Bearer", grafanaOptions.ApiToken);
-                            request.Content = CreateObjectContent(content);
+                            request.Content =
+                                new ObjectContent<NewGrafanaAnnotationRequest>(content, s_grafanaFormatter);
 
                             using (HttpResponseMessage response = await client.SendAsync(request, CancellationToken.None))
                             {
                                 _logger.LogTrace("Response from grafana {responseCode} {reason}", response.StatusCode, response.ReasonPhrase);
                                 response.EnsureSuccessStatusCode();
-                                return await ReadObjectContent<NewGrafanaAnnotationResponse>(response.Content);
+                                return await response.Content.ReadAsAsync<NewGrafanaAnnotationResponse>(s_grafanaFormatters, CancellationToken.None);
                             }
                         }
                     },
@@ -130,7 +130,8 @@ namespace DotNet.Status.Web.Controllers
                             request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                             request.Headers.Authorization =
                                 new AuthenticationHeaderValue("Bearer", grafanaOptions.ApiToken);
-                            request.Content = CreateObjectContent(content);
+                            request.Content =
+                                new ObjectContent<NewGrafanaAnnotationRequest>(content, s_grafanaFormatter);
                             using (HttpResponseMessage response = await client.SendAsync(request, CancellationToken.None))
                             {
                                 _logger.LogTrace("Response from grafana {responseCode} {reason}", response.StatusCode, response.ReasonPhrase);
@@ -161,28 +162,18 @@ namespace DotNet.Status.Web.Controllers
             }
             return table;
         }
-
-        private static StringContent CreateObjectContent(object content)
+        
+        private static readonly MediaTypeFormatter s_grafanaFormatter = new JsonMediaTypeFormatter
         {
-            StringWriter writer = new StringWriter();
-            s_grafanaSerializer.Serialize(writer, content);
-            return new StringContent(writer.ToString(), Encoding.UTF8, "application/json");
-        }
-
-        private static async Task<T> ReadObjectContent<T>(HttpContent content)
-        {
-            using (var streamReader = new StreamReader(await content.ReadAsStreamAsync()))
-            using (var jsonReader = new JsonTextReader(streamReader))
+            SerializerSettings =
             {
-                return s_grafanaSerializer.Deserialize<T>(jsonReader);
+                ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                NullValueHandling = NullValueHandling.Ignore,
             }
-        }
-
-        private static readonly JsonSerializer s_grafanaSerializer = new JsonSerializer
-        {
-            ContractResolver = new CamelCasePropertyNamesContractResolver(),
-            Formatting = Formatting.None,
         };
+
+        private static readonly ImmutableArray<MediaTypeFormatter> s_grafanaFormatters =
+            ImmutableArray.Create(s_grafanaFormatter);
     }
 
     public class DeploymentStartRequest

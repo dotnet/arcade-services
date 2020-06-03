@@ -22,7 +22,6 @@ using Channel = Maestro.Web.Api.v2018_07_16.Models.Channel;
 using FlowGraph = Maestro.Web.Api.v2018_07_16.Models.FlowGraph;
 using FlowRef = Maestro.Web.Api.v2018_07_16.Models.FlowRef;
 using FlowEdge = Maestro.Web.Api.v2018_07_16.Models.FlowEdge;
-using ReleasePipeline = Maestro.Web.Api.v2018_07_16.Models.ReleasePipeline;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
 {
@@ -91,6 +90,8 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         public virtual async Task<IActionResult> GetChannel(int id)
         {
             Data.Models.Channel channel = await _context.Channels
+                .Include(ch => ch.ChannelReleasePipelines)
+                .ThenInclude(crp => crp.ReleasePipeline)
                 .Where(c => c.Id == id).FirstOrDefaultAsync();
 
             if (channel == null)
@@ -111,6 +112,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         public virtual async Task<IActionResult> DeleteChannel(int id)
         {
             Data.Models.Channel channel = await _context.Channels
+                .Include(ch => ch.ChannelReleasePipelines)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (channel == null)
@@ -124,6 +126,13 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 return BadRequest(
                     new ApiError($"The channel with id '{id}' has associated subscriptions. " +
                     "Please remove these before removing this channel."));
+            }
+
+            if (channel.ChannelReleasePipelines != null && channel.ChannelReleasePipelines.Any())
+            {
+                return BadRequest(
+                    new ApiError($"The channel with id '{id}' has '{channel.ChannelReleasePipelines.Count()}' " +
+                    $"release pipeline(s) attached to it. Detach those release pipelines(s) first."));
             }
 
             _context.Channels.Remove(channel);
@@ -231,7 +240,37 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [SwaggerApiResponse(HttpStatusCode.Created, Description = "ReleasePipeline successfully added to Channel")]
         public virtual async Task<IActionResult> AddPipelineToChannel(int channelId, int pipelineId)
         {
-            return await Task.FromResult(StatusCode((int)HttpStatusCode.NotModified));
+            Data.Models.Channel channel = await _context.Channels.FindAsync(channelId);
+            if (channel == null)
+            {
+                return NotFound(new ApiError($"The channel with id '{channelId}' was not found."));
+            }
+
+            ReleasePipeline pipeline = await _context.ReleasePipelines
+                .Include(rp => rp.ChannelReleasePipelines)
+                .Where(rp => rp.Id == pipelineId)
+                .SingleOrDefaultAsync();
+
+            if (pipeline == null)
+            {
+                return NotFound(new ApiError($"The release pipeline with id '{pipelineId}' was not found."));
+            }
+
+            // If pipeline is already in channel, nothing to do
+            if (pipeline.ChannelReleasePipelines != null &&
+                pipeline.ChannelReleasePipelines.Any(existingPipelineChannel => existingPipelineChannel.ChannelId == channelId))
+            {
+                return StatusCode((int)HttpStatusCode.NotModified);
+            }
+
+            var pipelineChannel = new ChannelReleasePipeline
+            {
+                Channel = channel,
+                ReleasePipeline = pipeline
+            };
+            await _context.ChannelReleasePipelines.AddAsync(pipelineChannel);
+            await _context.SaveChangesAsync();
+            return StatusCode((int)HttpStatusCode.Created);
         }
 
         /// <summary>
@@ -243,7 +282,29 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [SwaggerApiResponse(HttpStatusCode.OK, Description = "ReleasePipelines successfully removed from Channel")]
         public virtual async Task<IActionResult> DeletePipelineFromChannel(int channelId, int pipelineId)
         {
-            return await Task.FromResult(StatusCode((int)HttpStatusCode.NotModified));
+            Data.Models.Channel channel = await _context.Channels
+                .Include(ch => ch.ChannelReleasePipelines)
+                .ThenInclude(crp => crp.ReleasePipeline)
+                .Where(ch => ch.Id == channelId)
+                .SingleOrDefaultAsync();
+            
+            if (channel == null)
+            {
+                return NotFound(new ApiError($"The channel with id '{channelId}' was not found."));
+            }
+
+            var pipeline = channel.ChannelReleasePipelines.Find(crp => crp.ReleasePipeline.Id == pipelineId);
+
+            // If pipeline is not in the channel, nothing to do
+            if (pipeline == null)
+            {
+                return StatusCode((int)HttpStatusCode.NotModified);
+            }
+
+            _context.ChannelReleasePipelines.Remove(pipeline);
+            await _context.SaveChangesAsync();
+
+            return StatusCode((int)HttpStatusCode.OK);
         }
 
         private const int EngLatestChannelId = 2;

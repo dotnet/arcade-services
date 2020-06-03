@@ -23,12 +23,12 @@ namespace DotNet.Status.Web
     public class AzureTableTokenStore : ITokenStore, ITokenRevocationProvider
     {
         private readonly RNGCryptoServiceProvider _random = new RNGCryptoServiceProvider();
-        private readonly IHostEnvironment _env;
+        private readonly IHostingEnvironment _env;
         private readonly IOptionsMonitor<AzureTableTokenStoreOptions> _options;
         private readonly ILogger<AzureTableTokenStore> _logger;
 
         public AzureTableTokenStore(
-            IHostEnvironment env,
+            IHostingEnvironment env,
             IOptionsMonitor<AzureTableTokenStoreOptions> options,
             ILogger<AzureTableTokenStore> logger)
         {
