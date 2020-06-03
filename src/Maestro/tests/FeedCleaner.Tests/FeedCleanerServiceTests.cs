@@ -5,15 +5,16 @@
 using Maestro.AzureDevOps;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace FeedCleanerService.Tests
@@ -21,7 +22,7 @@ namespace FeedCleanerService.Tests
     public class FeedCleanerServiceTests : IDisposable
     {
         private readonly Lazy<BuildAssetRegistryContext> _context;
-        private readonly Mock<IHostEnvironment> Env;
+        private readonly Mock<IHostingEnvironment> Env;
         private readonly ServiceProvider Provider;
         private readonly IServiceScope Scope;
         private readonly Dictionary<string, AzureDevOpsFeed> Feeds;
@@ -36,15 +37,11 @@ namespace FeedCleanerService.Tests
         public FeedCleanerServiceTests()
         {
             var services = new ServiceCollection();
-            Env = new Mock<IHostEnvironment>(MockBehavior.Strict);
+            Env = new Mock<IHostingEnvironment>(MockBehavior.Strict);
             services.AddSingleton(Env.Object);
             services.AddLogging();
             services.AddDbContext<BuildAssetRegistryContext>(
-                options =>
-                {
-                    options.UseInMemoryDatabase("BuildAssetRegistry");
-                    options.EnableServiceProviderCaching(false);
-                });
+                options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
             services.Configure<FeedCleanerOptions>(
                 (options) =>
                 {
@@ -84,7 +81,7 @@ namespace FeedCleanerService.Tests
         }
 
         [Fact]
-        public async Task OnlyDeletesReleasedPackagesFromManagedFeeds()
+        public async void OnlyDeletesReleasedPackagesFromManagedFeeds()
         {
             FeedCleanerService cleaner = ConfigureFeedCleaner();
             await cleaner.CleanManagedFeedsAsync();
@@ -92,22 +89,22 @@ namespace FeedCleanerService.Tests
             Assert.Equal(2, unreleasedFeed.Packages.Count);
             var packagesWithDeletedVersions = unreleasedFeed.Packages.Where(p => p.Versions.Any(v => v.IsDeleted)).ToList();
             Assert.Single(packagesWithDeletedVersions);
-            Assert.Equal("releasedPackage1", packagesWithDeletedVersions.First().Name);
-            var deletedVersions = packagesWithDeletedVersions.First().Versions.Where(v => v.IsDeleted).ToList();
+            Assert.Equal("releasedPackage1", packagesWithDeletedVersions.FirstOrDefault().Name);
+            var deletedVersions = packagesWithDeletedVersions.FirstOrDefault().Versions.Where(v => v.IsDeleted);
             Assert.Single(deletedVersions);
-            Assert.Equal("1.0", deletedVersions.First().Version);
+            Assert.Equal("1.0", deletedVersions.FirstOrDefault().Version);
 
             Assert.DoesNotContain(Feeds[UnmanagedFeedName].Packages, p => p.Versions.Any(v => v.IsDeleted));
         }
 
         [Fact]
-        public async Task UpdatesAssetLocationsForReleasedPackages()
+        public async void UpdatesAssetLocationsForReleasedPackages()
         {
             FeedCleanerService cleaner = ConfigureFeedCleaner();
             await cleaner.CleanManagedFeedsAsync();
 
             // Check the assets for the feed where all packages were released.
-            var assetsInDeletedFeed = _context.Value.Assets.Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithAllPackagesReleasedName))).ToList();
+            var assetsInDeletedFeed = GetContext().Assets.Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithAllPackagesReleasedName))).ToList();
             Assert.Equal(4, assetsInDeletedFeed.Count);
             Assert.Contains(assetsInDeletedFeed,
                 a => a.Name.Equals("Newtonsoft.Json") &&
@@ -120,12 +117,12 @@ namespace FeedCleanerService.Tests
                 !a.Locations.Any(l => l.Location.Contains(ReleaseFeedName)));
 
             // "releasedPackage1" should've been released and have its location updated to the released feed.
-            var assetsInRemainingFeed = _context.Value.Assets.Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithUnreleasedPackagesName))).ToList();
+            var assetsInRemainingFeed = GetContext().Assets.Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithUnreleasedPackagesName))).ToList();
             Assert.Equal(2, assetsInRemainingFeed.Count);
             var releasedAssets = assetsInRemainingFeed.Where(a => a.Locations.Any(l => l.Location.Contains(ReleaseFeedName))).ToList();
             Assert.Single(releasedAssets);
-            Assert.Equal("releasedPackage1", releasedAssets.First().Name);
-            Assert.Equal("1.0", releasedAssets.First().Version);
+            Assert.Equal("releasedPackage1", releasedAssets.FirstOrDefault().Name);
+            Assert.Equal("1.0", releasedAssets.FirstOrDefault().Version);
 
             // "unreleasedPackage1" hasn't been released, should only have the stable feed as its location
             var unreleasedAssets = assetsInRemainingFeed.Where(a => a.Locations.All(l => l.Location.Contains(FeedWithUnreleasedPackagesName))).ToList();
@@ -211,7 +208,7 @@ namespace FeedCleanerService.Tests
                 }
             }
 
-            var context = _context.Value;
+            var context = GetContext();
             context.Assets.AddRange(assets);
             context.SaveChanges();
         }

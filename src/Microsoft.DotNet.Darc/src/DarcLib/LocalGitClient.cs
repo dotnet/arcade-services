@@ -29,8 +29,6 @@ namespace Microsoft.DotNet.DarcLib
             _logger = logger;
         }
 
-        public bool AllowRetries { get; set; } = true;
-
         public Task<string> CheckIfFileExistsAsync(string repoUri, string filePath, string branch)
         {
             throw new NotImplementedException();
@@ -59,18 +57,6 @@ namespace Microsoft.DotNet.DarcLib
         public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoUri, string branch)
         {
             string fullPath = Path.Combine(repoUri, relativeFilePath);
-            if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
-            {
-                if (Directory.Exists(Path.GetDirectoryName(Path.GetDirectoryName(fullPath))))
-                {
-                    throw new Exception("Pizza");
-                }
-                else
-                {
-                    throw new Exception("Banana");
-                }
-            }
-
             using (var streamReader = new StreamReader(fullPath))
             {
                 return await streamReader.ReadToEndAsync();

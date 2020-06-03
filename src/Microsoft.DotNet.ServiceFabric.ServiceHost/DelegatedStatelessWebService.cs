@@ -9,10 +9,16 @@ using System.IO;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.ServiceFabric.Services.Communication.AspNetCore;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
+
+#if !NETCOREAPP3_1
+using Microsoft.AspNetCore.Hosting.Internal;
+using IHostEnvironment = Microsoft.Extensions.Hosting.IHostingEnvironment;
+#else
+using Microsoft.Extensions.Hosting;
+#endif
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
@@ -90,7 +96,12 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             }
             else
             {
+#if !NETCOREAPP3_1
+                var methods = StartupLoader.LoadMethods(provider, typeof(TStartup), env.EnvironmentName);
+                _startupImplementation = new ConventionBasedStartup(methods);
+#else
                 throw new InvalidOperationException($"Type '{typeof(TStartup).FullName}' must implement {typeof(IStartup).FullName}");
+#endif
             }
         }
 

@@ -11,24 +11,23 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class DependencyGraphNode
     {
-        public DependencyGraphNode(
-            string repoUri,
-            string commit,
-            List<DependencyDetail> dependencies,
-            HashSet<Build> contributingBuilds)
+        public DependencyGraphNode(string repoUri,
+                                   string commit,
+                                   IEnumerable<DependencyDetail> dependencies,
+                                   HashSet<Build> contributingBuilds)
             : this(
-                repoUri,
-                commit,
-                dependencies,
-                new HashSet<string>(StringComparer.OrdinalIgnoreCase),
-                contributingBuilds)
+                  repoUri,
+                  commit,
+                  dependencies,
+                  new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+                  contributingBuilds)
         {
         }
 
         public DependencyGraphNode(
             string repoUri,
             string commit,
-            List<DependencyDetail> dependencies,
+            IEnumerable<DependencyDetail> dependencies,
             HashSet<string> visitedNodes,
             HashSet<Build> contributingBuilds)
         {
@@ -61,7 +60,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <summary>
         ///     Dependencies of the node at RepoUri and Commit.
         /// </summary>
-        public List<DependencyDetail> Dependencies { get; set; }
+        public IEnumerable<DependencyDetail> Dependencies { get; set; }
 
         /// <summary>
         ///     Unique set of repositories that this node is dependent on.

@@ -3,9 +3,9 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.ExceptionServices;
 using System.Threading.Tasks;
 using Castle.DynamicProxy;
 
@@ -39,11 +39,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         public virtual void Intercept(IInvocation invocation)
         {
             Type retType = invocation.Method.ReturnType;
-            if (retType == typeof(void))
-            {
-                throw new NotSupportedException($"Void returning methods are not supported by {nameof(AsyncInterceptor)}");
-            }
-
             if (retType == typeof(Task))
             {
                 invocation.ReturnValue = InterceptAsync(
@@ -54,40 +49,28 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                         return (Task) invocation.ReturnValue;
                     });
             }
+            else if (IsTaskOfT(retType, out Type t))
+            {
+                invocation.ReturnValue = s_interceptAsyncMethod.MakeGenericMethod(t)
+                    .Invoke(
+                        this,
+                        new[]
+                        {
+                            invocation,
+                            s_makeCallAsyncMethodMethod.MakeGenericMethod(t).Invoke(this, new object[] {invocation})
+                        });
+            }
             else
             {
-                try
-                {
-                    if (IsTaskOfT(retType, out Type t))
-                    {
-                        invocation.ReturnValue = s_interceptAsyncMethod.MakeGenericMethod(t)
-                            .Invoke(
-                                this,
-                                new[]
-                                {
-                                    invocation,
-                                    s_makeCallAsyncMethodMethod.MakeGenericMethod(t)
-                                        .Invoke(this, new object[] {invocation})
-                                });
-                    }
-                    else
-                    {
-                        invocation.ReturnValue = s_interceptMethod.MakeGenericMethod(retType)
-                            .Invoke(
-                                this,
-                                new[]
-                                {
-                                    invocation,
-                                    s_makeCallMethodMethod.MakeGenericMethod(retType)
-                                        .Invoke(this, new object[] {invocation})
-                                });
-                    }
-                }
-                catch (TargetInvocationException e) when (e.InnerException != null)
-                {
-                    // We want to unwrap the reflection exception we created with the MethodInfo.Invoke
-                    ExceptionDispatchInfo.Capture(e.InnerException).Throw();
-                }
+                invocation.ReturnValue = s_interceptMethod.MakeGenericMethod(retType)
+                    .Invoke(
+                        this,
+                        new[]
+                        {
+                            invocation,
+                            s_makeCallMethodMethod.MakeGenericMethod(retType)
+                                .Invoke(this, new object[] {invocation})
+                        });
             }
         }
 
@@ -128,7 +111,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         protected T Intercept<T>(IInvocation invocation, Func<T> call)
         {
-            // The only asnyc thing in the code above is the away to this callback
+            // The only asny thing in the code above is the away to this callback
             Task<T> task = InterceptAsync(invocation, () => Task.FromResult(call()));
             if (!task.IsCompleted)
             {
