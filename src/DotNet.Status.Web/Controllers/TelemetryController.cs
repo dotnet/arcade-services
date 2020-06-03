@@ -36,7 +36,7 @@ namespace DotNet.Status.Web.Controllers
 
             if (string.IsNullOrEmpty(options.KustoIngestConnectionString))
             {
-                throw new Exception("No KustoIngestConnectionString set");
+                throw new InvalidOperationException("No KustoIngestConnectionString set");
             }
 
             List<ArcadeValidationData> arcadeValidationDatas = new List<ArcadeValidationData>{ data };

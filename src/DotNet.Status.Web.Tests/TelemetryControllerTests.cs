@@ -8,15 +8,14 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit.Abstractions;
 using System;
-using Microsoft.Extensions.Options;
-using Microsoft.Identity.Client;
 
 namespace DotNet.Status.Web.Tests
 {
-    public class TelemetryControllerTests
+    public class TelemetryControllerTests : IDisposable
     {
         private readonly ITestOutputHelper _output;
         private TelemetryController _controller;
+        private ServiceProvider _services;
 
         public TelemetryControllerTests(ITestOutputHelper output)
         {
@@ -39,16 +38,19 @@ namespace DotNet.Status.Web.Tests
 
             collection.AddScoped<TelemetryController>();
 
-            var kustoIngestionResult = new Mock<IKustoIngestionResult>().Object;
             var kustoIngestClientMock = new Mock<IKustoIngestClient>();
             kustoIngestClientMock.Setup(x => x.IngestFromStreamAsync(It.IsAny<System.IO.Stream>(), It.IsAny<KustoIngestionProperties>(), null))
-                .Returns(Task.FromResult(kustoIngestionResult));
+                .Returns(Task.FromResult(Mock.Of<IKustoIngestionResult>()));
 
-            collection.AddSingleton(kustoIngestionResult);
             collection.AddSingleton(kustoIngestClientMock.Object);
             
-            await using ServiceProvider services = collection.BuildServiceProvider();
-            _controller = services.GetRequiredService<TelemetryController>();
+            _services = collection.BuildServiceProvider();
+            _controller = _services.GetRequiredService<TelemetryController>();
+        }
+
+        public void Dispose()
+        {
+            _services.Dispose();
         }
 
         [Fact]
@@ -75,7 +77,7 @@ namespace DotNet.Status.Web.Tests
         public async void TestArcadeValidationTelemetryCollectionWithMissingKustoConnectionString()
         {
             await SetUp(new KustoOptions());
-            await Assert.ThrowsAsync<Exception>(() => _controller.CollectArcadeValidation(new ArcadeValidationData()));
+            await Assert.ThrowsAsync<InvalidOperationException>(() => _controller.CollectArcadeValidation(new ArcadeValidationData()));
         }
     }
 }
