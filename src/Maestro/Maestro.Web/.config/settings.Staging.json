@@ -1,4 +1,8 @@
 {
   "KeyVaultUri": "https://maestroint.vault.azure.net/",
-  "AppConfigurationUri": "https://maestroint.azconfig.io/"
+  "AppConfigurationUri": "https://maestroint.azconfig.io/",
+  "ApiRedirect": {
+    "uri": "",
+    "token": ""
+  }
 }
