@@ -20,8 +20,6 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.AzureKeyVault" />
     <PackageReference Include="Octokit" />
     <PackageReference Include="WindowsAzure.Storage" /> 
-    <Compile Remove="tests\**" />
-    <Content Remove="tests\**" />
     <EmbeddedResource Remove="tests\**" />
     <None Remove="tests\**" />
   </ItemGroup>
