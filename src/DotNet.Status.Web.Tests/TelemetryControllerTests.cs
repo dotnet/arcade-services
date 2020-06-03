@@ -22,11 +22,12 @@ namespace DotNet.Status.Web.Tests
             _output = output;            
         }
 
-        protected async Task SetUp(KustoOptions customOptions = null)
+        protected void SetUp(KustoOptions customOptions = null)
         {
             var collection = new ServiceCollection();
             collection.AddOptions();
-            collection.AddLogging(l => {
+            collection.AddLogging(l =>
+            {
                 l.AddProvider(new XUnitLogger(_output));
             });
 
@@ -43,9 +44,9 @@ namespace DotNet.Status.Web.Tests
                 .Returns(Task.FromResult(Mock.Of<IKustoIngestionResult>()));
 
             collection.AddSingleton(kustoIngestClientMock.Object);
-            
+
             _services = collection.BuildServiceProvider();
-            _controller = await _services.GetRequiredService<TelemetryController>();
+            _controller = _services.GetRequiredService<TelemetryController>();
         }
 
         public void Dispose()
@@ -56,7 +57,7 @@ namespace DotNet.Status.Web.Tests
         [Fact]
         public async void TestArcadeValidationTelemetryCollection()
         {
-            await SetUp();
+            SetUp();
             var result = await _controller.CollectArcadeValidation(new ArcadeValidationData
             {
                 BuildDateTime = new DateTime(),
@@ -76,7 +77,7 @@ namespace DotNet.Status.Web.Tests
         [Fact]
         public async void TestArcadeValidationTelemetryCollectionWithMissingKustoConnectionString()
         {
-            await SetUp(new KustoOptions());
+            SetUp(new KustoOptions());
             await Assert.ThrowsAsync<InvalidOperationException>(() => _controller.CollectArcadeValidation(new ArcadeValidationData()));
         }
     }
