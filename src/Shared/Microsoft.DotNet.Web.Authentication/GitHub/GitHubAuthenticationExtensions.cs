@@ -8,10 +8,8 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OAuth;
-using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.Web.Authentication.GitHub
@@ -22,7 +20,6 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
         {
             auth.Services.Configure<GitHubAuthenticationOptions>(scheme, section.Bind);
             auth.Services.AddSingleton<GitHubClaimResolver>();
-            auth.Services.TryAddSingleton<IGitHubClientFactory, GitHubClientFactory>();
             return auth.AddOAuth<GitHubAuthenticationOptions, GitHubAuthenticationHandler>(
                 scheme,
                 options =>

@@ -202,7 +202,6 @@ namespace DotNet.Status.Web
             services.AddSingleton<IInstallationLookup, InMemoryCacheInstallationLookup>();
 
             services.AddSingleton<ZenHubClient>();
-            services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         }
 

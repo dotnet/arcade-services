@@ -22,7 +22,7 @@ namespace DependencyUpdateErrorProcessor.Tests
         protected readonly IServiceScope Scope;
         protected readonly MockReliableStateManager StateManager;
         protected readonly Mock<IGitHubClient> GithubClient;
-        protected readonly Mock<IGitHubApplicationClientFactory> GithubClientFactory;
+        protected readonly Mock<IGitHubClientFactory> GithubClientFactory;
 
         public DependencyUpdateErrorProcessorTests()
         {
@@ -30,7 +30,7 @@ namespace DependencyUpdateErrorProcessor.Tests
             StateManager = new MockReliableStateManager();
             Env = new Mock<IHostEnvironment>(MockBehavior.Strict);
             GithubClient = new Mock<IGitHubClient>();
-            GithubClientFactory = new Mock<IGitHubApplicationClientFactory>();
+            GithubClientFactory = new Mock<IGitHubClientFactory>();
             GithubClientFactory.Setup(x => x.CreateGitHubClientAsync(It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(GithubClient.Object);
             services.AddSingleton(Env.Object);
