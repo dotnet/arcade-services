@@ -9,6 +9,7 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.Common;
 using NuGet.Packaging;
 using System;
 using System.Collections.Concurrent;
@@ -108,13 +109,8 @@ namespace Microsoft.DotNet.Darc.Operations
                             Console.WriteLine($"Looking up build with BAR id {_options.BARBuildId}");
                             var specificBuild = await barOnlyRemote.GetBuildAsync(_options.BARBuildId);
 
-                            int nonCoherencyResult = await NonCoherencyUpdatesForBuildAsync(specificBuild, barOnlyRemote, currentDependencies, dependenciesToUpdate)
+                            await NonCoherencyUpdatesForBuildAsync(specificBuild, barOnlyRemote, currentDependencies, dependenciesToUpdate)
                                 .ConfigureAwait(false);
-                            if (nonCoherencyResult != Constants.SuccessCode)
-                            {
-                                Console.WriteLine("Error: Failed to update non-coherent parent tied dependencies.");
-                                return nonCoherencyResult;
-                            }
 
                             string sourceRepo = specificBuild.GitHubRepository ?? specificBuild.AzureDevOpsRepository;
                             string sourceBranch = specificBuild.GitHubBranch ?? specificBuild.AzureDevOpsBranch;
@@ -123,15 +119,10 @@ namespace Microsoft.DotNet.Darc.Operations
                                 $"({specificBuild.AzureDevOpsBuildNumber} from {sourceRepo}@{sourceBranch})";
                         }
 
-                        int coherencyResult = await CoherencyUpdatesAsync(barOnlyRemote, remoteFactory, currentDependencies, dependenciesToUpdate)
+                        await CoherencyUpdatesAsync(barOnlyRemote, remoteFactory, currentDependencies, dependenciesToUpdate)
                             .ConfigureAwait(false);
-                        if (coherencyResult != Constants.SuccessCode)
-                        {
-                            Console.WriteLine("Error: Failed to update coherent parent tied dependencies.");
-                            return coherencyResult;
-                        }
 
-                        finalMessage = string.IsNullOrEmpty(finalMessage) ? "Local dependencies successfully updated." : finalMessage;
+                        finalMessage = finalMessage.IsNullOrEmpty() ? "Local dependencies successfully updated." : finalMessage;
                     }
                     catch (RestApiException e) when (e.Response.Status == 404)
                     {
@@ -191,23 +182,13 @@ namespace Microsoft.DotNet.Darc.Operations
                                 continue;
                             }
 
-                            int nonCoherencyResult = await NonCoherencyUpdatesForBuildAsync(build, barOnlyRemote, currentDependencies, dependenciesToUpdate)
+                            await NonCoherencyUpdatesForBuildAsync(build, barOnlyRemote, currentDependencies, dependenciesToUpdate)
                                 .ConfigureAwait(false);
-                            if (nonCoherencyResult != Constants.SuccessCode)
-                            {
-                                Console.WriteLine("Error: Failed to update non-coherent parent tied dependencies.");
-                                return nonCoherencyResult;
-                            }
                         }
                     }
 
-                    int coherencyResult = await CoherencyUpdatesAsync(barOnlyRemote, remoteFactory, currentDependencies, dependenciesToUpdate)
+                    await CoherencyUpdatesAsync(barOnlyRemote, remoteFactory, currentDependencies, dependenciesToUpdate)
                         .ConfigureAwait(false);
-                    if (coherencyResult != Constants.SuccessCode)
-                    {
-                        Console.WriteLine("Error: Failed to update coherent parent tied dependencies.");
-                        return coherencyResult;
-                    }
                 }
 
                 if (!dependenciesToUpdate.Any())
@@ -290,7 +271,7 @@ namespace Microsoft.DotNet.Darc.Operations
             return Constants.SuccessCode;
         }
 
-        private async Task<int> CoherencyUpdatesAsync(
+        private async Task CoherencyUpdatesAsync(
             IRemote barOnlyRemote, 
             IRemoteFactory remoteFactory,
             List<DependencyDetail> currentDependencies,
@@ -298,34 +279,10 @@ namespace Microsoft.DotNet.Darc.Operations
         {
             Console.WriteLine("Checking for coherency updates...");
 
-            CoherencyMode coherencyMode = CoherencyMode.Legacy;
-            if (_options.StrictCoherency)
-            {
-                coherencyMode = CoherencyMode.Strict;
-            }
-
-            List<DependencyUpdate> coherencyUpdates = null;
-            try
-            {
-                // Now run a coherency update based on the current set of dependencies updated
-                // from the previous pass.
-                coherencyUpdates = await barOnlyRemote.GetRequiredCoherencyUpdatesAsync(
-                    currentDependencies, remoteFactory, coherencyMode);
-            }
-            catch (DarcCoherencyException e)
-            {
-                Console.WriteLine("Coherency updates failed for the following dependencies:");
-                foreach (var error in e.Errors)
-                {
-                    Console.WriteLine($"  Unable to update {error.Dependency.Name} to have coherency with " +
-                        $"{error.Dependency.CoherentParentDependencyName}: {error.Error}");
-                    foreach (string potentialSolution in error.PotentialSolutions)
-                    {
-                        Console.WriteLine($"    - {potentialSolution}");
-                    }
-                }
-                return Constants.ErrorCode;
-            }
+            // Now run a coherency update based on the current set of dependencies updated
+            // from the previous pass.
+            List<DependencyUpdate> coherencyUpdates =
+                await barOnlyRemote.GetRequiredCoherencyUpdatesAsync(currentDependencies, remoteFactory);
 
             foreach (DependencyUpdate dependencyUpdate in coherencyUpdates)
             {
@@ -340,8 +297,6 @@ namespace Microsoft.DotNet.Darc.Operations
                 // Final list of dependencies to update
                 dependenciesToUpdate.Add(to);
             }
-
-            return Constants.SuccessCode;
         }
 
         private IEnumerable<DependencyDetail> GetDependenciesFromPackagesFolder(string pathToFolder, IEnumerable<DependencyDetail> dependencies)

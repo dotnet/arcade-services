@@ -19,7 +19,6 @@ namespace Microsoft.DotNet.DarcLib
                 {"Microsoft.DotNet.Helix.Sdk", KnownDependencyType.GlobalJson},
                 {"Microsoft.DotNet.SharedFramework.Sdk", KnownDependencyType.GlobalJson},
                 {"Microsoft.NET.SharedFramework.Sdk", KnownDependencyType.GlobalJson},
-                {"Microsoft.DotNet.CMake.Sdk", KnownDependencyType.GlobalJson},
                 {"dotnet", KnownDependencyType.GlobalJson}
             };
 

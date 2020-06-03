@@ -41,15 +41,13 @@ namespace Maestro.Web
             services.AddIdentity<ApplicationUser, IdentityRole<int>>(
                     options => { options.Lockout.AllowedForNewUsers = false; })
                 .AddEntityFrameworkStores<BuildAssetRegistryContext>();
-            
-            services.AddAuthentication(options =>
-                    {
-                        // The "AddIdentity" above messed with these, so we need to re-mess with them.
-                        options.DefaultChallengeScheme = options.DefaultAuthenticateScheme =
-                            options.DefaultSignInScheme = options.DefaultScheme = "Contextual";
-                    })
-                .AddPolicyScheme("Contextual","Contextual",
-                    policyOptions => { policyOptions.ForwardDefaultSelector = ctx => ctx.Request.Path.StartsWithSegments("/api") ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme; })
+
+            services.AddContextAwareAuthenticationScheme(o =>
+            {
+                o.SelectScheme = p => p.StartsWithSegments("/api") ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme;
+            });
+
+            services.AddAuthentication()
                 .AddGitHubOAuth(Configuration.GetSection("GitHubAuthentication"), GitHubScheme)
                 .AddPersonalAccessToken<ApplicationUser>(
                     options =>
@@ -201,7 +199,7 @@ namespace Maestro.Web
                             policy.RequireAuthenticatedUser();
                             if (!HostingEnvironment.IsDevelopment())
                             {
-                                policy.RequireRole(GitHubClaimResolver.GetTeamRole("dotnet","dnceng"), GitHubClaimResolver.GetTeamRole("dotnet","arcade-contrib"));
+                                policy.RequireRole("github:team:dotnet:dnceng", "github:team:dotnet:arcade-contrib");
                             }
                         });
                 });

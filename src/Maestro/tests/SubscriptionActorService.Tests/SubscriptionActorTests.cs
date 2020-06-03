@@ -15,7 +15,6 @@ using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using Xunit;
-using Xunit.Abstractions;
 using Asset = Maestro.Contracts.Asset;
 
 namespace SubscriptionActorService.Tests
@@ -24,11 +23,7 @@ namespace SubscriptionActorService.Tests
     {
         private readonly Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors =
             new Dictionary<ActorId, Mock<IPullRequestActor>>();
-
-        public SubscriptionActorTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
+        
         protected override void RegisterServices(IServiceCollection services)
         {
             var proxyFactory = new Mock<IActorProxyFactory<IPullRequestActor>>();

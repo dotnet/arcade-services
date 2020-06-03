@@ -166,7 +166,7 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
                 }
 
                 {
-                    JArray orgPayload = await GetResponseJsonPayloadAsync(options.OrganizationEndpoint,
+                    JArray orgPayload = await GetResponseJsonPayloadAsync("https://api.github.com/user/orgs",
                         accessToken,
                         options,
                         async r => JArray.Parse(await r.Content.ReadAsStringAsync()),
@@ -177,13 +177,13 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
                     foreach (JToken org in orgPayload)
                     {
                         string orgLogin = org.Value<string>("login")?.ToLowerInvariant();
-                        AddClaim(ClaimTypes.Role, GetOrganizationRole(orgLogin));
+                        AddClaim(ClaimTypes.Role, "github:org:" + orgLogin);
                         AddClaim("urn:github:org", orgLogin);
                     }
                 }
 
                 {
-                    JArray teamPayload = await GetResponseJsonPayloadAsync(options.TeamsEndpoint,
+                    JArray teamPayload = await GetResponseJsonPayloadAsync("https://api.github.com/user/teams",
                         accessToken,
                         options,
                         async r => JArray.Parse(await r.Content.ReadAsStringAsync()),
@@ -196,7 +196,7 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
                         string teamName = team.Value<string>("name")?.ToLowerInvariant();
                         string orgName = team["organization"]?.Value<string>("login")?.ToLowerInvariant();
                         string fullName = orgName + ":" + teamName;
-                        AddClaim(ClaimTypes.Role, GetTeamRole(orgName, teamName));
+                        AddClaim(ClaimTypes.Role, "github:team:" + fullName);
                         AddClaim("urn:github:team", fullName);
                     }
                 }
@@ -208,17 +208,6 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
         public string GetAccessToken(ClaimsPrincipal principal)
         {
             return principal.FindFirst(AccessTokenClaim)?.Value;
-        }
-        
-        public static string GetOrganizationRole(string organizationLogin)
-        {
-            return $"github:org:{organizationLogin.ToLowerInvariant()}";
-
-        }
-
-        public static string GetTeamRole(string organizationLogin, string teamName)
-        {
-            return $"github:team:{organizationLogin.ToLowerInvariant()}:{teamName.ToLowerInvariant()}";
         }
 
         private async Task<T> GetResponseJsonPayloadAsync<T>(
@@ -247,12 +236,7 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
                         return await parseResponse(response);
                     }
 
-                    string body = "";
-                    if (response.Content != null)
-                    {
-                        body = await response.Content.ReadAsStringAsync();
-                    }
-
+                    string body = await response.Content.ReadAsStringAsync();
                     if (body.Length > 1024)
                     {
                         body = body.Substring(0, 1024);

@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -25,10 +24,10 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Rewrite;
+using Microsoft.AspNetCore.Rewrite.Internal;
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
 using Microsoft.DotNet.DarcLib;
@@ -44,16 +43,10 @@ using Newtonsoft.Json;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Azure.Services.AppAuthentication;
-using Microsoft.DotNet.Internal.DependencyInjection;
-using Microsoft.OpenApi.Models;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
-using Swashbuckle.AspNetCore.Swagger;
 
 namespace Maestro.Web
 {
-    public partial class Startup : StartupBase
+    public partial class Startup
     {
         // https://github.com/dotnet/core-eng/issues/6819
         // TODO: Remove once the repo in this list is ready to onboard to yaml publishing.
@@ -85,7 +78,9 @@ namespace Maestro.Web
                     if (hasAssetsWithPublishedLocations || ReposWithoutAssetLocationAllowList.Contains(build.GitHubRepository))
                     {
                         var queue = context.GetService<BackgroundQueue>();
-                        queue.Post<StartDependencyUpdate>(StartDependencyUpdate.CreateArgs(entity));
+                        var dependencyUpdater = context.GetService<IDependencyUpdater>();
+
+                        queue.Post(() => dependencyUpdater.StartUpdateDependenciesAsync(entity.BuildId, entity.ChannelId));
                     }
                     else
                     {
@@ -95,34 +90,7 @@ namespace Maestro.Web
             };
         }
 
-        private class StartDependencyUpdate : IBackgroundWorkItem
-        {
-            private readonly IDependencyUpdater _updater;
-
-            public StartDependencyUpdate(IDependencyUpdater updater)
-            {
-                _updater = updater;
-            }
-
-            public Task ProcessAsync(JToken argumentToken)
-            {
-                var argVal = argumentToken.ToObject<Arguments>();
-                return _updater.StartUpdateDependenciesAsync(argVal.BuildId, argVal.ChannelId);
-            }
-
-            public static JToken CreateArgs(BuildChannel channel)
-            {
-                return JToken.FromObject(new Arguments {BuildId = channel.BuildId, ChannelId = channel.ChannelId});
-            }
-
-            private struct Arguments
-            {
-                public int BuildId;
-                public int ChannelId;
-            }
-        }
-
-        public Startup(IConfiguration configuration, IHostEnvironment env)
+        public Startup(IConfiguration configuration, IHostingEnvironment env)
         {
             HostingEnvironment = env;
             Configuration = configuration;
@@ -130,10 +98,11 @@ namespace Maestro.Web
 
         public static readonly TimeSpan LoginCookieLifetime = new TimeSpan(days: 120, hours: 0, minutes: 0, seconds: 0);
 
-        public IHostEnvironment HostingEnvironment { get; }
+        public IHostingEnvironment HostingEnvironment { get; set; }
         public IConfiguration Configuration { get; }
 
-        public override void ConfigureServices(IServiceCollection services)
+        // This method gets called by the runtime. Use this method to add services to the container.
+        public void ConfigureServices(IServiceCollection services)
         {
             if (HostingEnvironment.IsDevelopment())
             {
@@ -184,15 +153,17 @@ namespace Maestro.Web
                     options.UseSqlServer(Configuration.GetSection("BuildAssetRegistry")["ConnectionString"]);
                 });
 
-            services.AddRazorPages(options =>
-                {
-                    options.Conventions.AuthorizeFolder("/", MsftAuthorizationPolicyName);
-                    options.Conventions.AllowAnonymousToPage("/Index");
-                    options.Conventions.AllowAnonymousToPage("/Error");
-                    options.Conventions.AllowAnonymousToPage("/SwaggerUi");
-                })
-                .SetCompatibilityVersion(CompatibilityVersion.Version_3_0)
+            services.AddMvc()
+                .SetCompatibilityVersion(CompatibilityVersion.Version_2_1)
                 .AddFluentValidation(options => options.RegisterValidatorsFromAssemblyContaining<Startup>())
+                .AddRazorPagesOptions(
+                    options =>
+                    {
+                        options.Conventions.AuthorizeFolder("/", MsftAuthorizationPolicyName);
+                        options.Conventions.AllowAnonymousToPage("/Index");
+                        options.Conventions.AllowAnonymousToPage("/Error");
+                        options.Conventions.AllowAnonymousToPage("/SwaggerUi");
+                    })
                 .AddGitHubWebHooks()
                 .AddApiPagination()
                 .AddCookieTempDataProvider(
@@ -203,21 +174,7 @@ namespace Maestro.Web
                         options.Cookie.IsEssential = true;
                     });
 
-            services.AddControllers()
-                .AddNewtonsoftJson(options =>
-                {
-                    options.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
-                    options.SerializerSettings.Converters.Add(new StringEnumConverter
-                        {NamingStrategy = new CamelCaseNamingStrategy()});
-                    options.SerializerSettings.Converters.Add(
-                        new IsoDateTimeConverter
-                        {
-                            DateTimeFormat = "yyyy-MM-ddTHH:mm:ssZ",
-                            DateTimeStyles = DateTimeStyles.AdjustToUniversal
-                        });
-                });
-
-            services.AddSingleton(Configuration);
+            services.AddSingleton<IConfiguration>(Configuration);
 
             ConfigureAuthServices(services);
 
@@ -263,31 +220,11 @@ namespace Maestro.Web
             // in such a way that will work with sizing.
             services.AddSingleton<DarcRemoteMemoryCache>();
 
-            services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
+            services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
             services.AddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
 
-            services.EnableLazy();
-
             services.AddMergePolicies();
-            services.Configure<SwaggerOptions>(options =>
-            {
-                options.SerializeAsV2 = true;
-                options.RouteTemplate = "api/{documentName}/swagger.json";
-                options.PreSerializeFilters.Add(
-                    (doc, req) =>
-                    {
-                        bool http = HostingEnvironment.IsDevelopment() && !ServiceFabricHelpers.RunningInServiceFabric();
-                        doc.Servers = new List<OpenApiServer>
-                        {
-                            new OpenApiServer
-                            {
-                                Url = $"{(http ? "http" : "https")}://{req.Host.Value}/",
-                            },
-                        };
 
-                        req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
-                    });
-            });
         }
 
         private void ConfigureApiExceptions(IApplicationBuilder app)
@@ -296,8 +233,8 @@ namespace Maestro.Web
                 async ctx =>
                 {
                     var result = new ApiError("An error occured.");
-                    MvcNewtonsoftJsonOptions jsonOptions =
-                        ctx.RequestServices.GetRequiredService<IOptions<MvcNewtonsoftJsonOptions>>().Value;
+                    MvcJsonOptions jsonOptions =
+                        ctx.RequestServices.GetRequiredService<IOptions<MvcJsonOptions>>().Value;
                     string output = JsonConvert.SerializeObject(result, jsonOptions.SerializerSettings);
                     ctx.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                     await ctx.Response.WriteAsync(output, Encoding.UTF8);
@@ -340,21 +277,21 @@ namespace Maestro.Web
         {
             app.UseExceptionHandler(ConfigureApiExceptions);
 
-            if (HostingEnvironment.IsDevelopment() &&
-                !ServiceFabricHelpers.RunningInServiceFabric() &&
-                !string.Equals(
-                    Configuration["ForceLocalApi"],
-                    true.ToString(),
-                    StringComparison.OrdinalIgnoreCase))
+            app.UseAuthentication();
+
+            if (HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric())
             {
                 // Redirect api requests to prod when running locally outside of service fabric
                 // This is for the `ng serve` local debugging case for the website
                 app.MapWhen(
-                    ctx => IsGet(ctx) &&
-                        ctx.Request.Path.StartsWithSegments("/api") &&
-                        ctx.Request.Path != "/api/swagger.json",
-                    a => { a.Run(ApiRedirectHandler); });
+                    ctx => IsGet(ctx) && ctx.Request.Path.StartsWithSegments("/api") && ctx.Request.Path != "/api/swagger.json",
+                    a =>
+                    {
+                        a.Run(ApiRedirectHandler);
+                    });
             }
+
+            app.UseMvc();
 
             app.Use(
                 (ctx, next) =>
@@ -368,43 +305,59 @@ namespace Maestro.Web
 
                     return next();
                 });
-            app.UseSwagger();
-            
-            app.UseRouting();
-            app.UseAuthentication();
-            app.UseAuthorization();
-            app.UseEndpoints(e =>
-            {
-                e.MapRazorPages();
-                e.MapControllers();
-            });
+
+            app.UseSwagger(
+                options =>
+                {
+                    options.RouteTemplate = "api/{documentName}/swagger.json";
+                    options.PreSerializeFilters.Add(
+                        (doc, req) =>
+                        {
+                            doc.Host = req.Host.Value;
+                            if (HostingEnvironment.IsDevelopment() && !Program.RunningInServiceFabric())
+                            {
+                                doc.Schemes = new List<string> { "http" };
+                            }
+                            else
+                            {
+                                doc.Schemes = new List<string> { "https" };
+                            }
+
+                            req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
+                        });
+                });
         }
 
         // The whole api, only allowing GET requests, with all urls prefixed with _
         private void ConfigureCookieAuthedApi(IApplicationBuilder app)
         {
             app.UseExceptionHandler(ConfigureApiExceptions);
+            app.UseAuthentication();
 
-            app.MapWhen(ctx => DoApiRedirect && !ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _),
-                redirectedApp =>
+            app.UseRewriter(new RewriteOptions
+            {
+                Rules =
                 {
-                    app.UseRouting();
-                    app.UseAuthentication();
-                    app.UseAuthorization();
+                    new RewriteRule("^_/(.*)", "$1", true),
+                },
+            });
 
-                    app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
-                    app.Run(ApiRedirectHandler);
+            // Redirect the entire cookie-authed api if it is in settings.
+            if (DoApiRedirect)
+            {
+                // when told to not redirect by the request, don't do it.
+                app.MapWhen(ctx => ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _), a =>
+                {
+                    a.UseMvc();
                 });
 
-            app.UseRouting();
-            app.UseAuthentication();
-            app.UseAuthorization();
-
-            app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
-            app.UseEndpoints(e =>
+                app.Run(ApiRedirectHandler);
+            }
+            else
             {
-                e.MapControllers();
-            });
+                app.UseMvc();
+            }
+
         }
 
         private static bool IsGet(HttpContext context)
@@ -412,9 +365,9 @@ namespace Maestro.Web
             return string.Equals(context.Request.Method, "get", StringComparison.OrdinalIgnoreCase);
         }
 
-        public override void Configure(IApplicationBuilder app)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
-            if (HostingEnvironment.IsDevelopment())
+            if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
@@ -456,14 +409,20 @@ namespace Maestro.Web
                     return next();
                 });
 
-            if (HostingEnvironment.IsDevelopment() && !ServiceFabricHelpers.RunningInServiceFabric())
+            if (env.IsDevelopment() && !Program.RunningInServiceFabric())
             {
                 // In local dev with the `ng serve` scenario, just redirect /_/api to /api
-                app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
+                app.UseRewriter(new RewriteOptions
+                {
+                    Rules =
+                    {
+                        new RewriteRule("^_/(.*)", "$1", true),
+                    },
+                });
             }
 
             app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/api"), ConfigureApi);
-            if (ServiceFabricHelpers.RunningInServiceFabric())
+            if (Program.RunningInServiceFabric())
             {
                 app.MapWhen(
                     ctx => ctx.Request.Path.StartsWithSegments("/_/api") && IsGet(ctx),
@@ -474,27 +433,22 @@ namespace Maestro.Web
             app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
             app.UseCookiePolicy();
             app.UseStaticFiles();
-
-            app.UseRouting();
             app.UseAuthentication();
-            app.UseAuthorization();
 
-            app.UseEndpoints(e =>
-                {
-                    e.MapRazorPages();
-                    e.MapControllers();
-                }
-            );
+            app.UseMvc();
             app.MapWhen(IsGet, AngularIndexHtmlRedirect);
         }
 
         private static void AngularIndexHtmlRedirect(IApplicationBuilder app)
         {
-            app.UseRewriter(new RewriteOptions().AddRewrite(".*", "Index", true));
-            app.UseRouting();
-            app.UseAuthentication();
-            app.UseAuthorization();
-            app.UseEndpoints(e => { e.MapRazorPages(); });
+            app.UseRewriter(new RewriteOptions
+            {
+                Rules =
+                {
+                    new RewriteRule(".*", "Index", true),
+                },
+            });
+            app.UseMvc();
         }
     }
 }

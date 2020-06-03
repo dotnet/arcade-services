@@ -1,14 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
     <SignAssembly>false</SignAssembly>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LibGit2Sharp" />
-    <PackageReference Include="Moq" />
-    <PackageReference Include="Microsoft.CodeCoverage" />
+    <PackageReference Include="LibGit2Sharp" Version="$(LibGit2SharpVersion)" />
+    <PackageReference Include="Moq" Version="4.8.2" />
+    <PackageReference Include="Microsoft.CodeCoverage" Version="$(MicrosoftCodeCoverageVersion)" />
   </ItemGroup>
 
   <ItemGroup>

@@ -8,7 +8,6 @@ using NUnit.Framework.Internal;
 namespace Maestro.ScenarioTests
 {
     [TestFixture]
-    [Category("ScenarioTest")]
     public class ScenarioTests_Dependencies : MaestroScenarioTestBase
     {
 

@@ -4,7 +4,6 @@ using NUnit.Framework;
 namespace Maestro.ScenarioTests
 {
     [TestFixture]
-    [Category("ScenarioTest")]
     public class ScenarioTests_DefaultChannels : MaestroScenarioTestBase
     {
         private readonly string repoName = "maestro-test1";
