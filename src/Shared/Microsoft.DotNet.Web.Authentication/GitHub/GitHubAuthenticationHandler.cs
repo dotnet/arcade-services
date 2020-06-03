@@ -5,6 +5,7 @@
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OAuth;
@@ -36,6 +37,12 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
             string accessToken = tokens.AccessToken;
             (IEnumerable<Claim> claims, JObject user) = await _claimResolver.GetUserInformation(accessToken, Context.RequestAborted);
             identity.AddClaims(claims);
+            JsonElement rootElement;
+            using (JsonDocument jsonDocument = JsonDocument.Parse(user.ToString()))
+            {
+                rootElement = jsonDocument.RootElement.Clone();
+            }
+
             var context = new OAuthCreatingTicketContext(
                 new ClaimsPrincipal(identity),
                 properties,
@@ -44,7 +51,7 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
                 Options,
                 Backchannel,
                 tokens,
-                user);
+                rootElement);
             await Options.Events.CreatingTicket(context);
             return new AuthenticationTicket(context.Principal, context.Properties, context.Scheme.Name);
         }

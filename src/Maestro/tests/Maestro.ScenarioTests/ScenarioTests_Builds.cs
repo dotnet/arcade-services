@@ -8,6 +8,7 @@ using NUnit.Framework.Internal;
 namespace Maestro.ScenarioTests
 {
     [TestFixture]
+    [Category("ScenarioTest")]
     public class ScenarioTests_Builds : MaestroScenarioTestBase
     {
         private string repoUrl;

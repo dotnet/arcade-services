@@ -18,14 +18,14 @@ namespace Maestro.Data
         public static IServiceCollection AddBuildAssetRegistry(this IServiceCollection services, Action<IServiceProvider, DbContextOptionsBuilder> optionsAction = null)
         {
             services.AddDbContext<BuildAssetRegistryContext>(optionsAction);
-            services.AddScoped<IInstallationLookup>(c => c.GetRequiredService<BuildAssetRegistryContext>());
+            services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
             return services;
         }
 
         public static IServiceCollection AddBuildAssetRegistry(this IServiceCollection services, Action<DbContextOptionsBuilder> optionsAction = null)
         {
             services.AddDbContext<BuildAssetRegistryContext>(optionsAction);
-            services.AddScoped<IInstallationLookup>(c => c.GetRequiredService<BuildAssetRegistryContext>());
+            services.AddSingleton<IInstallationLookup, BuildAssetRegistryInstallationLookup>();
             return services;
         }
     }

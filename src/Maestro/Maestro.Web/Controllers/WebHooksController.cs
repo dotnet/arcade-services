@@ -66,7 +66,7 @@ namespace Maestro.Web.Controllers
 
         private async Task RemoveInstallationRepositoriesAsync(long installationId)
         {
-            foreach (Data.Models.Repository repo in Context.Repositories.Where(r => r.InstallationId == installationId))
+            foreach (Data.Models.Repository repo in await Context.Repositories.Where(r => r.InstallationId == installationId).ToListAsync())
             {
                 Context.Update(repo);
                 repo.InstallationId = 0;
