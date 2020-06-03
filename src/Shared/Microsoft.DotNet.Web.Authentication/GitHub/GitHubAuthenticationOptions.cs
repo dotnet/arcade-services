@@ -11,5 +11,10 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
 {
     public class GitHubAuthenticationOptions : OAuthOptions
     {
+        public GitHubAuthenticationOptions()
+        {
+            AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
+            TokenEndpoint = "https://github.com/login/oauth/access_token";
+        }
     }
 }
