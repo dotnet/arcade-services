@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -22,12 +23,14 @@ namespace SubscriptionActorService
         private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
         private readonly IConfiguration _configuration;
         private readonly ILogger<LocalGit> _logger;
+        private readonly OperationManager _operations;
 
-        public LocalGit(TemporaryFiles tempFiles, IConfiguration configuration, ILogger<LocalGit> logger)
+        public LocalGit(TemporaryFiles tempFiles, IConfiguration configuration, OperationManager operations, ILogger<LocalGit> logger)
         {
             _tempFiles = tempFiles;
             _configuration = configuration;
             _logger = logger;
+            _operations = operations;
         }
         /// <summary>
         ///     Download and install git to the a temporary location.
@@ -51,7 +54,7 @@ namespace SubscriptionActorService
                 // in the meantime.
                 if (string.IsNullOrEmpty(_gitExecutable))
                 {
-                    using (_logger.BeginScope($"Installing a local copy of git"))
+                    using (_operations.BeginOperation($"Installing a local copy of git"))
                     {
                         string gitLocation = _configuration.GetValue<string>("GitDownloadLocation", null);
                         string[] pathSegments = new Uri(gitLocation, UriKind.Absolute).Segments;
