@@ -45,7 +45,7 @@ namespace DotNet.Status.Web.Tests
             collection.AddSingleton(kustoIngestClientMock.Object);
             
             _services = collection.BuildServiceProvider();
-            _controller = _services.GetRequiredService<TelemetryController>();
+            _controller = await _services.GetRequiredService<TelemetryController>();
         }
 
         public void Dispose()
