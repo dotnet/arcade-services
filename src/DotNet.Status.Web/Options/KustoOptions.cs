@@ -4,7 +4,7 @@
 
 namespace DotNet.Status.Web
 {
-    public class TelemetryOptions
+    public class KustoOptions
     {
         public string KustoQueryConnectionString { get; set; }
         public string KustoIngestConnectionString { get; set; }

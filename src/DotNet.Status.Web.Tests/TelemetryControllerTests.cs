@@ -1,37 +1,63 @@
 using Xunit;
 using DotNet.Status.Web.Controllers;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Moq;
 using Microsoft.AspNetCore.Mvc;
 using Kusto.Ingest;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Xunit.Abstractions;
+using System;
+using Microsoft.Extensions.Options;
+using Microsoft.Identity.Client;
 
 namespace DotNet.Status.Web.Tests
 {
     public class TelemetryControllerTests
     {
-        // TODO: Test for required values in data
+        private readonly ITestOutputHelper _output;
+        private TelemetryController _controller;
 
-        [Fact]
-        public void TestArcadeValidationTelemetryCollection()
+        public TelemetryControllerTests(ITestOutputHelper output)
         {
-            var mockLoggerMock = new Mock<ILogger<TelemetryController>>();
-            var telemetryOptionsMock = new Mock<IOptionsSnapshot<TelemetryOptions>>();
-            var telemetryOptions = new TelemetryOptions
+            _output = output;            
+        }
+
+        protected async Task SetUp(KustoOptions customOptions = null)
+        {
+            var collection = new ServiceCollection();
+            collection.AddOptions();
+            collection.AddLogging(l => {
+                l.AddProvider(new XUnitLogger(_output));
+            });
+
+            collection.Configure<KustoOptions>(options =>
             {
-                KustoIngestConnectionString = "fakekustoconnectionstring",
-                KustoDatabase = "fakekustodatbase"
-            };
-            telemetryOptionsMock.SetupGet(x => x.Value).Returns(telemetryOptions);
-            var kustoIngestResultMock = new Mock<IKustoIngestionResult>();
+                options.KustoIngestConnectionString = customOptions != null ? customOptions.KustoIngestConnectionString : "fakekustoconnectionstring";
+                options.KustoDatabase = customOptions != null ? customOptions.KustoDatabase : "fakekustodatbase";
+            });
+
+            collection.AddScoped<TelemetryController>();
+
+            var kustoIngestionResult = new Mock<IKustoIngestionResult>().Object;
             var kustoIngestClientMock = new Mock<IKustoIngestClient>();
             kustoIngestClientMock.Setup(x => x.IngestFromStreamAsync(It.IsAny<System.IO.Stream>(), It.IsAny<KustoIngestionProperties>(), null))
-                .Returns(Task.FromResult(kustoIngestResultMock.Object));
-            var controller = new TelemetryController(mockLoggerMock.Object, telemetryOptionsMock.Object, kustoIngestClientMock.Object);
-            var result = controller.CollectArcadeValidation(new ArcadeValidationData
+                .Returns(Task.FromResult(kustoIngestionResult));
+
+            collection.AddSingleton(kustoIngestionResult);
+            collection.AddSingleton(kustoIngestClientMock.Object);
+            
+            await using ServiceProvider services = collection.BuildServiceProvider();
+            _controller = services.GetRequiredService<TelemetryController>();
+        }
+
+        [Fact]
+        public async void TestArcadeValidationTelemetryCollection()
+        {
+            await SetUp();
+            var result = await _controller.CollectArcadeValidation(new ArcadeValidationData
             {
-                BuildDateTime = new System.DateTime(),
+                BuildDateTime = new DateTime(),
                 ArcadeVersion = "fakearcadeversion",
                 BARBuildID = -1,
                 ArcadeBuildLink = "fakearcadebuildlink", 
@@ -41,37 +67,15 @@ namespace DotNet.Status.Web.Tests
                 ProductRepoBuildResult = "fakeproductrepobuildresult",
                 ArcadeDiffLink = "fakearcadedifflink"
             });
-            result.Wait();
             Assert.NotNull(result);
-            Assert.IsType<OkResult>(result.Result);
+            Assert.IsType<OkResult>(result);
         }
 
         [Fact]
-        public void TestArcadeValidationTelemetryCollectionWithNullOptions()
+        public async void TestArcadeValidationTelemetryCollectionWithMissingKustoConnectionString()
         {
-            var mockLoggerMock = new Mock<ILogger<TelemetryController>>();
-            var telemetryOptionsMock = new Mock<IOptionsSnapshot<TelemetryOptions>>();
-            var kustoIngestClientMock = new Mock<IKustoIngestClient>();
-            var controller = new TelemetryController(mockLoggerMock.Object, telemetryOptionsMock.Object, kustoIngestClientMock.Object);
-            var result = controller.CollectArcadeValidation(null);
-            result.Wait();
-            Assert.NotNull(result);
-            var resultObject = Assert.IsType<StatusCodeResult>(result.Result);
-            Assert.Equal(500, resultObject.StatusCode);
-        }
-
-        [Fact]
-        public void TestArcadeValidationTelemetryCollectionWithMissingKustoConnectionString()
-        {
-            var mockLoggerMock = new Mock<ILogger<TelemetryController>>();
-            var telemetryOptionsMock = new Mock<IOptionsSnapshot<TelemetryOptions>>();
-            var kustoIngestClientMock = new Mock<IKustoIngestClient>();
-            var controller = new TelemetryController(mockLoggerMock.Object, telemetryOptionsMock.Object, kustoIngestClientMock.Object);
-            var result = controller.CollectArcadeValidation(new ArcadeValidationData());
-            result.Wait();
-            Assert.NotNull(result);            
-            var resultObject = Assert.IsType<StatusCodeResult>(result.Result);
-            Assert.Equal(500, resultObject.StatusCode);
+            await SetUp(new KustoOptions());
+            await Assert.ThrowsAsync<Exception>(() => _controller.CollectArcadeValidation(new ArcadeValidationData()));
         }
     }
 }

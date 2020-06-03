@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Microsoft.DotNet.Kusto;
 using Kusto.Ingest;
 using System.Collections.Generic;
+using System;
 
 namespace DotNet.Status.Web.Controllers
 {
@@ -15,13 +16,13 @@ namespace DotNet.Status.Web.Controllers
     public class TelemetryController : ControllerBase
     {
         private readonly ILogger<TelemetryController> _logger;
-        private readonly IOptionsSnapshot<TelemetryOptions> _options;
+        private readonly IOptionsSnapshot<KustoOptions> _options;
         private readonly IKustoIngestClient _client;
 
         public TelemetryController(
             ILogger<TelemetryController> logger,
-            IOptionsSnapshot<TelemetryOptions> options,
-            IKustoIngestClient client = null)
+            IOptionsSnapshot<KustoOptions> options,
+            IKustoIngestClient client)
         {
             _logger = logger;
             _options = options;
@@ -31,20 +32,17 @@ namespace DotNet.Status.Web.Controllers
         [HttpPost("collect/arcade-validation")]
         public async Task<IActionResult> CollectArcadeValidation([Required] ArcadeValidationData data)
         {
-            TelemetryOptions options = _options.Value;
+            KustoOptions options = _options.Value;
 
-            if (_client == null && string.IsNullOrEmpty(options.KustoIngestConnectionString))
+            if (string.IsNullOrEmpty(options.KustoIngestConnectionString))
             {
-                _logger.LogError("No KustoIngestConnectionString set");
-                return StatusCode(500);
+                throw new Exception("No KustoIngestConnectionString set");
             }
-
-            IKustoIngestClient ingest = _client ?? KustoIngestFactory.CreateQueuedIngestClient(options.KustoIngestConnectionString);
 
             List<ArcadeValidationData> arcadeValidationDatas = new List<ArcadeValidationData>{ data };
 
             await KustoHelpers.WriteDataToKustoInMemoryAsync(
-                ingest,
+                _client,
                 options.KustoDatabase,
                 "ArcadeValidation",
                 _logger,

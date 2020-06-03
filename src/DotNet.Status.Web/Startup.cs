@@ -26,6 +26,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Octokit;
 
 namespace DotNet.Status.Web
@@ -79,7 +80,7 @@ namespace DotNet.Status.Web
             services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth").Bind);
             services.Configure<ZenHubOptions>(Configuration.GetSection("ZenHub").Bind);
             services.Configure<BuildMonitorOptions>(Configuration.GetSection("BuildMonitor").Bind);
-            services.Configure<TelemetryOptions>(Configuration.GetSection("Telemetry").Bind);
+            services.Configure<KustoOptions>(Configuration.GetSection("Kusto").Bind);
 
             services.Configure<SimpleSigninOptions>(o => { o.ChallengeScheme = GitHubScheme; });
             services.ConfigureExternalCookie(options =>
@@ -198,6 +199,7 @@ namespace DotNet.Status.Web
                             }
                         });
                 });
+            services.AddKustoIngest(options => Configuration.GetSection("Kusto").Bind(options));
 
             services.AddScoped<SimpleSigninMiddleware>();
             services.AddGitHubTokenProvider();
@@ -205,8 +207,6 @@ namespace DotNet.Status.Web
 
             services.AddSingleton<ZenHubClient>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
-
-            services.AddSingleton<IKustoIngestClient>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
