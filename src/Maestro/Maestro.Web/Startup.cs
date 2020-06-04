@@ -352,6 +352,16 @@ namespace Maestro.Web
         {
             app.UseExceptionHandler(ConfigureApiExceptions);
 
+            var logger = app.ApplicationServices.GetRequiredService<ILogger<Startup>>();
+
+            logger.LogInformation(
+                "Configuring API, env: '{env}', isDev: {isDev}, inSF: {inSF}, forceLocal: '{forceLocal}'",
+                HostingEnvironment.EnvironmentName,
+                HostingEnvironment.IsDevelopment(),
+                ServiceFabricHelpers.RunningInServiceFabric(),
+                Configuration["ForceLocalApi"]
+            );
+
             if (HostingEnvironment.IsDevelopment() &&
                 !ServiceFabricHelpers.RunningInServiceFabric() &&
                 !string.Equals(
@@ -382,8 +392,8 @@ namespace Maestro.Web
                 });
             app.UseSwagger();
             
-            app.UseRouting();
             app.UseAuthentication();
+            app.UseRouting();
             app.UseAuthorization();
             app.UseEndpoints(e =>
             {
@@ -400,22 +410,20 @@ namespace Maestro.Web
             if (DoApiRedirect)
             {
                 app.MapWhen(ctx => !ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _),
-                    redirectedApp =>
+                    a =>
                     {
-                        app.UseRouting();
-                        app.UseAuthentication();
-                        app.UseAuthorization();
-
-                        app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
-                        app.Run(ApiRedirectHandler);
+                        a.UseAuthentication();
+                        a.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
+                        a.UseRouting();
+                        a.UseAuthorization();
+                        a.Run(ApiRedirectHandler);
                     });
             }
-
-            app.UseRouting();
+            
             app.UseAuthentication();
-            app.UseAuthorization();
-
             app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
+            app.UseRouting();
+            app.UseAuthorization();
             app.UseEndpoints(e =>
             {
                 e.MapControllers();
@@ -489,9 +497,9 @@ namespace Maestro.Web
             app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
             app.UseCookiePolicy();
             app.UseStaticFiles();
-
-            app.UseRouting();
+            
             app.UseAuthentication();
+            app.UseRouting();
             app.UseAuthorization();
 
             app.UseEndpoints(e =>
@@ -506,8 +514,8 @@ namespace Maestro.Web
         private static void AngularIndexHtmlRedirect(IApplicationBuilder app)
         {
             app.UseRewriter(new RewriteOptions().AddRewrite(".*", "Index", true));
-            app.UseRouting();
             app.UseAuthentication();
+            app.UseRouting();
             app.UseAuthorization();
             app.UseEndpoints(e => { e.MapRazorPages(); });
         }
