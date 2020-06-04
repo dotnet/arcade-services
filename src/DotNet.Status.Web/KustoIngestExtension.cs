@@ -10,9 +10,9 @@ namespace DotNet.Status.Web
         public static IServiceCollection AddKustoIngest(this IServiceCollection services, Action<IOptions<KustoOptions>> configure)
         {
             services.Configure(configure);
-            services.AddSingleton<IKustoIngestClient>(options =>
+            services.AddSingleton<IKustoIngestClient>(provider =>
                 KustoIngestFactory.CreateQueuedIngestClient(
-                    options.GetRequiredService<IOptions<KustoOptions>>().Value.KustoIngestConnectionString));
+                    provider.GetRequiredService<IOptions<KustoOptions>>().Value.IngestConnectionString));
             return services;
         }
     }

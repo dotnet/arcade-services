@@ -6,8 +6,8 @@ namespace DotNet.Status.Web
 {
     public class KustoOptions
     {
-        public string KustoQueryConnectionString { get; set; }
-        public string KustoIngestConnectionString { get; set; }
-        public string KustoDatabase { get; set; }
+        public string QueryConnectionString { get; set; }
+        public string IngestConnectionString { get; set; }
+        public string Database { get; set; }
     }
 }

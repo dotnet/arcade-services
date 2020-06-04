@@ -34,16 +34,16 @@ namespace DotNet.Status.Web.Controllers
         {
             KustoOptions options = _options.Value;
 
-            if (string.IsNullOrEmpty(options.KustoIngestConnectionString))
+            if (string.IsNullOrEmpty(options.IngestConnectionString))
             {
-                throw new InvalidOperationException("No KustoIngestConnectionString set");
+                throw new InvalidOperationException("No IngestConnectionString set");
             }
 
             List<ArcadeValidationData> arcadeValidationDatas = new List<ArcadeValidationData>{ data };
 
             await KustoHelpers.WriteDataToKustoInMemoryAsync(
                 _client,
-                options.KustoDatabase,
+                options.Database,
                 "ArcadeValidation",
                 _logger,
                 arcadeValidationDatas,

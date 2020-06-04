@@ -33,8 +33,8 @@ namespace DotNet.Status.Web.Tests
 
             collection.Configure<KustoOptions>(options =>
             {
-                options.KustoIngestConnectionString = customOptions != null ? customOptions.KustoIngestConnectionString : "fakekustoconnectionstring";
-                options.KustoDatabase = customOptions != null ? customOptions.KustoDatabase : "fakekustodatbase";
+                options.IngestConnectionString = customOptions != null ? customOptions.IngestConnectionString : "fakekustoconnectionstring";
+                options.Database = customOptions != null ? customOptions.Database : "fakekustodatbase";
             });
 
             collection.AddScoped<TelemetryController>();
