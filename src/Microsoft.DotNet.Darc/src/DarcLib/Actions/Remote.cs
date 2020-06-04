@@ -1048,7 +1048,7 @@ namespace Microsoft.DotNet.DarcLib
             if (mayNeedArcadeUpdate)
             {
                 arcadeRemote = await remoteFactory.GetRemoteAsync(arcadeItem.RepoUri, _logger);
-                targetDotNetVersion = await GetToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+                targetDotNetVersion = await arcadeRemote.GetToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
             }
 
             GitFileContentContainer fileContainer =
