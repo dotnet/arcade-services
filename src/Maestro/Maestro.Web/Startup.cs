@@ -304,14 +304,14 @@ namespace Maestro.Web
                 });
         }
 
-        private bool DoApiRedirect => !string.IsNullOrEmpty(Configuration.GetSection("ApiRedirect")["uri"]);
+        private bool DoApiRedirect => !string.IsNullOrEmpty(ApiRedirectTarget);
         private string ApiRedirectTarget => Configuration.GetSection("ApiRedirect")["uri"];
         private string ApiRedirectToken => Configuration.GetSection("ApiRedirect")["token"];
 
         private async Task ApiRedirectHandler(HttpContext ctx)
         {
             var logger = ctx.RequestServices.GetRequiredService<ILogger<Startup>>();
-            logger.LogInformation("Preparing for redirect: enabled: '{redirectEnabled}', uri: '{redirectUrl}", DoApiRedirect, ApiRedirectTarget);
+            logger.LogInformation("Preparing for redirect: enabled: '{redirectEnabled}', uri: '{redirectUrl}'", DoApiRedirect, ApiRedirectTarget);
             if (ctx.User == null)
             {
                 logger.LogInformation("Rejecting redirect because of missing authentication");
@@ -407,16 +407,19 @@ namespace Maestro.Web
         {
             app.UseExceptionHandler(ConfigureApiExceptions);
 
-            app.MapWhen(ctx => DoApiRedirect && !ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _),
-                redirectedApp =>
-                {
-                    app.UseRouting();
-                    app.UseAuthentication();
-                    app.UseAuthorization();
+            if (DoApiRedirect)
+            {
+                app.MapWhen(ctx => !ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _),
+                    redirectedApp =>
+                    {
+                        app.UseRouting();
+                        app.UseAuthentication();
+                        app.UseAuthorization();
 
-                    app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
-                    app.Run(ApiRedirectHandler);
-                });
+                        app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
+                        app.Run(ApiRedirectHandler);
+                    });
+            }
 
             app.UseRouting();
             app.UseAuthentication();
