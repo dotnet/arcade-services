@@ -310,8 +310,11 @@ namespace Maestro.Web
 
         private async Task ApiRedirectHandler(HttpContext ctx)
         {
+            var logger = ctx.RequestServices.GetRequiredService<ILogger<Startup>>();
+            logger.LogInformation("Preparing for redirect: enabled: '{redirectEnabled}', uri: '{redirectUrl}", DoApiRedirect, ApiRedirectTarget);
             if (ctx.User == null)
             {
+                logger.LogInformation("Rejecting redirect because of missing authentication");
                 ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                 return;
             }
@@ -320,6 +323,7 @@ namespace Maestro.Web
             AuthorizationResult result = await authService.AuthorizeAsync(ctx.User, MsftAuthorizationPolicyName);
             if (!result.Succeeded)
             {
+                logger.LogInformation("Rejecting redirect because authorization failed");
                 ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                 return;
             }
@@ -327,8 +331,16 @@ namespace Maestro.Web
 
             using (var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
-                var uri = new UriBuilder(ApiRedirectTarget) { Path = ctx.Request.Path, Query = ctx.Request.QueryString.ToUriComponent(), };
-                await ctx.ProxyRequestAsync(client, uri.Uri.AbsoluteUri,
+                logger.LogInformation("Preparing proxy request to {proxyPath}", ctx.Request.Path);
+                var uri = new UriBuilder(ApiRedirectTarget)
+                {
+                    Path = ctx.Request.Path,
+                    Query = ctx.Request.QueryString.ToUriComponent(),
+                };
+
+                string absoluteUri = uri.Uri.AbsoluteUri;
+                logger.LogInformation("Service proxied request to {url}", absoluteUri);
+                await ctx.ProxyRequestAsync(client, absoluteUri,
                     req =>
                     {
                         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ApiRedirectToken);
