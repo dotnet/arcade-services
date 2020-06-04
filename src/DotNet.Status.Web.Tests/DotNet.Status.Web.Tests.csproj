@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
+<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
   <PropertyGroup>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <IsPackable>false</IsPackable>
@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Moq" />
+    <PackageReference Include="Microsoft.CodeCoverage" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DotNet.Status.Web\DotNet.Status.Web.csproj" />
