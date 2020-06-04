@@ -352,6 +352,16 @@ namespace Maestro.Web
         {
             app.UseExceptionHandler(ConfigureApiExceptions);
 
+            var logger = app.ApplicationServices.GetRequiredService<ILogger<Startup>>();
+
+            logger.LogInformation(
+                "Configuring API, env: '{env}', isDev: {isDev}, inSF: {inSF}, forceLocal: '{forceLocal}'",
+                HostingEnvironment.EnvironmentName,
+                HostingEnvironment.IsDevelopment(),
+                ServiceFabricHelpers.RunningInServiceFabric(),
+                Configuration["ForceLocalApi"]
+            );
+
             if (HostingEnvironment.IsDevelopment() &&
                 !ServiceFabricHelpers.RunningInServiceFabric() &&
                 !string.Equals(
