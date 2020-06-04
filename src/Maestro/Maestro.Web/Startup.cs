@@ -323,7 +323,7 @@ namespace Maestro.Web
             AuthorizationResult result = await authService.AuthorizeAsync(ctx.User, MsftAuthorizationPolicyName);
             if (!result.Succeeded)
             {
-                logger.LogInformation("Rejecting redirect because authentication failed");
+                logger.LogInformation("Rejecting redirect because authorization failed");
                 ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                 return;
             }
