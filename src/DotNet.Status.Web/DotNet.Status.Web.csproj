@@ -5,6 +5,7 @@
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SignAssembly>false</SignAssembly>
     <AspNetCoreHostingModel>OutOfProcess</AspNetCoreHostingModel>
+    <DebugType>Full</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
