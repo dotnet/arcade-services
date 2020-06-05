@@ -44,7 +44,8 @@ namespace Maestro.Web
             
             services.AddAuthentication(options =>
                     {
-                        options.DefaultScheme = "Contextual";
+                        options.DefaultAuthenticateScheme = options.DefaultChallengeScheme = options.DefaultScheme = "Contextual";
+                        options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
                     })
                 .AddPolicyScheme("Contextual","Contextual",
                     policyOptions => { policyOptions.ForwardDefaultSelector = ctx => ctx.Request.Path.StartsWithSegments("/api") ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme; })
