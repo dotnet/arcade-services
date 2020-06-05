@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using DotNet.Status.Web.Options;
+using Kusto.Ingest;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
@@ -25,6 +26,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Octokit;
 
 namespace DotNet.Status.Web
@@ -78,6 +80,7 @@ namespace DotNet.Status.Web
             services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth").Bind);
             services.Configure<ZenHubOptions>(Configuration.GetSection("ZenHub").Bind);
             services.Configure<BuildMonitorOptions>(Configuration.GetSection("BuildMonitor").Bind);
+            services.Configure<KustoOptions>(Configuration.GetSection("Kusto").Bind);
 
             services.Configure<SimpleSigninOptions>(o => { o.ChallengeScheme = GitHubScheme; });
             services.ConfigureExternalCookie(options =>
@@ -196,6 +199,7 @@ namespace DotNet.Status.Web
                             }
                         });
                 });
+            services.AddKustoIngest(options => Configuration.GetSection("Kusto").Bind(options));
 
             services.AddScoped<SimpleSigninMiddleware>();
             services.AddGitHubTokenProvider();
@@ -221,8 +225,8 @@ namespace DotNet.Status.Web
                 app.UseHttpsRedirection();
             }
             
-            app.UseRouting();
             app.UseAuthentication();
+            app.UseRouting();
             app.UseAuthorization();
             app.UseEndpoints(e =>
             {
