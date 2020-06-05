@@ -22,23 +22,23 @@ namespace DotNet.Status.Web.Controllers
         private readonly Lazy<Task> _ensureLabels;
         private readonly IOptions<GitHubConnectionOptions> _githubOptions;
         private readonly ILogger<GitHubHookController> _logger;
-        private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
+        private readonly IGitHubClientFactory _gitHubClientFactory;
 
         public GitHubHookController(
             IOptions<GitHubConnectionOptions> githubOptions,
-            IGitHubApplicationClientFactory gitHubApplicationClientFactory,
+            IGitHubClientFactory gitHubClientFactory,
             ILogger<GitHubHookController> logger)
         {
             _githubOptions = githubOptions;
             _logger = logger;
-            _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
+            _gitHubClientFactory = gitHubClientFactory;
             _ensureLabels = new Lazy<Task>(EnsureLabelsAsync);
         }
 
         private async Task EnsureLabelsAsync()
         {
             GitHubConnectionOptions options = _githubOptions.Value;
-            IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(options.Organization, options.Repository);
+            IGitHubClient client = await _gitHubClientFactory.CreateGitHubClientAsync(options.Organization, options.Repository);
             await GitHubModifications.TryCreateAsync(
                 () => client.Issue.Labels.Create(
                     options.Organization,
@@ -95,7 +95,7 @@ namespace DotNet.Status.Web.Controllers
             string issueRepo = data.Repository.Name;
             string issueOrg = data.Repository.Owner.Login;
             _logger.LogInformation("Opening connection to open issue to {org}/{repo}", options.Organization, options.Repository);
-            IGitHubClient client = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(options.Organization, options.Repository);
+            IGitHubClient client = await _gitHubClientFactory.CreateGitHubClientAsync(options.Organization, options.Repository);
 
             var issue = new NewIssue($"RCA: {issueTitle} ({issueNumber})")
             {

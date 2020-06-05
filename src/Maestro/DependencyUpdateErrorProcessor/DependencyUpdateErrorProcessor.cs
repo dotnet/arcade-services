@@ -40,21 +40,21 @@ namespace DependencyUpdateErrorProcessor
         // github url -> https://github.com/maestro-auth-test/maestro-test2  repo ->maestro-test2 owner -> maestro-auth-test2 
         private static readonly Regex RepositoryUriPattern = new Regex(@"^/(?<owner>[^/]+)/(?<repo>[^/]+)/?$");
 
-        private readonly IGitHubApplicationClientFactory _authenticateGitHubApplicationClient;
+        private readonly IGitHubClientFactory _authenticateGitHubClient;
 
         public DependencyUpdateErrorProcessor(
             IReliableStateManager stateManager,
             ILogger<DependencyUpdateErrorProcessor> logger,
             BuildAssetRegistryContext context,
             IOptions<DependencyUpdateErrorProcessorOptions> options,
-            IGitHubApplicationClientFactory authenticateGithubApplicationClient
+            IGitHubClientFactory authenticateGithubClient
             )
         {
             _stateManager = stateManager;
             _context = context;
             _options = options.Value;
             _logger = logger;
-            _authenticateGitHubApplicationClient = authenticateGithubApplicationClient;
+            _authenticateGitHubClient = authenticateGithubClient;
         }
 
        [CronSchedule("0 0 5 1/1 * ? *", TimeZones.PST)]
@@ -160,7 +160,7 @@ namespace DependencyUpdateErrorProcessor
             IReliableDictionary<(string repository, string branch),int> gitHubIssueEvaluator =
                 await _stateManager.GetOrAddAsync<IReliableDictionary<(string repository, string branch), int>>("gitHubIssueEvaluator");
             var parseRepoUri = ParseRepoUri(issueRepo);
-            IGitHubClient client = await _authenticateGitHubApplicationClient.CreateGitHubClientAsync(parseRepoUri.owner, parseRepoUri.repo);
+            IGitHubClient client = await _authenticateGitHubClient.CreateGitHubClientAsync(parseRepoUri.owner, parseRepoUri.repo);
             Octokit.Repository repo = await client.Repository.Get(
                 parseRepoUri.owner, 
                 parseRepoUri.repo);
