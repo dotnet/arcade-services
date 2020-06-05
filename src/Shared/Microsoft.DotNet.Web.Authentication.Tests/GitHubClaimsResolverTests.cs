@@ -6,19 +6,14 @@ using System.Net.Http;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Web.Authentication.GitHub;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
-using Moq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Octokit;
-using Octokit.Internal;
 using Xunit;
 using Xunit.Abstractions;
-using Xunit.Sdk;
 
 namespace Microsoft.DotNet.Web.Authentication.Tests
 {
@@ -31,126 +26,42 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             _output = output;
         }
 
-        private IResponse MockResponse()
-        {
-            var m = new Mock<IResponse>();
-            m.Setup(r => r.ApiInfo)
-                .Returns(new ApiInfo(new Dictionary<string, Uri>(), Array.Empty<string>(), Array.Empty<string>(), null, new RateLimit(100, 0, DateTimeOffset.UtcNow.AddHours(1).ToUnixTimeSeconds())));
-            return m.Object;
-        }
-
-        private User MockUser(int id, string login, string email, string name, string url)
-        {
-            return new User(
-                default,
-                default,
-                default,
-                default,
-                default,
-                default,
-                default,
-                default,
-                email,
-                default,
-                default,
-                default,
-                default,
-                default,
-                id,
-                default,
-                login,
-                name,
-                default,
-                default,
-                default,
-                default,
-                default,
-                default,
-                url,
-                default,
-                default,
-                default,
-                default);
-        }
-
-        private Organization MockOrganization(int id, string login)
-        {
-            return new Organization(
-                default,
-                default,
-                default,
-                default,
-                default,
-                default,
-                default,
-                default,
-                default,
-                default,
-                default,
-                default,
-                default,
-                id,
-                default,
-                default,
-                login,
-                default,
-                default,
-                default,
-                default,
-                default,
-                default,
-                default,
-                default);
-        }
-
-        private Team MockTeam(int id, string name, Organization org)
-        {
-            return new Team(
-                default,
-                id,
-                default,
-                default,
-                name,
-                default,
-                default,
-                default,
-                default,
-                default,
-                org,
-                default,
-                default);
-        }
-
         [Fact]
         public async Task GitHubErrorFailedAuth()
         {
-            using IDisposable scope = ConfigureResolver(out Mock<IGitHubClient> mock, out _, out GitHubClaimResolver resolver);
+            using IDisposable scope = ConfigureResolver(out FakeHandler handler, out _, out GitHubClaimResolver resolver);
 
-            mock.Setup(c => c.User.Current())
-                .ThrowsAsync(new RateLimitExceededException(MockResponse()));
+            handler.AddCannedResponse(HttpStatusCode.TooManyRequests,
+                "https://api.github.test/user",
+                new JObject
+                {
+                    {"error", "Rate limit exceeded"},
+                    {"really-long-details", new string('*', 10000)},
+                });
 
-            await Assert.ThrowsAsync<RateLimitExceededException>(() => resolver.GetUserInformationClaims("FAKE-TOKEN"));
+            await Assert.ThrowsAsync<HttpRequestException>(() => resolver.GetUserInformationClaims("FAKE-TOKEN"));
 
-            mock.Verify(c => c.User.Current(), Times.Once);
-            mock.VerifyNoOtherCalls();
+            handler.AssertCompleted();
         }
 
         [Fact]
         public async Task UserInformationIsPopulated()
         {
             using IDisposable scope =
-                ConfigureResolver(out Mock<IGitHubClient> mock, out _, out GitHubClaimResolver resolver);
+                ConfigureResolver(out FakeHandler handler, out _, out GitHubClaimResolver resolver);
 
-            mock.Setup(c => c.User.Current())
-                .ReturnsAsync(MockUser(
-                    146,
-                    "TestUser",
-                    "TestEmail@microsoft.test",
-                    "A Real Fake Name",
-                    "https://github.com/TestUser"));
+            handler.AddCannedResponse("https://api.github.test/user",
+                new JObject
+                {
+                    {"id", 146},
+                    {"login", "TestUser"},
+                    {"email", "TestEmail@microsoft.test"},
+                    {"name", "A Real Fake Name"},
+                    {"url", "https://github.test/TestUser"},
+                });
 
-            (IEnumerable<Claim> claims, User user) = await resolver.GetUserInformation("FAKE-TOKEN");
-            Assert.NotNull(user);
+            (IEnumerable<Claim> claims, JObject job) = await resolver.GetUserInformation("FAKE-TOKEN");
+            Assert.NotNull(job);
             var id = new ClaimsIdentity(claims, "TEST");
             var principal = new ClaimsPrincipal(id);
             string accessToken = resolver.GetAccessToken(principal);
@@ -159,29 +70,33 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             Assert.Equal("TestUser", id.Name);
             Assert.Equal("TestEmail@microsoft.test", id.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value);
 
-            mock.Verify(c => c.User.Current(), Times.Once);
-            mock.VerifyNoOtherCalls();
+            handler.AssertCompleted();
         }
 
         [Fact]
         public async Task ExpiredUserInformationIsFetchedAgain()
         {
-            using IDisposable scope = ConfigureResolver(
-                out Mock<IGitHubClient> mock,
+            using IDisposable scope = ConfigureResolver(out FakeHandler handler,
                 out TestClock clock,
                 out GitHubClaimResolver resolver);
 
-            int userTimes = 0;
-            mock.Setup(c => c.User.Current())
-                .ReturnsAsync(() =>
+            handler.AddCannedResponse("https://api.github.test/user",
+                new JObject
                 {
-                    userTimes++;
-                    return userTimes switch
-                    {
-                        1 => MockUser(146, "TestUser", "TestEmail@microsoft.test", "A Real Fake Name", "https://github.com/TestUser"),
-                        2 => MockUser(146, "TestUser", "OtherEmail@microsoft.test", "A Real Fake Name", "https://github.com/TestUser"),
-                        _ => throw new XunitException("user fetched too many times"),
-                    };
+                    {"id", 146},
+                    {"login", "TestUser"},
+                    {"email", "TestEmail@microsoft.test"},
+                    {"name", "A Real Fake Name"},
+                    {"url", "https://github.test/TestUser"},
+                });
+            handler.AddCannedResponse("https://api.github.test/user",
+                new JObject
+                {
+                    {"id", 146},
+                    {"login", "TestUser"},
+                    {"email", "OtherEmail@microsoft.test"},
+                    {"name", "A Real Fake Name"},
+                    {"url", "https://github.test/TestUser"},
                 });
 
             IEnumerable<Claim> userInformation = await resolver.GetUserInformationClaims("FAKE-TOKEN");
@@ -196,28 +111,23 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             Assert.Equal("TestUser", id.Name);
             Assert.Equal("OtherEmail@microsoft.test", id.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value);
 
-            mock.Verify(c => c.User.Current(), Times.Exactly(2));
-            mock.VerifyNoOtherCalls();
+            handler.AssertCompleted();
         }
 
         [Fact]
         public async Task UserInformationIsCached()
         {
             using IDisposable scope =
-                ConfigureResolver(out Mock<IGitHubClient> mock, out _, out GitHubClaimResolver resolver);
+                ConfigureResolver(out FakeHandler handler, out _, out GitHubClaimResolver resolver);
 
-            var called = false;
-            mock.Setup(c => c.User.Current())
-                .ReturnsAsync(() =>
+            handler.AddCannedResponse("https://api.github.test/user",
+                new JObject
                 {
-                    Assert.False(called);
-                    called = true;
-                    return MockUser(
-                        146,
-                        "TestUser",
-                        "TestEmail@microsoft.test",
-                        "A Real Fake Name",
-                        "https://github.com/TestUser");
+                    {"id", 146},
+                    {"login", "TestUser"},
+                    {"email", "TestEmail@microsoft.test"},
+                    {"name", "A Real Fake Name"},
+                    {"url", "https://github.test/TestUser"},
                 });
 
             IEnumerable<Claim> userInformation = await resolver.GetUserInformationClaims("FAKE-TOKEN");
@@ -233,29 +143,50 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             id = new ClaimsIdentity(userInformation, "TEST");
             Assert.Equal("TestUser", id.Name);
 
-            mock.Verify(c =>c.User.Current(), Times.Once);
-            mock.VerifyNoOtherCalls();
+            handler.AssertCompleted();
         }
         
         [Fact]
         public async Task MembershipClaimsArePopulated()
         {
             using IDisposable scope =
-                ConfigureResolver(out Mock<IGitHubClient> mock, out _, out GitHubClaimResolver resolver);
+                ConfigureResolver(out FakeHandler handler, out _, out GitHubClaimResolver resolver);
 
-            mock.Setup(c => c.User.Current())
-                .ReturnsAsync(MockUser(146, "TestUser", "TeamEmail@microsoft.test", "A Real Fake Name", "https://github.com/TestUser"));
-            mock.Setup(c => c.Organization.GetAllForCurrent())
-                .ReturnsAsync(new[]
+            handler.AddCannedResponse("https://api.github.test/user",
+                new JObject
                 {
-                    MockOrganization(978, "TestOrg"),
+                    {"id", 146},
+                    {"login", "TestUser"},
+                    {"email", "TestEmail@microsoft.test"},
+                    {"name", "A Real Fake Name"},
+                    {"url", "https://github.test/TestUser"},
                 });
-            mock.Setup(c => c.Organization.Team.GetAllForCurrent())
-                .ReturnsAsync(new[]
+            handler.AddCannedResponse("https://api.github.test/user/orgs",
+                new JArray
                 {
-                    MockTeam(1235, "TestTeam", MockOrganization(85241, "OtherOrg"))
+                    new JObject
+                    {
+                        {"id", 978},
+                        {"login", "TestOrg"},
+                    },
                 });
-
+            handler.AddCannedResponse("https://api.github.test/user/teams",
+                new JArray
+                {
+                    new JObject
+                    {
+                        {"id", 1235},
+                        {"name", "TestTeam"},
+                        {
+                            "organization",
+                            new JObject
+                            {
+                                {"id", 85241},
+                                {"login", "OtherOrg"},
+                            }
+                        },
+                    },
+                });
 
             IEnumerable<Claim> userInformation = await resolver.GetUserInformationClaims("FAKE-TOKEN");
             var id = new ClaimsIdentity(userInformation, "TEST");
@@ -278,29 +209,49 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
                 $"Test: IsInRole({teamRole})\nRoles: {string.Join(", ", withMembershipId.Claims.Where(c => c.Type == withMembershipId.RoleClaimType).Select(c => c.Value))}"
             );
 
-            mock.Verify(c => c.User.Current(), Times.Once);
-            mock.Verify(c => c.Organization.GetAllForCurrent(), Times.Once);
-            mock.Verify(c => c.Organization.Team.GetAllForCurrent(), Times.Once);
-            mock.VerifyNoOtherCalls();
+            handler.AssertCompleted();
         }
 
         [Fact]
         public async Task MembershipClaimsAreCached()
         {
             using IDisposable scope =
-                ConfigureResolver(out Mock<IGitHubClient> mock, out _, out GitHubClaimResolver resolver);
+                ConfigureResolver(out FakeHandler handler, out _, out GitHubClaimResolver resolver);
 
-            mock.Setup(c => c.User.Current())
-                .ReturnsAsync(MockUser(146, "TestUser", "TeamEmail@microsoft.test", "A Real Fake Name", "https://github.com/TestUser"));
-            mock.Setup(c => c.Organization.GetAllForCurrent())
-                .ReturnsAsync(new[]
+            handler.AddCannedResponse("https://api.github.test/user",
+                new JObject
                 {
-                    MockOrganization(978, "TestOrg"),
+                    {"id", 146},
+                    {"login", "TestUser"},
+                    {"email", "TestEmail@microsoft.test"},
+                    {"name", "A Real Fake Name"},
+                    {"url", "https://github.test/TestUser"},
                 });
-            mock.Setup(c => c.Organization.Team.GetAllForCurrent())
-                .ReturnsAsync(new[]
+            handler.AddCannedResponse("https://api.github.test/user/orgs",
+                new JArray
                 {
-                    MockTeam(1235, "TestTeam", MockOrganization(85241, "OtherOrg"))
+                    new JObject
+                    {
+                        {"id", 978},
+                        {"login", "TestOrg"},
+                    },
+                });
+            handler.AddCannedResponse("https://api.github.test/user/teams",
+                new JArray
+                {
+                    new JObject
+                    {
+                        {"id", 1235},
+                        {"name", "TestTeam"},
+                        {
+                            "organization",
+                            new JObject
+                            {
+                                {"id", 85241},
+                                {"login", "OtherOrg"},
+                            }
+                        },
+                    },
                 });
 
             IEnumerable<Claim> userInformation = await resolver.GetUserInformationClaims("FAKE-TOKEN");
@@ -329,46 +280,78 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             }
 
             await AssertMembership();
+            // This will fail uncached, since there is not another copy of the canned responses
             await AssertMembership();
 
-            // These will fail if the response wasn't cached, because the methods will be called more than once.
-            mock.Verify(c => c.User.Current(), Times.Once);
-            mock.Verify(c => c.Organization.GetAllForCurrent(), Times.Once);
-            mock.Verify(c => c.Organization.Team.GetAllForCurrent(), Times.Once);
-            mock.VerifyNoOtherCalls();
+            handler.AssertCompleted();
         }
 
         [Fact]
         public async Task ExpiredMembershipClaimsAreRefreshed()
         {
             using IDisposable scope =
-                ConfigureResolver(out Mock<IGitHubClient> mock, out TestClock clock, out GitHubClaimResolver resolver);
+                ConfigureResolver(out FakeHandler handler, out TestClock clock, out GitHubClaimResolver resolver);
 
-            mock.Setup(c => c.User.Current())
-                .ReturnsAsync(MockUser(146, "TestUser", "TeamEmail@microsoft.test", "A Real Fake Name", "https://github.com/TestUser"));
-            int orgTimes = 0;
-            mock.Setup(c => c.Organization.GetAllForCurrent())
-                .ReturnsAsync(() =>
+            handler.AddCannedResponse("https://api.github.test/user",
+                new JObject
                 {
-                    orgTimes++;
-                    return orgTimes switch
-                    {
-                        1 => new[] {MockOrganization(978, "OldTestOrg")},
-                        2 => new[] {MockOrganization(978, "NewTestOrg")},
-                        _ => throw new XunitException("orgs fetched too many times"),
-                    };
+                    {"id", 146},
+                    {"login", "TestUser"},
+                    {"email", "TestEmail@microsoft.test"},
+                    {"name", "A Real Fake Name"},
+                    {"url", "https://github.test/TestUser"},
                 });
-            int teamTimes = 0;
-            mock.Setup(c => c.Organization.Team.GetAllForCurrent())
-                .ReturnsAsync(() =>
+            handler.AddCannedResponse("https://api.github.test/user/orgs",
+                new JArray
                 {
-                    teamTimes++;
-                    return teamTimes switch
+                    new JObject
                     {
-                        1 => new[] {MockTeam(1235, "OldTestTeam", MockOrganization(85241, "OldOtherOrg"))},
-                        2 => new[] {MockTeam(1235, "NewTestTeam", MockOrganization(85241, "NewOtherOrg"))},
-                        _ => throw new XunitException("teams fetched too many times"),
-                    };
+                        {"id", 978},
+                        {"login", "OldTestOrg"},
+                    },
+                });
+            handler.AddCannedResponse("https://api.github.test/user/teams",
+                new JArray
+                {
+                    new JObject
+                    {
+                        {"id", 1235},
+                        {"name", "OldTestTeam"},
+                        {
+                            "organization",
+                            new JObject
+                            {
+                                {"id", 85241},
+                                {"login", "OldOtherOrg"},
+                            }
+                        },
+                    },
+                });
+            handler.AddCannedResponse("https://api.github.test/user/orgs",
+                new JArray
+                {
+                    new JObject
+                    {
+                        {"id", 978},
+                        {"login", "NewTestOrg"},
+                    },
+                });
+            handler.AddCannedResponse("https://api.github.test/user/teams",
+                new JArray
+                {
+                    new JObject
+                    {
+                        {"id", 1235},
+                        {"name", "NewTestTeam"},
+                        {
+                            "organization",
+                            new JObject
+                            {
+                                {"id", 85241},
+                                {"login", "NewOtherOrg"},
+                            }
+                        },
+                    },
                 });
 
             IEnumerable<Claim> userInformation = await resolver.GetUserInformationClaims("FAKE-TOKEN");
@@ -400,21 +383,19 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             clock.UtcNow = TestClock.BaseTime.AddDays(1);
             await AssertMembership("NewTestOrg", "NewOtherOrg", "NewTestTeam");
 
-            mock.Verify(c => c.User.Current(), Times.Once);
-            mock.Verify(c => c.Organization.GetAllForCurrent(), Times.Exactly(2));
-            mock.Verify(c => c.Organization.Team.GetAllForCurrent(), Times.Exactly(2));
-            mock.VerifyNoOtherCalls();
+            handler.AssertCompleted();
         }
 
         private IDisposable ConfigureResolver(
-            out Mock<IGitHubClient> clientMock,
+            out FakeHandler handler,
             out TestClock clock,
             out GitHubClaimResolver resolver)
         {
-            Mock<IGitHubClient> gitHubClient = clientMock = new Mock<IGitHubClient>(MockBehavior.Strict);
+            FakeHandler localHandler = handler = new FakeHandler();
+            var client = new HttpClient(handler);
+
             TestClock localClock = clock = new TestClock();
             var collection = new ServiceCollection();
-
             collection.AddSingleton<ISystemClock>(clock);
             collection.AddSingleton<AspNetCore.Authentication.ISystemClock>(clock);
             collection.AddMemoryCache(o => o.Clock = localClock);
@@ -424,19 +405,21 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
                 l.AddProvider(new XUnitLogger(_output));
             });
             collection.AddSingleton<GitHubClaimResolver>();
-            var clientFactoryMock = new Mock<IGitHubClientFactory>();
-            clientFactoryMock.Setup(f => f.CreateGitHubClient(It.IsAny<string>()))
-                .Returns((string token) => gitHubClient.Object);
-            collection.AddSingleton(clientFactoryMock.Object);
-            collection.Configure<GitHubClientOptions>(o =>
+            collection.Configure<GitHubAuthenticationOptions>(o =>
             {
-                o.ProductHeader = new ProductHeaderValue("TEST", "1.0");
+                o.Backchannel = new HttpClient(localHandler);
+                o.BackchannelHttpHandler = localHandler;
+                o.AuthorizationEndpoint = "https://github.test/login/oauth/authorize";
+                o.TokenEndpoint = "https://github.test/login/oauth/access_token";
+                o.UserInformationEndpoint = "https://api.github.test/user";
+                o.TeamsEndpoint = "https://api.github.test/user/teams";
+                o.OrganizationEndpoint = "https://api.github.test/user/orgs";
             });
 
             ServiceProvider provider = collection.BuildServiceProvider();
             resolver = provider.GetRequiredService<GitHubClaimResolver>();
 
-            return new Disposables(provider);
+            return new Disposables(localHandler, client, provider);
         }
     }
 
@@ -464,6 +447,67 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
                     obj.Dispose();
                 }
             }
+        }
+    }
+
+    public class FakeHandler : HttpMessageHandler
+    {
+        private readonly List<(HttpStatusCode statusCode, string uri, JToken body)> _cannedResponses = new List<(HttpStatusCode statusCode, string uri, JToken body)>();
+
+        private readonly List<(string uri, Dictionary<string, string> headers, JToken body, bool accepted)> _requests =
+            new List<(string uri, Dictionary<string, string> headers, JToken body, bool accepted)>();
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            Dictionary<string, string> requestHeaders =
+                request.Headers.ToDictionary(h => h.Key, h => string.Join("\n", h.Value));
+            JToken requestBody = null;
+            if (request.Content != null)
+            {
+                string bodyText = await request.Content.ReadAsStringAsync();
+                if (bodyText != null)
+                {
+                    requestBody = JToken.Parse(bodyText);
+                }
+            }
+
+
+            int index = _cannedResponses.FindIndex(r => r.uri == request.RequestUri.AbsoluteUri);
+            if (index == -1)
+            {
+                _requests.Add((request.RequestUri.AbsoluteUri, requestHeaders, requestBody, false));
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+            }
+
+            (HttpStatusCode statusCode, _, JToken body) = _cannedResponses[index];
+            _cannedResponses.RemoveAt(index);
+            _requests.Add((request.RequestUri.AbsoluteUri, requestHeaders, requestBody, true));
+            return new HttpResponseMessage(statusCode)
+            {
+                Content = new StringContent(body.ToString(Formatting.Indented))
+            };
+        }
+        
+        public void AddCannedResponse(string uri, JToken result)
+        {
+            _cannedResponses.Add((HttpStatusCode.OK, uri, result));
+        }
+
+        public void AddCannedResponse(HttpStatusCode code, string uri, JToken result)
+        {
+            _cannedResponses.Add((code, uri, result));
+        }
+
+        public IEnumerable<string> UnexpectedRequests => _requests.Where(r => !r.accepted).Select(r => r.uri);
+
+        public IEnumerable<string> UnusedResponses => _cannedResponses.Select(r => r.uri);
+
+        public void AssertCompleted()
+        {
+            Assert.Empty(UnusedResponses);
+            Assert.Empty(UnexpectedRequests);
         }
     }
 }
