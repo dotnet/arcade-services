@@ -5,12 +5,13 @@
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Octokit;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.Web.Authentication.GitHub
 {
@@ -34,8 +35,13 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
             OAuthTokenResponse tokens)
         {
             string accessToken = tokens.AccessToken;
-            (IEnumerable<Claim> claims, User user) = await _claimResolver.GetUserInformation(accessToken, Context.RequestAborted);
+            (IEnumerable<Claim> claims, JObject user) = await _claimResolver.GetUserInformation(accessToken, Context.RequestAborted);
             identity.AddClaims(claims);
+            JsonElement rootElement;
+            using (JsonDocument jsonDocument = JsonDocument.Parse(user.ToString()))
+            {
+                rootElement = jsonDocument.RootElement.Clone();
+            }
 
             var context = new OAuthCreatingTicketContext(
                 new ClaimsPrincipal(identity),
@@ -45,7 +51,7 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
                 Options,
                 Backchannel,
                 tokens,
-                default);
+                rootElement);
             await Options.Events.CreatingTicket(context);
             return new AuthenticationTicket(context.Principal, context.Properties, context.Scheme.Name);
         }
