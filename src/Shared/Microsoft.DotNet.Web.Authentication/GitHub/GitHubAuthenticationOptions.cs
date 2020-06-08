@@ -12,10 +12,6 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
         {
             AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
             TokenEndpoint = "https://github.com/login/oauth/access_token";
-            UserInformationEndpoint = "https://api.github.com/user";
         }
-        
-        public string OrganizationEndpoint { get; set; } = "https://api.github.com/user/orgs";
-        public string TeamsEndpoint { get; set; } = "https://api.github.com/user/teams";
     }
 }
