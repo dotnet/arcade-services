@@ -81,8 +81,13 @@ namespace Maestro.ScenarioTests
 
             using (ChangeDirectory(repoDirectory))
             {
-
+                throw new NotImplementedException();
             }
+        }
+
+        public async Task ValidatePullRequestDependencies(string targetRepoName, string pullRequestBaseBranch, List<Microsoft.DotNet.DarcLib.DependencyDetail>  expectedDependencies)
+        {
+            throw new NotImplementedException();
         }
 
         public async Task GitCommitAsync(string message)
@@ -395,6 +400,11 @@ namespace Maestro.ScenarioTests
                 TestContext.WriteLine($"Removing build {buildId} from channel {channelName}");
                 await RunDarcAsync("delete-build-from-channel", "--id", buildId.ToString(), "--channel", channelName);
             });
+        }
+
+        public async Task DeleteBuildFromChannelAsync(int buildId, string channelName)
+        {
+            throw new NotImplementedException();
         }
 
         public IDisposable ChangeDirectory(string directory)
