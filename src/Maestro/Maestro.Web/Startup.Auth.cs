@@ -44,9 +44,8 @@ namespace Maestro.Web
             
             services.AddAuthentication(options =>
                     {
-                        // The "AddIdentity" above messed with these, so we need to re-mess with them.
-                        options.DefaultChallengeScheme = options.DefaultAuthenticateScheme =
-                            options.DefaultSignInScheme = options.DefaultScheme = "Contextual";
+                        options.DefaultAuthenticateScheme = options.DefaultChallengeScheme = options.DefaultScheme = "Contextual";
+                        options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
                     })
                 .AddPolicyScheme("Contextual","Contextual",
                     policyOptions => { policyOptions.ForwardDefaultSelector = ctx => ctx.Request.Path.StartsWithSegments("/api") ? PersonalAccessTokenDefaults.AuthenticationScheme : IdentityConstants.ApplicationScheme; })
@@ -137,6 +136,8 @@ namespace Maestro.Web
                 {
                     options.ExpireTimeSpan = LoginCookieLifetime;
                     options.SlidingExpiration = true;
+                    options.ReturnUrlParameter = "returnUrl";
+                    options.LoginPath = "/Account/SignIn";
                     options.Events = new CookieAuthenticationEvents
                     {
                         OnSigningIn = async ctx =>
