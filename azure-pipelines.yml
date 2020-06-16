@@ -262,44 +262,20 @@ stages:
           # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
             # - powershell: eng\create-tag.ps1 -AccessToken $(System.AccessToken)
 
-- stage: validateDeployment
-  displayName: Validate deployment
-  pool:
-    vmImage: vs2017-win2016
-  variables:
-  - group: MaestroInt KeyVault
-  - name: MaestroTestEndpoint
-    value: https://maestro-int.westus2.cloudapp.azure.com
-  jobs:
-  - job: scenario
-    displayName: Scenario tests
-    steps:
-    - download: current
-      artifact: ScenarioTests
-    - download: current
-      artifact: PackageArtifacts
-    - download: current
-      artifact: Maestro.ScenarioTests
-
-    - task: NuGetToolInstaller@1
-      displayName: Use NuGet
-      inputs:
-        versionSpec: 5.3.x
-
-    - task: UseDotNet@2
-      displayName: Use .NET Core Sdk
-      inputs:
-        packageType: sdk
-        version: 3.1.x
-
-    - task: VSTest@2
-      inputs:
-        testSelector: testAssemblies
-        testAssemblyVer2: |
-          Maestro.ScenarioTests.dll
-        searchFolder: $(Pipeline.Workspace)/Maestro.ScenarioTests
-      env:
-        MAESTRO_BASEURI: $(MaestroTestEndpoint)
-        MAESTRO_TOKEN: $(scenario-test-maestro-token)
-        GITHUB_TOKEN: $(maestro-scenario-test-github-token)
-        DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
+  - template: eng\deploy.yaml
+    parameters:
+      ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
+        DeploymentEnvironment: Staging
+        DotNetStatusAppName: dotneteng-status-staging
+        DotNetStatusEndpoint: .NET Engineering Deployment Notification - Staging
+        MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
+        MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
+        PublishProfile: Int
+        RolloutScorerAppName: rollout-scorer-int
+        ServiceFabricConnection: Maestro-Int
+        Subscription: NetHelixStaging
+        VariableGroup: MaestroInt KeyVault
+        StatusVariableGroup: DotNetStatus Staging
+        GrafanaHost: https://dotnet-eng-grafana-staging.westus2.cloudapp.azure.com
+        GrafanaKeyVault: dotnet-grafana-staging
+        GrafanaVariableGroup: Dotnet-Grafana-Staging
