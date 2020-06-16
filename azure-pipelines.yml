@@ -263,7 +263,7 @@ stages:
             # - powershell: eng\create-tag.ps1 -AccessToken $(System.AccessToken)
             
 
-    parameters:
+    validateParameters:
         DeploymentEnvironment: Staging
         DotNetStatusAppName: dotneteng-status-staging
         DotNetStatusEndpoint: .NET Engineering Deployment Notification - Staging
@@ -278,17 +278,15 @@ stages:
         GrafanaHost: https://dotnet-eng-grafana-staging.westus2.cloudapp.azure.com
         GrafanaKeyVault: dotnet-grafana-staging
         GrafanaVariableGroup: Dotnet-Grafana-Staging
-        
+
 - stage: validateDeployment
   displayName: Validate deployment
   pool:
     vmImage: vs2017-win2016
-  dependsOn: 
-  - deploy
   variables:
-  - group: ${{ parameters.VariableGroup }}
+  - group: ${{ validateParameters.VariableGroup }}
   - name: MaestroTestEndpoint
-    value: ${{ parameters.MaestroTestEndpoint }}
+    value: ${{ validateParameters.MaestroTestEndpoint }}
   jobs:
   - job: scenario
     displayName: Scenario tests
