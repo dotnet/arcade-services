@@ -159,13 +159,26 @@ namespace Maestro.ScenarioTests
 
         public async Task<AsyncDisposableValue<string>> CreateTestChannelAsync(string testChannelName)
         {
+            string message = "";
+
             try
             {
-                await RunDarcAsync("delete-channel", "--name", testChannelName).ConfigureAwait(false);
+                message = await RunDarcAsync("delete-channel", "--name", testChannelName).ConfigureAwait(false);
             }
             catch (MaestroTestException)
             {
-                // Ignore failures from delete-channel, its just a pre-cleanup that isn't really part of the test
+                // If there are subscriptions associated the the channel then a previous test clean up failed
+                // Run a subscription clean up and try again
+                try
+                {
+                    await DeleteSubscriptionsForChannel(testChannelName).ConfigureAwait(false);
+                    await RunDarcAsync("delete-channel", "--name", testChannelName).ConfigureAwait(false);
+                }
+                catch(MaestroTestException)
+                {
+                    // Otherwise ignore failures from delete-channel, its just a pre-cleanup that isn't really part of the test
+                    // And if the test previously succeeded then it'll fail because the channel doesn't exist
+                }
             }
 
             await RunDarcAsync("add-channel", "--name", testChannelName, "--classification", "test").ConfigureAwait(false);
@@ -179,13 +192,7 @@ namespace Maestro.ScenarioTests
                 }
                 catch (MaestroTestException ex)
                 {
-                    // If there are subscriptions associated the the channel then a previous test clean up failed
-                    if (ex.Message.Contains("has associated subscriptions.Please remove these before removing this channel."))
-                    {
-                        await DeleteSubscriptionsForChannel(testChannelName).ConfigureAwait(false);
-                    }
-
-                    // Otherwise ignore failures from delete-channel, this delete is here to ensure that the channel is deleted
+                    // Ignore failures from delete-channel on cleanup, this delete is here to ensure that the channel is deleted
                     // even if the test does not do an explicit delete as part of the test. Other failures are typical that the channel has already been deleted.
                 }
             });
