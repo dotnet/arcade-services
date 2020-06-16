@@ -293,7 +293,8 @@ export class BuildComponent implements OnInit, OnChanges {
             mostRecentFailureLink = undefined;
           } else {
             isMostRecent = false;
-            const recentFailure = newerBuilds.find(b => b.result == "failed");
+            // Yes, it's "canceled".
+            const recentFailure = newerBuilds.find(b => (b.result == "failed" || b.result == "canceled") );
             if (recentFailure) {
               mostRecentFailureLink = this.getBuildLinkFromAzdo(build.azureDevOpsAccount as string, build.azureDevOpsProject as string, recentFailure.id);
             } else {

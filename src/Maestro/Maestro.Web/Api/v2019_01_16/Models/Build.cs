@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
-using Maestro.Web.Api.v2019_01_16.Models;
 
 namespace Maestro.Web.Api.v2019_01_16.Models
 {

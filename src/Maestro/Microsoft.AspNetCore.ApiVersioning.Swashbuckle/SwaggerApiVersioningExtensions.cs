@@ -6,7 +6,7 @@ using System;
 using JetBrains.Annotations;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Swashbuckle.AspNetCore.Swagger;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
@@ -14,7 +14,7 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
     [PublicAPI]
     public static class SwaggerApiVersioningExtensions
     {
-        public static IServiceCollection AddSwaggerApiVersioning(this IServiceCollection services, Action<string, Info> configureVersionInfo = null)
+        public static IServiceCollection AddSwaggerApiVersioning(this IServiceCollection services, Action<string, OpenApiInfo> configureVersionInfo = null)
         {
             return services.AddSingleton<IConfigureOptions<SwaggerGenOptions>, ConfigureSwaggerVersions>(
                 provider => new ConfigureSwaggerVersions(
@@ -25,35 +25,35 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
 
         public static void FilterSchemas(
             this SwaggerGenOptions options,
-            Action<Schema, SchemaFilterContext> filter)
+            Action<OpenApiSchema, SchemaFilterContext> filter)
         {
             options.SchemaFilter<FunctionSchemaFilter>(filter);
         }
 
         public static void FilterOperations(
             this SwaggerGenOptions options,
-            Action<Operation, OperationFilterContext> filter)
+            Action<OpenApiOperation, OperationFilterContext> filter)
         {
             options.OperationFilter<FunctionOperationFilter>(filter);
         }
 
         public static void FilterDocument(
             this SwaggerGenOptions options,
-            Action<SwaggerDocument, DocumentFilterContext> filter)
+            Action<OpenApiDocument, DocumentFilterContext> filter)
         {
             options.DocumentFilter<FunctionDocumentFilter>(filter);
         }
 
         private class FunctionSchemaFilter : ISchemaFilter
         {
-            public FunctionSchemaFilter(Action<Schema, SchemaFilterContext> filter)
+            public FunctionSchemaFilter(Action<OpenApiSchema, SchemaFilterContext> filter)
             {
                 Filter = filter;
             }
 
-            public Action<Schema, SchemaFilterContext> Filter { get; }
+            public Action<OpenApiSchema, SchemaFilterContext> Filter { get; }
 
-            public void Apply(Schema schema, SchemaFilterContext context)
+            public void Apply(OpenApiSchema schema, SchemaFilterContext context)
             {
                 Filter(schema, context);
             }
@@ -62,14 +62,14 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
 
         private class FunctionOperationFilter : IOperationFilter
         {
-            public FunctionOperationFilter(Action<Operation, OperationFilterContext> filter)
+            public FunctionOperationFilter(Action<OpenApiOperation, OperationFilterContext> filter)
             {
                 Filter = filter;
             }
 
-            public Action<Operation, OperationFilterContext> Filter { get; }
+            public Action<OpenApiOperation, OperationFilterContext> Filter { get; }
 
-            public void Apply(Operation operation, OperationFilterContext context)
+            public void Apply(OpenApiOperation operation, OperationFilterContext context)
             {
                 Filter(operation, context);
             }
@@ -77,14 +77,14 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
 
         private class FunctionDocumentFilter : IDocumentFilter
         {
-            public FunctionDocumentFilter(Action<SwaggerDocument, DocumentFilterContext> filter)
+            public FunctionDocumentFilter(Action<OpenApiDocument, DocumentFilterContext> filter)
             {
                 Filter = filter;
             }
 
-            public Action<SwaggerDocument, DocumentFilterContext> Filter { get; }
+            public Action<OpenApiDocument, DocumentFilterContext> Filter { get; }
 
-            public void Apply(SwaggerDocument model, DocumentFilterContext context)
+            public void Apply(OpenApiDocument model, DocumentFilterContext context)
             {
                 Filter(model, context);
             }

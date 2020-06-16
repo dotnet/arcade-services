@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.ServiceFabric.Actors;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -20,6 +19,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
+using Newtonsoft.Json.Linq;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
 {
@@ -234,15 +234,39 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                     new ApiError("That action was successful, it cannot be retried."));
             }
 
-            Queue.Post(
-                async () =>
-                {
-                    IPullRequestActor actor =
-                        PullRequestActorFactory.Lookup(PullRequestActorId.Create(update.Repository, update.Branch));
-                    await actor.RunActionAsync(update.Method, update.Arguments);
-                });
+            Queue.Post<PullRequestActionWorkItem>(PullRequestActionWorkItem.GetArguments(update));
 
             return Accepted();
+        }
+
+        private class PullRequestActionWorkItem : IBackgroundWorkItem
+        {
+            private readonly IActorProxyFactory<IPullRequestActor> _factory;
+
+            public PullRequestActionWorkItem(IActorProxyFactory<IPullRequestActor> factory)
+            {
+                this._factory = factory;
+            }
+
+            public Task ProcessAsync(JToken argumentToken)
+            {
+                var update = argumentToken.ToObject<Arguments>();
+                IPullRequestActor actor = _factory.Lookup(PullRequestActorId.Create(update.Repository, update.Branch));
+                return actor.RunActionAsync(update.Method, update.MethodArguments);
+            }
+
+            public static JToken GetArguments(RepositoryBranchUpdateHistoryEntry update)
+            {
+                return JToken.FromObject(new Arguments {Repository = update.Repository, Branch = update.Branch, Method = update.Method, MethodArguments = update.Arguments});
+            }
+
+            private struct Arguments
+            {
+                public string Repository;
+                public string Branch;
+                public string Method;
+                public string MethodArguments;
+            }
         }
 
         private async Task<Data.Models.RepositoryBranch> GetRepositoryBranch(string repository, string branch)
