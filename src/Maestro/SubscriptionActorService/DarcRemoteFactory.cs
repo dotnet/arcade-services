@@ -3,10 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.IO;
-using System.IO.Compression;
-using System.Net.Http;
-using System.Threading;
 using System.Threading.Tasks;
 using Maestro.AzureDevOps;
 using Maestro.Data;
@@ -27,30 +23,31 @@ namespace SubscriptionActorService
             IAzureDevOpsTokenProvider azureDevOpsTokenProvider,
             DarcRemoteMemoryCache memoryCache,
             BuildAssetRegistryContext context,
-            TemporaryFiles tempFiles)
+            TemporaryFiles tempFiles,
+            ILocalGit localGit)
         {
             _tempFiles = tempFiles;
-            Configuration = configuration;
-            GitHubTokenProvider = gitHubTokenProvider;
-            AzureDevOpsTokenProvider = azureDevOpsTokenProvider;
-            Cache = memoryCache;
-            Context = context;
+            _localGit = localGit;
+            _configuration = configuration;
+            _gitHubTokenProvider = gitHubTokenProvider;
+            _azureDevOpsTokenProvider = azureDevOpsTokenProvider;
+            _cache = memoryCache;
+            _context = context;
         }
-        
-        public IConfiguration Configuration { get; }
-        public IGitHubTokenProvider GitHubTokenProvider { get; }
-        public IAzureDevOpsTokenProvider AzureDevOpsTokenProvider { get; }
-        public BuildAssetRegistryContext Context { get; }
-        public DarcRemoteMemoryCache Cache { get; }
+
+        private readonly IConfiguration _configuration;
+        private readonly IGitHubTokenProvider _gitHubTokenProvider;
+        private readonly IAzureDevOpsTokenProvider _azureDevOpsTokenProvider;
+        private readonly BuildAssetRegistryContext _context;
+        private readonly DarcRemoteMemoryCache _cache;
 
         private readonly TemporaryFiles _tempFiles;
-        private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
-        
-        private string _gitExecutable;
+        private readonly ILocalGit _localGit;
+
 
         public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
         {
-            return Task.FromResult((IRemote)new Remote(null, new MaestroBarClient(Context), logger));
+            return Task.FromResult((IRemote)new Remote(null, new MaestroBarClient(_context), logger));
         }
 
         public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
@@ -64,17 +61,17 @@ namespace SubscriptionActorService
                 Uri normalizedRepoUri = new Uri(normalizedUrl);
                 // Look up the setting for where the repo root should be held.  Default to empty,
                 // which will use the temp directory.
-                string temporaryRepositoryRoot = Configuration.GetValue<string>("DarcTemporaryRepoRoot", null);
+                string temporaryRepositoryRoot = _configuration.GetValue<string>("DarcTemporaryRepoRoot", null);
                 if (string.IsNullOrEmpty(temporaryRepositoryRoot))
                 {
                     temporaryRepositoryRoot = _tempFiles.GetFilePath("repos");
                 }
                 IGitRepo gitClient;
 
-                long installationId = await Context.GetInstallationId(normalizedUrl);
+                long installationId = await _context.GetInstallationId(normalizedUrl);
 
-                await ExponentialRetry.RetryAsync(
-                    async () => await EnsureLocalGit(logger),
+                var gitExe = await ExponentialRetry.RetryAsync(
+                    async () => await _localGit.GetPathToLocalGitAsync(),
                     ex => logger.LogError(ex, $"Failed to install git to local temporary directory."),
                     ex => true);
 
@@ -86,76 +83,20 @@ namespace SubscriptionActorService
                             throw new GithubApplicationInstallationException($"No installation is avaliable for repository '{normalizedUrl}'");
                         }
 
-                        gitClient = new GitHubClient(_gitExecutable, await GitHubTokenProvider.GetTokenForInstallationAsync(installationId),
-                            logger, temporaryRepositoryRoot, Cache.Cache);
+                        gitClient = new GitHubClient(gitExe, await _gitHubTokenProvider.GetTokenForInstallationAsync(installationId),
+                            logger, temporaryRepositoryRoot, _cache.Cache);
                         break;
                     case "dev.azure.com":
-                        gitClient = new AzureDevOpsClient(_gitExecutable, await AzureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl),
+                        gitClient = new AzureDevOpsClient(gitExe, await _azureDevOpsTokenProvider.GetTokenForRepository(normalizedUrl),
                             logger, temporaryRepositoryRoot);
                         break;
                     default:
                         throw new NotImplementedException($"Unknown repo url type {normalizedUrl}");
                 };
 
-                return new Remote(gitClient, new MaestroBarClient(Context), logger);
+                return new Remote(gitClient, new MaestroBarClient(_context), logger);
             }
         }
 
-        /// <summary>
-        ///     Download and install git to the a temporary location.
-        ///     Git is used by DarcLib, and the Service Fabric nodes do not have it installed natively.
-        ///     
-        ///     The file is assumed to be on a public endpoint.
-        ///     We return the git client executable so that this call may be easily wrapped in RetryAsync
-        /// </summary>
-        public async Task<string> EnsureLocalGit(ILogger logger)
-        {
-            // Determine whether we need to do any downloading at all.
-            if (string.IsNullOrEmpty(_gitExecutable))
-            {
-                await _semaphoreSlim.WaitAsync();
-                try
-                {
-                    // Determine whether another thread ended up getting the lock and downloaded git
-                    // in the meantime.
-                    if (string.IsNullOrEmpty(_gitExecutable))
-                    {
-                        using (logger.BeginScope($"Installing a local copy of git"))
-                        {
-                            string gitLocation = Configuration.GetValue<string>("GitDownloadLocation", null);
-                            string[] pathSegments = new Uri(gitLocation, UriKind.Absolute).Segments;
-                            string remoteFileName = pathSegments[pathSegments.Length - 1];
-
-                            string gitRoot = _tempFiles.GetFilePath("git-portable");
-                            string targetPath = Path.Combine(gitRoot, Path.GetFileNameWithoutExtension(remoteFileName));
-                            string gitZipFile = Path.Combine(gitRoot, remoteFileName);
-
-                            logger.LogInformation($"Downloading git from '{gitLocation}' to '{gitZipFile}'");
-
-                            Directory.CreateDirectory(targetPath);
-
-                            using (HttpClient client = new HttpClient())
-                            using (FileStream outStream = new FileStream(gitZipFile, FileMode.Create, FileAccess.Write))
-                            using (var inStream = await client.GetStreamAsync(gitLocation))
-                            {
-                                await inStream.CopyToAsync(outStream);
-                            }
-
-                            logger.LogInformation($"Extracting '{gitZipFile}' to '{targetPath}'");
-
-                            ZipFile.ExtractToDirectory(gitZipFile, targetPath, overwriteFiles: true);
-
-                            _gitExecutable = Path.Combine(targetPath, "bin", "git.exe");
-                        }
-                    }
-                }
-                finally
-                {
-                    _semaphoreSlim.Release();
-                }
-            }
-
-            return _gitExecutable;
-        }
     }
 }

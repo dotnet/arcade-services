@@ -105,7 +105,7 @@ namespace Maestro.DataProviders
 
             if (!string.IsNullOrEmpty(channel))
             {
-                query = query.Where(dc => dc.Channel.Name.Equals(channel, StringComparison.OrdinalIgnoreCase));
+                query = query.Where(dc => dc.Channel.Name == channel);
             }
 
             var defaultChannels = await query.ToListAsync();
@@ -245,8 +245,6 @@ namespace Maestro.DataProviders
         public async Task<Channel> GetChannelAsync(int channelId)
         {
             Data.Models.Channel channel = await _context.Channels
-                .Include(ch => ch.ChannelReleasePipelines)
-                .ThenInclude(crp => crp.ReleasePipeline)
                 .Where(c => c.Id == channelId).FirstOrDefaultAsync();
 
             if (channel != null)

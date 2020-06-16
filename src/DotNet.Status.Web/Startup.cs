@@ -7,12 +7,11 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Claims;
 using System.Threading.Tasks;
-using DotNet.Status.Web.Controllers;
 using DotNet.Status.Web.Options;
-using GitHubJwt;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.KeyVault;
@@ -32,13 +31,13 @@ namespace DotNet.Status.Web
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration, IHostingEnvironment env)
+        public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
             Env = env;
         }
         
-        public IHostingEnvironment Env { get; }
+        public IWebHostEnvironment Env { get; }
         public IConfiguration Configuration { get; }
 
         public const string GitHubScheme = "github";
@@ -123,16 +122,19 @@ namespace DotNet.Status.Web
 
         private void AddServices(IServiceCollection services)
         {
-            services.AddMvc()
-                .WithRazorPagesRoot("/Pages")
-                .AddRazorPagesOptions(o =>
+            services.AddRazorPages(o =>
+                {
                     o.Conventions
                         .AuthorizeFolder("/", MsftAuthorizationPolicyName)
                         .AllowAnonymousToPage("/Index")
                         .AllowAnonymousToPage("/Status")
-                        .AllowAnonymousToPage("/Error")
-                    )
+                        .AllowAnonymousToPage("/Error");
+                    o.RootDirectory = "/Pages";
+                });
+
+            services.AddControllers()
                 .AddGitHubWebHooks();
+
             services.AddApplicationInsightsTelemetry(Configuration.GetSection("ApplicationInsights").Bind);
             services.Configure<LoggerFilterOptions>(o =>
             {
@@ -144,7 +146,17 @@ namespace DotNet.Status.Web
                     "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider"));
             });
 
-            services.AddAuthentication()
+            services.AddAuthentication("contextual")
+                .AddPolicyScheme("contextual", "Contextual Scheme",
+                    o => { o.ForwardDefaultSelector = context =>
+                    {
+                        if (context.Request.Path.StartsWithSegments("/api"))
+                        {
+                            return "github-token";
+                        }
+
+                        return IdentityConstants.ApplicationScheme;
+                    }; })
                 .AddGitHubOAuth(Configuration.GetSection("GitHubAuthentication"), GitHubScheme)
                 .AddScheme<UserTokenOptions, GitHubUserTokenHandler>("github-token", o => { })
                 .AddCookie(IdentityConstants.ApplicationScheme,
@@ -164,7 +176,7 @@ namespace DotNet.Status.Web
                                     ctx.HttpContext.RequestServices.GetRequiredService<GitHubClaimResolver>();
                                 ClaimsIdentity identity = ctx.Principal.Identities.FirstOrDefault();
                                 identity?.AddClaims(await resolver.GetMembershipClaims(resolver.GetAccessToken(ctx.Principal)));
-                            }
+                            },
                         };
                     })
                 .AddExternalCookie()
@@ -180,7 +192,7 @@ namespace DotNet.Status.Web
                             policy.RequireAuthenticatedUser();
                             if (!Env.IsDevelopment())
                             {
-                                policy.RequireRole("github:team:dotnet:dnceng", "github:team:dotnet:bots-high");
+                                policy.RequireRole(GitHubClaimResolver.GetTeamRole("dotnet","dnceng"), GitHubClaimResolver.GetTeamRole("dotnet","bots-high"));
                             }
                         });
                 });
@@ -188,10 +200,6 @@ namespace DotNet.Status.Web
             services.AddScoped<SimpleSigninMiddleware>();
             services.AddGitHubTokenProvider();
             services.AddSingleton<IInstallationLookup, InMemoryCacheInstallationLookup>();
-            services.AddContextAwareAuthenticationScheme(o =>
-            {
-                o.SelectScheme = p => p.StartsWithSegments("/api") ? "github-token" : IdentityConstants.ApplicationScheme;
-            });
 
             services.AddSingleton<ZenHubClient>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
@@ -212,10 +220,16 @@ namespace DotNet.Status.Web
                 app.UseHttpsRedirection();
             }
             
+            app.UseRouting();
             app.UseAuthentication();
-            app.UseMvc();
-            app.UseMiddleware<SimpleSigninMiddleware>();
+            app.UseAuthorization();
+            app.UseEndpoints(e =>
+            {
+                e.MapRazorPages();
+                e.MapControllers();
+            });
             app.UseStaticFiles();
+            app.UseMiddleware<SimpleSigninMiddleware>();
         }
     }
 }
