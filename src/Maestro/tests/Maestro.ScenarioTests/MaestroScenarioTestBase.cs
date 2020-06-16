@@ -32,7 +32,8 @@ namespace Maestro.ScenarioTests
         public async Task<PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
         {
             Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo).ConfigureAwait(false);
-            var attempts = 10;
+            //TODO: This was previously set to 10, need to set it back after debugging
+            var attempts = 3;
             while (attempts-- > 0)
             {
                 IReadOnlyList<PullRequest> prs = await GitHubApi.PullRequest.GetAllForRepository(repo.Id, new PullRequestRequest
