@@ -85,7 +85,7 @@ namespace Maestro.ScenarioTests
             }
         }
 
-        public async Task ValidatePullRequestDependencies(string targetRepoName, string pullRequestBaseBranch, List<Microsoft.DotNet.DarcLib.DependencyDetail>  expectedDependencies)
+        public async Task ValidatePullRequestDependencies(string targetRepoName, string pullRequestBaseBranch, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies)
         {
             throw new NotImplementedException();
         }
@@ -177,10 +177,16 @@ namespace Maestro.ScenarioTests
                 {
                     string doubleDelete = await RunDarcAsync("delete-channel", "--name", testChannelName).ConfigureAwait(false);
                 }
-                catch (MaestroTestException)
+                catch (MaestroTestException ex)
                 {
-                    // Ignore failures from delete-channel, this delete is here to ensure that the channel is deleted
-                    // even if the test does not do an explicit delete as part of the test
+                    // If there are subscriptions associated the the channel then a previous test clean up failed
+                    if (ex.Message.Contains("has associated subscriptions.Please remove these before removing this channel."))
+                    {
+                        await DeleteSubscriptionsForChannel(testChannelName).ConfigureAwait(false);
+                    }
+
+                    // Otherwise ignore failures from delete-channel, this delete is here to ensure that the channel is deleted
+                    // even if the test does not do an explicit delete as part of the test. Other failures are typical that the channel has already been deleted.
                 }
             });
         }
@@ -364,13 +370,21 @@ namespace Maestro.ScenarioTests
             return buildString;
         }
 
-        public async Task AddDependenciesToLocalRepo(string repoPath, List<AssetData> dependencies, string repoUri)
+        public async Task AddDependenciesToLocalRepo(string repoPath, List<AssetData> dependencies, string repoUri, string coherentParent = "")
         {
             using (ChangeDirectory(repoPath))
             {
                 foreach (AssetData asset in dependencies)
                 {
-                    await RunDarcAsync("add-dependency", "--name", asset.Name, "--type", "product", "--repo", repoUri);
+                    string[] parameters = { "add-dependency", "--name", asset.Name, "--type", "product", "--repo", repoUri };
+
+                    if (!String.IsNullOrEmpty(coherentParent))
+                    {
+                        parameters.Append("--coherent-parent");
+                        parameters.Append(coherentParent);
+                    }
+
+                    await RunDarcAsync(parameters);
                 }
             }
         }
