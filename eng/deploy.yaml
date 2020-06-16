@@ -17,12 +17,271 @@ parameters:
   # dn-bot-dnceng-build-rw-code-rw-release-rw
   # maestro-scenario-test-github-token
   # dotnet-build-bot-dotnet-eng-status-token
-  
+
 stages:
+# - stage: approval
+#   dependsOn:
+#   - build
+#   - Validate
+#   jobs:
+#   - deployment: approval
+#     displayName: deployment approval (conditional)
+#     environment: ${{ parameters.DeploymentEnvironment }}
+#     strategy:
+#       runOnce:
+#         deploy:
+#           steps:
+#           - download: none
+
+# - stage: predeploy
+#   displayName: Pre-Deployment
+#   pool:
+#     name: Hosted VS2017
+#   dependsOn:
+#   - build
+#   - Validate
+#   - approval
+#   jobs:
+#   - job: notifyStartDeployment
+#     displayName: Notify deployment start
+#     pool: server
+#     steps:
+#     - task: InvokeRESTAPI@1
+#       displayName: Notify dotnet-eng-status/start
+#       continueOnError: true
+#       inputs:
+#         serviceConnection: ${{ parameters.DotNetStatusEndpoint }}
+#         method: POST
+#         urlSuffix: /arcade-services/$(Build.BuildNumber)/start
+
+# - stage: deploy
+#   displayName: Deploy
+#   pool:
+#     name: Hosted VS2017
+#   dependsOn:
+#   - predeploy
+#   - approval
+#   variables:
+#   - group: ${{ parameters.VariableGroup }}
+#   - name: PublishProfile
+#     value: ${{ parameters.PublishProfile }}
+#   jobs:
+#   - job: updateDatabase
+#     displayName: Update BuildAssetRegistry database
+#     steps:
+#     - download: current
+#       artifact: ReleaseUtilities
+#     - download: current
+#       artifact: Maestro.Data
+#     - task: UseDotNet@2
+#       displayName: Use .NET Core SDK
+#       inputs:
+#         packageType: sdk
+#         version: 3.1.x
+#     - task: AzurePowerShell@3
+#       displayName: eng\firewall.ps1 -Add
+#       inputs:
+#         azureSubscription: ${{ parameters.Subscription }}
+#         ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
+#         ScriptArguments: -RuleName UnblockSQLForUpgrade -Add -ConnectionString "$(maestro-admin-sql-connection-string)"
+#         azurePowerShellVersion: LatestVersion
+#     - task: PowerShell@2
+#       displayName: update-database.ps1
+#       inputs:
+#         targetType: filePath
+#         filePath: $(Pipeline.Workspace)/Maestro.Data/update-database.ps1
+#         arguments: Maestro.Data.dll
+#         workingDirectory: $(Pipeline.Workspace)/Maestro.Data
+#       env:
+#         BUILD_ASSET_REGISTRY_DB_CONNECTION_STRING: $(maestro-admin-sql-connection-string)
+#     - task: AzurePowerShell@3
+#       displayName: eng\firewall.ps1 -Remove
+#       inputs:
+#         azureSubscription: ${{ parameters.Subscription }}
+#         ScriptPath: $(Pipeline.Workspace)/ReleaseUtilities/firewall.ps1
+#         ScriptArguments: -RuleName UnblockSQLForUpgrade -Remove -ConnectionString "$(maestro-admin-sql-connection-string)"
+#         azurePowerShellVersion: LatestVersion
+#       condition: always()
+
+#   - job: deployMaestro
+#     displayName: Deploy maestro service fabric application
+#     dependsOn: 
+#     - updateDatabase
+#     steps:
+#     - download: current
+#       artifact: MaestroApplication
+#     - download: current
+#       artifact: ReleaseUtilities
+#     - task: ServiceFabricPowerShell@1
+#       displayName: Refresh Service Fabric Services (Maestro)
+#       inputs:
+#         clusterConnection: ${{ parameters.ServiceFabricConnection }}
+#         scriptType: filePath
+#         scriptPath: $(Pipeline.Workspace)/ReleaseUtilities/refresh-service-fabric-services.ps1
+#         scriptArguments: -ApplicationName fabric:/MaestroApplication 
+#           -ApplicationManifestPath $(Pipeline.Workspace)/MaestroApplication/projectartifacts/ApplicationPackageRoot/ApplicationManifest.xml 
+#           -ServicesSourceFolder $(Build.SourcesDirectory)/src/Maestro/
+#     - task: ServiceFabricDeploy@1
+#       displayName: Deploy Service Fabric Application (Maestro)
+#       inputs:
+#         applicationPackagePath: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
+#         serviceConnectionName: ${{ parameters.ServiceFabricConnection }}
+#         publishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
+#         applicationParameterPath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/ApplicationParameters/$(PublishProfile).xml
+
+#   - job: deployTelemetry
+#     displayName: Deploy telemetry service fabric application
+#     dependsOn:
+#     steps:
+#     - download: current
+#       artifact: TelemetryApplication
+#     - download: current
+#       artifact: ReleaseUtilities
+#     - task: ServiceFabricPowerShell@1
+#       displayName: Refresh Service Fabric Services (Telemetry)
+#       inputs:
+#         clusterConnection: ${{ parameters.ServiceFabricConnection }}
+#         scriptType: filePath
+#         scriptPath: $(Pipeline.Workspace)/ReleaseUtilities/refresh-service-fabric-services.ps1
+#         scriptArguments: -ApplicationName fabric:/TelemetryApplication 
+#           -ApplicationManifestPath $(Pipeline.Workspace)/TelemetryApplication/projectartifacts/ApplicationPackageRoot/ApplicationManifest.xml 
+#           -ServicesSourceFolder $(Build.SourcesDirectory)/src/Telemetry/
+#     - task: ServiceFabricDeploy@1
+#       displayName: Deploy Service Fabric Application (Telemetry)
+#       inputs:
+#         applicationPackagePath: $(Pipeline.Workspace)/TelemetryApplication/applicationpackage
+#         serviceConnectionName: ${{ parameters.ServiceFabricConnection }}
+#         publishProfilePath: $(Pipeline.Workspace)/TelemetryApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
+#         applicationParameterPath: $(Pipeline.Workspace)/TelemetryApplication/projectartifacts/ApplicationParameters/$(PublishProfile).xml
+
+#   - job: deployStatus
+#     displayName: Deploy dotnet-status web app
+#     dependsOn:
+#     steps:
+#     - download: current
+#       artifact: DotNetStatus
+#     - task: AzureRmWebAppDeployment@4
+#       inputs:
+#         ConnectionType: AzureRM
+#         azureSubscription: ${{ parameters.Subscription }}
+#         appType: webApp
+#         WebAppName: ${{ parameters.DotNetStatusAppName }}
+#         deployToSlotOrASE: true
+#         ResourceGroupName: monitoring
+#         SlotName: staging
+#         Package: $(Pipeline.Workspace)/DotNetStatus/DotNetStatus.zip
+#         enableCustomDeployment: true
+#         DeploymentType: webDeploy
+#         RemoveAdditionalFilesFlag: true
+  
+#   - job: deployRolloutScorer
+#     displayName: Deploy rollout scorer azure function
+#     dependsOn:
+#     steps:
+#     - download: current
+#       artifact: RolloutScorer
+#     - task: AzureFunctionApp@1
+#       displayName: Deploy RolloutScorer
+#       inputs:
+#         azureSubscription: ${{ parameters.Subscription }}
+#         ${{ if ne(parameters.DeploymentEnvironment, 'Production') }}:
+#           appSettings: >
+#             -AzureServicesAuthConnectionString "RunAs=App;AppId=7d568741-c2b9-40a3-bbcc-9c3e82c3d872"
+#             -DeploymentEnvironment Staging
+#             -ScorecardsStorageAccountKeySecretName "rolloutscorecardsstaging-storage-key"
+#             -ScorecardsStorageAccountName "rolloutscorecardsstaging"
+#             -ScorecardsStorageAccountTableName "scorecardsstaging"
+#         ${{ if eq(parameters.DeploymentEnvironment, 'Production') }}:
+#           appSettings: >
+#             -AzureServicesAuthConnectionString "RunAs=App;AppId=7d568741-c2b9-40a3-bbcc-9c3e82c3d872"
+#             -DeploymentEnvironment Production
+#             -ScorecardsStorageAccountKeySecretName "rolloutscorecards-storage-key"
+#             -ScorecardsStorageAccountName "rolloutscorecards"
+#             -ScorecardsStorageAccountTableName "scorecards"
+#         package: $(Pipeline.Workspace)/RolloutScorer/RolloutScorer.zip
+#         appName: ${{ parameters.RolloutScorerAppName }}
+
+#   - ${{ if ne(parameters.DarcBotVariableGroup, '') }}:
+#     - job: deployDarcBot
+#       displayName: Deploy DarcBot GitHub app
+#       dependsOn:
+#       variables:
+#       - group: ${{ parameters.DarcBotVariableGroup }}
+#       - name: IngestConnectionString
+#         value: $(nethelix-engsrv-kusto-connection-string-ingest)
+#       steps:
+#       - download: current
+#         artifact: DarcBot
+#       - task: ArchiveFiles@2
+#         displayName: Archive DarcBot files
+#         inputs:
+#           rootFolderOrFile: $(Pipeline.Workspace)/DarcBot
+#           includeRootFolder: false
+#           archiveFile: $(Build.ArtifactStagingDirectory)/DarcBot.zip
+#       - task: AzureFunctionApp@1
+#         displayName: Deploy DarcBot
+#         inputs:
+#           azureSubscription: ${{ parameters.Subscription }}
+#           appSettings: >
+#             -AppId $(GitHubApp-DarcBot-AppId)
+#             -APPINSIGHTS_INSTRUMENTATIONKEY "$(GitHubApp-DarcBot-AppInsights-InstrumentationKey)"
+#             -AzureWebJobsDashboard "$(GitHubApp-DarcBot-AzureWebJobsDashboard)"
+#             -AzureWebJobsStorage "$(GitHubApp-DarcBot-AzureWebJobsStorage)"
+#             -FUNCTIONS_EXTENSION_VERSION ~2
+#             -FUNCTIONS_WORKER_RUNTIME dotnet
+#             -KustoDatabaseName engineeringdata
+#             -KustoIngestConnectionString "$(IngestConnectionString)"
+#             -PrivateKey "$(GitHubApp-DarcBot-PrivateKey)"
+#             -WEBSITE_RUN_FROM_PACKAGE 1
+#           package: $(Build.ArtifactStagingDirectory)/DarcBot.zip
+#           appName: DarcBotProd
+
+# - stage: postdeploy
+#   displayName: Post-Deployment
+#   pool:
+#     name: Hosted VS2017
+#   dependsOn:
+#   - deploy
+#   condition: always()
+#   variables:
+#   - group: ${{ parameters.StatusVariableGroup }}
+#   - group: ${{ parameters.VariableGroup }}
+#   - group: ${{ parameters.GrafanaVariableGroup }}
+#   - name: DeploymentEnvironment
+#     value: ${{ parameters.DeploymentEnvironment }}
+#   - name: GrafanaHost
+#     value: ${{ parameters.GrafanaHost }}
+#   - name: GrafanaKeyVault
+#     value: ${{ parameters.GrafanaKeyVault }}
+#   jobs:
+#   - job: notifyEndDeployment
+#     displayName: Notify deployment end
+#     pool: server
+#     steps:
+#     - task: InvokeRESTAPI@1
+#       displayName: Notify dotnet-eng-status/end
+#       continueOnError: true
+#       inputs:
+#         serviceConnection: ${{ parameters.DotNetStatusEndpoint }}
+#         method: POST
+#         urlSuffix: /arcade-services/$(Build.BuildNumber)/end
+#   - job: updateMetrics
+#     displayName: Update Grafana Metrics
+#     dependsOn:
+#     steps:
+#     - task: UseDotNet@2
+#       displayName: Install Correct .NET Version
+#       inputs:
+#         useGlobalJson: true
+#     - script: dotnet publish $(Build.SourcesDirectory)\src\Monitoring\Sdk\Microsoft.DotNet.Monitoring.Sdk.csproj -f netcoreapp3.1
+#     - script: dotnet build $(Build.SourcesDirectory)\src\Monitoring\Monitoring.ArcadeServices\Monitoring.ArcadeServices.proj -t:PublishGrafana -p:GrafanaAccessToken=$(grafana-admin-api-key) -p:GrafanaHost=$(GrafanaHost) -p:GrafanaKeyVaultName=$(GrafanaKeyVault) -p:GrafanaKeyVaultAppId=2bdfceef-194a-4775-99d9-b5575c77bc6b -p:GrafanaKeyVaultAppSecret=$(key-vault-app-secret) -p:GrafanaEnvironment=$(DeploymentEnvironment) -v:normal
+
 - stage: validateDeployment
   displayName: Validate deployment
   pool:
     vmImage: vs2017-win2016
+  dependsOn: 
+  - deploy
   variables:
   - group: ${{ parameters.VariableGroup }}
   - name: MaestroTestEndpoint
