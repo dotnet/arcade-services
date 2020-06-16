@@ -261,32 +261,15 @@ stages:
           # https://github.com/dotnet/arcade-services/issues/59
           # - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.SourceBranchName'], 'production')) }}:
             # - powershell: eng\create-tag.ps1 -AccessToken $(System.AccessToken)
-            
-
-    validateParameters:
-        DeploymentEnvironment: Staging
-        DotNetStatusAppName: dotneteng-status-staging
-        DotNetStatusEndpoint: .NET Engineering Deployment Notification - Staging
-        MaestroPublishEndpoint: https://maestro-prod.westus2.cloudapp.azure.com
-        MaestroTestEndpoint: https://maestro-int.westus2.cloudapp.azure.com
-        PublishProfile: Int
-        RolloutScorerAppName: rollout-scorer-int
-        ServiceFabricConnection: Maestro-Int
-        Subscription: NetHelixStaging
-        VariableGroup: MaestroInt KeyVault
-        StatusVariableGroup: DotNetStatus Staging
-        GrafanaHost: https://dotnet-eng-grafana-staging.westus2.cloudapp.azure.com
-        GrafanaKeyVault: dotnet-grafana-staging
-        GrafanaVariableGroup: Dotnet-Grafana-Staging
 
 - stage: validateDeployment
   displayName: Validate deployment
   pool:
     vmImage: vs2017-win2016
   variables:
-  - group: ${{ validateParameters.VariableGroup }}
+  - group: MaestroInt KeyVault
   - name: MaestroTestEndpoint
-    value: ${{ validateParameters.MaestroTestEndpoint }}
+    value: https://maestro-int.westus2.cloudapp.azure.com
   jobs:
   - job: scenario
     displayName: Scenario tests
