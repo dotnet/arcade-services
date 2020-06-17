@@ -1,8 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;netstandard2.1</TargetFrameworks>
-    <LangVersion>7.1</LangVersion>
     <NoWarn>$(NoWarn);NU1701</NoWarn>
     <SignAssembly>false</SignAssembly>
     <IsPackable>true</IsPackable>
@@ -11,20 +9,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LibGit2Sharp" Version="$(LibGit2SharpVersion)" />
-    <PackageReference Include="Microsoft.Azure.KeyVault" Version="$(MicrosoftAzureKeyVaultVersion)" />
-    <PackageReference Include="Microsoft.Azure.Services.AppAuthentication" Version="1.0.1" />
-    <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.1.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
-    <PackageReference Include="NuGet.Packaging" Version="4.8.0" />
-    <PackageReference Include="Octokit" Version="$(OctokitVersion)" />
-    <PackageReference Include="System.Net.Http" Version="4.3.3" />
-    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="2.2.0" />
+    <PackageReference Include="LibGit2Sharp" />
+    <PackageReference Include="Microsoft.Azure.KeyVault" />
+    <PackageReference Include="Microsoft.Azure.Services.AppAuthentication" />
+    <PackageReference Include="Microsoft.CSharp" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="NuGet.Packaging" />
+    <PackageReference Include="Octokit" />
+    <PackageReference Include="System.Net.Http" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Maestro\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
+    <ProjectReference Include="..\..\..\Shared\MIcrosoft.DotNet.Internal.Logging\Microsoft.DotNet.Internal.Logging.csproj" />
     <ProjectReference Include="..\..\..\Shared\Microsoft.DotNet.Services.Utility\Microsoft.DotNet.Services.Utility.csproj" />
   </ItemGroup>
 </Project>

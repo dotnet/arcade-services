@@ -106,7 +106,7 @@ namespace ServiceFabricMocks
 
         public Task<IAsyncEnumerable<T>> CreateEnumerableAsync(ITransaction tx)
         {
-            return Task.FromResult<IAsyncEnumerable<T>>(new MockAsyncEnumerable<T>(queue));
+            return Task.FromResult<IAsyncEnumerable<T>>(new SyncAsyncEnumerable<T>(queue));
         }
 
         public Task<long> GetCountAsync(ITransaction tx)
