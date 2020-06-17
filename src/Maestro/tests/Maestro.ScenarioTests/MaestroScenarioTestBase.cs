@@ -86,14 +86,30 @@ namespace Maestro.ScenarioTests
             }
         }
 
+        public async Task CheckBatchedAzDoPullRequest(string source1RepoName, string source2RepoName, string targetRepoName, string targetBranch, 
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies , string repoDirectory, bool complete = false)
+        {
+            string expectedPRTitle = $"Find out what this is supposed to be";
+            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete);
+        }
+
+        public async Task CheckAzDoPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task ValidatePullRequestDependencies(string targetRepoName, string pullRequestBaseBranch, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies)
         {
             throw new NotImplementedException();
         }
 
-        public async Task GitCommitAsync(string message)
+        public async Task GitCommitAsync(string message, string repoPath)
         {
-            await RunGitAsync("commit", "-am", message);
+            using (ChangeDirectory(repoPath))
+            {
+                await RunGitAsync("commit", "-am", message);
+            }
         }
 
         public async Task<IAsyncDisposable> PushGitBranchAsync(string remote, string branch)
@@ -191,7 +207,7 @@ namespace Maestro.ScenarioTests
                 {
                     string doubleDelete = await RunDarcAsync("delete-channel", "--name", testChannelName).ConfigureAwait(false);
                 }
-                catch (MaestroTestException ex)
+                catch (MaestroTestException)
                 {
                     // Ignore failures from delete-channel on cleanup, this delete is here to ensure that the channel is deleted
                     // even if the test does not do an explicit delete as part of the test. Other failures are typical that the channel has already been deleted.
