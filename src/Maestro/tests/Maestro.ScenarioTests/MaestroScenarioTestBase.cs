@@ -86,8 +86,8 @@ namespace Maestro.ScenarioTests
             }
         }
 
-        public async Task CheckBatchedAzDoPullRequest(string source1RepoName, string source2RepoName, string targetRepoName, string targetBranch, 
-            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies , string repoDirectory, bool complete = false)
+        public async Task CheckBatchedAzDoPullRequest(string source1RepoName, string source2RepoName, string targetRepoName, string targetBranch,
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete = false)
         {
             string expectedPRTitle = $"Find out what this is supposed to be";
             await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete);
@@ -104,12 +104,9 @@ namespace Maestro.ScenarioTests
             throw new NotImplementedException();
         }
 
-        public async Task GitCommitAsync(string message, string repoPath)
+        public async Task GitCommitAsync(string message)
         {
-            using (ChangeDirectory(repoPath))
-            {
-                await RunGitAsync("commit", "-am", message);
-            }
+            await RunGitAsync("commit", "-am", message);
         }
 
         public async Task<IAsyncDisposable> PushGitBranchAsync(string remote, string branch)
@@ -191,7 +188,7 @@ namespace Maestro.ScenarioTests
                     await DeleteSubscriptionsForChannel(testChannelName).ConfigureAwait(false);
                     await RunDarcAsync("delete-channel", "--name", testChannelName).ConfigureAwait(false);
                 }
-                catch(MaestroTestException)
+                catch (MaestroTestException)
                 {
                     // Otherwise ignore failures from delete-channel, its just a pre-cleanup that isn't really part of the test
                     // And if the test previously succeeded then it'll fail because the channel doesn't exist
@@ -490,6 +487,7 @@ namespace Maestro.ScenarioTests
 
         public async Task CheckoutBranchAsync(string branchName)
         {
+            await RunGitAsync("fetch", "origin");
             await RunGitAsync("checkout", branchName);
         }
 

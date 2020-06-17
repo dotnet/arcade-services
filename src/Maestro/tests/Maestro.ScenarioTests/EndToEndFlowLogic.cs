@@ -142,34 +142,38 @@ namespace Maestro.ScenarioTests
                         Build build2 = await CreateBuildAsync(source2RepoUri, sourceBranch, sourceCommit, sourceBuildNumber, source2Assets);
                         await AddBuildToChannelAsync(build2.Id, testChannelName);
 
+
                         TestContext.WriteLine("Cloning target repo to prepare the target branch");
                         TemporaryDirectory reposFolder = await CloneRepositoryAsync(testRepo2Name);
-                        await CheckoutBranchAsync(targetBranch);
-
-                        TestContext.WriteLine("Adding dependencies to target repo");
-                        await AddDependenciesToLocalRepo(reposFolder.Directory, source1Assets.ToList(), source1RepoUri);
-                        await AddDependenciesToLocalRepo(reposFolder.Directory, source2Assets.ToList(), source2RepoUri);
-
-                        TestContext.WriteLine("Pushing branch to remote");
-                        await GitCommitAsync("Add dependencies", reposFolder.Directory);
-                        await using (await PushGitBranchAsync("origin", targetBranch))
+                        using (ChangeDirectory(reposFolder.Directory))
                         {
+                            await CheckoutBranchAsync(targetBranch);
 
-                            TestContext.WriteLine("Trigger the dependency update");
-                            await TriggerSubscriptionAsync(subscription1Id.Value);
-                            await TriggerSubscriptionAsync(subscription2Id.Value);
+                            TestContext.WriteLine("Adding dependencies to target repo");
+                            await AddDependenciesToLocalRepo(reposFolder.Directory, source1Assets.ToList(), source1RepoUri);
+                            await AddDependenciesToLocalRepo(reposFolder.Directory, source2Assets.ToList(), source2RepoUri);
 
-                            List<DependencyDetail> expectedDependencies = expectedDependenciesSource1.Concat(expectedDependenciesSource2).ToList();
-
-                            TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
-
-                            if (isAzDoTest)
+                            TestContext.WriteLine("Pushing branch to remote");
+                            await GitCommitAsync("Add dependencies");
+                            await using (await PushGitBranchAsync("origin", targetBranch))
                             {
-                                await CheckBatchedAzDoPullRequest(testRepo1Name, testRepo3Name, testRepo2Name, targetBranch, expectedDependencies, reposFolder.Directory);
-                            }
-                            else
-                            {
-                                await CheckBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo3Name, testRepo2Name, expectedDependencies, reposFolder.Directory);
+
+                                TestContext.WriteLine("Trigger the dependency update");
+                                await TriggerSubscriptionAsync(subscription1Id.Value);
+                                await TriggerSubscriptionAsync(subscription2Id.Value);
+
+                                List<DependencyDetail> expectedDependencies = expectedDependenciesSource1.Concat(expectedDependenciesSource2).ToList();
+
+                                TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
+
+                                if (isAzDoTest)
+                                {
+                                    await CheckBatchedAzDoPullRequest(testRepo1Name, testRepo3Name, testRepo2Name, targetBranch, expectedDependencies, reposFolder.Directory);
+                                }
+                                else
+                                {
+                                    await CheckBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo3Name, testRepo2Name, expectedDependencies, reposFolder.Directory);
+                                }
                             }
                         }
                     }
@@ -179,7 +183,7 @@ namespace Maestro.ScenarioTests
 
         public async Task NonBatchedFlowTestBase(bool isAzDoTest)
         {
-            string testChannelName = isAzDoTest ?azDoChannelName : gitHubChannelName;
+            string testChannelName = isAzDoTest ? azDoChannelName : gitHubChannelName;
             string targetBranch = isAzDoTest ? azDoBranchName : gitHubBranchName;
 
             string sourceRepoUri = isAzDoTest ? GetAzDoRepoUrl(testRepo1Name) : GetRepoUrl(testRepo1Name);
@@ -194,36 +198,38 @@ namespace Maestro.ScenarioTests
                     TemporaryDirectory reposFolder = await SetUpForSingleSourceSub(
                         testChannelName, sourceRepoUri, sourceBranch, sourceCommit, sourceBuildNumber, source1Assets,
                         testRepo2Name, targetBranch);
-
-                    await using (await PushGitBranchAsync("origin", targetBranch))
+                    using (ChangeDirectory(reposFolder.Directory))
                     {
+                        await using (await PushGitBranchAsync("origin", targetBranch))
+                        {
+
+                            TestContext.WriteLine("Trigger the dependency update");
+                            await TriggerSubscriptionAsync(subscription1Id.Value);
+
+                            TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
+
+                            await CheckNonBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo3Name, testRepo2Name, expectedDependenciesSource1, reposFolder.Directory, true);
+                        }
+
+                        TestContext.WriteLine("Set up another build for intake into target repository");
+                        Build build = await CreateBuildAsync(sourceRepoUri, sourceBranch, source2Commit, source2BuildNumber, source3Assets);
 
                         TestContext.WriteLine("Trigger the dependency update");
                         await TriggerSubscriptionAsync(subscription1Id.Value);
 
-                        TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
+                        TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
+                        await ValidatePullRequestDependencies(testRepo2Name, targetBranch, expectedDependenciesSource3);
 
-                        await CheckNonBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo3Name, testRepo2Name, expectedDependenciesSource1, reposFolder.Directory, true);
+                        // Then remove the second build from the channel, trigger the sub again, and it should revert back to the original dependency set
+                        TestContext.Write("Remove the build from the channel and verify that the original dependencies are restored");
+                        await DeleteBuildFromChannelAsync(build.Id, testChannelName);
+
+                        TestContext.WriteLine("Trigger the dependency update");
+                        await TriggerSubscriptionAsync(subscription1Id.Value);
+
+                        TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
+                        await ValidatePullRequestDependencies(testRepo2Name, targetBranch, expectedDependenciesSource1);
                     }
-
-                    TestContext.WriteLine("Set up another build for intake into target repository");
-                    Build build = await CreateBuildAsync(sourceRepoUri, sourceBranch, source2Commit, source2BuildNumber, source3Assets);
-
-                    TestContext.WriteLine("Trigger the dependency update");
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
-
-                    TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
-                    await ValidatePullRequestDependencies(testRepo2Name, targetBranch, expectedDependenciesSource3);
-
-                    // Then remove the second build from the channel, trigger the sub again, and it should revert back to the original dependency set
-                    TestContext.Write("Remove the build from the channel and verify that the original dependencies are restored");
-                    await DeleteBuildFromChannelAsync(build.Id, testChannelName);
-
-                    TestContext.WriteLine("Trigger the dependency update");
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
-
-                    TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
-                    await ValidatePullRequestDependencies(testRepo2Name, targetBranch, expectedDependenciesSource1);
                 }
             }
         }
@@ -242,15 +248,17 @@ namespace Maestro.ScenarioTests
                 TemporaryDirectory reposFolder = await SetUpForSingleSourceSub(
                     testChannelName, sourceRepoUri, sourceBranch, sourceCommit, sourceBuildNumber, source1Assets,
                     testRepo2Name, targetBranch);
-
-                await using (await PushGitBranchAsync("origin", targetBranch))
+                using (ChangeDirectory(reposFolder.Directory))
                 {
-                    await using (AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(testChannelName, testRepo1Name, testRepo2Name, targetBranch,
-                         UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--all-checks-passed", "--ignore-checks license/cla", "--trigger" }))
+                    await using (await PushGitBranchAsync("origin", targetBranch))
                     {
-                        TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
+                        await using (AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(testChannelName, testRepo1Name, testRepo2Name, targetBranch,
+                             UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--all-checks-passed", "--ignore-checks license/cla", "--trigger" }))
+                        {
+                            TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
-                        await CheckNonBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo3Name, testRepo2Name, expectedDependenciesSource1, reposFolder.Directory, true);
+                            await CheckNonBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo3Name, testRepo2Name, expectedDependenciesSource1, reposFolder.Directory, true);
+                        }
                     }
                 }
             }
@@ -272,13 +280,17 @@ namespace Maestro.ScenarioTests
 
             TestContext.WriteLine("Cloning target repo to prepare the target branch");
             TemporaryDirectory reposFolder = await CloneRepositoryAsync(targetRepoName);
-            await CheckoutBranchAsync(targetBranch);
+            using (ChangeDirectory(reposFolder.Directory))
+            {
+                await CheckoutBranchAsync(targetBranch);
 
-            TestContext.WriteLine("Adding dependencies to target repo");
-            await AddDependenciesToLocalRepo(reposFolder.Directory, sourceAssets.ToList(), sourceRepoUri);
+                TestContext.WriteLine("Adding dependencies to target repo");
+                await AddDependenciesToLocalRepo(reposFolder.Directory, sourceAssets.ToList(), sourceRepoUri);
 
-            TestContext.WriteLine("Pushing branch to remote");
-            await GitCommitAsync("Add dependencies", reposFolder.Directory);
+                TestContext.WriteLine("Pushing branch to remote");
+                await GitCommitAsync("Add dependencies");
+            }
+
             return reposFolder;
         }
 
@@ -306,14 +318,17 @@ namespace Maestro.ScenarioTests
 
             TestContext.WriteLine("Cloning target repo to prepare the target branch");
             TemporaryDirectory reposFolder = await CloneRepositoryAsync(targetRepoName);
-            await CheckoutBranchAsync(targetBranch);
+            using (ChangeDirectory(reposFolder.Directory))
+            {
+                await CheckoutBranchAsync(targetBranch);
 
-            TestContext.WriteLine("Adding dependencies to target repo");
-            await AddDependenciesToLocalRepo(reposFolder.Directory, source1Assets.ToList(), sourceRepoUri1);
-            await AddDependenciesToLocalRepo(reposFolder.Directory, source2Assets.ToList(), sourceRepoUri2, source2CoherentParent);
+                TestContext.WriteLine("Adding dependencies to target repo");
+                await AddDependenciesToLocalRepo(reposFolder.Directory, source1Assets.ToList(), sourceRepoUri1);
+                await AddDependenciesToLocalRepo(reposFolder.Directory, source2Assets.ToList(), sourceRepoUri2, source2CoherentParent);
 
-            TestContext.WriteLine("Pushing branch to remote");
-            await GitCommitAsync("Add dependencies", reposFolder.Directory);
+                TestContext.WriteLine("Pushing branch to remote");
+                await GitCommitAsync("Add dependencies");
+            }
             return reposFolder;
         }
     }
