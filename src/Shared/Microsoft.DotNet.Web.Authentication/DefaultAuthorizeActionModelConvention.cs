@@ -22,9 +22,8 @@ namespace Microsoft.DotNet.Web.Authentication
 
         public void Apply(ActionModel action)
         {
-            // ASP.NET 3.1 broke IAllowAnonymousFilter, just find the attribute ourselves
-            // Otherwise it takes like 500 lines of code
-            if (action.ActionMethod?.GetCustomAttributes(true).Any(a => a is IAllowAnonymous || a is IAuthorizeData) ?? false)
+            IEnumerable<IFilterMetadata> preexisting = action.Controller.Filters.Concat(action.Filters);
+            if (preexisting.Any(f => f is IAsyncAuthorizationFilter || f is IAllowAnonymousFilter))
             {
                 return;
             }

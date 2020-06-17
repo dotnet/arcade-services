@@ -5,15 +5,15 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Octokit;
-using Octokit.Internal;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.Web.Authentication.GitHub
 {
@@ -23,17 +23,14 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
         private readonly ILogger<GitHubClaimResolver> _logger;
         private readonly IMemoryCache _cache;
         private readonly IOptionsMonitor<GitHubAuthenticationOptions> _options;
-        private readonly IGitHubClientFactory _gitHubClientFactory;
 
         public GitHubClaimResolver(
             IMemoryCache cache,
             IOptionsMonitor<GitHubAuthenticationOptions> options,
-            ILoggerFactory logger,
-            IGitHubClientFactory gitHubClientFactory)
+            ILoggerFactory logger)
         {
             _cache = cache;
             _options = options;
-            _gitHubClientFactory = gitHubClientFactory;
             _logger = logger.CreateLogger<GitHubClaimResolver>();
         }
 
@@ -110,8 +107,12 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
             {
                 _logger.LogInformation("Fetching fresh user info...");
                 GitHubAuthenticationOptions options = _options.CurrentValue;
-                IGitHubClient client = _gitHubClientFactory.CreateGitHubClient(accessToken);
-                User user = await client.User.Current();
+
+                JObject payload = await GetResponseJsonPayloadAsync(options.UserInformationEndpoint,
+                    accessToken,
+                    options,
+                    async r => JObject.Parse(await r.Content.ReadAsStringAsync()),
+                    cancellationToken);
 
                 _logger.LogInformation("Successfully fetched user data");
 
@@ -125,14 +126,14 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
                     }
                 }
 
-                AddClaim(ClaimTypes.NameIdentifier, user.Id.ToString());
-                AddClaim(ClaimTypes.Name, user.Login);
-                AddClaim(ClaimTypes.Email, user.Email);
-                AddClaim("urn:github:name", user.Name);
-                AddClaim("urn:github:url", user.Url);
+                AddClaim(ClaimTypes.NameIdentifier, payload.Value<string>("id"));
+                AddClaim(ClaimTypes.Name, payload.Value<string>("login"));
+                AddClaim(ClaimTypes.Email, payload.Value<string>("email"));
+                AddClaim("urn:github:name", payload.Value<string>("name"));
+                AddClaim("urn:github:url", payload.Value<string>("url"));
                 AddClaim(AccessTokenClaim, accessToken);
 
-                var userInformation = new UserInformation(claims.ToImmutable(), user);
+                var userInformation = new UserInformation(claims.ToImmutable(), payload);
                 return userInformation;
             }
         }
@@ -153,7 +154,6 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
             {
                 _logger.LogInformation("Fetching fresh membership info...");
                 GitHubAuthenticationOptions options = _options.CurrentValue;
-                IGitHubClient client = _gitHubClientFactory.CreateGitHubClient(accessToken);
 
                 ImmutableArray<Claim>.Builder claims = ImmutableArray.CreateBuilder<Claim>();
 
@@ -166,25 +166,37 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
                 }
 
                 {
-                    IReadOnlyList<Organization> organizations = await client.Organization.GetAllForCurrent();
-                    _logger.LogInformation("Fetched {orgCount} orgs", organizations.Count);
-                    foreach (Organization org in organizations)
+                    JArray orgPayload = await GetResponseJsonPayloadAsync("https://api.github.com/user/orgs",
+                        accessToken,
+                        options,
+                        async r => JArray.Parse(await r.Content.ReadAsStringAsync()),
+                        cancellationToken);
+
+                    _logger.LogInformation("Fetched {orgCount} orgs", orgPayload.Count);
+
+                    foreach (JToken org in orgPayload)
                     {
-                        string orgLogin = org.Login?.ToLowerInvariant();
-                        AddClaim(ClaimTypes.Role, GetOrganizationRole(orgLogin));
+                        string orgLogin = org.Value<string>("login")?.ToLowerInvariant();
+                        AddClaim(ClaimTypes.Role, "github:org:" + orgLogin);
                         AddClaim("urn:github:org", orgLogin);
                     }
                 }
 
                 {
-                    IReadOnlyList<Team> teams = await client.Organization.Team.GetAllForCurrent();
-                    _logger.LogInformation("Fetched {teamCount} teams", teams.Count);
-                    foreach (Team team in teams)
+                    JArray teamPayload = await GetResponseJsonPayloadAsync("https://api.github.com/user/teams",
+                        accessToken,
+                        options,
+                        async r => JArray.Parse(await r.Content.ReadAsStringAsync()),
+                        cancellationToken);
+
+                    _logger.LogInformation("Fetched {teamCount} teams", teamPayload.Count);
+
+                    foreach (JToken team in teamPayload)
                     {
-                        string teamName = team.Name?.ToLowerInvariant();
-                        string orgName = team.Organization.Login?.ToLowerInvariant();
+                        string teamName = team.Value<string>("name")?.ToLowerInvariant();
+                        string orgName = team["organization"]?.Value<string>("login")?.ToLowerInvariant();
                         string fullName = orgName + ":" + teamName;
-                        AddClaim(ClaimTypes.Role, GetTeamRole(orgName, teamName));
+                        AddClaim(ClaimTypes.Role, "github:team:" + fullName);
                         AddClaim("urn:github:team", fullName);
                     }
                 }
@@ -197,33 +209,64 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
         {
             return principal.FindFirst(AccessTokenClaim)?.Value;
         }
-        
-        public static string GetOrganizationRole(string organizationLogin)
-        {
-            return $"github:org:{organizationLogin.ToLowerInvariant()}";
 
-        }
-
-        public static string GetTeamRole(string organizationLogin, string teamName)
+        private async Task<T> GetResponseJsonPayloadAsync<T>(
+            string url,
+            string accessToken,
+            GitHubAuthenticationOptions options,
+            Func<HttpResponseMessage, Task<T>> parseResponse,
+            CancellationToken cancellationToken)
         {
-            return $"github:team:{organizationLogin.ToLowerInvariant()}:{teamName.ToLowerInvariant()}";
+            using (var request = new HttpRequestMessage(HttpMethod.Get, url)
+            {
+                Headers =
+                {
+                    Accept = {new MediaTypeWithQualityHeaderValue("application/json")},
+                    Authorization = new AuthenticationHeaderValue("Bearer", accessToken)
+                }
+            })
+            {
+                using (HttpResponseMessage response = await options.Backchannel.SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken))
+                {
+                    if (response.IsSuccessStatusCode)
+                    {
+                        return await parseResponse(response);
+                    }
+
+                    string body = await response.Content.ReadAsStringAsync();
+                    if (body.Length > 1024)
+                    {
+                        body = body.Substring(0, 1024);
+                    }
+
+                    _logger.LogError(
+                        "An error occurred while retrieving the user profile: the remote server returned a {Status} response with the following payload: {Headers} {Body}.",
+                        response.StatusCode,
+                        response.Headers.ToString(),
+                        body);
+                    throw new HttpRequestException("An error occurred while retrieving the user org membership.");
+                }
+            }
         }
 
         public struct UserInformation
         {
-            public UserInformation(IEnumerable<Claim> claims, User user)
+            public UserInformation(IEnumerable<Claim> claims, JObject userObject)
             {
                 Claims = claims;
-                User = user;
+                UserObject = userObject;
             }
 
             public IEnumerable<Claim> Claims { get; }
-            public User User { get; }
+            public JObject UserObject { get; }
 
-            public void Deconstruct(out IEnumerable<Claim> claims, out User user)
+            public void Deconstruct(out IEnumerable<Claim> claims, out JObject user)
             {
                 claims = Claims;
-                user = User;
+                user = UserObject;
             }
         }
     }

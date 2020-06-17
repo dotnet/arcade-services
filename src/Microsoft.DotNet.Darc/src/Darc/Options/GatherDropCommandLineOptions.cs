@@ -26,7 +26,7 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("max-downloads", Default = 4, HelpText = "Maximum concurrent downloads.")]
         public int MaxConcurrentDownloads { get; set; }
 
-        [Option("download-timeout", Default = 180, HelpText = "Timeout in seconds for downloading each asset.")]
+        [Option("download-timeout", Default = 30, HelpText = "Timeout in seconds for downloading each asset.")]
         public int AssetDownloadTimeoutInSeconds { get; set; }
 
         [Option('f', "full", HelpText = "Gather the full drop (build and all input builds).")]

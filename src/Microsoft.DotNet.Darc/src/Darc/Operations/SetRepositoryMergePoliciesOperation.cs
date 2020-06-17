@@ -125,9 +125,9 @@ namespace Microsoft.DotNet.Darc.Operations
             }
 
             IRemote verifyRemote = RemoteFactory.GetRemote(_options, repository, Logger);
-            IEnumerable<RepositoryBranch> targetRepository = await verifyRemote.GetRepositoriesAsync(repository);
+            var targetRepository = await verifyRemote.GetRepositoriesAsync(repository);
 
-            if (targetRepository == null || !targetRepository.Any())
+            if (targetRepository.IsNullOrEmpty())
             {
                 Console.WriteLine($"The target repository '{repository}' doesn't have a Maestro installation. Aborting merge policy creation.");
                 return Constants.ErrorCode;

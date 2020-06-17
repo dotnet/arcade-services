@@ -24,18 +24,18 @@ namespace DotNet.Status.Web.Controllers
     [Route("api/azp")]
     public class AzurePipelinesController : ControllerBase
     {
-        private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
+        private readonly IGitHubClientFactory _gitHubClientFactory;
         private readonly IOptions<BuildMonitorOptions> _options;
         private readonly ILogger<AzurePipelinesController> _logger;
         private readonly Lazy<AzureDevOpsClient> _clientLazy;
         private readonly Lazy<Task<Dictionary<string, string>>> _projectMapping;
 
         public AzurePipelinesController(
-            IGitHubApplicationClientFactory gitHubApplicationClientFactory,
+            IGitHubClientFactory gitHubClientFactory,
             IOptions<BuildMonitorOptions> options,
             ILogger<AzurePipelinesController> logger)
         {
-            _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
+            _gitHubClientFactory = gitHubClientFactory;
             _options = options;
             _logger = logger;
             _clientLazy = new Lazy<AzureDevOpsClient>(BuildAzureDevOpsClient);
@@ -182,7 +182,7 @@ namespace DotNet.Status.Web.Controllers
                 string changesMessage = await BuildChangesMessage(build);
 
                 BuildMonitorOptions.IssuesOptions repo = _options.Value.Issues;
-                IGitHubClient github = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(repo.Owner, repo.Name);
+                IGitHubClient github = await _gitHubClientFactory.CreateGitHubClientAsync(repo.Owner, repo.Name);
                 
                 DateTimeOffset? finishTime = DateTimeOffset.TryParse(build.FinishTime, out var parsedFinishTime) ?parsedFinishTime: (DateTimeOffset?) null;
                 DateTimeOffset? startTime = DateTimeOffset.TryParse(build.StartTime, out var parsedStartTime) ? parsedStartTime:(DateTimeOffset?) null;

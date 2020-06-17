@@ -5,12 +5,11 @@
 using System;
 using Maestro.Contracts;
 using Maestro.Data;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Data;
 using Moq;
@@ -21,7 +20,7 @@ namespace DependencyUpdater.Tests
     public class DependencyUpdaterTests : IDisposable
     {
         private readonly Lazy<BuildAssetRegistryContext> _context;
-        protected readonly Mock<IHostEnvironment> Env;
+        protected readonly Mock<IHostingEnvironment> Env;
         protected readonly ServiceProvider Provider;
         protected readonly IServiceScope Scope;
         protected readonly MockReliableStateManager StateManager;
@@ -34,16 +33,12 @@ namespace DependencyUpdater.Tests
             StateManager = new MockReliableStateManager();
             SubscriptionActor = new Mock<ISubscriptionActor>(MockBehavior.Strict);
             RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
-            Env = new Mock<IHostEnvironment>(MockBehavior.Strict);
+            Env = new Mock<IHostingEnvironment>(MockBehavior.Strict);
             services.AddSingleton(Env.Object);
             services.AddSingleton<IReliableStateManager>(StateManager);
             services.AddLogging();
             services.AddDbContext<BuildAssetRegistryContext>(
-                options =>
-                {
-                    options.UseInMemoryDatabase("BuildAssetRegistry");
-                    options.EnableServiceProviderCaching(false);
-                });
+                options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
             var proxyFactory = new Mock<IActorProxyFactory<ISubscriptionActor>>();
             proxyFactory.Setup(l => l.Lookup(It.IsAny<ActorId>()))
                 .Returns((ActorId id) =>
@@ -53,7 +48,6 @@ namespace DependencyUpdater.Tests
                 });
             services.AddSingleton(proxyFactory.Object);
             services.AddSingleton(RemoteFactory.Object);
-            services.AddOperationTracking(o => { });
             Provider = services.BuildServiceProvider();
             Scope = Provider.CreateScope();
 

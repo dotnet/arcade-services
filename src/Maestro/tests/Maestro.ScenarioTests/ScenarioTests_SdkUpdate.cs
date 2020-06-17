@@ -10,7 +10,6 @@ using Octokit;
 namespace Maestro.ScenarioTests
 {
     [TestFixture]
-    [Category("ScenarioTest")]
     public class ScenarioTests_SdkUpdate : MaestroScenarioTestBase
     {
         private TestParameters _parameters;

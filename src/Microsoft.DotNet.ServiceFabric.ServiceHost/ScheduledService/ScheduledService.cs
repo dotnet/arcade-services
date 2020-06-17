@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Internal.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
@@ -18,8 +17,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
     internal class ScheduledService<TService>
     {
-        private readonly OperationManager _operations;
         private readonly ILogger<ScheduledService<TService>> _logger;
+        private readonly IServiceScopeFactory _scopeFactory;
 
         public static async Task RunScheduleAsync(ServiceProvider container, CancellationToken cancellationToken)
         {
@@ -28,12 +27,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             await scheduler.RunAsync(cancellationToken);
         }
 
-        public ScheduledService(
-            OperationManager operations,
-            ILogger<ScheduledService<TService>> logger)
+        public ScheduledService(ILogger<ScheduledService<TService>> logger, IServiceScopeFactory scopeFactory)
         {
-            _operations = operations;
             _logger = logger;
+            _scopeFactory = scopeFactory;
         }
 
         private IEnumerable<(IJobDetail job, ITrigger trigger)> GetCronJobs(CancellationToken cancellationToken)
@@ -102,23 +99,26 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         private async Task InvokeMethodAsync(MethodInfo method, CancellationToken cancellationToken)
         {
-            using (Operation op = _operations.BeginOperation("Invoking scheduled method {scheduledMethod}", method.ToString()))
+            using (_logger.BeginScope("Invoking scheduled method {scheduledMethod}", method.ToString()))
             {
                 try
                 {
-                    var impl = op.ServiceProvider.GetService<TService>();
-                    var parameters = method.GetParameters();
-                    Task result;
-                    if (parameters.Length == 1 && parameters[0].ParameterType == typeof(CancellationToken))
+                    using (IServiceScope scope = _scopeFactory.CreateScope())
                     {
-                        result = (Task) method.Invoke(impl, new object[] {cancellationToken})!;
-                    }
-                    else
-                    {
-                        result = (Task) method.Invoke(impl, Array.Empty<object>())!;
-                    }
+                        var impl = scope.ServiceProvider.GetService<TService>();
+                        var parameters = method.GetParameters();
+                        Task result;
+                        if (parameters.Length == 1 && parameters[0].ParameterType == typeof(CancellationToken))
+                        {
+                            result = (Task) method.Invoke(impl, new object[] {cancellationToken})!;
+                        }
+                        else
+                        {
+                            result = (Task) method.Invoke(impl, Array.Empty<object>())!;
+                        }
 
-                    await result;
+                        await result;
+                    }
                 }
                 catch (OperationCanceledException ocex) when (ocex.CancellationToken == cancellationToken)
                 {

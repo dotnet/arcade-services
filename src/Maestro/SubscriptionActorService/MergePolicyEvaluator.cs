@@ -9,20 +9,16 @@ using Maestro.Contracts;
 using Maestro.Data.Models;
 using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Internal.Logging;
 using Microsoft.Extensions.Logging;
 
 namespace SubscriptionActorService
 {
     public class MergePolicyEvaluator : IMergePolicyEvaluator
     {
-        private readonly OperationManager _operations;
-
-        public MergePolicyEvaluator(IEnumerable<MergePolicy> mergePolicies, OperationManager operations, ILogger<MergePolicyEvaluator> logger)
+        public MergePolicyEvaluator(IEnumerable<MergePolicy> mergePolicies, ILogger<MergePolicyEvaluator> logger)
         {
             MergePolicies = mergePolicies.ToImmutableDictionary(p => p.Name);
             Logger = logger;
-            _operations = operations;
         }
 
         public IImmutableDictionary<string, MergePolicy> MergePolicies { get; }
@@ -38,7 +34,7 @@ namespace SubscriptionActorService
             {
                 if (MergePolicies.TryGetValue(definition.Name, out MergePolicy policy))
                 {
-                    using (_operations.BeginOperation("Evaluating Merge Policy {policyName}", policy.Name))
+                    using (Logger.BeginScope("Evaluating Merge Policy {policyName}", policy.Name))
                     {
                         context.CurrentPolicy = policy;
                         await policy.EvaluateAsync(context, new MergePolicyProperties(definition.Properties));

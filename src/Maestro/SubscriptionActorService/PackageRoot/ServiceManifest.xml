@@ -34,7 +34,7 @@
     <EntryPoint>
       <ExeHost>
         <Program>SubscriptionActorService.exe</Program>
-        <ConsoleRedirection FileRetentionCount="5" FileMaxSizeInKb="2048" />
+        <ConsoleRedirection FileRetentionCount="5" FileMaxSizeInKb="2048"/>
       </ExeHost>
     </EntryPoint>
     <EnvironmentVariables>

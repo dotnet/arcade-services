@@ -43,7 +43,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         public virtual async Task<IActionResult> Create([FromBody, Required] Goal.GoalRequestJson goalData,[Required] String channelName , [Required] int definitionId)
         {
             Data.Models.Channel channel = await _context.Channels
-                .FirstOrDefaultAsync(c => c.Name == channelName);
+                .FirstOrDefaultAsync(c => c.Name.Equals(channelName));
             if (channel == null)
             {
                 return NotFound();
@@ -81,7 +81,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         public virtual async Task<IActionResult> GetGoalTimes([Required]int definitionId, [Required]string channelName)
         {
             Data.Models.Channel channel = await _context.Channels
-                .FirstOrDefaultAsync(c => c.Name == channelName);
+                .FirstOrDefaultAsync(c => c.Name.Equals(channelName));
             if (channel == null)
             {
                 return NotFound();

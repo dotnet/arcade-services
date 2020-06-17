@@ -6,17 +6,17 @@
     <Copyright>$(CopyrightNetFoundation)</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IsShipping>false</IsShipping>
-    <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
   </PropertyGroup>
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <!--
+      'NetFxTfm' is the standard desktop Target Framework Moniker which this repo's packages are targeting
+      ie.  Place 'NetFxTfm' in the 'TargetFramework' property of a csproj like <TargetFrameworks>$(NetFxTfm);netcoreapp2.0</TargetFrameworks>
+    -->
+    <NetFxTfm>net472</NetFxTfm>
     
     <NoWarn>$(NoWarn);NU5125</NoWarn>
 
     <LangVersion>8.0</LangVersion>
-
-    <EnableCentralPackageVersions>true</EnableCentralPackageVersions>
-    <CentralPackagesFile>$(MSBuildThisFileDirectory)eng/Packages.props</CentralPackagesFile>
   </PropertyGroup>
 </Project>

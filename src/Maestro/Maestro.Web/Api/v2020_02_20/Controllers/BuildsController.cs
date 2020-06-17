@@ -10,14 +10,15 @@ using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.ServiceFabric.Services.Remoting;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 
 namespace Maestro.Web.Api.v2020_02_20.Controllers
 {
@@ -28,14 +29,22 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
     [ApiVersion("2020-02-20")]
     public class BuildsController : v2019_01_16.Controllers.BuildsController
     {
+        public ILogger<BuildsController> Logger { get; }
+        private IRemoteFactory RemoteFactory { get; }
         private BackgroundQueue Queue { get; }
+        private IServiceScopeFactory ServiceScopeFactory { get; }
 
-        public BuildsController(
-            BuildAssetRegistryContext context,
-            BackgroundQueue queue)
+        public BuildsController(BuildAssetRegistryContext context,
+                                IRemoteFactory factory,
+                                IServiceScopeFactory serviceScopeFactory,
+                                BackgroundQueue queue,
+                                ILogger<BuildsController> logger)
             : base(context)
         {
+            RemoteFactory = factory;
+            ServiceScopeFactory = serviceScopeFactory;
             Queue = queue;
+            Logger = logger;
         }
 
         /// <summary>
@@ -234,13 +243,13 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                     // of the current build. If we find a match in the BuildDependencies table, it means
                     // that this is not a new dependency, and we should use the TimeToInclusionInMinutes
                     // of the previous time this dependency was added.
-                    var buildDependency = await _context.BuildDependencies.FirstOrDefaultAsync(d =>
-                        d.DependentBuildId == dep.BuildId &&
-                        d.Build.GitHubRepository == buildModel.GitHubRepository &&
-                        d.Build.GitHubBranch == buildModel.GitHubBranch &&
-                        d.Build.AzureDevOpsRepository == buildModel.AzureDevOpsRepository &&
-                        d.Build.AzureDevOpsBranch == buildModel.AzureDevOpsBranch
-                    );
+                    var buildDependency = _context.BuildDependencies.Where( d =>
+                            d.DependentBuildId == dep.BuildId &&
+                            d.Build.GitHubRepository == buildModel.GitHubRepository &&
+                            d.Build.GitHubBranch == buildModel.GitHubBranch &&
+                            d.Build.AzureDevOpsRepository == buildModel.AzureDevOpsRepository &&
+                            d.Build.AzureDevOpsBranch == buildModel.AzureDevOpsBranch
+                        ).FirstOrDefault();
 
                     if (buildDependency != null)
                     {
@@ -262,21 +271,19 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                         // date produced.
                         DateTimeOffset startTime = depBuild.DateProduced;
 
-                        Data.Models.Subscription subscription = await _context.Subscriptions.FirstOrDefaultAsync(s =>
-                            (s.SourceRepository == depBuild.GitHubRepository ||
-                                s.SourceRepository == depBuild.AzureDevOpsRepository) &&
-                            (s.TargetRepository == buildModel.GitHubRepository ||
-                                s.TargetRepository == buildModel.AzureDevOpsRepository) &&
-                            (s.TargetBranch == buildModel.GitHubBranch ||
-                                s.TargetBranch == buildModel.AzureDevOpsBranch));
+                        Data.Models.Subscription subscription = _context.Subscriptions.Where( s =>
+                            (s.SourceRepository == depBuild.GitHubRepository || s.SourceRepository == depBuild.AzureDevOpsRepository ) &&
+                            (s.TargetRepository == buildModel.GitHubRepository || s.TargetRepository == buildModel.AzureDevOpsRepository) &&
+                            (s.TargetBranch == buildModel.GitHubBranch || s.TargetBranch == buildModel.AzureDevOpsBranch)
+                        ).LastOrDefault();
 
                         
                         if (subscription != null)
                         {
-                            Data.Models.BuildChannel buildChannel = await _context.BuildChannels.FirstOrDefaultAsync(bc =>
+                            Data.Models.BuildChannel buildChannel = _context.BuildChannels.Where( bc =>
                                 bc.BuildId == depBuild.Id &&
                                 bc.ChannelId == subscription.ChannelId
-                            );
+                            ).LastOrDefault();
 
                             if (buildChannel != null)
                             {
@@ -301,7 +308,11 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
 
             // Compute the dependency incoherencies of the build.
             // Since this might be an expensive operation we do it asynchronously.
-            Queue.Post<BuildCoherencyInfoWorkItem>(JToken.FromObject(buildModel.Id));
+            Queue.Post(
+                async () =>
+                {
+                    await SetBuildIncoherencyInfoAsync(buildModel.Id);
+                });
 
             return CreatedAtRoute(
                 new
@@ -312,43 +323,35 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 new Models.Build(buildModel));
         }
 
-        private class BuildCoherencyInfoWorkItem : IBackgroundWorkItem
+        /// <summary>
+        /// This method is called asynchronously whenever a new build is inserted in BAR.
+        /// It's goal is to compute the incoherent dependencies that the build have and
+        /// persist the list of them in BAR.
+        /// </summary>
+        /// <param name="buildId">Build id for which the incoherencies should be computed.</param>
+        private async Task SetBuildIncoherencyInfoAsync(int buildId)
         {
-            private readonly BuildAssetRegistryContext _context;
-            private readonly IRemoteFactory _remoteFactory;
-            private readonly ILogger<BuildCoherencyInfoWorkItem> _logger;
-
-            public BuildCoherencyInfoWorkItem(BuildAssetRegistryContext context, IRemoteFactory remoteFactory, ILogger<BuildCoherencyInfoWorkItem> logger)
+            DependencyGraphBuildOptions graphBuildOptions = new DependencyGraphBuildOptions()
             {
-                _context = context;
-                _remoteFactory = remoteFactory;
-                _logger = logger;
-            }
+                IncludeToolset = false,
+                LookupBuilds = false,
+                NodeDiff = NodeDiff.None
+            };
 
-            public async Task ProcessAsync(JToken argumentToken)
+            try
             {
-                // This method is called asynchronously whenever a new build is inserted in BAR.
-                // It's goal is to compute the incoherent dependencies that the build have and
-                // persist the list of them in BAR.
-
-                int buildId = argumentToken.Value<int>();
-                DependencyGraphBuildOptions graphBuildOptions = new DependencyGraphBuildOptions()
+                using (IServiceScope scope = ServiceScopeFactory.CreateScope())
                 {
-                    IncludeToolset = false,
-                    LookupBuilds = false,
-                    NodeDiff = NodeDiff.None
-                };
+                    BuildAssetRegistryContext context = scope.ServiceProvider.GetRequiredService<BuildAssetRegistryContext>();
 
-                try
-                {
-                    Data.Models.Build build = await _context.Builds.FindAsync(buildId);
+                    Data.Models.Build build = await context.Builds.FindAsync(buildId);
 
                     DependencyGraph graph = await DependencyGraph.BuildRemoteDependencyGraphAsync(
-                        _remoteFactory,
+                        RemoteFactory,
                         build.GitHubRepository ?? build.AzureDevOpsRepository,
                         build.Commit,
                         graphBuildOptions,
-                        _logger);
+                        Logger);
 
                     var incoherencies = new List<Data.Models.BuildIncoherence>();
 
@@ -362,17 +365,16 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                             Commit = incoherence.Commit
                         });
                     }
-
-                    _context.Entry(build).Reload();
+                    context.Entry<Data.Models.Build>(build).Reload();
                     build.Incoherencies = incoherencies;
 
-                    _context.Builds.Update(build);
-                    await _context.SaveChangesAsync();
+                    context.Builds.Update(build);
+                    await context.SaveChangesAsync();
                 }
-                catch (Exception e)
-                {
-                    _logger.LogWarning(e, $"Problems computing the dependency incoherencies for BAR build {buildId}");
-                }
+            }
+            catch (Exception e)
+            {
+                Logger.LogWarning(e, $"Problems computing the dependency incoherencies for BAR build {buildId}");
             }
         }
     }

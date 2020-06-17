@@ -210,11 +210,6 @@ namespace DotNet.Status.Web.Controllers
                 issue.Labels.Add(label);
             }
 
-            foreach (string label in options.EnvironmentLabels.OrEmpty())
-            {
-                issue.Labels.Add(label);
-            }
-
             return issue;
         }
 
@@ -320,19 +315,12 @@ namespace DotNet.Status.Web.Controllers
         {
             string id = GetUniqueIdentifier(notification);
 
-            var searchedLabels = new List<string>
-            {
-                NotificationIdLabel
-            };
-
-            searchedLabels.AddRange(_githubOptions.Value.EnvironmentLabels.OrEmpty());
-
             string automationId = string.Format(BodyLabelTextFormat, id);
             var request = new SearchIssuesRequest(automationId)
             {
                 // We need to manually quote the label here, because of
                 // https://github.com/octokit/octokit.net/issues/2044
-                Labels = searchedLabels.Select(label => '"' + label + '"'),
+                Labels = new[] {'"' + NotificationIdLabel + '"'},
                 Order = SortDirection.Descending,
                 SortField = IssueSearchSort.Created,
                 Type = IssueTypeQualifier.Issue,
