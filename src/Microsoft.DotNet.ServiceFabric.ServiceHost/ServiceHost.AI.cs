@@ -13,7 +13,6 @@ using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.ApplicationInsights.Extensibility.PerfCounterCollector;
 using Microsoft.ApplicationInsights.ServiceFabric;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 {
@@ -24,6 +23,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             string envVar = Environment.GetEnvironmentVariable("APPLICATION_INSIGHTS_KEY");
             if (string.IsNullOrEmpty(envVar))
             {
+                // ReSharper disable once ImpureMethodCallOnReadonlyValueField
                 return Guid.Empty.ToString("D");
             }
 
@@ -73,15 +73,6 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
         private static void ConfigureApplicationInsights(IServiceCollection services)
         {
             services.AddApplicationInsightsTelemetry();
-            services.Configure<LoggerFilterOptions>(o =>
-            {
-                // This handler is added by 'AddApplicationInsightsTelemetry' above and hard limits
-                // and reporting below "warning", which basically kills all logging
-                // Remove it, we already configured the filters in Program.cs
-                o.Rules.Remove(o.Rules.FirstOrDefault(r =>
-                    r.ProviderName ==
-                    "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider"));
-            });
             RemoveImplementations(services, typeof(PerformanceCollectorModule));
             services.AddSingleton<ITelemetryModule>(
                 provider =>

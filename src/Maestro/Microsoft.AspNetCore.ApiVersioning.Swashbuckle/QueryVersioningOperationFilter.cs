@@ -5,8 +5,6 @@
 using System.Collections.Generic;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.ApiVersioning.Schemes;
-using Microsoft.OpenApi.Any;
-using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -22,29 +20,23 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
             _scheme = scheme;
         }
 
-        public void Apply(OpenApiOperation operation, OperationFilterContext context)
+        public void Apply(Operation operation, OperationFilterContext context)
         {
             string version = context.ApiDescription.ActionDescriptor.RouteValues["version"];
             if (operation.Parameters == null)
             {
-                operation.Parameters = new List<OpenApiParameter>();
+                operation.Parameters = new List<IParameter>();
             }
 
             operation.Parameters.Add(
-                new OpenApiParameter()
+                new NonBodyParameter
                 {
-                    In = ParameterLocation.Query,
+                    In = "query",
                     Name = _scheme.ParameterName,
                     Description = "The api version",
                     Required = true,
-                    Schema = new OpenApiSchema
-                    {
-                        Type = "string",
-                        Enum = new List<IOpenApiAny>
-                        {
-                            new OpenApiString(version),
-                        },
-                    },
+                    Type = "string",
+                    Enum = new object[] {version}
                 });
         }
     }

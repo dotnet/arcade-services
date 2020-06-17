@@ -37,6 +37,7 @@ steps:
   inputs:
     codeCoverageTool: Cobertura
     summaryFileLocation: '$(Build.SourcesDirectory)\CodeCoverage\Cobertura.xml'
+    reportDirectory: '$(Build.SourcesDirectory)\CodeCoverage'
     pathToSources: '$(Build.SourcesDirectory)'
     publishRunAttachments: true
 

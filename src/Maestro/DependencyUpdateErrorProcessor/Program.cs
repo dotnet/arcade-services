@@ -9,7 +9,6 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Octokit;
 
 namespace DependencyUpdateErrorProcessor
@@ -49,18 +48,10 @@ namespace DependencyUpdateErrorProcessor
                 (options, provider) =>
                 {
                     var config = provider.GetRequiredService<IConfiguration>();
-                    if (!bool.TryParse(config["EnableDependencyUpdateErrorProcessor"], out var errorProcessorFlag))
-                    {
-                        var logger = provider.GetRequiredService<ILoggerProvider>().CreateLogger(nameof(Program));
-                        // Logging statement is added to track the feature flag returns. 
-                        logger.LogError(
-                            $"Value of the dependency update error processor feature flag '{config["EnableDependencyUpdateErrorProcessor"]}'");
-                    }
-                    options.IsEnabled = errorProcessorFlag;
+                    options.IsEnabled = bool.Parse(config["EnableDependencyUpdateErrorProcessor"]);
                     options.GithubUrl = config["GithubUrl"];
                     options.FyiHandle = config["FyiHandle"];
                 });
-            services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         }
     }

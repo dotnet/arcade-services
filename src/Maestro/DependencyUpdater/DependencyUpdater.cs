@@ -12,7 +12,6 @@ using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -37,17 +36,13 @@ namespace DependencyUpdater
     /// </summary>
     public sealed class DependencyUpdater : IServiceImplementation, IDependencyUpdater
     {
-        private readonly OperationManager _operations;
-
         public DependencyUpdater(
             IReliableStateManager stateManager,
             ILogger<DependencyUpdater> logger,
             BuildAssetRegistryContext context,
             IRemoteFactory factory,
-            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory,
-            OperationManager operations)
+            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
         {
-            _operations = operations;
             StateManager = stateManager;
             Logger = logger;
             Context = context;
@@ -123,7 +118,7 @@ namespace DependencyUpdater
                     if (maybeItem.HasValue)
                     {
                         DependencyUpdateItem item = maybeItem.Value;
-                        using (_operations.BeginOperation(
+                        using (Logger.BeginScope(
                             "Processing dependency update for build {buildId} in channel {channelId}",
                             item.BuildId,
                             item.ChannelId))
@@ -182,7 +177,7 @@ namespace DependencyUpdater
 
         private async Task CheckSubscriptionsAsync(UpdateFrequency targetUpdateFrequency, CancellationToken cancellationToken)
         {
-            using (_operations.BeginOperation($"Updating {targetUpdateFrequency} subscriptions"))
+            using (Logger.BeginScope($"Updating {targetUpdateFrequency} subscriptions"))
             {
                 var subscriptionsToUpdate = from sub in Context.Subscriptions
                                             where sub.Enabled
@@ -215,7 +210,7 @@ namespace DependencyUpdater
         [CronSchedule("0 0 0 1/1 * ? *", TimeZones.PST)]
         public async Task UpdateLongestBuildPathAsync(CancellationToken cancellationToken)
         {
-            using (_operations.BeginOperation($"Updating Longest Build Path table"))
+            using (Logger.BeginScope($"Updating Longest Build Path table"))
             {
                 List<Channel> channels = Context.Channels.Select(c => new Channel() { Id = c.Id, Name = c.Name }).ToList();
 
@@ -296,7 +291,7 @@ namespace DependencyUpdater
 
         private async Task UpdateSubscriptionAsync(Guid subscriptionId, int buildId)
         {
-            using (_operations.BeginOperation(
+            using (Logger.BeginScope(
                 "Updating subscription '{subscriptionId}' with build '{buildId}'",
                 subscriptionId,
                 buildId))

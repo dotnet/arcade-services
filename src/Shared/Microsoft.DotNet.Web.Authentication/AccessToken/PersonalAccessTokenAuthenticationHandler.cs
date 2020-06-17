@@ -17,24 +17,6 @@ using Microsoft.Extensions.Options;
 
 namespace Microsoft.DotNet.Web.Authentication.AccessToken
 {
-    public static class PersonalAccessTokenUtilities
-    {
-        public static int TokenIdByteCount => sizeof(int);
-        public static int CalculateTokenSizeForPasswordSize(int passwordSize) => TokenIdByteCount + passwordSize;
-
-        public static string EncodeToken(int tokenId, byte[] password)
-        {
-            byte[] tokenIdBytes = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(tokenId));
-            byte[] outputBytes = tokenIdBytes.Concat(password).ToArray();
-            return WebEncoders.Base64UrlEncode(outputBytes);
-        }
-
-        public static string EncodePasswordBytes(byte[] passwordBytes)
-        {
-            return WebEncoders.Base64UrlEncode(passwordBytes);
-        }
-    }
-
     public class PersonalAccessTokenAuthenticationHandler<TUser> :
         AuthenticationHandler<PersonalAccessTokenAuthenticationOptions<TUser>> where TUser : class
     {
@@ -59,7 +41,9 @@ namespace Microsoft.DotNet.Web.Authentication.AccessToken
             set => base.Events = value;
         }
 
-        public int TokenByteCount => PersonalAccessTokenUtilities.CalculateTokenSizeForPasswordSize(Options.PasswordSize);
+        public int TokenIdByteCount => sizeof(int);
+
+        public int TokenByteCount => TokenIdByteCount + Options.PasswordSize;
 
         protected override Task<object> CreateEventsAsync()
         {
@@ -77,6 +61,13 @@ namespace Microsoft.DotNet.Web.Authentication.AccessToken
             return bytes;
         }
 
+        private string EncodeToken(int tokenId, byte[] password)
+        {
+            byte[] tokenIdBytes = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(tokenId));
+            byte[] outputBytes = tokenIdBytes.Concat(password).ToArray();
+            return WebEncoders.Base64UrlEncode(outputBytes);
+        }
+
         private (int tokenId, string password)? DecodeToken(string input)
         {
             byte[] tokenBytes = WebEncoders.Base64UrlDecode(input);
@@ -86,18 +77,18 @@ namespace Microsoft.DotNet.Web.Authentication.AccessToken
             }
 
             int tokenId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(tokenBytes, 0));
-            string password = WebEncoders.Base64UrlEncode(tokenBytes, PersonalAccessTokenUtilities.TokenIdByteCount, Options.PasswordSize);
+            string password = WebEncoders.Base64UrlEncode(tokenBytes, TokenIdByteCount, Options.PasswordSize);
             return (tokenId, password);
         }
 
         public async Task<(int id, string value)> CreateToken(TUser user, string name)
         {
             byte[] passwordBytes = GeneratePassword();
-            string password = PersonalAccessTokenUtilities.EncodePasswordBytes(passwordBytes);
+            string password = WebEncoders.Base64UrlEncode(passwordBytes);
             string hash = PasswordHasher.HashPassword(user, password);
             var context = new SetTokenHashContext<TUser>(Context, user, name, hash);
             int tokenId = await Events.SetTokenHash(context);
-            return (tokenId, PersonalAccessTokenUtilities.EncodeToken(tokenId, passwordBytes));
+            return (tokenId, EncodeToken(tokenId, passwordBytes));
         }
 
         public async Task<TUser> VerifyToken(string token)

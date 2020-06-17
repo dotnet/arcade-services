@@ -7,7 +7,6 @@ using JetBrains.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Microsoft.DotNet.EntityFrameworkCore.Extensions
 {
@@ -35,15 +34,21 @@ namespace Microsoft.DotNet.EntityFrameworkCore.Extensions
             historyBuilder.Property<DateTime>("SysStartTime").HasColumnType("datetime2").ValueGeneratedOnAddOrUpdate();
             historyBuilder.Property<DateTime>("SysEndTime").HasColumnType("datetime2").ValueGeneratedOnAddOrUpdate();
 
-            historyBuilder.HasIndex("SysEndTime", "SysStartTime").IsClustered();
+            historyBuilder.HasIndex("SysEndTime", "SysStartTime").ForSqlServerIsClustered();
 
             return modelBuilder;
         }
 
+        public static IndexBuilder ForSqlServerIsColumnstore([NotNull] this IndexBuilder indexBuilder)
+        {
+            indexBuilder.Metadata.SetAnnotation(DotNetExtensionsAnnotationNames.Columnstore, true);
+            return indexBuilder;
+        }
+
         public static DbContextOptionsBuilder AddDotNetExtensions(this DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.ReplaceService<IMigrationsAnnotationProvider, SystemVersionedSqlServerMigrationsAnnotationProvider>();
-            optionsBuilder.ReplaceService<IMigrationsSqlGenerator, SystemVersionedSqlServerMigrationsSqlGenerator>();
+            ((IDbContextOptionsBuilderInfrastructure) optionsBuilder).AddOrUpdateExtension(
+                new DotNetEntityFrameworkExtension());
             return optionsBuilder;
         }
     }

@@ -4,7 +4,6 @@ using NUnit.Framework;
 namespace Maestro.ScenarioTests
 {
     [TestFixture]
-    [Category("ScenarioTest")]
     public class ScenarioTests_Channels : MaestroScenarioTestBase
     {
         private TestParameters _parameters;

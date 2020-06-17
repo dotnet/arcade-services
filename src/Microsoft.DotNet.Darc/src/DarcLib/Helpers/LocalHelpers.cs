@@ -203,13 +203,14 @@ namespace Microsoft.DotNet.DarcLib.Helpers
         private static void ExecuteGitCommand(string gitLocation, string arguments, ILogger logger, string workingDirectory, string secretToMask = null)
         {
             string maskedArguments = secretToMask == null ? arguments : arguments.Replace(secretToMask, "***");
-            logger.LogInformation("Executing command git {maskedArguments} in {workingDirectory}...", maskedArguments, workingDirectory);
-            string result = ExecuteCommand(gitLocation, arguments, logger, workingDirectory);
-
-            if (result == null)
+            using (logger.BeginScope("Executing command git {maskedArguments} in {workingDirectory}...", maskedArguments, workingDirectory))
             {
-                throw new DarcException(
-                    $"Something failed when executing command git {maskedArguments} in {workingDirectory}");
+                string result = ExecuteCommand(gitLocation, arguments, logger, workingDirectory);
+
+                if (result == null)
+                {
+                    throw new DarcException($"Something failed when executing command git {maskedArguments} in {workingDirectory}");
+                }
             }
         }
     }

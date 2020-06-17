@@ -11,7 +11,6 @@ using Microsoft.EntityFrameworkCore.SqlServer.Migrations.Internal;
 
 namespace Microsoft.DotNet.EntityFrameworkCore.Extensions
 {
-    #pragma warning disable EF1001
     public class SystemVersionedSqlServerMigrationsAnnotationProvider : SqlServerMigrationsAnnotationProvider
     {
         public SystemVersionedSqlServerMigrationsAnnotationProvider(

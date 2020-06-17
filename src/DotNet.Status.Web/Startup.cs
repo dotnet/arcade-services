@@ -7,12 +7,12 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Claims;
 using System.Threading.Tasks;
+using DotNet.Status.Web.Controllers;
 using DotNet.Status.Web.Options;
-using Kusto.Ingest;
+using GitHubJwt;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.KeyVault;
@@ -26,20 +26,19 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Octokit;
 
 namespace DotNet.Status.Web
 {
     public class Startup
     {
-        public Startup(IConfiguration configuration, IWebHostEnvironment env)
+        public Startup(IConfiguration configuration, IHostingEnvironment env)
         {
             Configuration = configuration;
             Env = env;
         }
         
-        public IWebHostEnvironment Env { get; }
+        public IHostingEnvironment Env { get; }
         public IConfiguration Configuration { get; }
 
         public const string GitHubScheme = "github";
@@ -80,7 +79,6 @@ namespace DotNet.Status.Web
             services.Configure<GitHubTokenProviderOptions>(Configuration.GetSection("GitHubAppAuth").Bind);
             services.Configure<ZenHubOptions>(Configuration.GetSection("ZenHub").Bind);
             services.Configure<BuildMonitorOptions>(Configuration.GetSection("BuildMonitor").Bind);
-            services.Configure<KustoOptions>(Configuration.GetSection("Kusto").Bind);
 
             services.Configure<SimpleSigninOptions>(o => { o.ChallengeScheme = GitHubScheme; });
             services.ConfigureExternalCookie(options =>
@@ -125,19 +123,16 @@ namespace DotNet.Status.Web
 
         private void AddServices(IServiceCollection services)
         {
-            services.AddRazorPages(o =>
-                {
+            services.AddMvc()
+                .WithRazorPagesRoot("/Pages")
+                .AddRazorPagesOptions(o =>
                     o.Conventions
                         .AuthorizeFolder("/", MsftAuthorizationPolicyName)
                         .AllowAnonymousToPage("/Index")
                         .AllowAnonymousToPage("/Status")
-                        .AllowAnonymousToPage("/Error");
-                    o.RootDirectory = "/Pages";
-                });
-
-            services.AddControllers()
+                        .AllowAnonymousToPage("/Error")
+                    )
                 .AddGitHubWebHooks();
-
             services.AddApplicationInsightsTelemetry(Configuration.GetSection("ApplicationInsights").Bind);
             services.Configure<LoggerFilterOptions>(o =>
             {
@@ -149,17 +144,7 @@ namespace DotNet.Status.Web
                     "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider"));
             });
 
-            services.AddAuthentication("contextual")
-                .AddPolicyScheme("contextual", "Contextual Scheme",
-                    o => { o.ForwardDefaultSelector = context =>
-                    {
-                        if (context.Request.Path.StartsWithSegments("/api"))
-                        {
-                            return "github-token";
-                        }
-
-                        return IdentityConstants.ApplicationScheme;
-                    }; })
+            services.AddAuthentication()
                 .AddGitHubOAuth(Configuration.GetSection("GitHubAuthentication"), GitHubScheme)
                 .AddScheme<UserTokenOptions, GitHubUserTokenHandler>("github-token", o => { })
                 .AddCookie(IdentityConstants.ApplicationScheme,
@@ -179,7 +164,7 @@ namespace DotNet.Status.Web
                                     ctx.HttpContext.RequestServices.GetRequiredService<GitHubClaimResolver>();
                                 ClaimsIdentity identity = ctx.Principal.Identities.FirstOrDefault();
                                 identity?.AddClaims(await resolver.GetMembershipClaims(resolver.GetAccessToken(ctx.Principal)));
-                            },
+                            }
                         };
                     })
                 .AddExternalCookie()
@@ -195,18 +180,20 @@ namespace DotNet.Status.Web
                             policy.RequireAuthenticatedUser();
                             if (!Env.IsDevelopment())
                             {
-                                policy.RequireRole(GitHubClaimResolver.GetTeamRole("dotnet","dnceng"), GitHubClaimResolver.GetTeamRole("dotnet","bots-high"));
+                                policy.RequireRole("github:team:dotnet:dnceng", "github:team:dotnet:bots-high");
                             }
                         });
                 });
-            services.AddKustoIngest(options => Configuration.GetSection("Kusto").Bind(options));
 
             services.AddScoped<SimpleSigninMiddleware>();
             services.AddGitHubTokenProvider();
             services.AddSingleton<IInstallationLookup, InMemoryCacheInstallationLookup>();
+            services.AddContextAwareAuthenticationScheme(o =>
+            {
+                o.SelectScheme = p => p.StartsWithSegments("/api") ? "github-token" : IdentityConstants.ApplicationScheme;
+            });
 
             services.AddSingleton<ZenHubClient>();
-            services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         }
 
@@ -226,15 +213,9 @@ namespace DotNet.Status.Web
             }
             
             app.UseAuthentication();
-            app.UseRouting();
-            app.UseAuthorization();
-            app.UseEndpoints(e =>
-            {
-                e.MapRazorPages();
-                e.MapControllers();
-            });
-            app.UseStaticFiles();
+            app.UseMvc();
             app.UseMiddleware<SimpleSigninMiddleware>();
+            app.UseStaticFiles();
         }
     }
 }

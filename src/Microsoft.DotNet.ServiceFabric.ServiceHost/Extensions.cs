@@ -18,7 +18,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             if (!cancellationToken.CanBeCanceled)
             {
                 return Task.FromException(
-                    new ArgumentException("The passed in CancellationToken cannot be canceled", nameof(cancellationToken)));
+                    new InvalidOperationException("The passed in CancellationToken cannot be canceled"));
             }
 
             if (cancellationToken.IsCancellationRequested)

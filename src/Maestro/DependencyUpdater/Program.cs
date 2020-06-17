@@ -15,7 +15,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
-using Microsoft.DotNet.Internal.Logging;
 
 namespace DependencyUpdater
 {
@@ -76,7 +75,7 @@ namespace DependencyUpdater
             // in such a way that will work with sizing.
             services.AddSingleton<DarcRemoteMemoryCache>();
 
-            services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
+            services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
             services.AddKustoClientProvider((provider, options) =>
             {
                 var config = provider.GetRequiredService<IConfiguration>();

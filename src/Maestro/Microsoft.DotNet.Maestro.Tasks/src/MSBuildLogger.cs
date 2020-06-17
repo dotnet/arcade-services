@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Build.Framework;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions.Internal;
 
 namespace Microsoft.DotNet.Maestro.Tasks
 {
@@ -47,23 +48,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
         public IDisposable BeginScope<TState>(TState state)
         {
             return NullScope.Instance;
-        }
-    }
-
-    /// <summary>
-    /// An empty scope without any logic
-    /// </summary>
-    internal class NullScope : IDisposable
-    {
-        public static NullScope Instance { get; } = new NullScope();
-
-        private NullScope()
-        {
-        }
-
-        /// <inheritdoc />
-        public void Dispose()
-        {
         }
     }
 }

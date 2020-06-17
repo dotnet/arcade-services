@@ -6,50 +6,33 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Internal.Logging;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Maestro.Web
 {
-    public interface IBackgroundWorkItem
-    {
-        Task ProcessAsync(JToken argumentToken);
-    }
-
     public class BackgroundQueue : BackgroundService
     {
-        private readonly BlockingCollection<(Type type, JToken args)> _workItems = new BlockingCollection<(Type type, JToken args)>();
-        private readonly OperationManager _operations;
+        private readonly BlockingCollection<Func<Task>> _workItems = new BlockingCollection<Func<Task>>();
 
-        public BackgroundQueue(OperationManager operations, ILogger<BackgroundQueue> logger)
+        public BackgroundQueue(ILogger<BackgroundQueue> logger)
         {
             Logger = logger;
-            _operations = operations;
         }
 
         public ILogger<BackgroundQueue> Logger { get; }
 
-        public void Post<T>() where T : IBackgroundWorkItem
+        public void Post(Func<Task> workItem)
         {
-            Post<T>("");
-        }
-
-        public void Post<T>(JToken args) where T : IBackgroundWorkItem
-        {
-            Logger.LogInformation(
-                $"Posted work to BackgroundQueue: {typeof(T).Name}.ProcessAsync({args.ToString(Formatting.None)})");
-            _workItems.Add((typeof(T), args));
+            Logger.LogInformation($"Posted work to BackgroundQueue: {workItem}");
+            _workItems.Add(workItem);
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             // Get off the synchronous chain from WebHost.Start
             await Task.Yield();
-            using (_operations.BeginOperation("Processing Background Queue"))
+            using (Logger.BeginScope("Processing Background Queue"))
             {
                 while (true)
                 {
@@ -62,14 +45,14 @@ namespace Maestro.Web
                                 _workItems.CompleteAdding();
                             }
 
-                            if (_workItems.TryTake(out (Type type, JToken args) item, 1000))
+                            _workItems.TryTake(out Func<Task> item, 1000);
+                            if (item != null)
                             {
-                                using (Operation op = _operations.BeginOperation("Executing background work: {item} ({args})", item.type.Name, item.args.ToString(Formatting.None)))
+                                using (Logger.BeginScope("Executing background work: {item}", item.ToString()))
                                 {
                                     try
                                     {
-                                        var instance = (IBackgroundWorkItem) ActivatorUtilities.CreateInstance(op.ServiceProvider, item.type);
-                                        await instance.ProcessAsync(item.args);
+                                        await item();
                                     }
                                     catch (Exception ex)
                                     {
