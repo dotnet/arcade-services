@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OAuth;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Octokit;
+using Newtonsoft.Json.Linq;
 
 namespace Microsoft.DotNet.Web.Authentication.GitHub
 {
@@ -34,9 +34,8 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
             OAuthTokenResponse tokens)
         {
             string accessToken = tokens.AccessToken;
-            (IEnumerable<Claim> claims, User user) = await _claimResolver.GetUserInformation(accessToken, Context.RequestAborted);
+            (IEnumerable<Claim> claims, JObject user) = await _claimResolver.GetUserInformation(accessToken, Context.RequestAborted);
             identity.AddClaims(claims);
-
             var context = new OAuthCreatingTicketContext(
                 new ClaimsPrincipal(identity),
                 properties,
@@ -45,7 +44,7 @@ namespace Microsoft.DotNet.Web.Authentication.GitHub
                 Options,
                 Backchannel,
                 tokens,
-                default);
+                user);
             await Options.Events.CreatingTicket(context);
             return new AuthenticationTicket(context.Principal, context.Properties, context.Scheme.Name);
         }

@@ -20,7 +20,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1591904237245,
+  "iteration": 1586883704387,
   "links": [
     {
       "icon": "external link",
@@ -969,7 +969,7 @@
             "dimension": "none",
             "metricName": "select",
             "rawQuery": true,
-            "rawQueryString": "// Query QueueReport and QueueReportTest because of the issue https://github.com/dotnet/core-eng/issues/10044\n// Until this can be fixed by https://github.com/dotnet/core-eng/issues/10051\ncustomEvents\n| where name == \"QueueReport\" or name == \"QueueReportTest\" \n| where $__timeFilter(timestamp)\n| extend queue = tostring(customDimensions[\"Queue\"])\n| where queue !contains \"xaml\" and queue !contains \"arcade\"\n| extend deployment = tostring(customDimensions[\"Deployment\"])\n| extend machines = todouble(customMeasurements[\"Online\"]) + todouble(customMeasurements[\"Offline\"]) + todouble(customMeasurements[\"Busy\"]) + todouble(customMeasurements[\"Initializing\"]) \n| extend online = todouble(customMeasurements[\"Online\"])\n| where deployment == \"ScaleSet\"\n| summarize max(machines) by bin(timestamp, 2m), queue\n| extend cores = iif(queue contains \"buildpool\", 4, 2)\n| summarize sum_core = sum(cores * max_machines) by bin(timestamp, 2m)\n| summarize cores=max(sum_core) by bin(timestamp, $__interval)\n| order by timestamp asc",
+            "rawQueryString": "customEvents\n| where name == \"QueueReport\" \n| where $__timeFilter(timestamp)\n| extend queue = tostring(customDimensions[\"Queue\"])\n| where queue !contains \"xaml\" and queue !contains \"arcade\"\n| extend deployment = tostring(customDimensions[\"Deployment\"])\n| extend machines = todouble(customMeasurements[\"Online\"]) + todouble(customMeasurements[\"Offline\"]) + todouble(customMeasurements[\"Busy\"]) + todouble(customMeasurements[\"Initializing\"]) \n| extend online = todouble(customMeasurements[\"Online\"])\n| where deployment == \"ScaleSet\"\n| summarize max(machines) by bin(timestamp, 2m), queue\n| extend cores = iif(queue contains \"buildpool\", 4, 2)\n| summarize sum_core = sum(cores * max_machines) by bin(timestamp, 2m)\n| summarize cores=max(sum_core) by bin(timestamp, $__interval)\n| order by timestamp asc",
             "timeColumn": "timestamp",
             "timeGrain": "auto",
             "valueColumn": "cores"

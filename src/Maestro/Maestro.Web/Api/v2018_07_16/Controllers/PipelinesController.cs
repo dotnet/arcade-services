@@ -4,12 +4,15 @@
 
 using Maestro.Data;
 using Microsoft.AspNetCore.ApiVersioning;
-using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using ReleasePipeline = Maestro.Web.Api.v2018_07_16.Models.ReleasePipeline;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
@@ -39,7 +42,25 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [ValidateModelState]
         public virtual IActionResult List(int? pipelineIdentifier = null, string organization = null, string project = null)
         {
-            return Ok(new List<ReleasePipeline>());
+            IQueryable<Data.Models.ReleasePipeline> query = _context.ReleasePipelines;
+
+            if (pipelineIdentifier != null)
+            {
+                query = query.Where(p => p.PipelineIdentifier == pipelineIdentifier);
+            }
+
+            if (!string.IsNullOrEmpty(organization))
+            {
+                query = query.Where(p => p.Organization == organization);
+            }
+
+            if (!string.IsNullOrEmpty(project))
+            {
+                query = query.Where(p => p.Project == project);
+            }
+
+            List<ReleasePipeline> results = query.AsEnumerable().Select(c => new ReleasePipeline(c)).ToList();
+            return Ok(results);
         }
 
         /// <summary>
@@ -51,7 +72,14 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [ValidateModelState]
         public virtual async Task<IActionResult> GetPipeline(int id)
         {
-            return await Task.FromResult(NotFound());
+            Data.Models.ReleasePipeline pipeline = await _context.ReleasePipelines.Where(c => c.Id == id).FirstOrDefaultAsync();
+
+            if (pipeline == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(new ReleasePipeline(pipeline));
         }
 
         /// <summary>
@@ -63,7 +91,25 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [ValidateModelState]
         public virtual async Task<IActionResult> DeletePipeline(int id)
         {
-            return await Task.FromResult(StatusCode((int)HttpStatusCode.NotModified));
+            bool isPipelineInUse = await _context.ChannelReleasePipelines.AnyAsync(crp => crp.ReleasePipelineId == id);
+
+            if (isPipelineInUse)
+            {
+                return BadRequest(new ApiError($"The pipeline with id '{id}' is in use and cannot be deleted."));
+            }
+
+            Data.Models.ReleasePipeline pipeline = await _context.ReleasePipelines
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            if (pipeline == null)
+            {
+                return NotFound();
+            }
+
+            _context.ReleasePipelines.Remove(pipeline);
+
+            await _context.SaveChangesAsync();
+            return Ok(new ReleasePipeline(pipeline));
         }
 
         /// <summary>
@@ -74,9 +120,36 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         /// <param name="project">The Azure DevOps project</param>
         [HttpPost]
         [SwaggerApiResponse(HttpStatusCode.Created, Type = typeof(ReleasePipeline), Description = "ReleasePipeline successfully created")]
-        public async virtual Task<IActionResult> CreatePipeline([Required] int pipelineIdentifier, [Required] string organization, [Required] string project)
+        public virtual async Task<IActionResult> CreatePipeline([Required] int pipelineIdentifier, [Required] string organization, [Required] string project)
         {
-            return await Task.FromResult(StatusCode((int)HttpStatusCode.NotModified));
+            Data.Models.ReleasePipeline pipeline = await _context.ReleasePipelines
+                .FirstOrDefaultAsync(rp => 
+                    rp.PipelineIdentifier == pipelineIdentifier && 
+                    rp.Organization.Equals(organization, StringComparison.OrdinalIgnoreCase) && 
+                    rp.Project.Equals(project, StringComparison.OrdinalIgnoreCase)
+                );
+
+            // If an release pipeline with same values already exist then do nothing
+            if (pipeline != null)
+            {
+                return StatusCode((int)HttpStatusCode.NotModified);
+            }
+
+            var pipelineModel = new Data.Models.ReleasePipeline
+            {
+                PipelineIdentifier = pipelineIdentifier,
+                Organization = organization,
+                Project = project
+            };
+            await _context.ReleasePipelines.AddAsync(pipelineModel);
+            await _context.SaveChangesAsync();
+            return CreatedAtRoute(
+                new
+                {
+                    action = "GetPipeline",
+                    id = pipelineModel.Id
+                },
+                new ReleasePipeline(pipelineModel));
         }
     }
 }

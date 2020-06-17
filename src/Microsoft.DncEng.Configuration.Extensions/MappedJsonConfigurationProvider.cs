@@ -8,6 +8,11 @@ using Microsoft.Extensions.Configuration.Json;
 namespace Microsoft.DncEng.Configuration.Extensions
 {
     public class MappedJsonConfigurationProvider : JsonConfigurationProvider
+#if NETCOREAPP2_1
+        , IDisposable
+#elif NETSTANDARD
+#error This project cannot be built with netstandard, please build it for netcoreapp* or net*
+#endif
     {
         private readonly Func<string, string> _mapFunc;
         private readonly Timer _timer;
@@ -37,6 +42,12 @@ namespace Microsoft.DncEng.Configuration.Extensions
             OnReload();
         }
 
+#if NETCOREAPP2_1
+        public void Dispose()
+        {
+            _timer.Dispose();
+        }
+#else
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -45,5 +56,6 @@ namespace Microsoft.DncEng.Configuration.Extensions
             }
             base.Dispose(disposing);
         }
+#endif
     }
 }

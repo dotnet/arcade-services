@@ -22,5 +22,6 @@ namespace Maestro.Data.Models
 
         public List<BuildChannel> BuildChannels { get; set; }
         public List<DefaultChannel> DefaultChannels { get; set; }
+        public List<ChannelReleasePipeline> ChannelReleasePipelines { get; set; }
     }
 }

@@ -56,73 +56,78 @@ namespace Microsoft.DotNet.DarcLib
             string repoUri,
             string branch,
             string commitMessage,
-            ILogger logger,
+            ILogger _logger,
             string pat,
             string dotnetMaestroName,
             string dotnetMaestroEmail)
         {
-            logger.LogInformation("Pushing files to {branch}", branch);
-            string tempRepoFolder = Path.Combine(TemporaryRepositoryPath, Path.GetRandomFileName());
-            string remote = "origin";
-            try
+            using (_logger.BeginScope("Pushing files to {branch}", branch))
             {
-                string clonedRepo = null;
+                string tempRepoFolder = Path.Combine(TemporaryRepositoryPath, Path.GetRandomFileName());
+                string remote = "origin";
 
-                logger.LogInformation("Sparse and shallow checkout of branch {branch} in {repoUri}...", branch, repoUri);
-                clonedRepo = LocalHelpers.SparseAndShallowCheckout(GitExecutable, repoUri, branch, tempRepoFolder, logger, remote, dotnetMaestroName, dotnetMaestroEmail, pat);
-
-                foreach (GitFile file in filesToCommit)
-                {
-                    string filePath = Path.Combine(clonedRepo, file.FilePath);
-
-                    if (file.Operation == GitFileOperation.Add)
-                    {
-                        if (!File.Exists(filePath))
-                        {
-                            string parentFolder = Directory.GetParent(filePath).FullName;
-
-                            Directory.CreateDirectory(parentFolder);
-                        }
-
-                        using (FileStream stream = File.Create(filePath))
-                        {
-                            byte[] contentBytes = GetUtf8ContentBytes(file.Content, file.ContentEncoding);
-                            await stream.WriteAsync(contentBytes, 0, contentBytes.Length);
-                        }
-                    }
-                    else if (file.Operation == GitFileOperation.Delete)
-                    {
-                        File.Delete(filePath);
-                    }
-
-                    LocalHelpers.ExecuteCommand(GitExecutable, $"add {filePath}", logger, clonedRepo);
-                }
-
-                LocalHelpers.ExecuteCommand(GitExecutable, $"commit -m \"{commitMessage}\"", logger, clonedRepo);
-                LocalHelpers.ExecuteCommand(GitExecutable, $"-c core.askpass= -c credential.helper= push {remote} {branch}", logger, clonedRepo);
-            }
-            catch (Exception exc)
-            {
-                // This was originally a DarcException. Making it an actual Exception so we get to see in AppInsights if something failed while
-                // commiting the changes
-                throw new Exception($"Something went wrong when pushing the files to repo {repoUri} in branch {branch}", exc);
-            }
-            finally
-            {
                 try
                 {
-                    // .git/objects hierarchy are marked as read-only so we need to unset the read-only attribute otherwise an UnauthorizedAccessException is thrown.
-                    GitFileManager.NormalizeAttributes(tempRepoFolder);
-                    Directory.Delete(tempRepoFolder, true);
-                }
-                catch (DirectoryNotFoundException)
-                {
-                    // If the directory wasn't found, that means that the clone operation above failed
-                    // but this error isn't interesting at all.
+                    string clonedRepo = null;
+
+                    using (_logger.BeginScope("Sparse and shallow checkout of branch {branch} in {repoUri}...", branch, repoUri))
+                    {
+                        clonedRepo = LocalHelpers.SparseAndShallowCheckout(GitExecutable, repoUri, branch, tempRepoFolder, _logger, remote, dotnetMaestroName, dotnetMaestroEmail, pat);
+                    }
+
+                    foreach (GitFile file in filesToCommit)
+                    {
+                        string filePath = Path.Combine(clonedRepo, file.FilePath);
+
+                        if (file.Operation == GitFileOperation.Add)
+                        {
+                            if (!File.Exists(filePath))
+                            {
+                                string parentFolder = Directory.GetParent(filePath).FullName;
+
+                                Directory.CreateDirectory(parentFolder);
+                            }
+
+                            using (FileStream stream = File.Create(filePath))
+                            {
+                                byte[] contentBytes = GetUtf8ContentBytes(file.Content, file.ContentEncoding);
+                                await stream.WriteAsync(contentBytes, 0, contentBytes.Length);
+                            }
+                        }
+                        else if (file.Operation == GitFileOperation.Delete)
+                        {
+                            File.Delete(filePath);
+                        }
+
+                        LocalHelpers.ExecuteCommand(GitExecutable, $"add {filePath}", _logger, clonedRepo);
+                    }
+
+                    LocalHelpers.ExecuteCommand(GitExecutable, $"commit -m \"{commitMessage}\"", _logger, clonedRepo);
+                    LocalHelpers.ExecuteCommand(GitExecutable, $"-c core.askpass= -c credential.helper= push {remote} {branch}", _logger, clonedRepo);
                 }
                 catch (Exception exc)
                 {
-                    throw new Exception($"Something went wrong while trying to delete the folder {tempRepoFolder}", exc);
+                    // This was originally a DarcException. Making it an actual Exception so we get to see in AppInsights if something failed while
+                    // commiting the changes
+                    throw new Exception($"Something went wrong when pushing the files to repo {repoUri} in branch {branch}", exc);
+                }
+                finally
+                {
+                    try
+                    {
+                        // .git/objects hierarchy are marked as read-only so we need to unset the read-only attribute otherwise an UnauthorizedAccessException is thrown.
+                        GitFileManager.NormalizeAttributes(tempRepoFolder);
+                        Directory.Delete(tempRepoFolder, true);
+                    }
+                    catch (DirectoryNotFoundException)
+                    {
+                        // If the directory wasn't found, that means that the clone operation above failed
+                        // but this error isn't interesting at all.
+                    }
+                    catch (Exception exc)
+                    {
+                        throw new Exception($"Something went wrong while trying to delete the folder {tempRepoFolder}", exc);
+                    }
                 }
             }
         }
@@ -135,7 +140,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="targetDirectory">Target directory to clone to</param>
         /// <param name="gitDirectory">Location for the .git directory, or null for default</param>
         /// <returns></returns>
-        protected void Clone(string repoUri, string commit, string targetDirectory, ILogger logger, string pat, string gitDirectory)
+        protected void Clone(string repoUri, string commit, string targetDirectory, ILogger _logger, string pat, string gitDirectory)
         {
             string dotnetMaestro = "dotnet-maestro";
             LibGit2Sharp.CloneOptions cloneOptions = new LibGit2Sharp.CloneOptions
@@ -150,45 +155,47 @@ namespace Microsoft.DotNet.DarcLib
                     Password = pat
                 },
             };
-            logger.LogInformation("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory);
-            try
+            using (_logger.BeginScope("Cloning {repoUri} to {targetDirectory}", repoUri, targetDirectory))
             {
-                logger.LogDebug($"Cloning {repoUri} to {targetDirectory}");
-                string repoPath = LibGit2Sharp.Repository.Clone(
-                    repoUri,
-                    targetDirectory,
-                    cloneOptions);
-
-                LibGit2Sharp.CheckoutOptions checkoutOptions = new LibGit2Sharp.CheckoutOptions
+                try
                 {
-                    CheckoutModifiers = LibGit2Sharp.CheckoutModifiers.Force,
-                };
+                    _logger.LogDebug($"Cloning {repoUri} to {targetDirectory}");
+                    string repoPath = LibGit2Sharp.Repository.Clone(
+                        repoUri,
+                        targetDirectory,
+                        cloneOptions);
 
-                logger.LogDebug($"Reading local repo from {repoPath}");
-                using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoPath))
-                {
-                    if (commit == null)
+                    LibGit2Sharp.CheckoutOptions checkoutOptions = new LibGit2Sharp.CheckoutOptions
                     {
-                        commit = localRepo.Head.Reference.TargetIdentifier;
-                        logger.LogInformation($"Repo {localRepo.Info.WorkingDirectory} has no commit to clone at, assuming it's {commit}");
+                        CheckoutModifiers = LibGit2Sharp.CheckoutModifiers.Force,
+                    };
+
+                    _logger.LogDebug($"Reading local repo from {repoPath}");
+                    using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoPath))
+                    {
+                        if (commit == null)
+                        {
+                            commit = localRepo.Head.Reference.TargetIdentifier;
+                            _logger.LogInformation($"Repo {localRepo.Info.WorkingDirectory} has no commit to clone at, assuming it's {commit}");
+                        }
+                        _logger.LogDebug($"Attempting to checkout {commit} as commit in {localRepo.Info.WorkingDirectory}");
+                        LibGit2SharpHelpers.SafeCheckout(localRepo, commit, checkoutOptions, _logger);
                     }
-                    logger.LogDebug($"Attempting to checkout {commit} as commit in {localRepo.Info.WorkingDirectory}");
-                    LibGit2SharpHelpers.SafeCheckout(localRepo, commit, checkoutOptions, logger);
+                    // LibGit2Sharp doesn't support a --git-dir equivalent yet (https://github.com/libgit2/libgit2sharp/issues/1467), so we do this manually
+                    if (gitDirectory != null)
+                    {
+                        Directory.Move(repoPath, gitDirectory);
+                        File.WriteAllText(repoPath.TrimEnd('\\', '/'), $"gitdir: {gitDirectory}");
+                    }
+                    using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(targetDirectory))
+                    {
+                        CheckoutSubmodules(localRepo, cloneOptions, gitDirectory, _logger);
+                    }
                 }
-                // LibGit2Sharp doesn't support a --git-dir equivalent yet (https://github.com/libgit2/libgit2sharp/issues/1467), so we do this manually
-                if (gitDirectory != null)
+                catch (Exception exc)
                 {
-                    Directory.Move(repoPath, gitDirectory);
-                    File.WriteAllText(repoPath.TrimEnd('\\', '/'), $"gitdir: {gitDirectory}");
+                    throw new Exception($"Something went wrong when cloning repo {repoUri} at {commit ?? "<default branch>"} into {targetDirectory}", exc);
                 }
-                using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(targetDirectory))
-                {
-                    CheckoutSubmodules(localRepo, cloneOptions, gitDirectory, logger);
-                }
-            }
-            catch (Exception exc)
-            {
-                throw new Exception($"Something went wrong when cloning repo {repoUri} at {commit ?? "<default branch>"} into {targetDirectory}", exc);
             }
         }
 

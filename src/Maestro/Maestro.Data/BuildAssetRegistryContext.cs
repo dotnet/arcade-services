@@ -9,15 +9,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using EntityFrameworkCore.Triggers;
 using Maestro.Data.Models;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Internal;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Microsoft.DotNet.EntityFrameworkCore.Extensions;
+using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
-using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Hosting.Internal;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Maestro.Data
 {
@@ -42,26 +43,28 @@ namespace Maestro.Data
                 })
                 .Options;
             return new BuildAssetRegistryContext(
-                new HostingEnvironment{EnvironmentName = Environments.Development},
+                new HostingEnvironment {EnvironmentName = EnvironmentName.Development},
                 options);
         }
     }
 
-    public class BuildAssetRegistryContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
+    public class BuildAssetRegistryContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>, IInstallationLookup
     {
-        public BuildAssetRegistryContext(IHostEnvironment hostingEnvironment, DbContextOptions options) : base(
+        public BuildAssetRegistryContext(IHostingEnvironment hostingEnvironment, DbContextOptions options) : base(
             options)
         {
             HostingEnvironment = hostingEnvironment;
         }
 
-        public IHostEnvironment HostingEnvironment { get; }
+        public IHostingEnvironment HostingEnvironment { get; }
 
         public DbSet<Asset> Assets { get; set; }
         public DbSet<AssetLocation> AssetLocations { get; set; }
         public DbSet<Build> Builds { get; set; }
         public DbSet<BuildChannel> BuildChannels { get; set; }
         public DbSet<BuildDependency> BuildDependencies { get; set; }
+        public DbSet<ChannelReleasePipeline> ChannelReleasePipelines { get; set; }
+        public DbSet<ReleasePipeline> ReleasePipelines { get; set; }
         public DbSet<Channel> Channels { get; set; }
         public DbSet<DefaultChannel> DefaultChannels { get; set; }
         public DbSet<Subscription> Subscriptions { get; set; }
@@ -69,42 +72,11 @@ namespace Maestro.Data
         public DbSet<Repository> Repositories { get; set; }
         public DbSet<RepositoryBranch> RepositoryBranches { get; set; }
         public DbSet<RepositoryBranchUpdate> RepositoryBranchUpdates { get; set; }
+        public DbQuery<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory { get; set; }
+        public DbQuery<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory { get; set; }
         public DbSet<DependencyFlowEvent> DependencyFlowEvents { get; set; }
         public DbSet<GoalTime> GoalTime { get; set; }
         public DbSet<LongestBuildPath> LongestBuildPaths { get; set; }
-
-        public virtual IQueryable<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory => RepositoryBranchUpdates.FromSqlRaw(@"
-SELECT * FROM [RepositoryBranchUpdates]
-FOR SYSTEM_TIME ALL
-")
-            .Select(
-                u => new RepositoryBranchUpdateHistoryEntry
-                {
-                    Repository = u.RepositoryName,
-                    Branch = u.BranchName,
-                    Action = u.Action,
-                    Success = u.Success,
-                    ErrorMessage = u.ErrorMessage,
-                    Method = u.Method,
-                    Arguments = u.Arguments,
-                    Timestamp = EF.Property<DateTime>(u, "SysStartTime")
-                });
-
-        public IQueryable<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory => SubscriptionUpdates.FromSqlRaw(@"
-SELECT * FROM [SubscriptionUpdates]
-FOR SYSTEM_TIME ALL
-")
-            .Select(
-                u => new SubscriptionUpdateHistoryEntry
-                {
-                    SubscriptionId = u.SubscriptionId,
-                    Action = u.Action,
-                    Success = u.Success,
-                    ErrorMessage = u.ErrorMessage,
-                    Method = u.Method,
-                    Arguments = u.Arguments,
-                    Timestamp = EF.Property<DateTime>(u, "SysStartTime")
-                });
 
         public override Task<int> SaveChangesAsync(
             bool acceptAllChangesOnSuccess,
@@ -119,7 +91,6 @@ FOR SYSTEM_TIME ALL
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.AddDotNetExtensions();
-            base.OnConfiguring(optionsBuilder);
         }
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -162,6 +133,21 @@ FOR SYSTEM_TIME ALL
                 .HasOne(d => d.DependentBuild)
                 .WithMany()
                 .HasForeignKey(d => d.DependentBuildId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ChannelReleasePipeline>()
+                .HasKey(crp => new {crp.ChannelId, crp.ReleasePipelineId});
+
+            builder.Entity<ChannelReleasePipeline>()
+                .HasOne(crp => crp.Channel)
+                .WithMany(c => c.ChannelReleasePipelines)
+                .HasForeignKey(rcp => rcp.ChannelId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<ChannelReleasePipeline>()
+                .HasOne(crp => crp.ReleasePipeline)
+                .WithMany(rp => rp.ChannelReleasePipelines)
+                .HasForeignKey(crp => crp.ReleasePipelineId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<ApplicationUserPersonalAccessToken>()
@@ -253,8 +239,46 @@ FOR SYSTEM_TIME ALL
             builder.Entity<RepositoryBranchUpdateHistory>()
                 .HasIndex("RepositoryName", "BranchName", "SysEndTime", "SysStartTime");
 
-            builder.HasDbFunction(() => JsonExtensions.JsonValue("", ""))
-                .HasTranslation(args => SqlFunctionExpression.Create("JSON_VALUE", args, typeof(string), null));
+            builder.HasDbFunction(() => JsonExtensions.JsonValue("", "")).HasName("JSON_VALUE").HasSchema("");
+
+            builder.Query<SubscriptionUpdateHistoryEntry>()
+                .ToQuery(
+                    () => SubscriptionUpdates.FromSql(
+                            @"
+SELECT * FROM [SubscriptionUpdates]
+FOR SYSTEM_TIME ALL
+")
+                        .Select(
+                            u => new SubscriptionUpdateHistoryEntry
+                            {
+                                SubscriptionId = u.SubscriptionId,
+                                Action = u.Action,
+                                Success = u.Success,
+                                ErrorMessage = u.ErrorMessage,
+                                Method = u.Method,
+                                Arguments = u.Arguments,
+                                Timestamp = EF.Property<DateTime>(u, "SysStartTime")
+                            }));
+
+            builder.Query<RepositoryBranchUpdateHistoryEntry>()
+                .ToQuery(
+                    () => RepositoryBranchUpdates.FromSql(
+                            @"
+SELECT * FROM [RepositoryBranchUpdates]
+FOR SYSTEM_TIME ALL
+")
+                        .Select(
+                            u => new RepositoryBranchUpdateHistoryEntry
+                            {
+                                Repository = u.RepositoryName,
+                                Branch = u.BranchName,
+                                Action = u.Action,
+                                Success = u.Success,
+                                ErrorMessage = u.ErrorMessage,
+                                Method = u.Method,
+                                Arguments = u.Arguments,
+                                Timestamp = EF.Property<DateTime>(u, "SysStartTime")
+                            }));
         }
 
         public virtual Task<long> GetInstallationId(string repositoryUrl)
@@ -267,13 +291,13 @@ FOR SYSTEM_TIME ALL
         public async Task<IList<Build>> GetBuildGraphAsync(int buildId)
         {
             var dependencyEntity = Model.FindEntityType(typeof(BuildDependency));
-            var buildIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.BuildId)).GetColumnName();
-            var dependencyIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.DependentBuildId)).GetColumnName();
-            var isProductColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.IsProduct)).GetColumnName();
-            var timeToInclusionInMinutesColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.TimeToInclusionInMinutes)).GetColumnName();
-            var edgeTable = dependencyEntity.GetTableName();
+            var buildIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.BuildId)).Relational().ColumnName;
+            var dependencyIdColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.DependentBuildId)).Relational().ColumnName;
+            var isProductColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.IsProduct)).Relational().ColumnName;
+            var timeToInclusionInMinutesColumnName = dependencyEntity.FindProperty(nameof(BuildDependency.TimeToInclusionInMinutes)).Relational().ColumnName;
+            var edgeTable = dependencyEntity.Relational().TableName;
 
-            var edges = BuildDependencies.FromSqlRaw($@"
+            var edges = BuildDependencies.FromSql($@"
 WITH traverse AS (
         SELECT
             {buildIdColumnName},
@@ -282,7 +306,7 @@ WITH traverse AS (
             {timeToInclusionInMinutesColumnName},
             0 as Depth
         from {edgeTable}
-        WHERE {buildIdColumnName} = {{@id}}
+        WHERE {buildIdColumnName} = @id
     UNION ALL
         SELECT
             {edgeTable}.{buildIdColumnName},
@@ -298,7 +322,7 @@ WITH traverse AS (
 )
 SELECT DISTINCT {buildIdColumnName}, {dependencyIdColumnName}, {isProductColumnName}, {timeToInclusionInMinutesColumnName}
 FROM traverse;",
-               new SqlParameter("@id", buildId));
+               new SqlParameter("id", buildId));
 
             List<BuildDependency> things = await edges.ToListAsync();
             var buildIds = new HashSet<int>(things.SelectMany(t => new[] { t.BuildId, t.DependentBuildId }));

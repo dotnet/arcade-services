@@ -8,8 +8,9 @@ using Microsoft.AspNetCore.Http;
 
 namespace Microsoft.DotNet.Web.Authentication.AccessToken
 {
-    public class PersonalAccessTokenValidatePrincipalContext<TUser>
-        : PrincipalContext<PersonalAccessTokenAuthenticationOptions<TUser>>
+    public class
+        PersonalAccessTokenValidatePrincipalContext<TUser> : PrincipalContext<
+            PersonalAccessTokenAuthenticationOptions<TUser>>
     {
         public PersonalAccessTokenValidatePrincipalContext(
             HttpContext context,

@@ -5,11 +5,10 @@
 using System.Collections.Generic;
 using FluentAssertions;
 using ServiceFabricMocks;
-using Xunit.Abstractions;
 
 namespace SubscriptionActorService.Tests
 {
-    public abstract class ActorTests : TestsWithServices
+    public class ActorTests : TestsWithServices
     {
         protected readonly Dictionary<string, object> ExpectedActorState = new Dictionary<string, object>();
 
@@ -19,7 +18,7 @@ namespace SubscriptionActorService.Tests
         protected readonly MockReminderManager Reminders;
         protected readonly MockActorStateManager StateManager;
 
-        protected ActorTests(ITestOutputHelper output) : base(output)
+        protected ActorTests()
         {
             StateManager = new MockActorStateManager();
             Reminders = new MockReminderManager();

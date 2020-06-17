@@ -13,12 +13,9 @@ namespace Microsoft.DotNet.Kusto
         public static IServiceCollection AddKustoClientProvider(this IServiceCollection services, Action<IServiceProvider, KustoClientProviderOptions> configure = null)
         {
             services.AddSingleton<IKustoClientProvider, KustoClientProvider>();
-            if (configure != null)
-            {
-                services.AddSingleton<IConfigureOptions<KustoClientProviderOptions>>(
-                    provider => new ConfigureOptions<KustoClientProviderOptions>(options => configure(provider, options))
-                );
-            }
+            services.AddSingleton<IConfigureOptions<KustoClientProviderOptions>>(
+                provider => new ConfigureOptions<KustoClientProviderOptions>(options => configure(provider, options))
+            );
             return services;
         }
 

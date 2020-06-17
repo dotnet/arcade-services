@@ -15,7 +15,10 @@ using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
+using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions.Internal;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.ServiceFabric.Data;
@@ -190,7 +193,7 @@ namespace SubscriptionActorService
             DarcRemoteFactory = darcFactory;
             ActionRunner = actionRunner;
             SubscriptionActorFactory = subscriptionActorFactory;
-            Logger = loggerFactory.CreateLogger(GetType());
+            Logger = loggerFactory.CreateLogger(TypeNameHelper.GetTypeDisplayName(GetType()));
         }
 
         public ILogger Logger { get; }
@@ -254,7 +257,7 @@ namespace SubscriptionActorService
         /// <returns>Build</returns>
         private Task<Build> GetBuildAsync(int buildId)
         {
-            return Context.Builds.FindAsync(buildId).AsTask();
+            return Context.Builds.FindAsync(buildId);
         }
 
         public Task RunProcessPendingUpdatesAsync()
@@ -1161,7 +1164,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             // Once we have applied all of non coherent updates, then we need to run a coherency check on the
             // dependencies.
             List<DependencyUpdate> coherencyUpdates =
-                await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory, CoherencyMode.Legacy);
+                await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory);
 
             if (coherencyUpdates.Any())
             {
