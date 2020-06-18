@@ -31,7 +31,7 @@ namespace Maestro.Web.Tests
         }
 
         [Fact]
-        public async Task EmptyBuildIsCreatedAndCanRetrieved()
+        public async Task MinimalBuildIsCreatedAndCanRetrieved()
         {
             using TestData data = await BuildDefaultAsync();
 
@@ -67,6 +67,7 @@ namespace Maestro.Web.Tests
                 Assert.Equal(buildNumber, build.AzureDevOpsBuildNumber);
                 Assert.Equal(repository, build.AzureDevOpsRepository);
                 Assert.Equal(branch, build.AzureDevOpsBranch);
+                Assert.Equal(data.Clock.UtcNow, build.DateProduced);
             }
 
             {
@@ -82,6 +83,7 @@ namespace Maestro.Web.Tests
                 Assert.Equal(buildNumber, build.AzureDevOpsBuildNumber);
                 Assert.Equal(repository, build.AzureDevOpsRepository);
                 Assert.Equal(branch, build.AzureDevOpsBranch);
+                Assert.Equal(data.Clock.UtcNow, build.DateProduced);
             }
         }
 
@@ -103,7 +105,6 @@ namespace Maestro.Web.Tests
             string account = "FAKE-ACCOUNT";
             string project = "FAKE-PROJECT";
             string buildNumber = "20.5.19.20";
-            string repository = "FAKE-REPOSITORY";
             string branch = "FAKE-BRANCH";
             
             Build aBuild;
@@ -134,26 +135,44 @@ namespace Maestro.Web.Tests
                 bBuild = (Build) ((ObjectResult) result).Value;
             }
             data.Clock.UtcNow += TimeSpan.FromHours(1);
+            Build cBuild;
             {
-                IActionResult result = await data.Controller.Create(new BuildData
+                int cBuildId;
                 {
-                    Commit = commitHash,
-                    AzureDevOpsAccount = account,
-                    AzureDevOpsProject = project,
-                    AzureDevOpsBuildNumber = buildNumber + ".3",
-                    AzureDevOpsRepository = "C-REPO",
-                    AzureDevOpsBranch = branch,
-                    Dependencies = new List<BuildRef>
+                    IActionResult result = await data.Controller.Create(new BuildData
                     {
-                        new BuildRef(aBuild.Id, isProduct: true),
-                        new BuildRef(bBuild.Id, isProduct: true),
-                    },
-                });
-                Assert.IsAssignableFrom<ObjectResult>(result);
-                var objResult = (ObjectResult) result;
-                Assert.Equal((int) HttpStatusCode.Created, objResult.StatusCode);
-                Assert.IsAssignableFrom<Build>(objResult.Value);
-                var build = (Build) objResult.Value;
+                        Commit = commitHash,
+                        AzureDevOpsAccount = account,
+                        AzureDevOpsProject = project,
+                        AzureDevOpsBuildNumber = buildNumber + ".3",
+                        AzureDevOpsRepository = "C-REPO",
+                        AzureDevOpsBranch = branch,
+                        Dependencies = new List<BuildRef>
+                        {
+                            new BuildRef(aBuild.Id, isProduct: true),
+                            new BuildRef(bBuild.Id, isProduct: true),
+                        },
+                    });
+                    Assert.IsAssignableFrom<ObjectResult>(result);
+                    var objResult = (ObjectResult) result;
+                    Assert.Equal((int) HttpStatusCode.Created, objResult.StatusCode);
+                    Assert.IsAssignableFrom<Build>(objResult.Value);
+                    cBuild = (Build) objResult.Value;
+                    cBuildId = cBuild.Id;
+                }
+
+                {
+                    IActionResult result = await data.Controller.GetBuild(cBuildId);
+                    Assert.IsAssignableFrom<ObjectResult>(result);
+                    var objResult = (ObjectResult) result;
+                    Assert.Equal((int) HttpStatusCode.OK, objResult.StatusCode);
+                    Assert.IsAssignableFrom<Build>(objResult.Value);
+                    cBuild = (Build) objResult.Value;
+                }
+
+                Assert.Equal(2, cBuild.Dependencies.Count);
+                Assert.Contains(cBuild.Dependencies, b => b.BuildId == aBuild.Id);
+                Assert.Contains(cBuild.Dependencies, b => b.BuildId == bBuild.Id);
             }
         }
 

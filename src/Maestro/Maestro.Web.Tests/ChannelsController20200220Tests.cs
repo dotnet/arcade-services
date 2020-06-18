@@ -130,6 +130,14 @@ namespace Maestro.Web.Tests
                 _output = output;
             }
 
+            private Type _backgroundQueueType = typeof(NeverBackgroundQueue);
+
+            public TestDataBuilder WithImmediateBackgroundQueue()
+            {
+                _backgroundQueueType = typeof(ImmediateBackgroundQueue);
+                return this;
+            }
+
             public async Task<TestData> BuildAsync()
             {
                 string connectionString = await _database.GetConnectionString();
@@ -149,7 +157,8 @@ namespace Maestro.Web.Tests
                 collection.AddSingleton<BuildsController>();
                 collection.AddSingleton<ISystemClock, TestClock>();
                 collection.AddSingleton(Mock.Of<IRemoteFactory>());
-                collection.AddSingleton<IBackgroundQueue, ImmediateBackgroundQueue>();
+                collection.AddSingleton(typeof(IBackgroundQueue), _backgroundQueueType);
+                collection.AddSingleton(_output);
                 ServiceProvider provider = collection.BuildServiceProvider();
 
                 var clock = (TestClock) provider.GetRequiredService<ISystemClock>();
