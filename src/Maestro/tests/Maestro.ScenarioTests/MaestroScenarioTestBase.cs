@@ -59,7 +59,7 @@ namespace Maestro.ScenarioTests
         public async Task CheckBatchedGitHubPullRequest(string targetBranch, string source1RepoName, string source2RepoName,
             string targetRepoName, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory)
         {
-            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{source1RepoName} {_parameters.GitHubTestOrg}/{source2RepoName}";
+            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{source1RepoName}";
             await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false);
         }
 
@@ -78,7 +78,7 @@ namespace Maestro.ScenarioTests
 
             StringAssert.AreEqualIgnoringCase(expectedPRTitle, pullRequest.Title);
             ItemState expectedPRState = complete ? ItemState.Closed : ItemState.Open;
-            Assert.AreEqual(expectedPRState, pullRequest.State);
+            StringAssert.AreEqualIgnoringCase(expectedPRState.ToString(), pullRequest.State.ToString());
 
             using (ChangeDirectory(repoDirectory))
             {
