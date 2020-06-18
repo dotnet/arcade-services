@@ -23,10 +23,10 @@ namespace Maestro.ScenarioTests
         private readonly string azDoBranchName = "AzDoTestFlowBranch";
         private readonly string gitHubChannelName = "GitHub Flow Test Channel";
         private readonly string azDoChannelName = "AzDo Flow Test Channel";
-        private readonly IImmutableList<AssetData> source1Assets;
+        internal readonly IImmutableList<AssetData> Source1Assets;
         private readonly IImmutableList<AssetData> source2Assets;
         private readonly IImmutableList<AssetData> source3Assets;
-        private List<DependencyDetail> expectedDependenciesSource1;
+        internal List<DependencyDetail> ExpectedDependenciesSource1;
         private List<DependencyDetail> expectedDependenciesSource2;
         private List<DependencyDetail> expectedDependenciesSource3;
         private TestParameters _parameters;
@@ -36,11 +36,11 @@ namespace Maestro.ScenarioTests
             _parameters = parameters;
             SetTestParameters(_parameters);
 
-            source1Assets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
+            Source1Assets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
             source2Assets = GetAssetData("Pizza", "3.1.0", "Hamburger", "4.1.0");
             source3Assets = GetAssetData("Foo", "1.17.0", "Bar", "2.17.0");
 
-            expectedDependenciesSource1 = new List<DependencyDetail>();
+            ExpectedDependenciesSource1 = new List<DependencyDetail>();
             string sourceRepoUri = GetRepoUrl(testRepo1Name);
             DependencyDetail dep1 = new DependencyDetail
             {
@@ -51,7 +51,7 @@ namespace Maestro.ScenarioTests
                 Type = DependencyType.Product,
                 Pinned = false
             };
-            expectedDependenciesSource1.Add(dep1);
+            ExpectedDependenciesSource1.Add(dep1);
 
             DependencyDetail dep2 = new DependencyDetail
             {
@@ -62,7 +62,7 @@ namespace Maestro.ScenarioTests
                 Type = DependencyType.Product,
                 Pinned = false
             };
-            expectedDependenciesSource1.Add(dep2);
+            ExpectedDependenciesSource1.Add(dep2);
 
             expectedDependenciesSource2 = new List<DependencyDetail>();
             string source2RepoUri = GetRepoUrl(testRepo3Name);
@@ -135,7 +135,7 @@ namespace Maestro.ScenarioTests
                     {
 
                         TestContext.WriteLine("Set up build1 for intake into target repository");
-                        Build build1 = await CreateBuildAsync(source1RepoUri, sourceBranch, sourceCommit, sourceBuildNumber, source1Assets);
+                        Build build1 = await CreateBuildAsync(source1RepoUri, sourceBranch, sourceCommit, sourceBuildNumber, Source1Assets);
                         await AddBuildToChannelAsync(build1.Id, testChannelName);
 
                         TestContext.WriteLine("Set up build2 for intake into target repository");
@@ -150,7 +150,7 @@ namespace Maestro.ScenarioTests
                             await CheckoutBranchAsync(targetBranch);
 
                             TestContext.WriteLine("Adding dependencies to target repo");
-                            await AddDependenciesToLocalRepo(reposFolder.Directory, source1Assets.ToList(), source1RepoUri);
+                            await AddDependenciesToLocalRepo(reposFolder.Directory, Source1Assets.ToList(), source1RepoUri);
                             await AddDependenciesToLocalRepo(reposFolder.Directory, source2Assets.ToList(), source2RepoUri);
 
                             TestContext.WriteLine("Pushing branch to remote");
@@ -162,7 +162,7 @@ namespace Maestro.ScenarioTests
                                 await TriggerSubscriptionAsync(subscription1Id.Value);
                                 await TriggerSubscriptionAsync(subscription2Id.Value);
 
-                                List<DependencyDetail> expectedDependencies = expectedDependenciesSource1.Concat(expectedDependenciesSource2).ToList();
+                                List<DependencyDetail> expectedDependencies = ExpectedDependenciesSource1.Concat(expectedDependenciesSource2).ToList();
 
                                 TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
@@ -196,7 +196,7 @@ namespace Maestro.ScenarioTests
                          UpdateFrequency.None.ToString(), "maestro-auth-test"))
                 {
                     TemporaryDirectory reposFolder = await SetUpForSingleSourceSub(
-                        testChannelName, sourceRepoUri, sourceBranch, sourceCommit, sourceBuildNumber, source1Assets,
+                        testChannelName, sourceRepoUri, sourceBranch, sourceCommit, sourceBuildNumber, Source1Assets,
                         testRepo2Name, targetBranch);
                     using (ChangeDirectory(reposFolder.Directory))
                     {
@@ -208,7 +208,7 @@ namespace Maestro.ScenarioTests
 
                             TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
-                            await CheckNonBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo3Name, testRepo2Name, expectedDependenciesSource1, reposFolder.Directory, true);
+                            await CheckNonBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo3Name, testRepo2Name, ExpectedDependenciesSource1, reposFolder.Directory, true);
                         }
 
                         TestContext.WriteLine("Set up another build for intake into target repository");
@@ -228,7 +228,7 @@ namespace Maestro.ScenarioTests
                         await TriggerSubscriptionAsync(subscription1Id.Value);
 
                         TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
-                        await ValidatePullRequestDependencies(testRepo2Name, targetBranch, expectedDependenciesSource1);
+                        await ValidatePullRequestDependencies(testRepo2Name, targetBranch, ExpectedDependenciesSource1);
                     }
                 }
             }
@@ -246,7 +246,7 @@ namespace Maestro.ScenarioTests
             await using (AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false))
             {
                 TemporaryDirectory reposFolder = await SetUpForSingleSourceSub(
-                    testChannelName, sourceRepoUri, sourceBranch, sourceCommit, sourceBuildNumber, source1Assets,
+                    testChannelName, sourceRepoUri, sourceBranch, sourceCommit, sourceBuildNumber, Source1Assets,
                     testRepo2Name, targetBranch);
                 using (ChangeDirectory(reposFolder.Directory))
                 {
@@ -257,7 +257,7 @@ namespace Maestro.ScenarioTests
                         {
                             TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
-                            await CheckNonBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo3Name, testRepo2Name, expectedDependenciesSource1, reposFolder.Directory, true);
+                            await CheckNonBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo3Name, testRepo2Name, ExpectedDependenciesSource1, reposFolder.Directory, true);
                         }
                     }
                 }

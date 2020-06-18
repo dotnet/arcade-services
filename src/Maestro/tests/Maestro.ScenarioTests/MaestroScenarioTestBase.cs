@@ -488,7 +488,7 @@ namespace Maestro.ScenarioTests
         public async Task CheckoutBranchAsync(string branchName)
         {
             await RunGitAsync("fetch", "origin");
-            await RunGitAsync("checkout", branchName);
+            await RunGitAsync("checkout", "-b", branchName);
         }
 
         internal IImmutableList<AssetData> GetAssetData(string asset1Name, string asset1Version, string asset2Name, string asset2Version)

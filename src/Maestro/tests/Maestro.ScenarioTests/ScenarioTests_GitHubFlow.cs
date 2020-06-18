@@ -19,8 +19,6 @@ namespace Maestro.ScenarioTests
         private readonly string sourceCommit = "123456";
         private readonly string targetBranch = "GitHubFlowBranch";
         private readonly string testChannelName = "GitHub Flow Test Channel";
-        private readonly IImmutableList<AssetData> source1Assets;
-        private List<DependencyDetail> expectedDependenciesSource1;
         private TestParameters _parameters;
         private EndToEndFlowLogic testLogic;
 
@@ -120,13 +118,13 @@ namespace Maestro.ScenarioTests
                     TestContext.WriteLine("Set up new builds for intake into target repository");
                     TemporaryDirectory tempDirectory = await testLogic.SetUpForTwoSourceSub(
                         testChannelName,
-                        parentSourceRepoUri, sourceBranch, parentSourceCommit, sourceBuildNumber, source1Assets,
+                        parentSourceRepoUri, sourceBranch, parentSourceCommit, sourceBuildNumber, testLogic.Source1Assets,
                         childSourceRepoUri, sourceBranch, childSourceCommit, source2BuildNumber, childSourceAssets,
                         testRepo3Name, targetBranch, "Foo");
 
                     await TriggerSubscriptionAsync(subscription1Id.Value);
 
-                    List<DependencyDetail> expectedDependencies = expectedDependenciesSource1.Concat(expectedChildDependencies).ToList();
+                    List<DependencyDetail> expectedDependencies = testLogic.ExpectedDependenciesSource1.Concat(expectedChildDependencies).ToList();
 
                     await CheckNonBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo3Name, targetBranch, expectedDependencies, tempDirectory.Directory);               
                 }
