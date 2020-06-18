@@ -84,7 +84,7 @@ namespace Maestro.Web
 
                     if (hasAssetsWithPublishedLocations || ReposWithoutAssetLocationAllowList.Contains(build.GitHubRepository))
                     {
-                        var queue = context.GetService<BackgroundQueue>();
+                        var queue = context.GetService<IBackgroundQueue>();
                         queue.Post<StartDependencyUpdate>(StartDependencyUpdate.CreateArgs(entity));
                     }
                     else
@@ -220,8 +220,9 @@ namespace Maestro.Web
             services.AddSingleton(Configuration);
 
             ConfigureAuthServices(services);
-
+            
             services.AddSingleton<BackgroundQueue>();
+            services.AddSingleton<IBackgroundQueue>(provider => provider.GetRequiredService<BackgroundQueue>());
             services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BackgroundQueue>());
 
             services.AddServiceFabricService<IDependencyUpdater>("fabric:/MaestroApplication/DependencyUpdater");

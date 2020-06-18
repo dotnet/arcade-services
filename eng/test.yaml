@@ -1,5 +1,11 @@
 steps: 
 
+- task: Powershell@2
+  displayName: Install SQL Express
+  inputs: 
+    targetType: filePath
+    filePath: eng\Install-SqlExpress.ps1
+
 - task: DotNetCoreCLI@2
   displayName: Test C# (dotnet test)
   inputs:
