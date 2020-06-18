@@ -29,7 +29,7 @@ stages:
   jobs:
   - template: /eng/common/templates/jobs/jobs.yml
     parameters:
-      enableMicrobuild: true
+      enableMicrobuild: false
       enablePublishBuildArtifacts: true
       enablePublishTestResults: true
       enablePublishBuildAssets: true
@@ -40,12 +40,7 @@ stages:
       - job: Windows_NT
         timeoutInMinutes: 90
         pool:
-          ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
-            name: NetCorePublic-Pool
-            queue: BuildPool.Windows.10.Amd64.VS2019.Open
-          ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-            name: NetCoreInternal-Pool
-            queue: BuildPool.Windows.10.Amd64.VS2019
+          vmImage: windows-2019
 
         variables:
         - _InternalBuildArgs: ''
@@ -94,7 +89,7 @@ stages:
                 _DotNetPublishToBlobFeed : false
               ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
                 _PublishType: blob
-                _SignType: real
+                _SignType: test
                 _DotNetPublishToBlobFeed : true
         steps:
         - checkout: self
