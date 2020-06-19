@@ -253,7 +253,7 @@ namespace Maestro.ScenarioTests
                     await using (await PushGitBranchAsync("origin", targetBranch))
                     {
                         await using (AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(testChannelName, testRepo1Name, testRepo2Name, targetBranch,
-                             UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--all-checks-passed", "--ignore-checks license/cla", "--trigger" }))
+                             UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--all-checks-passed", "--ignore-checks license/cla"}, trigger:true))
                         {
                             TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 

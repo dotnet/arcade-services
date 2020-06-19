@@ -246,17 +246,19 @@ namespace Maestro.ScenarioTests
             string sourceOrg = "dotnet",
             List<string> additionalOptions = null,
             bool sourceIsAzDo = false,
-            bool targetIsAzDo = false)
+            bool targetIsAzDo = false,
+            bool trigger = false)
         {
             string sourceUrl = sourceIsAzDo ? GetAzDoRepoUrl(sourceRepo, azdoProject: sourceOrg) : GetRepoUrl(sourceOrg, sourceRepo);
             string targetUrl = targetIsAzDo ? GetAzDoRepoUrl(targetRepo) : GetRepoUrl(targetRepo);
 
-            string[] command = {"add-subscription", "-q", "--no-trigger",
+            string[] command = {"add-subscription", "-q",
                 "--channel", sourceChannelName,
                 "--source-repo", sourceUrl,
                 "--target-repo", targetUrl,
                 "--target-branch", targetBranch,
-                "--update-frequency", updateFrequency};
+                "--update-frequency", updateFrequency,
+                trigger?"--trigger":"--no-trigger"};
 
             if (additionalOptions != null)
             {
