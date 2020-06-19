@@ -45,6 +45,7 @@ using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.DotNet.Internal.DependencyInjection;
+using Microsoft.Extensions.Internal;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -289,6 +290,8 @@ namespace Maestro.Web
                         req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
                     });
             });
+
+            services.AddSingleton<ISystemClock, SystemClock>();
         }
 
         private void ConfigureApiExceptions(IApplicationBuilder app)
