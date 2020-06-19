@@ -7,6 +7,7 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Web.Authentication.GitHub;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Internal;

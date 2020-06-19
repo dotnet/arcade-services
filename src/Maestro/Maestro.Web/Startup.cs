@@ -45,6 +45,7 @@ using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.DotNet.Internal.DependencyInjection;
+using Microsoft.Extensions.Internal;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -84,7 +85,7 @@ namespace Maestro.Web
 
                     if (hasAssetsWithPublishedLocations || ReposWithoutAssetLocationAllowList.Contains(build.GitHubRepository))
                     {
-                        var queue = context.GetService<BackgroundQueue>();
+                        var queue = context.GetService<IBackgroundQueue>();
                         queue.Post<StartDependencyUpdate>(StartDependencyUpdate.CreateArgs(entity));
                     }
                     else
@@ -220,8 +221,9 @@ namespace Maestro.Web
             services.AddSingleton(Configuration);
 
             ConfigureAuthServices(services);
-
+            
             services.AddSingleton<BackgroundQueue>();
+            services.AddSingleton<IBackgroundQueue>(provider => provider.GetRequiredService<BackgroundQueue>());
             services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BackgroundQueue>());
 
             services.AddServiceFabricService<IDependencyUpdater>("fabric:/MaestroApplication/DependencyUpdater");
@@ -288,6 +290,8 @@ namespace Maestro.Web
                         req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
                     });
             });
+
+            services.AddSingleton<ISystemClock, SystemClock>();
         }
 
         private void ConfigureApiExceptions(IApplicationBuilder app)
