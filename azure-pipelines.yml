@@ -127,6 +127,7 @@ stages:
             $(_InternalBuildArgs)
             $(_ProductionArgs)
             /p:Test=false
+            /P:Sign=false
           name: Build
           displayName: Build / Publish
           condition: succeeded()
