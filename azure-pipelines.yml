@@ -126,6 +126,7 @@ stages:
             -prepareMachine
             $(_InternalBuildArgs)
             $(_ProductionArgs)
+            /p:Test=false
           name: Build
           displayName: Build / Publish
           condition: succeeded()
