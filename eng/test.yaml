@@ -3,41 +3,57 @@ steps:
 - task: DotNetCoreCLI@2
   displayName: Test C# (dotnet test)
   inputs:
-    command: 'custom'
+    command: custom
     projects: |
       src/**/*.Tests.csproj
-    custom: 'test'
+    custom: test
     arguments: > 
       --configuration $(_BuildConfig)
       --collect:"Code Coverage"
       --settings:CodeCoverage.runsettings
       --filter "TestCategory!=PostDeployment&TestCategory!=Nightly&TestCategory!=PreDeployment"
       --no-build
+      --logger "trx;LogFilePrefix=TestResults-"
+      -v normal
+      --
+      "RunConfiguration.ResultsDirectory=$(Build.ArtifactStagingDirectory)\TestResults"
+      RunConfiguration.MapCpuCount=4
   env:
-    NUGET_PACKAGES: '$(Build.SourcesDirectory)/.packages'
+    NUGET_PACKAGES: $(Build.SourcesDirectory)/.packages
   condition: succeededOrFailed()
 
 - task: Powershell@2
   inputs: 
-    targetType: 'filePath'
+    targetType: filePath
     filePath: eng\convert-codecoveragetoxml.ps1
-    arguments: -Path "$(system.defaultworkingdirectory)" -NugetPackagesPath "$(Build.SourcesDirectory)\.packages"
+    arguments: -Path "$(Build.ArtifactStagingDirectory)\TestResults" -NugetPackagesPath "$(Build.SourcesDirectory)\.packages"
   displayName: Convert Code Coverage to XML (powershell)
 
 - task: Palmmedia.reportgenerator.reportgenerator-build-release-task.reportgenerator@4
   displayName: ReportGenerator
   inputs:
-    reports: '$(system.defaultworkingdirectory)\codecoverage.coveragexml'
-    targetdir: '$(Build.SourcesDirectory)\CodeCoverage'
-    reporttypes: 'HtmlInline_AzurePipelines;Cobertura'
-    sourcedirs: '$(Build.SourcesDirectory)'
+    reports: $(Build.ArtifactStagingDirectory)\TestResults\codecoverage.coveragexml
+    targetdir: $(Build.ArtifactStagingDirectory)\CodeCoverage
+    reporttypes: HtmlInline_AzurePipelines;Cobertura
+    sourcedirs: $(Build.SourcesDirectory)
+
+- task: PublishTestResults@2
+  displayName: Publish Core Test Results
+  condition: succeededOrFailed()
+  inputs:
+    testRunner: VSTest
+    testResultsFiles: '**/TestResults-*' 
+    searchFolder: $(Build.ArtifactStagingDirectory)\TestResults
+    testRunTitle: Basic Tests
+    mergeTestResults: true
+    configuration: $(_BuildConfig)
 
 - task: PublishCodeCoverageResults@1
-  displayName: 'Publish Code Coverage'
+  displayName: Publish Code Coverage
   inputs:
     codeCoverageTool: Cobertura
-    summaryFileLocation: '$(Build.SourcesDirectory)\CodeCoverage\Cobertura.xml'
-    pathToSources: '$(Build.SourcesDirectory)'
+    summaryFileLocation: $(Build.ArtifactStagingDirectory)\CodeCoverage\Cobertura.xml
+    pathToSources: $(Build.SourcesDirectory)
     publishRunAttachments: true
 
 - script: echo export const token = ''; > src/environments/token.ts
