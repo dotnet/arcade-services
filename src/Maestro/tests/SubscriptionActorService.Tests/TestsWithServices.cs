@@ -4,7 +4,6 @@
 
 using System;
 using System.Threading.Tasks;
-using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;

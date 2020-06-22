@@ -29,7 +29,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
 
         public SubscriptionsController(
             BuildAssetRegistryContext context,
-            IBackgroundQueue queue)
+            BackgroundQueue queue)
             : base(context, queue)
         {
             _context = context;

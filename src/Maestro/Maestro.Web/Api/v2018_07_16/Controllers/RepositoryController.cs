@@ -32,7 +32,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
     {
         public RepositoryController(
             BuildAssetRegistryContext context,
-            IBackgroundQueue queue,
+            BackgroundQueue queue,
             IActorProxyFactory<IPullRequestActor> pullRequestActorFactory)
         {
             Context = context;
@@ -41,7 +41,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         }
 
         public BuildAssetRegistryContext Context { get; }
-        public IBackgroundQueue Queue { get; }
+        public BackgroundQueue Queue { get; }
         public IActorProxyFactory<IPullRequestActor> PullRequestActorFactory { get; }
 
         /// <summary>

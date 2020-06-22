@@ -15,7 +15,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Web.Authentication.AccessToken;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.WebEncoders.Testing;
@@ -411,6 +410,12 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
 
             return PasswordVerificationResult.Failed;
         }
+    }
+
+    public class TestClock : ISystemClock, Extensions.Internal.ISystemClock
+    {
+        public static readonly DateTime BaseTime = DateTime.Parse("2001-02-03T16:05:06Z");
+        public DateTimeOffset UtcNow { get; set; } = BaseTime;
     }
 
     public class TestUser

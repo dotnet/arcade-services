@@ -25,7 +25,6 @@
     <PackageReference Update="Microsoft.ApplicationInsights.PerfCounterCollector" Version="2.11.2" />
     <PackageReference Update="Microsoft.ApplicationInsights.ServiceFabric" Version="2.3.1" />
     <PackageReference Update="Microsoft.AspNet.WebApi.Client" Version="5.2.6" />
-    <PackageReference Update="Microsoft.AspNetCore.Authentication" Version="2.2.0" />
     <PackageReference Update="Microsoft.AspNetCore.DataProtection.AzureKeyVault" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.AspNetCore.DataProtection.AzureStorage" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="$(DotNetAssemblyVersion)" />
@@ -108,6 +107,5 @@
     <PackageReference Update="YamlDotNet.Signed" Version="5.3.0" />
     <PackageReference Update="coverlet.collector" Version="1.0.1" />
     <PackageReference Update="nunit" Version="3.12.0" /> 
-    <PackageReference Update="xunit.abstractions" Version="2.0.1" /> 
   </ItemGroup>
 </Project>

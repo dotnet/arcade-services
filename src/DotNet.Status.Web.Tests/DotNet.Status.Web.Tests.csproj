@@ -11,6 +11,5 @@
   <ItemGroup>
     <ProjectReference Include="..\DotNet.Status.Web\DotNet.Status.Web.csproj" />
     <ProjectReference Include="..\Shared\Microsoft.DotNet.Internal.DependencyInjection.Testing\Microsoft.DotNet.Internal.DependencyInjection.Testing.csproj" />
-    <ProjectReference Include="..\Shared\Microsoft.DotNet.Internal.Testing.Utility\Microsoft.DotNet.Internal.Testing.Utility.csproj" />
   </ItemGroup>
 </Project>

@@ -9,7 +9,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Microsoft.DotNet.Internal.Testing.Utility\Microsoft.DotNet.Internal.Testing.Utility.csproj" />
     <ProjectReference Include="..\Microsoft.DotNet.Web.Authentication\Microsoft.DotNet.Web.Authentication.csproj" />
   </ItemGroup>
 </Project>

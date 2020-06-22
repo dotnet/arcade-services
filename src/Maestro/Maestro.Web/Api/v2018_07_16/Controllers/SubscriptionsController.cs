@@ -32,11 +32,11 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
     public class SubscriptionsController : Controller
     {
         private readonly BuildAssetRegistryContext _context;
-        private readonly IBackgroundQueue _queue;
+        private readonly BackgroundQueue _queue;
 
         public SubscriptionsController(
             BuildAssetRegistryContext context,
-            IBackgroundQueue queue)
+            BackgroundQueue queue)
         {
             _context = context;
             _queue = queue;

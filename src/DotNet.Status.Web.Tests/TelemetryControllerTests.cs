@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit.Abstractions;
 using System;
-using Microsoft.DotNet.Internal.Testing.Utility;
 
 namespace DotNet.Status.Web.Tests
 {
@@ -59,7 +58,7 @@ namespace DotNet.Status.Web.Tests
         public async void TestArcadeValidationTelemetryCollection()
         {
             SetUp();
-            IActionResult result = await _controller.CollectArcadeValidation(new ArcadeValidationData
+            var result = await _controller.CollectArcadeValidation(new ArcadeValidationData
             {
                 BuildDateTime = new DateTime(),
                 ArcadeVersion = "fakearcadeversion",

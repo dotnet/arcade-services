@@ -2,9 +2,9 @@ using System;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
-namespace Microsoft.DotNet.Internal.Testing.Utility
+namespace DotNet.Status.Web.Tests
 {
-    public class XUnitLogger : ILogger, ILoggerProvider
+    internal class XUnitLogger : ILogger, ILoggerProvider
     {
         private readonly ITestOutputHelper _output;
 

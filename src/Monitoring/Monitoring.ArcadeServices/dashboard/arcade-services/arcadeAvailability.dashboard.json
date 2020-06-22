@@ -531,7 +531,7 @@
             ],
             "metricName": "requests/count",
             "rawQuery": true,
-            "rawQueryString": "let r = requests | where $__timeFilter();\nlet f = toscalar(r | summarize min(timestamp));\nlet t = toscalar(r | summarize max(timestamp));\nr\n| where success == false and toint(resultCode) >= 500\n| make-series valueCount=count() default=0 on timestamp in range(f, t, 1m) by resultCode\n| mv-expand timestamp, valueCount\n| project timestamp=todatetime(timestamp), valueCount=toint(valueCount), resultCode",
+            "rawQueryString": "let r = requests | where $__timeFilter();\nlet f = toscalar(r | summarize min(timestamp));\nlet t = toscalar(r | summarize max(timestamp));\nr\n| where success == false and toint(resultCode) >= 500\n| make-series valueCount=count() default=0 on timestamp in range(f, t, 1m) by resultCode\n| mvexpand timestamp, valueCount\n| project timestamp=todatetime(timestamp), valueCount=toint(valueCount), resultCode",
             "segmentColumn": "resultCode",
             "timeColumn": "timestamp",
             "timeGrain": "auto",
