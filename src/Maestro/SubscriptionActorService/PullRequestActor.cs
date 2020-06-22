@@ -490,7 +490,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
                 var merged = false;
                 try
                 {
-                    await darc.MergePullRequestAsync(pr.Url, new MergePullRequestParameters());
+                    await darc.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
                     merged = true;
                 }
                 catch

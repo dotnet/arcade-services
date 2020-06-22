@@ -103,6 +103,14 @@ namespace Microsoft.DotNet.DarcLib
         Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
 
         /// <summary>
+        ///     Merges a Dependency update pull request
+        /// </summary>
+        /// <param name="pullRequestUrl">Uri of pull request to merge</param>
+        /// <param name="parameters">Settings for merge</param>
+        /// <returns></returns>
+        Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
+
+        /// <summary>
         ///     Create a new comment, or update the last comment with an updated message,
         ///     if that comment was created by Darc.
         /// </summary>

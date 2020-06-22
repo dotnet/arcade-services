@@ -448,6 +448,46 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Merges an update dependency pull request
+        /// </summary>
+        /// <param name="pullRequestUrl">Uri of the update dependency pull request to merge</param>
+        /// <param name="parameters">Settings for merge</param>
+        /// <returns></returns>
+        public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
+        {
+            (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
+
+            VssConnection connection = CreateVssConnection(accountName);
+            GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+
+            string commitToMerge = parameters.CommitToMerge;
+
+            // If the commit to merge is empty, look it up first.
+            if (string.IsNullOrEmpty(commitToMerge))
+            {
+                var prInfo = await client.GetPullRequestAsync(repoName, id);
+                commitToMerge = prInfo.LastMergeSourceCommit.CommitId;
+            }
+
+            await client.UpdatePullRequestAsync(
+                new GitPullRequest
+                {
+                    Status = PullRequestStatus.Completed,
+                    CompletionOptions = new GitPullRequestCompletionOptions
+                    {
+                        BypassPolicy = true,
+                        BypassReason = "All required checks were successful",
+                        SquashMerge = parameters.SquashMerge,
+                        DeleteSourceBranch = parameters.DeleteSourceBranch
+                    },
+                    LastMergeSourceCommit = new GitCommitRef { CommitId = commitToMerge }
+                },
+                projectName,
+                repoName,
+                id);
+        }
+
+        /// <summary>
         ///     Create a new comment, or update the last comment with an updated message,
         ///     if that comment was created by Darc.
         /// </summary>

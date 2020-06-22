@@ -362,6 +362,16 @@ namespace Microsoft.DotNet.DarcLib
             _logger.LogInformation($"Merging pull request '{pullRequestUrl}' succeeded!");
         }
 
+        public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
+        {
+            CheckForValidGitClient();
+            _logger.LogInformation($"Merging pull request '{pullRequestUrl}'...");
+
+            await _gitClient.MergeDependencyPullRequestAsync(pullRequestUrl, parameters ?? new MergePullRequestParameters());
+
+            _logger.LogInformation($"Merging pull request '{pullRequestUrl}' succeeded!");
+        }
+
         /// <summary>
         ///     Calculate the leaves of the coherency trees
         /// </summary>
