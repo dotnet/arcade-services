@@ -149,7 +149,8 @@ namespace SubscriptionActorService
         }
 
         public async Task ReceiveReminderAsync(string reminderName, byte[] state, TimeSpan dueTime, TimeSpan period)
-        {if (reminderName == PullRequestActorImplementation.PullRequestCheck)
+        {
+            if (reminderName == PullRequestActorImplementation.PullRequestCheck)
             {
                 await Implementation.SynchronizeInProgressPullRequestAsync();
             }
@@ -394,7 +395,7 @@ namespace SubscriptionActorService
             switch (status)
             {
                 // If the PR is currently open, then evaluate the merge policies, which will potentially
-                // merge the PR if they are successful.
+                // merge the PR if they are successul.
                 case PrStatus.Open:
                     ActionResult<MergePolicyCheckResult> checkPolicyResult = await CheckMergePolicyAsync(pr, darc);
                     pr.MergePolicyResult = checkPolicyResult.Result;
@@ -489,7 +490,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
                 var merged = false;
                 try
                 {
-                    await darc.MergeDependencyPullRequestAsync(pr.Url, new MergePullRequestParameters());
+                    await darc.MergePullRequestAsync(pr.Url, new MergePullRequestParameters());
                     merged = true;
                 }
                 catch

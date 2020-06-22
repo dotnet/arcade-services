@@ -15,6 +15,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
+using Microsoft.DotNet.Internal.Logging;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -272,10 +273,8 @@ namespace Microsoft.DotNet.DarcLib
 
         public async Task DeleteBranchAsync(string repoUri, string branch)
         {
-            using (_logger.BeginScope($"Deleting branch '{branch}' from repo '{repoUri}'"))
-            {
-                await _gitClient.DeleteBranchAsync(repoUri, branch);
-            }
+            _logger.LogInformation($"Deleting branch '{branch}' from repo '{repoUri}'");
+            await _gitClient.DeleteBranchAsync(repoUri, branch);
         }
 
         /// <summary>
@@ -286,10 +285,8 @@ namespace Microsoft.DotNet.DarcLib
         public async Task<IEnumerable<Check>> GetPullRequestChecksAsync(string pullRequestUrl)
         {
             CheckForValidGitClient();
-            using (_logger.BeginScope($"Getting status checks for pull request '{pullRequestUrl}'..."))
-            {
-                return await _gitClient.GetPullRequestChecksAsync(pullRequestUrl);
-            }
+            _logger.LogInformation($"Getting status checks for pull request '{pullRequestUrl}'...");
+            return await _gitClient.GetPullRequestChecksAsync(pullRequestUrl);
         }
 
         /// <summary>
@@ -300,10 +297,8 @@ namespace Microsoft.DotNet.DarcLib
         public async Task<IEnumerable<Review>> GetPullRequestReviewsAsync(string pullRequestUrl)
         {
             CheckForValidGitClient();
-            using (_logger.BeginScope($"Getting reviews for pull request '{pullRequestUrl}'..."))
-            {
-                return await _gitClient.GetPullRequestReviewsAsync(pullRequestUrl);
-            }
+            _logger.LogInformation($"Getting reviews for pull request '{pullRequestUrl}'...");
+            return await _gitClient.GetPullRequestReviewsAsync(pullRequestUrl);
         }
 
         public async Task<IEnumerable<int>> SearchPullRequestsAsync(
@@ -366,17 +361,6 @@ namespace Microsoft.DotNet.DarcLib
 
             _logger.LogInformation($"Merging pull request '{pullRequestUrl}' succeeded!");
         }
-
-        public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
-        {
-            CheckForValidGitClient();
-            _logger.LogInformation($"Merging pull request '{pullRequestUrl}'...");
-
-            await _gitClient.MergeDependencyPullRequestAsync(pullRequestUrl, parameters ?? new MergePullRequestParameters());
-
-            _logger.LogInformation($"Merging pull request '{pullRequestUrl}' succeeded!");
-        }
-
 
         /// <summary>
         ///     Calculate the leaves of the coherency trees
@@ -1064,7 +1048,7 @@ namespace Microsoft.DotNet.DarcLib
             if (mayNeedArcadeUpdate)
             {
                 arcadeRemote = await remoteFactory.GetRemoteAsync(arcadeItem.RepoUri, _logger);
-                targetDotNetVersion = await GetToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
+                targetDotNetVersion = await arcadeRemote.GetToolsDotnetVersionAsync(arcadeItem.RepoUri, arcadeItem.Commit);
             }
 
             GitFileContentContainer fileContainer =
