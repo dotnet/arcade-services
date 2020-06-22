@@ -155,10 +155,6 @@ namespace Microsoft.DotNet.DarcLib
             throw new NotImplementedException();
         }
 
-        public Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
-        {
-            throw new NotImplementedException();
-        }
         /// <summary>
         ///     Updates local copies of the files.
         /// </summary>

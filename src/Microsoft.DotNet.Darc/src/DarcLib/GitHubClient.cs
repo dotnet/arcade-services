@@ -36,9 +36,6 @@ namespace Microsoft.DotNet.DarcLib
         private static readonly Regex PullRequestUriPattern =
             new Regex(@"^/repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)$");
 
-        private static readonly Regex DependencyUpdatesPattern =
-            new Regex(@"- \*\*(?<update>\w+)\*\*: from (?<oldVersion>[\d\.]*) to (?<newVersion>[\d\.]+)");
-
         private readonly Lazy<Octokit.IGitHubClient> _lazyClient;
         private readonly ILogger _logger;
         private readonly string _personalAccessToken;
@@ -378,65 +375,6 @@ namespace Microsoft.DotNet.DarcLib
                 await Client.Git.Reference.Delete(owner, repo, $"heads/{pr.Head.Ref}");
             }
         }
-
-        /// <summary>
-        ///     Parse out the owner and repo from a repository url
-        /// </summary>
-        /// <param name="prBody">Pull Request commit msg</param>
-        /// <returns>Tuple of owner and repo</returns>
-        public static string ParsePullRequestBody(string prBody)
-        {
-            var matches = DependencyUpdatesPattern.Matches(prBody);
-            if (matches.Count == 0)
-            {
-                return prBody;
-            }
-            string message = "";
-            foreach (Match match in matches)
-            {
-                message += $@"
-{match.Value.ToString().Replace("*","")}";
-            }
-            return message;
-        }
-
-        /// <summary>
-        ///     Merge a dependency update pull request
-        /// </summary>
-        /// <param name="pullRequestUrl">Uri of pull request to merge</param>
-        /// <param name="parameters">Settings for merge</param>
-        /// <returns></returns>
-        public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
-        {
-            (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-            Octokit.PullRequest pr = await Client.PullRequest.Get(owner, repo, id);
-            var commits = await Client.PullRequest.Commits(owner, repo, pr.Number);
-            string commitMessage = $@"{pr.Title}
-
-{ParsePullRequestBody(pr.Body)}";
-            foreach (Octokit.PullRequestCommit commit in commits)
-            {
-                if (!commit.Commit.Author.Name.Equals("dotnet-maestro[bot]"))
-                {
-                    commitMessage += $@" 
-{commit.Commit.Message}";
-                }
-            }
-            var mergePullRequest = new MergePullRequest
-            {
-                CommitMessage = commitMessage,
-                Sha = parameters.CommitToMerge,
-                MergeMethod = parameters.SquashMerge ? PullRequestMergeMethod.Squash : PullRequestMergeMethod.Merge
-            };
-
-            await Client.PullRequest.Merge(owner, repo, id, mergePullRequest);
-
-            if (parameters.DeleteSourceBranch)
-            {
-                await Client.Git.Reference.Delete(owner, repo, $"heads/{pr.Head.Ref}");
-            }
-        }
-
 
         /// <summary>
         ///     Create a new comment, or update the last comment with an updated message,
