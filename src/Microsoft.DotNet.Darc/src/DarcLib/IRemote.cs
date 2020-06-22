@@ -190,6 +190,13 @@ namespace Microsoft.DotNet.DarcLib
         Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
 
         /// <summary>
+        ///     Merge a Dependency update pull request.
+        /// </summary>
+        /// <param name="pullRequestUrl">Uri of pull request to merge</param>
+        /// <param name="parameters">Merge options.</param>
+        /// <returns>Async task.</returns>
+        Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
+        /// <summary>
         ///     Create a comment on a pull request, or update the last comment if it was made by Maestro.
         /// </summary>
         /// <param name="pullRequestUrl">Url of pull request.</param>
