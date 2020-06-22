@@ -207,69 +207,35 @@ For help filling out this form, see the [Root Cause Analysis](https://github.com
 
     public class IssuesHookData
     {
-        public string Action { get; }
-        public IssuesHookIssue Issue { get; }
-        public IssuesHookUser Sender { get; }
-        public IssuesHookRepository Repository { get; }
-        public IssuesHookLabel Label { get; }
-        
-        public IssuesHookData(string action, IssuesHookIssue issue, IssuesHookUser sender, IssuesHookRepository repository, IssuesHookLabel label)
-        {
-            Action = action;
-            Issue = issue;
-            Sender = sender;
-            Repository = repository;
-            Label = label;
-        }
+        public string Action { get; set; }
+        public IssuesHookIssue Issue { get; set; }
+        public IssuesHookUser Sender { get; set; }
+        public IssuesHookRepository Repository { get; set; }
+        public IssuesHookLabel Label { get; set; }
     }
 
     public class IssuesHookRepository
     {
-        public string Name { get; }
-        public IssuesHookUser Owner { get; }
-
-        public IssuesHookRepository(string name, IssuesHookUser owner)
-        {
-            Name = name;
-            Owner = owner;
-        }
+        public string Name { get; set; }
+        public IssuesHookUser Owner { get; set; }
     }
 
     public class IssuesHookIssue
     {
-        public int Number { get; }
-        public string Title { get; }
-        public IssuesHookUser Assignee { get; }
+        public int Number { get; set; }
+        public string Title { get; set; }
+        public IssuesHookUser Assignee { get; set; }
         public ImmutableArray<IssuesHookLabel> Labels { get; set; }
-        public ItemState State { get; }
-
-        public IssuesHookIssue(int number, string title, IssuesHookUser assignee, ImmutableArray<IssuesHookLabel> labels, ItemState state)
-        {
-            Number = number;
-            Title = title;
-            Assignee = assignee;
-            Labels = labels;
-            State = state;
-        }
+        public ItemState State { get; set; }
     }
 
     public class IssuesHookLabel
     {
-        public string Name { get; }
-
-        public IssuesHookLabel(string name)
-        {
-            Name = name;
-        }
+        public string Name { get; set; }
     }
 
     public class IssuesHookUser
     {
-        public string Login { get; }
-
-        public IssuesHookUser(string login)
-        {
-            Login = login;
-        }
+        public string Login { get; set; }
     }
 }
