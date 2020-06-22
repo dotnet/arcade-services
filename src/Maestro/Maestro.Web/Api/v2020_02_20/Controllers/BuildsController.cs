@@ -17,7 +17,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Internal;
 using Newtonsoft.Json.Linq;
 
 namespace Maestro.Web.Api.v2020_02_20.Controllers
@@ -29,13 +28,12 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
     [ApiVersion("2020-02-20")]
     public class BuildsController : v2019_01_16.Controllers.BuildsController
     {
-        private IBackgroundQueue Queue { get; }
+        private BackgroundQueue Queue { get; }
 
         public BuildsController(
             BuildAssetRegistryContext context,
-            IBackgroundQueue queue,
-            ISystemClock clock)
-            : base(context, clock)
+            BackgroundQueue queue)
+            : base(context)
         {
             Queue = queue;
         }

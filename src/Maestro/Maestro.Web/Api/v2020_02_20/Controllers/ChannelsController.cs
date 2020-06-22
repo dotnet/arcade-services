@@ -66,7 +66,8 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         public override async Task<IActionResult> ListRepositories(int id)
         {
             List<string> list = await _context.BuildChannels
-                    .Include(b => b.Build)
+                    .Include(b => b.Build.GitHubRepository)
+                    .Include(b => b.Build.AzureDevOpsRepository)
                     .Where(bc => bc.ChannelId == id)
                     .Select(bc => bc.Build.GitHubRepository ?? bc.Build.AzureDevOpsRepository)
                     .Where(b => !String.IsNullOrEmpty(b))
