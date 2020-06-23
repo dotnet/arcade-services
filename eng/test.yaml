@@ -11,7 +11,7 @@ steps:
   inputs:
     command: custom
     projects: |
-      src/**/*.Tests.csproj
+      $(Build.SourcesDirectory)\arcade-services.sln
     custom: test
     arguments: > 
       --configuration $(_BuildConfig)
