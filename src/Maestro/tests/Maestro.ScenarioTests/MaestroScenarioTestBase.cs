@@ -119,6 +119,11 @@ namespace Maestro.ScenarioTests
             });
         }
 
+        public async Task PullGitBranchAsync(string remote, string branch)
+        {
+            await RunGitAsync("pull", remote, branch);
+        }
+
         public string GetRepoUrl(string org, string repository)
         {
             return $"https://github.com/{org}/{repository}";
