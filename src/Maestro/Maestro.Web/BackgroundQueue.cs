@@ -20,7 +20,20 @@ namespace Maestro.Web
         Task ProcessAsync(JToken argumentToken);
     }
 
-    public class BackgroundQueue : BackgroundService
+    public interface IBackgroundQueue
+    {
+        void Post<T>(JToken args) where T : IBackgroundWorkItem;
+    }
+
+    public static class BackgroundQueueExtensions
+    {
+        public static void Post<T>(this IBackgroundQueue queue) where T : IBackgroundWorkItem
+        {
+            queue.Post<T>("");
+        }
+    }
+
+    public class BackgroundQueue : BackgroundService, IBackgroundQueue
     {
         private readonly BlockingCollection<(Type type, JToken args)> _workItems = new BlockingCollection<(Type type, JToken args)>();
         private readonly OperationManager _operations;
@@ -32,11 +45,6 @@ namespace Maestro.Web
         }
 
         public ILogger<BackgroundQueue> Logger { get; }
-
-        public void Post<T>() where T : IBackgroundWorkItem
-        {
-            Post<T>("");
-        }
 
         public void Post<T>(JToken args) where T : IBackgroundWorkItem
         {
