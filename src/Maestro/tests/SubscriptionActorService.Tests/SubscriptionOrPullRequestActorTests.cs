@@ -4,19 +4,19 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.Data.Models;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Moq;
+using Xunit.Abstractions;
 
 namespace SubscriptionActorService.Tests
 {
-    public class SubscriptionOrPullRequestActorTests : ActorTests
+    public abstract class SubscriptionOrPullRequestActorTests : ActorTests
     {
         protected const string AssetFeedUrl = "https://source.feed/index.json";
         protected const string SourceBranch = "source.branch";
@@ -33,7 +33,7 @@ namespace SubscriptionActorService.Tests
 
         protected readonly List<Action> AfterDbUpdateActions = new List<Action>();
 
-        protected readonly Mock<IHostingEnvironment> HostingEnvironment;
+        protected readonly Mock<IHostEnvironment> HostingEnvironment;
 
         protected Channel Channel;
 
@@ -41,17 +41,21 @@ namespace SubscriptionActorService.Tests
 
         protected Subscription Subscription;
 
-        public SubscriptionOrPullRequestActorTests()
+        protected SubscriptionOrPullRequestActorTests(ITestOutputHelper output) : base(output)
         {
             ActionRunner = CreateMock<IActionRunner>();
-            HostingEnvironment = CreateMock<IHostingEnvironment>();
+            HostingEnvironment = CreateMock<IHostEnvironment>();
         }
 
         protected override void RegisterServices(IServiceCollection services)
         {
             services.AddSingleton(HostingEnvironment.Object);
             services.AddSingleton(ActionRunner.Object);
-            services.AddBuildAssetRegistry(options => { options.UseInMemoryDatabase("BuildAssetRegistry"); });
+            services.AddBuildAssetRegistry(options =>
+            {
+                options.UseInMemoryDatabase("BuildAssetRegistry");
+                options.EnableServiceProviderCaching(false);
+            });
             base.RegisterServices(services);
         }
 

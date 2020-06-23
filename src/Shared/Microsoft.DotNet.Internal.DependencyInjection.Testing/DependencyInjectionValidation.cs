@@ -13,14 +13,22 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
         private static readonly ImmutableList<string> s_exemptTypes = ImmutableList.Create(
             "System.Fabric.ServiceContext",
             "Microsoft.Extensions.Options.IConfigureOptions`1",
-            "Microsoft.Extensions.Caching.Memory.MemoryCacheOptions"
+            "Microsoft.Extensions.Caching.Memory.MemoryCacheOptions",
+            "Microsoft.Extensions.Caching.Memory.MemoryDistributedCacheOptions",
+            "Microsoft.Extensions.DependencyInjection.IServiceScopeFactory",
+            "System.IServiceProvider"
         );
 
         private static readonly ImmutableList<string> s_exemptNamespaces = ImmutableList.Create(
-            "Microsoft.ApplicationInsights.AspNetCore"
+            "Microsoft.ApplicationInsights.AspNetCore",
+            "Microsoft.AspNetCore"
         );
 
-        public static bool IsDependencyResolutionCoherent(Action<ServiceCollection> register, out string errorMessage)
+        public static bool IsDependencyResolutionCoherent(
+            Action<ServiceCollection> register,
+            out string errorMessage,
+            IEnumerable<Type> additionalScopedTypes = null,
+            IEnumerable<Type> additionalSingletonTypes = null)
         {
             errorMessage = null;
 
@@ -45,7 +53,23 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
                     continue;
                 }
 
-                if (!IsTypeResolvable(service.ImplementationType, services, allErrors))
+                if (!IsTypeResolvable(service.ImplementationType, services, allErrors, service.Lifetime))
+                {
+                    allResolved = false;
+                }
+            }
+
+            foreach (Type scopedType in additionalScopedTypes ?? Enumerable.Empty<Type>())
+            {
+                if (!IsTypeResolvable(scopedType, services, allErrors, ServiceLifetime.Scoped))
+                {
+                    allResolved = false;
+                }
+            }
+
+            foreach (Type scopedType in additionalSingletonTypes ?? Enumerable.Empty<Type>())
+            {
+                if (!IsTypeResolvable(scopedType, services, allErrors, ServiceLifetime.Singleton))
                 {
                     allResolved = false;
                 }
@@ -57,7 +81,11 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
             return allResolved;
         }
 
-        private static bool IsTypeResolvable(Type type, ServiceCollection services, StringBuilder msgBuilder)
+        private static bool IsTypeResolvable(
+            Type type,
+            ServiceCollection services,
+            StringBuilder msgBuilder,
+            ServiceLifetime serviceLifetime)
         {
             ConstructorInfo[] constructors = type
                 .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
@@ -73,12 +101,12 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
             string errorMessage = null;
             foreach (ConstructorInfo ctor in constructors)
             {
-                if (IsConstructorResolvable(ctor, services, errorMessage == null, out string ctorMsg))
+                if (IsConstructorResolvable(ctor, services, errorMessage == null, serviceLifetime, out string ctorMsg))
                 {
                     return true;
                 }
 
-                errorMessage = ctorMsg;
+                errorMessage ??= ctorMsg;
             }
             
             msgBuilder.AppendLine();
@@ -88,7 +116,12 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
             return false;
         }
 
-        private static bool IsConstructorResolvable(ConstructorInfo ctor, ServiceCollection services, bool recordErrors, out string errorMessage)
+        private static bool IsConstructorResolvable(
+            ConstructorInfo ctor,
+            ServiceCollection services,
+            bool recordErrors,
+            ServiceLifetime serviceLifetime,
+            out string errorMessage)
         {
             errorMessage = null;
             bool resolvedAllParameters = true;
@@ -106,6 +139,22 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
                 ServiceDescriptor parameterService = services.FirstOrDefault(s => IsMatchingServiceRegistration(s.ServiceType, p.ParameterType));
                 if (parameterService != null)
                 {
+                    if (serviceLifetime == ServiceLifetime.Singleton &&
+                        parameterService.Lifetime == ServiceLifetime.Scoped)
+                    {
+                        if (!resolvedAllParameters)
+                        {
+                            msgBuilder.Append(", ");
+                        }
+                        
+                        msgBuilder.Append("<SCOPED> ");
+                        msgBuilder.Append(p.Name);
+                        msgBuilder.Append(" of type ");
+                        msgBuilder.Append(GetDisplayName(p.ParameterType));
+
+                        resolvedAllParameters = false;
+                    }
+
                     continue;
                 }
 
@@ -140,7 +189,7 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
                 // The name of IOptions<Pizza> is "IOptions`1"
                 // The full name has the other types, but they are all fully qualified (and also still have the `1 on them)
                 string baseName = type.Name.Split('`')[0];
-                return $"{baseName}<{string.Join(",", type.GetGenericArguments().Select(GetDisplayName))}>";
+                return $"{baseName}<{string.Join(", ", type.GetGenericArguments().Select(GetDisplayName))}>";
             }
 
             return type.Name;

@@ -3,7 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using JetBrains.Annotations;
-using Swashbuckle.AspNetCore.Swagger;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
@@ -11,6 +11,6 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
     [PublicAPI]
     public interface ISwaggerVersioningScheme
     {
-        void Apply(Operation operation, OperationFilterContext context, string version);
+        void Apply(OpenApiOperation operation, OperationFilterContext context, string version);
     }
 }

@@ -130,7 +130,7 @@ namespace Microsoft.DotNet.Darc.Tests
                 testPath: RootInputsPath);
         }
 
-        private async static void TestAndCompareImpl(
+        private static async Task TestAndCompareImpl(
             string testInputsName, 
             bool compareOutput, 
             Func<DependencyTestDriver, Task> testFunc)
@@ -153,17 +153,17 @@ namespace Microsoft.DotNet.Darc.Tests
             }
         }
 
-        public static void TestAndCompareOutput(string testInputsName, Func<DependencyTestDriver, Task> testFunc)
+        public static Task TestAndCompareOutput(string testInputsName, Func<DependencyTestDriver, Task> testFunc)
         {
-            TestAndCompareImpl(testInputsName, true, testFunc);
+            return TestAndCompareImpl(testInputsName, true, testFunc);
         }
 
-        public static void TestNoCompare(string testInputsName, Func<DependencyTestDriver, Task> testFunc)
+        public static Task TestNoCompare(string testInputsName, Func<DependencyTestDriver, Task> testFunc)
         {
-            TestAndCompareImpl(testInputsName, false, testFunc);
+            return TestAndCompareImpl(testInputsName, false, testFunc);
         }
 
-        public async static void GetGraphAndCompare(string testInputsName, 
+        public static async Task GetGraphAndCompare(string testInputsName, 
             Func<DependencyTestDriver, Task<DependencyGraph>> testFunc,
             string expectedGraphFile)
         {
@@ -300,7 +300,14 @@ namespace Microsoft.DotNet.Darc.Tests
         /// </summary>
         public void Cleanup()
         {
-            Directory.Delete(TemporaryRepositoryPath, true);
+            try
+            {
+                Directory.Delete(TemporaryRepositoryPath, true);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                // Good, it's already gone
+            }
         }
 
         /// <summary>
