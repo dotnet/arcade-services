@@ -68,7 +68,7 @@ namespace Maestro.Web.Tests
         public async Task ListRepositories()
         {
             using TestData data = await BuildDefaultAsync();
-            string channelName = "TEST-CHANNEL-LIST-REPOSITORIES";
+            string channelName = "TEST-CHANNEL-LIST-REPOSITORIES-20180716";
             string classification = "TEST-CLASSIFICATION";
             string commitHash = "FAKE-COMMIT";
             string buildNumber = "20.5.19.20";
