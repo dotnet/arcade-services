@@ -226,6 +226,7 @@ namespace Microsoft.DotNet.Darc.Operations
 
             var queueTimeVariables = $"{{" +
                 $"\"BARBuildId\": \"{ build.Id }\", " +
+                $"\"PublishingInfraVersion\": \"{ _options.PublishingInfraVersion }\", " +
                 $"\"PromoteToChannelIds\": \"{ string.Join(",", targetChannels.Select(tch => tch.Id)) }\", " +
                 $"\"EnableSigningValidation\": \"{ _options.DoSigningValidation }\", " +
                 $"\"SigningValidationAdditionalParameters\": \"{ _options.SigningValidationAdditionalParameters }\", " +
