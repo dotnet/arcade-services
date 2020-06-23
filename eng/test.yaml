@@ -17,7 +17,7 @@ steps:
       --configuration $(_BuildConfig)
       --collect:"Code Coverage"
       --settings:CodeCoverage.runsettings
-      --filter "TestCategory!=ScenarioTest"
+      --filter "TestCategory!=PostDeployment&TestCategory!=Nightly&TestCategory!=PreDeployment"
       --no-build
       --logger "trx;LogFilePrefix=TestResults-"
       -v normal
