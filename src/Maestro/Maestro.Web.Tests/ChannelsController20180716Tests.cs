@@ -39,7 +39,7 @@ namespace Maestro.Web.Tests
         {
             using TestData data = await BuildDefaultAsync();
             Channel channel;
-            string channelName = "TEST-CHANNEL-BASIC";
+            string channelName = "TEST-CHANNEL-BASIC-20180716";
             string classification = "TEST-CLASSIFICATION";
             {
                 IActionResult result = await data.Controller.CreateChannel(channelName, classification);
