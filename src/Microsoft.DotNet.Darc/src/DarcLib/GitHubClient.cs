@@ -36,6 +36,10 @@ namespace Microsoft.DotNet.DarcLib
         private static readonly Regex PullRequestUriPattern =
             new Regex(@"^/repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)$");
 
+        // captures specific part of the pr description, for eg: 
+        // **Updates**:
+        //- **Foo**: from to 1.1.0
+        //- **Bar**: from to 2.1.0
         private static readonly Regex DependencyUpdatesPattern =
             new Regex(@"- \*\*(?<update>\w+)\*\*: from (?<oldVersion>[\d\.]*) to (?<newVersion>[\d\.]+)");
 
