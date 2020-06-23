@@ -78,6 +78,12 @@ namespace Microsoft.DotNet.Darc.Operations
                     return Constants.ErrorCode;
                 }
 
+                if (_options.PublishingInfraVersion < 2 || _options.PublishingInfraVersion > 3)
+                {
+                    Console.WriteLine($"Publishing version '{_options.PublishingInfraVersion}' is not configured. The following versions are available: 2, 3");
+                    return Constants.ErrorCode;
+                }
+
                 List<Channel> targetChannels = new List<Channel>();
 
                 if (!string.IsNullOrEmpty(_options.Channel))
