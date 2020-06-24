@@ -13,6 +13,9 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("id", Required = true, HelpText = "BAR id of build to assign to channel.")]
         public int Id { get; set; }
 
+        [Option("publishing-infra-version", Default = 2, Required = true, HelpText = "Which version of the publishing infrastructure should be used.")]
+        public int PublishingInfraVersion { get; set; }
+
         [Option("channel", HelpText = "Channel to assign build to. Required if --default-channels is not specified.")]
         public string Channel { get; set; }
 
