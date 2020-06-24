@@ -142,7 +142,7 @@ If any errors are visible, the browser console should reveal which API is
 returning the errors: Making GET requests to these APIs will also reveal any
 problem with the queries that Barviz uses:
 
-### Build Details
+#### Build Details
 
 * https://maestro-int.westus2.cloudapp.azure.com/api/builds/15357?api-version=2018-07-16
 * https://maestro-int.westus2.cloudapp.azure.com/api/builds/15357?api-version=2019-01-16
