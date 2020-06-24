@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Maestro.Data;
@@ -174,6 +175,58 @@ namespace Maestro.Web.Tests
                 Assert.Contains(cBuild.Dependencies, b => b.BuildId == aBuild.Id);
                 Assert.Contains(cBuild.Dependencies, b => b.BuildId == bBuild.Id);
             }
+        }
+
+        [Fact]
+        public async Task BuildGraphIncludesOnlyRelatedBuilds()
+        {
+            using TestData data = await BuildDefaultAsync();
+
+            string commitHash = "FAKE-COMMIT";
+            string account = "FAKE-ACCOUNT";
+            string project = "FAKE-PROJECT";
+            string buildNumber = "20.5.19.20";
+            string branch = "FAKE-BRANCH";
+
+            async Task<Build> CreateBuildAsync(string repo, string build, params Build[] dependencies)
+            {
+                var inputBuild = new BuildData
+                {
+                    Commit = commitHash,
+                    AzureDevOpsAccount = account,
+                    AzureDevOpsProject = project,
+                    AzureDevOpsBuildNumber = buildNumber + "." + build,
+                    AzureDevOpsRepository = repo,
+                    AzureDevOpsBranch = branch,
+                    Dependencies = dependencies.Select(d => new BuildRef(d.Id, true)).ToList(),
+                };
+
+                return (Build) ((ObjectResult) await data.Controller.Create(inputBuild)).Value;
+            }
+
+            Build aBuild = await CreateBuildAsync("A-REPO", "1");
+            Build bBuild= await CreateBuildAsync("B-REPO", "2");
+            Build cBuild= await CreateBuildAsync("C-REPO", "3", aBuild, bBuild);
+            await CreateBuildAsync("UNRELATED-REPO", "4");
+
+            BuildGraph graph;
+            {
+                IActionResult result = await data.Controller.GetBuildGraph(cBuild.Id);
+                Assert.IsAssignableFrom<ObjectResult>(result);
+                var objResult = (ObjectResult) result;
+                Assert.Equal((int) HttpStatusCode.OK, objResult.StatusCode);
+                Assert.IsAssignableFrom<BuildGraph>(objResult.Value);
+                graph = (BuildGraph) objResult.Value;
+            }
+
+            Assert.Equal(3, graph.Builds.Count);
+            Assert.Contains(aBuild.Id, graph.Builds);
+            Assert.Contains(bBuild.Id, graph.Builds);
+            Assert.Contains(cBuild.Id, graph.Builds);
+            Assert.Contains(aBuild.Id, graph.Builds[cBuild.Id].Dependencies.Select(r => r.BuildId));
+            Assert.Contains(bBuild.Id, graph.Builds[cBuild.Id].Dependencies.Select(r => r.BuildId));
+            Assert.Empty(graph.Builds[aBuild.Id].Dependencies);
+            Assert.Empty(graph.Builds[bBuild.Id].Dependencies);
         }
 
         private Task<TestData> BuildDefaultAsync()
