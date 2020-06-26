@@ -5,14 +5,26 @@
         <Configuration>
           <CodeCoverage>
             <ModulePaths>
+              <Include>
+                <ModulePath>.*\.dll$</ModulePath>
+                <ModulePath>.*\.exe$</ModulePath>
+              </Include>
               <Exclude>
-                <ModulePath>.*Moq.dll</ModulePath>
-                <ModulePath>.*fluentassertions.dll</ModulePath>
-                <ModulePath>.*microsoft.extensions.logging.applicationinsights.dll</ModulePath>
-                <ModulePath>.*libgit2sharp.dll</ModulePath>
-                <ModulePath>.*quartz.dll</ModulePath>
+                <ModulePath>.*Moq\.dll$</ModulePath>
+                <ModulePath>.*fluentassertions\.dll$</ModulePath>
+                <ModulePath>.*microsoft\.extensions\.logging\.applicationinsights\.dll$</ModulePath>
+                <ModulePath>.*libgit2sharp\.dll$</ModulePath>
+                <ModulePath>.*quartz\.dll$</ModulePath>
+                <ModulePath>git.*\.dll$</ModulePath>
+                <ModulePath>.*Tests\.dll$</ModulePath>
+                <ModulePath>.*\.testadapter\.dll$</ModulePath>
               </Exclude>
             </ModulePaths>
+            <Functions>
+              <Exclude>
+                <Function>Microsoft\.Data\.Migrations\..*</Function>
+              </Exclude>
+            </Functions>
           </CodeCoverage>
         </Configuration>
       </DataCollector>
