@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using System.Xml.Serialization;
 using MSBuild = Microsoft.Build.Utilities;
 using Microsoft.DotNet.VersionTools.BuildManifest;
+using Microsoft.DotNet.VersionTools.BuildManifest.Model;
 
 namespace Microsoft.DotNet.Maestro.Tasks
 {
@@ -36,11 +37,19 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         public string RepoRoot { get; set; }
 
+        public string AssetVersion { get; set; }
+
+        public string[] ManifestBuildData { get; set; }
+
+        public string PublishingVersion { get; set; } = "3";
+
         [Output]
         public int BuildId { get; set; }
 
         private const string SearchPattern = "*.xml";
+        private const string MergeManifestFileName = "MergedManifest.xml";
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
+        private readonly HashSet<string> blobSet = new HashSet<string>();
 
         public void Cancel()
         {
@@ -62,6 +71,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
         {
             try
             {
+                System.Diagnostics.Debugger.Launch();
+
                 cancellationToken.ThrowIfCancellationRequested();
 
                 Log.LogMessage(MessageImportance.High, "Starting build metadata push to the Build Asset Registry...");
@@ -82,6 +93,22 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                     BuildData finalBuild = MergeBuildManifests(buildsManifestMetadata);
 
+                    // Inject an entry of MergedManifest.xml to the in-memory merged manifest
+                    string location = null;
+                    AssetData assetData = finalBuild.Assets.FirstOrDefault();
+
+                    if (assetData != null)
+                    {
+                        AssetLocationData assetLocationData = assetData.Locations.FirstOrDefault();
+
+                        if (assetLocationData != null)
+                        {
+                            location = assetLocationData.Location;
+                        }
+                    }
+
+                    finalBuild.Assets = finalBuild.Assets.Add(GetManifestAsAsset(finalBuild.Assets, location, MergeManifestFileName));
+
                     IMaestroApi client = ApiFactory.GetAuthenticated(MaestroApiEndpoint, BuildAssetRegistryToken);
 
                     var deps = await GetBuildDependenciesAsync(client, cancellationToken);
@@ -97,6 +124,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                     Log.LogMessage(MessageImportance.High, $"Metadata has been pushed. Build id in the Build Asset Registry is '{recordedBuild.Id}'");
                     Console.WriteLine($"##vso[build.addbuildtag]BAR ID - {recordedBuild.Id}");
+
+                    // Based on the in-memory merged manifest, create a physical XML file and
+                    // upload it to the BlobArtifacts folder
+                    CreateAndPushMergedManifest(finalBuild.Assets);
 
                     // Only 'create' the AzDO (VSO) variables if running in an AzDO build
                     if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BUILD_BUILDID")))
@@ -293,6 +324,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             manifest.InitialAssetsLocation ?? manifest.Location,
                             LocationType.Container,
                             blob.NonShipping);
+
+                        blobSet.Add(blob.Id);
                     }
 
                     // For now we aren't persisting this property, so we just record this info in the task scope
@@ -373,6 +406,16 @@ namespace Microsoft.DotNet.Maestro.Tasks
         private int GetAzDevBuildDefinitionId()
         {
             return int.Parse(GetEnv("SYSTEM_DEFINITIONID"));
+        }
+
+        private string GetAzDevCommit()
+        {
+            return GetEnv("BUILD_SOURCEVERSION");
+        }
+
+        private string GetAzDevStagingDirectory()
+        {
+            return GetEnv("Build.ArtifactStagingDirectory");
         }
 
         /// <summary>
@@ -494,6 +537,122 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     mergedBuild.GitHubBranch = null;
                 }
             }
+        }
+
+        /// <summary>
+        /// Creates an AssetData object for the merged manifest so it can be injected
+        /// in itself
+        /// </summary>
+        /// <param name="assets">List of assets extracted from the merged manifest</param>
+        /// <param name="location">Initial location for the merged manifest entry</param>
+        /// <param name="manifestFileName">Merged manifest file name</param>
+        /// <returns>An AssetData with data about the merge manifest</returns>
+        private AssetData GetManifestAsAsset(IImmutableList<AssetData> assets, string location, string manifestFileName)
+        {
+            (string accountName, string projectName, string azDORepoName) = AzureDevOpsClient.ParseRepoUri(GetAzDevRepository());
+
+            if (string.IsNullOrEmpty(AssetVersion))
+            {
+                AssetData asset = assets.Where(a => a.NonShipping).FirstOrDefault();
+
+                if (asset != null)
+                {
+                    AssetVersion = asset.Version;
+                }
+            }
+
+            AssetData assetData = new AssetData(true)
+            {
+                Locations = (location == null) ? null : ImmutableList.Create(new AssetLocationData(LocationType.Container)
+                {
+                    Location = location,
+                }),
+                Name = $"assets/manifests/{azDORepoName}/{AssetVersion}/{manifestFileName}",
+                Version = AssetVersion,
+            };
+
+            blobSet.Add(assetData.Name);
+            return assetData;
+        }
+
+        private IDictionary<string, string> GetNamedProperties(string[] input)
+        {
+            var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            if (input == null)
+            {
+                return values;
+            }
+
+            foreach (var item in input)
+            {
+                var splitIdx = item.IndexOf('=');
+                if (splitIdx < 0)
+                {
+                    continue;
+                }
+
+                var key = item.Substring(0, splitIdx).Trim();
+                if (string.IsNullOrEmpty(key))
+                {
+                    continue;
+                }
+
+                var value = item.Substring(splitIdx + 1);
+                values[key] = value;
+            }
+
+            return values;
+        }
+
+        private void CreateAndPushMergedManifest(IImmutableList<AssetData> assets)
+        {
+            string mergedManifestPath = Path.Combine(GetAzDevStagingDirectory(), MergeManifestFileName);
+
+            BuildModel buildModel = new BuildModel(
+                        new BuildIdentity
+                        {
+                            Attributes = GetNamedProperties(ManifestBuildData),
+                            Name = GetAzDevRepository(),
+                            BuildId = GetAzDevBuildNumber(),
+                            Branch = GetAzDevBranch(),
+                            Commit = GetAzDevCommit(),
+                            IsStable = IsStableBuild.ToString(),
+                            PublishingVersion = PublishingVersion
+                        });
+
+            foreach (AssetData data in assets)
+            {
+                if (blobSet.Contains(data.Name))
+                {
+                    BlobArtifactModel blobArtifactModel = new BlobArtifactModel
+                    {
+                        Attributes = new Dictionary<string, string>
+                                {
+                                    { "NonShipping", data.NonShipping.ToString() }
+                                },
+                        Id = data.Name
+                    };
+                    buildModel.Artifacts.Blobs.Add(blobArtifactModel);
+                }
+                else
+                {
+                    PackageArtifactModel packageArtifactModel = new PackageArtifactModel
+                    {
+                        Attributes = new Dictionary<string, string>
+                                {
+                                    { "NonShipping", data.NonShipping.ToString() }
+                                },
+                        Id = data.Name,
+                        Version = data.Version
+                    };
+                    buildModel.Artifacts.Packages.Add(packageArtifactModel);
+                }
+            }
+
+            File.WriteAllText(mergedManifestPath, buildModel.ToXml().ToString());
+
+            Log.LogMessage(MessageImportance.High,
+                        $"##vso[artifact.upload containerfolder=BlobArtifacts;artifactname=BlobArtifacts]{mergedManifestPath}");
         }
     }
 }
