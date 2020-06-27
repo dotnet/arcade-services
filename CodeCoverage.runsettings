@@ -10,14 +10,16 @@
                 <ModulePath>.*\.exe$</ModulePath>
               </Include>
               <Exclude>
-                <ModulePath>.*Moq\.dll$</ModulePath>
+                <ModulePath>.*moq\.dll$</ModulePath>
                 <ModulePath>.*fluentassertions\.dll$</ModulePath>
                 <ModulePath>.*microsoft\.extensions\.logging\.applicationinsights\.dll$</ModulePath>
                 <ModulePath>.*libgit2sharp\.dll$</ModulePath>
                 <ModulePath>.*quartz\.dll$</ModulePath>
                 <ModulePath>.*\git.*\.dll$</ModulePath>
-                <ModulePath>.*Tests\.dll$</ModulePath>
+                <ModulePath>.*tests\.dll$</ModulePath>
                 <ModulePath>.*\.testadapter\.dll$</ModulePath>
+                <!-- This is all generated code -->
+                <ModulePath>.*microsoft\.dotnet\.maestro\.client\.dll$</ModulePath>
               </Exclude>
             </ModulePaths>
             <Functions>
