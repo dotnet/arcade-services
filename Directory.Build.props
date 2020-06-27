@@ -19,4 +19,12 @@
     <EnableCentralPackageVersions>true</EnableCentralPackageVersions>
     <CentralPackagesFile>$(MSBuildThisFileDirectory)eng/Packages.props</CentralPackagesFile>
   </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(IsTestProject) ' == 'true' ">
+    <DebugType>Full</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup Condition=" '$(IsTestProject) ' == 'true' ">
+    <PackageReference Include="Microsoft.CodeCoverage" />
+  </PropertyGroup>
 </Project>

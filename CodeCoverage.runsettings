@@ -15,7 +15,7 @@
                 <ModulePath>.*microsoft\.extensions\.logging\.applicationinsights\.dll$</ModulePath>
                 <ModulePath>.*libgit2sharp\.dll$</ModulePath>
                 <ModulePath>.*quartz\.dll$</ModulePath>
-                <ModulePath>git.*\.dll$</ModulePath>
+                <ModulePath>.*\git.*\.dll$</ModulePath>
                 <ModulePath>.*Tests\.dll$</ModulePath>
                 <ModulePath>.*\.testadapter\.dll$</ModulePath>
               </Exclude>
