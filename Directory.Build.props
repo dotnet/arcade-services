@@ -23,5 +23,5 @@
 
   <ItemGroup Condition=" '$(IsTestProject) ' == 'true' ">
     <PackageReference Include="Microsoft.CodeCoverage" />
-  </PropertyGroup>
+  </ItemGroup>
 </Project>
