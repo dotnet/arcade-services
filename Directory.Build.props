@@ -7,6 +7,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IsShipping>false</IsShipping>
     <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
+    <DebugType>Full</DebugType>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -18,10 +19,6 @@
 
     <EnableCentralPackageVersions>true</EnableCentralPackageVersions>
     <CentralPackagesFile>$(MSBuildThisFileDirectory)eng/Packages.props</CentralPackagesFile>
-  </PropertyGroup>
-
-  <PropertyGroup Condition=" '$(IsTestProject) ' == 'true' ">
-    <DebugType>Full</DebugType>
   </PropertyGroup>
 
   <ItemGroup Condition=" '$(IsTestProject) ' == 'true' ">
