@@ -24,7 +24,7 @@
             </ModulePaths>
             <Functions>
               <Exclude>
-                <Function>Microsoft\.Data\.Migrations\..*</Function>
+                <Function>Maestro\.Data\.Migrations\..*</Function>
               </Exclude>
             </Functions>
           </CodeCoverage>
