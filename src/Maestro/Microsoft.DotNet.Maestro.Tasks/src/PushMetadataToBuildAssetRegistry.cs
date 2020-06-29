@@ -19,6 +19,7 @@ using System.Xml.Serialization;
 using MSBuild = Microsoft.Build.Utilities;
 using Microsoft.DotNet.VersionTools.BuildManifest;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
+using System.Xml.Linq;
 
 namespace Microsoft.DotNet.Maestro.Tasks
 {
@@ -71,8 +72,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
         {
             try
             {
-                System.Diagnostics.Debugger.Launch();
-
                 cancellationToken.ThrowIfCancellationRequested();
 
                 Log.LogMessage(MessageImportance.High, "Starting build metadata push to the Build Asset Registry...");
@@ -83,7 +82,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
                 else
                 {
-                    List<BuildData> buildsManifestMetadata = GetBuildManifestsMetadata(ManifestsPath, cancellationToken);
+                    (List<BuildData> buildsManifestMetadata, List<SigningInformation> signingInformation) = GetBuildManifestsMetadata(ManifestsPath, cancellationToken);
 
                     if (buildsManifestMetadata.Count == 0)
                     {
@@ -92,6 +91,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     }
 
                     BuildData finalBuild = MergeBuildManifests(buildsManifestMetadata);
+                    SigningInformation finalSigningInfo = MergeSigningInfo(signingInformation);
 
                     // Inject an entry of MergedManifest.xml to the in-memory merged manifest
                     string location = null;
@@ -127,7 +127,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                     // Based on the in-memory merged manifest, create a physical XML file and
                     // upload it to the BlobArtifacts folder
-                    CreateAndPushMergedManifest(finalBuild.Assets);
+                    CreateAndPushMergedManifest(finalBuild.Assets, finalSigningInfo);
 
                     // Only 'create' the AzDO (VSO) variables if running in an AzDO build
                     if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BUILD_BUILDID")))
@@ -279,11 +279,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return VersionIdentifier.GetVersion(assetId);
         }
 
-        private List<BuildData> GetBuildManifestsMetadata(
+        private (List<BuildData>, List<SigningInformation>) GetBuildManifestsMetadata(
             string manifestsFolderPath,
             CancellationToken cancellationToken)
         {
             var buildsManifestMetadata = new List<BuildData>();
+            var signingInfo = new List<SigningInformation>();
 
             foreach (string manifestPath in Directory.GetFiles(manifestsFolderPath, SearchPattern, SearchOption.AllDirectories))
             {
@@ -350,10 +351,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     };
 
                     buildsManifestMetadata.Add(buildInfo);
+                    signingInfo.Add(manifest.SigningInformation);
                 }
             }
 
-            return buildsManifestMetadata;
+            return (buildsManifestMetadata, signingInfo);
         }
 
         private string GetEnv(string key)
@@ -480,6 +482,35 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return mergedBuild;
         }
 
+        private SigningInformation MergeSigningInfo(List<SigningInformation> signignInformation)
+        {
+            SigningInformation mergedInfo = signignInformation[0];
+
+            for (int i = 1; i < signignInformation.Count; i++)
+            {
+                SigningInformation signInfo = signignInformation[i];
+
+                if (mergedInfo.AzureDevOpsBuildId != signInfo.AzureDevOpsBuildId ||
+                    mergedInfo.AzureDevOpsCollectionUri != signInfo.AzureDevOpsCollectionUri ||
+                    mergedInfo.AzureDevOpsProject != signInfo.AzureDevOpsProject)
+                {
+                    throw new Exception("Can't merge if one or more manifests have different build id, collection URI or project.");
+                }
+
+                mergedInfo.FileExtensionSignInfos.AddRange(signInfo.FileExtensionSignInfos);
+                mergedInfo.FileSignInfos.AddRange(signInfo.FileSignInfos);
+                mergedInfo.ItemsToSign.AddRange(signInfo.ItemsToSign);
+                mergedInfo.StrongNameSignInfos.AddRange(signInfo.StrongNameSignInfos);
+            }
+
+            mergedInfo.FileExtensionSignInfos = new List<FileExtensionSignInfo>(mergedInfo.FileExtensionSignInfos.Distinct(new FileExtensionSignInfoComparer()));
+            mergedInfo.FileSignInfos = new List<FileSignInfo>(mergedInfo.FileSignInfos.Distinct(new FileSignInfoComparer()));
+            mergedInfo.ItemsToSign = new List<ItemsToSign>(mergedInfo.ItemsToSign.Distinct(new ItemsToSignComparer()));
+            mergedInfo.StrongNameSignInfos = new List<StrongNameSignInfo>(mergedInfo.StrongNameSignInfos.Distinct(new StrongNameSignInfoComparer()));
+
+            return mergedInfo;
+        }
+
         /// <summary>
         /// When we flow dependencies we expect source and target repos to be the same i.e github.com or dev.azure.com/dnceng. 
         /// When this task is executed the repository is an Azure DevOps repository even though the real source is GitHub 
@@ -604,7 +635,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return values;
         }
 
-        private void CreateAndPushMergedManifest(IImmutableList<AssetData> assets)
+        private void CreateAndPushMergedManifest(IImmutableList<AssetData> assets, SigningInformation finalSigningInfo)
         {
             string mergedManifestPath = Path.Combine(GetAzDevStagingDirectory(), MergeManifestFileName);
 
@@ -628,7 +659,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     {
                         Attributes = new Dictionary<string, string>
                                 {
-                                    { "NonShipping", data.NonShipping.ToString() }
+                                    { "NonShipping", data.NonShipping.ToString().ToLower() }
                                 },
                         Id = data.Name
                     };
@@ -640,7 +671,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     {
                         Attributes = new Dictionary<string, string>
                                 {
-                                    { "NonShipping", data.NonShipping.ToString() }
+                                    { "NonShipping", data.NonShipping.ToString().ToLower() }
                                 },
                         Id = data.Name,
                         Version = data.Version
@@ -649,10 +680,71 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
             }
 
-            File.WriteAllText(mergedManifestPath, buildModel.ToXml().ToString());
+            XElement buildModelXml = buildModel.ToXml();
+            buildModelXml.Add(SigningInfoToXml(finalSigningInfo));
+
+            File.WriteAllText(mergedManifestPath, buildModelXml.ToString());
 
             Log.LogMessage(MessageImportance.High,
                         $"##vso[artifact.upload containerfolder=BlobArtifacts;artifactname=BlobArtifacts]{mergedManifestPath}");
+        }
+
+        private XElement SigningInfoToXml(SigningInformation signingInformation)
+        {
+            XAttribute[] attributes = new XAttribute[]
+                {
+                    new XAttribute(nameof(signingInformation.AzureDevOpsCollectionUri), signingInformation.AzureDevOpsCollectionUri),
+                    new XAttribute(nameof(signingInformation.AzureDevOpsProject), signingInformation.AzureDevOpsProject),
+                    new XAttribute(nameof(signingInformation.AzureDevOpsBuildId), signingInformation.AzureDevOpsBuildId)
+                };
+
+            List<XElement> signingMetadata = new List<XElement>();
+
+            foreach (FileExtensionSignInfo fileExtensionSignInfo in signingInformation.FileExtensionSignInfos)
+            {
+                signingMetadata.Add(new XElement(
+                    nameof(FileExtensionSignInfo),
+                    new XAttribute[]
+                    {
+                        new XAttribute(nameof(fileExtensionSignInfo.Extension), fileExtensionSignInfo.Extension),
+                        new XAttribute(nameof(fileExtensionSignInfo.CertificateName), fileExtensionSignInfo.CertificateName)
+                    }));
+            }
+
+            foreach (FileSignInfo fileSignInfo in signingInformation.FileSignInfos)
+            {
+                signingMetadata.Add(new XElement(
+                    nameof(FileSignInfo),
+                    new XAttribute[]
+                    {
+                        new XAttribute(nameof(fileSignInfo.File), fileSignInfo.File),
+                        new XAttribute(nameof(fileSignInfo.CertificateName), fileSignInfo.CertificateName)
+                    }));
+            }
+
+            foreach (ItemsToSign itemsToSign in signingInformation.ItemsToSign)
+            {
+                signingMetadata.Add(new XElement(
+                    nameof(ItemsToSign),
+                    new XAttribute[]
+                    {
+                        new XAttribute(nameof(itemsToSign.File), itemsToSign.File)
+                    }));
+            }
+
+            foreach (StrongNameSignInfo strongNameSignInfo in signingInformation.StrongNameSignInfos)
+            {
+                signingMetadata.Add(new XElement(
+                    nameof(StrongNameSignInfo),
+                    new XAttribute[]
+                    {
+                        new XAttribute(nameof(strongNameSignInfo.File), strongNameSignInfo.File),
+                        new XAttribute(nameof(strongNameSignInfo.PublicKeyToken), strongNameSignInfo.PublicKeyToken),
+                        new XAttribute(nameof(strongNameSignInfo.CertificateName), strongNameSignInfo.CertificateName)
+                    }));
+            }
+
+            return new XElement(nameof(SigningInformation), attributes, signingMetadata);
         }
     }
 }

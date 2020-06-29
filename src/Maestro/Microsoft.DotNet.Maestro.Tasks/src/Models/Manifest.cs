@@ -17,6 +17,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
         [XmlElement(ElementName = "Blob")]
         public List<Blob> Blobs { get; set; }
 
+        [XmlElement(ElementName = "SigningInformation")]
+        public SigningInformation SigningInformation { get; set; }
+
         [XmlAttribute(AttributeName = "Name")]
         public string Name { get; set; }
 
@@ -102,5 +105,70 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         [XmlAttribute(AttributeName = "NonShipping")]
         public bool NonShipping { get; set; }
+    }
+
+    [XmlRoot(ElementName = "SigningInformation")]
+    public class SigningInformation
+    {
+        [XmlAttribute(AttributeName = "AzureDevOpsCollectionUri")]
+        public string AzureDevOpsCollectionUri { get; set; }
+
+        [XmlAttribute(AttributeName = "AzureDevOpsProject")]
+        public string AzureDevOpsProject { get; set; }
+
+        [XmlAttribute(AttributeName = "AzureDevOpsBuildId")]
+        public string AzureDevOpsBuildId { get; set; }
+
+        [XmlElement(ElementName = "FileExtensionSignInfo")]
+        public List<FileExtensionSignInfo> FileExtensionSignInfos { get; set; }
+
+        [XmlElement(ElementName = "FileSignInfo")]
+        public List<FileSignInfo> FileSignInfos { get; set; }
+
+        [XmlElement(ElementName = "ItemsToSign")]
+        public List<ItemsToSign> ItemsToSign { get; set; }
+
+        [XmlElement(ElementName = "StrongNameSignInfo")]
+        public List<StrongNameSignInfo> StrongNameSignInfos { get; set; }
+    }
+
+    [XmlRoot(ElementName = "FileExtensionSignInfo")]
+    public class FileExtensionSignInfo
+    {
+        [XmlAttribute(AttributeName = "Extension")]
+        public string Extension { get; set; }
+
+        [XmlAttribute(AttributeName = "CertificateName")]
+        public string CertificateName { get; set; }
+    }
+
+    [XmlRoot(ElementName = "FileSignInfo")]
+    public class FileSignInfo
+    {
+        [XmlAttribute(AttributeName = "File")]
+        public string File { get; set; }
+
+        [XmlAttribute(AttributeName = "CertificateName")]
+        public string CertificateName { get; set; }
+    }
+
+    [XmlRoot(ElementName = "ItemsToSign")]
+    public class ItemsToSign
+    {
+        [XmlAttribute(AttributeName = "File")]
+        public string File { get; set; }
+    }
+
+    [XmlRoot(ElementName = "StrongNameSignInfo")]
+    public class StrongNameSignInfo
+    {
+        [XmlAttribute(AttributeName = "File")]
+        public string File { get; set; }
+
+        [XmlAttribute(AttributeName = "PublicKeyToken")]
+        public string PublicKeyToken { get; set; }
+
+        [XmlAttribute(AttributeName = "CertificateName")]
+        public string CertificateName { get; set; }
     }
 }
