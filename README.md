@@ -51,8 +51,8 @@ If you would like to see your repository on BARViz, it needs to be published to 
 ## Validation Process in dev and int environments
 
 For any non-deployment code changes, the expectation is to have run the tests corresponding to the service locally to confirm that the change works before putting up the PR. The tests for each of the major areas in arcade-services are as below:
-- [Maestro](src\Maestro\Tests)
-- [Darc](src\Microsoft.DotNet.Darc\tests)
+- [Maestro](src/Maestro/tests)
+- [Darc](src/Microsoft.DotNet.Darc/tests)
 
 For any deployment changes, the only way to test would be to kick off the [build pipeline](https://dev.azure.com/dnceng/internal/_build?definitionId=252&_a=summary) that deploys the intended service from the dev branch to staging / int environment.
 
