@@ -426,7 +426,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private string GetAzDevStagingDirectory()
         {
-            return GetEnv("Build.ArtifactStagingDirectory");
+            return GetEnv("BUILD_STAGINGDIRECTORY");
         }
 
         /// <summary>
