@@ -9,6 +9,7 @@ using NUnit.Framework;
 
 namespace Maestro.ScenarioTests
 {
+    [TestFixture]
     public class EndToEndFlowLogic : MaestroScenarioTestBase
     {
         private readonly string testRepo1Name = "maestro-test1";
@@ -124,12 +125,11 @@ namespace Maestro.ScenarioTests
             TestContext.WriteLine($"Creating test channel {testChannelName}");
             await using (AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false))
             {
-
                 TestContext.WriteLine($"Adding a subscription from {testRepo1Name} to {testRepo2Name}");
                 await using (AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(testChannelName, testRepo1Name, testRepo2Name, targetBranch,
                     UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" }))
                 {
-                    TestContext.WriteLine($"Adding a  subscription from {testRepo3Name} to {testRepo2Name}");
+                    TestContext.WriteLine($"Adding a subscription from {testRepo3Name} to {testRepo2Name}");
                     await using (AsyncDisposableValue<string> subscription2Id = await CreateSubscriptionAsync(testChannelName, testRepo3Name, testRepo2Name, targetBranch,
                         UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" }))
                     {
@@ -168,11 +168,11 @@ namespace Maestro.ScenarioTests
 
                                 if (isAzDoTest)
                                 {
-                                    await CheckBatchedAzDoPullRequest(testRepo1Name, testRepo3Name, testRepo2Name, targetBranch, expectedDependencies, reposFolder.Directory);
+                                    await CheckBatchedAzDoPullRequest(testRepo1Name, testRepo2Name, targetBranch, expectedDependencies, reposFolder.Directory);
                                 }
                                 else
                                 {
-                                    await CheckBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo3Name, testRepo2Name, expectedDependencies, reposFolder.Directory);
+                                    await CheckBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo2Name, expectedDependencies, reposFolder.Directory);
                                 }
                             }
                         }
@@ -208,7 +208,7 @@ namespace Maestro.ScenarioTests
 
                             TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
-                            await CheckNonBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo3Name, testRepo2Name, ExpectedDependenciesSource1, reposFolder.Directory, true);
+                            await CheckNonBatchedGitHubPullRequest(testRepo1Name, testRepo3Name, testRepo2Name, ExpectedDependenciesSource1, reposFolder.Directory, true);
                         }
 
                         TestContext.WriteLine("Set up another build for intake into target repository");
@@ -253,11 +253,11 @@ namespace Maestro.ScenarioTests
                     await using (await PushGitBranchAsync("origin", targetBranch))
                     {
                         await using (AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(testChannelName, testRepo1Name, testRepo2Name, targetBranch,
-                             UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--all-checks-passed", "--ignore-checks license/cla"}, trigger:true))
+                             UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--all-checks-passed", "--ignore-checks", "license/cla" }, trigger: true))
                         {
                             TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
-                            await CheckNonBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo3Name, testRepo2Name, ExpectedDependenciesSource1, reposFolder.Directory, true);
+                            await CheckNonBatchedGitHubPullRequest(testRepo1Name, testRepo2Name, targetBranch, ExpectedDependenciesSource1, reposFolder.Directory, true);
                         }
                     }
                 }

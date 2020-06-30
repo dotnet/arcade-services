@@ -56,14 +56,14 @@ namespace Maestro.ScenarioTests
             throw new MaestroTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
         }
 
-        public async Task CheckBatchedGitHubPullRequest(string targetBranch, string source1RepoName, string source2RepoName,
+        public async Task CheckBatchedGitHubPullRequest(string targetBranch, string source1RepoName,
             string targetRepoName, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory)
         {
             string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{source1RepoName}";
             await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false);
         }
 
-        public async Task CheckNonBatchedGitHubPullRequest(string targetbranch, string sourceRepoName, string targetRepoName, string targetBranch,
+        public async Task CheckNonBatchedGitHubPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete = false)
         {
             string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
@@ -86,7 +86,7 @@ namespace Maestro.ScenarioTests
             }
         }
 
-        public async Task CheckBatchedAzDoPullRequest(string source1RepoName, string source2RepoName, string targetRepoName, string targetBranch,
+        public async Task CheckBatchedAzDoPullRequest(string source1RepoName, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete = false)
         {
             string expectedPRTitle = $"Find out what this is supposed to be";
@@ -117,11 +117,6 @@ namespace Maestro.ScenarioTests
                 TestContext.WriteLine($"Cleaning up Remote branch {branch}");
                 await RunGitAsync("push", remote, "--delete", branch);
             });
-        }
-
-        public async Task PullGitBranchAsync(string remote, string branch)
-        {
-            await RunGitAsync("pull", remote, branch);
         }
 
         public string GetRepoUrl(string org, string repository)

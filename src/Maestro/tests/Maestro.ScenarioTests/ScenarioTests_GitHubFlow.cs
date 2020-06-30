@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -21,6 +22,19 @@ namespace Maestro.ScenarioTests
         private readonly string testChannelName = "GitHub Flow Test Channel";
         private TestParameters _parameters;
         private EndToEndFlowLogic testLogic;
+
+        private readonly string source2Commit = "789101";
+        private readonly string sourceBranch = "master";
+        private readonly string gitHubBranchName = "GitHubTestFlowBranch";
+        private readonly string azDoBranchName = "AzDoTestFlowBranch";
+        private readonly string gitHubChannelName = "GitHub Flow Test Channel";
+        private readonly string azDoChannelName = "AzDo Flow Test Channel";
+        internal IImmutableList<AssetData> Source1Assets;
+        private IImmutableList<AssetData> source2Assets;
+        private IImmutableList<AssetData> source3Assets;
+        internal List<DependencyDetail> ExpectedDependenciesSource1;
+        private List<DependencyDetail> expectedDependenciesSource2;
+        private List<DependencyDetail> expectedDependenciesSource3;
 
         public ScenarioTests_GitHubFlow()
         {
@@ -127,8 +141,9 @@ namespace Maestro.ScenarioTests
                     List<DependencyDetail> expectedDependencies = testLogic.ExpectedDependenciesSource1.Concat(expectedChildDependencies).ToList();
 
                     // TODO: WHERE ARE ALL THE THINGS? THERE'S NOTHING HERE!
+                    throw new NotImplementedException();
 
-                    await CheckNonBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo3Name, targetBranch, expectedDependencies, tempDirectory.Directory);               
+                    // await CheckNonBatchedGitHubPullRequest(testRepo1Name, testRepo3Name, targetBranch, expectedDependencies, tempDirectory.Directory);
                 }
             }
         }
