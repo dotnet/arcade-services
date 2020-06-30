@@ -10,7 +10,6 @@
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
     <PackageReference Include="Moq" />
-    <PackageReference Include="Microsoft.CodeCoverage" />
   </ItemGroup>
 
   <ItemGroup>
