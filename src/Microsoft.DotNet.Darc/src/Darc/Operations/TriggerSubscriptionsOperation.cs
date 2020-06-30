@@ -71,6 +71,25 @@ namespace Microsoft.DotNet.Darc.Operations
                     subscriptionsToTrigger.AddRange(subscriptions);
                 }
 
+                // Filter away subscriptions that are disabled
+                List<Subscription> disabledSubscriptions = subscriptionsToTrigger.Where(s => !s.Enabled).ToList();
+                subscriptionsToTrigger = subscriptionsToTrigger.Where(s => s.Enabled).ToList();
+
+                if (disabledSubscriptions.Any())
+                {
+                    Console.WriteLine($"The following {disabledSubscriptions.Count} subscription(s) are disabled and will not be triggered");
+                    foreach (var subscription in disabledSubscriptions)
+                    {
+                        Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
+                    }
+                }
+
+                if (!subscriptionsToTrigger.Any())
+                {
+                    Console.WriteLine("No enabled subscriptions found matching the specified criteria.");
+                    return Constants.ErrorCode;
+                }
+
                 if (!noConfirm)
                 {
                     // Print out the list of subscriptions about to be triggered.

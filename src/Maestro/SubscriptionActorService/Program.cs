@@ -38,7 +38,8 @@ namespace SubscriptionActorService
         {
             services.AddSingleton<IActionRunner, ActionRunner>();
             services.AddSingleton<IMergePolicyEvaluator, MergePolicyEvaluator>();
-            services.AddSingleton<IRemoteFactory, DarcRemoteFactory>();
+            services.AddSingleton<ILocalGit, LocalGit>();
+            services.AddScoped<IRemoteFactory, DarcRemoteFactory>();
             services.AddSingleton<TemporaryFiles>();
             services.AddGitHubTokenProvider();
             services.AddAzureDevOpsTokenProvider();
