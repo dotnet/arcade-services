@@ -38,24 +38,27 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             {
                 try
                 {
-                    Activity.Current.AddBaggage("CallingServiceName", $"\"{Context.ServiceName.ToString()}\"");
+                    Activity.Current.AddBaggage("CallingServiceName", $"\"{Context.ServiceName}\"");
                     op.Telemetry.Type = "ServiceFabricRemoting";
                     op.Telemetry.Target = ServiceUri;
                     op.Telemetry.Data = ServiceUri + methodName;
                     return await call();
                 }
+                catch (AggregateException ex) when (ex.InnerExceptions.Count == 1)
+                {
+                    Exception primaryException = ex.InnerExceptions[0];
+
+                    op.Telemetry.Success = false;
+                    TelemetryClient.TrackException(primaryException);
+                    ExceptionDispatchInfo.Capture(primaryException).Throw();
+                    // throw; is Required by the compiler because it doesn't know that ExceptionDispatchInfo.Throw throws
+                    // ReSharper disable once HeuristicUnreachableCode
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     op.Telemetry.Success = false;
-                    if (ex is AggregateException ae && ae.InnerExceptions.Count == 1)
-                    {
-                        ex = ae;
-                    }
-
                     TelemetryClient.TrackException(ex);
-                    ExceptionDispatchInfo.Capture(ex).Throw();
-                    // throw; is Required by the compiler because it doesn't know that ExceptionDispatchInfo.Throw throws
-                    // ReSharper disable once HeuristicUnreachableCode
                     throw;
                 }
             }

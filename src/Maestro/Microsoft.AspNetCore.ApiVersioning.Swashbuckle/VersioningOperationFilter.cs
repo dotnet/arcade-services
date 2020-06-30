@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using JetBrains.Annotations;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -18,7 +19,7 @@ namespace Microsoft.AspNetCore.ApiVersioning.Swashbuckle
             _scheme = scheme;
         }
 
-        public void Apply(Operation operation, OperationFilterContext context)
+        public void Apply(OpenApiOperation operation, OperationFilterContext context)
         {
             string version = context.ApiDescription.ActionDescriptor.RouteValues["version"];
             _scheme.Apply(operation, context, version);
