@@ -15,6 +15,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Internal;
 
 namespace Maestro.Web.Api.v2019_01_16.Controllers
 {
@@ -25,9 +26,14 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
     [ApiVersion("2019-01-16")]
     public class BuildsController : v2018_07_16.Controllers.BuildsController
     {
-        public BuildsController(BuildAssetRegistryContext context)
+        private readonly ISystemClock _clock;
+
+        public BuildsController(
+            BuildAssetRegistryContext context,
+            ISystemClock clock)
             : base(context)
         {
+            _clock = clock;
         }
 
         /// <summary>
@@ -202,7 +208,7 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
         public virtual async Task<IActionResult> Create([FromBody, Required] BuildData build)
         {
             Data.Models.Build buildModel = build.ToDb();
-            buildModel.DateProduced = DateTimeOffset.UtcNow;
+            buildModel.DateProduced = _clock.UtcNow;
             if (build.Dependencies != null)
             {
                 // For each Dependency, update the time to Inclusion.
@@ -247,19 +253,21 @@ namespace Maestro.Web.Api.v2019_01_16.Controllers
                         // date produced.
                         DateTimeOffset startTime = depBuild.DateProduced;
 
-                        Data.Models.Subscription subscription = _context.Subscriptions.Where( s =>
-                            (s.SourceRepository == depBuild.GitHubRepository || s.SourceRepository == depBuild.AzureDevOpsRepository ) &&
-                            (s.TargetRepository == buildModel.GitHubRepository || s.TargetRepository == buildModel.AzureDevOpsRepository) &&
-                            (s.TargetBranch == buildModel.GitHubBranch || s.TargetBranch == buildModel.AzureDevOpsBranch)
-                        ).LastOrDefault();
+                        Data.Models.Subscription subscription = await _context.Subscriptions
+                            .FirstOrDefaultAsync(s =>
+                                (s.SourceRepository == depBuild.GitHubRepository || s.SourceRepository == depBuild.AzureDevOpsRepository) &&
+                                (s.TargetRepository == buildModel.GitHubRepository || s.TargetRepository == buildModel.AzureDevOpsRepository) &&
+                                (s.TargetBranch == buildModel.GitHubBranch || s.TargetBranch == buildModel.AzureDevOpsBranch)
+                            );
 
                         
                         if (subscription != null)
                         {
-                            Data.Models.BuildChannel buildChannel = _context.BuildChannels.Where( bc =>
-                                bc.BuildId == depBuild.Id &&
-                                bc.ChannelId == subscription.ChannelId
-                            ).LastOrDefault();
+                            Data.Models.BuildChannel buildChannel = await _context.BuildChannels
+                                .FirstOrDefaultAsync(bc =>
+                                    bc.BuildId == depBuild.Id &&
+                                    bc.ChannelId == subscription.ChannelId
+                                );
 
                             if (buildChannel != null)
                             {

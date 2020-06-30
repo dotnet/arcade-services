@@ -9,7 +9,6 @@
     <PackageTags>Arcade Darc CLI Dependency Flow</PackageTags>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>darc</ToolCommandName>
-    <DebugType>Full</DebugType>
   </PropertyGroup>
 
   <ItemGroup>
