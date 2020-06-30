@@ -91,7 +91,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     }
 
                     BuildData finalBuild = MergeBuildManifests(buildsManifestMetadata);
-                    SigningInformation finalSigningInfo = MergeSigningInfo(signingInformation);
+                    SigningInformation finalSigningInfo = null;
+
+                    if (signingInformation.Any())
+                    { 
+                        finalSigningInfo = MergeSigningInfo(signingInformation);
+                    }
 
                     // Inject an entry of MergedManifest.xml to the in-memory merged manifest
                     string location = null;
@@ -351,7 +356,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     };
 
                     buildsManifestMetadata.Add(buildInfo);
-                    signingInfo.Add(manifest.SigningInformation);
+
+                    if (manifest.SigningInformation != null)
+                    {
+                        signingInfo.Add(manifest.SigningInformation);
+                    }
                 }
             }
 
@@ -681,7 +690,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
             }
 
             XElement buildModelXml = buildModel.ToXml();
-            buildModelXml.Add(SigningInfoToXml(finalSigningInfo));
+
+            if (finalSigningInfo != null)
+            {
+                buildModelXml.Add(SigningInfoToXml(finalSigningInfo));
+            }
 
             File.WriteAllText(mergedManifestPath, buildModelXml.ToString());
 
