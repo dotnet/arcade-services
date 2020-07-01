@@ -12,7 +12,7 @@ These are the services that drive several of the tools behind the [Arcade](//git
 
 - [Issues](https://github.com/dotnet/arcade/issues)
 
-Information about Maestro [README.md](src/Maestro/Readme.md)
+Information about tools and scripts to run code locally, see [docs/DevGuide.md](docs/DevGuide.md)
 
 Please follow our [Validation Process](https://github.com/dotnet/core-eng/blob/master/Documentation/Validation/README.md) for including tests to go with new or changed functionality.
 
