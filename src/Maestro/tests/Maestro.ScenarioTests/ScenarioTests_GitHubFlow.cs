@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -22,19 +21,6 @@ namespace Maestro.ScenarioTests
         private readonly string testChannelName = "GitHub Flow Test Channel";
         private TestParameters _parameters;
         private EndToEndFlowLogic testLogic;
-
-        private readonly string source2Commit = "789101";
-        private readonly string sourceBranch = "master";
-        private readonly string gitHubBranchName = "GitHubTestFlowBranch";
-        private readonly string azDoBranchName = "AzDoTestFlowBranch";
-        private readonly string gitHubChannelName = "GitHub Flow Test Channel";
-        private readonly string azDoChannelName = "AzDo Flow Test Channel";
-        internal IImmutableList<AssetData> Source1Assets;
-        private IImmutableList<AssetData> source2Assets;
-        private IImmutableList<AssetData> source3Assets;
-        internal List<DependencyDetail> ExpectedDependenciesSource1;
-        private List<DependencyDetail> expectedDependenciesSource2;
-        private List<DependencyDetail> expectedDependenciesSource3;
 
         public ScenarioTests_GitHubFlow()
         {
@@ -89,14 +75,12 @@ namespace Maestro.ScenarioTests
             //ParentSource = testRepo1, ChildSource = testRepo2, TargetRepo = testRepo3
             string parentSourceRepoUri = GetRepoUrl(testRepo1Name);
             string childSourceRepoUri = GetRepoUrl(testRepo2Name);
-            string targetRepoUri = GetRepoUrl(testRepo3Name);
 
             // source commit is set to the HEAD commit of the "coherency-tree" branch
             string sourceBranch = "coherency-tree";
             string parentSourceCommit = "cc1a27107a1f4c4bc5e2f796c5ef346f60abb404";
             string childSourceCommit = "8460158878d4b7568f55d27960d4453877523ea6";
             IImmutableList<AssetData> childSourceAssets = GetAssetData("Baz", "1.3.0", "Bop", "1.0");
-
 
             List<DependencyDetail> expectedChildDependencies = new List<DependencyDetail>();
             DependencyDetail dep1 = new DependencyDetail
@@ -136,14 +120,17 @@ namespace Maestro.ScenarioTests
                         childSourceRepoUri, sourceBranch, childSourceCommit, source2BuildNumber, childSourceAssets,
                         testRepo3Name, targetBranch, "Foo");
 
-                    await TriggerSubscriptionAsync(subscription1Id.Value);
+                    using (ChangeDirectory(tempDirectory.Directory))
+                    {
+                        await using (await PushGitBranchAsync("origin", targetBranch))
+                        {
+                            await TriggerSubscriptionAsync(subscription1Id.Value);
 
-                    List<DependencyDetail> expectedDependencies = testLogic.ExpectedDependenciesSource1.Concat(expectedChildDependencies).ToList();
+                            List<DependencyDetail> expectedDependencies = testLogic.ExpectedDependenciesSource1.Concat(expectedChildDependencies).ToList();
 
-                    // TODO: WHERE ARE ALL THE THINGS? THERE'S NOTHING HERE!
-                    throw new NotImplementedException();
-
-                    // await CheckNonBatchedGitHubPullRequest(testRepo1Name, testRepo3Name, targetBranch, expectedDependencies, tempDirectory.Directory);
+                            await CheckNonBatchedGitHubPullRequest(testRepo1Name, testRepo3Name, targetBranch, expectedDependencies, tempDirectory.Directory);
+                        }
+                    }
                 }
             }
         }

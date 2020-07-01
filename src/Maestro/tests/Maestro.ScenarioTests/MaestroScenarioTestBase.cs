@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Maestro.ScenarioTests.ObjectHelpers;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
@@ -32,8 +33,8 @@ namespace Maestro.ScenarioTests
         public async Task<PullRequest> WaitForPullRequestAsync(string targetRepo, string targetBranch)
         {
             Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo).ConfigureAwait(false);
-            //TODO: This was previously set to 10, need to set it back after debugging
-            var attempts = 3;
+
+            var attempts = 10;
             while (attempts-- > 0)
             {
                 IReadOnlyList<PullRequest> prs = await GitHubApi.PullRequest.GetAllForRepository(repo.Id, new PullRequestRequest
@@ -54,6 +55,11 @@ namespace Maestro.ScenarioTests
             }
 
             throw new MaestroTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
+        }
+
+        private Task<PullRequest> WaitForAzDoPullRequestAsync(string targetRepoName, string targetBranch)
+        {
+            throw new NotImplementedException();
         }
 
         public async Task CheckBatchedGitHubPullRequest(string targetBranch, string source1RepoName,
@@ -82,26 +88,59 @@ namespace Maestro.ScenarioTests
 
             using (ChangeDirectory(repoDirectory))
             {
-                throw new NotImplementedException();
+                await ValidatePullRequestDependencies(targetRepoName, pullRequest.Head.Ref, expectedDependencies, 1);
+
+                if (complete)
+                {
+                    var attempts = 7;
+                    while (attempts-- > 0)
+                    {
+                          bool isMerged = (await WaitForPullRequestAsync(targetRepoName, targetBranch)).Merged;
+                        // "$(Get-Github-RepoApiUri($targetRepoName))/pulls/$pullRequestNumber/merge"
+                        
+                        if (!isMerged)
+                        {
+                            TestContext.WriteLine($"Pull request has not been completed. {attempts} tries remaining.");
+                            await Task.Delay(60 * 1000).ConfigureAwait(false);
+                        }
+                    }
+                }
             }
         }
 
-        public async Task CheckBatchedAzDoPullRequest(string source1RepoName, string targetRepoName, string targetBranch,
+        public async Task CheckBatchedAzDoPullRequest(string source1RepoName, string source2RepoName, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete = false)
         {
-            string expectedPRTitle = $"Find out what this is supposed to be";
+            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{source1RepoName} {_parameters.GitHubTestOrg}/{source2RepoName}";
             await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete);
+        }
+
+        public async Task CheckNonBatchedAzDoPullRequest(string sourceRepoName, string targetRepoName, string targetBranch, 
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory)
+        {
+            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
+            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false);
         }
 
         public async Task CheckAzDoPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete)
         {
-            throw new NotImplementedException();
+            TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoName} ...");
+            PullRequest pullRequest = await WaitForAzDoPullRequestAsync(targetRepoName, targetBranch);
         }
 
-        public async Task ValidatePullRequestDependencies(string targetRepoName, string pullRequestBaseBranch, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies)
+        public async Task ValidatePullRequestDependencies(string targetRepoName, string pullRequestBaseBranch, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, int tries = 1)
         {
-            throw new NotImplementedException();
+            int triesRemaining = tries;
+            while (triesRemaining > 0)
+            {
+                await CheckoutBranchAsync(pullRequestBaseBranch);
+                await RunGitAsync("pull");
+
+                string actualDependencies = await RunDarcAsync("get-dependencies");
+                string expectedDependenciesString = DependencyCollectionStringBuilder.GetString(expectedDependencies);
+                Assert.AreEqual(expectedDependenciesString, actualDependencies);
+            }
         }
 
         public async Task GitCommitAsync(string message)
@@ -441,7 +480,7 @@ namespace Maestro.ScenarioTests
 
         public async Task DeleteBuildFromChannelAsync(int buildId, string channelName)
         {
-            throw new NotImplementedException();
+            await Task.Run(() => throw new NotImplementedException());
         }
 
         public IDisposable ChangeDirectory(string directory)

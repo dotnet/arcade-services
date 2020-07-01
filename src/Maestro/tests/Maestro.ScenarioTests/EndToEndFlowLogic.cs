@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -168,7 +167,7 @@ namespace Maestro.ScenarioTests
 
                                 if (isAzDoTest)
                                 {
-                                    await CheckBatchedAzDoPullRequest(testRepo1Name, testRepo2Name, targetBranch, expectedDependencies, reposFolder.Directory);
+                                    await CheckBatchedAzDoPullRequest(testRepo1Name, testRepo3Name, testRepo2Name, targetBranch, expectedDependencies, reposFolder.Directory);
                                 }
                                 else
                                 {
