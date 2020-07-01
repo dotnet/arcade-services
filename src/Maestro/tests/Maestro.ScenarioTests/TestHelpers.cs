@@ -13,7 +13,7 @@ namespace Maestro.ScenarioTests
     {
         public static async Task<string> RunExecutableAsync(string executable, params string[] args)
         {
-            TestContext.WriteLine($"{executable} {string.Join(" ", args.Select(a => $"\"{a}\""))}");
+            TestContext.WriteLine(FormatExecutableCall(executable, args));
             var output = new StringBuilder();
 
             void WriteOutput(string message)
@@ -104,6 +104,28 @@ namespace Maestro.ScenarioTests
             }
 
             return (await RunExecutableAsync("/bin/sh", "-c", $"which {command}")).Trim();
+        }
+
+        internal static string FormatExecutableCall(string executable, params string[] args)
+        {
+            var output = new StringBuilder();
+            var secretArgNames = new[] { "-p", "--password", "--github-pat", "--azdev-pat" };
+
+            output.Append(executable);
+            for (var i = 0; i < args.Length; i++)
+            {
+                output.Append(' ');
+
+                if (i > 0 && secretArgNames.Contains(args[i - 1]))
+                {
+                    output.Append("\"***\"");
+                    continue;
+                }
+
+                output.Append($"\"{args[i]}\"");
+            }
+
+            return output.ToString();
         }
     }
 

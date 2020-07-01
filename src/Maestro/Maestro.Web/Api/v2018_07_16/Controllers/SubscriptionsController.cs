@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.ServiceFabric.Actors;
+using Newtonsoft.Json.Linq;
 using Channel = Maestro.Data.Models.Channel;
 
 namespace Maestro.Web.Api.v2018_07_16.Controllers
@@ -31,20 +32,14 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
     public class SubscriptionsController : Controller
     {
         private readonly BuildAssetRegistryContext _context;
-        private readonly BackgroundQueue _queue;
-        private readonly IDependencyUpdater _dependencyUpdater;
-        private readonly IActorProxyFactory<ISubscriptionActor> _subscriptionActorFactory;
+        private readonly IBackgroundQueue _queue;
 
         public SubscriptionsController(
             BuildAssetRegistryContext context,
-            BackgroundQueue queue,
-            IDependencyUpdater dependencyUpdater,
-            IActorProxyFactory<ISubscriptionActor> subscriptionActorFactory)
+            IBackgroundQueue queue)
         {
             _context = context;
             _queue = queue;
-            _dependencyUpdater = dependencyUpdater;
-            _subscriptionActorFactory = subscriptionActorFactory;
         }
 
         /// <summary>
@@ -119,22 +114,42 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [ValidateModelState]
         public virtual async Task<IActionResult> TriggerSubscription(Guid id)
         {
+            Data.Models.Subscription subscription = await TriggerSubscriptionCore(id);
+
+            if (subscription == null)
+                return NotFound();
+
+            return Accepted(new Subscription(subscription));
+        }
+
+        protected async Task<Data.Models.Subscription> TriggerSubscriptionCore(Guid id)
+        {
             Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
                 .Include(sub => sub.Channel)
                 .FirstOrDefaultAsync(sub => sub.Id == id);
 
             if (subscription == null)
             {
-                return NotFound();
+                return null;
             }
 
-            _queue.Post(
-                async () =>
-                {
-                    await _dependencyUpdater.StartSubscriptionUpdateAsync(id);
-                });
+            _queue.Post<StartSubscriptionUpdateWorkItem>(JToken.FromObject(id));
+            return subscription;
+        }
 
-            return Accepted(new Subscription(subscription));
+        private class StartSubscriptionUpdateWorkItem : IBackgroundWorkItem
+        {
+            private readonly IDependencyUpdater _dependencyUpdater;
+
+            public StartSubscriptionUpdateWorkItem(IDependencyUpdater dependencyUpdater)
+            {
+                _dependencyUpdater = dependencyUpdater;
+            }
+
+            public Task ProcessAsync(JToken argumentToken)
+            {
+                return _dependencyUpdater.StartSubscriptionUpdateAsync(argumentToken.Value<Guid>());
+            }
         }
 
         /// <summary>
@@ -145,13 +160,24 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [ValidateModelState]
         public virtual IActionResult TriggerDailyUpdate()
         {
-            _queue.Post(
-                async () =>
-                {
-                    await _dependencyUpdater.CheckDailySubscriptionsAsync(CancellationToken.None);
-                });
+            _queue.Post<CheckDailySubscriptionsWorkItem>();
 
             return Accepted();
+        }
+
+        private class CheckDailySubscriptionsWorkItem : IBackgroundWorkItem
+        {
+            private readonly IDependencyUpdater _dependencyUpdater;
+
+            public CheckDailySubscriptionsWorkItem(IDependencyUpdater dependencyUpdater)
+            {
+                _dependencyUpdater = dependencyUpdater;
+            }
+
+            public Task ProcessAsync(JToken ignored)
+            {
+                return _dependencyUpdater.CheckDailySubscriptionsAsync(CancellationToken.None);
+            }
         }
 
         /// <summary>
@@ -321,14 +347,45 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                     new ApiError("That action was successful, it cannot be retried."));
             }
 
-            _queue.Post(
-                async () =>
-                {
-                    ISubscriptionActor actor = _subscriptionActorFactory.Lookup(new ActorId(subscription.Id));
-                    await actor.RunActionAsync(update.Method, update.Arguments);
-                });
+            _queue.Post<SubscriptionActorActionWorkItem>(
+                SubscriptionActorActionWorkItem.GetArguments(subscription.Id, update.Method, update.Arguments)
+            );
 
             return Accepted();
+        }
+
+        private class SubscriptionActorActionWorkItem : IBackgroundWorkItem
+        {
+            private readonly IActorProxyFactory<ISubscriptionActor> _factory;
+
+            public SubscriptionActorActionWorkItem(IActorProxyFactory<ISubscriptionActor> factory)
+            {
+                _factory = factory;
+            }
+
+            private struct Arguments
+            {
+                public Guid Subscriptionid;
+                public string Method;
+                public string MethodArguments;
+            }
+
+            public Task ProcessAsync(JToken argumentToken)
+            {
+                var args = argumentToken.ToObject<Arguments>();
+                ISubscriptionActor actor = _factory.Lookup(new ActorId(args.Subscriptionid));
+                return actor.RunActionAsync(args.Method, args.MethodArguments);
+            }
+
+            public static JToken GetArguments(Guid subscriptionId, string method, string arguments)
+            {
+                return JToken.FromObject(new Arguments
+                {
+                    Subscriptionid = subscriptionId,
+                    Method = method,
+                    MethodArguments = arguments
+                });
+            }
         }
 
         /// <summary>
@@ -429,10 +486,10 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             // - Target branch
             // - Not the same subscription id (for updates)
             return await _context.Subscriptions.FirstOrDefaultAsync(sub =>
-                sub.SourceRepository.Equals(updatedOrNewSubscription.SourceRepository, StringComparison.OrdinalIgnoreCase) &&
+                sub.SourceRepository == updatedOrNewSubscription.SourceRepository &&
                 sub.ChannelId == updatedOrNewSubscription.Channel.Id &&
-                sub.TargetRepository.Equals(updatedOrNewSubscription.TargetRepository, StringComparison.OrdinalIgnoreCase) &&
-                sub.TargetBranch.Equals(updatedOrNewSubscription.TargetBranch, StringComparison.OrdinalIgnoreCase) &&
+                sub.TargetRepository == updatedOrNewSubscription.TargetRepository &&
+                sub.TargetBranch == updatedOrNewSubscription.TargetBranch &&
                 sub.Id != updatedOrNewSubscription.Id);
         }
     }

@@ -29,6 +29,8 @@ namespace Microsoft.DotNet.DarcLib
             _logger = logger;
         }
 
+        public bool AllowRetries { get; set; } = true;
+
         public Task<string> CheckIfFileExistsAsync(string repoUri, string filePath, string branch)
         {
             throw new NotImplementedException();
@@ -57,6 +59,18 @@ namespace Microsoft.DotNet.DarcLib
         public async Task<string> GetFileContentsAsync(string relativeFilePath, string repoUri, string branch)
         {
             string fullPath = Path.Combine(repoUri, relativeFilePath);
+            if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
+            {
+                if (Directory.Exists(Path.GetDirectoryName(Path.GetDirectoryName(fullPath))))
+                {
+                    throw new Exception("Pizza");
+                }
+                else
+                {
+                    throw new Exception("Banana");
+                }
+            }
+
             using (var streamReader = new StreamReader(fullPath))
             {
                 return await streamReader.ReadToEndAsync();
@@ -295,72 +309,67 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="commit">Tag, branch, or commit to checkout.</param>
         public void Checkout(string repoDir, string commit, bool force = false)
         {
-            using (_logger.BeginScope("Checking out {commit}", commit ?? "default commit"))
+            _logger.LogDebug($"Checking out {commit}", commit ?? "default commit");
+            LibGit2Sharp.CheckoutOptions checkoutOptions = new LibGit2Sharp.CheckoutOptions
             {
-                _logger.LogDebug($"Checking out {commit}", commit ?? "default commit");
-                LibGit2Sharp.CheckoutOptions checkoutOptions = new LibGit2Sharp.CheckoutOptions
+                CheckoutModifiers = force ? LibGit2Sharp.CheckoutModifiers.Force : LibGit2Sharp.CheckoutModifiers.None,
+            };
+            try
+            {
+                _logger.LogDebug($"Reading local repo from {repoDir}");
+                using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoDir))
                 {
-                    CheckoutModifiers = force ? LibGit2Sharp.CheckoutModifiers.Force : LibGit2Sharp.CheckoutModifiers.None,
-                };
-                try
-                {
-                    _logger.LogDebug($"Checking out {commit ?? "default commit"}");
-
-                    _logger.LogDebug($"Reading local repo from {repoDir}");
-                    using (LibGit2Sharp.Repository localRepo = new LibGit2Sharp.Repository(repoDir))
+                    if (commit == null)
                     {
-                        if (commit == null)
+                        commit = localRepo.Head.Reference.TargetIdentifier;
+                        _logger.LogInformation($"Repo {localRepo.Info.WorkingDirectory} default commit to checkout is {commit}");
+                    }
+                    try
+                    {
+                        _logger.LogDebug($"Attempting to check out {commit} in {repoDir}");
+                        LibGit2SharpHelpers.SafeCheckout(localRepo, commit, checkoutOptions, _logger);
+                        if (force)
                         {
-                            commit = localRepo.Head.Reference.TargetIdentifier;
-                            _logger.LogInformation($"Repo {localRepo.Info.WorkingDirectory} default commit to checkout is {commit}");
+                            CleanRepoAndSubmodules(localRepo, _logger);
                         }
+                    }
+                    catch (LibGit2Sharp.NotFoundException)
+                    {
+                        _logger.LogWarning($"Couldn't find commit {commit} in {repoDir} locally.  Attempting fetch.");
                         try
                         {
-                            _logger.LogDebug($"Attempting to check out {commit} in {repoDir}");
+                            foreach (LibGit2Sharp.Remote r in localRepo.Network.Remotes)
+                            {
+                                IEnumerable<string> refSpecs = r.FetchRefSpecs.Select(x => x.Specification);
+                                _logger.LogDebug($"Fetching {string.Join(";", refSpecs)} from {r.Url} in {repoDir}");
+                                try
+                                {
+                                    LibGit2Sharp.Commands.Fetch(localRepo, r.Name, refSpecs, new LibGit2Sharp.FetchOptions(), $"Fetching from {r.Url}");
+                                }
+                                catch
+                                {
+                                    _logger.LogWarning($"Fetching failed, are you offline or missing a remote?");
+                                }
+                            }
+                            _logger.LogDebug($"After fetch, attempting to checkout {commit} in {repoDir}");
                             LibGit2SharpHelpers.SafeCheckout(localRepo, commit, checkoutOptions, _logger);
+
                             if (force)
                             {
                                 CleanRepoAndSubmodules(localRepo, _logger);
                             }
                         }
-                        catch (LibGit2Sharp.NotFoundException)
+                        catch   // Most likely network exception, could also be no remotes.  We can't do anything about any error here.
                         {
-                            _logger.LogWarning($"Couldn't find commit {commit} in {repoDir} locally.  Attempting fetch.");
-                            try
-                            {
-                                foreach (LibGit2Sharp.Remote r in localRepo.Network.Remotes)
-                                {
-                                    IEnumerable<string> refSpecs = r.FetchRefSpecs.Select(x => x.Specification);
-                                    _logger.LogDebug($"Fetching {string.Join(";", refSpecs)} from {r.Url} in {repoDir}");
-                                    try
-                                    {
-                                        LibGit2Sharp.Commands.Fetch(localRepo, r.Name, refSpecs, new LibGit2Sharp.FetchOptions(), $"Fetching from {r.Url}");
-                                    }
-                                    catch
-                                    {
-                                        _logger.LogWarning($"Fetching failed, are you offline or missing a remote?");
-                                    }
-                                }
-                                _logger.LogDebug($"After fetch, attempting to checkout {commit} in {repoDir}");
-                                LibGit2SharpHelpers.SafeCheckout(localRepo, commit, checkoutOptions, _logger);
-
-                                if (force)
-                                {
-                                    CleanRepoAndSubmodules(localRepo, _logger);
-                                }
-                            }
-                            catch   // Most likely network exception, could also be no remotes.  We can't do anything about any error here.
-                            {
-                                _logger.LogError($"After fetch, still couldn't find commit or treeish {commit} in {repoDir}.  Are you offline or missing a remote?");
-                                throw;
-                            }
+                            _logger.LogError($"After fetch, still couldn't find commit or treeish {commit} in {repoDir}.  Are you offline or missing a remote?");
+                            throw;
                         }
                     }
                 }
-                catch (Exception exc)
-                {
-                    throw new Exception($"Something went wrong when checking out {commit} in {repoDir}", exc);
-                }
+            }
+            catch (Exception exc)
+            {
+                throw new Exception($"Something went wrong when checking out {commit} in {repoDir}", exc);
             }
         }
 

@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>netcoreapp2.1;netcoreapp3.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <SignAssembly>false</SignAssembly>
     <IsPackable>true</IsPackable>
@@ -10,27 +9,19 @@
     <PackageTags>Arcade Darc CLI Dependency Flow</PackageTags>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>darc</ToolCommandName>
-    <DebugType>Full</DebugType>
   </PropertyGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp2.1'">
-    <ProjectReference Include="..\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" AdditionalProperties="TargetFramework=netstandard2.0" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' == 'netcoreapp3.0'">
-    <ProjectReference Include="..\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" AdditionalProperties="TargetFramework=netstandard2.1" />
-  </ItemGroup>
-
   <ItemGroup>
+    <ProjectReference Include="..\DarcLib.AzDev\Microsoft.DotNet.DarcLib.AzDev.csproj" />
     <ProjectReference Include="..\DarcLib\Microsoft.DotNet.DarcLib.csproj" />
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="CommandLineParser" Version="$(CommandLineParserVersion)" />
-    <PackageReference Include="LibGit2Sharp" Version="$(LibGit2SharpVersion)" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.1.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.1.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
-    <PackageReference Include="YamlDotNet.Signed" Version="5.3.0" />
+    <PackageReference Include="CommandLineParser" />
+    <PackageReference Include="LibGit2Sharp" />
+    <PackageReference Include="Microsoft.Extensions.Logging" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="YamlDotNet.Signed" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
+  <PropertyGroup>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IsPackable>false</IsPackable>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Moq" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DotNet.Status.Web\DotNet.Status.Web.csproj" />
+    <ProjectReference Include="..\Shared\Microsoft.DotNet.Internal.DependencyInjection.Testing\Microsoft.DotNet.Internal.DependencyInjection.Testing.csproj" />
+    <ProjectReference Include="..\Shared\Microsoft.DotNet.Internal.Testing.Utility\Microsoft.DotNet.Internal.Testing.Utility.csproj" />
+  </ItemGroup>
+</Project>

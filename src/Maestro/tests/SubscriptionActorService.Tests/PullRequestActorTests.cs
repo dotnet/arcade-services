@@ -19,6 +19,7 @@ using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
 
@@ -43,7 +44,7 @@ namespace SubscriptionActorService.Tests
 
         private string NewBranch;
 
-        public PullRequestActorTests()
+        public PullRequestActorTests(ITestOutputHelper output) : base(output)
         {
             MergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
             RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
@@ -95,7 +96,7 @@ namespace SubscriptionActorService.Tests
             DarcRemotes[TargetRepo]
                 .Verify(r => r.GetDependenciesAsync(TargetRepo, TargetBranch, null, false));
             DarcRemotes[TargetRepo]
-                .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object));
+                .Verify(r => r.GetRequiredCoherencyUpdatesAsync(Capture.In(dependencies), RemoteFactory.Object, CoherencyMode.Legacy));
             assets.Should()
                 .BeEquivalentTo(
                     new List<List<AssetData>>
@@ -240,9 +241,9 @@ namespace SubscriptionActorService.Tests
                 .Setup(
                     r => r.GetRequiredCoherencyUpdatesAsync(
                         It.IsAny<IEnumerable<DependencyDetail>>(),
-                        It.IsAny<IRemoteFactory>()))
+                        It.IsAny<IRemoteFactory>(), CoherencyMode.Legacy))
                 .ReturnsAsync(
-                    (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory) =>
+                    (IEnumerable<DependencyDetail> dependencies, IRemoteFactory factory, CoherencyMode coherencyMode) =>
                     {
                         return new List<DependencyUpdate>();
                     });
@@ -385,6 +386,10 @@ namespace SubscriptionActorService.Tests
 
         public class ProcessPendingUpdatesAsync : PullRequestActorTests
         {
+            public ProcessPendingUpdatesAsync(ITestOutputHelper output) : base(output)
+            {
+            }
+
             private async Task WhenProcessPendingUpdatesAsyncIsCalled()
             {
                 await Execute(
@@ -518,6 +523,10 @@ namespace SubscriptionActorService.Tests
 
         public class UpdateAssetsAsync : PullRequestActorTests
         {
+            public UpdateAssetsAsync(ITestOutputHelper output) : base(output)
+            {
+            }
+
             private async Task WhenUpdateAssetsAsyncIsCalled(Build forBuild)
             {
                 await Execute(

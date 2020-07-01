@@ -12,12 +12,6 @@ namespace Microsoft.DotNet.Web.Authentication.AccessToken
 {
     public static class PersonalAccessTokenAuthenticationExtensions
     {
-        public static AuthenticationBuilder AddPersonalAccessToken<TUser>(this AuthenticationBuilder builder)
-            where TUser : class
-        {
-            return builder.AddPersonalAccessToken<TUser>(PersonalAccessTokenDefaults.AuthenticationScheme, _ => { });
-        }
-
         public static AuthenticationBuilder AddPersonalAccessToken<TUser>(
             this AuthenticationBuilder builder,
             Action<PersonalAccessTokenAuthenticationOptions<TUser>> configureOptions) where TUser : class

@@ -424,14 +424,24 @@ namespace Microsoft.DotNet.DarcLib
             IEnumerable<string> remotesMap,
             string testPath)
         {
-            ValidateBuildOptions(remoteFactory, rootDependencies, repoUri, commit,
-                options, remote, logger, reposFolder, remotesMap, testPath);
+            List<DependencyDetail> rootDependencyList = rootDependencies?.ToList();
+            List<string> remotesList = remotesMap?.ToList();
+            ValidateBuildOptions(remoteFactory,
+                rootDependencyList,
+                repoUri,
+                commit,
+                options,
+                remote,
+                logger,
+                reposFolder,
+                remotesList,
+                testPath);
 
             if (rootDependencies != null)
             {
-                logger.LogInformation($"Starting build of graph from {rootDependencies.Count()} root dependencies " +
+                logger.LogInformation($"Starting build of graph from {rootDependencyList.Count} root dependencies " +
                     $"({repoUri}@{commit})");
-                foreach (DependencyDetail dependency in rootDependencies)
+                foreach (DependencyDetail dependency in rootDependencyList)
                 {
                     logger.LogInformation($"  {dependency.Name}@{dependency.Version}");
                 }
@@ -449,19 +459,19 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             List<LinkedList<DependencyGraphNode>> cycles = new List<LinkedList<DependencyGraphNode>>();
-            Dictionary<string, Task<IEnumerable<Build>>> buildLookupTasks = null;
+            Dictionary<string, List<Build>> buildLookups = null;
 
             if (options.LookupBuilds)
             {
-                buildLookupTasks = new Dictionary<string, Task<IEnumerable<Build>>>();
+                buildLookups = new Dictionary<string, List<Build>>();
 
                 // Look up the dependency and get the creating build.
-                buildLookupTasks.Add($"{repoUri}@{commit}", barOnlyRemote.GetBuildsAsync(repoUri, commit));
+                buildLookups.Add($"{repoUri}@{commit}", (await barOnlyRemote.GetBuildsAsync(repoUri, commit)).ToList());
             }
 
             // Create the root node and add the repo to the visited bit vector.
             List<Build> allContributingBuilds = null;
-            DependencyGraphNode rootGraphNode = new DependencyGraphNode(repoUri, commit, rootDependencies, null);
+            DependencyGraphNode rootGraphNode = new DependencyGraphNode(repoUri, commit, rootDependencyList, null);
             rootGraphNode.VisitedNodes.Add(repoUri);
             // Nodes to visit is a queue, so that the evaluation order
             // of the graph is breadth first.
@@ -490,8 +500,10 @@ namespace Microsoft.DotNet.DarcLib
             Dictionary<string, DependencyGraphNode> visitedRepoUriNodes = new Dictionary<string, DependencyGraphNode>();
             HashSet<DependencyGraphNode> incoherentNodes = new HashSet<DependencyGraphNode>();
             // Cache of incoherent dependencies, looked up by name
-            Dictionary<string, DependencyDetail> incoherentDependenciesCache = new Dictionary<string, DependencyDetail>();
-            HashSet<DependencyDetail> incoherentDependencies = new HashSet<DependencyDetail>(new LooseDependencyDetailComparer());
+            Dictionary<string, DependencyDetail> incoherentDependenciesCache =
+                new Dictionary<string, DependencyDetail>();
+            HashSet<DependencyDetail> incoherentDependencies =
+                new HashSet<DependencyDetail>(new LooseDependencyDetailComparer());
 
             while (nodesToVisit.Count > 0)
             {
@@ -499,7 +511,7 @@ namespace Microsoft.DotNet.DarcLib
 
                 logger.LogInformation($"Visiting {node.Repository}@{node.Commit}");
 
-                IEnumerable<DependencyDetail> dependencies;
+                List<DependencyDetail> dependencies;
                 // In case of the root node which is initially put on the stack,
                 // we already have the set of dependencies to start at (this may have been
                 // filtered by the caller). So no need to get the dependencies again.
@@ -511,7 +523,7 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     logger.LogInformation($"Getting dependencies at {node.Repository}@{node.Commit}");
 
-                    dependencies = await GetDependenciesAsync(
+                    dependencies = (await GetDependenciesAsync(
                         remoteFactory,
                         remote,
                         logger,
@@ -519,9 +531,9 @@ namespace Microsoft.DotNet.DarcLib
                         node.Repository,
                         node.Commit,
                         options.IncludeToolset,
-                        remotesMap,
+                        remotesList,
                         reposFolder,
-                        testPath);
+                        testPath)).ToList();
                     // Set the dependencies on the current node.
                     node.Dependencies = dependencies;
                 }
@@ -542,9 +554,11 @@ namespace Microsoft.DotNet.DarcLib
 
                         if (options.LookupBuilds)
                         {
-                            if (!buildLookupTasks.ContainsKey($"{dependency.RepoUri}@{dependency.Commit}"))
+                            if (!buildLookups.ContainsKey($"{dependency.RepoUri}@{dependency.Commit}"))
                             {
-                                buildLookupTasks.Add($"{dependency.RepoUri}@{dependency.Commit}", barOnlyRemote.GetBuildsAsync(dependency.RepoUri, dependency.Commit));
+                                buildLookups.Add($"{dependency.RepoUri}@{dependency.Commit}",
+                                    (await barOnlyRemote.GetBuildsAsync(dependency.RepoUri, dependency.Commit))
+                                    .ToList());
                             }
                         }
 
@@ -560,13 +574,15 @@ namespace Microsoft.DotNet.DarcLib
                                 var newCycles = ComputeCyclePaths(node, dependency.RepoUri);
                                 cycles.AddRange(newCycles);
                             }
+
                             continue;
                         }
 
                         // Add the individual dependency to the set of unique dependencies seen
                         // in the whole graph.
                         uniqueDependencyDetails.Add(dependency);
-                        if (incoherentDependenciesCache.TryGetValue(dependency.Name, out DependencyDetail existingDependency))
+                        if (incoherentDependenciesCache.TryGetValue(dependency.Name,
+                            out DependencyDetail existingDependency))
                         {
                             incoherentDependencies.Add(existingDependency);
                             incoherentDependencies.Add(dependency);
@@ -578,9 +594,11 @@ namespace Microsoft.DotNet.DarcLib
 
                         // We may have visited this node before.  If so, add it as a child and avoid additional walks.
                         // Update the list of contributing builds.
-                        if (nodeCache.TryGetValue($"{dependency.RepoUri}@{dependency.Commit}", out DependencyGraphNode existingNode))
+                        if (nodeCache.TryGetValue($"{dependency.RepoUri}@{dependency.Commit}",
+                            out DependencyGraphNode existingNode))
                         {
-                            logger.LogInformation($"Node {dependency.RepoUri}@{dependency.Commit} has already been created, adding as child");
+                            logger.LogInformation(
+                                $"Node {dependency.RepoUri}@{dependency.Commit} has already been created, adding as child");
                             node.AddChild(existingNode, dependency);
                             continue;
                         }
@@ -617,9 +635,10 @@ namespace Microsoft.DotNet.DarcLib
 
             if (options.LookupBuilds)
             {
-                allContributingBuilds = await ComputeContributingBuildsAsync(buildLookupTasks,
-                                                                             nodeCache.Values,
-                                                                             logger);
+                allContributingBuilds = ComputeContributingBuilds(
+                    buildLookups,
+                    nodeCache.Values,
+                    logger);
             }
 
             switch (options.NodeDiff)
@@ -636,24 +655,25 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             return new DependencyGraph(rootGraphNode,
-                                       uniqueDependencyDetails,
-                                       incoherentDependencies,
-                                       nodeCache.Values,
-                                       incoherentNodes,
-                                       allContributingBuilds,
-                                       cycles);
+                uniqueDependencyDetails,
+                incoherentDependencies,
+                nodeCache.Values,
+                incoherentNodes,
+                allContributingBuilds,
+                cycles);
         }
 
         /// <summary>
         /// Compute which builds contribute to each node in the graph, as well as the overall graph
         /// </summary>
-        /// <param name="buildLookupTasks">Set of tasks that are looking up builds</param>
+        /// <param name="buildLookups">Set of tasks that are looking up builds</param>
         /// <param name="allNodes">All nodes in the graph</param>
         /// <param name="logger">Logger</param>
         /// <returns></returns>
-        private static async Task<List<Build>> ComputeContributingBuildsAsync(Dictionary<string, Task<IEnumerable<Build>>> buildLookupTasks,
-                                                                              IEnumerable<DependencyGraphNode> allNodes,
-                                                                              ILogger logger)
+        private static List<Build> ComputeContributingBuilds(
+            Dictionary<string, List<Build>> buildLookups,
+            IEnumerable<DependencyGraphNode> allNodes,
+            ILogger logger)
         {
             logger.LogInformation("Computing contributing builds");
 
@@ -662,13 +682,13 @@ namespace Microsoft.DotNet.DarcLib
             foreach (DependencyGraphNode node in allNodes)
             {
                 node.ContributingBuilds = new HashSet<Build>(new BuildComparer());
-                IEnumerable<Build> potentiallyContributingBuilds = await buildLookupTasks[$"{node.Repository}@{node.Commit}"];
+                IEnumerable<Build> potentiallyContributingBuilds = buildLookups[$"{node.Repository}@{node.Commit}"];
 
                 // Filter down. The parent nodes of this node may have specific dependency versions that narrow down
                 // which potential builds this could be.  For instance, if sha A was built twice, producing asset B.1 and B.2,
                 // we wouldn't know which by a simple query. But we can narrow the potential
                 // builds by any of those that produced assets that match any parent's dependency name+version
-                foreach (var potentialContributingBuild in potentiallyContributingBuilds)
+                foreach (Build potentialContributingBuild in potentiallyContributingBuilds)
                 {
                     if (BuildContributesToNode(node, potentialContributingBuild))
                     {
@@ -682,7 +702,7 @@ namespace Microsoft.DotNet.DarcLib
 
             return allContributingBuilds;
         }
-        
+
         /// <summary>
         /// Determines whether a build contributes to a given node by looking at the parents'
         /// input dependencies. If there are no parents, then we assume that the build could contribute. This
@@ -730,16 +750,16 @@ namespace Microsoft.DotNet.DarcLib
             // Find all parents who have a path to the root node.  This set might also
             // be the root node, since the root node has itself marked in VisitedNodes.
             // After reaching the root along all paths, this set will be empty
-            var parentsInCycles = currentNode.Parents.Where(p => p.VisitedNodes.Contains(repoCycleRoot));
+            var parentsInCycles = currentNode.Parents.Where(p => p.VisitedNodes.Contains(repoCycleRoot)).ToList();
 
             if (parentsInCycles.Any())
             {
                 // Recurse into each parent, combining the returned cycles together and
                 // appending on the current node.
-                foreach (var parent in parentsInCycles)
+                foreach (DependencyGraphNode parent in parentsInCycles)
                 {
-                    var cyclesRootedAtParentNode = ComputeCyclePaths(parent, repoCycleRoot);
-                    foreach (var cycleRootedAtNode in cyclesRootedAtParentNode)
+                    List<LinkedList<DependencyGraphNode>> cyclesRootedAtParentNode = ComputeCyclePaths(parent, repoCycleRoot);
+                    foreach (LinkedList<DependencyGraphNode> cycleRootedAtNode in cyclesRootedAtParentNode)
                     {
                         cycleRootedAtNode.AddLast(currentNode);
                         allCyclesRootedAtNode.Add(cycleRootedAtNode);
@@ -749,7 +769,7 @@ namespace Microsoft.DotNet.DarcLib
             else
             {
                 // Create a segment containing just this node and return that
-                LinkedList<DependencyGraphNode> newCycleSegment = new LinkedList<DependencyGraphNode>();
+                var newCycleSegment = new LinkedList<DependencyGraphNode>();
                 allCyclesRootedAtNode.Add(newCycleSegment);
                 newCycleSegment.AddFirst(currentNode);
             }

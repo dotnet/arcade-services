@@ -66,8 +66,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         public override async Task<IActionResult> ListRepositories(int id)
         {
             List<string> list = await _context.BuildChannels
-                    .Include(b => b.Build.GitHubRepository)
-                    .Include(b => b.Build.AzureDevOpsRepository)
+                    .Include(b => b.Build)
                     .Where(bc => bc.ChannelId == id)
                     .Select(bc => bc.Build.GitHubRepository ?? bc.Build.AzureDevOpsRepository)
                     .Where(b => !String.IsNullOrEmpty(b))
@@ -77,7 +76,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         }
 
         /// <summary>
-        ///   Gets a single <see cref="Channel"/>, including all <see cref="ReleasePipeline"/> data.
+        ///   Gets a single <see cref="Channel"/>.
         /// </summary>
         /// <param name="id">The id of the <see cref="Channel"/> to get</param>
         [HttpGet("{id}")]
@@ -86,8 +85,6 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         public override async Task<IActionResult> GetChannel(int id)
         {
             Data.Models.Channel channel = await _context.Channels
-                .Include(ch => ch.ChannelReleasePipelines)
-                .ThenInclude(crp => crp.ReleasePipeline)
                 .Where(c => c.Id == id).FirstOrDefaultAsync();
 
             if (channel == null)
@@ -108,7 +105,6 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         public override async Task<IActionResult> DeleteChannel(int id)
         {
             Data.Models.Channel channel = await _context.Channels
-                .Include(ch => ch.ChannelReleasePipelines)
                 .FirstOrDefaultAsync(c => c.Id == id);
 
             if (channel == null)
@@ -122,13 +118,6 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 return BadRequest(
                     new ApiError($"The channel with id '{id}' has associated subscriptions. " +
                     "Please remove these before removing this channel."));
-            }
-
-            if (channel.ChannelReleasePipelines != null && channel.ChannelReleasePipelines.Any())
-            {
-                return BadRequest(
-                    new ApiError($"The channel with id '{id}' has '{channel.ChannelReleasePipelines.Count()}' " +
-                    $"release pipeline(s) attached to it. Detach those release pipelines(s) first."));
             }
 
             _context.Channels.Remove(channel);

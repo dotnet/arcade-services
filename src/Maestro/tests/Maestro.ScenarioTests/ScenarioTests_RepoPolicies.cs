@@ -5,6 +5,7 @@ using NUnit.Framework.Internal;
 namespace Maestro.ScenarioTests
 {
     [TestFixture]
+    [Category("PostDeployment")]
     public class ScenarioTests_RepoPolicies : MaestroScenarioTestBase
     {
         private readonly string repoName = "maestro-test1";

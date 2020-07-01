@@ -1,21 +1,20 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.1</TargetFramework>
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
     <SignAssembly>false</SignAssembly>
-    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FluentAssertions" Version="5.4.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="2.1.1" />
-    <PackageReference Include="Moq" Version="$(MoqVersion)" />
-    <PackageReference Include="Microsoft.CodeCoverage" Version="$(MicrosoftCodeCoverageVersion)" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Moq" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Shared\Microsoft.DotNet.Internal.DependencyInjection.Testing\Microsoft.DotNet.Internal.DependencyInjection.Testing.csproj" />
+    <ProjectReference Include="..\..\..\Shared\Microsoft.DotNet.Internal.Testing.Utility\Microsoft.DotNet.Internal.Testing.Utility.csproj" />
     <ProjectReference Include="..\..\ServiceFabricMocks\ServiceFabricMocks.csproj" />
     <ProjectReference Include="..\..\SubscriptionActorService\SubscriptionActorService.csproj" />
   </ItemGroup>
