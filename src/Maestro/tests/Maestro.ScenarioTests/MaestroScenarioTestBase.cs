@@ -21,6 +21,8 @@ namespace Maestro.ScenarioTests
 
         public GitHubClient GitHubApi => _parameters.GitHubApi;
 
+        public Microsoft.DotNet.DarcLib.AzureDevOpsClient AzDoClient => _parameters.AzDoClient;
+
         public MaestroScenarioTestBase()
         {
         }
@@ -57,9 +59,25 @@ namespace Maestro.ScenarioTests
             throw new MaestroTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
         }
 
-        private Task<PullRequest> WaitForAzDoPullRequestAsync(string targetRepoName, string targetBranch)
+        private async Task<Microsoft.DotNet.DarcLib.PullRequest> WaitForAzDoPullRequestAsync(string targetRepoUri, string targetBranch)
         {
-            throw new NotImplementedException();
+            int attempts = 10;
+            while (attempts-- > 0)
+            {
+                var prs = await AzDoClient.SearchPullRequestsAsync(targetRepoUri, targetBranch, Microsoft.DotNet.DarcLib.PrStatus.Open).ConfigureAwait(false);
+                if (prs.Count() == 1)
+                {
+                    return await AzDoClient.GetPullRequestAsync($"{targetRepoUri}/pullrequests/{prs.FirstOrDefault()}?api-version=5.0");
+                }
+                if (prs.Count() > 1)
+                {
+                    throw new MaestroTestException($"More than one pull request found in {targetRepoUri} targeting {targetBranch}");
+                }
+
+                await Task.Delay(60 * 1000).ConfigureAwait(false);
+            }
+
+            throw new MaestroTestException($"No pull request was created in {targetRepoUri} targeting {targetBranch}");
         }
 
         public async Task CheckBatchedGitHubPullRequest(string targetBranch, string source1RepoName,
@@ -95,9 +113,10 @@ namespace Maestro.ScenarioTests
                     var attempts = 7;
                     while (attempts-- > 0)
                     {
-                          bool isMerged = (await WaitForPullRequestAsync(targetRepoName, targetBranch)).Merged;
+                        bool isMerged = (await WaitForPullRequestAsync(targetRepoName, targetBranch)).Merged;
                         // "$(Get-Github-RepoApiUri($targetRepoName))/pulls/$pullRequestNumber/merge"
-                        
+                        // There doesn't seem to be an equivalent to this in the client, so just getting the PR over & over until it's done
+
                         if (!isMerged)
                         {
                             TestContext.WriteLine($"Pull request has not been completed. {attempts} tries remaining.");
@@ -115,7 +134,7 @@ namespace Maestro.ScenarioTests
             await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete);
         }
 
-        public async Task CheckNonBatchedAzDoPullRequest(string sourceRepoName, string targetRepoName, string targetBranch, 
+        public async Task CheckNonBatchedAzDoPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory)
         {
             string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
@@ -125,8 +144,19 @@ namespace Maestro.ScenarioTests
         public async Task CheckAzDoPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete)
         {
-            TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoName} ...");
-            PullRequest pullRequest = await WaitForAzDoPullRequestAsync(targetRepoName, targetBranch);
+            string targetRepoUri = GetAzDoRepoUrl(targetRepoName);
+            TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
+            Microsoft.DotNet.DarcLib.PullRequest pullRequest = await WaitForAzDoPullRequestAsync(targetRepoUri, targetBranch);
+
+            StringAssert.AreEqualIgnoringCase(expectedPRTitle, pullRequest.Title);
+            Microsoft.DotNet.DarcLib.PrStatus expectedPRState = complete ? Microsoft.DotNet.DarcLib.PrStatus.Closed : Microsoft.DotNet.DarcLib.PrStatus.Open;
+            var prStatus = AzDoClient.GetPullRequestStatusAsync(targetRepoUri);
+            Assert.AreEqual(expectedPRState, prStatus);
+
+            using (ChangeDirectory(repoDirectory))
+            {
+                await ValidatePullRequestDependencies(targetRepoName, pullRequest.BaseBranch, expectedDependencies, 1);
+            }
         }
 
         public async Task ValidatePullRequestDependencies(string targetRepoName, string pullRequestBaseBranch, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, int tries = 1)
