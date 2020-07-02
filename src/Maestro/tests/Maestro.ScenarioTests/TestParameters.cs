@@ -33,7 +33,8 @@ namespace Maestro.ScenarioTests
                 ? ApiFactory.GetAnonymous(maestroBaseUri)
                 : ApiFactory.GetAuthenticated(maestroBaseUri, maestroToken);
 
-            string darcVersion = await maestroApi.Assets.GetDarcVersionAsync();
+            //   string darcVersion = await maestroApi.Assets.GetDarcVersionAsync();
+            string darcVersion = "1.1.0-beta.20351.2";
             string dotnetExe = await TestHelpers.Which("dotnet");
 
             var toolInstallArgs = new List<string>
@@ -63,7 +64,7 @@ namespace Maestro.ScenarioTests
             return new TestParameters(darcExe, await TestHelpers.Which("git"), maestroBaseUri, maestroToken!, githubToken, maestroApi, githubApi, azDoClient, testDir.TryTake()!, azdoToken);
         }
 
-        private TestParameters(string darcExePath, string gitExePath, string maestroBaseUri, string maestroToken, string gitHubToken, 
+        private TestParameters(string darcExePath, string gitExePath, string maestroBaseUri, string maestroToken, string gitHubToken,
             IMaestroApi maestroApi, GitHubClient gitHubApi, Microsoft.DotNet.DarcLib.AzureDevOpsClient azdoClient, TemporaryDirectory dir, string azdoToken)
         {
             _dir = dir;
@@ -110,7 +111,10 @@ namespace Maestro.ScenarioTests
 
         public void Dispose()
         {
-            _dir.Dispose();
+            if (_dir != null)
+            {
+                _dir.Dispose();
+            }
         }
     }
 }
