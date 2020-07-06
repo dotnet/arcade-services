@@ -533,7 +533,7 @@ namespace Microsoft.DotNet.DarcLib
                         options.IncludeToolset,
                         remotesList,
                         reposFolder,
-                        testPath)).ToList();
+                        testPath))?.ToList();
                     // Set the dependencies on the current node.
                     node.Dependencies = dependencies;
                 }
