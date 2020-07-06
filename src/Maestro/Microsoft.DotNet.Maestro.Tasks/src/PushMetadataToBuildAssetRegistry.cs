@@ -48,7 +48,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         public int BuildId { get; set; }
 
         private const string SearchPattern = "*.xml";
-        private const string MergeManifestFileName = "MergedManifest.xml";
+        private const string MergedManifestFileName = "MergedManifest.xml";
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
         private readonly HashSet<string> blobSet = new HashSet<string>();
 
@@ -91,13 +91,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     }
 
                     BuildData finalBuild = MergeBuildManifests(buildsManifestMetadata);
-                    SigningInformation finalSigningInfo = null;
-
-                    if (signingInformation.Any())
-                    { 
-                        finalSigningInfo = MergeSigningInfo(signingInformation);
-                    }
-
+                    SigningInformation finalSigningInfo = MergeSigningInfo(signingInformation);
+                    
                     // Inject an entry of MergedManifest.xml to the in-memory merged manifest
                     string location = null;
                     AssetData assetData = finalBuild.Assets.FirstOrDefault();
@@ -112,7 +107,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         }
                     }
 
-                    finalBuild.Assets = finalBuild.Assets.Add(GetManifestAsAsset(finalBuild.Assets, location, MergeManifestFileName));
+                    finalBuild.Assets = finalBuild.Assets.Add(GetManifestAsAsset(finalBuild.Assets, location, MergedManifestFileName));
 
                     IMaestroApi client = ApiFactory.GetAuthenticated(MaestroApiEndpoint, BuildAssetRegistryToken);
 
@@ -491,31 +486,39 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return mergedBuild;
         }
 
-        private SigningInformation MergeSigningInfo(List<SigningInformation> signignInformation)
+        private SigningInformation MergeSigningInfo(List<SigningInformation> signingInformation)
         {
-            SigningInformation mergedInfo = signignInformation[0];
+            SigningInformation mergedInfo = null;
 
-            for (int i = 1; i < signignInformation.Count; i++)
+            if (signingInformation.Any())
             {
-                SigningInformation signInfo = signignInformation[i];
-
-                if (mergedInfo.AzureDevOpsBuildId != signInfo.AzureDevOpsBuildId ||
-                    mergedInfo.AzureDevOpsCollectionUri != signInfo.AzureDevOpsCollectionUri ||
-                    mergedInfo.AzureDevOpsProject != signInfo.AzureDevOpsProject)
+                foreach (SigningInformation signInfo in signingInformation)
                 {
-                    throw new Exception("Can't merge if one or more manifests have different build id, collection URI or project.");
+                    if (mergedInfo == null)
+                    {
+                        mergedInfo = signInfo;
+                    }
+                    else
+                    {
+                        if (mergedInfo.AzureDevOpsBuildId != signInfo.AzureDevOpsBuildId ||
+                            mergedInfo.AzureDevOpsCollectionUri != signInfo.AzureDevOpsCollectionUri ||
+                            mergedInfo.AzureDevOpsProject != signInfo.AzureDevOpsProject)
+                        {
+                            throw new Exception("Can't merge if one or more manifests have different build id, collection URI or project.");
+                        }
+
+                        mergedInfo.FileExtensionSignInfos.AddRange(signInfo.FileExtensionSignInfos);
+                        mergedInfo.FileSignInfos.AddRange(signInfo.FileSignInfos);
+                        mergedInfo.ItemsToSign.AddRange(signInfo.ItemsToSign);
+                        mergedInfo.StrongNameSignInfos.AddRange(signInfo.StrongNameSignInfos);
+                    }
                 }
 
-                mergedInfo.FileExtensionSignInfos.AddRange(signInfo.FileExtensionSignInfos);
-                mergedInfo.FileSignInfos.AddRange(signInfo.FileSignInfos);
-                mergedInfo.ItemsToSign.AddRange(signInfo.ItemsToSign);
-                mergedInfo.StrongNameSignInfos.AddRange(signInfo.StrongNameSignInfos);
+                mergedInfo.FileExtensionSignInfos = new List<FileExtensionSignInfo>(mergedInfo.FileExtensionSignInfos.Distinct(new FileExtensionSignInfoComparer()));
+                mergedInfo.FileSignInfos = new List<FileSignInfo>(mergedInfo.FileSignInfos.Distinct(new FileSignInfoComparer()));
+                mergedInfo.ItemsToSign = new List<ItemsToSign>(mergedInfo.ItemsToSign.Distinct(new ItemsToSignComparer()));
+                mergedInfo.StrongNameSignInfos = new List<StrongNameSignInfo>(mergedInfo.StrongNameSignInfos.Distinct(new StrongNameSignInfoComparer()));
             }
-
-            mergedInfo.FileExtensionSignInfos = new List<FileExtensionSignInfo>(mergedInfo.FileExtensionSignInfos.Distinct(new FileExtensionSignInfoComparer()));
-            mergedInfo.FileSignInfos = new List<FileSignInfo>(mergedInfo.FileSignInfos.Distinct(new FileSignInfoComparer()));
-            mergedInfo.ItemsToSign = new List<ItemsToSign>(mergedInfo.ItemsToSign.Distinct(new ItemsToSignComparer()));
-            mergedInfo.StrongNameSignInfos = new List<StrongNameSignInfo>(mergedInfo.StrongNameSignInfos.Distinct(new StrongNameSignInfoComparer()));
 
             return mergedInfo;
         }
@@ -646,7 +649,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private void CreateAndPushMergedManifest(IImmutableList<AssetData> assets, SigningInformation finalSigningInfo)
         {
-            string mergedManifestPath = Path.Combine(GetAzDevStagingDirectory(), MergeManifestFileName);
+            string mergedManifestPath = Path.Combine(GetAzDevStagingDirectory(), MergedManifestFileName);
 
             BuildModel buildModel = new BuildModel(
                         new BuildIdentity
