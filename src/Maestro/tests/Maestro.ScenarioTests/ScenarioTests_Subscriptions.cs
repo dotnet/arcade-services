@@ -9,14 +9,13 @@ using NUnit.Framework.Internal;
 namespace Maestro.ScenarioTests
 {
     [TestFixture]
-    [Category("ScenarioTest")]
+    [Category("PostDeployment")]
     public class ScenarioTests_Subscriptions : MaestroScenarioTestBase
     {
         private TestParameters _parameters;
 
         private string repo1Name = "maestro-test1";
         private string repo2Name = "maestro-test2";
-        private string repo3Name = "marstro-test3";
         private string channel1Name = "subscriptionTestChannel1";
         private string channel2Name = "subscriptionTestChannel2";
 
@@ -35,14 +34,13 @@ namespace Maestro.ScenarioTests
         }
 
         [Test]
-        [Category("ScenarioTest")]
+        [Category("PostDeployment")]
         public async Task Subscriptions_EndToEnd()
         {
             TestContext.WriteLine("Subscription management tests...");
 
             string repo1Uri = GetRepoUrl(repo1Name);
             string repo2Uri = GetRepoUrl(repo2Name);
-            string repo3Uri = GetRepoUrl(repo3Name);
             string repo1AzDoUri = GetAzDoRepoUrl(repo1Name);
             string targetBranch = "master";
 
