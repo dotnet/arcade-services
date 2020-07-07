@@ -556,10 +556,28 @@ namespace Maestro.ScenarioTests
             await RunGitAsync("checkout", commit);
         }
 
-        public async Task CheckoutBranchAsync(string branchName)
+        public async Task CheckoutRemoteBranchAsync(string branchName)
+        {
+            await RunGitAsync("fetch", "origin", branchName);
+            await RunGitAsync("checkout", branchName);
+        }
+
+        public async Task<IAsyncDisposable> CheckoutBranchAsync(string branchName)
         {
             await RunGitAsync("fetch", "origin");
-            await RunGitAsync("checkout", "-b", branchName);
+            await RunGitAsync("checkout", "-B", branchName, "--track", branchName);
+
+            return AsyncDisposable.Create(async () =>
+            {
+                TestContext.WriteLine($"Deleting remote branch {branchName}");
+                await DeleteBranchAsync(branchName);
+            });
+        }
+
+        public async Task DeleteBranchAsync(string branchName)
+        {
+            await RunGitAsync("push", "origin", "--delete", branchName);
+
         }
 
         internal IImmutableList<AssetData> GetAssetData(string asset1Name, string asset1Version, string asset2Name, string asset2Version)

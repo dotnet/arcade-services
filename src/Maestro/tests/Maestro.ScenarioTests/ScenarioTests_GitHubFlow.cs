@@ -122,13 +122,16 @@ namespace Maestro.ScenarioTests
 
                     using (ChangeDirectory(tempDirectory.Directory))
                     {
-                        await using (await PushGitBranchAsync("origin", targetBranch))
+                        await using (await CheckoutBranchAsync(targetBranch))
                         {
-                            await TriggerSubscriptionAsync(subscription1Id.Value);
+                            await using (await PushGitBranchAsync("origin", targetBranch))
+                            {
+                                await TriggerSubscriptionAsync(subscription1Id.Value);
 
-                            List<DependencyDetail> expectedDependencies = testLogic.ExpectedDependenciesSource1.Concat(expectedChildDependencies).ToList();
+                                List<DependencyDetail> expectedDependencies = testLogic.ExpectedDependenciesSource1.Concat(expectedChildDependencies).ToList();
 
-                            await CheckNonBatchedGitHubPullRequest(testRepo1Name, testRepo3Name, targetBranch, expectedDependencies, tempDirectory.Directory);
+                                await CheckNonBatchedGitHubPullRequest(testRepo1Name, testRepo3Name, targetBranch, expectedDependencies, tempDirectory.Directory);
+                            }
                         }
                     }
                 }

@@ -146,32 +146,34 @@ namespace Maestro.ScenarioTests
                         TemporaryDirectory reposFolder = await CloneRepositoryAsync(testRepo2Name);
                         using (ChangeDirectory(reposFolder.Directory))
                         {
-                            await CheckoutBranchAsync(targetBranch);
+                            await CheckoutRemoteBranchAsync("master");
 
-                            TestContext.WriteLine("Adding dependencies to target repo");
-                            await AddDependenciesToLocalRepo(reposFolder.Directory, Source1Assets.ToList(), source1RepoUri);
-                            await AddDependenciesToLocalRepo(reposFolder.Directory, source2Assets.ToList(), source2RepoUri);
-
-                            TestContext.WriteLine("Pushing branch to remote");
-                            await GitCommitAsync("Add dependencies");
-                            await using (await PushGitBranchAsync("origin", targetBranch))
+                            await using (await CheckoutBranchAsync(targetBranch))
                             {
+                                TestContext.WriteLine("Adding dependencies to target repo");
+                                await AddDependenciesToLocalRepo(reposFolder.Directory, Source1Assets.ToList(), targetRepoUri);
+                                await AddDependenciesToLocalRepo(reposFolder.Directory, source2Assets.ToList(), targetRepoUri);
 
-                                TestContext.WriteLine("Trigger the dependency update");
-                                await TriggerSubscriptionAsync(subscription1Id.Value);
-                                await TriggerSubscriptionAsync(subscription2Id.Value);
-
-                                List<DependencyDetail> expectedDependencies = ExpectedDependenciesSource1.Concat(expectedDependenciesSource2).ToList();
-
-                                TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
-
-                                if (isAzDoTest)
+                                TestContext.WriteLine("Pushing branch to remote");
+                                await GitCommitAsync("Add dependencies");
+                                await using (await PushGitBranchAsync("origin", targetBranch))
                                 {
-                                    await CheckBatchedAzDoPullRequest(testRepo1Name, testRepo3Name, testRepo2Name, targetBranch, expectedDependencies, reposFolder.Directory);
-                                }
-                                else
-                                {
-                                    await CheckBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo2Name, expectedDependencies, reposFolder.Directory);
+                                    TestContext.WriteLine("Trigger the dependency update");
+                                    await TriggerSubscriptionAsync(subscription1Id.Value);
+                                    await TriggerSubscriptionAsync(subscription2Id.Value);
+
+                                    List<DependencyDetail> expectedDependencies = ExpectedDependenciesSource1.Concat(expectedDependenciesSource2).ToList();
+
+                                    TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
+
+                                    if (isAzDoTest)
+                                    {
+                                        await CheckBatchedAzDoPullRequest(testRepo1Name, testRepo3Name, testRepo2Name, targetBranch, expectedDependencies, reposFolder.Directory);
+                                    }
+                                    else
+                                    {
+                                        await CheckBatchedGitHubPullRequest(targetBranch, testRepo1Name, testRepo2Name, expectedDependencies, reposFolder.Directory);
+                                    }
                                 }
                             }
                         }
@@ -281,6 +283,7 @@ namespace Maestro.ScenarioTests
             TemporaryDirectory reposFolder = await CloneRepositoryAsync(targetRepoName);
             using (ChangeDirectory(reposFolder.Directory))
             {
+                await DeleteBranchAsync(targetBranch);
                 await CheckoutBranchAsync(targetBranch);
 
                 TestContext.WriteLine("Adding dependencies to target repo");
@@ -319,6 +322,7 @@ namespace Maestro.ScenarioTests
             TemporaryDirectory reposFolder = await CloneRepositoryAsync(targetRepoName);
             using (ChangeDirectory(reposFolder.Directory))
             {
+                await DeleteBranchAsync(targetBranch);
                 await CheckoutBranchAsync(targetBranch);
 
                 TestContext.WriteLine("Adding dependencies to target repo");
