@@ -101,20 +101,14 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         Task UpdatePullRequestAsync(string pullRequestUri, PullRequest pullRequest);
 
-        /// <summary>
-        ///     Merge a pull request
-        /// </summary>
-        /// <param name="pullRequestUrl">Uri of pull request to merge</param>
-        /// <param name="parameters">Settings for merge</param>
-        /// <returns></returns>
-     /*   Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
 
         /// <summary>
         ///     Merges a Dependency update pull request
         /// </summary>
         /// <param name="pullRequestUrl">Uri of pull request to merge</param>
         /// <param name="parameters">Settings for merge</param>
-        /// <returns></returns>*/
+        /// <param name="commitToMerge">Settings for merge</param>
+        /// <returns></returns>
         Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string commitToMerge);
 
         /// <summary>

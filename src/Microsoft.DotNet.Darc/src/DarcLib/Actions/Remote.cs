@@ -25,15 +25,15 @@ namespace Microsoft.DotNet.DarcLib
         private readonly ILogger _logger;
 
         // **Updates**:
-        //- **Foo**: from to 1.1.0
-        //- **Bar**: from to 2.1.0
+        //- **Foo**: from 1.0 to 1.1.0
+        //- **Bar**: from 2.0.0 to 2.1.0
         private static readonly Regex DependencyUpdatesPattern =
             new Regex(@"- \*\*(?<updates>[\w+\.\-]+)\*\*: from (?<oldVersion>[\w\.\-]*) to (?<newVersion>[\w\.\-]+)");
 
         // captures coherency updates from pr description, for eg: 
         // **Coherency updates**:
-        //- **Foo**: from to 1.1.0
-        //- **Bar**: from to 2.1.0
+        //- **Foo**: from 1.0 to 1.1.0
+        //- **Bar**: from 2.0 to 2.1.0
         private static readonly Regex CoherencyUpdatesPattern =
             new Regex(@"- \*\*(?<library>[\w\.\-]+)\*\*: from (?<oldversion>[\w\.\-]+) to (?<newVersion>[\w\.\-]+)");
 

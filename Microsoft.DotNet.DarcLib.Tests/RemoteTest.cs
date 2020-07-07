@@ -1,7 +1,5 @@
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -10,13 +8,12 @@ namespace Microsoft.DotNet.DarcLib.Tests
 {
     public class RemoteTest
     {
-        Mock<IGitRepo> client = new Mock<IGitRepo>();
-        Mock<IBarClient> barClient = new Mock<IBarClient>();
-        Mock<ILogger> logger = new Mock<ILogger>();
-
         [Fact]
         public async Task MergeDependencyPullRequest()
         {
+            Mock<IGitRepo> client = new Mock<IGitRepo>();
+            Mock<IBarClient> barClient = new Mock<IBarClient>();
+            Mock<ILogger> logger = new Mock<ILogger>();
             MergePullRequestParameters mergePullRequest = new MergePullRequestParameters
             {
                 DeleteSourceBranch = true,
