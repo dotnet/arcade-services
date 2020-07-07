@@ -25,7 +25,6 @@ namespace Maestro.ScenarioTests
             string maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
             string githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
             string darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE");
-            string azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"];
 
             using var testDir = Shareable.Create(TemporaryDirectory.Get());
 
@@ -58,10 +57,10 @@ namespace Maestro.ScenarioTests
                     new ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
                     new InMemoryCredentialStore(new Credentials(githubToken)));
 
-            return new TestParameters(darcExe, await TestHelpers.Which("git"), maestroBaseUri, maestroToken!, githubToken, maestroApi, githubApi, testDir.TryTake()!, azdoToken);
+            return new TestParameters(darcExe, await TestHelpers.Which("git"), maestroBaseUri, maestroToken!, githubToken, maestroApi, githubApi, testDir.TryTake()!);
         }
 
-        private TestParameters(string darcExePath, string gitExePath, string maestroBaseUri, string maestroToken, string gitHubToken, IMaestroApi maestroApi, GitHubClient gitHubApi, TemporaryDirectory dir, string azdoToken)
+        private TestParameters(string darcExePath, string gitExePath, string maestroBaseUri, string maestroToken, string gitHubToken, IMaestroApi maestroApi, GitHubClient gitHubApi, TemporaryDirectory dir)
         {
             _dir = dir;
             DarcExePath = darcExePath;
@@ -71,12 +70,11 @@ namespace Maestro.ScenarioTests
             GitHubToken = gitHubToken;
             MaestroApi = maestroApi;
             GitHubApi = gitHubApi;
-            AzDoToken = azdoToken;
         }
 
         public string DarcExePath { get; }
 
-        public string GitExePath { get; }
+        public string GitExePath { get;  }
 
         public string GitHubUser { get; } = "dotnet-maestro-bot";
 
@@ -99,8 +97,6 @@ namespace Maestro.ScenarioTests
         public string AzureDevOpsAccount { get; } = "dnceng";
 
         public string AzureDevOpsProject { get; } = "internal";
-
-        public string AzDoToken { get; }
 
         public void Dispose()
         {

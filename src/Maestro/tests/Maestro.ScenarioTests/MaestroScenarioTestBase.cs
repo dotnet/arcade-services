@@ -85,22 +85,6 @@ namespace Maestro.ScenarioTests
             return $"https://{_parameters.GitHubUser}:{_parameters.GitHubToken}@github.com/{org}/{repository}";
         }
 
-        public string GetAzDoRepoUrl(string repoName, string azdoAccount = "dnceng", string azdoProject = "internal")
-        {
-            return $"https://dev.azure.com/{azdoAccount}/{azdoProject}/_git/{repoName}";
-        }
-
-        public Task<string> RunDarcAsyncWithInput(string input, params string[] args)
-        {
-            return TestHelpers.RunExecutableAsyncWithInput(_parameters.DarcExePath, input, args.Concat(new[]
-            {
-                "-p", _parameters.MaestroToken,
-                "--bar-uri", _parameters.MaestroBaseUri,
-                "--github-pat", _parameters.GitHubToken,
-                "--azdev-pat", _parameters.AzDoToken,
-            }).ToArray());
-        }
-
         public Task<string> RunDarcAsync(params string[] args)
         {
             return TestHelpers.RunExecutableAsync(_parameters.DarcExePath, args.Concat(new[]
@@ -108,7 +92,6 @@ namespace Maestro.ScenarioTests
                 "-p", _parameters.MaestroToken,
                 "--bar-uri", _parameters.MaestroBaseUri,
                 "--github-pat", _parameters.GitHubToken,
-                "--azdev-pat", _parameters.AzDoToken,
             }).ToArray());
         }
 
@@ -170,58 +153,14 @@ namespace Maestro.ScenarioTests
             await RunDarcAsync("delete-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branch).ConfigureAwait(false);
         }
 
-        public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(
-            string sourceChannelName,
-            string sourceRepo,
-            string targetRepo,
-            string targetBranch,
-            string updateFrequency,
-            string sourceOrg = "dotnet",
-            List<string> additionalOptions = null,
-            bool sourceIsAzDo = false,
-            bool targetIsAzDo = false)
+        public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string sourceChannelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency)
         {
-            string sourceUrl = sourceIsAzDo ? GetAzDoRepoUrl(sourceRepo, azdoProject: sourceOrg) : GetRepoUrl(sourceOrg, sourceRepo);
-            string targetUrl = targetIsAzDo ? GetAzDoRepoUrl(targetRepo) : GetRepoUrl(targetRepo);
-
-            string[] command = {"add-subscription", "-q", "--no-trigger",
+            string output = await RunDarcAsync("add-subscription", "-q", "--no-trigger",
                 "--channel", sourceChannelName,
-                "--source-repo", sourceUrl,
-                "--target-repo", targetUrl,
+                "--source-repo", GetRepoUrl("dotnet", sourceRepo),
+                "--target-repo", GetRepoUrl(targetRepo),
                 "--target-branch", targetBranch,
-                "--update-frequency", updateFrequency};
-
-            if (additionalOptions != null)
-            {
-                command = command.Concat(additionalOptions).ToArray();
-            }
-
-            string output = await RunDarcAsync(command).ConfigureAwait(false);
-
-            Match match = Regex.Match(output, "Successfully created new subscription with id '([a-f0-9-]+)'");
-            if (!match.Success)
-            {
-                throw new MaestroTestException("Unable to create subscription.");
-            }
-
-            string subscriptionId = match.Groups[1].Value;
-            return AsyncDisposableValue.Create(subscriptionId, async () =>
-            {
-                TestContext.WriteLine($"Cleaning up Test Subscription {subscriptionId}");
-                try
-                {
-                    await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet").ConfigureAwait(false);
-                }
-                catch (MaestroTestException)
-                {
-                    // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
-                }
-            });
-        }
-
-        public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string yamlDefinition)
-        {
-            string output = await RunDarcAsyncWithInput(yamlDefinition, "add-subscription", "-q", "--read-stdin", "--no-trigger").ConfigureAwait(false);
+                "--update-frequency", updateFrequency).ConfigureAwait(false);
 
             Match match = Regex.Match(output, "Successfully created new subscription with id '([a-f0-9-]+)'");
             if (match.Success)
@@ -230,58 +169,11 @@ namespace Maestro.ScenarioTests
                 return AsyncDisposableValue.Create(subscriptionId, async () =>
                 {
                     TestContext.WriteLine($"Cleaning up Test Subscription {subscriptionId}");
-                    try
-                    {
-                        await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet").ConfigureAwait(false);
-                    }
-                    catch (MaestroTestException)
-                    {
-                        // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
-                    }
+                    await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet").ConfigureAwait(false);
                 });
             }
 
             throw new MaestroTestException("Unable to create subscription.");
-        }
-
-        public async Task<string> GetSubscriptionInfo(string subscriptionId)
-        {
-            return await RunDarcAsync("get-subscriptions", "--ids", subscriptionId).ConfigureAwait(false);
-        }
-
-        public async Task<string> GetSubscriptions(string channelName)
-        {
-            return await RunDarcAsync("get-subscriptions", "--channel", channelName);
-        }
-
-        public async Task ValidateSubscriptionInfo(string subscriptionId, string expectedSubscriptionInfo)
-        {
-            string subscriptionInfo = await GetSubscriptionInfo(subscriptionId);
-            StringAssert.AreEqualIgnoringCase(expectedSubscriptionInfo, subscriptionInfo);
-        }
-
-        public async Task SetSubscriptionStatus(bool enableSub, string subscriptionId = null, string channelName = null)
-        {
-            string actionToTake = enableSub ? "--enable" : "-d";
-
-            if (channelName != null)
-            {
-                await RunDarcAsync("subscription-status", actionToTake, "--channel", channelName, "--quiet").ConfigureAwait(false);
-            }
-            else
-            {
-                await RunDarcAsync("subscription-status", "--id", subscriptionId, actionToTake, "--quiet").ConfigureAwait(false);
-            }
-        }
-
-        public async Task<string> DeleteSubscriptionsForChannel(string channelName)
-        {
-            return await RunDarcAsync("delete-subscriptions", "--channel", channelName, "--quiet");
-        }
-
-        public async Task<string> DeleteSubscriptionById(string subscriptionId)
-        {
-            return await RunDarcAsync("delete-subscriptions", "--id", subscriptionId, "--quiet").ConfigureAwait(false);
         }
 
         public Task<Build> CreateBuildAsync(string repositoryUrl, string branch, string commit, string buildNumber, IImmutableList<AssetData> assets)
