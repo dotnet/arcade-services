@@ -187,7 +187,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="pullRequestUrl">Uri of pull request to merge</param>
         /// <param name="parameters">Merge options.</param>
-        /// <returns>Async task.</returns>*/
+        /// <returns>Async task.</returns>
         Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
 
         /// <summary>

@@ -13,12 +13,11 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
-using Microsoft.VisualStudio.Services.Common;
+using MicProsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.WebApi;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using Octokit;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -353,7 +352,7 @@ namespace Microsoft.DotNet.DarcLib
                 Title = pr.Title,
                 Description = pr.Description,
                 BaseBranch = pr.TargetRefName.Substring(refsHeads.Length),
-                HeadBranch = pr.SourceRefName.Substring(refsHeads.Length)
+                HeadBranch = pr.SourceRefName.Substring(refsHeads.Length),
             };
         }
 
