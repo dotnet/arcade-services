@@ -955,7 +955,6 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 coherencySection.AppendLine("attribute were produced in a build used as input to the parent dependency's build.");
                 coherencySection.AppendLine("See [Dependency Description Format](https://github.com/dotnet/arcade/blob/master/Documentation/DependencyDescriptionFormat.md#dependency-description-overview)");
                 coherencySection.AppendLine();
-                
                 foreach (DependencyUpdate dep in deps)
                 {
                     coherencySection.AppendLine($" -  **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");

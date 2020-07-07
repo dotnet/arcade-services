@@ -18,7 +18,6 @@ using Microsoft.VisualStudio.Services.WebApi;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using Octokit;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -494,27 +493,6 @@ namespace Microsoft.DotNet.DarcLib
                 projectName,
                 repoName,
                 id);
-        }
-
-        /// <summary>
-        ///     Parse out the owner and repo from a repository url
-        /// </summary>
-        /// <param name="prBody">Pull Request commit msg</param>
-        /// <returns>Tuple of owner and repo</returns>
-        public static string ParsePullRequestBody(Regex pattern, string prBody)
-        {
-            var matches = pattern.Matches(prBody);
-            if (matches.Count == 0)
-            {
-                return prBody;
-            }
-            string message = "";
-            foreach (Match match in matches)
-            {
-                message += $@"
-{match.Value.ToString().Replace("*", "")}";
-            }
-            return message;
         }
 
         /// <summary>
