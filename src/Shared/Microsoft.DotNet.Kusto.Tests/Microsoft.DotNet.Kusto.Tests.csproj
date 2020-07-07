@@ -1,0 +1,10 @@
+﻿<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
+  <PropertyGroup>
+    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <IsPackable>false</IsPackable>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.DotNet.Kusto\Microsoft.DotNet.Kusto.csproj" />
+  </ItemGroup>
+</Project>

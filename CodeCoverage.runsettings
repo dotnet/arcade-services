@@ -1,35 +1,43 @@
 <RunSettings>
-  <DataCollectionRunSettings>
-    <DataCollectors>
-      <DataCollector friendlyName="Code Coverage" uri="datacollector://Microsoft/CodeCoverage/2.0" assemblyQualifiedName="Microsoft.VisualStudio.Coverage.DynamicCoverageDataCollector, Microsoft.VisualStudio.TraceCollector, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-        <Configuration>
-          <CodeCoverage>
-            <ModulePaths>
-              <Include>
-                <ModulePath>.*\.dll$</ModulePath>
-                <ModulePath>.*\.exe$</ModulePath>
-              </Include>
-              <Exclude>
-                <ModulePath>.*moq\.dll$</ModulePath>
-                <ModulePath>.*fluentassertions\.dll$</ModulePath>
-                <ModulePath>.*microsoft\.extensions\.logging\.applicationinsights\.dll$</ModulePath>
-                <ModulePath>.*libgit2sharp\.dll$</ModulePath>
-                <ModulePath>.*quartz\.dll$</ModulePath>
-                <ModulePath>.*git[a-f0-9-]*\.dll$</ModulePath>
-                <ModulePath>.*tests\.dll$</ModulePath>
-                <ModulePath>.*\.testadapter\.dll$</ModulePath>
-                <!-- This is all generated code -->
-                <ModulePath>.*microsoft\.dotnet\.maestro\.client\.dll$</ModulePath>
-              </Exclude>
-            </ModulePaths>
-            <Functions>
-              <Exclude>
-                <Function>Maestro\.Data\.Migrations..*</Function>
-              </Exclude>
-            </Functions>
-          </CodeCoverage>
-        </Configuration>
-      </DataCollector>
-    </DataCollectors>
-  </DataCollectionRunSettings>
+    <DataCollectionRunSettings>
+        <DataCollectors>
+            <DataCollector friendlyName="Code Coverage" uri="datacollector://Microsoft/CodeCoverage/2.0" assemblyQualifiedName="Microsoft.VisualStudio.Coverage.DynamicCoverageDataCollector, Microsoft.VisualStudio.TraceCollector, Version=11.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+                <Configuration>
+                    <CodeCoverage>
+                        <ModulePaths>
+                            <Include>
+                                <ModulePath>.*\.dll$</ModulePath>
+                                <ModulePath>.*\.exe$</ModulePath>
+                            </Include>
+                            <Exclude>
+                                <ModulePath>.*moq\.dll$</ModulePath>
+                                <ModulePath>.*fluentassertions\.dll$</ModulePath>
+                                <ModulePath>.*microsoft\.extensions\.logging\.applicationinsights\.dll$</ModulePath>
+                                <ModulePath>.*libgit2sharp\.dll$</ModulePath>
+                                <ModulePath>.*quartz\.dll$</ModulePath>
+                                <ModulePath>.*git[a-f0-9-]*\.dll$</ModulePath>
+                                <ModulePath>.*tests\.dll$</ModulePath>
+                                <ModulePath>.*\.testadapter\.dll$</ModulePath>
+                                <!-- This is all generated code -->
+                                <ModulePath>.*microsoft\.dotnet\.maestro\.client\.dll$</ModulePath>
+                            </Exclude>
+                        </ModulePaths>
+                        <Functions>
+                            <Exclude>
+                                <Function>Maestro\.Data\.Migrations..*</Function>
+                            </Exclude>
+                        </Functions>
+                        <Attributes>
+                            <Exclude>
+                                <!-- Don't forget "Attribute" at the end of the name -->
+                                <Attribute>^System\.Diagnostics\.DebuggerNonUserCodeAttribute$</Attribute>
+                                <Attribute>^System\.CodeDom\.Compiler\.GeneratedCodeAttribute$</Attribute>
+                                <Attribute>^System\.Diagnostics\.CodeAnalysis\.ExcludeFromCodeCoverageAttribute$</Attribute>
+                            </Exclude>
+                        </Attributes>
+                    </CodeCoverage>
+                </Configuration>
+            </DataCollector>
+        </DataCollectors>
+    </DataCollectionRunSettings>
 </RunSettings>
