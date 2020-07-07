@@ -10,18 +10,23 @@ using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Internal.Logging;
 
 namespace Maestro.DataProviders
 {
     public class DarcRemoteFactory : IRemoteFactory
     {
+        private readonly OperationManager _operations;
+
         public DarcRemoteFactory(
             BuildAssetRegistryContext context,
             IKustoClientProvider kustoClientProvider,
             IGitHubTokenProvider gitHubTokenProvider,
             IAzureDevOpsTokenProvider azureDevOpsTokenProvider,
-            DarcRemoteMemoryCache memoryCache)
+            DarcRemoteMemoryCache memoryCache,
+            OperationManager operations)
         {
+            _operations = operations;
             Context = context;
             KustoClientProvider = (KustoClientProvider)kustoClientProvider;
             GitHubTokenProvider = gitHubTokenProvider;
@@ -46,7 +51,7 @@ namespace Maestro.DataProviders
 
         public async Task<IRemote> GetRemoteAsync(string repoUrl, ILogger logger)
         {
-            using (logger.BeginScope($"Getting remote for repo {repoUrl}."))
+            using (_operations.BeginOperation($"Getting remote for repo {repoUrl}."))
             {
                 // Normalize the url with the AzDO client prior to attempting to
                 // get a token. When we do coherency updates we build a repo graph and

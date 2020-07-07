@@ -42,7 +42,16 @@ namespace Maestro.ScenarioTests
 
             foreach (string arg in args)
             {
-                psi.ArgumentList.Add(arg);
+                // The string append used by Process will accept null params 
+                // and then throw without identifying the param, so we need to handle it here to get logging
+                if (arg != null)
+                {
+                    psi.ArgumentList.Add(arg);
+                }
+                else
+                {
+                    WriteOutput("Null parameter encountered while constructing command string.");
+                }
             }
 
             using var process = new Process

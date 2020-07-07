@@ -45,6 +45,7 @@ using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.DotNet.Internal.DependencyInjection;
+using Microsoft.Extensions.Internal;
 using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -84,7 +85,7 @@ namespace Maestro.Web
 
                     if (hasAssetsWithPublishedLocations || ReposWithoutAssetLocationAllowList.Contains(build.GitHubRepository))
                     {
-                        var queue = context.GetService<BackgroundQueue>();
+                        var queue = context.GetService<IBackgroundQueue>();
                         queue.Post<StartDependencyUpdate>(StartDependencyUpdate.CreateArgs(entity));
                     }
                     else
@@ -220,8 +221,9 @@ namespace Maestro.Web
             services.AddSingleton(Configuration);
 
             ConfigureAuthServices(services);
-
+            
             services.AddSingleton<BackgroundQueue>();
+            services.AddSingleton<IBackgroundQueue>(provider => provider.GetRequiredService<BackgroundQueue>());
             services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BackgroundQueue>());
 
             services.AddServiceFabricService<IDependencyUpdater>("fabric:/MaestroApplication/DependencyUpdater");
@@ -288,6 +290,8 @@ namespace Maestro.Web
                         req.HttpContext.Response.Headers["Access-Control-Allow-Origin"] = "*";
                     });
             });
+
+            services.AddSingleton<ISystemClock, SystemClock>();
         }
 
         private void ConfigureApiExceptions(IApplicationBuilder app)
@@ -304,14 +308,17 @@ namespace Maestro.Web
                 });
         }
 
-        private bool DoApiRedirect => !string.IsNullOrEmpty(Configuration.GetSection("ApiRedirect")["uri"]);
+        private bool DoApiRedirect => !string.IsNullOrEmpty(ApiRedirectTarget);
         private string ApiRedirectTarget => Configuration.GetSection("ApiRedirect")["uri"];
         private string ApiRedirectToken => Configuration.GetSection("ApiRedirect")["token"];
 
         private async Task ApiRedirectHandler(HttpContext ctx)
         {
+            var logger = ctx.RequestServices.GetRequiredService<ILogger<Startup>>();
+            logger.LogInformation("Preparing for redirect: enabled: '{redirectEnabled}', uri: '{redirectUrl}'", DoApiRedirect, ApiRedirectTarget);
             if (ctx.User == null)
             {
+                logger.LogInformation("Rejecting redirect because of missing authentication");
                 ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                 return;
             }
@@ -320,6 +327,7 @@ namespace Maestro.Web
             AuthorizationResult result = await authService.AuthorizeAsync(ctx.User, MsftAuthorizationPolicyName);
             if (!result.Succeeded)
             {
+                logger.LogInformation("Rejecting redirect because authorization failed");
                 ctx.Response.StatusCode = (int)HttpStatusCode.Forbidden;
                 return;
             }
@@ -327,8 +335,16 @@ namespace Maestro.Web
 
             using (var client = new HttpClient(new HttpClientHandler { CheckCertificateRevocationList = true }))
             {
-                var uri = new UriBuilder(ApiRedirectTarget) { Path = ctx.Request.Path, Query = ctx.Request.QueryString.ToUriComponent(), };
-                await ctx.ProxyRequestAsync(client, uri.Uri.AbsoluteUri,
+                logger.LogInformation("Preparing proxy request to {proxyPath}", ctx.Request.Path);
+                var uri = new UriBuilder(ApiRedirectTarget)
+                {
+                    Path = ctx.Request.Path,
+                    Query = ctx.Request.QueryString.ToUriComponent(),
+                };
+
+                string absoluteUri = uri.Uri.AbsoluteUri;
+                logger.LogInformation("Service proxied request to {url}", absoluteUri);
+                await ctx.ProxyRequestAsync(client, absoluteUri,
                     req =>
                     {
                         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ApiRedirectToken);
@@ -339,6 +355,16 @@ namespace Maestro.Web
         private void ConfigureApi(IApplicationBuilder app)
         {
             app.UseExceptionHandler(ConfigureApiExceptions);
+
+            var logger = app.ApplicationServices.GetRequiredService<ILogger<Startup>>();
+
+            logger.LogInformation(
+                "Configuring API, env: '{env}', isDev: {isDev}, inSF: {inSF}, forceLocal: '{forceLocal}'",
+                HostingEnvironment.EnvironmentName,
+                HostingEnvironment.IsDevelopment(),
+                ServiceFabricHelpers.RunningInServiceFabric(),
+                Configuration["ForceLocalApi"]
+            );
 
             if (HostingEnvironment.IsDevelopment() &&
                 !ServiceFabricHelpers.RunningInServiceFabric() &&
@@ -370,8 +396,8 @@ namespace Maestro.Web
                 });
             app.UseSwagger();
             
-            app.UseRouting();
             app.UseAuthentication();
+            app.UseRouting();
             app.UseAuthorization();
             app.UseEndpoints(e =>
             {
@@ -385,22 +411,23 @@ namespace Maestro.Web
         {
             app.UseExceptionHandler(ConfigureApiExceptions);
 
-            app.MapWhen(ctx => DoApiRedirect && !ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _),
-                redirectedApp =>
-                {
-                    app.UseRouting();
-                    app.UseAuthentication();
-                    app.UseAuthorization();
-
-                    app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
-                    app.Run(ApiRedirectHandler);
-                });
-
-            app.UseRouting();
+            if (DoApiRedirect)
+            {
+                app.MapWhen(ctx => !ctx.Request.Cookies.TryGetValue("Skip-Api-Redirect", out _),
+                    a =>
+                    {
+                        a.UseAuthentication();
+                        a.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
+                        a.UseRouting();
+                        a.UseAuthorization();
+                        a.Run(ApiRedirectHandler);
+                    });
+            }
+            
             app.UseAuthentication();
-            app.UseAuthorization();
-
             app.UseRewriter(new RewriteOptions().AddRewrite("^_/(.*)", "$1", true));
+            app.UseRouting();
+            app.UseAuthorization();
             app.UseEndpoints(e =>
             {
                 e.MapControllers();
@@ -474,9 +501,9 @@ namespace Maestro.Web
             app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
             app.UseCookiePolicy();
             app.UseStaticFiles();
-
-            app.UseRouting();
+            
             app.UseAuthentication();
+            app.UseRouting();
             app.UseAuthorization();
 
             app.UseEndpoints(e =>
@@ -491,8 +518,8 @@ namespace Maestro.Web
         private static void AngularIndexHtmlRedirect(IApplicationBuilder app)
         {
             app.UseRewriter(new RewriteOptions().AddRewrite(".*", "Index", true));
-            app.UseRouting();
             app.UseAuthentication();
+            app.UseRouting();
             app.UseAuthorization();
             app.UseEndpoints(e => { e.MapRazorPages(); });
         }

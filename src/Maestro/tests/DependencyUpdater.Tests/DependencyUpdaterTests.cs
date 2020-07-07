@@ -6,6 +6,7 @@ using System;
 using Maestro.Contracts;
 using Maestro.Data;
 using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -52,6 +53,7 @@ namespace DependencyUpdater.Tests
                 });
             services.AddSingleton(proxyFactory.Object);
             services.AddSingleton(RemoteFactory.Object);
+            services.AddOperationTracking(o => { });
             Provider = services.BuildServiceProvider();
             Scope = Provider.CreateScope();
 

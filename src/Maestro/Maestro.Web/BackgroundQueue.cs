@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Internal.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -19,24 +20,31 @@ namespace Maestro.Web
         Task ProcessAsync(JToken argumentToken);
     }
 
-    public class BackgroundQueue : BackgroundService
+    public interface IBackgroundQueue
     {
-        private readonly IServiceScopeFactory _scopeFactory;
-        private readonly BlockingCollection<(Type type, JToken args)> _workItems = new BlockingCollection<(Type type, JToken args)>();
+        void Post<T>(JToken args) where T : IBackgroundWorkItem;
+    }
 
-        public BackgroundQueue(IServiceScopeFactory scopeFactory,
-            ILogger<BackgroundQueue> logger)
+    public static class BackgroundQueueExtensions
+    {
+        public static void Post<T>(this IBackgroundQueue queue) where T : IBackgroundWorkItem
         {
-            _scopeFactory = scopeFactory;
+            queue.Post<T>("");
+        }
+    }
+
+    public class BackgroundQueue : BackgroundService, IBackgroundQueue
+    {
+        private readonly BlockingCollection<(Type type, JToken args)> _workItems = new BlockingCollection<(Type type, JToken args)>();
+        private readonly OperationManager _operations;
+
+        public BackgroundQueue(OperationManager operations, ILogger<BackgroundQueue> logger)
+        {
             Logger = logger;
+            _operations = operations;
         }
 
         public ILogger<BackgroundQueue> Logger { get; }
-
-        public void Post<T>() where T : IBackgroundWorkItem
-        {
-            Post<T>("");
-        }
 
         public void Post<T>(JToken args) where T : IBackgroundWorkItem
         {
@@ -49,7 +57,7 @@ namespace Maestro.Web
         {
             // Get off the synchronous chain from WebHost.Start
             await Task.Yield();
-            using (Logger.BeginScope("Processing Background Queue"))
+            using (_operations.BeginOperation("Processing Background Queue"))
             {
                 while (true)
                 {
@@ -64,12 +72,11 @@ namespace Maestro.Web
 
                             if (_workItems.TryTake(out (Type type, JToken args) item, 1000))
                             {
-                                using (Logger.BeginScope("Executing background work: {item} ({args})", item.type.Name, item.args.ToString(Formatting.None)))
-                                using (IServiceScope scope = _scopeFactory.CreateScope())
+                                using (Operation op = _operations.BeginOperation("Executing background work: {item} ({args})", item.type.Name, item.args.ToString(Formatting.None)))
                                 {
                                     try
                                     {
-                                        var instance = (IBackgroundWorkItem) ActivatorUtilities.CreateInstance(scope.ServiceProvider, item.type);
+                                        var instance = (IBackgroundWorkItem) ActivatorUtilities.CreateInstance(op.ServiceProvider, item.type);
                                         await instance.ProcessAsync(item.args);
                                     }
                                     catch (Exception ex)

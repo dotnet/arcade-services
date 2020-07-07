@@ -6,6 +6,8 @@ variables:
     value: true
   - name: _DotNetArtifactsCategory
     value: .NETCore
+  - name: skipComponentGovernanceDetection
+    value: true
   - ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
     - group: SDL_Settings
 
@@ -27,9 +29,9 @@ stages:
   jobs:
   - template: /eng/common/templates/jobs/jobs.yml
     parameters:
-      enableMicrobuild: true
+      enableMicrobuild: false
       enablePublishBuildArtifacts: true
-      enablePublishTestResults: true
+      enablePublishTestResults: false
       enablePublishBuildAssets: true
       enablePublishUsingPipelines: ${{ variables._PublishUsingPipelines }}
       enableTelemetry: true
@@ -38,12 +40,7 @@ stages:
       - job: Windows_NT
         timeoutInMinutes: 90
         pool:
-          ${{ if or(eq(variables['System.TeamProject'], 'public'), in(variables['Build.Reason'], 'PullRequest')) }}:
-            name: NetCorePublic-Pool
-            queue: BuildPool.Windows.10.Amd64.VS2019.Open
-          ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
-            name: NetCoreInternal-Pool
-            queue: BuildPool.Windows.10.Amd64.VS2019
+          vmImage: windows-2019
 
         variables:
         - _InternalBuildArgs: ''
@@ -92,7 +89,7 @@ stages:
                 _DotNetPublishToBlobFeed : false
               ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
                 _PublishType: blob
-                _SignType: real
+                _SignType: test
                 _DotNetPublishToBlobFeed : true
         steps:
         - checkout: self
@@ -129,6 +126,8 @@ stages:
             -prepareMachine
             $(_InternalBuildArgs)
             $(_ProductionArgs)
+            /p:Test=false
+            /P:Sign=false
           name: Build
           displayName: Build / Publish
           condition: succeeded()
@@ -268,6 +267,7 @@ stages:
       # Symbol validation isn't being very reliable lately. This should be enabled back
       # once this issue is resolved: https://github.com/dotnet/arcade/issues/2871
       enableSymbolValidation: false
+      enableSigningValidation: false
       # This is to enable SDL runs part of Post-Build Validation Stage
       SDLValidationParameters:
         enable: true

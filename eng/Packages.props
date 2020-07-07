@@ -25,6 +25,7 @@
     <PackageReference Update="Microsoft.ApplicationInsights.PerfCounterCollector" Version="2.11.2" />
     <PackageReference Update="Microsoft.ApplicationInsights.ServiceFabric" Version="2.3.1" />
     <PackageReference Update="Microsoft.AspNet.WebApi.Client" Version="5.2.6" />
+    <PackageReference Update="Microsoft.AspNetCore.Authentication" Version="2.2.0" />
     <PackageReference Update="Microsoft.AspNetCore.DataProtection.AzureKeyVault" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.AspNetCore.DataProtection.AzureStorage" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="$(DotNetAssemblyVersion)" />
@@ -33,7 +34,7 @@
     <PackageReference Update="Microsoft.AspNetCore.WebHooks.Receivers" Version="1.0.0-preview2-final" />
     <PackageReference Update="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" Version="1.0.0-preview2-final" />
     <PackageReference Update="Microsoft.Azure.KeyVault" Version="3.0.4" />
-    <PackageReference Update="Microsoft.Azure.Kusto.Ingest" Version="8.0.3" />
+    <PackageReference Update="Microsoft.Azure.Kusto.Ingest" Version="8.1.0" />
     <PackageReference Update="Microsoft.Azure.Management.Fluent" Version="1.31.0" />
     <PackageReference Update="Microsoft.Azure.Services.AppAuthentication" Version="1.4.0" />
     <PackageReference Update="Microsoft.Azure.WebJobs.Core" Version="3.0.2" />
@@ -73,7 +74,7 @@
     <PackageReference Update="Microsoft.Extensions.Logging.Debug" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.Options" Version="$(DotNetAssemblyVersion)" /> 
     <PackageReference Update="Microsoft.IdentityModel.Clients.ActiveDirectory" Version="5.2.0" />
-    <PackageReference Update="Microsoft.IdentityModel.Tokens" Version="5.2.1" />
+    <PackageReference Update="Microsoft.IdentityModel.Tokens" Version="5.4.0" />
     <PackageReference Update="Microsoft.NET.Sdk.Functions" Version="3.0.2" />
     <PackageReference Update="Microsoft.NET.Test.Sdk" Version="16.5.0" />
     <PackageReference Update="Microsoft.Net.Http" Version="2.2.29" />
@@ -99,7 +100,7 @@
     <PackageReference Update="Swashbuckle.AspNetCore.SwaggerGen" Version="5.2.1" />
     <PackageReference Update="System.Configuration.ConfigurationManager" Version="4.7.0" />
     <PackageReference Update="System.IO.FileSystem.AccessControl" Version="4.3.0" />
-    <PackageReference Update="System.IdentityModel.Tokens.Jwt" Version="5.2.1" /> 
+    <PackageReference Update="System.IdentityModel.Tokens.Jwt" Version="5.4.0" />
     <PackageReference Update="System.Net.Http" Version="4.3.4" />
     <PackageReference Update="System.Text.Encodings.Web" Version="4.5.0" />
     <PackageReference Update="System.ValueTuple" Version="4.5.0" /> 
@@ -107,5 +108,6 @@
     <PackageReference Update="YamlDotNet.Signed" Version="5.3.0" />
     <PackageReference Update="coverlet.collector" Version="1.0.1" />
     <PackageReference Update="nunit" Version="3.12.0" /> 
+    <PackageReference Update="xunit.abstractions" Version="2.0.1" /> 
   </ItemGroup>
 </Project>

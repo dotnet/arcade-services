@@ -2,9 +2,9 @@ using System;
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
 
-namespace SubscriptionActorService.Tests
+namespace Microsoft.DotNet.Internal.Testing.Utility
 {
-    internal class XUnitLogger : ILogger, ILoggerProvider
+    public class XUnitLogger : ILogger, ILoggerProvider
     {
         private readonly ITestOutputHelper _output;
 
