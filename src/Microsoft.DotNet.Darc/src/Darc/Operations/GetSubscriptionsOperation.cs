@@ -2,16 +2,16 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Options;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -46,6 +46,11 @@ namespace Microsoft.DotNet.Darc.Operations
                 foreach (var subscription in subscriptions.OrderBy(subscription =>
                                             $"{subscription.SourceRepository}{subscription.Channel}{subscription.TargetRepository}{subscription.TargetBranch}"))
                 {
+                    Console.WriteLine($"{subscription.SourceRepository} ({subscription.Channel.Name}) ==> '{subscription.TargetRepository}' ('{subscription.TargetBranch}')");
+                    Console.WriteLine($"  - Id: {subscription.Id}");
+                    Console.WriteLine($"  - Update Frequency: {subscription.Policy.UpdateFrequency}");
+                    Console.WriteLine($"  - Enabled: {subscription.Enabled}");
+                    Console.WriteLine($"  - Batchable: {subscription.Policy.Batchable}");
                     // If batchable, the merge policies come from the repository
                     IEnumerable<MergePolicy> mergePolicies = subscription.Policy.MergePolicies;
                     if (subscription.Policy.Batchable == true)
@@ -53,8 +58,14 @@ namespace Microsoft.DotNet.Darc.Operations
                         mergePolicies = await remote.GetRepositoryMergePoliciesAsync(subscription.TargetRepository, subscription.TargetBranch);
                     }
 
-                    string subscriptionInfo = UxHelpers.GetTextSubscriptionDescription(subscription, mergePolicies);
-                    Console.Write(subscriptionInfo);
+                    Console.Write(UxHelpers.GetMergePoliciesDescription(mergePolicies, "  "));
+
+                    // Currently the API only returns the last applied build for requests to specific subscriptions.
+                    // This will be fixed, but for now, don't print the last applied build otherwise.
+                    if (subscription.LastAppliedBuild != null)
+                    {
+                        Console.WriteLine($"  - Last Build: {subscription.LastAppliedBuild.AzureDevOpsBuildNumber} ({subscription.LastAppliedBuild.Commit})");
+                    }
                 }
                 return Constants.SuccessCode;
             }
