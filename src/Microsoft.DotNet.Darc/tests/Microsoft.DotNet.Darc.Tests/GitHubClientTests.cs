@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Primitives;
@@ -9,19 +10,8 @@ using Moq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.Extensions.FileSystemGlobbing.Internal.PatternContexts;
-using Octokit;
 using Xunit;
-using System.Text;
-using System.Text.RegularExpressions;
-using Microsoft.TeamFoundation.WorkItemTracking.Process.WebApi.Models;
-using Capture = Moq.Capture;
-using GitHubClient = Microsoft.DotNet.DarcLib.GitHubClient;
-using GitHubCommit = Microsoft.DotNet.DarcLib.GitHubCommit;
-using PullRequest = Octokit.PullRequest;
 
 namespace Microsoft.DotNet.Darc.Tests
 {
@@ -97,16 +87,13 @@ namespace Microsoft.DotNet.Darc.Tests
 
     public class GitHubClientTests
     {
-        protected readonly Mock<IGitHubClient> GithubClient = new Mock<IGitHubClient>();
-
-
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
         private async Task TreeItemCacheTest(bool enableCache)
         {
             SimpleCache cache = enableCache ? new SimpleCache() : null;
-            Mock<DarcLib.GitHubClient> client = new Mock<DarcLib.GitHubClient>(null, null, NullLogger.Instance, null, cache);
+            Mock<GitHubClient> client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, cache);
 
             List<(string, string, Octokit.TreeItem)> treeItemsToGet = new List<(string, string, Octokit.TreeItem)>
             {
@@ -201,184 +188,5 @@ namespace Microsoft.DotNet.Darc.Tests
                 Assert.Equal(expectedCacheHits, cache.CacheHits);
             }
         }
-
-        [Theory]
-        [InlineData("fakeURl", true, "fakeCommit", false )]
-        private async Task MergeDependencyTest(string pullRequestUrl, bool deleteSourceBranch , string commitToMerge, bool squashMerge)
-        {
-            //Mock<GitHubClient> darc = new Mock<GitHubClient>(null, null, NullLogger.Instance, null);
-            string owner = "testOwner";
-            string repo = "testRepo";
-            int repoId = 1;
-            //darc.Setup(x => x.ParsePullRequestUri(It.IsAny<string>())).Returns((owner, repo, repoId));
-            MergePullRequestParameters mergePullRequest = new MergePullRequestParameters
-            {
-                DeleteSourceBranch = deleteSourceBranch,
-                CommitToMerge = commitToMerge,
-                SquashMerge = squashMerge
-            };
-
-            var parents = new GitReference[1];
-            var firstCommit = new Octokit.Commit(
-                "testNode",
-                "testUrl",
-                "testLabe;",
-                "testRef",
-                "testSha",
-                null,
-                null,
-                @"[branchName] Update dependencies from maestro-auth-test/maestro-test1
-
-- Bar: from  to 2.2.0
-- Foo: from  to 1.2.0",
-                null,
-                null,
-                null,
-                parents,
-                1,
-                null
-            );
-            var dotNetBot = new Committer(
-                "dotnet-maestro[bot]",
-                "test@email.com",
-                new DateTime(2020, 01, 01)
-                );
-            var pullrequestCommit = new PullRequestCommit(
-                "nodeUrl",
-                null,
-                "commentUrl",
-                firstCommit,
-                dotNetBot,
-                null,
-                parents,
-                null,
-                null);
-
-            var test = new Committer(
-                "user",
-                "test@email.com",
-                new DateTime(2020, 01, 01)
-            );
-
-            var secondCommit = new PullRequestCommit(
-                "nodeUrl",
-                null,
-                "commentUrl",
-                firstCommit,
-                test,
-                null,
-                parents,
-                null,
-                null);
-
-            var commits = new List<PullRequestCommit>();
-            commits.Add(pullrequestCommit);
-
-            GithubClient.Setup(x => x.PullRequest.Get(owner, repo, 1)).ReturnsAsync(GetPullReq);
-            GithubClient.Setup(x => x.PullRequest.Commits(owner, repo, 1)).ReturnsAsync(commits);
-
-            string dependencyUpdate = "Dependency Update";
-            string coherencyUpdate = "Coherency Update";
-
-            //darc.Setup(x => x.ParsePullRequestBody(It.IsAny<Regex>(), It.IsAny<string>())).Returns(dependencyUpdate);
-            //darc.Setup(x => x.ParsePullRequestBody(It.IsAny<Regex>(), It.IsAny<string>())).Returns(coherencyUpdate);
-
-            List<MergePullRequest> merge = new List<MergePullRequest>();
-            PullRequestMerge prMerge = new PullRequestMerge();
-/*            merge.CommitMessage = $@"{dependencyUpdate} 
-{coherencyUpdate}";
-            merge.CommitTitle = "Title for PR";
-            merge.Sha = "TestSha";*/
-
-            //GithubClient.Setup(x => x.PullRequest.Merge(owner, repo, 1, Capture.In(merge))).ReturnsAsync(prMerge);
-            GithubClient.Setup(x => x.PullRequest.Merge(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), Capture.In(merge)));
-            GithubClient.Verify(x=>x.PullRequest.Merge(It.IsAny<string>(), It.IsAny<string>(),It.IsAny<int>(), It.IsAny<MergePullRequest>()), Times.Once);
-
-            
-
-        }
-
-        public PullRequest GetPullReq()
-        {
-            var pr = new Octokit.PullRequest
-            (
-                1,
-                "testModId",
-                "testUrl",
-                "testHtml",
-                "testUrl",
-                "patchUrl",
-                "issueUrl",
-                "statusesUrl",
-                1,
-                ItemState.Open,
-                "Title for PR",
-                "Body",
-                new DateTime(2020, 01, 01),
-                new DateTime(2020, 01, 01),
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                false,
-                null,
-                null,
-                "testSha",
-                0,
-                2,
-                0,
-                0,
-                0,
-                null,
-                false,
-                false,
-                null,
-                null
-            );
-            return pr;
-        }
-        /*      [Theory]
-
-              [InlineData((@"- \*\*(?<updates>[\w+\.\-]+)\*\*: from (?<oldVersion>[\w\.\-]*) to (?<newVersion>[\w\.\-]+)"), @"
-      ## Coherency Updates
-
-      The following updates ensure that dependencies with a *CoherentParentDependency*
-      attribute were produced in a build used as input to the parent dependency's build.
-      See [Dependency Description Format](https://github.com/dotnet/arcade/blob/master/Documentation/DependencyDescriptionFormat.md#dependency-description-overview)
-       -  **Microsoft.NETCore.App.Internal**: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
-       -  **Microsoft.NETCore.App.Runtime.win-x64**: from 3.1.4 to 3.1.4
-
-      ## From https://dev.azure.com/dnceng/internal/_git/maestro-test1
-      - **Subscription**: b2a4bbef-8dc3-4cb3-5a13-08d818a46851
-      - **Build**: 165387918
-      - **Date Produced**: 6/25/2020 1:09 AM
-      - **Commit**: 1819542737
-      - **Branch**: master
-      - **Updates**:
-        - **Foo.sdasd**: from 123 to 1.2.0
-        - **Bar.sdasdasd.jgjgkj**: from 2323 to 2.2.0
-        - **Microsoft.NETCore.App.Internal**: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
-        - **Microsoft.NETCore.App.Runtime.win-x64**: from 3.1.4 to 3.1.4
-
-
-      [marker]: <> (End:eaa13548-9011-4b1b-00f7-08d81963b896)
-      ")]
-              public void ParsePullRequestTest(string patternDetails, string body)
-              {
-                  Regex pattern = new Regex(patternDetails);
-                  Mock<Regex> patterns = new Mock<Regex>();
-
-                  //var matches = new MatchCollection();
-      // patterns.Setup(x => x.Matches(body)).Returns(matches);
-
-
-
-
-              }
-        */
     }
 }
