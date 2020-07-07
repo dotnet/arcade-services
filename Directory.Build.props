@@ -7,6 +7,7 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <IsShipping>false</IsShipping>
     <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
+    <DebugType>Full</DebugType>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -19,4 +20,8 @@
     <EnableCentralPackageVersions>true</EnableCentralPackageVersions>
     <CentralPackagesFile>$(MSBuildThisFileDirectory)eng/Packages.props</CentralPackagesFile>
   </PropertyGroup>
+
+  <ItemGroup Condition=" '$(IsTestProject) ' == 'true' ">
+    <PackageReference Include="Microsoft.CodeCoverage" />
+  </ItemGroup>
 </Project>

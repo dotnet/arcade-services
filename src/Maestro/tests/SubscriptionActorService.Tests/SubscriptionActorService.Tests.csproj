@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
@@ -8,14 +8,13 @@
   <ItemGroup>
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Moq" />
-    <PackageReference Include="Microsoft.CodeCoverage" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
-    <PackageReference Include="Microsoft.CodeCoverage" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Shared\Microsoft.DotNet.Internal.DependencyInjection.Testing\Microsoft.DotNet.Internal.DependencyInjection.Testing.csproj" />
+    <ProjectReference Include="..\..\..\Shared\Microsoft.DotNet.Internal.Testing.Utility\Microsoft.DotNet.Internal.Testing.Utility.csproj" />
     <ProjectReference Include="..\..\ServiceFabricMocks\ServiceFabricMocks.csproj" />
     <ProjectReference Include="..\..\SubscriptionActorService\SubscriptionActorService.csproj" />
   </ItemGroup>

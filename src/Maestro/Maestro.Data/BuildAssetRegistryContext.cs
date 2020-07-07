@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +11,7 @@ using EntityFrameworkCore.Triggers;
 using Maestro.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using Microsoft.DotNet.EntityFrameworkCore.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -282,7 +282,7 @@ WITH traverse AS (
             {timeToInclusionInMinutesColumnName},
             0 as Depth
         from {edgeTable}
-        WHERE {buildIdColumnName} = {{@id}}
+        WHERE {buildIdColumnName} = @id
     UNION ALL
         SELECT
             {edgeTable}.{buildIdColumnName},
@@ -298,7 +298,7 @@ WITH traverse AS (
 )
 SELECT DISTINCT {buildIdColumnName}, {dependencyIdColumnName}, {isProductColumnName}, {timeToInclusionInMinutesColumnName}
 FROM traverse;",
-               new SqlParameter("@id", buildId));
+               new SqlParameter("id", buildId));
 
             List<BuildDependency> things = await edges.ToListAsync();
             var buildIds = new HashSet<int>(things.SelectMany(t => new[] { t.BuildId, t.DependentBuildId }));
@@ -323,9 +323,15 @@ FROM traverse;",
 
             // Gather subscriptions used by this build.
             Build primaryBuild = Builds.First(b => b.Id == buildId);
-            var validSubscriptions = await Subscriptions.Where(s => (s.TargetRepository == primaryBuild.AzureDevOpsRepository || s.TargetRepository == primaryBuild.GitHubRepository) &&
-                                                                    (s.TargetBranch == primaryBuild.AzureDevOpsBranch || s.TargetBranch == primaryBuild.GitHubBranch ||
-                                                                     $"refs/heads/{s.TargetBranch}" == primaryBuild.AzureDevOpsBranch || $"refs/heads/{s.TargetBranch}" == primaryBuild.GitHubBranch)).ToListAsync();
+
+            var validSubscriptions = await Subscriptions.Where(s =>
+                    (s.TargetRepository == primaryBuild.AzureDevOpsRepository ||
+                        s.TargetRepository == primaryBuild.GitHubRepository) &&
+                    (s.TargetBranch == primaryBuild.AzureDevOpsBranch ||
+                        s.TargetBranch == primaryBuild.GitHubBranch ||
+                        "refs/heads/" + s.TargetBranch == primaryBuild.AzureDevOpsBranch ||
+                        "refs/heads/" + s.TargetBranch == primaryBuild.GitHubBranch))
+                .ToListAsync();
 
             // Use the subscriptions to determine what channels are relevant for this build, so just grab the unique channel ID's from valid suscriptions
             var channelIds = validSubscriptions.GroupBy(x => x.ChannelId).Select(y => y.First()).Select(s => s.ChannelId);
