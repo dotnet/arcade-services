@@ -6,13 +6,16 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class Commit
     {
-        public Commit(string author, string sha)
+        public Commit(string author, string sha, string message)
         {
             Author = author;
             Sha = sha;
+            Message = message;
+
         }
 
-        public string Author { get; }
-        public string Sha { get; }
+        public string Author { get; set; }
+        public string Sha { get; set; }
+        public string Message { get; set; }
     }
 }

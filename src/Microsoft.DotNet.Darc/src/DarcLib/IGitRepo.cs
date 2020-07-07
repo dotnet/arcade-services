@@ -79,6 +79,13 @@ namespace Microsoft.DotNet.DarcLib
         Task<PullRequest> GetPullRequestAsync(string pullRequestUrl);
 
         /// <summary>
+        ///     Retrieve information on commits of a specific pull request
+        /// </summary>
+        /// <param name="pullRequestUrl">Uri of the pull request</param>
+        /// <returns>Information on the pull request.</returns>
+        Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl );
+
+        /// <summary>
         ///     Create a new pull request for a repository
         /// </summary>
         /// <param name="repoUri">Repo to create the pull request for.</param>
@@ -100,15 +107,15 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="pullRequestUrl">Uri of pull request to merge</param>
         /// <param name="parameters">Settings for merge</param>
         /// <returns></returns>
-        Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
+     /*   Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
 
         /// <summary>
         ///     Merges a Dependency update pull request
         /// </summary>
         /// <param name="pullRequestUrl">Uri of pull request to merge</param>
         /// <param name="parameters">Settings for merge</param>
-        /// <returns></returns>
-        Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
+        /// <returns></returns>*/
+        Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string commitToMerge);
 
         /// <summary>
         ///     Create a new comment, or update the last comment with an updated message,

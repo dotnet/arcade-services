@@ -36,13 +36,6 @@ namespace Microsoft.DotNet.DarcLib
         private static readonly Regex PullRequestUriPattern =
             new Regex(@"^/repos/(?<owner>[^/]+)/(?<repo>[^/]+)/pulls/(?<id>\d+)$");
 
-        // captures specific part of the pr description, for eg: 
-        // **Updates**:
-        //- **Foo**: from to 1.1.0
-        //- **Bar**: from to 2.1.0
-        private static readonly Regex DependencyUpdatesPattern =
-            new Regex(@"- \*\*(?<update>\w+)\*\*: from (?<oldVersion>[\d\.]*) to (?<newVersion>[\d\.]+)");
-
         private readonly Lazy<Octokit.IGitHubClient> _lazyClient;
         private readonly ILogger _logger;
         private readonly string _personalAccessToken;
@@ -305,7 +298,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="pullRequestUrl">Uri of the pull request</param>
         /// <returns>Information on the pull request.</returns>
-        public async Task<PullRequest> GetPullRequestAsync(string pullRequestUrl)
+        public virtual async Task<PullRequest> GetPullRequestAsync(string pullRequestUrl)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
             Octokit.PullRequest pr = await Client.PullRequest.Get(owner, repo, id);
@@ -364,7 +357,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="pullRequestUrl">Uri of pull request to merge</param>
         /// <param name="parameters">Settings for merge</param>
         /// <returns></returns>
-        public async Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
+        public virtual async Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
@@ -383,25 +376,20 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
-        /// <summary>
-        ///     Parse out the owner and repo from a repository url
-        /// </summary>
-        /// <param name="prBody">Pull Request commit msg</param>
-        /// <returns>Tuple of owner and repo</returns>
-        public static string ParsePullRequestBody(string prBody)
+        public virtual async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
         {
-            var matches = DependencyUpdatesPattern.Matches(prBody);
-            if (matches.Count == 0)
+            (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
+            Octokit.PullRequest pr = await Client.PullRequest.Get(owner, repo, id);
+            var pullRequestCommits = await Client.PullRequest.Commits(owner, repo, pr.Number);
+            IList<Commit> commits = new List<Commit>(pullRequestCommits.Count);
+            for (int i = 0; i < pullRequestCommits.Count; i++)
             {
-                return prBody;
+                commits.Add(new Commit(pullRequestCommits[i].Commit.Author.Name,
+                    pullRequestCommits[i].Sha,
+                    pullRequestCommits[i].Commit.Message));
             }
-            string message = "";
-            foreach (Match match in matches)
-            {
-                message += $@"
-{match.Value.ToString().Replace("*", "")}";
-            }
-            return message;
+            return commits;
+
         }
 
         /// <summary>
@@ -409,25 +397,16 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="pullRequestUrl">Uri of pull request to merge</param>
         /// <param name="parameters">Settings for merge</param>
+        /// <param name="commitToMerge">Actual commit message</param>
         /// <returns></returns>
-        public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
+        public virtual async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string commitToMerge)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
             Octokit.PullRequest pr = await Client.PullRequest.Get(owner, repo, id);
-            var commits = await Client.PullRequest.Commits(owner, repo, pr.Number);
-            string commitMessage = $@"{pr.Title}
-{ParsePullRequestBody(pr.Body)}";
-            foreach (Octokit.PullRequestCommit commit in commits)
-            {
-                if (!commit.Commit.Author.Name.Equals("dotnet-maestro[bot]"))
-                {
-                    commitMessage += $@" 
-{commit.Commit.Message}";
-                }
-            }
+            
             var mergePullRequest = new MergePullRequest
             {
-                CommitMessage = commitMessage,
+                CommitMessage = commitToMerge,
                 Sha = parameters.CommitToMerge,
                 MergeMethod = parameters.SquashMerge ? PullRequestMergeMethod.Squash : PullRequestMergeMethod.Merge
             };
@@ -945,7 +924,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="uri">Github pr URL</param>
         /// <returns>Tuple of owner, repo and pr id</returns>
-        public static (string owner, string repo, int id) ParsePullRequestUri(string uri)
+        public virtual (string owner, string repo, int id) ParsePullRequestUri(string uri)
         {
             var u = new UriBuilder(uri);
             Match match = PullRequestUriPattern.Match(u.Path);

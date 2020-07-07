@@ -2,29 +2,40 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
-using NuGet.Packaging;
-using NuGet.Versioning;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
-using Microsoft.DotNet.Internal.Logging;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
+using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public class Remote : IRemote
+    public sealed class Remote : IRemote
     {
         private readonly IBarClient _barClient;
         private readonly GitFileManager _fileManager;
         private readonly IGitRepo _gitClient;
         private readonly ILogger _logger;
+
+        // **Updates**:
+        //- **Foo**: from to 1.1.0
+        //- **Bar**: from to 2.1.0
+        private static readonly Regex DependencyUpdatesPattern =
+            new Regex(@"- \*\*(?<updates>[\w+\.\-]+)\*\*: from (?<oldVersion>[\w\.\-]*) to (?<newVersion>[\w\.\-]+)");
+
+        // captures coherency updates from pr description, for eg: 
+        // **Coherency updates**:
+        //- **Foo**: from to 1.1.0
+        //- **Bar**: from to 2.1.0
+        private static readonly Regex CoherencyUpdatesPattern =
+            new Regex(@"- \*\*(?<library>[\w\.\-]+)\*\*: from (?<oldversion>[\w\.\-]+) to (?<newVersion>[\w\.\-]+)");
 
         public Remote(IGitRepo gitClient, IBarClient barClient, ILogger logger)
         {
@@ -352,22 +363,64 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
-        public async Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
+        /// <summary>
+        ///     Parse out the owner and repo from a repository url
+        /// </summary>
+        /// <param name="pattern">Regex Pattern</param>
+        /// <param name="prBody">Pull Request commit msg</param>
+        /// <returns>Tuple of owner and repo</returns>
+        public string ParsePullRequestBody(Regex pattern, string prBody)
         {
-            CheckForValidGitClient();
-            _logger.LogInformation($"Merging pull request '{pullRequestUrl}'...");
-
-            await _gitClient.MergePullRequestAsync(pullRequestUrl, parameters ?? new MergePullRequestParameters());
-
-            _logger.LogInformation($"Merging pull request '{pullRequestUrl}' succeeded!");
+            var matches = pattern.Matches(prBody);
+            if (matches.Count == 0)
+            {
+                return string.Empty;
+            }
+            string message = "";
+            foreach (Match match in matches)
+            {
+                message += $@"
+{match.Value.ToString().Replace("*", "")}";
+            }
+            return message;
         }
 
+        /// <summary>
+        /// Merges the dependency pull request 
+        /// </summary>
+        /// <param name="pullRequestUrl"></param>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
         public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
         {
             CheckForValidGitClient();
             _logger.LogInformation($"Merging pull request '{pullRequestUrl}'...");
 
-            await _gitClient.MergeDependencyPullRequestAsync(pullRequestUrl, parameters ?? new MergePullRequestParameters());
+            var pr = await _gitClient.GetPullRequestAsync(pullRequestUrl);
+            var commits = await _gitClient.GetPullRequestCommitsAsync(pullRequestUrl);
+            string dependencyUpdate = ParsePullRequestBody(DependencyUpdatesPattern, pr.Description);
+            string coherencyUpdate = ParsePullRequestBody(CoherencyUpdatesPattern, pr.Description);
+            string commitMessage = $@"{pr.Title}
+{dependencyUpdate}
+
+";
+            foreach (Commit commit in commits)
+            {
+                if (!commit.Author.Equals("dotnet-maestro[bot]"))
+                {
+                    commitMessage += $@"- {commit.Message}";
+                }
+            }
+            if (!string.IsNullOrEmpty(coherencyUpdate))
+            {
+                commitMessage += $@"
+
+Coherency Update:
+{coherencyUpdate}";
+            }
+
+            await _gitClient.MergeDependencyPullRequestAsync(pullRequestUrl,
+                    parameters ?? new MergePullRequestParameters(), commitMessage);
 
             _logger.LogInformation($"Merging pull request '{pullRequestUrl}' succeeded!");
         }

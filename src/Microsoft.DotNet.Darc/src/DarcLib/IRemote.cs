@@ -5,6 +5,7 @@
 using Microsoft.DotNet.Maestro.Client.Models;
 using NuGet.Versioning;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib
@@ -181,20 +182,13 @@ namespace Microsoft.DotNet.DarcLib
         #endregion
 
         #region Pull Request Operations
-        /// <summary>
-        ///     Merge a pull request.
-        /// </summary>
-        /// <param name="pullRequestUrl">Uri of pull request to merge</param>
-        /// <param name="parameters">Merge options.</param>
-        /// <returns>Async task.</returns>
-        Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
 
         /// <summary>
         ///     Merge a Dependency update pull request.
         /// </summary>
         /// <param name="pullRequestUrl">Uri of pull request to merge</param>
         /// <param name="parameters">Merge options.</param>
-        /// <returns>Async task.</returns>
+        /// <returns>Async task.</returns>*/
         Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
 
         /// <summary>
@@ -256,7 +250,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Async task</returns>
         Task DeletePullRequestBranchAsync(string pullRequestUri);
 
-        #endregion
+    #endregion
 
         #region Repo/Dependency Operations
 

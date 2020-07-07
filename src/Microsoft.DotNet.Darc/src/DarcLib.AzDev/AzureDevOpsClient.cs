@@ -18,6 +18,7 @@ using Microsoft.VisualStudio.Services.WebApi;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using Octokit;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -352,7 +353,7 @@ namespace Microsoft.DotNet.DarcLib
                 Title = pr.Title,
                 Description = pr.Description,
                 BaseBranch = pr.TargetRefName.Substring(refsHeads.Length),
-                HeadBranch = pr.SourceRefName.Substring(refsHeads.Length),
+                HeadBranch = pr.SourceRefName.Substring(refsHeads.Length)
             };
         }
 
@@ -446,6 +447,21 @@ namespace Microsoft.DotNet.DarcLib
                 repoName,
                 id);
         }
+        public async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
+        {
+            (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
+            VssConnection connection = CreateVssConnection(accountName);
+            GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+            var prInfo = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
+            IList<Commit> commits = new List<Commit>(prInfo.Commits.Length);
+            for (int i=0; i < prInfo.Commits.Length; i++)
+            {
+                commits.Add(new Commit(prInfo.Commits[i].Author.Name == "DotNet-Bot"? "dotnet-maestro[bot]" : prInfo.Commits[i].Author.Name, 
+                    prInfo.Commits[i].CommitId ,
+                    prInfo.Commits[i].Comment));
+            }
+            return commits;
+        }
 
         /// <summary>
         ///     Merges an update dependency pull request
@@ -453,21 +469,13 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="pullRequestUrl">Uri of the update dependency pull request to merge</param>
         /// <param name="parameters">Settings for merge</param>
         /// <returns></returns>
-        public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
+        public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string commitToMerge)
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
             VssConnection connection = CreateVssConnection(accountName);
             GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
-
-            string commitToMerge = parameters.CommitToMerge;
-
-            // If the commit to merge is empty, look it up first.
-            if (string.IsNullOrEmpty(commitToMerge))
-            {
-                var prInfo = await client.GetPullRequestAsync(repoName, id);
-                commitToMerge = prInfo.LastMergeSourceCommit.CommitId;
-            }
+            var prInfo = await client.GetPullRequestAsync(repoName, id , includeCommits:true);
 
             await client.UpdatePullRequestAsync(
                 new GitPullRequest
@@ -475,16 +483,38 @@ namespace Microsoft.DotNet.DarcLib
                     Status = PullRequestStatus.Completed,
                     CompletionOptions = new GitPullRequestCompletionOptions
                     {
+                        MergeCommitMessage = commitToMerge,
                         BypassPolicy = true,
                         BypassReason = "All required checks were successful",
                         SquashMerge = parameters.SquashMerge,
                         DeleteSourceBranch = parameters.DeleteSourceBranch
                     },
-                    LastMergeSourceCommit = new GitCommitRef { CommitId = commitToMerge }
+                    LastMergeSourceCommit = new GitCommitRef { CommitId = prInfo.LastMergeSourceCommit.CommitId, Comment = commitToMerge }
                 },
                 projectName,
                 repoName,
                 id);
+        }
+
+        /// <summary>
+        ///     Parse out the owner and repo from a repository url
+        /// </summary>
+        /// <param name="prBody">Pull Request commit msg</param>
+        /// <returns>Tuple of owner and repo</returns>
+        public static string ParsePullRequestBody(Regex pattern, string prBody)
+        {
+            var matches = pattern.Matches(prBody);
+            if (matches.Count == 0)
+            {
+                return prBody;
+            }
+            string message = "";
+            foreach (Match match in matches)
+            {
+                message += $@"
+{match.Value.ToString().Replace("*", "")}";
+            }
+            return message;
         }
 
         /// <summary>
