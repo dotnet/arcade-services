@@ -957,7 +957,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 coherencySection.AppendLine();
                 foreach (DependencyUpdate dep in deps)
                 {
-                    coherencySection.AppendLine($" -  **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
+                    coherencySection.AppendLine($"-  **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
                 }
                 coherencySection.AppendLine();
                 coherencySection.AppendLine(sectionEndMarker); 

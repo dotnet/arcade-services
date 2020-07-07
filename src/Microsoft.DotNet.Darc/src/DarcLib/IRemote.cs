@@ -183,7 +183,7 @@ namespace Microsoft.DotNet.DarcLib
         #region Pull Request Operations
 
         /// <summary>
-        ///     Merge a Dependency update pull request.
+        ///  Merges a pull request created by a dependency update
         /// </summary>
         /// <param name="pullRequestUrl">Uri of pull request to merge</param>
         /// <param name="parameters">Merge options.</param>

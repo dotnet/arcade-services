@@ -298,7 +298,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="pullRequestUrl">Uri of the pull request</param>
         /// <returns>Information on the pull request.</returns>
-        public virtual async Task<PullRequest> GetPullRequestAsync(string pullRequestUrl)
+        public async Task<PullRequest> GetPullRequestAsync(string pullRequestUrl)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
             Octokit.PullRequest pr = await Client.PullRequest.Get(owner, repo, id);
@@ -351,32 +351,8 @@ namespace Microsoft.DotNet.DarcLib
                 });
         }
 
-        /// <summary>
-        ///     Merge a pull request
-        /// </summary>
-        /// <param name="pullRequestUrl">Uri of pull request to merge</param>
-        /// <param name="parameters">Settings for merge</param>
-        /// <returns></returns>
-        public virtual async Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
-        {
-            (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
-            var mergePullRequest = new MergePullRequest
-            {
-                Sha = parameters.CommitToMerge,
-                MergeMethod = parameters.SquashMerge ? PullRequestMergeMethod.Squash : PullRequestMergeMethod.Merge
-            };
-
-            Octokit.PullRequest pr = await Client.PullRequest.Get(owner, repo, id);
-            await Client.PullRequest.Merge(owner, repo, id, mergePullRequest);
-
-            if (parameters.DeleteSourceBranch)
-            {
-                await Client.Git.Reference.Delete(owner, repo, $"heads/{pr.Head.Ref}");
-            }
-        }
-
-        public virtual async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
+        public async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
             Octokit.PullRequest pr = await Client.PullRequest.Get(owner, repo, id);
@@ -399,7 +375,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="parameters">Settings for merge</param>
         /// <param name="commitToMerge">Actual commit message</param>
         /// <returns></returns>
-        public virtual async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string commitToMerge)
+        public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string commitToMerge)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
             Octokit.PullRequest pr = await Client.PullRequest.Get(owner, repo, id);
@@ -924,7 +900,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="uri">Github pr URL</param>
         /// <returns>Tuple of owner, repo and pr id</returns>
-        public virtual (string owner, string repo, int id) ParsePullRequestUri(string uri)
+        public static (string owner, string repo, int id) ParsePullRequestUri(string uri)
         {
             var u = new UriBuilder(uri);
             Match match = PullRequestUriPattern.Match(u.Path);

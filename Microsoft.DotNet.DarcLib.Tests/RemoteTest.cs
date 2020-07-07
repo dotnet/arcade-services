@@ -29,19 +29,9 @@ The following updates ensure that dependencies with a *CoherentParentDependency*
 attribute were produced in a build used as input to the parent dependency's build.
 See [Dependency Description Format](https://github.com/dotnet/arcade/blob/master/Documentation/DependencyDescriptionFormat.md#dependency-description-overview)
 
-- **Coherency Updates**:
-  - **Microsoft.NETCore.App.Internal**: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
-  - **Microsoft.NETCore.App.Runtime.win-x64**: from 3.1.4 to 3.1.4
-
-## From https://dev.azure.com/dnceng/internal/_git/maestro-test1
-- **Subscription**: b2a4bbef-8dc3-4cb3-5a13-08d818a46851
-- **Build**: 165387918
-- **Date Produced**: 6/25/2020 1:09 AM
-- **Commit**: 1819542737
-- **Branch**: master
-- **Updates**:
-  - **Foo**: from 3433test to 1.2.0
-  - **Bar**: from 34354test to 2.2.0
+-  **Coherency Updates**:
+  -  **Microsoft.NETCore.App.Internal**: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
+  -  **Microsoft.NETCore.App.Runtime.win-x64**: from 3.1.4 to 3.1.4
 
 # From https://dev.azure.com/dnceng/internal/_git/maestro-test1
 - **Subscription**: 95a525c4-1bd7-46db-8ac2-08d818b0d8de
@@ -84,10 +74,6 @@ See [Dependency Description Format](https://github.com/dotnet/arcade/blob/master
             client.Verify(x => x.MergeDependencyPullRequestAsync(It.IsAny<string>(), It.IsAny<MergePullRequestParameters>(),It.IsAny<string>()), Times.Once);
             string expectedCommitMessage = @"[352119842] Update dependencies from maestro-auth-test/maestro-test1
 
-- Microsoft.NETCore.App.Internal: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
-- Microsoft.NETCore.App.Runtime.win-x64: from 3.1.4 to 3.1.4
-- Foo: from 3433test to 1.2.0
-- Bar: from 34354test to 2.2.0
 - Foo: from 67 to 1.2.0
 - Bar: from 75 to 2.2.0
 
@@ -95,12 +81,8 @@ See [Dependency Description Format](https://github.com/dotnet/arcade/blob/master
 
 Coherency Update:
 
-- Microsoft.NETCore.App.Internal: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
-- Microsoft.NETCore.App.Runtime.win-x64: from 3.1.4 to 3.1.4
-- Foo: from 3433test to 1.2.0
-- Bar: from 34354test to 2.2.0
-- Foo: from 67 to 1.2.0
-- Bar: from 75 to 2.2.0";
+-  Microsoft.NETCore.App.Internal: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
+-  Microsoft.NETCore.App.Runtime.win-x64: from 3.1.4 to 3.1.4";
             Assert.Equal(expectedCommitMessage, commitToMerge[0]);
         }
     }

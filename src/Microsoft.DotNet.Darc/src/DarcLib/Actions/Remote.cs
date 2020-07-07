@@ -35,7 +35,7 @@ namespace Microsoft.DotNet.DarcLib
         //- **Foo**: from 1.0 to 1.1.0
         //- **Bar**: from 2.0 to 2.1.0
         private static readonly Regex CoherencyUpdatesPattern =
-            new Regex(@"- \*\*(?<library>[\w\.\-]+)\*\*: from (?<oldversion>[\w\.\-]+) to (?<newVersion>[\w\.\-]+)");
+            new Regex(@"-  \*\*(?<library>[\w\.\-]+)\*\*: from (?<oldversion>[\w\.\-]+) to (?<newVersion>[\w\.\-]+)");
 
         public Remote(IGitRepo gitClient, IBarClient barClient, ILogger logger)
         {
@@ -364,7 +364,7 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Parse out the owner and repo from a repository url
+        ///     Parses the request body to get the dependency updates/ coherency updates. 
         /// </summary>
         /// <param name="pattern">Regex Pattern</param>
         /// <param name="prBody">Pull Request commit msg</param>
@@ -386,7 +386,7 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        /// Merges the dependency pull request 
+        /// Merges pull request for a dependency update  
         /// </summary>
         /// <param name="pullRequestUrl"></param>
         /// <param name="parameters"></param>
