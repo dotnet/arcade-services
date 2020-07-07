@@ -32,11 +32,17 @@ namespace Microsoft.DotNet.Kusto
                 {
                     foreach (T d in data)
                     {
+                        IList<KustoValue> kustoValues = mapFunc(d);
+                        if (kustoValues == null)
+                        {
+                            continue;
+                        }
+
                         var dataList = new List<string>(size);
                         if (mappings == null)
                         {
                             var mapList = new List<CsvColumnMapping>();
-                            foreach (KustoValue p in mapFunc(d))
+                            foreach (KustoValue p in kustoValues)
                             {
                                 mapList.Add(new CsvColumnMapping {ColumnName = p.Column, CslDataType = p.DataType});
                                 dataList.Add(p.StringValue);
@@ -47,7 +53,7 @@ namespace Microsoft.DotNet.Kusto
                         }
                         else
                         {
-                            dataList.AddRange(mapFunc(d).Select(p => p.StringValue));
+                            dataList.AddRange(kustoValues.Select(p => p.StringValue));
                         }
 
                         await writer.WriteCsvLineAsync(dataList);

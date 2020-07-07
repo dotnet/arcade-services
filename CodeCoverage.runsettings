@@ -5,14 +5,28 @@
         <Configuration>
           <CodeCoverage>
             <ModulePaths>
+              <Include>
+                <ModulePath>.*\.dll$</ModulePath>
+                <ModulePath>.*\.exe$</ModulePath>
+              </Include>
               <Exclude>
-                <ModulePath>.*Moq.dll</ModulePath>
-                <ModulePath>.*fluentassertions.dll</ModulePath>
-                <ModulePath>.*microsoft.extensions.logging.applicationinsights.dll</ModulePath>
-                <ModulePath>.*libgit2sharp.dll</ModulePath>
-                <ModulePath>.*quartz.dll</ModulePath>
+                <ModulePath>.*moq\.dll$</ModulePath>
+                <ModulePath>.*fluentassertions\.dll$</ModulePath>
+                <ModulePath>.*microsoft\.extensions\.logging\.applicationinsights\.dll$</ModulePath>
+                <ModulePath>.*libgit2sharp\.dll$</ModulePath>
+                <ModulePath>.*quartz\.dll$</ModulePath>
+                <ModulePath>.*git[a-f0-9-]*\.dll$</ModulePath>
+                <ModulePath>.*tests\.dll$</ModulePath>
+                <ModulePath>.*\.testadapter\.dll$</ModulePath>
+                <!-- This is all generated code -->
+                <ModulePath>.*microsoft\.dotnet\.maestro\.client\.dll$</ModulePath>
               </Exclude>
             </ModulePaths>
+            <Functions>
+              <Exclude>
+                <Function>Maestro\.Data\.Migrations..*</Function>
+              </Exclude>
+            </Functions>
           </CodeCoverage>
         </Configuration>
       </DataCollector>
