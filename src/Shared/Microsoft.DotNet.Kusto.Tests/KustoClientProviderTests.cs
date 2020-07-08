@@ -34,7 +34,8 @@ namespace Microsoft.DotNet.Kusto.Tests
                     {QueryConnectionString = "IGNORED-CONNECTION-STRING", Database = "TEST-DATABASE",}),
                 queryProvider.Object))
             {
-                await client.ExecuteKustoQueryAsync(new KustoQuery("basicQuery"));
+                IDataReader result = await client.ExecuteKustoQueryAsync(new KustoQuery("basicQuery"));
+                Assert.Same(result, reader);
             }
 
             Assert.Equal(new[] {"TEST-DATABASE"}, dbNames);
@@ -59,10 +60,11 @@ namespace Microsoft.DotNet.Kusto.Tests
                     {QueryConnectionString = "IGNORED-CONNECTION-STRING", Database = "TEST-DATABASE",}),
                 queryProvider.Object))
             {
-                var result = await client.ExecuteKustoQueryAsync(
+                IDataReader result = await client.ExecuteKustoQueryAsync(
                     new KustoQuery("basicQuery | where Id = _id and Name = _name",
                         new KustoParameter("_id", 9274, KustoDataType.Int),
                         new KustoParameter("_name", "TEST-NAME", KustoDataType.String)));
+                Assert.Same(result, reader);
             }
 
             Assert.Equal(new[] {"TEST-DATABASE"}, dbNames);
@@ -91,7 +93,8 @@ namespace Microsoft.DotNet.Kusto.Tests
         public async Task SemanticExceptionReturnsNull()
         {
             var queryProvider = new Mock<ICslQueryProvider>();
-            queryProvider.Setup(q => q.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ClientRequestProperties>()))
+            queryProvider.Setup(q =>
+                    q.ExecuteQueryAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ClientRequestProperties>()))
                 .Throws(new SemanticException());
 
             using (var client = new KustoClientProvider(Options.Create(new KustoClientProviderOptions
@@ -100,7 +103,6 @@ namespace Microsoft.DotNet.Kusto.Tests
             {
                 Assert.Null(await client.ExecuteKustoQueryAsync(new KustoQuery("basicQuery")));
             }
-
         }
     }
 }
