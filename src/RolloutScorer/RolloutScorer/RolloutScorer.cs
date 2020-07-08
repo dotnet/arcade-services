@@ -146,6 +146,7 @@ namespace RolloutScorer
             // Loop over all the builds in the returned content and calculate start and end times
             foreach (ScorecardBuildBreakdown build in BuildBreakdowns)
             {
+                Utilities.WriteDebug($"Calculating time to rollout for build {build.BuildSummary.BuildNumber}", Log, LogLevel);
                 TimeSpan duration = GetPipelineDurationFromStages(build.BuildSummary.Stages);
                 rolloutBuildTimes.Add(duration);
                 build.Score.TimeToRollout = duration;
@@ -376,6 +377,7 @@ namespace RolloutScorer
         {
             if (stages.Count == 0)
             {
+                Utilities.WriteTrace($"Build had no stages; time to roll out logged as 0", Log, LogLevel);
                 return TimeSpan.Zero;
             }   
             
@@ -383,17 +385,25 @@ namespace RolloutScorer
             {
                 return DateTimeOffset.TryParse(s.StartTime, out DateTimeOffset start) ? start : DateTimeOffset.MaxValue;
             });
+            Utilities.WriteTrace($"Build start time logged as {startTime}", Log, LogLevel);
             DateTimeOffset endTime = stages.Max(s =>
             {
                 return DateTimeOffset.TryParse(s.EndTime, out DateTimeOffset end) ? end : DateTimeOffset.MinValue;
             });
+            Utilities.WriteTrace($"Build end time logged as {endTime}", Log, LogLevel);
 
             TimeSpan approvalTime = stages
                 .Where(s => s.Type == "Checkpoint.Approval")
                 .Select(s => (DateTimeOffset.TryParse(s.StartTime, out DateTimeOffset start) && DateTimeOffset.TryParse(s.EndTime, out DateTimeOffset end)) ? end - start : TimeSpan.Zero)
                 .Aggregate(TimeSpan.Zero, (l, r) => l + r);
+            Utilities.WriteTrace($"Time spent waiting for approval calculated as {approvalTime}", Log, LogLevel);
 
             TimeSpan duration = (endTime - startTime) - approvalTime;
+            if (duration < TimeSpan.Zero)
+            {
+                Utilities.WriteWarning("Build time determined to be less than zero; reporting it as zero.", Log);
+            }
+
             return duration >= TimeSpan.Zero ? duration : TimeSpan.Zero;
         }
 
