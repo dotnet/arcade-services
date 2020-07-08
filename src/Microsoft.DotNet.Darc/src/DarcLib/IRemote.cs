@@ -249,7 +249,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Async task</returns>
         Task DeletePullRequestBranchAsync(string pullRequestUri);
 
-    #endregion
+        #endregion
 
         #region Repo/Dependency Operations
 

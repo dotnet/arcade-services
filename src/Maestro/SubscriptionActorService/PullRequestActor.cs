@@ -151,8 +151,7 @@ namespace SubscriptionActorService
         public async Task ReceiveReminderAsync(string reminderName, byte[] state, TimeSpan dueTime, TimeSpan period)
         {
             if (reminderName == PullRequestActorImplementation.PullRequestCheck)
-            {
-                await Implementation.SynchronizeInProgressPullRequestAsync();
+            { await Implementation.SynchronizeInProgressPullRequestAsync();
             }
             else if (reminderName == PullRequestActorImplementation.PullRequestUpdate)
             {
@@ -955,12 +954,17 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 coherencySection.AppendLine("attribute were produced in a build used as input to the parent dependency's build.");
                 coherencySection.AppendLine("See [Dependency Description Format](https://github.com/dotnet/arcade/blob/master/Documentation/DependencyDescriptionFormat.md#dependency-description-overview)");
                 coherencySection.AppendLine();
+                coherencySection.AppendLine("[DependencyUpdate]: <> (Begin)");
+                coherencySection.AppendLine();
+                coherencySection.AppendLine("**Coherency Update**:");
                 foreach (DependencyUpdate dep in deps)
                 {
-                    coherencySection.AppendLine($"-  **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
+                    coherencySection.AppendLine($"- **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
                 }
                 coherencySection.AppendLine();
-                coherencySection.AppendLine(sectionEndMarker); 
+                coherencySection.AppendLine("[DependencyUpdate]: <> (End)");
+                coherencySection.AppendLine();
+                coherencySection.AppendLine(sectionEndMarker);
                 description.Insert(sectionStartIndex, coherencySection.ToString());
             }
             else
@@ -985,13 +989,18 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 {
                     subscriptionSection.AppendLine($"- **Branch**: {branch}");
                 }
+                subscriptionSection.AppendLine();
+                subscriptionSection.AppendLine("[DependencyUpdate]: <> (Begin)");
+                subscriptionSection.AppendLine();
                 subscriptionSection.AppendLine($"- **Updates**:");
 
                 foreach (DependencyUpdate dep in deps)
                 {
                     subscriptionSection.AppendLine($"  - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version}");
                 }
-
+                subscriptionSection.AppendLine();
+                subscriptionSection.AppendLine("[DependencyUpdate]: <> (End)");
+                subscriptionSection.AppendLine();
                 UpdatePRDescriptionDueConfigFiles(committedFiles, subscriptionSection);
 
                 subscriptionSection.AppendLine();

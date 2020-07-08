@@ -24,18 +24,13 @@ namespace Microsoft.DotNet.DarcLib
         private readonly IGitRepo _gitClient;
         private readonly ILogger _logger;
 
-        // **Updates**:
-        //- **Foo**: from 1.0 to 1.1.0
-        //- **Bar**: from 2.0.0 to 2.1.0
+        //[DependencyUpdate]: <> (Begin)
+        //- **Updates**:
+        //- **Foo**: from to 1.2.0
+        //- **Bar**: from to 2.2.0
+        //[DependencyUpdate]: <> (End)
         private static readonly Regex DependencyUpdatesPattern =
-            new Regex(@"- \*\*(?<updates>[\w+\.\-]+)\*\*: from (?<oldVersion>[\w\.\-]*) to (?<newVersion>[\w\.\-]+)");
-
-        // captures coherency updates from pr description, for eg: 
-        // **Coherency updates**:
-        //- **Foo**: from 1.0 to 1.1.0
-        //- **Bar**: from 2.0 to 2.1.0
-        private static readonly Regex CoherencyUpdatesPattern =
-            new Regex(@"-  \*\*(?<library>[\w\.\-]+)\*\*: from (?<oldversion>[\w\.\-]+) to (?<newVersion>[\w\.\-]+)");
+            new Regex(@"\[DependencyUpdate\]: <> \(Begin\)([^\[]+)\[DependencyUpdate\]: <> \(End\)");
 
         public Remote(IGitRepo gitClient, IBarClient barClient, ILogger logger)
         {
@@ -364,14 +359,13 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Parses the request body to get the dependency updates/ coherency updates. 
+        ///     Parses the request body to get the dependency updates.
         /// </summary>
-        /// <param name="pattern">Regex Pattern</param>
-        /// <param name="prBody">Pull Request commit msg</param>
+        /// <param name="prBody">Pull Request description</param>
         /// <returns>Tuple of owner and repo</returns>
-        public string ParsePullRequestBody(Regex pattern, string prBody)
+        public string ParsePullRequestBody(string prBody)
         {
-            var matches = pattern.Matches(prBody);
+            var matches = DependencyUpdatesPattern.Matches(prBody);
             if (matches.Count == 0)
             {
                 return string.Empty;
@@ -379,8 +373,9 @@ namespace Microsoft.DotNet.DarcLib
             string message = "";
             foreach (Match match in matches)
             {
-                message += $@"
-{match.Value.ToString().Replace("*", "")}";
+                message += $@"{match.Value.ToString().Replace("[DependencyUpdate]: <> (Begin)", "")
+                    .Replace("[DependencyUpdate]: <> (End)", "").Replace("*", "").TrimStart()}";
+
             }
             return message;
         }
@@ -398,25 +393,17 @@ namespace Microsoft.DotNet.DarcLib
 
             var pr = await _gitClient.GetPullRequestAsync(pullRequestUrl);
             var commits = await _gitClient.GetPullRequestCommitsAsync(pullRequestUrl);
-            string dependencyUpdate = ParsePullRequestBody(DependencyUpdatesPattern, pr.Description);
-            string coherencyUpdate = ParsePullRequestBody(CoherencyUpdatesPattern, pr.Description);
+            var dependencyUpdate = DependencyUpdatesPattern.Matches(pr.Description).Select(x => x.Groups[1].Value.Trim().Replace("*", string.Empty));
             string commitMessage = $@"{pr.Title}
-{dependencyUpdate}
-
-";
+{string.Join("\r\n\r\n", dependencyUpdate)}";
             foreach (Commit commit in commits)
             {
                 if (!commit.Author.Equals("dotnet-maestro[bot]"))
                 {
-                    commitMessage += $@"- {commit.Message}";
-                }
-            }
-            if (!string.IsNullOrEmpty(coherencyUpdate))
-            {
-                commitMessage += $@"
+                    commitMessage += $@"
 
-Coherency Update:
-{coherencyUpdate}";
+- Manual commit - {commit.Message}";
+                }
             }
 
             await _gitClient.MergeDependencyPullRequestAsync(pullRequestUrl,

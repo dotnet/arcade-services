@@ -107,9 +107,9 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="pullRequestUrl">Uri of pull request to merge</param>
         /// <param name="parameters">Settings for merge</param>
-        /// <param name="commitToMerge">Settings for merge</param>
+        /// <param name="mergeCommit">Commit message used to merge the pull request</param>
         /// <returns></returns>
-        Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string commitToMerge);
+        Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string mergeCommit);
 
         /// <summary>
         ///     Create a new comment, or update the last comment with an updated message,

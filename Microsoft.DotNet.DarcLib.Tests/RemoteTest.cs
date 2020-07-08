@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Microsoft.DotNet.DarcLib.Tests
 {
@@ -13,7 +15,8 @@ namespace Microsoft.DotNet.DarcLib.Tests
         {
             Mock<IGitRepo> client = new Mock<IGitRepo>();
             Mock<IBarClient> barClient = new Mock<IBarClient>();
-            Mock<ILogger> logger = new Mock<ILogger>();
+            Mock<ITestOutputHelper> output = new Mock<ITestOutputHelper>();
+            Mock<XUnitLogger> logger = new Mock<XUnitLogger>(output.Object);
             MergePullRequestParameters mergePullRequest = new MergePullRequestParameters
             {
                 DeleteSourceBranch = true,
@@ -22,33 +25,44 @@ namespace Microsoft.DotNet.DarcLib.Tests
             };
 
             PullRequest pr = new PullRequest();
-            pr.Description = @"[marker]: <> (End:b2a4bbef-8dc3-4cb3-5a13-08d818a46851)
+            pr.Description = @"This pull request updates the following dependencies
+
+[marker]: <> (Begin:390b1f10-7ba2-4d3a-142d-08d8149908a8)
+## From https://github.com/maestro-auth-test/maestro-test1
+- **Subscription**: 390b1f10-7ba2-4d3a-142d-08d8149908a8
+- **Build**: 388602341
+- **Date Produced**: 6/19/2020 9:45 PM
+- **Commit**: 863063912
+
+[DependencyUpdate]: <> (Begin) 
+
+- **Updates**:
+  - **Foo**: from  to 1.2.0
+  - **Bar**: from  to 2.2.0 
+
+[DependencyUpdate]: <> (End)
+
 ## Coherency Updates
 
 The following updates ensure that dependencies with a *CoherentParentDependency*
 attribute were produced in a build used as input to the parent dependency's build.
 See [Dependency Description Format](https://github.com/dotnet/arcade/blob/master/Documentation/DependencyDescriptionFormat.md#dependency-description-overview)
 
--  **Coherency Updates**:
-  -  **Microsoft.NETCore.App.Internal**: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
-  -  **Microsoft.NETCore.App.Runtime.win-x64**: from 3.1.4 to 3.1.4
+[DependencyUpdate]: <> (Begin)
 
-# From https://dev.azure.com/dnceng/internal/_git/maestro-test1
-- **Subscription**: 95a525c4-1bd7-46db-8ac2-08d818b0d8de
-- **Build**: 629895977
-- **Date Produced**: 6/25/2020 2:40 AM
-- **Commit**: 2003274066
-- **Branch**: master
-- **Updates**:
-  - **Foo**: from 67 to 1.2.0
-  - **Bar**: from 75 to 2.2.0
+Coherency Update:
+ - **Microsoft.NETCore.App.Internal**: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
+ - **Microsoft.NETCore.App.Runtime.win-x64**: from 3.1.4 to 3.1.4
 
-[marker]: <> (End:95a525c4-1bd7-46db-8ac2-08d818b0d8de)";
+[DependencyUpdate]: <> (End)
+
+
+[marker]: <> (End:390b1f10-7ba2-4d3a-142d-08d8149908a8)";
             pr.Title = "[352119842] Update dependencies from maestro-auth-test/maestro-test1";
             
             Commit firstCommit = new Commit("dotnet-maestro[bot]", "Sha", "TestCommit1");
             Commit secondCommit = new Commit("dotnet-maestro[bot]", "Sha", "TestCommit2");
-            Commit thirdCommit = new Commit("User", "Sha", "Manual Commit");
+            Commit thirdCommit = new Commit("User", "Sha", "Updated text");
 
             IList<Commit> commits = new List<Commit>();
             commits.Add(firstCommit);
@@ -68,21 +82,16 @@ See [Dependency Description Format](https://github.com/dotnet/arcade/blob/master
             await remote.MergeDependencyPullRequestAsync(
                 "https://github.com/test/test2",
                 mergePullRequest);
-
-            client.Verify(x=>x.GetPullRequestAsync(It.IsAny<string>()), Times.Once);
-            client.Verify(x => x.GetPullRequestCommitsAsync(It.IsAny<string>()), Times.Once);
-            client.Verify(x => x.MergeDependencyPullRequestAsync(It.IsAny<string>(), It.IsAny<MergePullRequestParameters>(),It.IsAny<string>()), Times.Once);
             string expectedCommitMessage = @"[352119842] Update dependencies from maestro-auth-test/maestro-test1
-
-- Foo: from 67 to 1.2.0
-- Bar: from 75 to 2.2.0
-
-- Manual Commit
+- Updates:
+  - Foo: from  to 1.2.0
+  - Bar: from  to 2.2.0
 
 Coherency Update:
+ - Microsoft.NETCore.App.Internal: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
+ - Microsoft.NETCore.App.Runtime.win-x64: from 3.1.4 to 3.1.4
 
--  Microsoft.NETCore.App.Internal: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
--  Microsoft.NETCore.App.Runtime.win-x64: from 3.1.4 to 3.1.4";
+- Manual commit - Updated text";
             Assert.Equal(expectedCommitMessage, commitToMerge[0]);
         }
     }
