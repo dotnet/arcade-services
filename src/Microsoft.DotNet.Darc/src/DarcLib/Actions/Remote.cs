@@ -359,28 +359,6 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Parses the request body to get the dependency updates.
-        /// </summary>
-        /// <param name="prBody">Pull Request description</param>
-        /// <returns>Tuple of owner and repo</returns>
-        public string ParsePullRequestBody(string prBody)
-        {
-            var matches = DependencyUpdatesPattern.Matches(prBody);
-            if (matches.Count == 0)
-            {
-                return string.Empty;
-            }
-            string message = "";
-            foreach (Match match in matches)
-            {
-                message += $@"{match.Value.ToString().Replace("[DependencyUpdate]: <> (Begin)", "")
-                    .Replace("[DependencyUpdate]: <> (End)", "").Replace("*", "").TrimStart()}";
-
-            }
-            return message;
-        }
-
-        /// <summary>
         /// Merges pull request for a dependency update  
         /// </summary>
         /// <param name="pullRequestUrl"></param>
@@ -409,6 +387,7 @@ namespace Microsoft.DotNet.DarcLib
             await _gitClient.MergeDependencyPullRequestAsync(pullRequestUrl,
                     parameters ?? new MergePullRequestParameters(), commitMessage);
 
+            _logger.LogInformation($"Merging pull request '{pullRequestUrl}' succeeded!");
             _logger.LogInformation($"Merging pull request '{pullRequestUrl}' succeeded!");
         }
 
