@@ -6,7 +6,7 @@ namespace DotNet.Status.Web
     public class ArcadeValidationData
     {
         [Required]
-        public DateTime BuildDateTime { get; set; }
+        public DateTimeOffset BuildDateTime { get; set; }
         [Required]
         public string ArcadeVersion { get; set; }
         [Required]

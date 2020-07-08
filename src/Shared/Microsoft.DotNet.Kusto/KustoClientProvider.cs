@@ -16,38 +16,21 @@ namespace Microsoft.DotNet.Kusto
     public sealed class KustoClientProvider : IKustoClientProvider, IDisposable
     {
         private readonly IOptions<KustoClientProviderOptions> _options;
-        private readonly ICslQueryProvider _kustoQueryProvider;
-
+        public ICslQueryProvider KustoQueryProvider { get; }
+        
         public KustoClientProvider(IOptions<KustoClientProviderOptions> options)
         {
             _options = options;
-            _kustoQueryProvider = KustoClientFactory.CreateCslQueryProvider(options.Value.QueryConnectionString);
+            KustoQueryProvider = KustoClientFactory.CreateCslQueryProvider(options.Value.QueryConnectionString);
         }
 
-        public ICslQueryProvider KustoQueryProvider => _kustoQueryProvider;
+        public KustoClientProvider(IOptions<KustoClientProviderOptions> options, ICslQueryProvider provider)
+        {
+            _options = options;
+            KustoQueryProvider = provider;
+        }
 
         public string DatabaseName => _options.Value.Database;
-
-        public async Task<T> GetSingleValueFromQueryAsync<T>(KustoQuery query)
-        {
-            var result = await ExecuteKustoQueryAsync(query);
-
-            if (result.Read())
-            {
-                var resultValue = result.GetValue(0);
-                if (resultValue == System.DBNull.Value || resultValue == null)
-                {
-                    return default(T);
-                }
-                else
-                {
-                    return (T) resultValue;
-                }
-            }
-
-            return default(T);
-        }
-
 
         public async Task<IDataReader> ExecuteKustoQueryAsync(KustoQuery query)
         {
@@ -61,7 +44,7 @@ namespace Microsoft.DotNet.Kusto
             string text = query.Text;
             if (query.Parameters?.Any() == true)
             {
-                string parameterList = String.Join(",", query.Parameters.Select(p => $"{p.Name}:{p.Type}"));
+                string parameterList = string.Join(",", query.Parameters.Select(p => $"{p.Name}:{p.Type.CslDataType}"));
                 text = $"declare query_parameters ({parameterList});{query.Text}";
             }
 
@@ -80,7 +63,7 @@ namespace Microsoft.DotNet.Kusto
 
         public void Dispose()
         {
-            _kustoQueryProvider.Dispose();
+            KustoQueryProvider.Dispose();
         }
     }
 }

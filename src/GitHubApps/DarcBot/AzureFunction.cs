@@ -168,12 +168,12 @@ namespace DarcBot
                 triageItems,
                 b => new[]
                 {
-                    new KustoValue("ModifiedDateTime", b.ModifiedDateTime.ToString(), KustoDataTypes.DateTime),
-                    new KustoValue("BuildId", b.BuildId.ToString(), KustoDataTypes.Int),
-                    new KustoValue("RecordId", b.RecordId.ToString(), KustoDataTypes.Guid),
-                    new KustoValue("Index", b.Index.ToString(), KustoDataTypes.Int),
-                    new KustoValue("UpdatedCategory", b?.UpdatedCategory, KustoDataTypes.String),
-                    new KustoValue("Url", b?.Url, KustoDataTypes.String)
+                    new KustoValue("ModifiedDateTime", b.ModifiedDateTime, KustoDataType.DateTime),
+                    new KustoValue("BuildId", b.BuildId, KustoDataType.Int),
+                    new KustoValue("RecordId", b.RecordId, KustoDataType.Guid),
+                    new KustoValue("Index", b.Index, KustoDataType.Int),
+                    new KustoValue("UpdatedCategory", b.UpdatedCategory, KustoDataType.String),
+                    new KustoValue("Url", b.Url, KustoDataType.String)
                 });
         }
 

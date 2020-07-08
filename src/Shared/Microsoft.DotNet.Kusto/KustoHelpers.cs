@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -44,7 +45,7 @@ namespace Microsoft.DotNet.Kusto
                             var mapList = new List<CsvColumnMapping>();
                             foreach (KustoValue p in kustoValues)
                             {
-                                mapList.Add(new CsvColumnMapping {ColumnName = p.Column, CslDataType = p.DataType});
+                                mapList.Add(new CsvColumnMapping {ColumnName = p.Column, CslDataType = p.DataType.CslDataType});
                                 dataList.Add(p.StringValue);
                             }
 
@@ -53,6 +54,11 @@ namespace Microsoft.DotNet.Kusto
                         }
                         else
                         {
+                            if (!kustoValues.Select(v => v.Column).SequenceEqual(mappings.Select(m => m.ColumnName)))
+                            {
+                                throw new ArgumentException("Fields must be supplied in the same order for each record");
+                            }
+
                             dataList.AddRange(kustoValues.Select(p => p.StringValue));
                         }
 
