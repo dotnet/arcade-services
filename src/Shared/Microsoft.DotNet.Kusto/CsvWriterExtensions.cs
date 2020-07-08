@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,11 +15,6 @@ namespace Microsoft.DotNet.Kusto
     {
         public static async Task WriteCsvLineAsync(this TextWriter writer, params string[] values)
         {
-            if (values.Length == 0)
-            {
-                return;
-            }
-
             await WriteCsvLineAsync(writer, (IEnumerable<string>) values);
         }
 
@@ -28,15 +24,23 @@ namespace Microsoft.DotNet.Kusto
             {
                 if (!enumerator.MoveNext())
                 {
-                    return;
+                    throw new ArgumentException("CSV record must contain at least one field", nameof(values));
                 }
 
+                bool wasEmpty = enumerator.Current.Length == 0;
                 await writer.WriteAsync(Escape(enumerator.Current));
 
                 while (enumerator.MoveNext())
                 {
+                    wasEmpty = false;
                     await writer.WriteAsync(',');
                     await writer.WriteAsync(Escape(enumerator.Current));
+                }
+
+                if (wasEmpty)
+                {
+                    // We wrote an entirely empty line, which is ambiguous, quote it to fix that
+                    await writer.WriteAsync("\"\"");
                 }
             }
 
@@ -87,7 +91,7 @@ namespace Microsoft.DotNet.Kusto
                     return fieldValue;
                 }
 
-                return fieldValue.Substring(1, fieldValue.Length - 1).Replace("\"\"", "\"");
+                return fieldValue.Substring(1, fieldValue.Length - 2).Replace("\"\"", "\"");
             }
 
             static string[] ConvertMatchToArray(Match match)
@@ -95,7 +99,7 @@ namespace Microsoft.DotNet.Kusto
                 return match.Groups["record"].Captures.Select(c => UnquoteFieldValue(c.Value)).ToArray();
             }
 
-            return matches.Select(ConvertMatchToArray).ToArray();
+            return matches.Where(m => m.Length > 0).Select(ConvertMatchToArray).ToArray();
         }
     }
 }

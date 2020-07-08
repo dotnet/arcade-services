@@ -2,10 +2,7 @@
 
   <PropertyGroup>
     <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
-    <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <SignAssembly>false</SignAssembly>
-    <RootNamespace>Microsoft.DotNet.Kusto</RootNamespace>
-    <AssemblyName>Microsoft.DotNet.Kusto</AssemblyName>
     <IsPackable>true</IsPackable>
   </PropertyGroup>
   
