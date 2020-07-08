@@ -313,7 +313,8 @@ namespace RolloutScorer
         {
             SearchIssuesRequest searchIssuesRequest = new SearchIssuesRequest
             {
-                Created = new DateRange(RolloutStartDate, RolloutEndDate),
+                // use offsets here because the GitHub API gets mad about UTC specified with a +
+                Created = new DateRange(RolloutStartDate.ToOffset(TimeSpan.FromHours(-1)), RolloutEndDate.ToOffset(TimeSpan.FromHours(-1))),
             };
             searchIssuesRequest.Repos.Add(GithubConfig.ScorecardsGithubOrg, GithubConfig.ScorecardsGithubRepo);
 
