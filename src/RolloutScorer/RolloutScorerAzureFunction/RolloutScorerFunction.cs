@@ -73,7 +73,8 @@ namespace RolloutScorerAzureFunction
                         RolloutScorer.RolloutScorer rolloutScorer = new RolloutScorer.RolloutScorer
                         {
                             Repo = deploymentGroup.Key,
-                            RolloutStartDate = deploymentGroup.First().Started.GetValueOrDefault().Date,
+                            RolloutStartDate = deploymentGroup.First().Started.GetValueOrDefault().ToOffset(TimeSpan.FromHours(-1)),
+                            RolloutEndDate = DateTimeOffset.Now.ToOffset(TimeSpan.FromHours(-1)),
                             RolloutWeightConfig = Configs.DefaultConfig.RolloutWeightConfig,
                             GithubConfig = Configs.DefaultConfig.GithubConfig,
                             Log = log,
