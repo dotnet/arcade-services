@@ -55,7 +55,7 @@ namespace RolloutScorerAzureFunction
             {
                 log.LogInformation("INFO: Checking to see if the most recent deployment occurred more than two days ago...");
                 // We have only want to score if the buffer period has elapsed since the last deployment
-                if (true || (relevantDeployments.Last().Ended ?? DateTimeOffset.MaxValue) < DateTimeOffset.UtcNow - TimeSpan.FromDays(ScoringBufferInDays))
+                if ((relevantDeployments.Last().Ended ?? DateTimeOffset.MaxValue) < DateTimeOffset.UtcNow - TimeSpan.FromDays(ScoringBufferInDays))
                 {
                     var scorecards = new List<Scorecard>();
 
