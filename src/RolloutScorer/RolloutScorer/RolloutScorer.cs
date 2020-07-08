@@ -1,6 +1,4 @@
-using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage.Shared.Protocol;
 using Newtonsoft.Json.Linq;
 using Octokit;
 using System;
@@ -10,7 +8,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
