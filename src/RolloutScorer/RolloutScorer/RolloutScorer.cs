@@ -254,9 +254,9 @@ namespace RolloutScorer
                 // First, check the issue body
                 Utilities.WriteDebug($"Checking issue body for downtime information...", Log, LogLevel);
                 downtimeStart = GetStartTimeFromIssueText(issue.Body, issue.HtmlUrl);
-                Utilities.WriteDebug($"Downtime start {downtimeStart?.DateTime.ToLongTimeString() ?? "not"} found in issue body.", Log, LogLevel);
+                WriteDowntimeDebugMessage(downtimeStart, "start");
                 downtimeFinish = GetEndTimeFromIssueText(issue.Body, issue.HtmlUrl);
-                Utilities.WriteDebug($"Downtime finish {downtimeFinish?.DateTime.ToLongTimeString() ?? "not"} found in issue body.", Log, LogLevel);
+                WriteDowntimeDebugMessage(downtimeFinish, "finish");
                 if (downtimeStart != null && downtimeFinish != null)
                 {
                     downtime += (TimeSpan)(downtimeFinish - downtimeStart);
@@ -271,9 +271,9 @@ namespace RolloutScorer
                 {
                     Utilities.WriteDebug($"Checking comment at {comment.HtmlUrl} for downtime information...", Log, LogLevel);
                     downtimeStart ??= GetStartTimeFromIssueText(comment.Body, comment.HtmlUrl);
-                    Utilities.WriteDebug($"Downtime start {downtimeStart?.DateTime.ToLongTimeString() ?? "not"} found.", Log, LogLevel);
+                    WriteDowntimeDebugMessage(downtimeStart, "start");
                     downtimeFinish ??= GetEndTimeFromIssueText(comment.Body, comment.HtmlUrl);
-                    Utilities.WriteDebug($"Downtime finish {downtimeFinish?.DateTime.ToLongTimeString() ?? "not"} found.", Log, LogLevel);
+                    WriteDowntimeDebugMessage(downtimeFinish, "finish");
 
                     if (downtimeStart != null && downtimeFinish != null)
                     {
@@ -289,9 +289,9 @@ namespace RolloutScorer
                 // If we haven't found both a start and end time yet, we're going to default to creation and/or close time
                 Utilities.WriteDebug($"Downtime not yet found in body or comments; looking at issue start & close times...", Log, LogLevel);
                 downtimeStart ??= issue.CreatedAt;
-                Utilities.WriteDebug($"Downtime start {downtimeStart?.DateTime.ToLongTimeString() ?? "not"} found.", Log, LogLevel);
+                WriteDowntimeDebugMessage(downtimeStart, "start");
                 downtimeFinish ??= issue.ClosedAt;
-                Utilities.WriteDebug($"Downtime finish {downtimeFinish?.DateTime.ToLongTimeString() ?? "not"} found.", Log, LogLevel);
+                WriteDowntimeDebugMessage(downtimeFinish, "finish");
                 if (downtimeFinish == null)
                 {
                     Utilities.WriteWarning($"Downtime issue was found unclosed and with no specified end time; " +
@@ -340,6 +340,10 @@ namespace RolloutScorer
             }
 
             return null;
+        }
+        private void WriteDowntimeDebugMessage(DateTimeOffset? downtimeEvent, string downtimeEventDescription)
+        {
+            Utilities.WriteDebug($"Downtime {downtimeEventDescription} {downtimeEvent?.ToString() ?? "not"} found.", Log, LogLevel);
         }
 
         /// <summary>
