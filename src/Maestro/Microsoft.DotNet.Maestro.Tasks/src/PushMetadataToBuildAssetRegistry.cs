@@ -42,8 +42,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         public string[] ManifestBuildData { get; set; }
 
-        public string PublishingVersion { get; set; } = "3";
-
         [Output]
         public int BuildId { get; set; }
 
@@ -82,7 +80,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
                 else
                 {
-                    (List<BuildData> buildsManifestMetadata, List<SigningInformation> signingInformation) = GetBuildManifestsMetadata(ManifestsPath, cancellationToken);
+                    (List<BuildData> buildsManifestMetadata, 
+                     List<SigningInformation> signingInformation, 
+                     int publishingVersion) = GetBuildManifestsMetadata(ManifestsPath, cancellationToken);
 
                     if (buildsManifestMetadata.Count == 0)
                     {
@@ -126,8 +126,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     Console.WriteLine($"##vso[build.addbuildtag]BAR ID - {recordedBuild.Id}");
 
                     // Based on the in-memory merged manifest, create a physical XML file and
-                    // upload it to the BlobArtifacts folder
-                    CreateAndPushMergedManifest(finalBuild.Assets, finalSigningInfo);
+                    // upload it to the BlobArtifacts folder only when publishingVersion >= 3
+                    if (publishingVersion >= 3)
+                    {
+                        CreateAndPushMergedManifest(finalBuild.Assets, finalSigningInfo, publishingVersion);
+                    }
 
                     // Only 'create' the AzDO (VSO) variables if running in an AzDO build
                     if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BUILD_BUILDID")))
@@ -279,10 +282,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return VersionIdentifier.GetVersion(assetId);
         }
 
-        private (List<BuildData>, List<SigningInformation>) GetBuildManifestsMetadata(
+        private (List<BuildData>, List<SigningInformation>, int) GetBuildManifestsMetadata(
             string manifestsFolderPath,
             CancellationToken cancellationToken)
         {
+            int publishingVersion = -1;
             var buildsManifestMetadata = new List<BuildData>();
             var signingInfo = new List<SigningInformation>();
 
@@ -294,6 +298,18 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 using (var stream = new FileStream(manifestPath, FileMode.Open))
                 {
                     var manifest = (Manifest)xmlSerializer.Deserialize(stream);
+
+                    if (publishingVersion == -1)
+                    {
+                        publishingVersion = manifest.PublishingVersion;
+                    }
+                    else
+                    {
+                        if (publishingVersion != manifest.PublishingVersion)
+                        {
+                            throw new Exception("PublishingVersion should the same in all manifests.");
+                        }
+                    }
 
                     var assets = new List<AssetData>();
 
@@ -359,7 +375,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
             }
 
-            return (buildsManifestMetadata, signingInfo);
+            return (buildsManifestMetadata, signingInfo, publishingVersion);
         }
 
         private string GetEnv(string key)
@@ -647,7 +663,10 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return values;
         }
 
-        private void CreateAndPushMergedManifest(IImmutableList<AssetData> assets, SigningInformation finalSigningInfo)
+        private void CreateAndPushMergedManifest(
+            IImmutableList<AssetData> assets, 
+            SigningInformation finalSigningInfo,
+            int publishingVersion)
         {
             string mergedManifestPath = Path.Combine(GetAzDevStagingDirectory(), MergedManifestFileName);
 
@@ -660,7 +679,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             Branch = GetAzDevBranch(),
                             Commit = GetAzDevCommit(),
                             IsStable = IsStableBuild.ToString(),
-                            PublishingVersion = PublishingVersion
+                            PublishingVersion = publishingVersion.ToString()
                         });
 
             foreach (AssetData data in assets)

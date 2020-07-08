@@ -35,6 +35,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
         [XmlAttribute(AttributeName = "Location")]
         public string Location { get; set; }
 
+        [XmlAttribute(AttributeName = "PublishingVersion")]
+        public int PublishingVersion { get; set; }
+
         #region Properties to be used in new publishing flow
 
         [XmlAttribute(AttributeName = "InitialAssetsLocation")]
