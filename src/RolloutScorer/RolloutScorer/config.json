@@ -17,7 +17,7 @@
       "ExcludeStages": [ "Validate", "Cleanup", "Validate_OnPrem" ]
     },
     {
-      "Repo": "dotnet-arcade-services",
+      "Repo": "arcade-services",
       "BuildDefinitionIds": [ "252", "728" ],
       "AzdoInstance": "dnceng",
       "GithubIssueLabel": "Rollout Arcade-Services",
