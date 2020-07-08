@@ -1,6 +1,7 @@
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.Extensions.Logging;
 using Mono.Options;
 using System;
 using System.Collections.Generic;
@@ -37,6 +38,8 @@ namespace RolloutScorer
                 { "o|output=", "Filename to output the generated csv to; defaults to ./{repo}-scorecard.csv", o => _rolloutScorer.OutputFile = o },
                 { "skip-output", "Skips the output step", skip => _rolloutScorer.SkipOutput = skip != null },
                 { "upload", "Directly uploads results", upload => _rolloutScorer.Upload = upload != null },
+                { "debug", "Enables debug logging", l => _rolloutScorer.LogLevel = LogLevel.Debug },
+                { "v|verbose", "Enables verbose (trace) logging", l => _rolloutScorer.LogLevel = LogLevel.Trace },
                 { "h|help", "Displays this message and exits", h => _showHelp = h != null },
             };
         }

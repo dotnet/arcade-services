@@ -49,15 +49,15 @@ namespace DotNet.Status.Web.Controllers
                 arcadeValidationDatas,
                 b => new[]
                 {
-                    new KustoValue("BuildDateTime", b.BuildDateTime.ToString(), KustoDataTypes.DateTime),
-                    new KustoValue("ArcadeVersion", b.ArcadeVersion, KustoDataTypes.String),
-                    new KustoValue("BARBuildID", b.BARBuildID.ToString(), KustoDataTypes.Int),
-                    new KustoValue("ArcadeBuildLink", b.ArcadeBuildLink, KustoDataTypes.String),
-                    new KustoValue("ArcadeValidationBuildLink", b.ArcadeValidationBuildLink, KustoDataTypes.String),
-                    new KustoValue("ProductRepoName", b.ProductRepoName, KustoDataTypes.String),
-                    new KustoValue("ProductRepoBuildLink", b.ProductRepoBuildLink, KustoDataTypes.String),
-                    new KustoValue("ProductRepoBuildResult", b.ProductRepoBuildResult, KustoDataTypes.String),
-                    new KustoValue("ArcadeDiffLink", b.ArcadeDiffLink, KustoDataTypes.String)
+                    new KustoValue("BuildDateTime", b.BuildDateTime, KustoDataType.DateTime),
+                    new KustoValue("ArcadeVersion", b.ArcadeVersion, KustoDataType.String),
+                    new KustoValue("BARBuildID", b.BARBuildID, KustoDataType.Int),
+                    new KustoValue("ArcadeBuildLink", b.ArcadeBuildLink, KustoDataType.String),
+                    new KustoValue("ArcadeValidationBuildLink", b.ArcadeValidationBuildLink, KustoDataType.String),
+                    new KustoValue("ProductRepoName", b.ProductRepoName, KustoDataType.String),
+                    new KustoValue("ProductRepoBuildLink", b.ProductRepoBuildLink, KustoDataType.String),
+                    new KustoValue("ProductRepoBuildResult", b.ProductRepoBuildResult, KustoDataType.String),
+                    new KustoValue("ArcadeDiffLink", b.ArcadeDiffLink, KustoDataType.String)
                 });
 
             return Ok();
