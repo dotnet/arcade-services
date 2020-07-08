@@ -2,8 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Kusto
@@ -12,11 +15,6 @@ namespace Microsoft.DotNet.Kusto
     {
         public static async Task WriteCsvLineAsync(this TextWriter writer, params string[] values)
         {
-            if (values.Length == 0)
-            {
-                return;
-            }
-
             await WriteCsvLineAsync(writer, (IEnumerable<string>) values);
         }
 
@@ -26,15 +24,23 @@ namespace Microsoft.DotNet.Kusto
             {
                 if (!enumerator.MoveNext())
                 {
-                    return;
+                    throw new ArgumentException("CSV record must contain at least one field", nameof(values));
                 }
 
+                bool wasEmpty = enumerator.Current.Length == 0;
                 await writer.WriteAsync(Escape(enumerator.Current));
 
                 while (enumerator.MoveNext())
                 {
+                    wasEmpty = false;
                     await writer.WriteAsync(',');
                     await writer.WriteAsync(Escape(enumerator.Current));
+                }
+
+                if (wasEmpty)
+                {
+                    // We wrote an entirely empty line, which is ambiguous, quote it to fix that
+                    await writer.WriteAsync("\"\"");
                 }
             }
 
@@ -55,6 +61,45 @@ namespace Microsoft.DotNet.Kusto
             }
 
             return "\"" + value.Replace("\"", "\"\"") + "\"";
+        }
+
+        public static string[][] ParseCsvFile(string input)
+        {
+            MatchCollection matches = Regex.Matches(input,
+                @"
+(?<=^|\r?\n) # Records begin at the beginning of the document or after a newline (technically the \r is required, but we are being generous)
+(
+    (^|,|(?<=\n))
+    (?<record>
+        [^,\r\n""]* # Boring stuff that isn't a comma or end of line or a quote
+        |
+        (
+            "" # a quoted one
+                ([^""]|"""")* # Anything that is inside, and either not a quote, or an escaped one
+            "" # end quote
+        )
+    )
+)+ # there is always a field, that's the rules, no zero field records according to the spec
+(?=$|\r?\n)  # all records are either followed by a newline or end of record (technically the \r is required, but we are being generous)
+",
+                RegexOptions.ExplicitCapture | RegexOptions.IgnorePatternWhitespace);
+            
+            static string UnquoteFieldValue(string fieldValue)
+            {
+                if (fieldValue.Length <= 0 || fieldValue[0] != '"')
+                {
+                    return fieldValue;
+                }
+
+                return fieldValue.Substring(1, fieldValue.Length - 2).Replace("\"\"", "\"");
+            }
+
+            static string[] ConvertMatchToArray(Match match)
+            {
+                return match.Groups["record"].Captures.Select(c => UnquoteFieldValue(c.Value)).ToArray();
+            }
+
+            return matches.Where(m => m.Length > 0).Select(ConvertMatchToArray).ToArray();
         }
     }
 }
