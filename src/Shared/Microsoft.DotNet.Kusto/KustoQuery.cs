@@ -28,6 +28,11 @@ namespace Microsoft.DotNet.Kusto
         }
 
         public List<KustoParameter> Parameters { get; }
-        public string Text { get; set; }
+        public string Text { get; set; } 
+
+        public void AddParameter(string name, object value, KustoDataType type)
+        {
+            Parameters.Add(new KustoParameter(name, value, type));
+        }
     }
 }
