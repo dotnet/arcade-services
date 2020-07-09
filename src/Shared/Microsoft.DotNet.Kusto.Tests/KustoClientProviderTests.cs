@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.Kusto.Tests
     public class KustoClientProviderTests
     {
         [Fact]
-        public async Task ParameterlessQueryIsPassedPlainly()
+        public async Task NoParameterQueryIsPassedPlainly()
         {
             var queryProvider = new Mock<ICslQueryProvider>();
             var dbNames = new List<string>();
@@ -35,6 +35,32 @@ namespace Microsoft.DotNet.Kusto.Tests
                 queryProvider.Object))
             {
                 IDataReader result = await client.ExecuteKustoQueryAsync(new KustoQuery("basicQuery"));
+                Assert.Same(result, reader);
+            }
+
+            Assert.Equal(new[] {"TEST-DATABASE"}, dbNames);
+            Assert.Equal(new[] {"basicQuery"}, queries);
+            Assert.Single(properties);
+            Assert.Empty(properties[0].Parameters);
+        }
+        [Fact]
+        public async Task AssignedToTextPropertyIsPassedPlainly()
+        {
+            var queryProvider = new Mock<ICslQueryProvider>();
+            var dbNames = new List<string>();
+            var queries = new List<string>();
+            var properties = new List<ClientRequestProperties>();
+            var reader = Mock.Of<IDataReader>();
+            queryProvider.Setup(q =>
+                    q.ExecuteQueryAsync(Capture.In(dbNames), Capture.In(queries), Capture.In(properties)))
+                .Returns(Task.FromResult(reader));
+
+            using (var client = new KustoClientProvider(Options.Create(new KustoClientProviderOptions
+                    {QueryConnectionString = "IGNORED-CONNECTION-STRING", Database = "TEST-DATABASE",}),
+                queryProvider.Object))
+            {
+                var query = new KustoQuery {Text = "basicQuery"};
+                IDataReader result = await client.ExecuteKustoQueryAsync(query);
                 Assert.Same(result, reader);
             }
 
@@ -60,10 +86,11 @@ namespace Microsoft.DotNet.Kusto.Tests
                     {QueryConnectionString = "IGNORED-CONNECTION-STRING", Database = "TEST-DATABASE",}),
                 queryProvider.Object))
             {
+                var query = new KustoQuery("basicQuery | where Id = _id and Name = _name",
+                    new KustoParameter("_id", 9274, KustoDataType.Int));
+                query.AddParameter("_name", "TEST-NAME", KustoDataType.String);
                 IDataReader result = await client.ExecuteKustoQueryAsync(
-                    new KustoQuery("basicQuery | where Id = _id and Name = _name",
-                        new KustoParameter("_id", 9274, KustoDataType.Int),
-                        new KustoParameter("_name", "TEST-NAME", KustoDataType.String)));
+                    query);
                 Assert.Same(result, reader);
             }
 
