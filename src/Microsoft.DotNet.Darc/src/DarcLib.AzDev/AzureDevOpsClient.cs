@@ -420,16 +420,10 @@ namespace Microsoft.DotNet.DarcLib
                     commit.CommitId,
                     commit.Comment));
             }
+            connection.Dispose();
             return commits;
         }
 
-        /// <summary>
-        ///     Merges a dependency update pull request
-        /// </summary>
-        /// <param name="pullRequestUrl">Uri of the update dependency pull request to merge</param>
-        /// <param name="parameters">Settings for the pull requst merge</param>
-        /// <param name="mergeCommit">Merge commit message for the pull request</param>
-        /// <returns></returns>
         public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string mergeCommit)
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
@@ -455,6 +449,7 @@ namespace Microsoft.DotNet.DarcLib
                 projectName,
                 repoName,
                 id);
+            connection.Dispose();
         }
 
         /// <summary>
