@@ -101,8 +101,6 @@ namespace Maestro.ScenarioTests
             PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
             StringAssert.AreEqualIgnoringCase(expectedPRTitle, pullRequest.Title);
-            ItemState expectedPRState = complete ? ItemState.Closed : ItemState.Open;
-            StringAssert.AreEqualIgnoringCase(expectedPRState.ToString(), pullRequest.State.ToString());
 
             using (ChangeDirectory(repoDirectory))
             {
@@ -113,9 +111,7 @@ namespace Maestro.ScenarioTests
                     var attempts = 7;
                     while (attempts-- > 0)
                     {
-                        bool isMerged = (await WaitForPullRequestAsync(targetRepoName, targetBranch)).Merged;
-                        // "$(Get-Github-RepoApiUri($targetRepoName))/pulls/$pullRequestNumber/merge"
-                        // There doesn't seem to be an equivalent to this in the client, so just getting the PR over & over until it's done
+                        bool isMerged = await GitHubApi.PullRequest.Merged(pullRequest.User.Name, pullRequest.Title, pullRequest.Number);
 
                         if (!isMerged)
                         {
@@ -124,6 +120,9 @@ namespace Maestro.ScenarioTests
                         }
                     }
                 }
+
+                ItemState expectedPRState = complete ? ItemState.Closed : ItemState.Open;
+                StringAssert.AreEqualIgnoringCase(expectedPRState.ToString(), pullRequest.State.ToString());
             }
         }
 
