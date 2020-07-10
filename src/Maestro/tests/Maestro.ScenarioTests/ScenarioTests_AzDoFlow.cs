@@ -3,6 +3,8 @@ using NUnit.Framework;
 
 namespace Maestro.ScenarioTests
 {
+    [TestFixture]
+    [Category("PostDeployment")]
     class ScenarioTests_AzDoFlow : MaestroScenarioTestBase
     {
         private TestParameters _parameters;
@@ -29,7 +31,6 @@ namespace Maestro.ScenarioTests
         }
 
         [Test]
-        [Category("ScenarioTest")]
         public async Task Darc_AzDoFlow_Batched()
         {
             TestContext.WriteLine("Azure DevOps Dependency Flow, batched");
@@ -37,19 +38,17 @@ namespace Maestro.ScenarioTests
         }
 
         [Test]
-        [Category("ScenarioTest")]
         public async Task Darc_AzDoFlow_NonBatched_AllChecksSuccessful()
         {
             TestContext.WriteLine("AzDo Dependency Flow, non-batched, all checks successful");
-            await testLogic.NonBatchedAllChecksTestBase(false).ConfigureAwait(true);
+            await testLogic.NonBatchedFlowTestBase(true, true).ConfigureAwait(true);
         }
 
         [Test]
-        [Category("ScenarioTest")]
         public async Task Darc_AzDoFlow_NonBatched()
         {
             TestContext.WriteLine("AzDo Dependency Flow, non-batched");
-            await testLogic.NonBatchedFlowTestBase(false).ConfigureAwait(false);
+            await testLogic.NonBatchedFlowTestBase(true).ConfigureAwait(false);
         }
     }
 }

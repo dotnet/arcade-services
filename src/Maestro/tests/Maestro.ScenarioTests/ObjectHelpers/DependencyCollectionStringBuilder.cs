@@ -14,8 +14,9 @@ namespace Maestro.ScenarioTests.ObjectHelpers
             foreach(DependencyDetail dependency in expectedDependencies)
             {
                 stringBuilder.AppendLine(UxHelpers.DependencyToString(dependency));
-                stringBuilder.AppendLine();
             }
+
+            stringBuilder.AppendLine();
 
             return stringBuilder.ToString();
         }

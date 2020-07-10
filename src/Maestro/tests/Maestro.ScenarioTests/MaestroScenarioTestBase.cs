@@ -36,7 +36,7 @@ namespace Maestro.ScenarioTests
         {
             Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo).ConfigureAwait(false);
 
-            var attempts = 10;
+            var attempts = 2;
             while (attempts-- > 0)
             {
                 IReadOnlyList<PullRequest> prs = await GitHubApi.PullRequest.GetAllForRepository(repo.Id, new PullRequestRequest
@@ -164,12 +164,12 @@ namespace Maestro.ScenarioTests
             int triesRemaining = tries;
             while (triesRemaining > 0)
             {
-                await CheckoutBranchAsync(pullRequestBaseBranch);
+                await CheckoutRemoteBranchAsync(pullRequestBaseBranch);
                 await RunGitAsync("pull");
 
                 string actualDependencies = await RunDarcAsync("get-dependencies");
                 string expectedDependenciesString = DependencyCollectionStringBuilder.GetString(expectedDependencies);
-                Assert.AreEqual(expectedDependenciesString, actualDependencies);
+                Assert.AreEqual(expectedDependenciesString, actualDependencies, $"Expected: {expectedDependenciesString} \r\n Actual: {actualDependencies}");
             }
         }
 
@@ -180,7 +180,7 @@ namespace Maestro.ScenarioTests
 
         public async Task<IAsyncDisposable> PushGitBranchAsync(string remote, string branch)
         {
-            await RunGitAsync("push", remote, branch);
+            await RunGitAsync("push", "-u", remote, branch);
             return AsyncDisposable.Create(async () =>
             {
                 TestContext.WriteLine($"Cleaning up Remote branch {branch}");
@@ -565,7 +565,7 @@ namespace Maestro.ScenarioTests
         public async Task<IAsyncDisposable> CheckoutBranchAsync(string branchName)
         {
             await RunGitAsync("fetch", "origin");
-            await RunGitAsync("checkout", "-B", branchName, "--track", branchName);
+            await RunGitAsync("checkout", "-b", branchName);
 
             return AsyncDisposable.Create(async () =>
             {
