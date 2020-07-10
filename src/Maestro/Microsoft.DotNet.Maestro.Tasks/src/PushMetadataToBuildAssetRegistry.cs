@@ -40,8 +40,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         public string AssetVersion { get; set; }
 
-        public string[] ManifestBuildData { get; set; }
-
         [Output]
         public int BuildId { get; set; }
 
@@ -82,7 +80,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 {
                     (List<BuildData> buildsManifestMetadata, 
                      List<SigningInformation> signingInformation, 
-                     int publishingVersion) = GetBuildManifestsMetadata(ManifestsPath, cancellationToken);
+                     ManifestBuildData manifestBuildData) = GetBuildManifestsMetadata(ManifestsPath, cancellationToken);
 
                     if (buildsManifestMetadata.Count == 0)
                     {
@@ -127,9 +125,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                     // Based on the in-memory merged manifest, create a physical XML file and
                     // upload it to the BlobArtifacts folder only when publishingVersion >= 3
-                    if (publishingVersion >= 3)
+                    if (manifestBuildData.PublishingVersion >= 3)
                     {
-                        CreateAndPushMergedManifest(finalBuild.Assets, finalSigningInfo, publishingVersion);
+                        CreateAndPushMergedManifest(finalBuild.Assets, finalSigningInfo, manifestBuildData);
                     }
 
                     // Only 'create' the AzDO (VSO) variables if running in an AzDO build
@@ -282,13 +280,13 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return VersionIdentifier.GetVersion(assetId);
         }
 
-        private (List<BuildData>, List<SigningInformation>, int) GetBuildManifestsMetadata(
+        private (List<BuildData>, List<SigningInformation>, ManifestBuildData) GetBuildManifestsMetadata(
             string manifestsFolderPath,
             CancellationToken cancellationToken)
         {
-            int publishingVersion = -1;
             var buildsManifestMetadata = new List<BuildData>();
             var signingInfo = new List<SigningInformation>();
+            ManifestBuildData manifestBuildData = null;
 
             foreach (string manifestPath in Directory.GetFiles(manifestsFolderPath, SearchPattern, SearchOption.AllDirectories))
             {
@@ -299,15 +297,15 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 {
                     var manifest = (Manifest)xmlSerializer.Deserialize(stream);
 
-                    if (publishingVersion == -1)
+                    if (manifestBuildData == null)
                     {
-                        publishingVersion = manifest.PublishingVersion;
+                        manifestBuildData = new ManifestBuildData(manifest);
                     }
                     else
                     {
-                        if (publishingVersion != manifest.PublishingVersion)
+                        if (!manifestBuildData.Equals(new ManifestBuildData(manifest)))
                         {
-                            throw new Exception("PublishingVersion should the same in all manifests.");
+                            throw new Exception("Attributes should be the same in all manifests.");
                         }
                     }
 
@@ -375,7 +373,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
             }
 
-            return (buildsManifestMetadata, signingInfo, publishingVersion);
+            return (buildsManifestMetadata, signingInfo, manifestBuildData);
         }
 
         private string GetEnv(string key)
@@ -634,52 +632,23 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return assetData;
         }
 
-        private IDictionary<string, string> GetNamedProperties(string[] input)
-        {
-            var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            if (input == null)
-            {
-                return values;
-            }
-
-            foreach (var item in input)
-            {
-                var splitIdx = item.IndexOf('=');
-                if (splitIdx < 0)
-                {
-                    continue;
-                }
-
-                var key = item.Substring(0, splitIdx).Trim();
-                if (string.IsNullOrEmpty(key))
-                {
-                    continue;
-                }
-
-                var value = item.Substring(splitIdx + 1);
-                values[key] = value;
-            }
-
-            return values;
-        }
-
         private void CreateAndPushMergedManifest(
             IImmutableList<AssetData> assets, 
             SigningInformation finalSigningInfo,
-            int publishingVersion)
+            ManifestBuildData manifestBuildData)
         {
             string mergedManifestPath = Path.Combine(GetAzDevStagingDirectory(), MergedManifestFileName);
 
             BuildModel buildModel = new BuildModel(
                         new BuildIdentity
                         {
-                            Attributes = GetNamedProperties(ManifestBuildData),
+                            Attributes = manifestBuildData.ToDictionary(),
                             Name = GetAzDevRepository(),
                             BuildId = GetAzDevBuildNumber(),
                             Branch = GetAzDevBranch(),
                             Commit = GetAzDevCommit(),
                             IsStable = IsStableBuild.ToString(),
-                            PublishingVersion = publishingVersion.ToString()
+                            PublishingVersion = manifestBuildData.PublishingVersion.ToString()
                         });
 
             foreach (AssetData data in assets)
