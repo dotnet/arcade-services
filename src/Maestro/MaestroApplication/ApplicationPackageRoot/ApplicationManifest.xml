@@ -8,7 +8,6 @@
     <Parameter Name="DependencyUpdater_PartitionCount" DefaultValue="1" />
     <Parameter Name="DependencyUpdater_TargetReplicaSetSize" DefaultValue="3" />
     <Parameter Name="Maestro.Web_InstanceCount" DefaultValue="-1" />
-    <Parameter Name="WebCertThumbprint" DefaultValue="" />
     <Parameter Name="Environment" DefaultValue="Development" />
     <Parameter Name="SubscriptionActorService_PartitionCount" DefaultValue="10" />
     <Parameter Name="SubscriptionActorService_MinReplicaSetSize" DefaultValue="3" />
@@ -17,6 +16,9 @@
     <Parameter Name="PullRequestActorService_MinReplicaSetSize" DefaultValue="3" />
     <Parameter Name="PullRequestActorService_TargetReplicaSetSize" DefaultValue="3" />
     <Parameter Name="FeedCleanerService_InstanceCount" DefaultValue="1" />
+    <Parameter Name="WebCertThumbprint" DefaultValue="" />
+    <Parameter Name="WebProtocol" DefaultValue="http" />
+    <Parameter Name="WebPort" DefaultValue="8080" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion
        should match the Name and Version attributes of the ServiceManifest element defined in the
@@ -46,7 +48,7 @@
     <ConfigOverrides />
     <ResourceOverrides>
       <Endpoints>
-        <Endpoint Name="ServiceEndpoint" Port="4430" Protocol="https" />
+        <Endpoint Name="ServiceEndpoint" Port="[WebPort]" Protocol="[WebProtocol]" />
       </Endpoints>
     </ResourceOverrides>
     <EnvironmentOverrides CodePackageRef="Code">
@@ -82,6 +84,10 @@
     <Service Name="Maestro.Web" ServicePackageActivationMode="ExclusiveProcess">
       <StatelessService ServiceTypeName="Maestro.WebType" InstanceCount="[Maestro.Web_InstanceCount]">
         <SingletonPartition />
+        <LoadMetrics>
+          <LoadMetric Name="NetworkUsage" PrimaryDefaultLoad="100" Weight="High" />
+          <LoadMetric Name="SslEndpoint" PrimaryDefaultLoad="1" Weight="High" />
+        </LoadMetrics>
       </StatelessService>
     </Service>
     <Service Name="SubscriptionActorService" GeneratedIdRef="82792a84-735e-4f43-970a-18493cc68564|Persisted">
