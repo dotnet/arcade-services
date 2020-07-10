@@ -68,8 +68,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
         {
             try
             {
-                System.Diagnostics.Debugger.Launch();
-
                 cancellationToken.ThrowIfCancellationRequested();
 
                 Log.LogMessage(MessageImportance.High, "Starting build metadata push to the Build Asset Registry...");
