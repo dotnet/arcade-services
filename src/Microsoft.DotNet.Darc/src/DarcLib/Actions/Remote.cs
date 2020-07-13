@@ -370,24 +370,23 @@ namespace Microsoft.DotNet.DarcLib
             _logger.LogInformation($"Merging pull request '{pullRequestUrl}'...");
 
             var pr = await _gitClient.GetPullRequestAsync(pullRequestUrl);
-            var commits = await _gitClient.GetPullRequestCommitsAsync(pullRequestUrl);
             var dependencyUpdate = DependencyUpdatesPattern.Matches(pr.Description).Select(x => x.Groups[1].Value.Trim().Replace("*", string.Empty));
             string commitMessage = $@"{pr.Title}
 {string.Join("\r\n\r\n", dependencyUpdate)}";
+            var commits = await _gitClient.GetPullRequestCommitsAsync(pullRequestUrl);
             foreach (Commit commit in commits)
             {
                 if (!commit.Author.Equals("dotnet-maestro[bot]"))
                 {
                     commitMessage += $@"
 
-- Manual commit - {commit.Message}";
+ - {commit.Message}";
                 }
             }
 
             await _gitClient.MergeDependencyPullRequestAsync(pullRequestUrl,
                     parameters ?? new MergePullRequestParameters(), commitMessage);
 
-            _logger.LogInformation($"Merging pull request '{pullRequestUrl}' succeeded!");
             _logger.LogInformation($"Merging pull request '{pullRequestUrl}' succeeded!");
         }
 

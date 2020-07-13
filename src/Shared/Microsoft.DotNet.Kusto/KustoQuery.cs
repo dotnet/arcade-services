@@ -13,32 +13,26 @@ namespace Microsoft.DotNet.Kusto
             Parameters = new List<KustoParameter>();
         }
 
-        public KustoQuery(string text)
-        {
-            Text = text;
-            Parameters = new List<KustoParameter>();
-        }
-
         public KustoQuery(string text, IEnumerable<KustoParameter> parameters)
         {
             Text = text;
             Parameters = parameters.ToList();
         }
 
-        public KustoQuery(string text, params KustoParameter[] parameters)
+        public KustoQuery(string text) : this(text, new List<KustoParameter>())
         {
-            Text = text;
-            Parameters = parameters.ToList();
+        }
+
+        public KustoQuery(string text, params KustoParameter[] parameters) : this(text, (IEnumerable<KustoParameter>) parameters)
+        {
         }
 
         public List<KustoParameter> Parameters { get; }
-        public string Text { get; set; }
+        public string Text { get; set; } 
 
-        public KustoParameter AddParameter(string name, string type)
+        public void AddParameter(string name, object value, KustoDataType type)
         {
-            var parameter = new KustoParameter(name, type);
-            Parameters.Add(parameter);
-            return parameter;
+            Parameters.Add(new KustoParameter(name, value, type));
         }
     }
 }

@@ -55,7 +55,8 @@ namespace Microsoft.DotNet.DarcLib
         /// <remarks>
         ///     The AzureDevopsClient currently does not utilize the memory cache
         /// </remarks>
-        public AzureDevOpsClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath)
+        public AzureDevOpsClient(string gitExecutable, string accessToken, ILogger logger,
+            string temporaryRepositoryPath)
             : base(gitExecutable, temporaryRepositoryPath, null)
         {
             _personalAccessToken = accessToken;
@@ -83,7 +84,8 @@ namespace Microsoft.DotNet.DarcLib
             return GetFileContentsAsync(accountName, projectName, repoName, filePath, branch);
         }
 
-        private static readonly List<string> VersionTypes = new List<string>() { "branch", "commit", "tag" };
+        private static readonly List<string> VersionTypes = new List<string>() {"branch", "commit", "tag"};
+
         /// <summary>
         ///     Retrieve the contents of a text file in a repo on a specific branch
         /// </summary>
@@ -123,7 +125,8 @@ namespace Microsoft.DotNet.DarcLib
                         retryCount: 0);
                     return content["content"].ToString();
                 }
-                catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)") || reqEx.Message.Contains("400 (Bad Request)"))
+                catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)") ||
+                                                         reqEx.Message.Contains("400 (Bad Request)"))
                 {
                     // Continue
                     lastException = reqEx;
@@ -344,7 +347,8 @@ namespace Microsoft.DotNet.DarcLib
             const string refsHeads = "refs/heads/";
             if (!pr.TargetRefName.StartsWith(refsHeads) || !pr.SourceRefName.StartsWith(refsHeads))
             {
-                throw new NotImplementedException("Expected that source and target ref names returned from pull request API include refs/heads");
+                throw new NotImplementedException(
+                    "Expected that source and target ref names returned from pull request API include refs/heads");
             }
 
             return new PullRequest
@@ -407,49 +411,66 @@ namespace Microsoft.DotNet.DarcLib
                 id);
         }
 
+        /// <summary>
+        /// Gets all the commits related to the pull request
+        /// </summary>
+        /// <param name="pullRequestUrl"></param>
+        /// <returns>All the commits related to the pull request</returns>
         public async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
-            VssConnection connection = CreateVssConnection(accountName);
-            GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
-            var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
-            IList<Commit> commits = new List<Commit>(pullRequest.Commits.Length);
-            foreach (var commit in pullRequest.Commits)
+            using (VssConnection connection = CreateVssConnection(accountName))
             {
-                commits.Add(new Commit(commit.Author.Name == "DotNet-Bot" ? "dotnet-maestro[bot]" : commit.Author.Name,
-                    commit.CommitId,
-                    commit.Comment));
+                using (GitHttpClient client = await connection.GetClientAsync<GitHttpClient>())
+                {
+
+                    var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
+                    IList<Commit> commits = new List<Commit>(pullRequest.Commits.Length);
+                    foreach (var commit in pullRequest.Commits)
+                    {
+                        commits.Add(new Commit(
+                            commit.Author.Name == "DotNet-Bot" ? "dotnet-maestro[bot]" : commit.Author.Name,
+                            commit.CommitId,
+                            commit.Comment));
+                    }
+
+                    return commits;
+                }
             }
-            connection.Dispose();
-            return commits;
         }
 
-        public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string mergeCommit)
+        public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters,
+            string mergeCommit)
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
-            VssConnection connection = CreateVssConnection(accountName);
-            GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
-            var pullRequest = await client.GetPullRequestAsync(repoName, id , includeCommits:true);
-
-            await client.UpdatePullRequestAsync(
-                new GitPullRequest
+            using (VssConnection connection = CreateVssConnection(accountName))
+            {
+                using (GitHttpClient client = await connection.GetClientAsync<GitHttpClient>())
                 {
-                    Status = PullRequestStatus.Completed,
-                    CompletionOptions = new GitPullRequestCompletionOptions
-                    {
-                        MergeCommitMessage = mergeCommit,
-                        BypassPolicy = true,
-                        BypassReason = "All required checks were successful",
-                        SquashMerge = parameters.SquashMerge,
-                        DeleteSourceBranch = parameters.DeleteSourceBranch
-                    },
-                    LastMergeSourceCommit = new GitCommitRef { CommitId = pullRequest.LastMergeSourceCommit.CommitId, Comment = mergeCommit }
-                },
-                projectName,
-                repoName,
-                id);
-            connection.Dispose();
+
+                    var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
+
+                    await client.UpdatePullRequestAsync(
+                        new GitPullRequest
+                        {
+                            Status = PullRequestStatus.Completed,
+                            CompletionOptions = new GitPullRequestCompletionOptions
+                            {
+                                MergeCommitMessage = mergeCommit,
+                                BypassPolicy = true,
+                                BypassReason = "All required checks were successful",
+                                SquashMerge = parameters.SquashMerge,
+                                DeleteSourceBranch = parameters.DeleteSourceBranch
+                            },
+                            LastMergeSourceCommit = new GitCommitRef
+                                {CommitId = pullRequest.LastMergeSourceCommit.CommitId, Comment = mergeCommit}
+                        },
+                        projectName,
+                        repoName,
+                        id);
+                }
+            }
         }
 
         /// <summary>

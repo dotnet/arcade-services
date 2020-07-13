@@ -351,21 +351,23 @@ namespace Microsoft.DotNet.DarcLib
                 });
         }
 
-
+        /// <summary>
+        /// Gets all the commits related to the pull request
+        /// </summary>
+        /// <param name="pullRequestUrl"></param>
+        /// <returns>All the commits related to the pull request</returns>
         public async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-            Octokit.PullRequest pr = await Client.PullRequest.Get(owner, repo, id);
-            var pullRequestCommits = await Client.PullRequest.Commits(owner, repo, pr.Number);
+            var pullRequestCommits = await Client.PullRequest.Commits(owner, repo, id);
             IList<Commit> commits = new List<Commit>(pullRequestCommits.Count);
-            for (int i = 0; i < pullRequestCommits.Count; i++)
+            foreach (var commit in pullRequestCommits)
             {
-                commits.Add(new Commit(pullRequestCommits[i].Commit.Author.Name,
-                    pullRequestCommits[i].Sha,
-                    pullRequestCommits[i].Commit.Message));
+                commits.Add(new Commit(commit.Commit.Author.Name,
+                    commit.Sha,
+                    commit.Commit.Message));
             }
             return commits;
-
         }
 
         /// <summary>
@@ -373,16 +375,16 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="pullRequestUrl">Uri of pull request to merge</param>
         /// <param name="parameters">Settings for merge</param>
-        /// <param name="commitToMerge">Actual commit message</param>
+        /// <param name="mergeCommitMessage">Commit message used to merge the pull request</param>
         /// <returns></returns>
-        public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string commitToMerge)
+        public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string mergeCommitMessage)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
             Octokit.PullRequest pr = await Client.PullRequest.Get(owner, repo, id);
             
             var mergePullRequest = new MergePullRequest
             {
-                CommitMessage = commitToMerge,
+                CommitMessage = mergeCommitMessage,
                 Sha = parameters.CommitToMerge,
                 MergeMethod = parameters.SquashMerge ? PullRequestMergeMethod.Squash : PullRequestMergeMethod.Merge
             };

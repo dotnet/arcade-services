@@ -2,13 +2,7 @@ namespace Microsoft.DotNet.Kusto
 {
     public class KustoParameter
     {
-        public KustoParameter(string name, string type)
-        {
-            Name = name;
-            Type = type;
-        }
-
-        public KustoParameter(string name, string type, object value)
+        public KustoParameter(string name, object value, KustoDataType type)
         {
             Name = name;
             Type = type;
@@ -16,18 +10,7 @@ namespace Microsoft.DotNet.Kusto
         }
 
         public string Name { get; }
-        public string Type { get; }
-
+        public KustoDataType Type { get; }
         public object Value { get; set; }
-
-        public bool IsValid()
-        {
-            if (Value is string)
-            {
-                if (Type != KustoDataTypes.String) return false;
-            }
-
-            return true;
-        }
     }
 }

@@ -1,3 +1,7 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Internal.Testing.Utility;
@@ -7,10 +11,10 @@ using Xunit.Abstractions;
 
 namespace Microsoft.DotNet.DarcLib.Tests
 {
-    public class RemoteTest
+    public class RemoteTests
     {
         [Fact]
-        public async Task MergeDependencyPullRequest()
+        public async Task ValidateCommitMessageTest()
         {
             Mock<IGitRepo> client = new Mock<IGitRepo>();
             Mock<IBarClient> barClient = new Mock<IBarClient>();
@@ -90,7 +94,7 @@ Coherency Update:
  - Microsoft.NETCore.App.Internal: from 3.1.4-servicing.20214.5 to 3.1.4-servicing.20221.3
  - Microsoft.NETCore.App.Runtime.win-x64: from 3.1.4 to 3.1.4
 
-- Manual commit - Updated text";
+ - Updated text";
             Assert.Equal(expectedCommitMessage, commitToMerge[0]);
         }
     }
