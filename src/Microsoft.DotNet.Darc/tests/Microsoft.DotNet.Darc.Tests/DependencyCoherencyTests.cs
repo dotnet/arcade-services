@@ -624,8 +624,8 @@ namespace Microsoft.DotNet.Darc.Tests
             Assert.Collection(coherencyException.Errors,
                 e =>
                 {
-                    Assert.Equal(e.Dependency.Name, depB.Name);
-                    Assert.Equal(e.Error, $"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}");
+                    Assert.Equal(depB.Name, e.Dependency.Name);
+                    Assert.Equal($"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}", e.Error);
                 });
         }
 
@@ -665,8 +665,8 @@ namespace Microsoft.DotNet.Darc.Tests
             Assert.Collection(coherencyException.Errors,
                 e =>
                 {
-                    Assert.Equal(e.Dependency.Name, depB.Name);
-                    Assert.Equal(e.Error, $"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}");
+                    Assert.Equal(depB.Name, e.Dependency.Name);
+                    Assert.Equal($"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}", e.Error);
                 });
         }
 
