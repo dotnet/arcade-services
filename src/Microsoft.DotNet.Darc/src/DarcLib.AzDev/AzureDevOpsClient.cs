@@ -55,8 +55,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <remarks>
         ///     The AzureDevopsClient currently does not utilize the memory cache
         /// </remarks>
-        public AzureDevOpsClient(string gitExecutable, string accessToken, ILogger logger,
-            string temporaryRepositoryPath)
+        public AzureDevOpsClient(string gitExecutable, string accessToken, ILogger logger, string temporaryRepositoryPath)
             : base(gitExecutable, temporaryRepositoryPath, null)
         {
             _personalAccessToken = accessToken;
@@ -85,7 +84,6 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         private static readonly List<string> VersionTypes = new List<string>() {"branch", "commit", "tag"};
-
         /// <summary>
         ///     Retrieve the contents of a text file in a repo on a specific branch
         /// </summary>
@@ -125,8 +123,7 @@ namespace Microsoft.DotNet.DarcLib
                         retryCount: 0);
                     return content["content"].ToString();
                 }
-                catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)") ||
-                                                         reqEx.Message.Contains("400 (Bad Request)"))
+                catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)") || reqEx.Message.Contains("400 (Bad Request)"))
                 {
                     // Continue
                     lastException = reqEx;
@@ -347,8 +344,7 @@ namespace Microsoft.DotNet.DarcLib
             const string refsHeads = "refs/heads/";
             if (!pr.TargetRefName.StartsWith(refsHeads) || !pr.SourceRefName.StartsWith(refsHeads))
             {
-                throw new NotImplementedException(
-                    "Expected that source and target ref names returned from pull request API include refs/heads");
+                throw new NotImplementedException("Expected that source and target ref names returned from pull request API include refs/heads");
             }
 
             return new PullRequest
@@ -440,7 +436,7 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters,
-            string mergeCommit)
+            string mergeCommitMessage)
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
@@ -457,14 +453,14 @@ namespace Microsoft.DotNet.DarcLib
                             Status = PullRequestStatus.Completed,
                             CompletionOptions = new GitPullRequestCompletionOptions
                             {
-                                MergeCommitMessage = mergeCommit,
+                                MergeCommitMessage = mergeCommitMessage,
                                 BypassPolicy = true,
                                 BypassReason = "All required checks were successful",
                                 SquashMerge = parameters.SquashMerge,
                                 DeleteSourceBranch = parameters.DeleteSourceBranch
                             },
                             LastMergeSourceCommit = new GitCommitRef
-                                {CommitId = pullRequest.LastMergeSourceCommit.CommitId, Comment = mergeCommit}
+                                {CommitId = pullRequest.LastMergeSourceCommit.CommitId, Comment = mergeCommitMessage}
                         },
                         projectName,
                         repoName,

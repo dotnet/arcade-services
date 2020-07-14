@@ -150,7 +150,7 @@ namespace Microsoft.DotNet.DarcLib
             throw new NotImplementedException();
         }
 
-        public Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string commitToMerge)
+        public Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string mergeCommitMessage)
         {
             throw new NotImplementedException();
         }
