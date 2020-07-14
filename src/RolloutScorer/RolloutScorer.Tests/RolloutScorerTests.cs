@@ -1,15 +1,17 @@
-using Microsoft.Azure.KeyVault;
-using Microsoft.Azure.Services.AppAuthentication;
-using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Xunit;
+using FluentAssertions;
+using Microsoft.Azure.KeyVault;
+using Microsoft.Azure.Services.AppAuthentication;
+using NUnit.Framework;
+using Octokit;
 
 namespace RolloutScorer.Tests
 {
+    [TestFixture]
     public class RolloutScorerTests
     {
         private const string URI_SUBDOMAIN = "dev.";
@@ -33,7 +35,8 @@ namespace RolloutScorer.Tests
             };
         }
 
-        public RolloutScorerTests()
+        [SetUp]
+        public void RolloutScorerTests_SetUp()
         {
             _rolloutScorer = new RolloutScorer();
             Config config = Utilities.ParseConfig();
@@ -46,18 +49,16 @@ namespace RolloutScorer.Tests
             _rolloutScorer.SetupHttpClient("fakePat");
         }
 
-        [Theory]
-        [MemberData(nameof(GetUriTestCases))]
+        [TestCaseSource(nameof(GetUriTestCases))]
         public async Task RedirectApiTest(string requestPath, string responseUri, string expectedMessage)
         {
             Uri sameHostRedirectUri = new Uri($"https://{URI_SUBDOMAIN}{URI_DOMAIN}/dnceng/{requestPath}");
             HttpResponseMessage sameHostRedirectResponse = new HttpResponseMessage();
             sameHostRedirectResponse.Headers.Location = new Uri(responseUri);
 
-            HttpRequestException exception = await Assert.ThrowsAsync<HttpRequestException>(
-                async () => await _rolloutScorer.GetAzdoApiResponseAsync(
-                    Utilities.HandleApiRedirect(sameHostRedirectResponse, sameHostRedirectUri)));
-            Assert.Contains(expectedMessage, exception.Message);
+            HttpRequestException exception = (await (((Func<Task>)(                async () => await _rolloutScorer.GetAzdoApiResponseAsync(
+                    Utilities.HandleApiRedirect(sameHostRedirectResponse, sameHostRedirectUri))))).Should().ThrowAsync<HttpRequestException>()).Which;
+            exception.Message.Should().Contain(expectedMessage);
         }
     }
 }

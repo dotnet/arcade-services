@@ -5,7 +5,6 @@
 using System.Collections.Generic;
 using FluentAssertions;
 using ServiceFabricMocks;
-using Xunit.Abstractions;
 
 namespace SubscriptionActorService.Tests
 {

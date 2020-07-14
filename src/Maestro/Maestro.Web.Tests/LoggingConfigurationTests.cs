@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using FluentAssertions;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
@@ -13,13 +14,14 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
-using Xunit;
+using NUnit.Framework;
 
 namespace Maestro.Web.Tests
 {
+    [TestFixture]
     public class LoggingConfigurationTests
     {
-        [Fact]
+        [Test]
         public void LoggingWithScopes()
         {
             Environment.SetEnvironmentVariable("ENVIRONMENT", Environments.Development);
@@ -62,33 +64,33 @@ namespace Maestro.Web.Tests
 
             innerProvider.GetRequiredService<TelemetryClient>().Flush();
             List<TraceTelemetry> traces = telemetry.OfType<TraceTelemetry>().ToList();
-            Assert.Equal(4, traces.Count);
+            traces.Should().HaveCount(4);
 
             {
                 // The operation id should stay constant, it's the root
                 string[] opIds = traces.Select(t => t.Context?.Operation?.Id).ToArray();
-                Assert.NotNull(opIds[0]);
-                Assert.Equal(opIds[0], opIds[1]);
-                Assert.Equal(opIds[1], opIds[2]);
-                Assert.Equal(opIds[2], opIds[3]);
+                opIds[0].Should().NotBeNull();
+                opIds[1].Should().Be(opIds[0]);
+                opIds[2].Should().Be(opIds[1]);
+                opIds[3].Should().Be(opIds[2]);
             }
 
             {
                 // The parent ids should flow with the operation start/stop
                 var parentIds = traces.Select(t => t.Context?.Operation?.ParentId).ToArray();
-                Assert.NotNull(parentIds[0]);
-                Assert.NotEqual(parentIds[0], parentIds[1]);
-                Assert.StartsWith(parentIds[0], parentIds[1]);
-                Assert.Equal(parentIds[1], parentIds[2]);
-                Assert.NotEqual(parentIds[2], parentIds[3]);
-                Assert.Equal(parentIds[0], parentIds[3]);
+                parentIds[0].Should().NotBeNull();
+                parentIds[1].Should().NotBe(parentIds[0]);
+                parentIds[1].Should().StartWith(parentIds[0]);
+                parentIds[2].Should().Be(parentIds[1]);
+                parentIds[3].Should().NotBe(parentIds[2]);
+                parentIds[3].Should().Be(parentIds[0]);
             }
 
             // The things in the operation should flow the properties from the BeginOperation
-            Assert.Equal("TEST_VALUE", traces[1].Properties.GetValueOrDefault("TEST_KEY"));
+            traces[1].Properties.GetValueOrDefault("TEST_KEY").Should().Be("TEST_VALUE");
 
             // The things outside the operation should not have those properties
-            Assert.DoesNotContain("TEST_VALUE", traces[3].Properties);
+            traces[3].Properties.Should().NotContainKey("TEST_VALUE");
         }
     }
 }

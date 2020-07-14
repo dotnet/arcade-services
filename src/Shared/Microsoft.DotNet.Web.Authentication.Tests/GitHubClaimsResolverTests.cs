@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Web.Authentication.GitHub;
@@ -13,21 +14,22 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Moq;
+using NUnit.Framework;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Octokit;
 using Octokit.Internal;
-using Xunit;
-using Xunit.Abstractions;
 using Xunit.Sdk;
 
 namespace Microsoft.DotNet.Web.Authentication.Tests
 {
+    [TestFixture, NonParallelizable]
     public class GitHubClaimsResolverTests
     {
         private readonly ITestOutputHelper _output;
 
-        public GitHubClaimsResolverTests(ITestOutputHelper output)
+        [SetUp]
+        public void GitHubClaimsResolverTests_SetUp()
         {
             _output = output;
         }
@@ -122,7 +124,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
                 default);
         }
 
-        [Fact]
+        [Test]
         public async Task GitHubErrorFailedAuth()
         {
             using IDisposable scope = ConfigureResolver(out Mock<IGitHubClient> mock, out _, out GitHubClaimResolver resolver);
@@ -130,13 +132,13 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             mock.Setup(c => c.User.Current())
                 .ThrowsAsync(new RateLimitExceededException(MockResponse()));
 
-            await Assert.ThrowsAsync<RateLimitExceededException>(() => resolver.GetUserInformationClaims("FAKE-TOKEN"));
+            await (((Func<Task>)(() => resolver.GetUserInformationClaims("FAKE-TOKEN")))).Should().ThrowExactlyAsync<RateLimitExceededException>();
 
             mock.Verify(c => c.User.Current(), Times.Once);
             mock.VerifyNoOtherCalls();
         }
 
-        [Fact]
+        [Test]
         public async Task UserInformationIsPopulated()
         {
             using IDisposable scope =
@@ -151,20 +153,20 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
                     "https://github.com/TestUser"));
 
             (IEnumerable<Claim> claims, User user) = await resolver.GetUserInformation("FAKE-TOKEN");
-            Assert.NotNull(user);
+            user.Should().NotBeNull();
             var id = new ClaimsIdentity(claims, "TEST");
             var principal = new ClaimsPrincipal(id);
             string accessToken = resolver.GetAccessToken(principal);
 
-            Assert.Equal("FAKE-TOKEN", accessToken);
-            Assert.Equal("TestUser", id.Name);
-            Assert.Equal("TestEmail@microsoft.test", id.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value);
+            accessToken.Should().Be("FAKE-TOKEN");
+            id.Name.Should().Be("TestUser");
+            (id.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value).Should().Be("TestEmail@microsoft.test");
 
             mock.Verify(c => c.User.Current(), Times.Once);
             mock.VerifyNoOtherCalls();
         }
 
-        [Fact]
+        [Test]
         public async Task ExpiredUserInformationIsFetchedAgain()
         {
             using IDisposable scope = ConfigureResolver(
@@ -187,21 +189,21 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
 
             IEnumerable<Claim> userInformation = await resolver.GetUserInformationClaims("FAKE-TOKEN");
             var id = new ClaimsIdentity(userInformation, "TEST");
-            Assert.Equal("TestUser", id.Name);
-            Assert.Equal("TestEmail@microsoft.test", id.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value);
+            id.Name.Should().Be("TestUser");
+            (id.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value).Should().Be("TestEmail@microsoft.test");
 
             clock.UtcNow = TestClock.BaseTime.AddDays(1);
 
             userInformation = await resolver.GetUserInformationClaims("FAKE-TOKEN");
             id = new ClaimsIdentity(userInformation, "TEST");
-            Assert.Equal("TestUser", id.Name);
-            Assert.Equal("OtherEmail@microsoft.test", id.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value);
+            id.Name.Should().Be("TestUser");
+            (id.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value).Should().Be("OtherEmail@microsoft.test");
 
             mock.Verify(c => c.User.Current(), Times.Exactly(2));
             mock.VerifyNoOtherCalls();
         }
 
-        [Fact]
+        [Test]
         public async Task UserInformationIsCached()
         {
             using IDisposable scope =
@@ -211,7 +213,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             mock.Setup(c => c.User.Current())
                 .ReturnsAsync(() =>
                 {
-                    Assert.False(called);
+                    called.Should().BeFalse();
                     called = true;
                     return MockUser(
                         146,
@@ -223,7 +225,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
 
             IEnumerable<Claim> userInformation = await resolver.GetUserInformationClaims("FAKE-TOKEN");
             var id = new ClaimsIdentity(userInformation, "TEST");
-            Assert.Equal("TestUser", id.Name);
+            id.Name.Should().Be("TestUser");
 
             // Combining the proven behaviors of GitHubErrorFailedAuth and ExpiredUserInformationIsFetchedAgain
             // we know this would crash if it attempted another lookup
@@ -232,13 +234,13 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             // So this not throwing and returning a valid answer proves it must have pulled from a cache
             userInformation = await resolver.GetUserInformationClaims("FAKE-TOKEN");
             id = new ClaimsIdentity(userInformation, "TEST");
-            Assert.Equal("TestUser", id.Name);
+            id.Name.Should().Be("TestUser");
 
             mock.Verify(c =>c.User.Current(), Times.Once);
             mock.VerifyNoOtherCalls();
         }
         
-        [Fact]
+        [Test]
         public async Task MembershipClaimsArePopulated()
         {
             using IDisposable scope =
@@ -269,15 +271,9 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             
             string orgRole = GitHubClaimResolver.GetOrganizationRole("TestOrg");
             string teamRole = GitHubClaimResolver.GetTeamRole("OtherOrg", "TestTeam");
-            Assert.Equal("TestUser", id.Name);
-            Assert.True(
-                withMembershipPrincipal.IsInRole(orgRole),
-                $"Test: IsInRole({orgRole})\nRoles: {string.Join(", ", withMembershipId.Claims.Where(c => c.Type == withMembershipId.RoleClaimType).Select(c => c.Value))}"
-            );
-            Assert.True(
-                withMembershipPrincipal.IsInRole(teamRole),
-                $"Test: IsInRole({teamRole})\nRoles: {string.Join(", ", withMembershipId.Claims.Where(c => c.Type == withMembershipId.RoleClaimType).Select(c => c.Value))}"
-            );
+            id.Name.Should().Be("TestUser");
+            withMembershipPrincipal.IsInRole(orgRole).Should().BeTrue();
+            withMembershipPrincipal.IsInRole(teamRole).Should().BeTrue();
 
             mock.Verify(c => c.User.Current(), Times.Once);
             mock.Verify(c => c.Organization.GetAllForCurrent(), Times.Once);
@@ -285,7 +281,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             mock.VerifyNoOtherCalls();
         }
 
-        [Fact]
+        [Test]
         public async Task MembershipClaimsAreCached()
         {
             using IDisposable scope =
@@ -318,15 +314,9 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
 
                 string orgRole = GitHubClaimResolver.GetOrganizationRole("TestOrg");
                 string teamRole = GitHubClaimResolver.GetTeamRole("OtherOrg", "TestTeam");
-                Assert.Equal("TestUser", id.Name);
-                Assert.True(
-                    withMembershipPrincipal.IsInRole(orgRole),
-                    $"Test: IsInRole({orgRole})\nRoles: {string.Join(", ", withMembershipId.Claims.Where(c => c.Type == withMembershipId.RoleClaimType).Select(c => c.Value))}"
-                );
-                Assert.True(
-                    withMembershipPrincipal.IsInRole(teamRole),
-                    $"Test: IsInRole({teamRole})\nRoles: {string.Join(", ", withMembershipId.Claims.Where(c => c.Type == withMembershipId.RoleClaimType).Select(c => c.Value))}"
-                );
+                id.Name.Should().Be("TestUser");
+                withMembershipPrincipal.IsInRole(orgRole).Should().BeTrue();
+                withMembershipPrincipal.IsInRole(teamRole).Should().BeTrue();
             }
 
             await AssertMembership();
@@ -339,7 +329,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             mock.VerifyNoOtherCalls();
         }
 
-        [Fact]
+        [Test]
         public async Task ExpiredMembershipClaimsAreRefreshed()
         {
             using IDisposable scope =
@@ -386,15 +376,9 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
 
                 string orgRole = GitHubClaimResolver.GetOrganizationRole(expectedOrg);
                 string teamRole = GitHubClaimResolver.GetTeamRole(expectedTeamOrg, expectedTeam);
-                Assert.Equal("TestUser", id.Name);
-                Assert.True(
-                    withMembershipPrincipal.IsInRole(orgRole),
-                    $"Test: IsInRole({orgRole})\nRoles: {string.Join(", ", withMembershipId.Claims.Where(c => c.Type == withMembershipId.RoleClaimType).Select(c => c.Value))}"
-                );
-                Assert.True(
-                    withMembershipPrincipal.IsInRole(teamRole),
-                    $"Test: IsInRole({teamRole})\nRoles: {string.Join(", ", withMembershipId.Claims.Where(c => c.Type == withMembershipId.RoleClaimType).Select(c => c.Value))}"
-                );
+                id.Name.Should().Be("TestUser");
+                withMembershipPrincipal.IsInRole(orgRole).Should().BeTrue();
+                withMembershipPrincipal.IsInRole(teamRole).Should().BeTrue();
             }
 
             await AssertMembership("OldTestOrg", "OldOtherOrg", "OldTestTeam");

@@ -4,6 +4,7 @@ using System.Fabric;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Maestro.Data;
 using Maestro.Web.Api.v2020_02_20.Controllers;
 using Maestro.Web.Api.v2020_02_20.Models;
@@ -18,24 +19,24 @@ using Microsoft.Extensions.Hosting.Internal;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Xunit;
-using Xunit.Abstractions;
+using NUnit.Framework;
 
 namespace Maestro.Web.Tests
 {
-    [Collection(nameof(DatabaseCollection))]
+    [TestFixture, NonParallelizable]
     public class ChannelsController20200220Tests
     {
         private readonly ITestOutputHelper _output;
         private readonly TestDatabaseFixture _database;
 
-        public ChannelsController20200220Tests(ITestOutputHelper output, TestDatabaseFixture database)
+        [SetUp]
+        public void ChannelsController20200220Tests_SetUp()
         {
             _output = output;
             _database = database;
         }
 
-        [Fact]
+        [Test]
         public async Task CreateChannel()
         {
             using TestData data = await BuildDefaultAsync();
@@ -44,28 +45,28 @@ namespace Maestro.Web.Tests
             string classification = "TEST-CLASSIFICATION";
             {
                 IActionResult result = await data.Controller.CreateChannel(channelName, classification);
-                Assert.IsAssignableFrom<ObjectResult>(result);
+                result.Should().BeAssignableTo<ObjectResult>();
                 var objResult = (ObjectResult) result;
-                Assert.Equal((int) HttpStatusCode.Created, objResult.StatusCode);
-                Assert.IsAssignableFrom<Channel>(objResult.Value);
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.Created);
+                objResult.Value.Should().BeAssignableTo<Channel>();
                 channel = (Channel) objResult.Value;
-                Assert.Equal(channelName, channel.Name);
-                Assert.Equal(classification, channel.Classification);
+                channel.Name.Should().Be(channelName);
+                channel.Classification.Should().Be(classification);
             }
 
             {
                 IActionResult result = await data.Controller.GetChannel(channel.Id);
-                Assert.IsAssignableFrom<ObjectResult>(result);
+                result.Should().BeAssignableTo<ObjectResult>();
                 var objResult = (ObjectResult) result;
-                Assert.Equal((int) HttpStatusCode.OK, objResult.StatusCode);
-                Assert.IsAssignableFrom<Channel>(objResult.Value);
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
+                objResult.Value.Should().BeAssignableTo<Channel>();
                 channel = (Channel) objResult.Value;
-                Assert.Equal(channelName, channel.Name);
-                Assert.Equal(classification, channel.Classification);
+                channel.Name.Should().Be(channelName);
+                channel.Classification.Should().Be(classification);
             }
         }
 
-        [Fact]
+        [Test]
         public async Task ListRepositories()
         {
             using TestData data = await BuildDefaultAsync();
@@ -103,14 +104,14 @@ namespace Maestro.Web.Tests
             List<string> repositories;
             {
                 IActionResult result = await data.Controller.ListRepositories(channel.Id);
-                Assert.IsAssignableFrom<ObjectResult>(result);
+                result.Should().BeAssignableTo<ObjectResult>();
                 var objResult = (ObjectResult) result;
-                Assert.Equal((int) HttpStatusCode.OK, objResult.StatusCode);
-                Assert.IsAssignableFrom<IEnumerable<string>>(objResult.Value);
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
+                objResult.Value.Should().BeAssignableTo<IEnumerable<string>>();
                 repositories = ((IEnumerable<string>) objResult.Value).ToList();
             }
 
-            Assert.Single(repositories, repository);
+            repositories.Should().ContainSingle();
         }
 
 

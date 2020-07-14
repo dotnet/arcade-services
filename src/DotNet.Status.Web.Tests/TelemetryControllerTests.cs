@@ -1,24 +1,26 @@
-using Xunit;
+using System;
+using System.Threading.Tasks;
 using DotNet.Status.Web.Controllers;
+using FluentAssertions;
+using Kusto.Ingest;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.Internal.Testing.Utility;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Microsoft.AspNetCore.Mvc;
-using Kusto.Ingest;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Xunit.Abstractions;
-using System;
-using Microsoft.DotNet.Internal.Testing.Utility;
+using NUnit.Framework;
 
 namespace DotNet.Status.Web.Tests
 {
+    [TestFixture, NonParallelizable]
     public class TelemetryControllerTests : IDisposable
     {
         private readonly ITestOutputHelper _output;
         private TelemetryController _controller;
         private ServiceProvider _services;
 
-        public TelemetryControllerTests(ITestOutputHelper output)
+        [SetUp]
+        public void TelemetryControllerTests_SetUp()
         {
             _output = output;            
         }
@@ -50,12 +52,13 @@ namespace DotNet.Status.Web.Tests
             _controller = _services.GetRequiredService<TelemetryController>();
         }
 
+        [TearDown]
         public void Dispose()
         {
             _services.Dispose();
         }
 
-        [Fact]
+        [Test]
         public async void TestArcadeValidationTelemetryCollection()
         {
             SetUp();
@@ -71,15 +74,15 @@ namespace DotNet.Status.Web.Tests
                 ProductRepoBuildResult = "fakeproductrepobuildresult",
                 ArcadeDiffLink = "fakearcadedifflink"
             });
-            Assert.NotNull(result);
-            Assert.IsType<OkResult>(result);
+            result.Should().NotBeNull();
+            result.Should().BeOfType<OkResult>();
         }
 
-        [Fact]
+        [Test]
         public async void TestArcadeValidationTelemetryCollectionWithMissingKustoConnectionString()
         {
             SetUp(new KustoOptions());
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _controller.CollectArcadeValidation(new ArcadeValidationData()));
+            await (((Func<Task>)(() => _controller.CollectArcadeValidation(new ArcadeValidationData())))).Should().ThrowExactlyAsync<InvalidOperationException>();
         }
     }
 }

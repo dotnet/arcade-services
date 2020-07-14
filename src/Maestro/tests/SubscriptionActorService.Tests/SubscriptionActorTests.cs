@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
+using FluentAssertions;
 using Maestro.Contracts;
 using Maestro.Data.Models;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
@@ -14,18 +15,20 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
-using Xunit;
-using Xunit.Abstractions;
+using NUnit.Framework;
+
 using Asset = Maestro.Contracts.Asset;
 
 namespace SubscriptionActorService.Tests
 {
+    [TestFixture, NonParallelizable]
     public class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
     {
         private readonly Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors =
             new Dictionary<ActorId, Mock<IPullRequestActor>>();
 
-        public SubscriptionActorTests(ITestOutputHelper output) : base(output)
+        [SetUp]
+        public void SubscriptionActorTests_SetUp()
         {
         }
 
@@ -77,7 +80,7 @@ namespace SubscriptionActorService.Tests
                     });
         }
 
-        [Fact]
+        [Test]
         public async Task BatchableEveryBuildSubscription()
         {
             GivenATestChannel();
@@ -95,7 +98,7 @@ namespace SubscriptionActorService.Tests
                 b);
         }
 
-        [Fact]
+        [Test]
         public async Task NotBatchableEveryBuildSubscription()
         {
             GivenATestChannel();

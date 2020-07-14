@@ -3,15 +3,17 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.Linq;
 using Castle.DynamicProxy;
+using FluentAssertions;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using Xunit;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 {
+    [TestFixture]
     public class InvokeInNewScopeInterceptorTests
     {
         private class Thing
@@ -53,7 +55,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             }
         }
 
-        [Fact]
+        [Test]
         public void InterceptCatchesExceptions()
         {
             var telemetryChannel = new FakeChannel();
@@ -77,20 +79,20 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 (object) null,
                 new InvokeInNewScopeInterceptor<IFakeService>(provider));
 
-            var ex = Assert.Throws<InvalidOperationException>(() => impl.TestServiceMethod());
-            Assert.Equal("Test Exception Text", ex.Message);
+            var ex = (((Func<object>)(() => impl.TestServiceMethod()))).Should().Throw<InvalidOperationException>().Which;
+            ex.Message.Should().Be("Test Exception Text");
 
             client.Flush();
 
             RequestTelemetry requestTelemetry = telemetryChannel.Telemetry.OfType<RequestTelemetry>().FirstOrDefault();
-            Assert.NotNull(requestTelemetry);
-            Assert.False(requestTelemetry.Success);
+            requestTelemetry.Should().NotBeNull();
+            requestTelemetry.Success.Should().BeFalse();
             ExceptionTelemetry exceptionTelemetry = telemetryChannel.Telemetry.OfType<ExceptionTelemetry>().FirstOrDefault();
-            Assert.NotNull(exceptionTelemetry);
-            Assert.Same(ex, exceptionTelemetry.Exception);
+            exceptionTelemetry.Should().NotBeNull();
+            exceptionTelemetry.Exception.Should().BeSameAs(ex);
         }
 
-        [Fact]
+        [Test]
         public void InterceptCreatesScope()
         {
             var telemetryChannel = new FakeChannel();
@@ -117,25 +119,25 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 (object) null,
                 new InvokeInNewScopeInterceptor<IFakeService>(provider));
 
-            Assert.Equal(FakeService.RetValue, impl.TestServiceMethod());
-            Assert.Equal(1, FakeService.Calls);
-            Assert.NotNull(innerThing);
+            impl.TestServiceMethod().Should().Be(FakeService.RetValue);
+            FakeService.Calls.Should().Be(1);
+            innerThing.Should().NotBeNull();
 
             // It's supposed to be a new scope, so it should have gotten a different thing
-            Assert.NotEqual(outerThing, innerThing);
+            innerThing.Should().NotBe(outerThing);
 
             client.Flush();
-            Assert.Equal(1, telemetryChannel.Telemetry.OfType<EventTelemetry>().Count(e => e.Name == "TestEvent"));
+            telemetryChannel.Telemetry.OfType<EventTelemetry>().Count(e => e.Name == "TestEvent").Should().Be(1);
             List<RequestTelemetry> requestTelemetries =
                 telemetryChannel.Telemetry.OfType<RequestTelemetry>().ToList();
-            Assert.Single(requestTelemetries);
+            requestTelemetries.Should().ContainSingle();
             RequestTelemetry requestTelemetry = requestTelemetries[0];
-            Assert.NotNull(requestTelemetry.Name);
-            Assert.True(requestTelemetry.Success ?? true);
-            Assert.Contains("IFakeService", requestTelemetry.Name, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("service://TestName", requestTelemetry.Name, StringComparison.OrdinalIgnoreCase);
+            requestTelemetry.Name.Should().NotBeNull();
+            (requestTelemetry.Success ?? true).Should().BeTrue();
+            requestTelemetry.Name.Should().Contain("IFakeService");
+            requestTelemetry.Name.Should().Contain("service://TestName");
             
-            Assert.Empty(telemetryChannel.Telemetry.OfType<ExceptionTelemetry>());
+            telemetryChannel.Telemetry.OfType<ExceptionTelemetry>().Should().BeEmpty();
         }
     }
 }

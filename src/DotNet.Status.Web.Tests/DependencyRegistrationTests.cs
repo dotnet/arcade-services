@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
@@ -9,13 +10,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Moq;
-using Xunit;
+using NUnit.Framework;
 
 namespace DotNet.Status.Web.Tests
 {
+    [TestFixture]
     public class DependencyRegistrationTests
     {
-        [Fact]
+        [Test]
         public void AreDependenciesRegistered()
         {
             var config = new ConfigurationBuilder();
@@ -34,7 +36,7 @@ namespace DotNet.Status.Web.Tests
             IEnumerable<Type> controllerTypes = typeof(Startup).Assembly.ExportedTypes
                 .Where(t => typeof(ControllerBase).IsAssignableFrom(t));
 
-            Assert.True(DependencyInjectionValidation.IsDependencyResolutionCoherent(
+            DependencyInjectionValidation.IsDependencyResolutionCoherent(
                     s =>
                     {
                         foreach (ServiceDescriptor descriptor in collection)
@@ -47,8 +49,7 @@ namespace DotNet.Status.Web.Tests
                         startup.ConfigureServices(s);
                     },
                     out string message,
-                    additionalScopedTypes: controllerTypes),
-                message);
+                    additionalScopedTypes: controllerTypes).Should().BeTrue();
         }
     }
 }

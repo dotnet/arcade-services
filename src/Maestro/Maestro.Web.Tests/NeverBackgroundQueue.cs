@@ -4,7 +4,6 @@
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Xunit.Abstractions;
 
 namespace Maestro.Web.Tests
 {

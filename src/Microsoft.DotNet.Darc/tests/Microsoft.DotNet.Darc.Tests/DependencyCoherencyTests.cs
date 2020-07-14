@@ -2,28 +2,30 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
-using Moq;
-using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
-using Xunit;
+using FluentAssertions;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using NUnit.Framework;
+using Octokit;
 
 namespace Microsoft.DotNet.Darc.Tests
 {
+    [TestFixture]
     public class DependencyCoherencyTests
     {
         /// <summary>
         ///     Test that a simple set of non-coherency updates works.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task CoherencyUpdateTests1()
         {
             Remote remote = new Remote(null, null, NullLogger.Instance);
@@ -40,17 +42,17 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> updates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
 
-            Assert.Collection(updates, u =>
+            updates.Should().SatisfyRespectively(u =>
             {
-                Assert.Equal(depA, u.From);
-                Assert.Equal("v2", u.To.Version);
+                u.From.Should().Be(depA);
+                u.To.Version.Should().Be("v2");
             });
         }
 
         /// <summary>
         ///     Test that a simple set of non-coherency updates works.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task CoherencyUpdateTests2()
         {
             Remote remote = new Remote(null, null, NullLogger.Instance);
@@ -68,16 +70,14 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> updates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
 
-            Assert.Collection(updates,
-            u =>
+            updates.Should().SatisfyRespectively(            u =>
             {
-                Assert.Equal(depA, u.From);
-                Assert.Equal("v2", u.To.Version);
-            },
-            u =>
+                u.From.Should().Be(depA);
+                u.To.Version.Should().Be("v2");
+            }, u =>
             {
-                Assert.Equal(depB, u.From);
-                Assert.Equal("v5", u.To.Version);
+                u.From.Should().Be(depB);
+                u.To.Version.Should().Be("v5");
             });
         }
 
@@ -87,7 +87,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     depB is tied to depA and should not move.
         ///     depA should have its case-corrected.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task CoherencyUpdateTests3()
         {
             Remote remote = new Remote(null, null, NullLogger.Instance);
@@ -105,19 +105,18 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> updates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
 
-            Assert.Collection(updates,
-            u =>
+            updates.Should().SatisfyRespectively(            u =>
             {
-                Assert.Equal(depA, u.From);
-                Assert.Equal("v2", u.To.Version);
-                Assert.Equal("depa", u.To.Name);
+                u.From.Should().Be(depA);
+                u.To.Version.Should().Be("v2");
+                u.To.Name.Should().Be("depa");
             });
         }
 
         /// <summary>
         ///     Test a chain with a pinned middle.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task CoherencyUpdateTests4()
         {
             Remote remote = new Remote(null, null, NullLogger.Instance);
@@ -137,11 +136,10 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> updates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
 
-            Assert.Collection(updates,
-            u =>
+            updates.Should().SatisfyRespectively(            u =>
             {
-                Assert.Equal(depA, u.From);
-                Assert.Equal("v2", u.To.Version);
+                u.From.Should().Be(depA);
+                u.To.Version.Should().Be("v2");
             });
         }
 
@@ -149,7 +147,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     Test a tree with a pinned head (nothing moves in non-coherency update)
         ///     Test different casings
         /// </summary>
-        [Fact]
+        [Test]
         public async Task CoherencyUpdateTests5()
         {
             Remote remote = new Remote(null, null, NullLogger.Instance);
@@ -171,14 +169,14 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> updates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
 
-            Assert.Empty(updates);
+            updates.Should().BeEmpty();
         }
 
         /// <summary>
         ///     Test a simple coherency update
         ///     B and C are tied to A, both should update
         /// </summary>
-        [Fact]
+        [Test]
         public async Task CoherencyUpdateTests6()
         {
             // Initialize
@@ -231,11 +229,10 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> nonCoherencyUpdates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
 
-            Assert.Collection(nonCoherencyUpdates,
-            u =>
+            nonCoherencyUpdates.Should().SatisfyRespectively(            u =>
             {
-                Assert.Equal(depA, u.From);
-                Assert.Equal("v2", u.To.Version);
+                u.From.Should().Be(depA);
+                u.To.Version.Should().Be("v2");
             });
 
             // Update the current dependency details with the non coherency updates
@@ -244,20 +241,18 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Legacy);
 
-            Assert.Collection(coherencyUpdates,
-            u =>
+            coherencyUpdates.Should().SatisfyRespectively(            u =>
             {
-                Assert.Equal(depB, u.From);
-                Assert.Equal("v10", u.To.Version);
-                Assert.Equal("commit5", u.To.Commit);
-                Assert.Equal("repoB", u.To.RepoUri);
-            },
-            u =>
+                u.From.Should().Be(depB);
+                u.To.Version.Should().Be("v10");
+                u.To.Commit.Should().Be("commit5");
+                u.To.RepoUri.Should().Be("repoB");
+            }, u =>
             {
-                Assert.Equal(depC, u.From);
-                Assert.Equal("v1000", u.To.Version);
-                Assert.Equal("commit6", u.To.Commit);
-                Assert.Equal("repoC", u.To.RepoUri);
+                u.From.Should().Be(depC);
+                u.To.Version.Should().Be("v1000");
+                u.To.Commit.Should().Be("commit6");
+                u.To.RepoUri.Should().Be("repoC");
             });
         }
 
@@ -265,7 +260,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     Test a simple coherency update
         ///     B tied to A, but B is pinned. Nothing moves.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task CoherencyUpdateTests7()
         {
             // Initialize
@@ -308,11 +303,10 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> nonCoherencyUpdates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
 
-            Assert.Collection(nonCoherencyUpdates,
-            u =>
+            nonCoherencyUpdates.Should().SatisfyRespectively(            u =>
             {
-                Assert.Equal(depA, u.From);
-                Assert.Equal("v2", u.To.Version);
+                u.From.Should().Be(depA);
+                u.To.Version.Should().Be("v2");
             });
 
             // Update the current dependency details with the non coherency updates
@@ -321,7 +315,7 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Legacy);
 
-            Assert.Empty(coherencyUpdates);
+            coherencyUpdates.Should().BeEmpty();
         }
 
         /// <summary>
@@ -329,7 +323,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     B tied to A, but no B asset is produced.
         ///     Should throw.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task CoherencyUpdateTests8()
         {
             // Initialize
@@ -371,27 +365,25 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> nonCoherencyUpdates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
 
-            Assert.Collection(nonCoherencyUpdates,
-            u =>
+            nonCoherencyUpdates.Should().SatisfyRespectively(            u =>
             {
-                Assert.Equal(depA, u.From);
-                Assert.Equal("v2", u.To.Version);
+                u.From.Should().Be(depA);
+                u.To.Version.Should().Be("v2");
             });
 
             // Update the current dependency details with the non coherency updates
             UpdateCurrentDependencies(existingDetails, nonCoherencyUpdates);
 
-            await Assert.ThrowsAsync<DarcCoherencyException>(() => remote.GetRequiredCoherencyUpdatesAsync(
-                existingDetails, remoteFactoryMock.Object, CoherencyMode.Legacy));
+            await (((Func<Task>)(() => remote.GetRequiredCoherencyUpdatesAsync(
+                existingDetails, remoteFactoryMock.Object, CoherencyMode.Legacy)))).Should().ThrowExactlyAsync<DarcCoherencyException>();
         }
 
         /// <summary>
         ///     Coherent dependency test with a 3 repo chain
         /// </summary>
         /// <returns></returns>
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
+        [TestCase(true)]
+        [TestCase(false)]
         public async Task CoherencyUpdateTests9(bool pinHead)
         {
             // Initialize
@@ -440,20 +432,18 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Legacy);
 
-            Assert.Collection(coherencyUpdates,
-            u =>
+            coherencyUpdates.Should().SatisfyRespectively(            u =>
             {
-                Assert.Equal(depC, u.From);
-                Assert.Equal("v1000", u.To.Version);
-                Assert.Equal("commit7", u.To.Commit);
-                Assert.Equal("repoC", u.To.RepoUri);
-            },
-            u =>
+                u.From.Should().Be(depC);
+                u.To.Version.Should().Be("v1000");
+                u.To.Commit.Should().Be("commit7");
+                u.To.RepoUri.Should().Be("repoC");
+            }, u =>
             {
-                Assert.Equal(depB, u.From);
-                Assert.Equal("v10", u.To.Version);
-                Assert.Equal("commit5", u.To.Commit);
-                Assert.Equal("repoB", u.To.RepoUri);
+                u.From.Should().Be(depB);
+                u.To.Version.Should().Be("v10");
+                u.To.Commit.Should().Be("commit5");
+                u.To.RepoUri.Should().Be("repoB");
             });
         }
 
@@ -462,9 +452,8 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     This should show only a single update for each element.
         /// </summary>
         /// <returns></returns>
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
+        [TestCase(true)]
+        [TestCase(false)]
         public async Task CoherencyUpdateTests10(bool pinHead)
         {
             // Initialize
@@ -522,27 +511,24 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Legacy);
 
-            Assert.Collection(coherencyUpdates,
-            u =>
+            coherencyUpdates.Should().SatisfyRespectively(            u =>
             {
-                Assert.Equal(depC, u.From);
-                Assert.Equal("v1000", u.To.Version);
-                Assert.Equal("commit7", u.To.Commit);
-                Assert.Equal("repoC", u.To.RepoUri);
-            },
-            u =>
+                u.From.Should().Be(depC);
+                u.To.Version.Should().Be("v1000");
+                u.To.Commit.Should().Be("commit7");
+                u.To.RepoUri.Should().Be("repoC");
+            }, u =>
             {
-                Assert.Equal(depB, u.From);
-                Assert.Equal("v10", u.To.Version);
-                Assert.Equal("commit5", u.To.Commit);
-                Assert.Equal("repoB", u.To.RepoUri);
-            },
-            u =>
+                u.From.Should().Be(depB);
+                u.To.Version.Should().Be("v10");
+                u.To.Commit.Should().Be("commit5");
+                u.To.RepoUri.Should().Be("repoB");
+            }, u =>
             {
-                Assert.Equal(depD, u.From);
-                Assert.Equal("v1001", u.To.Version);
-                Assert.Equal("commit35", u.To.Commit);
-                Assert.Equal("repoD", u.To.RepoUri);
+                u.From.Should().Be(depD);
+                u.To.Version.Should().Be("v1001");
+                u.To.Commit.Should().Be("commit35");
+                u.To.RepoUri.Should().Be("repoD");
             });
         }
 
@@ -550,7 +536,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     Test that a simple set of non-coherency updates works,
         ///     and that a file with no coherency updates does nothing
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests1()
         {
             // Initialize
@@ -577,10 +563,10 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> nonCoherencyUpdates =
                 await remote.GetRequiredNonCoherencyUpdatesAsync("repoA", "commit2", assets, existingDetails);
             
-            Assert.Collection(nonCoherencyUpdates, u =>
+            nonCoherencyUpdates.Should().SatisfyRespectively(u =>
             {
-                Assert.Equal(depA, u.From);
-                Assert.Equal("v2", u.To.Version);
+                u.From.Should().Be(depA);
+                u.To.Version.Should().Be("v2");
             });
 
             // Update the current dependency details with the non coherency updates
@@ -590,7 +576,7 @@ namespace Microsoft.DotNet.Darc.Tests
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
             // Should have no coherency updates
-            Assert.Empty(coherencyUpdates);
+            coherencyUpdates.Should().BeEmpty();
         }
 
         /// <summary>
@@ -598,7 +584,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     Strict coherency does not involve any graph build, and only
         ///     looks one level deep.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests2()
         {
             // Initialize
@@ -617,15 +603,14 @@ namespace Microsoft.DotNet.Darc.Tests
             DependencyDetail depA = AddDependency(existingDetails, "depA", "v1", "repoA", "commit1", pinned: false);
             DependencyDetail depB = AddDependency(existingDetails, "depB", "v1", "repoB", "commit1", pinned: false, coherentParent: "depA");
 
-            DarcCoherencyException coherencyException = await Assert.ThrowsAsync<DarcCoherencyException>(async () =>
-                await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict));
+            DarcCoherencyException coherencyException = (await (((Func<Task>)(async () =>
+                await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict)))).Should().ThrowAsync<DarcCoherencyException>()).Which;
 
             // Coherency exception should be for depB, saying that repoA @ commit1 has no such dependency
-            Assert.Collection(coherencyException.Errors,
-                e =>
+            coherencyException.Errors.Should().SatisfyRespectively(                e =>
                 {
-                    Assert.Equal(depB.Name, e.Dependency.Name);
-                    Assert.Equal($"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}", e.Error);
+                    e.Dependency.Name.Should().Be(depB.Name);
+                    e.Error.Should().Be($"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}");
                 });
         }
 
@@ -635,7 +620,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     looks one level deep. This test adds another layer where depB appears. That version should
         ///     not be chosen.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests3()
         {
             // Initialize
@@ -658,22 +643,21 @@ namespace Microsoft.DotNet.Darc.Tests
             AddDependency(repoADeps, "depY", "v42", "repoB", "commit5", pinned: false);
             RepoHasDependencies(remoteMock, "repoA", "commit1", repoADeps);
 
-            DarcCoherencyException coherencyException = await Assert.ThrowsAsync<DarcCoherencyException>(async () =>
-                await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict));
+            DarcCoherencyException coherencyException = (await (((Func<Task>)(async () =>
+                await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict)))).Should().ThrowAsync<DarcCoherencyException>()).Which;
 
             // Coherency exception should be for depB, saying that repoA @ commit1 has no such dependency
-            Assert.Collection(coherencyException.Errors,
-                e =>
+            coherencyException.Errors.Should().SatisfyRespectively(                e =>
                 {
-                    Assert.Equal(depB.Name, e.Dependency.Name);
-                    Assert.Equal($"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}", e.Error);
+                    e.Dependency.Name.Should().Be(depB.Name);
+                    e.Error.Should().Be($"{depA.RepoUri} @ {depA.Commit} does not contain dependency {depB.Name}");
                 });
         }
 
         /// <summary>
         ///     Test that a simple strict coherency passes and chooses the right version for depB.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests4()
         {
             // Initialize
@@ -699,14 +683,13 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates = 
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            Assert.Collection(coherencyUpdates,
-                u =>
+            coherencyUpdates.Should().SatisfyRespectively(                u =>
                 {
-                    Assert.Equal(depB, u.From);
-                    Assert.Equal("v42", u.To.Version);
-                    Assert.Equal("commit5", u.To.Commit);
-                    Assert.Equal(depB.RepoUri, u.To.RepoUri);
-                    Assert.Equal(depB.Name, u.To.Name);
+                    u.From.Should().Be(depB);
+                    u.To.Version.Should().Be("v42");
+                    u.To.Commit.Should().Be("commit5");
+                    u.To.RepoUri.Should().Be(depB.RepoUri);
+                    u.To.Name.Should().Be(depB.Name);
                 });
         }
 
@@ -715,7 +698,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     The dependency chain means the head of the chain moves first,
         ///     potentially affecting other parts of the chain.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests5()
         {
             // Initialize
@@ -751,29 +734,27 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            Assert.Collection(coherencyUpdates,
-                u =>
+            coherencyUpdates.Should().SatisfyRespectively(                u =>
                 {
-                    Assert.Equal(depB, u.From);
-                    Assert.Equal("v42", u.To.Version);
-                    Assert.Equal("commit5", u.To.Commit);
-                    Assert.Equal(depB.RepoUri, u.To.RepoUri);
-                    Assert.Equal(depB.Name, u.To.Name);
-                },
-                u =>
+                    u.From.Should().Be(depB);
+                    u.To.Version.Should().Be("v42");
+                    u.To.Commit.Should().Be("commit5");
+                    u.To.RepoUri.Should().Be(depB.RepoUri);
+                    u.To.Name.Should().Be(depB.Name);
+                }, u =>
                 {
-                    Assert.Equal(depC, u.From);
-                    Assert.Equal("v1000", u.To.Version);
-                    Assert.Equal("commit1000", u.To.Commit);
-                    Assert.Equal(depC.RepoUri, u.To.RepoUri);
-                    Assert.Equal(depC.Name, u.To.Name);
+                    u.From.Should().Be(depC);
+                    u.To.Version.Should().Be("v1000");
+                    u.To.Commit.Should().Be("commit1000");
+                    u.To.RepoUri.Should().Be(depC.RepoUri);
+                    u.To.Name.Should().Be(depC.Name);
                 });
         }
 
         /// <summary>
         ///     Test that a strict update on a dependency chain with some pinning works
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests6()
         {
             // Initialize
@@ -815,22 +796,20 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            Assert.Collection(coherencyUpdates,
-                u =>
+            coherencyUpdates.Should().SatisfyRespectively(                u =>
                 {
-                    Assert.Equal(depB, u.From);
-                    Assert.Equal("v42", u.To.Version);
-                    Assert.Equal("commit5", u.To.Commit);
-                    Assert.Equal(depB.RepoUri, u.To.RepoUri);
-                    Assert.Equal(depB.Name, u.To.Name);
-                },
-                u =>
+                    u.From.Should().Be(depB);
+                    u.To.Version.Should().Be("v42");
+                    u.To.Commit.Should().Be("commit5");
+                    u.To.RepoUri.Should().Be(depB.RepoUri);
+                    u.To.Name.Should().Be(depB.Name);
+                }, u =>
                 {
-                    Assert.Equal(depD, u.From);
-                    Assert.Equal("v2.5", u.To.Version);
-                    Assert.Equal("commit2.5", u.To.Commit);
-                    Assert.Equal(depD.RepoUri, u.To.RepoUri);
-                    Assert.Equal(depD.Name, u.To.Name);
+                    u.From.Should().Be(depD);
+                    u.To.Version.Should().Be("v2.5");
+                    u.To.Commit.Should().Be("commit2.5");
+                    u.To.RepoUri.Should().Be(depD.RepoUri);
+                    u.To.Name.Should().Be(depD.Name);
                 });
         }
 
@@ -839,7 +818,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     This test has the asset we are going to update to being generated by
         ///     a build of the CPD parents commit. No location
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests7()
         {
             // Initialize
@@ -870,15 +849,14 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            Assert.Collection(coherencyUpdates,
-                u =>
+            coherencyUpdates.Should().SatisfyRespectively(                u =>
                 {
-                    Assert.Equal(depB, u.From);
-                    Assert.Equal("v42", u.To.Version);
-                    Assert.Equal("commit5", u.To.Commit);
-                    Assert.Equal(depB.RepoUri, u.To.RepoUri);
-                    Assert.Equal(depB.Name, u.To.Name);
-                    Assert.Null(u.To.Locations);
+                    u.From.Should().Be(depB);
+                    u.To.Version.Should().Be("v42");
+                    u.To.Commit.Should().Be("commit5");
+                    u.To.RepoUri.Should().Be(depB.RepoUri);
+                    u.To.Name.Should().Be(depB.Name);
+                    u.To.Locations.Should().BeNull();
                 });
         }
 
@@ -887,7 +865,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     This test has the asset we are going to update to being generated by
         ///     a build of the CPD parents commit. This asset has a location.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests8()
         {
             // Initialize
@@ -918,20 +896,18 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            Assert.Collection(coherencyUpdates,
-                u =>
+            coherencyUpdates.Should().SatisfyRespectively(                u =>
                 {
-                    Assert.Equal(depB, u.From);
-                    Assert.Equal("v42", u.To.Version);
-                    Assert.Equal("commit5", u.To.Commit);
-                    Assert.Equal(depB.RepoUri, u.To.RepoUri);
-                    Assert.Equal(depB.Name, u.To.Name);
-                    Assert.Collection(u.To.Locations,
-                        u =>
+                    u.From.Should().Be(depB);
+                    u.To.Version.Should().Be("v42");
+                    u.To.Commit.Should().Be("commit5");
+                    u.To.RepoUri.Should().Be(depB.RepoUri);
+                    u.To.Name.Should().Be(depB.Name);
+                    u.To.Locations.Should().SatisfyRespectively(                        u =>
                         {
-                            Assert.Equal("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json", u);
+                            u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
                         }
-                    );
+);
                 });
         }
 
@@ -940,7 +916,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     This test has the asset we are going to update to being generated by
         ///     a build of the CPD parents commit. This asset has two locations.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests9()
         {
             // Initialize
@@ -974,24 +950,21 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            Assert.Collection(coherencyUpdates,
-                u =>
+            coherencyUpdates.Should().SatisfyRespectively(                u =>
                 {
-                    Assert.Equal(depB, u.From);
-                    Assert.Equal("v42", u.To.Version);
-                    Assert.Equal("commit5", u.To.Commit);
-                    Assert.Equal(depB.RepoUri, u.To.RepoUri);
-                    Assert.Equal(depB.Name, u.To.Name);
-                    Assert.Collection(u.To.Locations,
-                        u =>
+                    u.From.Should().Be(depB);
+                    u.To.Version.Should().Be("v42");
+                    u.To.Commit.Should().Be("commit5");
+                    u.To.RepoUri.Should().Be(depB.RepoUri);
+                    u.To.Name.Should().Be(depB.Name);
+                    u.To.Locations.Should().SatisfyRespectively(                        u =>
                         {
-                            Assert.Equal("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json", u);
-                        },
-                        u =>
+                            u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
+                        }, u =>
                         {
-                            Assert.Equal("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json", u);
+                            u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json");
                         }
-                    );
+);
                 });
         }
 
@@ -1001,7 +974,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     two separate builds of the CPD parents commit. Only one asset has a location,
         ///     but doesn't match the nuget.config. In this case, the lateset build should be returned.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests10()
         {
             // Initialize
@@ -1048,24 +1021,21 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            Assert.Collection(coherencyUpdates,
-                u =>
+            coherencyUpdates.Should().SatisfyRespectively(                u =>
                 {
-                    Assert.Equal(depB, u.From);
-                    Assert.Equal("v42", u.To.Version);
-                    Assert.Equal("commit5", u.To.Commit);
-                    Assert.Equal(depB.RepoUri, u.To.RepoUri);
-                    Assert.Equal(depB.Name, u.To.Name);
-                    Assert.Collection(u.To.Locations,
-                        u =>
+                    u.From.Should().Be(depB);
+                    u.To.Version.Should().Be("v42");
+                    u.To.Commit.Should().Be("commit5");
+                    u.To.RepoUri.Should().Be(depB.RepoUri);
+                    u.To.Name.Should().Be(depB.Name);
+                    u.To.Locations.Should().SatisfyRespectively(                        u =>
                         {
-                            Assert.Equal("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json", u);
-                        },
-                        u =>
+                            u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
+                        }, u =>
                         {
-                            Assert.Equal("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json", u);
+                            u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json");
                         }
-                    );
+);
                 });
         }
 
@@ -1075,7 +1045,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     two separate builds of the CPD parents commit. Only one asset has a location
         ///     and matches what is in the feed list.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests11()
         {
             // Initialize
@@ -1121,24 +1091,21 @@ namespace Microsoft.DotNet.Darc.Tests
             List <DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            Assert.Collection(coherencyUpdates,
-                u =>
+            coherencyUpdates.Should().SatisfyRespectively(                u =>
                 {
-                    Assert.Equal(depB, u.From);
-                    Assert.Equal("v42", u.To.Version);
-                    Assert.Equal("commit5", u.To.Commit);
-                    Assert.Equal(depB.RepoUri, u.To.RepoUri);
-                    Assert.Equal(depB.Name, u.To.Name);
-                    Assert.Collection(u.To.Locations,
-                        u =>
+                    u.From.Should().Be(depB);
+                    u.To.Version.Should().Be("v42");
+                    u.To.Commit.Should().Be("commit5");
+                    u.To.RepoUri.Should().Be(depB.RepoUri);
+                    u.To.Name.Should().Be(depB.Name);
+                    u.To.Locations.Should().SatisfyRespectively(                        u =>
                         {
-                            Assert.Equal("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json", u);
-                        },
-                        u =>
+                            u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
+                        }, u =>
                         {
-                            Assert.Equal("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json", u);
+                            u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json");
                         }
-                    );
+);
                 });
         }
 
@@ -1148,7 +1115,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     two separate builds of the CPD parents commit. Both builds have the assets,
         ///     and neither matches. The later build should be returned.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests12()
         {
             // Initialize
@@ -1197,24 +1164,21 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            Assert.Collection(coherencyUpdates,
-                u =>
+            coherencyUpdates.Should().SatisfyRespectively(                u =>
                 {
-                    Assert.Equal(depB, u.From);
-                    Assert.Equal("v42", u.To.Version);
-                    Assert.Equal("commit5", u.To.Commit);
-                    Assert.Equal(depB.RepoUri, u.To.RepoUri);
-                    Assert.Equal(depB.Name, u.To.Name);
-                    Assert.Collection(u.To.Locations,
-                        u =>
+                    u.From.Should().Be(depB);
+                    u.To.Version.Should().Be("v42");
+                    u.To.Commit.Should().Be("commit5");
+                    u.To.RepoUri.Should().Be(depB.RepoUri);
+                    u.To.Name.Should().Be(depB.Name);
+                    u.To.Locations.Should().SatisfyRespectively(                        u =>
                         {
-                            Assert.Equal("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5/nuget/v3/index.json", u);
-                        },
-                        u =>
+                            u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5/nuget/v3/index.json");
+                        }, u =>
                         {
-                            Assert.Equal("https://dotnetfeed.blob.core.windows.net/dotnet-core2/index.json", u);
+                            u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core2/index.json");
                         }
-                    );
+);
                 });
         }
 
@@ -1224,7 +1188,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     two separate builds of the CPD parents commit. Both builds have the assets,
         ///     and one matches. The matching build should be returned
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests13()
         {
             // Initialize
@@ -1274,24 +1238,21 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            Assert.Collection(coherencyUpdates,
-                u =>
+            coherencyUpdates.Should().SatisfyRespectively(                u =>
                 {
-                    Assert.Equal(depB, u.From);
-                    Assert.Equal("v42", u.To.Version);
-                    Assert.Equal("commit5", u.To.Commit);
-                    Assert.Equal(depB.RepoUri, u.To.RepoUri);
-                    Assert.Equal(depB.Name, u.To.Name);
-                    Assert.Collection(u.To.Locations,
-                        u =>
+                    u.From.Should().Be(depB);
+                    u.To.Version.Should().Be("v42");
+                    u.To.Commit.Should().Be("commit5");
+                    u.To.RepoUri.Should().Be(depB.RepoUri);
+                    u.To.Name.Should().Be(depB.Name);
+                    u.To.Locations.Should().SatisfyRespectively(                        u =>
                         {
-                            Assert.Equal("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json", u);
-                        },
-                        u =>
+                            u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json");
+                        }, u =>
                         {
-                            Assert.Equal("https://dotnetfeed.blob.core.windows.net/dotnet-core2/index.json", u);
+                            u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core2/index.json");
                         }
-                    );
+);
                 });
         }
 
@@ -1301,7 +1262,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     two separate builds of the CPD parents commit. Both builds have the assets,
         ///     and both match. The later build id should be returned
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests14()
         {
             // Initialize
@@ -1351,24 +1312,21 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            Assert.Collection(coherencyUpdates,
-                u =>
+            coherencyUpdates.Should().SatisfyRespectively(                u =>
                 {
-                    Assert.Equal(depB, u.From);
-                    Assert.Equal("v42", u.To.Version);
-                    Assert.Equal("commit5", u.To.Commit);
-                    Assert.Equal(depB.RepoUri, u.To.RepoUri);
-                    Assert.Equal(depB.Name, u.To.Name);
-                    Assert.Collection(u.To.Locations,
-                        u =>
+                    u.From.Should().Be(depB);
+                    u.To.Version.Should().Be("v42");
+                    u.To.Commit.Should().Be("commit5");
+                    u.To.RepoUri.Should().Be(depB.RepoUri);
+                    u.To.Name.Should().Be(depB.Name);
+                    u.To.Locations.Should().SatisfyRespectively(                        u =>
                         {
-                            Assert.Equal("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json", u);
-                        },
-                        u =>
+                            u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet566/nuget/v3/index.json");
+                        }, u =>
                         {
-                            Assert.Equal("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json", u);
+                            u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json");
                         }
-                    );
+);
                 });
         }
 
@@ -1377,7 +1335,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     This test has the asset we are going to update not being generated
         ///     by the CPD parent's build.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests15()
         {
             // Initialize
@@ -1405,15 +1363,14 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            Assert.Collection(coherencyUpdates,
-                u =>
+            coherencyUpdates.Should().SatisfyRespectively(                u =>
                 {
-                    Assert.Equal(depB, u.From);
-                    Assert.Equal("v42", u.To.Version);
-                    Assert.Equal("commit5", u.To.Commit);
-                    Assert.Equal(depB.RepoUri, u.To.RepoUri);
-                    Assert.Equal(depB.Name, u.To.Name);
-                    Assert.Null(u.To.Locations);
+                    u.From.Should().Be(depB);
+                    u.To.Version.Should().Be("v42");
+                    u.To.Commit.Should().Be("commit5");
+                    u.To.RepoUri.Should().Be(depB.RepoUri);
+                    u.To.Name.Should().Be(depB.Name);
+                    u.To.Locations.Should().BeNull();
                 });
         }
 
@@ -1421,7 +1378,7 @@ namespace Microsoft.DotNet.Darc.Tests
         ///     Test that disambiguation with build info works if it is available.
         ///     This test has the the asset only generated by one of the builds.
         /// </summary>
-        [Fact]
+        [Test]
         public async Task StrictCoherencyUpdateTests16()
         {
             // Initialize
@@ -1468,24 +1425,21 @@ namespace Microsoft.DotNet.Darc.Tests
             List<DependencyUpdate> coherencyUpdates =
                 await remote.GetRequiredCoherencyUpdatesAsync(existingDetails, remoteFactoryMock.Object, CoherencyMode.Strict);
 
-            Assert.Collection(coherencyUpdates,
-                u =>
+            coherencyUpdates.Should().SatisfyRespectively(                u =>
                 {
-                    Assert.Equal(depB, u.From);
-                    Assert.Equal("v42", u.To.Version);
-                    Assert.Equal("commit5", u.To.Commit);
-                    Assert.Equal(depB.RepoUri, u.To.RepoUri);
-                    Assert.Equal(depB.Name, u.To.Name);
-                    Assert.Collection(u.To.Locations,
-                        u =>
+                    u.From.Should().Be(depB);
+                    u.To.Version.Should().Be("v42");
+                    u.To.Commit.Should().Be("commit5");
+                    u.To.RepoUri.Should().Be(depB.RepoUri);
+                    u.To.Name.Should().Be(depB.Name);
+                    u.To.Locations.Should().SatisfyRespectively(                        u =>
                         {
-                            Assert.Equal("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json", u);
-                        },
-                        u =>
+                            u.Should().Be("https://pkgs.dev.azure.com/dnceng/public/_packaging/dotnet5-transport/nuget/v3/index.json");
+                        }, u =>
                         {
-                            Assert.Equal("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json", u);
+                            u.Should().Be("https://dotnetfeed.blob.core.windows.net/dotnet-core/index.json");
                         }
-                    );
+);
                 });
         }
 

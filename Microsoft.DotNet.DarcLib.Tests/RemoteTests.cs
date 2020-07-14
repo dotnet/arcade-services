@@ -4,22 +4,23 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Moq;
-using Xunit;
-using Xunit.Abstractions;
+using NUnit.Framework;
 using Xunit.Sdk;
 
 namespace Microsoft.DotNet.DarcLib.Tests
 {
+    [TestFixture]
     public class RemoteTests
     {
         private readonly ITestOutputHelper _output;
-        public RemoteTests(ITestOutputHelper output)
+        [SetUp]        public void RemoteTests_SetUp()
         {
             _output = output;
         }
-        [Fact]
+        [Test]
         public async Task ValidateCommitMessageTest()
         {
             Mock<IGitRepo> client = new Mock<IGitRepo>();
@@ -100,7 +101,7 @@ Coherency Update:
  - Microsoft.NETCore.App.Runtime.win-x64: from 3.1.4 to 3.1.4
 
  - Updated text";
-            Assert.Equal(expectedCommitMessage, commitToMerge[0]);
+            commitToMerge[0].Should().Be(expectedCommitMessage);
         }
     }
 }

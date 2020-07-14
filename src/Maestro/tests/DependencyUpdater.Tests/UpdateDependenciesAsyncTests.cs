@@ -6,16 +6,18 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
+using FluentAssertions;
 using Maestro.Data.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using Xunit;
+using NUnit.Framework;
 
 namespace DependencyUpdater.Tests
 {
+    [TestFixture]
     public class UpdateDependenciesAsyncTests : DependencyUpdaterTests
     {
-        [Fact]
+        [Test]
         public async Task EveryBuildSubscription()
         {
             var channel = new Channel
@@ -100,7 +102,7 @@ namespace DependencyUpdater.Tests
             ActorId.GetGuidId().Should().Be(subscription.Id);
         }
 
-        [Fact]
+        [Test]
         public async Task EveryBuildSubscriptionNotEnabled()
         {
             var channel = new Channel
@@ -183,7 +185,7 @@ namespace DependencyUpdater.Tests
             await updater.UpdateDependenciesAsync(newBuild.Id, channel.Id);
         }
 
-        [Fact]
+        [Test]
         public async Task NoSubscriptions()
         {
             var channel = new Channel
