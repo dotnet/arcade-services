@@ -2,10 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.DotNet.Maestro.Client.Models;
-using NuGet.Versioning;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Maestro.Client.Models;
+using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -181,13 +181,14 @@ namespace Microsoft.DotNet.DarcLib
         #endregion
 
         #region Pull Request Operations
+
         /// <summary>
-        ///     Merge a pull request.
+        ///  Merges a pull request created by a dependency update
         /// </summary>
         /// <param name="pullRequestUrl">Uri of pull request to merge</param>
         /// <param name="parameters">Merge options.</param>
         /// <returns>Async task.</returns>
-        Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
+        Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
 
         /// <summary>
         ///     Create a comment on a pull request, or update the last comment if it was made by Maestro.
