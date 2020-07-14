@@ -67,4 +67,8 @@
 
   <Target Name="GetTargetPath">
   </Target>
+  
+  <Target Name="Clean">
+    <Delete Files="@(BuildOutput)" />
+  </Target>
 </Project>
