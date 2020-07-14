@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project>
+  <PropertyGroup>
+    <UsingToolXUnit>false</UsingToolXUnit>
+  </PropertyGroup>
+
   <Import Project="Sdk.props" Sdk="Microsoft.DotNet.Arcade.Sdk" />
 
   <PropertyGroup Condition="'$(CopyrightNetFoundation)' != ''">
@@ -21,7 +25,17 @@
     <CentralPackagesFile>$(MSBuildThisFileDirectory)eng/Packages.props</CentralPackagesFile>
   </PropertyGroup>
 
-  <ItemGroup Condition=" '$(IsTestProject) ' == 'true' ">
+  <PropertyGroup>
+    <TestRunnerName></TestRunnerName>
+  </PropertyGroup>
+
+  <ItemGroup Condition=" '$(IsTestProject)' == 'true' ">
+    <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.CodeCoverage" />
+    <PackageReference Include="nunit" />
+    <PackageReference Include="NUnit3TestAdapter">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 </Project>
