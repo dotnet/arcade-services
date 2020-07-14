@@ -644,6 +644,19 @@ namespace Maestro.ScenarioTests
             return ImmutableList.Create(asset1, asset2);
         }
 
+        internal IImmutableList<AssetData> GetSingleAssetData(string assetName, string assetVersion)
+        {
+            AssetData asset = new AssetData(false)
+            {
+                Name = assetName,
+                Version = assetVersion,
+                Locations = ImmutableList.Create(new AssetLocationData(LocationType.NugetFeed)
+                { Location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json" })
+            };
+
+            return ImmutableList.Create(asset);
+        }
+
         public async Task SetRepositoryPolicies(string repoUri, string branchName, string[] policyParams = null)
         {
             string[] commandParams = { "set-repository-policies", "-q", "--repo", repoUri, "--branch", branchName };

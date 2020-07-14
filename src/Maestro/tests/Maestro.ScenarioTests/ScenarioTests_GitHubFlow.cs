@@ -73,7 +73,8 @@ namespace Maestro.ScenarioTests
             string sourceBranch = "coherency-tree";
             string parentSourceCommit = "cc1a27107a1f4c4bc5e2f796c5ef346f60abb404";
             string childSourceCommit = "8460158878d4b7568f55d27960d4453877523ea6";
-            IImmutableList<AssetData> childSourceAssets = GetAssetData("Baz", "1.3.0","Bop", "1.0");
+            IImmutableList<AssetData> childSourceBuildAssets = GetAssetData("Baz", "1.3.0","Bop", "1.0");
+            IImmutableList<AssetData> childSourceAssets = GetSingleAssetData("Baz", "1.3.0");
             string parentBuildNumber = "123456";
             string childBuildNumber = "654321";
 
@@ -105,7 +106,7 @@ namespace Maestro.ScenarioTests
                         parentBuildNumber, testLogic.Source1Assets);
                     await AddBuildToChannelAsync(build1.Id, testChannelName);
                     Build build2 = await CreateBuildAsync(childSourceRepoUri, sourceBranch, childSourceCommit,
-                        childBuildNumber, childSourceAssets);
+                        childBuildNumber, childSourceBuildAssets);
                     await AddBuildToChannelAsync(build2.Id, testChannelName);
 
                     TestContext.WriteLine("Cloning target repo to prepare the target branch");
