@@ -152,7 +152,7 @@ namespace SubscriptionActorService
         public async Task ReceiveReminderAsync(string reminderName, byte[] state, TimeSpan dueTime, TimeSpan period)
         {
             if (reminderName == PullRequestActorImplementation.PullRequestCheck)
-            { 
+            {
                 await Implementation.SynchronizeInProgressPullRequestAsync();
             }
             else if (reminderName == PullRequestActorImplementation.PullRequestUpdate)
@@ -173,7 +173,6 @@ namespace SubscriptionActorService
         public const string PullRequest = "pullRequest";
         public const string DependencyUpdateBegin = "[DependencyUpdate]: <> (Begin)";
         public const string DependencyUpdateEnd = "[DependencyUpdate]: <> (End)";
-
 
         protected PullRequestActorImplementation(
             ActorId id,
@@ -961,7 +960,7 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
                 coherencySection.AppendLine();
                 coherencySection.AppendLine(DependencyUpdateBegin);
                 coherencySection.AppendLine();
-                coherencySection.AppendLine("- **Coherency Update**:");
+                coherencySection.AppendLine("- **Coherency Updates**:");
                 foreach (DependencyUpdate dep in deps)
                 {
                     coherencySection.AppendLine($"  - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version} (parent: {dep.To.CoherentParentDependencyName})");
