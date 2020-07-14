@@ -36,7 +36,7 @@ namespace Maestro.ScenarioTests
         {
             Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo).ConfigureAwait(false);
 
-            var attempts = 2;
+            var attempts = 10;
             while (attempts-- > 0)
             {
                 IReadOnlyList<PullRequest> prs = await GitHubApi.PullRequest.GetAllForRepository(repo.Id, new PullRequestRequest
@@ -57,6 +57,26 @@ namespace Maestro.ScenarioTests
             }
 
             throw new MaestroTestException($"No pull request was created in {targetRepo} targeting {targetBranch}");
+        }
+
+        public async Task<PullRequest> WaitForUpdatedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 7)
+        {
+            Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo).ConfigureAwait(false);
+            PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
+
+            while (attempts-- > 0)
+            {
+                pr = await GitHubApi.PullRequest.Get(repo.Id, pr.Number);
+
+                if (pr.CreatedAt != pr.UpdatedAt)
+                {
+                    return pr;
+                }
+
+                await Task.Delay(60 * 1000).ConfigureAwait(false);
+            }
+
+            throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
         }
 
         private async Task<Microsoft.DotNet.DarcLib.PullRequest> WaitForAzDoPullRequestAsync(string targetRepoUri, string targetBranch)
@@ -80,38 +100,44 @@ namespace Maestro.ScenarioTests
             throw new MaestroTestException($"No pull request was created in {targetRepoUri} targeting {targetBranch}");
         }
 
-        public async Task CheckBatchedGitHubPullRequest(string targetBranch, string source1RepoName,
+        public async Task CheckBatchedGitHubPullRequest(string targetBranch, string source1RepoName, string source2RepoName,
             string targetRepoName, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory)
         {
-            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{source1RepoName}";
-            await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false);
+            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{source1RepoName} {_parameters.GitHubTestOrg}/{source2RepoName}";
+            await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, true);
         }
 
         public async Task CheckNonBatchedGitHubPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
-            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete = false)
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete = false, bool isUpdated = false)
         {
             string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
-            await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete);
+            await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, false);
         }
 
         public async Task CheckGitHubPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
-            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete)
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete, bool isUpdated)
         {
             TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
-            PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
+            PullRequest pullRequest = isUpdated ?
+                await WaitForUpdatedPullRequestAsync(targetRepoName, targetBranch)
+                : await WaitForPullRequestAsync(targetRepoName, targetBranch);
 
             StringAssert.AreEqualIgnoringCase(expectedPRTitle, pullRequest.Title);
 
             using (ChangeDirectory(repoDirectory))
             {
-                await ValidatePullRequestDependencies(targetRepoName, pullRequest.Head.Ref, expectedDependencies, 1);
+                await ValidatePullRequestDependencies(targetRepoName, pullRequest.Head.Ref, expectedDependencies);
 
                 if (complete)
                 {
+                    TestContext.WriteLine($"Checking for automatic merging of PR in {targetBranch} {targetRepoName}");
+
                     var attempts = 7;
                     while (attempts-- > 0)
                     {
-                        bool isMerged = await GitHubApi.PullRequest.Merged(pullRequest.User.Name, pullRequest.Title, pullRequest.Number);
+                        TestContext.WriteLine($"Starting check for merge, attempts remaining {attempts}");
+
+                        bool isMerged = await GitHubApi.PullRequest.Merged(pullRequest.User.Login, pullRequest.Title, pullRequest.Number).ConfigureAwait(false);
 
                         if (!isMerged)
                         {
@@ -121,6 +147,7 @@ namespace Maestro.ScenarioTests
                     }
                 }
 
+                TestContext.WriteLine($"Checking expected end state for PR in {targetBranch} {targetRepoName}");
                 ItemState expectedPRState = complete ? ItemState.Closed : ItemState.Open;
                 StringAssert.AreEqualIgnoringCase(expectedPRState.ToString(), pullRequest.State.ToString());
             }
@@ -154,21 +181,23 @@ namespace Maestro.ScenarioTests
 
             using (ChangeDirectory(repoDirectory))
             {
-                await ValidatePullRequestDependencies(targetRepoName, pullRequest.BaseBranch, expectedDependencies, 1);
+                await ValidatePullRequestDependencies(targetRepoName, pullRequest.BaseBranch, expectedDependencies);
             }
         }
 
         public async Task ValidatePullRequestDependencies(string targetRepoName, string pullRequestBaseBranch, List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, int tries = 1)
         {
             int triesRemaining = tries;
-            while (triesRemaining > 0)
+            while (triesRemaining-- > 0)
             {
-                await CheckoutRemoteBranchAsync(pullRequestBaseBranch);
-                await RunGitAsync("pull");
+                await CheckoutRemoteBranchAsync(pullRequestBaseBranch).ConfigureAwait(false);
+                await RunGitAsync("pull").ConfigureAwait(false);
 
-                string actualDependencies = await RunDarcAsync("get-dependencies");
+                string actualDependencies = await RunDarcAsync("get-dependencies").ConfigureAwait(false);
                 string expectedDependenciesString = DependencyCollectionStringBuilder.GetString(expectedDependencies);
+
                 Assert.AreEqual(expectedDependenciesString, actualDependencies, $"Expected: {expectedDependenciesString} \r\n Actual: {actualDependencies}");
+
             }
         }
 
@@ -183,7 +212,15 @@ namespace Maestro.ScenarioTests
             return AsyncDisposable.Create(async () =>
             {
                 TestContext.WriteLine($"Cleaning up Remote branch {branch}");
-                await RunGitAsync("push", remote, "--delete", branch);
+
+                try
+                {
+                    await RunGitAsync("push", remote, "--delete", branch);
+                }
+                catch
+                {
+                    // If this throws it means that it was cleaned up by a different clean up method first
+                }
             });
         }
 
@@ -507,9 +544,9 @@ namespace Maestro.ScenarioTests
             });
         }
 
-        public async Task DeleteBuildFromChannelAsync(int buildId, string channelName)
+        public async Task DeleteBuildFromChannelAsync(string buildId, string channelName)
         {
-            await Task.Run(() => throw new NotImplementedException());
+            await RunDarcAsync("delete-build-from-channel", "--id", buildId, "--channel", channelName);
         }
 
         public IDisposable ChangeDirectory(string directory)
@@ -569,7 +606,14 @@ namespace Maestro.ScenarioTests
             return AsyncDisposable.Create(async () =>
             {
                 TestContext.WriteLine($"Deleting remote branch {branchName}");
-                await DeleteBranchAsync(branchName);
+                try
+                {
+                    await DeleteBranchAsync(branchName);
+                }
+                catch
+                {
+                    // If this throws it means that it was cleaned up by a different clean up method first
+                }
             });
         }
 

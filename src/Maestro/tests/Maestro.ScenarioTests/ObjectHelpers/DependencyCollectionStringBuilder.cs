@@ -16,8 +16,6 @@ namespace Maestro.ScenarioTests.ObjectHelpers
                 stringBuilder.AppendLine(UxHelpers.DependencyToString(dependency));
             }
 
-            stringBuilder.AppendLine();
-
             return stringBuilder.ToString();
         }
     }

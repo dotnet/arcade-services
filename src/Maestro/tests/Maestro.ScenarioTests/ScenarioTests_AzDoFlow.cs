@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using NUnit.Framework;
 
@@ -34,21 +35,21 @@ namespace Maestro.ScenarioTests
         public async Task Darc_AzDoFlow_Batched()
         {
             TestContext.WriteLine("Azure DevOps Dependency Flow, batched");
-            await testLogic.DarcBatchedFlowTestBase(true);
+            await testLogic.DarcBatchedFlowTestBase($"AzDo_BatchedTestBranch_{Environment.MachineName}", $"AzDo Batched Channel {Environment.MachineName}",true);
         }
 
         [Test]
         public async Task Darc_AzDoFlow_NonBatched_AllChecksSuccessful()
         {
             TestContext.WriteLine("AzDo Dependency Flow, non-batched, all checks successful");
-            await testLogic.NonBatchedFlowTestBase(true, true).ConfigureAwait(true);
+            await testLogic.NonBatchedFlowTestBase($"AzDo_NonBatchedTestBranch_AllChecks_{Environment.MachineName}", $"AzDo Non-Batched All Checks Channel {Environment.MachineName}", true, true).ConfigureAwait(true);
         }
 
         [Test]
         public async Task Darc_AzDoFlow_NonBatched()
         {
             TestContext.WriteLine("AzDo Dependency Flow, non-batched");
-            await testLogic.NonBatchedFlowTestBase(true).ConfigureAwait(false);
+            await testLogic.NonBatchedFlowTestBase($"AzDo_NonBatchedTestBranch_{Environment.MachineName}", $"AzDo Non-Batched Channel {Environment.MachineName}", true).ConfigureAwait(false);
         }
     }
 }
