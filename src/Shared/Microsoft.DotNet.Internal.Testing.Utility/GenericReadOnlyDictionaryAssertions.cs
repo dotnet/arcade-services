@@ -11,6 +11,8 @@ using FluentAssertions.Collections;
 
 namespace Microsoft.DotNet.Internal.Testing.Utility
 {
+    // This entire class will be unnecessary in FluentAssertions 6.0
+    // https://github.com/fluentassertions/fluentassertions/issues/357
     public class GenericReadOnlyDictionaryAssertions<TKey, TValue> : GenericDictionaryAssertions<TKey, TValue>
     {
         private class ReadOnlyDictionaryWrapper : IDictionary<TKey, TValue>
@@ -44,12 +46,12 @@ namespace Microsoft.DotNet.Internal.Testing.Utility
 
             public bool Contains(KeyValuePair<TKey, TValue> item)
             {
-                throw new NotSupportedException();
+                return _backing.Contains(item);
             }
 
             public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
             {
-                throw new NotSupportedException();
+                _backing.ToList().CopyTo(array, arrayIndex);
             }
 
             public bool Remove(KeyValuePair<TKey, TValue> item)
