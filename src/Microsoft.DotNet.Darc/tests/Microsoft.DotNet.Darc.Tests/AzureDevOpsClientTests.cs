@@ -19,7 +19,7 @@ namespace Microsoft.DotNet.Darc.Tests
         [TestCase("https://dev.azure.com/foo/bar/_git/baz-bop", "foo", "bar", "baz-bop")]
         [TestCase("https://dnceng@dev.azure.com/foo/bar/_git/bebop", "foo", "bar", "bebop")]
         [TestCase("https://dnceng.visualstudio.com/int/_git/bebop", "dnceng", "int", "bebop")]
-        private void ParseValidRepoUriTests(string inputUri, string expectedAccount, string expectedProject, string expectedRepo)
+        public void ParseValidRepoUriTests(string inputUri, string expectedAccount, string expectedProject, string expectedRepo)
         {
             (string account, string project, string repo) = AzureDevOpsClient.ParseRepoUri(inputUri);
             account.Should().Be(expectedAccount);
@@ -29,15 +29,15 @@ namespace Microsoft.DotNet.Darc.Tests
 
         [TestCase("https://dev.azure.com/dcn-eng/public-s/_git/foo-23bar")]
         [TestCase("https://github.com/account/bar")]
-        private void ParseInvalidRepoUriTests(string inputUri)
+        public void ParseInvalidRepoUriTests(string inputUri)
         {
-            (((Func<object>)(() => AzureDevOpsClient.ParseRepoUri(inputUri)))).Should().ThrowExactly<ArgumentException>();
+            ((Func<object>)(() => AzureDevOpsClient.ParseRepoUri(inputUri))).Should().ThrowExactly<ArgumentException>();
         }
 
         [TestCase("https://dev.azure.com/foo/bar/_apis/git/repositories/baz98-bop/pullRequests/112", "foo", "bar", "baz98-bop", 112)]
         [TestCase("https://dev.azure.com/foo/bar/_apis/git/repositories/kidz-bop/pullRequests/1133?_a=files", "foo", "bar", "kidz-bop", 1133)]
         [TestCase("https://dev.azure.com/foo/bar/_apis/git/repositories/baz-bop/pullRequests/141?_a=files&path=%2F.build%2Frestore.yaml", "foo", "bar", "baz-bop", 141)]
-        private void ParseValidPullRequestUriTests(string inputUri, string expectedAccount,
+        public void ParseValidPullRequestUriTests(string inputUri, string expectedAccount,
             string expectedProject, string expectedRepo, int expectedId)
         {
             (string account, string project, string repo, int id) = AzureDevOpsClient.ParsePullRequestUri(inputUri);
@@ -48,7 +48,7 @@ namespace Microsoft.DotNet.Darc.Tests
         }
 
         [TestCase("https://dev.azure.com/foo/bar/_git/baz98-bop/pullRequests/112")]
-        private void ParseInvalidPullRequestUriTests(string inputUri)
+        public void ParseInvalidPullRequestUriTests(string inputUri)
         {
             (((Func<object>)(() => AzureDevOpsClient.ParsePullRequestUri(inputUri)))).Should().ThrowExactly<ArgumentException>();
         }
@@ -57,7 +57,7 @@ namespace Microsoft.DotNet.Darc.Tests
         [TestCase("https://dnceng@dev.azure.com/foo/bar/_git/bebop/pullrequest/11?_a=overview", "https://dev.azure.com/foo/bar/_git/bebop/pullrequest/11?_a=overview")]
         [TestCase("https://dnceng.visualstudio.com/int/_git/bebop", "https://dev.azure.com/dnceng/int/_git/bebop")]
         [TestCase("https://github.com/account/bar", "https://github.com/account/bar")]
-        private void NormalizeRepoUriTests(string inputUri, string expectedUri)
+        public void NormalizeRepoUriTests(string inputUri, string expectedUri)
         {
             string normalizedUri = AzureDevOpsClient.NormalizeUrl(inputUri);
             normalizedUri.Should().Be(expectedUri);

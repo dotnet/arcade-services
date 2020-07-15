@@ -18,17 +18,9 @@ using NUnit.Framework;
 
 namespace Microsoft.DotNet.Web.Authentication.Tests
 {
-    [TestFixture, NonParallelizable]
+    [TestFixture, Parallelizable(ParallelScope.All)]
     public class DefaultAuthorizeActionModelConventionTests
     {
-        private readonly ITestOutputHelper _output;
-
-        [SetUp]
-        public void DefaultAuthorizeActionModelConventionTests_SetUp()
-        {
-            _output = output;
-        }
-
         [TestCase("no/no", HttpStatusCode.Unauthorized)]
         [TestCase("no/anonymous", HttpStatusCode.OK, "No:Anonymous:Value")]
         [TestCase("no/any", HttpStatusCode.Unauthorized)]
@@ -166,7 +158,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
 
         private HttpClient CreateHttpClient(string user = null, string role = null)
         {
-            var factory = new TestAppFactory(_output);
+            var factory = new TestAppFactory();
             factory.ConfigureServices(services =>
                 {
                     services.AddControllers(o =>

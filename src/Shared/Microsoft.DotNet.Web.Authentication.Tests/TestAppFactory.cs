@@ -4,6 +4,7 @@ using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -11,15 +12,9 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
 {
     public class TestAppFactory : WebApplicationFactory<EmptyTestStartup>
     {
-        private readonly ITestOutputHelper _output;
         private readonly string _rootPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         private Action<IServiceCollection> _configureServices;
         private Action<IApplicationBuilder> _configureBuilder;
-
-        public TestAppFactory(ITestOutputHelper output)
-        {
-            _output = output;
-        }
 
         public void ConfigureServices(Action<IServiceCollection> configureServices)
         {
@@ -43,7 +38,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             builder.ConfigureLogging(l =>
             {
                 l.SetMinimumLevel(LogLevel.Trace);
-                l.AddProvider(new XUnitLogger(_output));
+                l.AddProvider(new NUnitLogger());
             });
             if (_configureServices != null)
                 builder.ConfigureServices(_configureServices);

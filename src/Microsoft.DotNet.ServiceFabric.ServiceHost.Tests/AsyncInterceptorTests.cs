@@ -137,25 +137,29 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
         [Test]
         public async Task TestVoidArgs()
         {
-            await (((Func<Task>)(() =>
-                TestInterception((impl, target) =>
-                {
-                    impl.VoidArgs(123, "TestParam");
-                    return Task.CompletedTask;
-                })
-))).Should().ThrowExactlyAsync<NotSupportedException>();
+            await ((Func<Task>) (() =>
+                        TestInterception((impl, target) =>
+                        {
+                            impl.VoidArgs(123, "TestParam");
+                            return Task.CompletedTask;
+                        })
+                    ))
+                .Should()
+                .ThrowExactlyAsync<NotSupportedException>();
         }
 
         [Test]
         public async Task TestVoidNoArg()
         {
-            await (((Func<Task>)(() =>
-                TestInterception((impl, target) =>
-                {
-                    impl.VoidNoArgs();
-                    return Task.CompletedTask;
-                })
-))).Should().ThrowExactlyAsync<NotSupportedException>();
+            await ((Func<Task>) (() =>
+                        TestInterception((impl, target) =>
+                        {
+                            impl.VoidNoArgs();
+                            return Task.CompletedTask;
+                        })
+                    ))
+                .Should()
+                .ThrowExactlyAsync<NotSupportedException>();
         }
 
         [Test]
@@ -300,7 +304,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 
             await test(impl, inter);
 
-            interceptor.Should().HaveCount(1);
+            interceptor.Count.Should().Be(1);
         }
 
         // ReSharper disable once MemberCanBePrivate.Global This is Mocked, so much be public

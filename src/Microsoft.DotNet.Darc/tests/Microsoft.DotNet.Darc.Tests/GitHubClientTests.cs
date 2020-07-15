@@ -88,12 +88,11 @@ namespace Microsoft.DotNet.Darc.Tests
     }
 
     [TestFixture]
-
     public class GitHubClientTests
     {
         [TestCase(true)]
         [TestCase(false)]
-        private async Task TreeItemCacheTest(bool enableCache)
+        public async Task TreeItemCacheTest(bool enableCache)
         {
             SimpleCache cache = enableCache ? new SimpleCache() : null;
             Mock<GitHubClient> client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, cache);

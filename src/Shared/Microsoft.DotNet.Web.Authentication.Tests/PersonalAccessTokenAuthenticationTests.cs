@@ -25,17 +25,9 @@ using NUnit.Framework;
 
 namespace Microsoft.DotNet.Web.Authentication.Tests
 {
-    [TestFixture, NonParallelizable]
+    [TestFixture]
     public class PersonalAccessTokenAuthenticationTests
     {
-        private readonly ITestOutputHelper _output;
-
-        [SetUp]
-        public void PersonalAccessTokenAuthenticationTests_SetUp()
-        {
-            _output = output;
-        }
-
         [Test]
         public async Task NoTokenRequiringAuthIsRejected()
         {
@@ -313,7 +305,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             }
 
             var localClock = new TestClock();
-            factory = new TestAppFactory(_output);
+            factory = new TestAppFactory();
             factory.ConfigureServices(services =>
             {
                 services.AddSingleton<ISystemClock>(localClock);

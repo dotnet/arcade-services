@@ -385,7 +385,7 @@ namespace Microsoft.DotNet.Darc.Tests
         /// Add an arcade dependency.  Not in version.details but in global.json  Should update.
         /// - Does not currently test script download
         /// </summary>
-        [Test]
+        [Test, Ignore("Not able to update existing version info when adding new dependency. https://github.com/dotnet/arcade/issues/1095")]
         public async Task AddArcadeDependency2()
         {
             await DependencyTestDriver.TestAndCompareOutput(nameof(AddArcadeDependency1), async driver =>

@@ -8,24 +8,17 @@ using FluentAssertions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Moq;
 using NUnit.Framework;
-using Xunit.Sdk;
 
 namespace Microsoft.DotNet.DarcLib.Tests
 {
     [TestFixture]
     public class RemoteTests
     {
-        private readonly ITestOutputHelper _output;
-        [SetUp]        public void RemoteTests_SetUp()
-        {
-            _output = output;
-        }
         [Test]
         public async Task ValidateCommitMessageTest()
         {
             Mock<IGitRepo> client = new Mock<IGitRepo>();
             Mock<IBarClient> barClient = new Mock<IBarClient>();
-            XUnitLogger logger = new XUnitLogger(_output);
             MergePullRequestParameters mergePullRequest = new MergePullRequestParameters
             {
                 DeleteSourceBranch = true,
@@ -86,7 +79,7 @@ Coherency Update:
             client.Setup(x => x.MergeDependencyPullRequestAsync(It.IsAny<string>(),
                 It.IsAny<MergePullRequestParameters>(), Moq.Capture.In(commitToMerge))).Returns(Task.CompletedTask);
 
-            Remote remote = new Remote(client.Object, barClient.Object, logger);
+            Remote remote = new Remote(client.Object, barClient.Object, new NUnitLogger());
 
             await remote.MergeDependencyPullRequestAsync(
                 "https://github.com/test/test2",

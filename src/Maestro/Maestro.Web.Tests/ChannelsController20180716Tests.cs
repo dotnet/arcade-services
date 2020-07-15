@@ -22,19 +22,9 @@ using NUnit.Framework;
 
 namespace Maestro.Web.Tests
 {
-    [TestFixture, NonParallelizable]
+    [TestFixture]
     public class ChannelsController20180716Tests
     {
-        private readonly ITestOutputHelper _output;
-        private readonly TestDatabaseFixture _database;
-
-        [SetUp]
-        public void ChannelsController20180716Tests_SetUp()
-        {
-            _output = output;
-            _database = database;
-        }
-
         [Test]
         public async Task CreateChannel()
         {
@@ -113,20 +103,11 @@ namespace Maestro.Web.Tests
 
         private Task<TestData> BuildDefaultAsync()
         {
-            return new TestDataBuilder(_database, _output).BuildAsync();
+            return new TestDataBuilder().BuildAsync();
         }
 
         private sealed class TestDataBuilder
         {
-            private readonly TestDatabaseFixture _database;
-            private readonly ITestOutputHelper _output;
-
-            public TestDataBuilder(TestDatabaseFixture database, ITestOutputHelper output)
-            {
-                _database = database;
-                _output = output;
-            }
-
             private Type _backgroundQueueType = typeof(NeverBackgroundQueue);
 
             public TestDataBuilder WithImmediateBackgroundQueue()
@@ -137,10 +118,10 @@ namespace Maestro.Web.Tests
 
             public async Task<TestData> BuildAsync()
             {
-                string connectionString = await _database.GetConnectionString();
+                string connectionString = await SharedData.Database.GetConnectionString();
 
                 var collection = new ServiceCollection();
-                collection.AddLogging(l => l.AddProvider(new XUnitLogger(_output)));
+                collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
                 collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
                 {
                     EnvironmentName = Environments.Development
@@ -155,7 +136,6 @@ namespace Maestro.Web.Tests
                 collection.AddSingleton<ISystemClock, TestClock>();
                 collection.AddSingleton(Mock.Of<IRemoteFactory>());
                 collection.AddSingleton(typeof(IBackgroundQueue), _backgroundQueueType);
-                collection.AddSingleton(_output);
                 ServiceProvider provider = collection.BuildServiceProvider();
 
                 var clock = (TestClock) provider.GetRequiredService<ISystemClock>();

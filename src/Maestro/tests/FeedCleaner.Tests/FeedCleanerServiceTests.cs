@@ -22,12 +22,12 @@ namespace FeedCleanerService.Tests
     [TestFixture, NonParallelizable]
     public class FeedCleanerServiceTests : IDisposable
     {
-        private readonly Lazy<BuildAssetRegistryContext> _context;
-        private readonly Mock<IHostEnvironment> Env;
-        private readonly ServiceProvider Provider;
-        private readonly IServiceScope Scope;
-        private readonly Dictionary<string, AzureDevOpsFeed> Feeds;
-        private readonly Mock<IAzureDevOpsClient> AzdoMock;
+        private Lazy<BuildAssetRegistryContext> _context;
+        private Mock<IHostEnvironment> Env;
+        private ServiceProvider Provider;
+        private IServiceScope Scope;
+        private Dictionary<string, AzureDevOpsFeed> Feeds;
+        private Mock<IAzureDevOpsClient> AzdoMock;
 
         private readonly string SomeAccount = "someAccount";
         private readonly string UnmanagedFeedName = "some-other-feed";

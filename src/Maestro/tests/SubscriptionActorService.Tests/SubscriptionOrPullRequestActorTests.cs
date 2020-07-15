@@ -12,9 +12,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Moq;
+using NUnit.Framework;
 
 namespace SubscriptionActorService.Tests
 {
+    [TestFixture]
     public abstract class SubscriptionOrPullRequestActorTests : ActorTests
     {
         protected const string AssetFeedUrl = "https://source.feed/index.json";
@@ -25,23 +27,19 @@ namespace SubscriptionActorService.Tests
         protected const string NewBuildNumber = "build.number";
         protected const string NewCommit = "sha2";
 
-        protected readonly Mock<IActionRunner> ActionRunner;
-
-        protected readonly List<Action<BuildAssetRegistryContext>> ContextUpdates =
-            new List<Action<BuildAssetRegistryContext>>();
-
-        protected readonly List<Action> AfterDbUpdateActions = new List<Action>();
-
-        protected readonly Mock<IHostEnvironment> HostingEnvironment;
-
+        protected Mock<IActionRunner> ActionRunner;
+        protected List<Action<BuildAssetRegistryContext>> ContextUpdates;
+        protected List<Action> AfterDbUpdateActions;
+        protected Mock<IHostEnvironment> HostingEnvironment;
         protected Channel Channel;
-
         protected DefaultChannel DefaultChannel;
-
         protected Subscription Subscription;
 
-        protected SubscriptionOrPullRequestActorTests(ITestOutputHelper output) : base(output)
+        [SetUp]
+        public void SubscriptionOrPullRequestActorTests_SetUp()
         {
+            ContextUpdates = new List<Action<BuildAssetRegistryContext>>();
+            AfterDbUpdateActions= new List<Action>();
             ActionRunner = CreateMock<IActionRunner>();
             HostingEnvironment = CreateMock<IHostEnvironment>();
         }

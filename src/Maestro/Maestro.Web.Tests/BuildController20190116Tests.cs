@@ -22,16 +22,6 @@ namespace Maestro.Web.Tests
     [TestFixture, NonParallelizable]
     public class BuildController20190116Tests
     {
-        private readonly ITestOutputHelper _output;
-        private readonly TestDatabaseFixture _database;
-
-        [SetUp]
-        public void BuildController20190116Tests_SetUp()
-        {
-            _output = output;
-            _database = database;
-        }
-
         [Test]
         public async Task MinimalBuildIsCreatedAndCanRetrieved()
         {
@@ -232,26 +222,17 @@ namespace Maestro.Web.Tests
 
         private Task<TestData> BuildDefaultAsync()
         {
-            return new TestDataBuilder(_database, _output).BuildAsync();
+            return new TestDataBuilder().BuildAsync();
         }
 
         private sealed class TestDataBuilder
         {
-            private readonly TestDatabaseFixture _database;
-            private readonly ITestOutputHelper _output;
-
-            public TestDataBuilder(TestDatabaseFixture database, ITestOutputHelper output)
-            {
-                _database = database;
-                _output = output;
-            }
-
             public async Task<TestData> BuildAsync()
             {
-                string connectionString = await _database.GetConnectionString();
+                string connectionString = await SharedData.Database.GetConnectionString();
 
                 ServiceCollection collection = new ServiceCollection();
-                collection.AddLogging(l => l.AddProvider(new XUnitLogger(_output)));
+                collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
                 collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
                 {
                     EnvironmentName = Environments.Development

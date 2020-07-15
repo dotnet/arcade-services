@@ -19,21 +19,12 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Octokit;
 using Octokit.Internal;
-using Xunit.Sdk;
 
 namespace Microsoft.DotNet.Web.Authentication.Tests
 {
-    [TestFixture, NonParallelizable]
+    [TestFixture]
     public class GitHubClaimsResolverTests
     {
-        private readonly ITestOutputHelper _output;
-
-        [SetUp]
-        public void GitHubClaimsResolverTests_SetUp()
-        {
-            _output = output;
-        }
-
         private IResponse MockResponse()
         {
             var m = new Mock<IResponse>();
@@ -183,7 +174,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
                     {
                         1 => MockUser(146, "TestUser", "TestEmail@microsoft.test", "A Real Fake Name", "https://github.com/TestUser"),
                         2 => MockUser(146, "TestUser", "OtherEmail@microsoft.test", "A Real Fake Name", "https://github.com/TestUser"),
-                        _ => throw new XunitException("user fetched too many times"),
+                        _ => throw new InvalidOperationException("user fetched too many times"),
                     };
                 });
 
@@ -346,7 +337,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
                     {
                         1 => new[] {MockOrganization(978, "OldTestOrg")},
                         2 => new[] {MockOrganization(978, "NewTestOrg")},
-                        _ => throw new XunitException("orgs fetched too many times"),
+                        _ => throw new InvalidOperationException("orgs fetched too many times"),
                     };
                 });
             int teamTimes = 0;
@@ -358,7 +349,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
                     {
                         1 => new[] {MockTeam(1235, "OldTestTeam", MockOrganization(85241, "OldOtherOrg"))},
                         2 => new[] {MockTeam(1235, "NewTestTeam", MockOrganization(85241, "NewOtherOrg"))},
-                        _ => throw new XunitException("teams fetched too many times"),
+                        _ => throw new InvalidOperationException("teams fetched too many times"),
                     };
                 });
 
@@ -406,7 +397,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             collection.AddLogging(l =>
             {
                 l.SetMinimumLevel(LogLevel.Trace);
-                l.AddProvider(new XUnitLogger(_output));
+                l.AddProvider(new NUnitLogger());
             });
             collection.AddSingleton<GitHubClaimResolver>();
             var clientFactoryMock = new Mock<IGitHubClientFactory>();

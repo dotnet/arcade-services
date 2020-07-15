@@ -17,17 +17,9 @@ using NUnit.Framework;
 
 namespace Microsoft.DotNet.Kusto.Tests
 {
-    [TestFixture, NonParallelizable]
+    [TestFixture]
     public class KustoHelpersTests
     {
-        private readonly ITestOutputHelper _output;
-
-        [SetUp]
-        public void KustoHelpersTests_SetUp()
-        {
-            _output = output;
-        }
-
         [Test]
         public async Task EmptyWriteTestShouldNotSend()
         {
@@ -42,7 +34,7 @@ namespace Microsoft.DotNet.Kusto.Tests
             await KustoHelpers.WriteDataToKustoInMemoryAsync(ingest.Object,
                 "TEST-DATABASE",
                 "TEST-TABLE",
-                new XUnitLogger(_output),
+                new NUnitLogger(), 
                 Enumerable.Empty<int>(),
                 null);
 
@@ -67,7 +59,7 @@ namespace Microsoft.DotNet.Kusto.Tests
             await KustoHelpers.WriteDataToKustoInMemoryAsync(ingest.Object,
                 "TEST-DATABASE",
                 "TEST-TABLE",
-                new XUnitLogger(_output),
+                new NUnitLogger(), 
                 new[] {inputValue},
                 v => new[]
                 {
@@ -96,7 +88,7 @@ namespace Microsoft.DotNet.Kusto.Tests
             await KustoHelpers.WriteDataToKustoInMemoryAsync(ingest.Object,
                 "TEST-DATABASE",
                 "TEST-TABLE",
-                new XUnitLogger(_output),
+                new NUnitLogger(), 
                 new[] {1},
                 v => new[]
                 {
@@ -116,7 +108,7 @@ namespace Microsoft.DotNet.Kusto.Tests
             await (((Func<Task>)(() => KustoHelpers.WriteDataToKustoInMemoryAsync(ingest.Object,
                     "TEST-DATABASE",
                     "TEST-TABLE",
-                    new XUnitLogger(_output),
+                    new NUnitLogger(), 
                     new[] {1, 2},
                     v => v switch
                     {
@@ -155,7 +147,7 @@ namespace Microsoft.DotNet.Kusto.Tests
             await KustoHelpers.WriteDataToKustoInMemoryAsync(ingest.Object,
                     "TEST-DATABASE",
                     "TEST-TABLE",
-                    new XUnitLogger(_output),
+                    new NUnitLogger(), 
                     new[] {1, 2},
                     v => v switch
                     {
@@ -211,7 +203,7 @@ namespace Microsoft.DotNet.Kusto.Tests
             await KustoHelpers.WriteDataToKustoInMemoryAsync(ingest.Object,
                 "TEST-DATABASE",
                 "TEST-TABLE",
-                new XUnitLogger(_output),
+                new NUnitLogger(), 
                 new[] {0, 1, 0, 2, 0},
                 v => v switch
                 {

@@ -40,8 +40,7 @@ namespace Microsoft.DotNet.Darc.Tests
         public LocalGitClient GitClient { get => _gitClient; }
         public GitFileManager GitFileManager { get => _gitFileManager; }
 
-        [SetUp]
-        public void DependencyTestDriver_SetUp()
+        public DependencyTestDriver(string testName)
         {
             _testName = testName;
         }

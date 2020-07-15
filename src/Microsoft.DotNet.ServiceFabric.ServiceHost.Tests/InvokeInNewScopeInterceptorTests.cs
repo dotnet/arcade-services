@@ -135,7 +135,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             requestTelemetry.Name.Should().NotBeNull();
             (requestTelemetry.Success ?? true).Should().BeTrue();
             requestTelemetry.Name.Should().Contain("IFakeService");
-            requestTelemetry.Name.Should().Contain("service://TestName");
+            requestTelemetry.Name.Should().ContainEquivalentOf("service://TestName");
             
             telemetryChannel.Telemetry.OfType<ExceptionTelemetry>().Should().BeEmpty();
         }

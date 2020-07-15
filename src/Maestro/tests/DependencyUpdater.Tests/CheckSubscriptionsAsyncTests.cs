@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using FluentAssertions;
 using Maestro.Data.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -14,7 +13,7 @@ using NUnit.Framework;
 
 namespace DependencyUpdater.Tests
 {
-    [TestFixture]
+    [TestFixture, NonParallelizable]
     public class CheckSubscriptionsAsyncTests : DependencyUpdaterTests
     {
         [Test]

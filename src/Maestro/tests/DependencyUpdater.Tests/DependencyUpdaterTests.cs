@@ -14,21 +14,23 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Data;
 using Moq;
+using NUnit.Framework;
 using ServiceFabricMocks;
 
 namespace DependencyUpdater.Tests
 {
-    public class DependencyUpdaterTests : IDisposable
+    public class DependencyUpdaterTests
     {
-        private readonly Lazy<BuildAssetRegistryContext> _context;
-        protected readonly Mock<IHostEnvironment> Env;
-        protected readonly ServiceProvider Provider;
-        protected readonly IServiceScope Scope;
-        protected readonly MockReliableStateManager StateManager;
-        protected readonly Mock<ISubscriptionActor> SubscriptionActor;
-        protected readonly Mock<IRemoteFactory> RemoteFactory;
+        private Lazy<BuildAssetRegistryContext> _context;
+        protected Mock<IHostEnvironment> Env;
+        protected ServiceProvider Provider;
+        protected IServiceScope Scope;
+        protected MockReliableStateManager StateManager;
+        protected Mock<ISubscriptionActor> SubscriptionActor;
+        protected Mock<IRemoteFactory> RemoteFactory;
 
-        public DependencyUpdaterTests()
+        [SetUp]
+        public void DependencyUpdaterTests_SetUp()
         {
             var services = new ServiceCollection();
             StateManager = new MockReliableStateManager();
@@ -64,7 +66,8 @@ namespace DependencyUpdater.Tests
 
         public BuildAssetRegistryContext Context => _context.Value;
 
-        public void Dispose()
+        [TearDown]
+        public void DependencyUpdaterTests_TearDown()
         {
             Env.VerifyAll();
             SubscriptionActor.VerifyAll();

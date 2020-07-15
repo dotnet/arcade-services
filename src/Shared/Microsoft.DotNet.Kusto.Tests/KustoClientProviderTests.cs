@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Kusto.Data.Common;
 using Kusto.Data.Exceptions;
+using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.Options;
 using Moq;
 using NUnit.Framework;

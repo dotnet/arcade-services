@@ -26,6 +26,7 @@ using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
 
 namespace SubscriptionActorService.Tests
 {
+    [TestFixture]
     public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     {
         private const long InstallationId = 1174;
@@ -33,21 +34,21 @@ namespace SubscriptionActorService.Tests
         private const string InProgressPrHeadBranch = "pr.head.branch";
         private const string PrUrl = "https://git.com/pr/123";
 
-        private readonly Dictionary<string, Mock<IRemote>> DarcRemotes =
-            new Dictionary<string, Mock<IRemote>>();
+        private Dictionary<string, Mock<IRemote>> DarcRemotes;
 
-        private readonly Mock<IRemoteFactory> RemoteFactory;
+        private Mock<IRemoteFactory> RemoteFactory;
 
-        private readonly Mock<IMergePolicyEvaluator> MergePolicyEvaluator;
+        private Mock<IMergePolicyEvaluator> MergePolicyEvaluator;
 
-        private readonly Dictionary<ActorId, Mock<ISubscriptionActor>> SubscriptionActors =
-            new Dictionary<ActorId, Mock<ISubscriptionActor>>();
+        private Dictionary<ActorId, Mock<ISubscriptionActor>> SubscriptionActors;
 
         private string NewBranch;
 
         [SetUp]
         public void PullRequestActorTests_SetUp()
         {
+            DarcRemotes = new Dictionary<string, Mock<IRemote>>();
+            SubscriptionActors = new Dictionary<ActorId, Mock<ISubscriptionActor>>();
             MergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
             RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
         }
@@ -387,13 +388,8 @@ namespace SubscriptionActorService.Tests
         }
 
         [TestFixture, NonParallelizable]
-
         public class ProcessPendingUpdatesAsync : PullRequestActorTests
         {
-            [SetUp]            public void ProcessPendingUpdatesAsync_SetUp()
-            {
-            }
-
             private async Task WhenProcessPendingUpdatesAsyncIsCalled()
             {
                 await Execute(
@@ -526,13 +522,8 @@ namespace SubscriptionActorService.Tests
         }
 
         [TestFixture, NonParallelizable]
-
         public class UpdateAssetsAsync : PullRequestActorTests
         {
-            [SetUp]            public void UpdateAssetsAsync_SetUp()
-            {
-            }
-
             private async Task WhenUpdateAssetsAsyncIsCalled(Build forBuild)
             {
                 await Execute(

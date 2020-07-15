@@ -14,13 +14,6 @@ namespace SubscriptionActorService.Tests
 {
     public abstract class TestsWithServices : TestsWithMocks
     {
-        private readonly ITestOutputHelper _output;
-
-        protected TestsWithServices(ITestOutputHelper output)
-        {
-            _output = output;
-        }
-
         protected virtual void RegisterServices(IServiceCollection services)
         {
         }
@@ -35,7 +28,7 @@ namespace SubscriptionActorService.Tests
             var services = new ServiceCollection();
             Environment.SetEnvironmentVariable("ENVIRONMENT", "XUNIT");
             services.TryAddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
-            services.AddLogging(l => l.AddProvider(new XUnitLogger(_output)));
+            services.AddLogging(l => l.AddProvider(new NUnitLogger()));
             RegisterServices(services);
             using (ServiceProvider container = services.BuildServiceProvider())
             using (IServiceScope scope = container.GetRequiredService<IServiceScopeFactory>().CreateScope())

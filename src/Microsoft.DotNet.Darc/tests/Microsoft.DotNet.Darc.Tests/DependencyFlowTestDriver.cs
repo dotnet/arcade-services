@@ -33,9 +33,8 @@ namespace Microsoft.DotNet.Darc.Tests
         private const string InputJsonFile = "input.json";
         public string OutputJsonFile { get => "output.json";}
         private string RootInputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, TestFilesInput, _testName); }
-        
-        [SetUp]        
-        public void DependencyFlowTestDriver_SetUp()
+         
+        public DependencyFlowTestDriver(string testName)
         {
             _testName = testName;
         }

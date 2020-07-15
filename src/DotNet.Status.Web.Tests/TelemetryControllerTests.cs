@@ -12,26 +12,33 @@ using NUnit.Framework;
 
 namespace DotNet.Status.Web.Tests
 {
-    [TestFixture, NonParallelizable]
-    public class TelemetryControllerTests : IDisposable
+    [TestFixture]
+    public class TelemetryControllerTests
     {
-        private readonly ITestOutputHelper _output;
-        private TelemetryController _controller;
-        private ServiceProvider _services;
-
-        [SetUp]
-        public void TelemetryControllerTests_SetUp()
+        private class TestData : IDisposable
         {
-            _output = output;            
+            public readonly TelemetryController Controller;
+            private readonly ServiceProvider _services;
+
+            public TestData(TelemetryController controller, ServiceProvider services)
+            {
+                Controller = controller;
+                _services = services;
+            }
+
+            public void Dispose()
+            {
+                _services?.Dispose();
+            }
         }
 
-        protected void SetUp(KustoOptions customOptions = null)
+        private static TestData SetUp(KustoOptions customOptions = null)
         {
             var collection = new ServiceCollection();
             collection.AddOptions();
             collection.AddLogging(l =>
             {
-                l.AddProvider(new XUnitLogger(_output));
+                l.AddProvider(new NUnitLogger());
             });
 
             collection.Configure<KustoOptions>(options =>
@@ -48,21 +55,15 @@ namespace DotNet.Status.Web.Tests
 
             collection.AddSingleton(kustoIngestClientMock.Object);
 
-            _services = collection.BuildServiceProvider();
-            _controller = _services.GetRequiredService<TelemetryController>();
-        }
-
-        [TearDown]
-        public void Dispose()
-        {
-            _services.Dispose();
+            var services = collection.BuildServiceProvider();
+            return new TestData(services.GetRequiredService<TelemetryController>(), services);
         }
 
         [Test]
-        public async void TestArcadeValidationTelemetryCollection()
+        public async Task TestArcadeValidationTelemetryCollection()
         {
-            SetUp();
-            IActionResult result = await _controller.CollectArcadeValidation(new ArcadeValidationData
+            using TestData testData = SetUp();
+            IActionResult result = await testData.Controller.CollectArcadeValidation(new ArcadeValidationData
             {
                 BuildDateTime = new DateTimeOffset(2001, 2, 3, 16, 5, 6, 7, TimeSpan.Zero),
                 ArcadeVersion = "fakearcadeversion",
@@ -79,10 +80,10 @@ namespace DotNet.Status.Web.Tests
         }
 
         [Test]
-        public async void TestArcadeValidationTelemetryCollectionWithMissingKustoConnectionString()
+        public async Task TestArcadeValidationTelemetryCollectionWithMissingKustoConnectionString()
         {
-            SetUp(new KustoOptions());
-            await (((Func<Task>)(() => _controller.CollectArcadeValidation(new ArcadeValidationData())))).Should().ThrowExactlyAsync<InvalidOperationException>();
+            using TestData testData = SetUp(new KustoOptions());
+            await (((Func<Task>)(() => testData.Controller.CollectArcadeValidation(new ArcadeValidationData())))).Should().ThrowExactlyAsync<InvalidOperationException>();
         }
     }
 }

@@ -14,7 +14,7 @@ using Octokit;
 
 namespace DependencyUpdateErrorProcessor.Tests
 {
-    [TestFixture]
+    [TestFixture, NonParallelizable]
     public class CreateGithubIssueTest : DependencyUpdateErrorProcessorTests
     {
         private const string SubscriptionId = "00000000-0000-0000-0000-000000000001";
