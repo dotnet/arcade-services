@@ -23,12 +23,12 @@ namespace SubscriptionActorService.Tests
     [TestFixture, NonParallelizable]
     public class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
     {
-        private readonly Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors =
-            new Dictionary<ActorId, Mock<IPullRequestActor>>();
+        private Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors;
 
         [SetUp]
         public void SubscriptionActorTests_SetUp()
         {
+            PullRequestActors = new Dictionary<ActorId, Mock<IPullRequestActor>>();
         }
 
         protected override void RegisterServices(IServiceCollection services)
