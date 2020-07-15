@@ -61,7 +61,7 @@ namespace DotNet.Status.Web.Tests
             SetUp();
             IActionResult result = await _controller.CollectArcadeValidation(new ArcadeValidationData
             {
-                BuildDateTime = new DateTime(),
+                BuildDateTime = new DateTimeOffset(2001, 2, 3, 16, 5, 6, 7, TimeSpan.Zero),
                 ArcadeVersion = "fakearcadeversion",
                 BARBuildID = -1,
                 ArcadeBuildLink = "fakearcadebuildlink", 
