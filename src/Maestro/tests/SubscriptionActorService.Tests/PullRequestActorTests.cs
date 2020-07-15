@@ -8,7 +8,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
 using FluentAssertions;
-using FluentAssertions;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
