@@ -5,24 +5,25 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Maestro.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using NUnit.Framework;
 using Octokit;
-using Xunit;
 
 namespace DependencyUpdateErrorProcessor.Tests
 {
+    [TestFixture, NonParallelizable]
     public class CreateGithubIssueTest : DependencyUpdateErrorProcessorTests
     {
         private const string SubscriptionId = "00000000-0000-0000-0000-000000000001";
         private const string RepoUrl = "https://github.test/test-org-1/test-repo-1";
         private const string BranchOne = "BranchOne";
         private const string BranchTwo = "BranchTwo";
-        [Theory]
-        [InlineData("https://github.test/test-org-1/test-repo-1", "BranchOne", "ProcessPendingUpdatesAsync", "no arguments" , "2200/1/1" , false)]
-        [InlineData("https://github.test/test-org-1/test-repo-13", "BranchTwo", "UpdateAssetsAsync", "[\"00000000-0000-0000-0000-000000000001\",\"UpdateAssetsAsync\"]",  "2200/1/1", false)]
-        [InlineData("https://github.test/test-org-1/test-repo-1", "BranchOne", "TestMethod", "no arguments", "2200/1/1", false)]
+        [TestCase("https://github.test/test-org-1/test-repo-1", "BranchOne", "ProcessPendingUpdatesAsync", "no arguments" , "2200/1/1" , false)]
+        [TestCase("https://github.test/test-org-1/test-repo-13", "BranchTwo", "UpdateAssetsAsync", "[\"00000000-0000-0000-0000-000000000001\",\"UpdateAssetsAsync\"]",  "2200/1/1", false)]
+        [TestCase("https://github.test/test-org-1/test-repo-1", "BranchOne", "TestMethod", "no arguments", "2200/1/1", false)]
         public async Task ShouldCreateIssue(string repoUrl, string branch , string method, string arguments , DateTime errorOccurredAt, bool success)
         {
             RepositoryBranchUpdateHistoryEntry repositoryBranchUpdate =
@@ -67,11 +68,10 @@ namespace DependencyUpdateErrorProcessor.Tests
         /// <param name="errorOccurredAt"></param>
         /// <param name="success"></param>
         /// <returns>Does not create any new issue.</returns>
-        [Theory]
-        [InlineData("https://github.test/test-org-1/test-repo-1", "38", "SynchronizePullRequestAsync", "no arguments", "2200/1/1", false)]
-        [InlineData("https://github.test/test-org-1/test-repo-13", "38", "UpdateAssetsAsync", "[\"0000000\",\"UpdateAssetsAsync\"]", "2200/1/1", false)]
-        [InlineData("https://github.test/test-org-1/test-repo-12", "38", "UpdateAssetsAsync", "[\"00000000-0000-0000-0000-000000000001\",\"UpdateAssetsAsync\"]", "2020/1/1", false)]
-        [InlineData("https://github.test/test-org-1/test-repo-1", "38", "UpdateAssetsAsync", "[\"00000000-0000-0000-0000-000000000001\",\"UpdateAssetsAsync\"]", "2200/1/1", false)]
+        [TestCase("https://github.test/test-org-1/test-repo-1", "38", "SynchronizePullRequestAsync", "no arguments", "2200/1/1", false)]
+        [TestCase("https://github.test/test-org-1/test-repo-13", "38", "UpdateAssetsAsync", "[\"0000000\",\"UpdateAssetsAsync\"]", "2200/1/1", false)]
+        [TestCase("https://github.test/test-org-1/test-repo-12", "38", "UpdateAssetsAsync", "[\"00000000-0000-0000-0000-000000000001\",\"UpdateAssetsAsync\"]", "2020/1/1", false)]
+        [TestCase("https://github.test/test-org-1/test-repo-1", "38", "UpdateAssetsAsync", "[\"00000000-0000-0000-0000-000000000001\",\"UpdateAssetsAsync\"]", "2200/1/1", false)]
         public async Task ShouldNotCreateIssue(string repoUrl, string branch, string method, string arguments, DateTime errorOccurredAt, bool success)
         {
             RepositoryBranchUpdateHistoryEntry repositoryBranchUpdate =
@@ -100,7 +100,7 @@ namespace DependencyUpdateErrorProcessor.Tests
             GithubClient.Verify(x => x.Issue.Create(It.IsAny<long>(), It.IsAny<NewIssue>()), Times.Never);
         }
 
-        [Fact]
+        [Test]
         public async Task CreateIssue()
         {
             RepositoryBranchUpdateHistoryEntry firstError =
@@ -140,19 +140,19 @@ namespace DependencyUpdateErrorProcessor.Tests
                 ActivatorUtilities.CreateInstance<DependencyUpdateErrorProcessor>(Scope.ServiceProvider,
                     Context);
             await errorProcessor.ProcessDependencyUpdateErrorsAsync();
-            Assert.Equal(2, newIssue.Count);
-            Assert.Equal("DependencyUpdateError", newIssue[0].Labels[0]);
-            Assert.Contains(RepoUrl, newIssue[0].Title);
-            Assert.Contains(BranchOne, newIssue[0].Body);
-            Assert.Contains("ProcessPendingUpdatesAsync", newIssue[0].Body);
-            Assert.Contains("1/1/2200 12:00:00 AM", newIssue[0].Body);
-            Assert.Contains(RepoUrl, newIssue[0].Body);
-            Assert.Equal( "DependencyUpdateError", newIssue[1].Labels[0]);
-            Assert.Contains(RepoUrl, newIssue[1].Title);
-            Assert.Contains(BranchTwo, newIssue[1].Body);
-            Assert.Contains("ProcessPendingUpdatesAsync error", newIssue[1].Body);
-            Assert.Contains("1/1/2200 12:00:00 AM", newIssue[1].Body);
-            Assert.Contains(RepoUrl, newIssue[1].Body);
+            newIssue.Should().HaveCount(2);
+            newIssue[0].Labels[0].Should().Be("DependencyUpdateError");
+            newIssue[0].Title.Should().Contain(RepoUrl);
+            newIssue[0].Body.Should().Contain(BranchOne);
+            newIssue[0].Body.Should().Contain("ProcessPendingUpdatesAsync");
+            newIssue[0].Body.Should().Contain("1/1/2200 12:00:00 AM");
+            newIssue[0].Body.Should().Contain(RepoUrl);
+            newIssue[1].Labels[0].Should().Be("DependencyUpdateError");
+            newIssue[1].Title.Should().Contain(RepoUrl);
+            newIssue[1].Body.Should().Contain(BranchTwo);
+            newIssue[1].Body.Should().Contain("ProcessPendingUpdatesAsync error");
+            newIssue[1].Body.Should().Contain("1/1/2200 12:00:00 AM");
+            newIssue[1].Body.Should().Contain(RepoUrl);
         }
     }
 }
