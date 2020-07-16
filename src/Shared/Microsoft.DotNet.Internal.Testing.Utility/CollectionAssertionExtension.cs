@@ -23,7 +23,7 @@ namespace Microsoft.DotNet.Internal.Testing.Utility
             if (inspector == null) throw new ArgumentNullException(nameof(inspector));
 
             Execute.Assertion.BecauseOf(because, becauseArgs)
-                .WithExpectation("Expected {context:collection} to satisfy all inspectors{reason}, ")
+                .WithExpectation("Expected {context:collection} to satisfy inspector{reason}, ")
                 .ForCondition(assertions.Subject != null)
                 .FailWith("but collection is <null>.")
                 .Then.ForCondition(assertions.Subject.Any())
