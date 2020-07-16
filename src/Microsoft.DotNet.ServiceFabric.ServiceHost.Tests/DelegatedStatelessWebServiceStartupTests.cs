@@ -1,16 +1,18 @@
 using System;
 using System.IO;
+using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 {
+    [TestFixture]
     public class DelegatedStatelessWebServiceStartupTests
     {
-        [Fact]
+        [Test]
         public void CallsForwardedToResolvedStartup()
         {
             var collection = new ServiceCollection();
@@ -29,11 +31,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             ServiceProvider innerProvider = innerCollection.BuildServiceProvider();
 
             var outer = innerProvider.GetService<OuterTest>();
-            Assert.NotNull(outer);
-            Assert.Equal("Test string", outer.Value);
+            outer.Should().NotBeNull();
+            outer.Value.Should().Be("Test string");
             var inner = innerProvider.GetService<InnerTest>();
-            Assert.NotNull(inner);
-            Assert.Equal("Test string:Inner", inner.Value);
+            inner.Should().NotBeNull();
+            inner.Value.Should().Be("Test string:Inner");
 
             var appBuilder = new ApplicationBuilder(innerProvider);
             delegated.Configure(appBuilder);
@@ -41,22 +43,22 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             var ctx = new DefaultHttpContext();
             built(ctx);
 
-            Assert.True(ctx.Response.Headers.TryGetValue("TestHeader", out var headerValues));
-            Assert.Equal("TestHeaderValue", headerValues.ToString());
+            ctx.Response.Headers.TryGetValue("TestHeader", out var headerValues).Should().BeTrue();
+            headerValues.ToString().Should().Be("TestHeaderValue");
         }
 
-        [Fact]
+        [Test]
         public void RequiresIStartup()
         {
             var collection = new ServiceCollection();
             ServiceProvider provider = collection.BuildServiceProvider();
-            Assert.Throws<InvalidOperationException>(() =>
+            (((Func<object>)(() =>
                 new DelegatedStatelessWebServiceStartup<DelegatedStatelessWebServiceStartupTests>(
                     provider,
                     null,
                     service => { }
                 )
-            );
+))).Should().ThrowExactly<InvalidOperationException>();
         }
 
         private class MyStartup : IStartup

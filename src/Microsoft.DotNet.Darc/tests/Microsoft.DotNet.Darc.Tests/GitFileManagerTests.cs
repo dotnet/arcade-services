@@ -2,17 +2,19 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.DotNet.DarcLib;
-using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using System.Xml;
-using Xunit;
+using FluentAssertions;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.Logging.Abstractions;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.Darc.Tests
 {
+    [TestFixture]
     public class GitFileManagerTests
     {
         const string TestInputsRootDir = "inputs";
@@ -21,25 +23,22 @@ namespace Microsoft.DotNet.Darc.Tests
         const string InputNugetConfigFile = "NuGet.input.config";
         const string OutputNugetConfigFile = "NuGet.output.config";
 
-        [Theory]
-        [InlineData("RemoveAllManagedFeeds", new string[0])]
-        [InlineData("AddFeedsToNuGetConfigWithoutManagedFeeds", new string[] {
+        [TestCase("RemoveAllManagedFeeds", new string[0])]
+        [TestCase("AddFeedsToNuGetConfigWithoutManagedFeeds", new string[] {
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-standard-a5b5f2e1/nuget/v3/index.json",
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
-        // Replaced an existing set of sources (one of which uses an a different URL format)
-        // with a second set of feeds
-        [InlineData("ReplaceExistingFeedsWithNewOnes", new string[] {
+        [TestCase("ReplaceExistingFeedsWithNewOnes", new string[] {
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-standard-a5b5f2e1/nuget/v3/index.json" })]
-        [InlineData("PreserveCommentsInRightLocationsWhenReplacing", new string[] {
+        [TestCase("PreserveCommentsInRightLocationsWhenReplacing", new string[] {
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-standard-a5b5f2e1/nuget/v3/index.json",
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
-        [InlineData("PreserveCommentsInRightLocationsWithNoExistingBlock", new string[] {
+        [TestCase("PreserveCommentsInRightLocationsWithNoExistingBlock", new string[] {
             "https://pkgs.dev.azure.com/dnceng/_packaging/darc-int-dotnet-arcade-b0437974/nuget/v3/index.json",
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
-        [InlineData("PreserveManagedFromFromOutside", new string[] {
+        [TestCase("PreserveManagedFromFromOutside", new string[] {
             "https://pkgs.dev.azure.com/dnceng/_packaging/darc-int-dotnet-arcade-b0437974/nuget/v3/index.json",
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
-        [InlineData("WhiteSpaceCorrectlyFormatted", new string[] {
+        [TestCase("WhiteSpaceCorrectlyFormatted", new string[] {
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-core-setup-7d57652f/nuget/v3/index.json" })]
         public async Task UpdatePackageSourcesTests(string testName, string[] managedFeeds)
         {
@@ -72,15 +71,14 @@ namespace Microsoft.DotNet.Darc.Tests
             // exist (GitFile normalizes these before writing)
             expectedOutputText = expectedOutputText.Replace(Environment.NewLine, "\n");
 
-            Assert.Equal(expectedOutputText, file.Content);
+            file.Content.Should().Be(expectedOutputText);
         }
 
-        [Theory]
-        [InlineData("SimpleDuplicated.props", true)]
-        [InlineData("DuplicatedSameConditions.props", true)]
-        [InlineData("AlternateNamesDuplicated.props", true)]
-        [InlineData("NothingDuplicated.props", false)]
-        [InlineData("NoDuplicatedDifferentConditions.props", false)]
+        [TestCase("SimpleDuplicated.props", true)]
+        [TestCase("DuplicatedSameConditions.props", true)]
+        [TestCase("AlternateNamesDuplicated.props", true)]
+        [TestCase("NothingDuplicated.props", false)]
+        [TestCase("NoDuplicatedDifferentConditions.props", false)]
         public void VerifyNoDuplicatedPropertiesTests(string inputFileName, bool hasDuplicatedProps)
         {
             GitFileManager gitFileManager = new GitFileManager(null, NullLogger.Instance);
@@ -95,8 +93,7 @@ namespace Microsoft.DotNet.Darc.Tests
 
             XmlDocument propsFile = GitFileManager.GetXmlDocument(propsFileContent);
 
-            Assert.Equal(!hasDuplicatedProps, 
-                gitFileManager.VerifyNoDuplicatedProperties(propsFile).Result);
+            gitFileManager.VerifyNoDuplicatedProperties(propsFile).Result.Should().Be(!hasDuplicatedProps);
         }
 
     }

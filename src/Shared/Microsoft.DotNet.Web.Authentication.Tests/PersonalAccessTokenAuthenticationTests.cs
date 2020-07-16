@@ -9,6 +9,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -20,30 +21,23 @@ using Microsoft.DotNet.Web.Authentication.AccessToken;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.WebEncoders.Testing;
 using Moq;
-using Xunit;
-using Xunit.Abstractions;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.Web.Authentication.Tests
 {
+    [TestFixture]
     public class PersonalAccessTokenAuthenticationTests
     {
-        private readonly ITestOutputHelper _output;
-
-        public PersonalAccessTokenAuthenticationTests(ITestOutputHelper output)
-        {
-            _output = output;
-        }
-
-        [Fact]
+        [Test]
         public async Task NoTokenRequiringAuthIsRejected()
         {
             using HttpClient client = CreateClient(out _);
 
             using HttpResponseMessage response = await client.GetAsync("https://example.test/test-auth/role/role");
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
 
-        [Fact]
+        [Test]
         public async Task BadTokenLengthRequiringAuthIsRejected()
         {
             using HttpClient client = CreateClient(out _);
@@ -52,10 +46,10 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "WRONG-LENGTH-TOKEN");
             using HttpResponseMessage response = await client.SendAsync(request);
 
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
 
-        [Fact]
+        [Test]
         public async Task BadTokenRequiringAuthIsRejected()
         {
             using HttpClient client = CreateClient(out _, 10);
@@ -67,10 +61,10 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
                 new AuthenticationHeaderValue("Bearer", Convert.ToBase64String(zeroTokenBytes));
             using HttpResponseMessage response = await client.SendAsync(request);
 
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
 
-        [Fact]
+        [Test]
         public async Task WrongAuthSchemeFailes()
         {
             using HttpClient client = CreateClient(out _, 10);
@@ -81,10 +75,10 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             request.Headers.Authorization = new AuthenticationHeaderValue("NotBearer", token);
             using HttpResponseMessage response = await client.SendAsync(request);
             
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
 
-        [Fact]
+        [Test]
         public async Task GoodTokenWorks()
         {
             using HttpClient client = CreateClient(out _, 10);
@@ -95,11 +89,11 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using HttpResponseMessage response = await client.SendAsync(request);
 
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Equal(GetUser(UserId).Name, await response.Content.ReadAsStringAsync());
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await response.Content.ReadAsStringAsync()).Should().Be(GetUser(UserId).Name);
         }
 
-        [Fact]
+        [Test]
         public async Task WrongPasswordFails()
         {
             using HttpClient client = CreateClient(out _, 10);
@@ -110,10 +104,10 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using HttpResponseMessage response = await client.SendAsync(request);
             
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
 
-        [Fact]
+        [Test]
         public async Task FailedPrincipalValidateFails()
         {
             using HttpClient client = CreateClient(out _, 10, validatedPrincipal: context =>
@@ -128,10 +122,10 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using HttpResponseMessage response = await client.SendAsync(request);
             
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
 
-        [Fact]
+        [Test]
         public async Task ExceptionFails()
         {
             using HttpClient client = CreateClient(out _, 10, validatedPrincipal: context =>
@@ -145,10 +139,10 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using HttpResponseMessage response = await client.SendAsync(request);
             
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
 
-        [Fact]
+        [Test]
         public async Task ReplacedPrincipalIsRespected()
         {
             using HttpClient client = CreateClient(out _, 10, validatedPrincipal: context =>
@@ -173,11 +167,11 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using HttpResponseMessage response = await client.SendAsync(request);
             
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Equal("REPLACED-NAME", await response.Content.ReadAsStringAsync());
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await response.Content.ReadAsStringAsync()).Should().Be("REPLACED-NAME");
         }
 
-        [Fact]
+        [Test]
         public async Task GoodTokenWithRenamedSchemeWorks()
         {
             using HttpClient client = CreateClient(out _, 10, "TestSchemeName");
@@ -188,11 +182,11 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using HttpResponseMessage response = await client.SendAsync(request);
 
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Equal(GetUser(UserId).Name, await response.Content.ReadAsStringAsync());
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await response.Content.ReadAsStringAsync()).Should().Be(GetUser(UserId).Name);
         }
 
-        [Fact]
+        [Test]
         public async Task PasswordFromWrongSizeFails()
         {
             using HttpClient client = CreateClient(out TestAppFactory factory);
@@ -204,10 +198,10 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using HttpResponseMessage response = await client.SendAsync(request);
 
-            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+            response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
 
-        [Fact]
+        [Test]
         public async Task CreatedPasswordWorks()
         {
             using HttpClient client = CreateClient(out _, 10);
@@ -218,11 +212,11 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using HttpResponseMessage response = await client.SendAsync(request);
 
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Equal(GetUser(UserId).Name, await response.Content.ReadAsStringAsync());
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await response.Content.ReadAsStringAsync()).Should().Be(GetUser(UserId).Name);
         }
 
-        [Fact]
+        [Test]
         public async Task CreatedPasswordWithAlternateSchemeWorks()
         {
             using HttpClient client = CreateClient(out _, 10, schemeName: "SomeOtherScheme");
@@ -233,19 +227,19 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             using HttpResponseMessage response = await client.SendAsync(request);
 
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            Assert.Equal(GetUser(UserId).Name, await response.Content.ReadAsStringAsync());
+            response.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await response.Content.ReadAsStringAsync()).Should().Be(GetUser(UserId).Name);
         }
 
-        [Fact]
+        [Test]
         public async Task CreatedPasswordWithWrongSchemeFails()
         {
             using HttpClient client = CreateClient(out _, 10);
 
             using HttpResponseMessage response = await client.GetAsync($"https://example.test/pat/create-token/{UserId}?scheme=UnregisteredScheme");
             
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.Equal(nameof(InvalidOperationException), await response.Content.ReadAsStringAsync());
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await response.Content.ReadAsStringAsync()).Should().Be(nameof(InvalidOperationException));
         }
 
         public const int UserId = 42;
@@ -311,7 +305,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             }
 
             var localClock = new TestClock();
-            factory = new TestAppFactory(_output);
+            factory = new TestAppFactory();
             factory.ConfigureServices(services =>
             {
                 services.AddSingleton<ISystemClock>(localClock);

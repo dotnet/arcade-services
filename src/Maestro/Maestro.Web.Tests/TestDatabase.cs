@@ -8,21 +8,41 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
-using Xunit.Abstractions;
-using Xunit.Sdk;
+using NUnit.Framework;
 
 namespace Maestro.Web.Tests
 {
-    public sealed class TestDatabaseFixture : IDisposable
+    [SetUpFixture]
+    public static class SharedData
+    {
+        public static TestDatabase Database { get; private set; }
+
+        [OneTimeSetUp]
+        public static void SetUp()
+        {
+            Database = new SharedTestDatabase();
+        }
+
+        [OneTimeTearDown]
+        public static void TearDown()
+        {
+            Database.Dispose();
+            Database = null;
+        }
+
+        private class SharedTestDatabase : TestDatabase
+        {
+        }
+    }
+
+    public class TestDatabase : IDisposable
     {
         private const string TestDatabasePrefix = "TestFixtureDatabase_";
-        private readonly IMessageSink _output;
         private string _databaseName;
         private readonly SemaphoreSlim _createLock = new SemaphoreSlim(1);
 
-        public TestDatabaseFixture(IMessageSink output)
+        protected TestDatabase()
         {
-            _output = output;
         }
 
         public void Dispose()
@@ -92,7 +112,7 @@ namespace Maestro.Web.Tests
 
             foreach (string db in previousTestDbs)
             {
-                _output.OnMessage(new DiagnosticMessage($"Dropping test database '{db}'"));
+                TestContext.WriteLine($"Dropping test database '{db}'");
                 await using SqlCommand command = connection.CreateCommand();
                 command.CommandText = $"ALTER DATABASE {db} SET single_user with rollback immediate; DROP DATABASE {db}";
                 await command.ExecuteNonQueryAsync();

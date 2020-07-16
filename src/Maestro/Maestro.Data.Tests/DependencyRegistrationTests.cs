@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using FluentAssertions;
 using Microsoft.DotNet.EntityFrameworkCore.Extensions;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -8,16 +9,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
-using Xunit;
+using NUnit.Framework;
 
 namespace Maestro.Data.Tests
 {
+    [TestFixture]
     public class DependencyRegistrationTests
     {
-        [Fact]
+        [Test]
         public void AreDependenciesRegistered()
         {
-            Assert.True(DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
+            DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
                     {
                         s.AddSingleton<IHostEnvironment>(new HostingEnvironment{EnvironmentName = 
                             Environments.Development});
@@ -27,8 +29,7 @@ namespace Maestro.Data.Tests
                             options.EnableServiceProviderCaching(false);
                         });
                     },
-                    out string message),
-                message);
+                    out string message).Should().BeTrue();
         }
 
     }
