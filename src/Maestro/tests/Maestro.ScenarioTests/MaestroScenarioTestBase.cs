@@ -4,6 +4,8 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 using Maestro.ScenarioTests.ObjectHelpers;
 using Microsoft.DotNet.Maestro.Client;
@@ -79,6 +81,27 @@ namespace Maestro.ScenarioTests
             throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
         }
 
+        public async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, int attempts = 7)
+        {
+            Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepo).ConfigureAwait(false);
+            PullRequest pr = await WaitForPullRequestAsync(targetRepo, targetBranch);
+
+            while (attempts-- > 0)
+            {
+                TestContext.WriteLine($"Starting check for merge, attempts remaining {attempts}");
+                pr = await GitHubApi.PullRequest.Get(repo.Id, pr.Number);
+
+                if (pr.State == ItemState.Closed)
+                {
+                    return true;
+                }
+
+                await Task.Delay(60 * 1000).ConfigureAwait(false);
+            }
+
+            throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
+        }
+
         private async Task<Microsoft.DotNet.DarcLib.PullRequest> WaitForAzDoPullRequestAsync(string targetRepoUri, string targetBranch)
         {
             int attempts = 10;
@@ -108,14 +131,14 @@ namespace Maestro.ScenarioTests
         }
 
         public async Task CheckNonBatchedGitHubPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
-            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete = false, bool isUpdated = false)
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false)
         {
             string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
-            await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, false);
+            await CheckGitHubPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, isCompleted, isUpdated);
         }
 
         public async Task CheckGitHubPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
-            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete, bool isUpdated)
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated)
         {
             TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
             PullRequest pullRequest = isUpdated ?
@@ -128,28 +151,12 @@ namespace Maestro.ScenarioTests
             {
                 await ValidatePullRequestDependencies(targetRepoName, pullRequest.Head.Ref, expectedDependencies);
 
-                if (complete)
+                if (isCompleted)
                 {
                     TestContext.WriteLine($"Checking for automatic merging of PR in {targetBranch} {targetRepoName}");
 
-                    var attempts = 7;
-                    while (attempts-- > 0)
-                    {
-                        TestContext.WriteLine($"Starting check for merge, attempts remaining {attempts}");
-
-                        bool isMerged = await GitHubApi.PullRequest.Merged(pullRequest.User.Login, pullRequest.Title, pullRequest.Number).ConfigureAwait(false);
-
-                        if (!isMerged)
-                        {
-                            TestContext.WriteLine($"Pull request has not been completed. {attempts} tries remaining.");
-                            await Task.Delay(60 * 1000).ConfigureAwait(false);
-                        }
-                    }
+                    await WaitForMergedPullRequestAsync(targetRepoName, targetBranch);
                 }
-
-                TestContext.WriteLine($"Checking expected end state for PR in {targetBranch} {targetRepoName}");
-                ItemState expectedPRState = complete ? ItemState.Closed : ItemState.Open;
-                StringAssert.AreEqualIgnoringCase(expectedPRState.ToString(), pullRequest.State.ToString());
             }
         }
 
@@ -157,25 +164,31 @@ namespace Maestro.ScenarioTests
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete = false)
         {
             string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{source1RepoName} {_parameters.GitHubTestOrg}/{source2RepoName}";
-            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete);
+            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, false);
         }
 
         public async Task CheckNonBatchedAzDoPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
-            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory)
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false)
         {
             string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
-            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false);
+            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated);
         }
 
         public async Task CheckAzDoPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
-            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete)
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated)
         {
             string targetRepoUri = GetAzDoRepoUrl(targetRepoName);
             TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
             Microsoft.DotNet.DarcLib.PullRequest pullRequest = await WaitForAzDoPullRequestAsync(targetRepoUri, targetBranch);
 
             StringAssert.AreEqualIgnoringCase(expectedPRTitle, pullRequest.Title);
-            Microsoft.DotNet.DarcLib.PrStatus expectedPRState = complete ? Microsoft.DotNet.DarcLib.PrStatus.Closed : Microsoft.DotNet.DarcLib.PrStatus.Open;
+
+            if (isUpdated)
+            {
+                await ValidatePullRequestDependencies(targetRepoName, targetBranch, expectedDependencies);
+            }
+
+            Microsoft.DotNet.DarcLib.PrStatus expectedPRState = isCompleted ? Microsoft.DotNet.DarcLib.PrStatus.Closed : Microsoft.DotNet.DarcLib.PrStatus.Open;
             var prStatus = AzDoClient.GetPullRequestStatusAsync(targetRepoUri);
             Assert.AreEqual(expectedPRState, prStatus);
 
@@ -504,15 +517,16 @@ namespace Maestro.ScenarioTests
             {
                 foreach (AssetData asset in dependencies)
                 {
-                    string[] parameters = { "add-dependency", "--name", asset.Name, "--type", "product", "--repo", repoUri };
+                    List<string> parameters = new List<string>() { "add-dependency", "--name", asset.Name, "--type", "product", "--repo", repoUri };
 
                     if (!String.IsNullOrEmpty(coherentParent))
                     {
-                        parameters.Append("--coherent-parent");
-                        parameters.Append(coherentParent);
+                        parameters.Add("--coherent-parent");
+                        parameters.Add(coherentParent);
                     }
+                    string[] parameterArr = parameters.ToArray();
 
-                    await RunDarcAsync(parameters);
+                    await RunDarcAsync(parameterArr);
                 }
             }
         }
@@ -625,23 +639,41 @@ namespace Maestro.ScenarioTests
 
         internal IImmutableList<AssetData> GetAssetData(string asset1Name, string asset1Version, string asset2Name, string asset2Version)
         {
-            AssetData asset1 = new AssetData(false)
-            {
-                Name = asset1Name,
-                Version = asset1Version,
-                Locations = ImmutableList.Create(new AssetLocationData(LocationType.NugetFeed)
-                { Location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json" })
-            };
+            string location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json";
+            LocationType locationType = LocationType.NugetFeed;
 
-            AssetData asset2 = new AssetData(false)
-            {
-                Name = asset2Name,
-                Version = asset2Version,
-                Locations = ImmutableList.Create(new AssetLocationData(LocationType.NugetFeed)
-                { Location = @"https://pkgs.dev.azure.com/dnceng/public/_packaging/NotARealFeed/nuget/v3/index.json" })
-            };
+            AssetData asset1 = GetAssetDataWithLocations(asset1Name, asset1Version, location, locationType);
+
+            AssetData asset2 = GetAssetDataWithLocations(asset2Name, asset2Version, location, locationType);
 
             return ImmutableList.Create(asset1, asset2);
+        }
+
+        internal AssetData GetAssetDataWithLocations(string assetName, string assetVersion,
+            string assetLocation1, LocationType assetLocationType1,
+            string assetLocation2 = null, LocationType assetLocationType2 = LocationType.None)
+        {
+           var locationsListBuilder = ImmutableList.CreateBuilder<AssetLocationData>();
+
+            AssetLocationData location1 = new AssetLocationData(assetLocationType1)
+            { Location = assetLocation1 };
+            locationsListBuilder.Add(location1);
+
+            if (assetLocation2 != null && assetLocationType2 != LocationType.None)
+            {
+                AssetLocationData location2 = new AssetLocationData(assetLocationType2)
+                { Location = assetLocation2 };
+                locationsListBuilder.Add(location2);
+            }
+
+            AssetData asset = new AssetData(false)
+            {
+                Name = assetName,
+                Version = assetVersion,
+                Locations = locationsListBuilder.ToImmutable()
+            };
+
+            return asset;
         }
 
         internal IImmutableList<AssetData> GetSingleAssetData(string assetName, string assetVersion)

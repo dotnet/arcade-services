@@ -18,15 +18,18 @@ namespace Maestro.ScenarioTests
         private readonly string testRepo3Name = "maestro-test3";
         private readonly string sourceBuildNumber = "654321";
         private readonly string source2BuildNumber = "987654";
-        private readonly string sourceCommit = "123456";
-        private readonly string source2Commit = "789101";
-        private readonly string sourceBranch = "master";
+        private string sourceCommit = "123456";
+        private string source2Commit = "789101";
+        private string sourceBranch = "master";
         internal readonly IImmutableList<AssetData> Source1Assets;
         private readonly IImmutableList<AssetData> source2Assets;
         private readonly IImmutableList<AssetData> source1AssetsUpdated;
+        IImmutableList<AssetData> childSourceBuildAssets;
+        IImmutableList<AssetData> childSourceAssets;
         internal List<DependencyDetail> ExpectedDependenciesSource1;
         private List<DependencyDetail> expectedDependenciesSource2;
         private List<DependencyDetail> expectedDependenciesSource1Updated;
+        private List<DependencyDetail> expectedCoherencyDependencies;
         private TestParameters _parameters;
 
         public EndToEndFlowLogic(TestParameters parameters)
@@ -37,10 +40,12 @@ namespace Maestro.ScenarioTests
             Source1Assets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
             source2Assets = GetAssetData("Pizza", "3.1.0", "Hamburger", "4.1.0");
             source1AssetsUpdated = GetAssetData("Foo", "1.17.0", "Bar", "2.17.0");
+            childSourceBuildAssets = GetAssetData("Baz", "1.3.0", "Bop", "1.0");
+            childSourceAssets = GetSingleAssetData("Baz", "1.3.0");
 
             ExpectedDependenciesSource1 = new List<DependencyDetail>();
             string sourceRepoUri = GetRepoUrl(testRepo1Name);
-            DependencyDetail dep1 = new DependencyDetail
+            DependencyDetail foo = new DependencyDetail
             {
                 Name = "Foo",
                 Version = "1.1.0",
@@ -49,9 +54,9 @@ namespace Maestro.ScenarioTests
                 Type = DependencyType.Product,
                 Pinned = false
             };
-            ExpectedDependenciesSource1.Add(dep1);
+            ExpectedDependenciesSource1.Add(foo);
 
-            DependencyDetail dep2 = new DependencyDetail
+            DependencyDetail bar = new DependencyDetail
             {
                 Name = "Bar",
                 Version = "2.1.0",
@@ -60,11 +65,11 @@ namespace Maestro.ScenarioTests
                 Type = DependencyType.Product,
                 Pinned = false
             };
-            ExpectedDependenciesSource1.Add(dep2);
+            ExpectedDependenciesSource1.Add(bar);
 
             expectedDependenciesSource2 = new List<DependencyDetail>();
             string source2RepoUri = GetRepoUrl(testRepo3Name);
-            DependencyDetail dep3 = new DependencyDetail
+            DependencyDetail pizza = new DependencyDetail
             {
                 Name = "Pizza",
                 Version = "3.1.0",
@@ -73,9 +78,9 @@ namespace Maestro.ScenarioTests
                 Type = DependencyType.Product,
                 Pinned = false
             };
-            expectedDependenciesSource2.Add(dep3);
+            expectedDependenciesSource2.Add(pizza);
 
-            DependencyDetail dep4 = new DependencyDetail
+            DependencyDetail hamburger = new DependencyDetail
             {
                 Name = "Hamburger",
                 Version = "4.1.0",
@@ -84,10 +89,10 @@ namespace Maestro.ScenarioTests
                 Type = DependencyType.Product,
                 Pinned = false
             };
-            expectedDependenciesSource2.Add(dep4);
+            expectedDependenciesSource2.Add(hamburger);
 
             expectedDependenciesSource1Updated = new List<DependencyDetail>();
-            DependencyDetail dep5 = new DependencyDetail
+            DependencyDetail fooUpdated = new DependencyDetail
             {
                 Name = "Foo",
                 Version = "1.1.0",
@@ -96,9 +101,9 @@ namespace Maestro.ScenarioTests
                 Type = DependencyType.Product,
                 Pinned = false
             };
-            expectedDependenciesSource1Updated.Add(dep5);
+            expectedDependenciesSource1Updated.Add(fooUpdated);
 
-            DependencyDetail dep6 = new DependencyDetail
+            DependencyDetail barUpdated = new DependencyDetail
             {
                 Name = "Bar",
                 Version = "2.1.0",
@@ -107,7 +112,21 @@ namespace Maestro.ScenarioTests
                 Type = DependencyType.Product,
                 Pinned = false
             };
-            expectedDependenciesSource1Updated.Add(dep6);
+            expectedDependenciesSource1Updated.Add(barUpdated);
+
+            expectedCoherencyDependencies = new List<DependencyDetail>();
+            DependencyDetail baz = new DependencyDetail
+            {
+                Name = "Baz",
+                Version = "1.3.0",
+                RepoUri = GetRepoUrl(testRepo3Name),
+                Commit = "8460158878d4b7568f55d27960d4453877523ea6",
+                Type = DependencyType.Product,
+                Pinned = false
+            };
+            expectedCoherencyDependencies.Add(foo);
+            expectedCoherencyDependencies.Add(bar);
+            expectedCoherencyDependencies.Add(baz);
         }
 
         public async Task DarcBatchedFlowTestBase(string targetBranch, string channelName, bool isAzDoTest)
@@ -180,10 +199,19 @@ namespace Maestro.ScenarioTests
             }
         }
 
-        public async Task NonBatchedFlowTestBase(string targetBranch, string channelName, bool isAzDoTest, bool allChecks = false)
+        public async Task NonBatchedFlowTestBase(string targetBranch, string channelName, bool isAzDoTest, bool allChecks = false, bool isCoherencyTest = false)
         {
             string targetRepoName = testRepo2Name;
             string sourceRepoName = testRepo1Name;
+            string childRepoName = testRepo2Name;
+
+            if (isCoherencyTest)
+            {
+                targetRepoName = testRepo3Name;
+                sourceBranch = "coherency-tree";
+                sourceCommit = "cc1a27107a1f4c4bc5e2f796c5ef346f60abb404";
+                source2Commit = "8460158878d4b7568f55d27960d4453877523ea6";
+            }
 
             string testChannelName = channelName;
             string sourceRepoUri = isAzDoTest ? GetAzDoRepoUrl(sourceRepoName) : GetRepoUrl(sourceRepoName);
@@ -201,6 +229,13 @@ namespace Maestro.ScenarioTests
                     Build build = await CreateBuildAsync(sourceRepoUri, sourceBranch, sourceCommit, sourceBuildNumber, Source1Assets);
                     await AddBuildToChannelAsync(build.Id, testChannelName);
 
+                    if(isCoherencyTest)
+                    {
+                        Build build2 = await CreateBuildAsync(GetRepoUrl(childRepoName), sourceBranch, source2Commit,
+                            source2BuildNumber, childSourceBuildAssets);
+                        await AddBuildToChannelAsync(build2.Id, testChannelName);
+                    }
+
                     TestContext.WriteLine("Cloning target repo to prepare the target branch");
                     TemporaryDirectory reposFolder = await CloneRepositoryAsync(targetRepoName);
                     using (ChangeDirectory(reposFolder.Directory))
@@ -209,6 +244,11 @@ namespace Maestro.ScenarioTests
                         {
                             TestContext.WriteLine("Adding dependencies to target repo");
                             await AddDependenciesToLocalRepo(reposFolder.Directory, Source1Assets.ToList(), sourceRepoUri);
+
+                            if (isCoherencyTest)
+                            {
+                                await AddDependenciesToLocalRepo(reposFolder.Directory, childSourceAssets.ToList(), targetRepoUri);
+                            }
 
                             TestContext.WriteLine("Pushing branch to remote");
                             await GitCommitAsync("Add dependencies");
@@ -220,18 +260,23 @@ namespace Maestro.ScenarioTests
 
                                 TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
-                                // AllChecks means that it'll be merged after the first push, so no further updates will be run
+                                // AllChecks & Coherency don't take updates that it'll be merged after the first push, so no further updates will be run
                                 if (allChecks)
                                 {
                                     if (isAzDoTest)
                                     {
-                                        await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, ExpectedDependenciesSource1, reposFolder.Directory);
+                                        await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, ExpectedDependenciesSource1, reposFolder.Directory, isCompleted: true, isUpdated: false);
                                     }
                                     else
                                     {
-                                        await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, ExpectedDependenciesSource1, reposFolder.Directory, false, true);
+                                        await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, ExpectedDependenciesSource1, reposFolder.Directory, isCompleted: true, isUpdated: false);
                                     }
+                                    return;
+                                }
 
+                                if (isCoherencyTest)
+                                {
+                                    await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedCoherencyDependencies, reposFolder.Directory, isCompleted: false, isUpdated: false);
                                     return;
                                 }
 
@@ -246,10 +291,9 @@ namespace Maestro.ScenarioTests
                                 await TriggerSubscriptionAsync(subscription1Id.Value);
 
                                 TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
-
-                                if (allChecks)
+                                if (isAzDoTest)
                                 {
-                                    await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1Updated, reposFolder.Directory, true, true);
+                                    await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1Updated, reposFolder.Directory);
                                 }
                                 else
                                 {
@@ -265,9 +309,9 @@ namespace Maestro.ScenarioTests
 
                                 TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
 
-                                if (allChecks)
+                                if (isAzDoTest)
                                 {
-                                    await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, ExpectedDependenciesSource1, reposFolder.Directory, true, true);
+                                    await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1Updated, reposFolder.Directory);
                                 }
                                 else
                                 {

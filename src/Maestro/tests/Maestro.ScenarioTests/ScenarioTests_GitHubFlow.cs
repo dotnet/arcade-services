@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
@@ -40,24 +42,39 @@ namespace Maestro.ScenarioTests
         public async Task Darc_GitHubFlow_Batched()
         {
             TestContext.WriteLine("Github Dependency Flow, batched");
-            await testLogic.DarcBatchedFlowTestBase($"GitHub_BatchedTestBranch_{Environment.MachineName}", $"GitHub Batched Channel {Environment.MachineName}", false).ConfigureAwait(false);
+            await testLogic.DarcBatchedFlowTestBase($"GitHub_BatchedTestBranch_{Environment.MachineName}", 
+                $"GitHub Batched Channel {Environment.MachineName}", 
+                false).ConfigureAwait(false);
         }
 
         [Test]
         public async Task Darc_GitHubFlow_NonBatched_AllChecksSuccessful()
         {
             TestContext.WriteLine("GitHub Dependency Flow, non-batched, all checks successful");
-            await testLogic.NonBatchedFlowTestBase($"GitHub_NonBatchedTestBranch_AllChecks_{Environment.MachineName}", $"GitHub Non-Batched All Checks Channel {Environment.MachineName}", false, true).ConfigureAwait(false);
+            await testLogic.NonBatchedFlowTestBase($"GitHub_NonBatchedTestBranch_AllChecks_{Environment.MachineName}", 
+                $"GitHub Non-Batched All Checks Channel {Environment.MachineName}", false, true).ConfigureAwait(false);
         }
 
         [Test]
         public async Task Darc_GitHubFlow_NonBatched()
         {
             TestContext.WriteLine("GitHub Dependency Flow, non-batched");
-            await testLogic.NonBatchedFlowTestBase($"GitHub_NonBatchedTestBranch_{Environment.MachineName}", $"GitHub Non-Batched Channel {Environment.MachineName}", false).ConfigureAwait(false);
+            await testLogic.NonBatchedFlowTestBase($"GitHub_NonBatchedTestBranch_{Environment.MachineName}", 
+                $"GitHub Non-Batched Channel {Environment.MachineName}", 
+                false).ConfigureAwait(false);
         }
 
         [Test]
+        public async Task Darc_GitHubFlow_NonBatched_WithCoherency_SharedCode()
+        {
+            TestContext.WriteLine("GitHub Dependency Flow, non-batched");
+            await testLogic.NonBatchedFlowTestBase(
+                $"GitHub_NonBatchedTestCoherencyBranch_{Environment.MachineName}", 
+                $"GitHub Non-Batched Coherency Channel {Environment.MachineName}", 
+                false, isCoherencyTest: true).ConfigureAwait(false);
+        }
+
+
         public async Task Darc_GitHubFlow_NonBatched_WithCoherency()
         {
             TestContext.WriteLine("GitHub Dependency Flow, non-batched with required coherency updates");
@@ -73,7 +90,7 @@ namespace Maestro.ScenarioTests
             string sourceBranch = "coherency-tree";
             string parentSourceCommit = "cc1a27107a1f4c4bc5e2f796c5ef346f60abb404";
             string childSourceCommit = "8460158878d4b7568f55d27960d4453877523ea6";
-            IImmutableList<AssetData> childSourceBuildAssets = GetAssetData("Baz", "1.3.0","Bop", "1.0");
+            IImmutableList<AssetData> childSourceBuildAssets = GetAssetData("Baz", "1.3.0", "Bop", "1.0");
             IImmutableList<AssetData> childSourceAssets = GetSingleAssetData("Baz", "1.3.0");
             string parentBuildNumber = "123456";
             string childBuildNumber = "654321";
@@ -94,46 +111,43 @@ namespace Maestro.ScenarioTests
             expectedChildDependencies.Add(dep1);
 
             TestContext.WriteLine($"Creating a test channel{testChannelName}");
-            await using (AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false))
+            await using AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName);
+
+            TestContext.WriteLine($"Adding a subscription from {parentSourceRepoName} to {targetRepoName}");
+            await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(
+                testChannelName, parentSourceRepoName, targetRepoName, targetBranch, UpdateFrequency.None.ToString(), "maestro-auth-test");
+
+            TestContext.WriteLine("Set up new builds for intake into target repository");
+            Build build1 = await CreateBuildAsync(parentSourceRepoUri, sourceBranch, parentSourceCommit,
+                parentBuildNumber, testLogic.Source1Assets);
+            await AddBuildToChannelAsync(build1.Id, testChannelName);
+            Build build2 = await CreateBuildAsync(childSourceRepoUri, sourceBranch, childSourceCommit,
+                childBuildNumber, childSourceBuildAssets);
+            await AddBuildToChannelAsync(build2.Id, testChannelName);
+
+            TestContext.WriteLine("Cloning target repo to prepare the target branch");
+            TemporaryDirectory reposFolder = await CloneRepositoryAsync(targetRepoName);
+
+            using (ChangeDirectory(reposFolder.Directory))
             {
-                TestContext.WriteLine($"Adding a subscription from {parentSourceRepoName} to {targetRepoName}");
-
-                await using (AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(
-                    testChannelName, parentSourceRepoName, targetRepoName, sourceBranch, UpdateFrequency.None.ToString(), "maestro-auth-test"))
+                await using (await CheckoutBranchAsync(targetBranch))
                 {
-                    TestContext.WriteLine("Set up new builds for intake into target repository");
-                    Build build1 = await CreateBuildAsync(parentSourceRepoUri, sourceBranch, parentSourceCommit,
-                        parentBuildNumber, testLogic.Source1Assets);
-                    await AddBuildToChannelAsync(build1.Id, testChannelName);
-                    Build build2 = await CreateBuildAsync(childSourceRepoUri, sourceBranch, childSourceCommit,
-                        childBuildNumber, childSourceBuildAssets);
-                    await AddBuildToChannelAsync(build2.Id, testChannelName);
+                    TestContext.WriteLine("Adding dependencies to target repo");
+                    await AddDependenciesToLocalRepo(reposFolder.Directory, testLogic.Source1Assets.ToList(), parentSourceRepoUri);
+                    await AddDependenciesToLocalRepo(reposFolder.Directory, childSourceAssets.ToList(), childSourceRepoUri, "Foo");
 
-                    TestContext.WriteLine("Cloning target repo to prepare the target branch");
-                    TemporaryDirectory reposFolder = await CloneRepositoryAsync(targetRepoName);
+                    TestContext.WriteLine("Pushing branch to remote");
+                    await GitCommitAsync("Add dependencies");
 
-                    using (ChangeDirectory(reposFolder.Directory))
+                    await using (await PushGitBranchAsync("origin", targetBranch))
                     {
-                        await using (await CheckoutBranchAsync(targetBranch))
-                        {
-                            TestContext.WriteLine("Adding dependencies to target repo");
-                            await AddDependenciesToLocalRepo(reposFolder.Directory, testLogic.Source1Assets.ToList(), parentSourceRepoUri);
-                            await AddDependenciesToLocalRepo(reposFolder.Directory, childSourceAssets.ToList(), childSourceRepoUri, "Foo");
+                        TestContext.WriteLine("Trigger the dependency update");
+                        await TriggerSubscriptionAsync(subscription1Id.Value);
 
-                            TestContext.WriteLine("Pushing branch to remote");
-                            await GitCommitAsync("Add dependencies");
+                        List<DependencyDetail> expectedDependencies = testLogic.ExpectedDependenciesSource1.Concat(expectedChildDependencies).ToList();
 
-                            await using (await PushGitBranchAsync("origin", targetBranch))
-                            {
-                                TestContext.WriteLine("Trigger the dependency update");
-                                await TriggerSubscriptionAsync(subscription1Id.Value);
-
-                                List<DependencyDetail> expectedDependencies = testLogic.ExpectedDependenciesSource1.Concat(expectedChildDependencies).ToList();
-
-                                TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoName}");
-                                await CheckNonBatchedGitHubPullRequest(parentSourceRepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory);
-                            }
-                        }
+                        TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoName}");
+                        await CheckNonBatchedGitHubPullRequest(parentSourceRepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory);
                     }
                 }
             }
