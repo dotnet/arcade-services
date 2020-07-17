@@ -6,16 +6,95 @@ using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
 using Microsoft.DotNet.Darc.Options;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Channel;
+using Microsoft.ApplicationInsights.DataContracts;
+using Microsoft.ApplicationInsights.DependencyCollector;
+using Microsoft.ApplicationInsights.Extensibility;
 
 namespace Microsoft.DotNet.Darc
 {
-    class Program
+    internal static class Program
     {
-        static int Main(string[] args)
+        private static TelemetryClient s_telemetryClient;
+
+        private static int Main(string[] args)
         {
-            return Parser.Default.ParseArguments(args, GetOptions())
-                .MapResult( (CommandLineOptions opts) => RunOperation(opts),
-                    (errs => 1));
+            InitializeTelemetry();
+
+            try
+            {
+                return Parser.Default.ParseArguments(args, GetOptions())
+                    .MapResult(
+                        (CommandLineOptions opts) => RunOperation(opts),
+                        RecordFailedCommand
+                    );
+            }
+            finally
+            {
+                s_telemetryClient.Flush();
+            }
+        }
+
+        private static int RecordFailedCommand(IEnumerable<Error> errors)
+        {
+            foreach (Error error in errors)
+            {
+                switch (error)
+                {
+                    case NamedError named:
+                        s_telemetryClient.TrackTrace(
+                            $"Command line parsing error: {named.Tag}, name '{named.NameInfo.LongName}'",
+                            SeverityLevel.Error,
+                            new Dictionary<string, string>
+                            {
+                                {"errorTag", named.Tag.ToString()},
+                                {"errorName", named.NameInfo.LongName},
+                            }
+                        );
+                        break;
+                    case TokenError token:
+                        s_telemetryClient.TrackTrace(
+                            $"Command line parsing error: {token.Tag}, token '{token.Token}'",
+                            SeverityLevel.Error,
+                            new Dictionary<string, string>
+                            {
+                                {"errorTag", token.Tag.ToString()},
+                                {"errorToken", token.Token},
+                            }
+                        );
+                        break;
+                    default:
+                        s_telemetryClient.TrackTrace(
+                            $"Command line parsing error: {error.Tag}",
+                            SeverityLevel.Error,
+                            new Dictionary<string, string>
+                            {
+                                {"errorTag", error.Tag.ToString()}
+                            }
+                        );
+                        break;
+                    case HelpRequestedError _:
+                    case HelpVerbRequestedError _:
+                        s_telemetryClient.TrackTrace(
+                            "Verb chosen: help",
+                            SeverityLevel.Information,
+                            new Dictionary<string, string>
+                            {
+                                {"verb", "help"}
+                            }
+                        );
+                        return 0;
+                    case VersionRequestedError _:
+                        ReportVerb();
+                        return 0;
+                }
+            }
+
+            return 1;
         }
 
         /// <summary>
@@ -30,16 +109,25 @@ namespace Microsoft.DotNet.Darc
         {
             try
             {
-                Operation operation = opts.GetOperation();
-
-                int returnValue = operation.ExecuteAsync().GetAwaiter().GetResult();
-                operation.Dispose();
-                return returnValue;
+                using (Operation operation = opts.GetOperation())
+                {
+                    Stopwatch stopwatch = Stopwatch.StartNew();
+                    try
+                    {
+                        return operation.ExecuteAsync().GetAwaiter().GetResult();
+                    }
+                    finally
+                    {
+                        stopwatch.Stop();
+                        ReportInvocation(opts, stopwatch.Elapsed);
+                    }
+                }
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Unhandled exception while running {typeof(Operation).Name}");
+                Console.WriteLine("Unhandled exception encountered");
                 Console.WriteLine(e);
+                s_telemetryClient.TrackException(e);
                 return Constants.ErrorCode;
             }
         }
@@ -85,6 +173,99 @@ namespace Microsoft.DotNet.Darc
                     typeof(SetGoalCommandLineOptions),
                     typeof(GetGoalCommandLineOptions)
                 };
+        }
+
+        private static void InitializeTelemetry()
+        {
+            var isDebugging = Debugger.IsAttached;
+            var config = TelemetryConfiguration.CreateDefault();
+            if (!isDebugging)
+            {
+                config.InstrumentationKey = "9fcef3c7-f401-41c7-9e91-1f6029c8dcc3";
+            }
+
+            var dependencyTracking = new DependencyTrackingTelemetryModule();
+            dependencyTracking.ExcludeComponentCorrelationHttpHeadersOnDomains.Add("core.windows.net");
+            dependencyTracking.Initialize(config);
+
+            config.TelemetryInitializers.Add(new HttpDependenciesParsingTelemetryInitializer());
+            var channel = new InMemoryChannel {DeveloperMode = isDebugging};
+            config.TelemetryChannel = channel;
+
+            s_telemetryClient = new TelemetryClient(config);
+        }
+
+        private static void ReportVerb()
+        {
+            s_telemetryClient.TrackTrace(
+                "Verb chosen: version",
+                SeverityLevel.Information,
+                new Dictionary<string, string>
+                {
+                    {"verb", "version"}
+                }
+            );
+        }
+
+        private static void ReportInvocation(CommandLineOptions options, TimeSpan stopwatchElapsed)
+        {
+            Type optionType = options.GetType();
+            string verb = optionType.GetCustomAttribute<VerbAttribute>()?.Name;
+            if (string.IsNullOrEmpty(verb))
+            {
+                s_telemetryClient.TrackTrace($"Unrecognized options/verb detected: {optionType.Name}");
+                return;
+            }
+
+            Dictionary<string,string> arguments = new Dictionary<string, string>();
+            Dictionary<Type, object> defaultValueCache = new Dictionary<Type, object>();
+            foreach (var prop in optionType.GetProperties(BindingFlags.FlattenHierarchy | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                var optionAttribute = prop.GetCustomAttribute<OptionAttribute>();
+                if (optionAttribute == null)
+                {
+                    // Whatever this property is, it's not an option, ignore it
+                    continue;
+                }
+
+                var value = prop.GetValue(options);
+                if (value == null)
+                {
+                    // This argument wasn't passed, just ignore it
+                    continue;
+                }
+
+                if (prop.PropertyType.IsValueType)
+                {
+                    // Value types, like "int", are hard, because they aren't null
+                    // So we need to Activator.CreateInstance one to get the "default"
+                    // value, and then compare to that.
+                    if (!defaultValueCache.TryGetValue(prop.PropertyType, out var defaultValue))
+                    {
+                        defaultValueCache.Add(prop.PropertyType, defaultValue = Activator.CreateInstance(prop.PropertyType));
+                    }
+
+                    if (defaultValue.Equals(value))
+                    {
+                        continue;
+                    }
+                }
+
+                if (prop.GetCustomAttribute<RedactFromLoggingAttribute>() != null)
+                {
+                    value = "<<REDACTED>>";
+                }
+
+                arguments.Add(optionAttribute.LongName, value.ToString());
+            }
+
+            s_telemetryClient.TrackEvent("CommandExecuted",
+                arguments,
+                new Dictionary<string, double>
+                {
+                    {"duration", stopwatchElapsed.TotalMilliseconds}
+                }
+            );
         }
     }
 }
