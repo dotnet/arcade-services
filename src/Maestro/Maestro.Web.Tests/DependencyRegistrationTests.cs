@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
@@ -8,13 +9,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using Xunit;
+using NUnit.Framework;
 
 namespace Maestro.Web.Tests
 {
+    [TestFixture]
     public class DependencyRegistrationTests
     {
-        [Fact]
+        [Test]
         public void AreDependenciesRegistered()
         {
             Environment.SetEnvironmentVariable("ENVIRONMENT", Environments.Development);
@@ -33,7 +35,7 @@ namespace Maestro.Web.Tests
             IEnumerable<Type> controllerTypes = typeof(Startup).Assembly.ExportedTypes
                 .Where(t => typeof(ControllerBase).IsAssignableFrom(t));
 
-            Assert.True(DependencyInjectionValidation.IsDependencyResolutionCoherent(
+            DependencyInjectionValidation.IsDependencyResolutionCoherent(
                     s =>
                     {
                         foreach (ServiceDescriptor descriptor in collection)
@@ -44,8 +46,7 @@ namespace Maestro.Web.Tests
                         startup.ConfigureServices(s);
                     },
                     out string message,
-                    additionalScopedTypes: controllerTypes),
-                message);
+                    additionalScopedTypes: controllerTypes).Should().BeTrue();
         }
     }
 }

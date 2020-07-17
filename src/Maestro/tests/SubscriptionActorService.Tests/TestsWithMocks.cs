@@ -4,19 +4,23 @@
 
 using System;
 using Moq;
+using NUnit.Framework;
 
 namespace SubscriptionActorService.Tests
 {
-    public class TestsWithMocks : IDisposable
+    [TestFixture]
+    public class TestsWithMocks
     {
-        private readonly VerifyableMockRepository _mocks;
+        private VerifyableMockRepository _mocks;
 
-        public TestsWithMocks()
+        [SetUp]
+        public void TestsWithMocks_SetUp()
         {
             _mocks = new VerifyableMockRepository(MockBehavior.Loose);
         }
 
-        public virtual void Dispose()
+        [TearDown]
+        public void TestsWithMocks_TearDown()
         {
             _mocks.VerifyNoUnverifiedCalls();
         }

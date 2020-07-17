@@ -83,7 +83,7 @@ namespace Microsoft.DotNet.DarcLib
             return GetFileContentsAsync(accountName, projectName, repoName, filePath, branch);
         }
 
-        private static readonly List<string> VersionTypes = new List<string>() { "branch", "commit", "tag" };
+        private static readonly List<string> VersionTypes = new List<string>() {"branch", "commit", "tag"};
         /// <summary>
         ///     Retrieve the contents of a text file in a repo on a specific branch
         /// </summary>
@@ -408,43 +408,65 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Merge a pull request
+        /// Gets all the commits related to the pull request
         /// </summary>
-        /// <param name="pullRequestUrl">Uri of pull request to merge</param>
-        /// <param name="parameters">Settings for merge</param>
-        /// <returns></returns>
-        public async Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
+        /// <param name="pullRequestUrl"></param>
+        /// <returns>All the commits related to the pull request</returns>
+        public async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
+        {
+            (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
+            using (VssConnection connection = CreateVssConnection(accountName))
+            {
+                using (GitHttpClient client = await connection.GetClientAsync<GitHttpClient>())
+                {
+
+                    var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
+                    IList<Commit> commits = new List<Commit>(pullRequest.Commits.Length);
+                    foreach (var commit in pullRequest.Commits)
+                    {
+                        commits.Add(new Commit(
+                            commit.Author.Name == "DotNet-Bot" ? "dotnet-maestro[bot]" : commit.Author.Name,
+                            commit.CommitId,
+                            commit.Comment));
+                    }
+
+                    return commits;
+                }
+            }
+        }
+
+        public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters,
+            string mergeCommitMessage)
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
-            VssConnection connection = CreateVssConnection(accountName);
-            GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
-
-            string commitToMerge = parameters.CommitToMerge;
-
-            // If the commit to merge is empty, look it up first.
-            if (string.IsNullOrEmpty(commitToMerge))
+            using (VssConnection connection = CreateVssConnection(accountName))
             {
-                var prInfo = await client.GetPullRequestAsync(repoName, id);
-                commitToMerge = prInfo.LastMergeSourceCommit.CommitId;
-            }
-
-            await client.UpdatePullRequestAsync(
-                new GitPullRequest
+                using (GitHttpClient client = await connection.GetClientAsync<GitHttpClient>())
                 {
-                    Status = PullRequestStatus.Completed,
-                    CompletionOptions = new GitPullRequestCompletionOptions
-                    {
-                        BypassPolicy = true,
-                        BypassReason = "All required checks were successful",
-                        SquashMerge = parameters.SquashMerge,
-                        DeleteSourceBranch = parameters.DeleteSourceBranch
-                    },
-                    LastMergeSourceCommit = new GitCommitRef { CommitId = commitToMerge }
-                },
-                projectName,
-                repoName,
-                id);
+
+                    var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
+
+                    await client.UpdatePullRequestAsync(
+                        new GitPullRequest
+                        {
+                            Status = PullRequestStatus.Completed,
+                            CompletionOptions = new GitPullRequestCompletionOptions
+                            {
+                                MergeCommitMessage = mergeCommitMessage,
+                                BypassPolicy = true,
+                                BypassReason = "All required checks were successful",
+                                SquashMerge = parameters.SquashMerge,
+                                DeleteSourceBranch = parameters.DeleteSourceBranch
+                            },
+                            LastMergeSourceCommit = new GitCommitRef
+                                {CommitId = pullRequest.LastMergeSourceCommit.CommitId, Comment = mergeCommitMessage}
+                        },
+                        projectName,
+                        repoName,
+                        id);
+                }
+            }
         }
 
         /// <summary>

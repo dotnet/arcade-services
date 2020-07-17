@@ -1,11 +1,13 @@
+using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
 {
+    [TestFixture]
     public class DependencyInjectionTestValidation
     {
-        [Fact]
+        [Test]
         public void DelegateRequirementsMess_Pass()
         {
             bool isCoherent = DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
@@ -15,17 +17,16 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
                     s.AddSingleton<NeedsValue>();
                 },
                 out string message);
-            Assert.True(isCoherent, message);
+            isCoherent.Should().BeTrue();
         }
 
-        [Fact]
+        [Test]
         public void Empty_Pass()
         {
-            Assert.True(DependencyInjectionValidation.IsDependencyResolutionCoherent(s => { }, out string message),
-                message);
+            DependencyInjectionValidation.IsDependencyResolutionCoherent(s => { }, out string message).Should().BeTrue();
         }
 
-        [Fact]
+        [Test]
         public void InstanceRequirementsMess_Pass()
         {
             bool isCoherent = DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
@@ -34,39 +35,39 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
                     s.AddSingleton<NeedsValue>();
                 },
                 out string message);
-            Assert.True(isCoherent, message);
+            isCoherent.Should().BeTrue();
         }
 
-        [Fact]
+        [Test]
         public void MissingOptional_Pass()
         {
             bool isCoherent = DependencyInjectionValidation.IsDependencyResolutionCoherent(
                 s => { s.AddSingleton<NeedsSimpleOptional>(); },
                 out string message);
-            Assert.True(isCoherent, message);
+            isCoherent.Should().BeTrue();
         }
 
-        [Fact]
+        [Test]
         public void MissingRequirements_Fail()
         {
             bool isCoherent = DependencyInjectionValidation.IsDependencyResolutionCoherent(
                 s => { s.AddSingleton<NeedsSimple>(); },
                 out string message);
-            Assert.False(isCoherent);
-            Assert.Contains(nameof(NeedsSimple), message);
+            isCoherent.Should().BeFalse();
+            message.Should().Contain(nameof(NeedsSimple));
         }
 
-        [Fact]
+        [Test]
         public void MissingSome_Fail()
         {
             bool isCoherent = DependencyInjectionValidation.IsDependencyResolutionCoherent(
                 s => { s.AddSingleton<NeedsSome>(); },
                 out string message);
-            Assert.False(isCoherent);
-            Assert.Contains(nameof(NeedsSome), message);
+            isCoherent.Should().BeFalse();
+            message.Should().Contain(nameof(NeedsSome));
         }
 
-        [Fact]
+        [Test]
         public void PresentOptional_Pass()
         {
             bool isCoherent = DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
@@ -75,10 +76,10 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
                     s.AddSingleton<NeedsSimpleOptional>();
                 },
                 out string message);
-            Assert.True(isCoherent, message);
+            isCoherent.Should().BeTrue();
         }
 
-        [Fact]
+        [Test]
         public void SimpleRequirementsMess_Pass()
         {
             bool isCoherent = DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
@@ -87,10 +88,10 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
                     s.AddSingleton<NeedsSimple>();
                 },
                 out string message);
-            Assert.True(isCoherent, message);
+            isCoherent.Should().BeTrue();
         }
 
-        [Fact]
+        [Test]
         public void SimpleScopedRequirementsMess_Pass()
         {
             bool isCoherent = DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
@@ -99,10 +100,10 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
                     s.AddScoped<NeedsSimple>();
                 },
                 out string message);
-            Assert.True(isCoherent, message);
+            isCoherent.Should().BeTrue();
         }
 
-        [Fact]
+        [Test]
         public void SimpleSome_Pass()
         {
             bool isCoherent = DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
@@ -111,10 +112,10 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
                     s.AddSingleton<NeedsSome>();
                 },
                 out string message);
-            Assert.True(isCoherent, message);
+            isCoherent.Should().BeTrue();
         }
 
-        [Fact]
+        [Test]
         public void ValueSome_Pass()
         {
             bool isCoherent = DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
@@ -123,10 +124,10 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
                     s.AddSingleton<NeedsSome>();
                 },
                 out string message);
-            Assert.True(isCoherent, message);
+            isCoherent.Should().BeTrue();
         }
 
-        [Fact]
+        [Test]
         public void MismatchedScopes_Fail()
         {
             bool isCoherent = DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
@@ -135,8 +136,8 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
                     s.AddSingleton<NeedsSimple>();
                 },
                 out string message);
-            Assert.False(isCoherent);
-            Assert.Contains(nameof(NeedsSimple), message);
+            isCoherent.Should().BeFalse();
+            message.Should().Contain(nameof(NeedsSimple));
         }
     }
 }

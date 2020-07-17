@@ -4,32 +4,35 @@
 
 using System.Collections.Generic;
 using FluentAssertions;
+using NUnit.Framework;
 using ServiceFabricMocks;
-using Xunit.Abstractions;
 
 namespace SubscriptionActorService.Tests
 {
+    [TestFixture]
     public abstract class ActorTests : TestsWithServices
     {
-        protected readonly Dictionary<string, object> ExpectedActorState = new Dictionary<string, object>();
+        protected Dictionary<string, object> ExpectedActorState;
 
-        protected readonly Dictionary<string, MockReminderManager.Reminder> ExpectedReminders =
-            new Dictionary<string, MockReminderManager.Reminder>();
+        protected Dictionary<string, MockReminderManager.Reminder> ExpectedReminders;
 
-        protected readonly MockReminderManager Reminders;
-        protected readonly MockActorStateManager StateManager;
+        protected MockReminderManager Reminders;
+        protected MockActorStateManager StateManager;
 
-        protected ActorTests(ITestOutputHelper output) : base(output)
+        [SetUp]
+        public void ActorTests_SetUp()
         {
+            ExpectedActorState = new Dictionary<string, object>();
+            ExpectedReminders = new Dictionary<string, MockReminderManager.Reminder>();
             StateManager = new MockActorStateManager();
             Reminders = new MockReminderManager();
         }
 
-        public override void Dispose()
+        [TearDown]
+        public void ActorTests_TearDown()
         {
             Reminders.Data.Should().BeEquivalentTo(ExpectedReminders);
             StateManager.Data.Should().BeEquivalentTo(ExpectedActorState);
-            base.Dispose();
         }
     }
 }

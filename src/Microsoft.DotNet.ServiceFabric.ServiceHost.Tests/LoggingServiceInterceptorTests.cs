@@ -4,17 +4,19 @@ using System.Fabric;
 using System.Linq;
 using System.Reflection;
 using Castle.DynamicProxy;
+using FluentAssertions;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Moq;
-using Xunit;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 {
+    [TestFixture]
     public class LoggingServiceInterceptorTests
     {
-        [Fact]
+        [Test]
         public void LogsCorrectUrl()
         {
             var telemetryChannel = new FakeChannel();
@@ -33,14 +35,14 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             impl.TestServiceMethod();
             client.Flush();
             RequestTelemetry requestTelemetry = telemetryChannel.Telemetry.OfType<RequestTelemetry>().FirstOrDefault();
-            Assert.NotNull(requestTelemetry);
-            Assert.True(requestTelemetry.Success ?? true);
-            Assert.StartsWith(ctx.ServiceName.AbsoluteUri, requestTelemetry.Url.AbsoluteUri, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains(nameof(IFakeService), requestTelemetry.Url.AbsoluteUri, StringComparison.OrdinalIgnoreCase);
-            Assert.Empty(telemetryChannel.Telemetry.OfType<ExceptionTelemetry>());
+            requestTelemetry.Should().NotBeNull();
+            (requestTelemetry.Success ?? true).Should().BeTrue();
+            requestTelemetry.Url.AbsoluteUri.Should().StartWith(ctx.ServiceName.AbsoluteUri);
+            requestTelemetry.Url.AbsoluteUri.Should().Contain(nameof(IFakeService));
+            telemetryChannel.Telemetry.OfType<ExceptionTelemetry>().Should().BeEmpty();
         }
 
-        [Fact]
+        [Test]
         public void ExceptionLogsFailedRequest()
         {
             var telemetryChannel = new FakeChannel();
@@ -59,18 +61,18 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 fakeService.Object,
                 new LoggingServiceInterceptor(ctx, client));
             
-            var ex = Assert.ThrowsAny<InvalidOperationException>(() => impl.TestServiceMethod());
-            Assert.Equal("Test Exception Text", ex.Message);
+            var ex = (((Func<object>)(() => impl.TestServiceMethod()))).Should().Throw<InvalidOperationException>().Which;
+            ex.Message.Should().Be("Test Exception Text");
             
             client.Flush();
             List<RequestTelemetry> requestTelemetries =
                 telemetryChannel.Telemetry.OfType<RequestTelemetry>().ToList();
-            Assert.Single(requestTelemetries);
+            requestTelemetries.Should().ContainSingle();
             RequestTelemetry requestTelemetry = requestTelemetries[0];
-            Assert.False(requestTelemetry.Success);
+            requestTelemetry.Success.Should().BeFalse();
             ExceptionTelemetry exceptionTelemetry = telemetryChannel.Telemetry.OfType<ExceptionTelemetry>().FirstOrDefault();
-            Assert.NotNull(exceptionTelemetry);
-            Assert.Same(ex, exceptionTelemetry.Exception);
+            exceptionTelemetry.Should().NotBeNull();
+            exceptionTelemetry.Exception.Should().BeSameAs(ex);
         }
     }
 }

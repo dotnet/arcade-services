@@ -1,18 +1,11 @@
 using System;
 using Microsoft.Extensions.Logging;
-using Xunit.Abstractions;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.Internal.Testing.Utility
 {
-    public class XUnitLogger : ILogger, ILoggerProvider
+    public class NUnitLogger : ILogger, ILoggerProvider
     {
-        private readonly ITestOutputHelper _output;
-
-        public XUnitLogger(ITestOutputHelper output)
-        {
-            _output = output;
-        }
-
         public void Dispose()
         {
         }
@@ -24,7 +17,7 @@ namespace Microsoft.DotNet.Internal.Testing.Utility
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
         {
-            _output.WriteLine($"{logLevel} : {eventId} : {formatter(state, exception)}");
+            TestContext.WriteLine($"{logLevel} : {eventId} : {formatter(state, exception)}");
         }
 
         public bool IsEnabled(LogLevel logLevel)

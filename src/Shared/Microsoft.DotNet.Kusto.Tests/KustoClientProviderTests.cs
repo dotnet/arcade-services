@@ -7,19 +7,23 @@ using System.Data;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Kusto.Data.Common;
 using Kusto.Data.Exceptions;
+using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.Options;
 using Moq;
-using Xunit;
+using NUnit.Framework;
+
 using Capture = Moq.Capture;
 
 namespace Microsoft.DotNet.Kusto.Tests
 {
+    [TestFixture]
     public class KustoClientProviderTests
     {
-        [Fact]
-        public async Task ParameterlessQueryIsPassedPlainly()
+        [Test]
+        public async Task NoParameterQueryIsPassedPlainly()
         {
             var queryProvider = new Mock<ICslQueryProvider>();
             var dbNames = new List<string>();
@@ -35,16 +39,42 @@ namespace Microsoft.DotNet.Kusto.Tests
                 queryProvider.Object))
             {
                 IDataReader result = await client.ExecuteKustoQueryAsync(new KustoQuery("basicQuery"));
-                Assert.Same(result, reader);
+                reader.Should().BeSameAs(result);
             }
 
-            Assert.Equal(new[] {"TEST-DATABASE"}, dbNames);
-            Assert.Equal(new[] {"basicQuery"}, queries);
-            Assert.Single(properties);
-            Assert.Empty(properties[0].Parameters);
+            dbNames.Should().Equal(new[] {"TEST-DATABASE"});
+            queries.Should().Equal(new[] {"basicQuery"});
+            properties.Should().ContainSingle();
+            properties[0].Parameters.Should().BeEmpty();
+        }
+        [Test]
+        public async Task AssignedToTextPropertyIsPassedPlainly()
+        {
+            var queryProvider = new Mock<ICslQueryProvider>();
+            var dbNames = new List<string>();
+            var queries = new List<string>();
+            var properties = new List<ClientRequestProperties>();
+            var reader = Mock.Of<IDataReader>();
+            queryProvider.Setup(q =>
+                    q.ExecuteQueryAsync(Capture.In(dbNames), Capture.In(queries), Capture.In(properties)))
+                .Returns(Task.FromResult(reader));
+
+            using (var client = new KustoClientProvider(Options.Create(new KustoClientProviderOptions
+                    {QueryConnectionString = "IGNORED-CONNECTION-STRING", Database = "TEST-DATABASE",}),
+                queryProvider.Object))
+            {
+                var query = new KustoQuery {Text = "basicQuery"};
+                IDataReader result = await client.ExecuteKustoQueryAsync(query);
+                reader.Should().BeSameAs(result);
+            }
+
+            dbNames.Should().Equal(new[] {"TEST-DATABASE"});
+            queries.Should().Equal(new[] {"basicQuery"});
+            properties.Should().ContainSingle();
+            properties[0].Parameters.Should().BeEmpty();
         }
 
-        [Fact]
+        [Test]
         public async Task ParameterizedQueryIncludesParameterInformation()
         {
             var queryProvider = new Mock<ICslQueryProvider>();
@@ -60,36 +90,37 @@ namespace Microsoft.DotNet.Kusto.Tests
                     {QueryConnectionString = "IGNORED-CONNECTION-STRING", Database = "TEST-DATABASE",}),
                 queryProvider.Object))
             {
+                var query = new KustoQuery("basicQuery | where Id = _id and Name = _name",
+                    new KustoParameter("_id", 9274, KustoDataType.Int));
+                query.AddParameter("_name", "TEST-NAME", KustoDataType.String);
                 IDataReader result = await client.ExecuteKustoQueryAsync(
-                    new KustoQuery("basicQuery | where Id = _id and Name = _name",
-                        new KustoParameter("_id", 9274, KustoDataType.Int),
-                        new KustoParameter("_name", "TEST-NAME", KustoDataType.String)));
-                Assert.Same(result, reader);
+                    query);
+                reader.Should().BeSameAs(result);
             }
 
-            Assert.Equal(new[] {"TEST-DATABASE"}, dbNames);
-            Assert.Single(queries);
-            Assert.EndsWith("basicQuery | where Id = _id and Name = _name", queries[0]);
+            dbNames.Should().Equal(new[] {"TEST-DATABASE"});
+            queries.Should().ContainSingle();
+            queries[0].Should().EndWith("basicQuery | where Id = _id and Name = _name");
             var parameterDeclarationPattern = new Regex(@"declare\s*query_parameters\s*\(([^)]*)\)\s*;");
-            Assert.Matches(parameterDeclarationPattern, queries[0]);
+            queries[0].Should().MatchRegex(parameterDeclarationPattern);
             string parametersString = parameterDeclarationPattern.Match(queries[0]).Groups[1].Value;
             IReadOnlyDictionary<string, string> parameters = parametersString.Split(',')
                 .Select(p => p.Split(':', 2))
                 .ToDictionary(p => p[0], p => p[1]);
-            Assert.Equal(2, parameters.Count);
-            Assert.Contains("_id", parameters);
-            Assert.Equal(KustoDataType.Int.CslDataType, parameters["_id"]);
-            Assert.Contains("_name", parameters);
-            Assert.Equal(KustoDataType.String.CslDataType, parameters["_name"]);
-            Assert.Single(properties);
-            Assert.Equal(2, properties[0].Parameters.Count);
-            Assert.Contains("_id", properties[0].Parameters);
-            Assert.Equal("9274", properties[0].Parameters["_id"]);
-            Assert.Contains("_name", properties[0].Parameters);
-            Assert.Equal("TEST-NAME", properties[0].Parameters["_name"]);
+            parameters.Should().HaveCount(2);
+            parameters.Should().ContainKey("_id");
+            parameters["_id"].Should().Be(KustoDataType.Int.CslDataType);
+            parameters.Should().ContainKey("_name");
+            parameters["_name"].Should().Be(KustoDataType.String.CslDataType);
+            properties.Should().ContainSingle();
+            properties[0].Parameters.Should().HaveCount(2);
+            properties[0].Parameters.Should().ContainKey("_id");
+            properties[0].Parameters["_id"].Should().Be("9274");
+            properties[0].Parameters.Should().ContainKey("_name");
+            properties[0].Parameters["_name"].Should().Be("TEST-NAME");
         }
 
-        [Fact]
+        [Test]
         public async Task SemanticExceptionReturnsNull()
         {
             var queryProvider = new Mock<ICslQueryProvider>();
@@ -101,7 +132,7 @@ namespace Microsoft.DotNet.Kusto.Tests
                     {QueryConnectionString = "IGNORED-CONNECTION-STRING", Database = "TEST-DATABASE",}),
                 queryProvider.Object))
             {
-                Assert.Null(await client.ExecuteKustoQueryAsync(new KustoQuery("basicQuery")));
+                (await client.ExecuteKustoQueryAsync(new KustoQuery("basicQuery"))).Should().BeNull();
             }
         }
     }

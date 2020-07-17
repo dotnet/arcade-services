@@ -7,26 +7,20 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Kusto.Data.Common;
 using Kusto.Ingest;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Moq;
-using Xunit;
-using Xunit.Abstractions;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.Kusto.Tests
 {
+    [TestFixture]
     public class KustoHelpersTests
     {
-        private readonly ITestOutputHelper _output;
-
-        public KustoHelpersTests(ITestOutputHelper output)
-        {
-            _output = output;
-        }
-
-        [Fact]
+        [Test]
         public async Task EmptyWriteTestShouldNotSend()
         {
             var ingest = new Mock<IKustoIngestClient>();
@@ -40,15 +34,14 @@ namespace Microsoft.DotNet.Kusto.Tests
             await KustoHelpers.WriteDataToKustoInMemoryAsync(ingest.Object,
                 "TEST-DATABASE",
                 "TEST-TABLE",
-                new XUnitLogger(_output),
+                new NUnitLogger(), 
                 Enumerable.Empty<int>(),
                 null);
 
             ingest.VerifyNoOtherCalls();
         }
 
-        [MemberData(nameof(GetBasicDataTypes))]
-        [Theory]
+        [TestCaseSource(nameof(GetBasicDataTypes))]
         public async Task BasicSend(object inputValue, KustoDataType dataType, string representation)
         {
             string saved = null;
@@ -66,7 +59,7 @@ namespace Microsoft.DotNet.Kusto.Tests
             await KustoHelpers.WriteDataToKustoInMemoryAsync(ingest.Object,
                 "TEST-DATABASE",
                 "TEST-TABLE",
-                new XUnitLogger(_output),
+                new NUnitLogger(), 
                 new[] {inputValue},
                 v => new[]
                 {
@@ -75,12 +68,12 @@ namespace Microsoft.DotNet.Kusto.Tests
             );
 
             string[][] parsed = CsvWriterExtensions.ParseCsvFile(saved);
-            Assert.Single(parsed);
-            Assert.Single(parsed[0]);
-            Assert.Equal(representation, parsed[0][0]);
+            parsed.Should().ContainSingle();
+            parsed[0].Should().ContainSingle();
+            parsed[0][0].Should().Be(representation);
         }
 
-        [Fact]
+        [Test]
         public async Task AssertPropertiesConfigured()
         {
             var ingest = new Mock<IKustoIngestClient>();
@@ -95,7 +88,7 @@ namespace Microsoft.DotNet.Kusto.Tests
             await KustoHelpers.WriteDataToKustoInMemoryAsync(ingest.Object,
                 "TEST-DATABASE",
                 "TEST-TABLE",
-                new XUnitLogger(_output),
+                new NUnitLogger(), 
                 new[] {1},
                 v => new[]
                 {
@@ -103,19 +96,19 @@ namespace Microsoft.DotNet.Kusto.Tests
                 }
             );
 
-            Assert.NotNull(props);
-            Assert.Equal("TEST-DATABASE", props.DatabaseName);
-            Assert.Equal("TEST-TABLE", props.TableName);
+            props.Should().NotBeNull();
+            props.DatabaseName.Should().Be("TEST-DATABASE");
+            props.TableName.Should().Be("TEST-TABLE");
         }
 
-        [Fact]
+        [Test]
         public async Task HandlesFieldsInAnyOrder()
         {
             var ingest = new Mock<IKustoIngestClient>();
-            await Assert.ThrowsAsync<ArgumentException>(() => KustoHelpers.WriteDataToKustoInMemoryAsync(ingest.Object,
+            await (((Func<Task>)(() => KustoHelpers.WriteDataToKustoInMemoryAsync(ingest.Object,
                     "TEST-DATABASE",
                     "TEST-TABLE",
-                    new XUnitLogger(_output),
+                    new NUnitLogger(), 
                     new[] {1, 2},
                     v => v switch
                     {
@@ -132,10 +125,10 @@ namespace Microsoft.DotNet.Kusto.Tests
                         _ => throw new ArgumentOutOfRangeException()
                     }
                 )
-            );
+))).Should().ThrowExactlyAsync<ArgumentException>();
         }
 
-        [Fact]
+        [Test]
         public async Task MultipleRecordsAndFieldsAreMapped()
         {
             string saved = null;
@@ -154,7 +147,7 @@ namespace Microsoft.DotNet.Kusto.Tests
             await KustoHelpers.WriteDataToKustoInMemoryAsync(ingest.Object,
                     "TEST-DATABASE",
                     "TEST-TABLE",
-                    new XUnitLogger(_output),
+                    new NUnitLogger(), 
                     new[] {1, 2},
                     v => v switch
                     {
@@ -173,25 +166,25 @@ namespace Microsoft.DotNet.Kusto.Tests
                     }
                 );
             
-            Assert.NotNull(props.CSVMapping);
-            Assert.Equal(2, props.CSVMapping.Count());
+            props.CSVMapping.Should().NotBeNull();
+            props.CSVMapping.Should().HaveCount(2);
             CsvColumnMapping aMapping = props.CSVMapping.FirstOrDefault(m => m.ColumnName == "a");
             CsvColumnMapping bMapping = props.CSVMapping.FirstOrDefault(m => m.ColumnName == "b");
-            Assert.NotNull(aMapping);
-            Assert.NotNull(bMapping);
-            Assert.NotEqual(aMapping.Ordinal, bMapping.Ordinal);
-            Assert.Equal(KustoDataType.Int.CslDataType, aMapping.CslDataType);
-            Assert.Equal(KustoDataType.String.CslDataType, bMapping.CslDataType);
+            aMapping.Should().NotBeNull();
+            bMapping.Should().NotBeNull();
+            bMapping.Ordinal.Should().NotBe(aMapping.Ordinal);
+            aMapping.CslDataType.Should().Be(KustoDataType.Int.CslDataType);
+            bMapping.CslDataType.Should().Be(KustoDataType.String.CslDataType);
             string[][] parsed = CsvWriterExtensions.ParseCsvFile(saved);
-            Assert.Equal(2, parsed.Length);
-            Assert.Equal(2, parsed[0].Length);
-            Assert.Equal("1", parsed[0][aMapping.Ordinal]);
-            Assert.Equal("bValue1", parsed[0][bMapping.Ordinal]);
-            Assert.Equal("2", parsed[1][aMapping.Ordinal]);
-            Assert.Equal("bValue2", parsed[1][bMapping.Ordinal]);
+            parsed.Should().HaveCount(2);
+            parsed[0].Should().HaveCount(2);
+            parsed[0][aMapping.Ordinal].Should().Be("1");
+            parsed[0][bMapping.Ordinal].Should().Be("bValue1");
+            parsed[1][aMapping.Ordinal].Should().Be("2");
+            parsed[1][bMapping.Ordinal].Should().Be("bValue2");
         }
 
-        [Fact]
+        [Test]
         public async Task NullRecordsAreSkipped()
         {
             string saved = null;
@@ -210,7 +203,7 @@ namespace Microsoft.DotNet.Kusto.Tests
             await KustoHelpers.WriteDataToKustoInMemoryAsync(ingest.Object,
                 "TEST-DATABASE",
                 "TEST-TABLE",
-                new XUnitLogger(_output),
+                new NUnitLogger(), 
                 new[] {0, 1, 0, 2, 0},
                 v => v switch
                 {
@@ -229,22 +222,22 @@ namespace Microsoft.DotNet.Kusto.Tests
                 }
             );
             
-            Assert.NotNull(props.CSVMapping);
-            Assert.Equal(2, props.CSVMapping.Count());
+            props.CSVMapping.Should().NotBeNull();
+            props.CSVMapping.Should().HaveCount(2);
             CsvColumnMapping aMapping = props.CSVMapping.FirstOrDefault(m => m.ColumnName == "a");
             CsvColumnMapping bMapping = props.CSVMapping.FirstOrDefault(m => m.ColumnName == "b");
-            Assert.NotNull(aMapping);
-            Assert.NotNull(bMapping);
-            Assert.NotEqual(aMapping.Ordinal, bMapping.Ordinal);
-            Assert.Equal(KustoDataType.Int.CslDataType, aMapping.CslDataType);
-            Assert.Equal(KustoDataType.String.CslDataType, bMapping.CslDataType);
+            aMapping.Should().NotBeNull();
+            bMapping.Should().NotBeNull();
+            bMapping.Ordinal.Should().NotBe(aMapping.Ordinal);
+            aMapping.CslDataType.Should().Be(KustoDataType.Int.CslDataType);
+            bMapping.CslDataType.Should().Be(KustoDataType.String.CslDataType);
             string[][] parsed = CsvWriterExtensions.ParseCsvFile(saved);
-            Assert.Equal(2, parsed.Length);
-            Assert.Equal(2, parsed[0].Length);
-            Assert.Equal("1", parsed[0][aMapping.Ordinal]);
-            Assert.Equal("bValue1", parsed[0][bMapping.Ordinal]);
-            Assert.Equal("2", parsed[1][aMapping.Ordinal]);
-            Assert.Equal("bValue2", parsed[1][bMapping.Ordinal]);
+            parsed.Should().HaveCount(2);
+            parsed[0].Should().HaveCount(2);
+            parsed[0][aMapping.Ordinal].Should().Be("1");
+            parsed[0][bMapping.Ordinal].Should().Be("bValue1");
+            parsed[1][aMapping.Ordinal].Should().Be("2");
+            parsed[1][bMapping.Ordinal].Should().Be("bValue2");
         }
 
         public static IEnumerable<object[]> GetBasicDataTypes()

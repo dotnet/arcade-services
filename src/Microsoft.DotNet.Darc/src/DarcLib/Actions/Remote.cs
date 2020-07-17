@@ -2,29 +2,35 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
-using NuGet.Packaging;
-using NuGet.Versioning;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
-using Microsoft.DotNet.Internal.Logging;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
+using NuGet.Versioning;
 
 namespace Microsoft.DotNet.DarcLib
 {
-    public class Remote : IRemote
+    public sealed class Remote : IRemote
     {
         private readonly IBarClient _barClient;
         private readonly GitFileManager _fileManager;
         private readonly IGitRepo _gitClient;
         private readonly ILogger _logger;
+
+        //[DependencyUpdate]: <> (Begin)
+        //- **Updates**:
+        //- **Foo**: from to 1.2.0
+        //- **Bar**: from to 2.2.0
+        //[DependencyUpdate]: <> (End)
+        private static readonly Regex DependencyUpdatesPattern =
+            new Regex(@"\[DependencyUpdate\]: <> \(Begin\)([^\[]+)\[DependencyUpdate\]: <> \(End\)");
 
         public Remote(IGitRepo gitClient, IBarClient barClient, ILogger logger)
         {
@@ -352,12 +358,34 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
-        public async Task MergePullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
+        /// <summary>
+        /// Merges pull request for a dependency update  
+        /// </summary>
+        /// <param name="pullRequestUrl"></param>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
+        public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters)
         {
             CheckForValidGitClient();
             _logger.LogInformation($"Merging pull request '{pullRequestUrl}'...");
 
-            await _gitClient.MergePullRequestAsync(pullRequestUrl, parameters ?? new MergePullRequestParameters());
+            var pr = await _gitClient.GetPullRequestAsync(pullRequestUrl);
+            var dependencyUpdate = DependencyUpdatesPattern.Matches(pr.Description).Select(x => x.Groups[1].Value.Trim().Replace("*", string.Empty));
+            string commitMessage = $@"{pr.Title}
+{string.Join("\r\n\r\n", dependencyUpdate)}";
+            var commits = await _gitClient.GetPullRequestCommitsAsync(pullRequestUrl);
+            foreach (Commit commit in commits)
+            {
+                if (!commit.Author.Equals("dotnet-maestro[bot]"))
+                {
+                    commitMessage += $@"
+
+ - {commit.Message}";
+                }
+            }
+
+            await _gitClient.MergeDependencyPullRequestAsync(pullRequestUrl,
+                    parameters ?? new MergePullRequestParameters(), commitMessage);
 
             _logger.LogInformation($"Merging pull request '{pullRequestUrl}' succeeded!");
         }

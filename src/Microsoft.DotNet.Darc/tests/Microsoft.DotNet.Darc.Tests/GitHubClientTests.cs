@@ -2,16 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using FluentAssertions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Primitives;
 using Moq;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Xunit;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.Darc.Tests
 {
@@ -55,6 +56,7 @@ namespace Microsoft.DotNet.Darc.Tests
             return cache.AddOrUpdate(key, new SimpleCacheEntry(key), (existingKey, existingValue) => newEntry);
         }
 
+        [TearDown]
         public void Dispose()
         {
             
@@ -71,7 +73,7 @@ namespace Microsoft.DotNet.Darc.Tests
             {
                 // GitHubClient should be setting the size of the 
                 // entries (they should be non-zero).
-                Assert.True(existingEntry.Size > 0);
+                (existingEntry.Size > 0).Should().BeTrue();
                 CacheHits++;
                 value = existingEntry.Value;
                 return true;
@@ -85,12 +87,12 @@ namespace Microsoft.DotNet.Darc.Tests
         }
     }
 
+    [TestFixture]
     public class GitHubClientTests
     {
-        [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        private async Task TreeItemCacheTest(bool enableCache)
+        [TestCase(true)]
+        [TestCase(false)]
+        public async Task TreeItemCacheTest(bool enableCache)
         {
             SimpleCache cache = enableCache ? new SimpleCache() : null;
             Mock<GitHubClient> client = new Mock<GitHubClient>(null, null, NullLogger.Instance, null, cache);
@@ -133,8 +135,8 @@ namespace Microsoft.DotNet.Darc.Tests
             int expectedCacheMisses = treeItemsToGet.Count - 1;
             if (enableCache)
             {
-                Assert.Equal(expectedCacheMisses, cache.CacheMisses);
-                Assert.Equal(expectedCacheHits, cache.CacheHits);
+                cache.CacheMisses.Should().Be(expectedCacheMisses);
+                cache.CacheHits.Should().Be(expectedCacheHits);
             }
 
             // Request full set
@@ -147,8 +149,8 @@ namespace Microsoft.DotNet.Darc.Tests
             {
                 expectedCacheMisses++;
                 expectedCacheHits += (treeItemsToGet.Count - 1);
-                Assert.Equal(treeItemsToGet.Count, cache.CacheMisses);
-                Assert.Equal(treeItemsToGet.Count - 1, cache.CacheHits);
+                cache.CacheMisses.Should().Be(treeItemsToGet.Count);
+                cache.CacheHits.Should().Be(treeItemsToGet.Count - 1);
             }
 
             // Request full set
@@ -160,8 +162,8 @@ namespace Microsoft.DotNet.Darc.Tests
             if (enableCache)
             {
                 expectedCacheHits += treeItemsToGet.Count;
-                Assert.Equal(expectedCacheMisses, cache.CacheMisses);
-                Assert.Equal(expectedCacheHits, cache.CacheHits);
+                cache.CacheMisses.Should().Be(expectedCacheMisses);
+                cache.CacheHits.Should().Be(expectedCacheHits);
             }
 
             // Request an item with the same SHA but different path
@@ -180,12 +182,12 @@ namespace Microsoft.DotNet.Darc.Tests
             {
                 // First time the new item should not be in the cache
                 expectedCacheMisses++;
-                Assert.Equal(expectedCacheMisses, cache.CacheMisses);
-                Assert.Equal(expectedCacheHits, cache.CacheHits);
+                cache.CacheMisses.Should().Be(expectedCacheMisses);
+                cache.CacheHits.Should().Be(expectedCacheHits);
                 // Get it again, this time it should be in the cache
                 expectedCacheHits++;
                 await client.Object.GetGitTreeItem("anotherPath", treeItemsToGet[0].Item3, treeItemsToGet[0].Item1, treeItemsToGet[0].Item2);
-                Assert.Equal(expectedCacheHits, cache.CacheHits);
+                cache.CacheHits.Should().Be(expectedCacheHits);
             }
         }
     }
