@@ -78,18 +78,13 @@ namespace Microsoft.DotNet.Darc
                         );
                         break;
                     case HelpRequestedError _:
-                    case HelpVerbRequestedError _:
-                        s_telemetryClient.TrackTrace(
-                            "Verb chosen: help",
-                            SeverityLevel.Information,
-                            new Dictionary<string, string>
-                            {
-                                {"verb", "help"}
-                            }
-                        );
+                        ReportVerb("help");
+                        return 0;
+                    case HelpVerbRequestedError verbHelp:
+                        ReportVerb("verb.help", "for", verbHelp.Verb);
                         return 0;
                     case VersionRequestedError _:
-                        ReportVerb();
+                        ReportVerb("version");
                         return 0;
                 }
             }
@@ -195,14 +190,19 @@ namespace Microsoft.DotNet.Darc
             s_telemetryClient = new TelemetryClient(config);
         }
 
-        private static void ReportVerb()
+        private static void ReportVerb(string verb, params string [] extra)
         {
-            s_telemetryClient.TrackTrace(
-                "Verb chosen: version",
-                SeverityLevel.Information,
-                new Dictionary<string, string>
+            var properties = new Dictionary<string, string> {{"verb", verb}};
+            for (int i = 0; i < extra.Length - 1; i += 2)
+            {
+                properties.Add(extra[i], extra[i + 1]);
+            }
+
+            s_telemetryClient.TrackEvent("CommandExecuted",
+                properties,
+                new Dictionary<string, double>
                 {
-                    {"verb", "version"}
+                    {"duration", 0}
                 }
             );
         }
@@ -256,8 +256,10 @@ namespace Microsoft.DotNet.Darc
                     value = "<<REDACTED>>";
                 }
 
-                arguments.Add(optionAttribute.LongName, value.ToString());
+                arguments.Add($"opt.{optionAttribute.LongName}", value.ToString());
             }
+
+            arguments.Add("verb", verb);
 
             s_telemetryClient.TrackEvent("CommandExecuted",
                 arguments,
