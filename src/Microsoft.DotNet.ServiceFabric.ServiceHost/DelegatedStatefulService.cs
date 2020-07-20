@@ -85,23 +85,23 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
+            var logger = _container.GetRequiredService<ILogger<DelegatedStatefulService<TServiceImplementation>>>();
             try
             {
+                await using var _ =
+                    cancellationToken.Register(() => logger.LogInformation("Service abort cancellation requested"));
+                logger.LogInformation("Entering service 'RunAsync'");
                 await Task.WhenAll(RunSchedule(cancellationToken),
                     RunAsyncLoop(cancellationToken));
+                logger.LogWarning("Abnormal service exit without cancellation");
+            }
+            catch (OperationCanceledException e) when (e.CancellationToken == cancellationToken)
+            {
+                logger.LogInformation("Service shutdown complete");
             }
             catch (Exception e)
             {
-                try
-                {
-                    _container.GetRequiredService<ILogger<DelegatedStatefulService<TServiceImplementation>>>()
-                        .LogCritical(e, "Unhandled exception crashing service execution");
-                }
-                catch
-                {
-                    // No point in crashing if we can't log (or can't resolve the logger)
-                }
-
+                logger.LogCritical(e, "Unhandled exception crashing service execution");
                 throw;
             }
         }

@@ -296,22 +296,22 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
 
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
+            var logger = Container.GetRequiredService<ILogger<DelegatedActor>>();
             try
             {
+                await using var _ =
+                    cancellationToken.Register(() => logger.LogInformation("Service abort cancellation requested"));
+                logger.LogInformation("Entering service 'RunAsync'");
                 await base.RunAsync(cancellationToken);
+                logger.LogWarning("Abnormal service exit without cancellation");
+            }
+            catch (OperationCanceledException e) when (e.CancellationToken == cancellationToken)
+            {
+                logger.LogInformation("Service shutdown complete");
             }
             catch (Exception e)
             {
-                try
-                {
-                    Container.GetRequiredService<ILogger<DelegatedActor>>()
-                        .LogCritical(e, "Unhandled exception crashing actor execution");
-                }
-                catch
-                {
-                    // No point in crashing if we can't log (or can't resolve the logger)
-                }
-
+                logger.LogCritical(e, "Unhandled exception crashing actor execution");
                 throw;
             }
         }
