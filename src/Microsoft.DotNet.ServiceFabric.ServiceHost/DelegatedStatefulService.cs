@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Castle.DynamicProxy.Internal;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Remoting;
 using Microsoft.ServiceFabric.Services.Runtime;
@@ -84,8 +85,25 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
 
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            await Task.WhenAll(RunSchedule(cancellationToken),
-                RunAsyncLoop(cancellationToken));
+            try
+            {
+                await Task.WhenAll(RunSchedule(cancellationToken),
+                    RunAsyncLoop(cancellationToken));
+            }
+            catch (Exception e)
+            {
+                try
+                {
+                    _container.GetRequiredService<ILogger<DelegatedStatefulService<TServiceImplementation>>>()
+                        .LogCritical(e, "Unhandled exception crashing service execution");
+                }
+                catch
+                {
+                    // No point in crashing if we can't log (or can't resolve the logger)
+                }
+
+                throw;
+            }
         }
 
         private async Task RunAsyncLoop(CancellationToken cancellationToken)

@@ -17,6 +17,7 @@ using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
@@ -295,7 +296,24 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
 
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            await base.RunAsync(cancellationToken);
+            try
+            {
+                await base.RunAsync(cancellationToken);
+            }
+            catch (Exception e)
+            {
+                try
+                {
+                    Container.GetRequiredService<ILogger<DelegatedActor>>()
+                        .LogCritical(e, "Unhandled exception crashing actor execution");
+                }
+                catch
+                {
+                    // No point in crashing if we can't log (or can't resolve the logger)
+                }
+
+                throw;
+            }
         }
 
         private ActorBase CreateActor(ActorId actorId)
