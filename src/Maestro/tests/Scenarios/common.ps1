@@ -665,6 +665,14 @@ function Get-Github-File-Contents($targetRepoName, $path, $ref) {
     Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Get | ConvertFrom-Json
 }
 
+function Get-Github-Checks($targetRepoName, $sha) 
+{
+    $uri = "$(Get-Github-RepoApiUri($targetRepoName))/commits/$sha/check-runs"
+    $headers = Get-Github-Headers
+    $headers.Add('Accept', 'application/vnd.github.antiope-preview+json')
+    Invoke-WebRequest -Uri $uri -Headers $headers -Method Get | ConvertFrom-Json
+}
+
 function Check-Github-PullRequest-Completed($targetRepoName, $pullRequestNumber) {
     $uri = "$(Get-Github-RepoApiUri($targetRepoName))/pulls/$pullRequestNumber/merge"
     Write-Host "Checking $uri until it reports a completed merge"
@@ -777,6 +785,42 @@ function Check-Github-PullRequest($expectedPRTitle, $targetRepoName, $targetBran
         Check-Github-PullRequest-Completed $targetRepoName $pullRequest.number
     }
     return $true
+}
+
+function Check-Github-PullRequest-Checks($targetRepoName, $targetBranch)
+{
+    $pullRequest = Check-Github-PullRequest-Created $targetRepoName $targetBranch
+    if (!$pullRequest) 
+    {
+        return $false
+    }
+
+    # Get the checks for the created PR
+    $checks = Get-Github-Checks $targetRepoName $pullRequest.head.sha
+    if (!$checks) 
+    {
+        return $false        
+    }
+    return Validate-Github-PullRequest-Checks $checks
+}
+
+function Validate-Github-PullRequest-Checks($checks) {
+    # Make sure that at least 1 check has an external ID set to "maestro-policy-{...}" and that every check with this external ID are completed
+    $cnt = 0
+    $allChecksCompleted = $true
+    foreach($check in $checks.check_runs.PsObject.Properties)
+    {
+        if ($check.external_id -match "maestro-policy") 
+        {
+            $cnt++
+            if ($check.status -match "completed") 
+            {
+                $allChecksCompleted = $false
+                break
+            }
+        }
+    }
+    return $cnt -gt 1 -and $allChecksCompleted
 }
 
 function Validate-Arcade-PullRequest-Contents($pullRequest, $expectedPRTitle, $targetRepoName, $targetBranch, $expectedDependencies) {
