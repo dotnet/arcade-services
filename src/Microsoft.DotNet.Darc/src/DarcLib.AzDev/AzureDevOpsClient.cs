@@ -25,6 +25,8 @@ namespace Microsoft.DotNet.DarcLib
     {
         private const string DefaultApiVersion = "5.0";
 
+        private const int MaxPullRequestDescriptionLength = 4000;
+
         private static readonly string AzureDevOpsHostPattern = @"dev\.azure\.com\";
 
         private static readonly string CommentMarker =
@@ -373,9 +375,9 @@ namespace Microsoft.DotNet.DarcLib
                 new GitPullRequest
                 {
                     Title = pullRequest.Title,
-                    Description = pullRequest.Description,
+                    Description = TruncateDescriptionIfNeeded(pullRequest.Description),
                     SourceRefName = "refs/heads/" + pullRequest.HeadBranch,
-                    TargetRefName = "refs/heads/" + pullRequest.BaseBranch
+                    TargetRefName = "refs/heads/" + pullRequest.BaseBranch,
                 },
                 projectName,
                 repoName);
@@ -400,7 +402,7 @@ namespace Microsoft.DotNet.DarcLib
                 new GitPullRequest
                 {
                     Title = pullRequest.Title,
-                    Description = pullRequest.Description
+                    Description = TruncateDescriptionIfNeeded(pullRequest.Description),
                 },
                 projectName,
                 repoName,
@@ -1465,6 +1467,21 @@ namespace Microsoft.DotNet.DarcLib
             PullRequest pr = await GetPullRequestAsync(pullRequestUri);
             (string account, string project, string repo, int id) prInfo = ParsePullRequestUri(pullRequestUri);
             await DeleteBranchAsync(prInfo.account, prInfo.project, prInfo.repo, pr.HeadBranch);
+        }
+
+        /// <summary>
+        /// Helper function for truncating strings to a set length.
+        ///  See https://github.com/dotnet/arcade/issues/5811 
+        /// </summary>
+        /// <param name="str">String to be shortened if necessary</param>
+        /// <returns></returns>
+        private static string TruncateDescriptionIfNeeded(string str)
+        {
+            if (str.Length > MaxPullRequestDescriptionLength)
+            {
+                return str.Substring(0, MaxPullRequestDescriptionLength);
+            }
+            return str;
         }
     }
 }
