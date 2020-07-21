@@ -9,7 +9,7 @@ indent_style = space
 indent_size = 4
 tab_width = 4
 
-[*.{*proj,xml,props,targets,tasks,json}]
+[*.{*proj,xml,props,targets,tasks,json,runsettings}]
 indent_size = 2
 tab_width = 2
 

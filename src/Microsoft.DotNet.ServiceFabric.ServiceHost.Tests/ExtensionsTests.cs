@@ -1,43 +1,45 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Xunit;
+using FluentAssertions;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 {
+    [TestFixture]
     public class ExtensionsTests
     {
-        [Fact]
+        [Test]
         public async Task NonCancelableThrows()
         {
-            await Assert.ThrowsAsync<ArgumentException>(() => CancellationToken.None.AsTask());
+            await (((Func<Task>)(() => CancellationToken.None.AsTask()))).Should().ThrowExactlyAsync<ArgumentException>();
         }
 
-        [Fact]
+        [Test]
         public void PostCancellationChangesStateCompleted()
         {
             var source = new CancellationTokenSource();
             Task task = source.Token.AsTask();
-            Assert.False(task.IsCompleted);
+            task.IsCompleted.Should().BeFalse();
             source.Cancel();
-            Assert.True(task.IsCompleted);
+            task.IsCompleted.Should().BeTrue();
         }
 
-        [Fact]
+        [Test]
         public void PreCancelledReturnsCompleted()
         {
             var source = new CancellationTokenSource();
             source.Cancel();
             Task task = source.Token.AsTask();
-            Assert.True(task.IsCompleted);
+            task.IsCompleted.Should().BeTrue();
         }
 
-        [Fact]
+        [Test]
         public void WithoutCancellingNotComplete()
         {
             var source = new CancellationTokenSource();
             Task task = source.Token.AsTask();
-            Assert.False(task.IsCompleted);
+            task.IsCompleted.Should().BeFalse();
         }
     }
 }

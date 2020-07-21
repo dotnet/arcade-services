@@ -16,7 +16,7 @@ namespace RolloutScorer
         public const string KeyVaultUri = "https://engkeyvault.vault.azure.net";
         public const string GitHubPatSecretName = "BotAccount-dotnet-bot-repo-PAT";
 
-        public static bool IssueContainsRelevantLabels(Issue issue, string issueLabel, string repoLabel, ILogger log = null)
+        public static bool IssueContainsRelevantLabels(Issue issue, string issueLabel, string repoLabel, ILogger log = null, Microsoft.Extensions.Logging.LogLevel logLevel = Microsoft.Extensions.Logging.LogLevel.Information)
         {
             if (issue == null)
             {
@@ -24,7 +24,26 @@ namespace RolloutScorer
                 return false;
             }
 
-            return issue.Labels.Any(l => l.Name == issueLabel) && issue.Labels.Any(l => l.Name == repoLabel);
+            WriteTrace($"Issue {issue.Number} has labels {string.Join(", ", issue.Labels.Select(l => $"'{l.Name}'"))}", log, logLevel);
+
+            bool isIssueLabel = false;
+
+            if (issueLabel == GithubLabelNames.IssueLabel)
+            {
+                isIssueLabel = issue.Labels.Any(l => l.Name == repoLabel)
+                    && !issue.Labels.Any(l => l.Name == GithubLabelNames.HotfixLabel || l.Name == GithubLabelNames.RollbackLabel || l.Name == GithubLabelNames.DowntimeLabel);
+            }
+            else
+            {
+                isIssueLabel = issue.Labels.Any(l => l.Name == issueLabel) && issue.Labels.Any(l => l.Name == repoLabel);
+            }
+
+            if (isIssueLabel)
+            {
+                WriteDebug($"Issue {issue.Number} determined to be {issueLabel} for {repoLabel}", log, logLevel);
+            }
+
+            return isIssueLabel;
         }
 
         public static Config ParseConfig()
@@ -87,6 +106,7 @@ namespace RolloutScorer
 
         public static void WriteError(string message, ILogger log = null)
         {
+            message = $"ERROR: {message}";
             if (log == null)
             {
                 WriteColoredMessage(message, ConsoleColor.Red);
@@ -99,6 +119,7 @@ namespace RolloutScorer
 
         public static void WriteWarning(string message, ILogger log)
         {
+            message = $"WARNING: {message}";
             if (log == null)
             {
                 WriteColoredMessage(message, ConsoleColor.Yellow);
@@ -106,6 +127,44 @@ namespace RolloutScorer
             else
             {
                 log.LogWarning(message);
+            }
+        }
+        public static void WriteInformation(string message, ILogger log)
+        {
+            message = $"INFO: {message}";
+            if (log == null)
+            {
+                WriteColoredMessage(message, ConsoleColor.White);
+            }
+            else
+            {
+                log.LogInformation(message);
+            }
+        }
+
+        public static void WriteDebug(string message, ILogger log, Microsoft.Extensions.Logging.LogLevel logLevel)
+        {
+            message = $"DEBUG: {message}";
+            if (log != null)
+            {
+                log.LogInformation(message);
+            }
+            else if (logLevel <= Microsoft.Extensions.Logging.LogLevel.Debug)
+            {
+                WriteColoredMessage(message, ConsoleColor.Gray);
+            }    
+        }
+
+        public static void WriteTrace(string message, ILogger log, Microsoft.Extensions.Logging.LogLevel logLevel)
+        {
+            message = $"TRACE: {message}";
+            if (log != null)
+            {
+                log.LogInformation(message);
+            }
+            else if (logLevel <= Microsoft.Extensions.Logging.LogLevel.Trace)
+            {
+                WriteColoredMessage(message, ConsoleColor.DarkGray);
             }
         }
 

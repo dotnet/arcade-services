@@ -1,17 +1,19 @@
 using System;
+using FluentAssertions;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
+using NUnit.Framework;
 
 namespace SubscriptionActorService.Tests
 {
+    [TestFixture]
     public class DependencyRegistrationTests
     {
-        [Fact]
+        [Test]
         public void AreDependenciesRegistered()
         {
-            Assert.True(DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
+            DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
                     {
                         Environment.SetEnvironmentVariable("ENVIRONMENT", "XUNIT");
                         ServiceHost.ConfigureDefaultServices(s);
@@ -19,8 +21,7 @@ namespace SubscriptionActorService.Tests
                         s.AddScoped<SubscriptionActor>();
                         s.AddScoped<PullRequestActor>();
                     },
-                    out string message),
-                message);
+                    out string message).Should().BeTrue();
         }
     }
 }

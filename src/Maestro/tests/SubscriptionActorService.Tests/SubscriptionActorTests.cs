@@ -14,19 +14,21 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
-using Xunit;
-using Xunit.Abstractions;
+using NUnit.Framework;
+
 using Asset = Maestro.Contracts.Asset;
 
 namespace SubscriptionActorService.Tests
 {
+    [TestFixture, NonParallelizable]
     public class SubscriptionActorTests : SubscriptionOrPullRequestActorTests
     {
-        private readonly Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors =
-            new Dictionary<ActorId, Mock<IPullRequestActor>>();
+        private Dictionary<ActorId, Mock<IPullRequestActor>> PullRequestActors;
 
-        public SubscriptionActorTests(ITestOutputHelper output) : base(output)
+        [SetUp]
+        public void SubscriptionActorTests_SetUp()
         {
+            PullRequestActors = new Dictionary<ActorId, Mock<IPullRequestActor>>();
         }
 
         protected override void RegisterServices(IServiceCollection services)
@@ -77,7 +79,7 @@ namespace SubscriptionActorService.Tests
                     });
         }
 
-        [Fact]
+        [Test]
         public async Task BatchableEveryBuildSubscription()
         {
             GivenATestChannel();
@@ -95,7 +97,7 @@ namespace SubscriptionActorService.Tests
                 b);
         }
 
-        [Fact]
+        [Test]
         public async Task NotBatchableEveryBuildSubscription()
         {
             GivenATestChannel();

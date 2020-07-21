@@ -1,35 +1,37 @@
+using FluentAssertions;
 using Microsoft.DotNet.Darc.Helpers;
-using Xunit;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.Darc.Tests.Helpers
 {
+    [TestFixture]
     public class UxManagerHelpers
     {
-        [Fact]
+        [Test]
         public void PathCodeLocation()
         {
             var codeCommand = UxManager.GetParsedCommand("code --wait");
 
-            Assert.Equal("code", codeCommand.FileName);
-            Assert.Equal(" --wait", codeCommand.Arguments);
+            codeCommand.FileName.Should().Be("code");
+            codeCommand.Arguments.Should().Be(" --wait");
         }
 
-        [Fact]
+        [Test]
         public void EscapedCodeLocation()
         {
             var codeCommand = UxManager.GetParsedCommand(@"'C:\Users\lulansky\AppData\Local\Programs\Microsoft VS Code\Code.exe' --wait");
 
-            Assert.Equal(@"C:\Users\lulansky\AppData\Local\Programs\Microsoft VS Code\Code.exe", codeCommand.FileName);
-            Assert.Equal(" --wait", codeCommand.Arguments);
+            codeCommand.FileName.Should().Be(@"C:\Users\lulansky\AppData\Local\Programs\Microsoft VS Code\Code.exe");
+            codeCommand.Arguments.Should().Be(" --wait");
         }
 
-        [Fact]
+        [Test]
         public void EscapedCodeLocationWithoutArg()
         {
             var codeCommand = UxManager.GetParsedCommand(@"'C:\Users\lulansky\AppData\Local\Programs\Microsoft VS Code\Code.exe'");
 
-            Assert.Equal(@"C:\Users\lulansky\AppData\Local\Programs\Microsoft VS Code\Code.exe", codeCommand.FileName);
-            Assert.Equal("", codeCommand.Arguments);
+            codeCommand.FileName.Should().Be(@"C:\Users\lulansky\AppData\Local\Programs\Microsoft VS Code\Code.exe");
+            codeCommand.Arguments.Should().Be("");
         }
     }
 }

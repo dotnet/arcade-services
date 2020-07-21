@@ -1,35 +1,44 @@
-using Xunit;
+using System;
+using System.Threading.Tasks;
 using DotNet.Status.Web.Controllers;
+using FluentAssertions;
+using Kusto.Ingest;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.DotNet.Internal.Testing.Utility;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Microsoft.AspNetCore.Mvc;
-using Kusto.Ingest;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Xunit.Abstractions;
-using System;
-using Microsoft.DotNet.Internal.Testing.Utility;
+using NUnit.Framework;
 
 namespace DotNet.Status.Web.Tests
 {
-    public class TelemetryControllerTests : IDisposable
+    [TestFixture]
+    public class TelemetryControllerTests
     {
-        private readonly ITestOutputHelper _output;
-        private TelemetryController _controller;
-        private ServiceProvider _services;
-
-        public TelemetryControllerTests(ITestOutputHelper output)
+        private class TestData : IDisposable
         {
-            _output = output;            
+            public readonly TelemetryController Controller;
+            private readonly ServiceProvider _services;
+
+            public TestData(TelemetryController controller, ServiceProvider services)
+            {
+                Controller = controller;
+                _services = services;
+            }
+
+            public void Dispose()
+            {
+                _services?.Dispose();
+            }
         }
 
-        protected void SetUp(KustoOptions customOptions = null)
+        private static TestData SetUp(KustoOptions customOptions = null)
         {
             var collection = new ServiceCollection();
             collection.AddOptions();
             collection.AddLogging(l =>
             {
-                l.AddProvider(new XUnitLogger(_output));
+                l.AddProvider(new NUnitLogger());
             });
 
             collection.Configure<KustoOptions>(options =>
@@ -46,22 +55,17 @@ namespace DotNet.Status.Web.Tests
 
             collection.AddSingleton(kustoIngestClientMock.Object);
 
-            _services = collection.BuildServiceProvider();
-            _controller = _services.GetRequiredService<TelemetryController>();
+            var services = collection.BuildServiceProvider();
+            return new TestData(services.GetRequiredService<TelemetryController>(), services);
         }
 
-        public void Dispose()
+        [Test]
+        public async Task TestArcadeValidationTelemetryCollection()
         {
-            _services.Dispose();
-        }
-
-        [Fact]
-        public async void TestArcadeValidationTelemetryCollection()
-        {
-            SetUp();
-            IActionResult result = await _controller.CollectArcadeValidation(new ArcadeValidationData
+            using TestData testData = SetUp();
+            IActionResult result = await testData.Controller.CollectArcadeValidation(new ArcadeValidationData
             {
-                BuildDateTime = new DateTime(),
+                BuildDateTime = new DateTimeOffset(2001, 2, 3, 16, 5, 6, 7, TimeSpan.Zero),
                 ArcadeVersion = "fakearcadeversion",
                 BARBuildID = -1,
                 ArcadeBuildLink = "fakearcadebuildlink", 
@@ -71,15 +75,15 @@ namespace DotNet.Status.Web.Tests
                 ProductRepoBuildResult = "fakeproductrepobuildresult",
                 ArcadeDiffLink = "fakearcadedifflink"
             });
-            Assert.NotNull(result);
-            Assert.IsType<OkResult>(result);
+            result.Should().NotBeNull();
+            result.Should().BeOfType<OkResult>();
         }
 
-        [Fact]
-        public async void TestArcadeValidationTelemetryCollectionWithMissingKustoConnectionString()
+        [Test]
+        public async Task TestArcadeValidationTelemetryCollectionWithMissingKustoConnectionString()
         {
-            SetUp(new KustoOptions());
-            await Assert.ThrowsAsync<InvalidOperationException>(() => _controller.CollectArcadeValidation(new ArcadeValidationData()));
+            using TestData testData = SetUp(new KustoOptions());
+            await (((Func<Task>)(() => testData.Controller.CollectArcadeValidation(new ArcadeValidationData())))).Should().ThrowExactlyAsync<InvalidOperationException>();
         }
     }
 }

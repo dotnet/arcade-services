@@ -11,9 +11,9 @@ namespace Maestro.DataProviders
         public static MultiProjectKustoQuery CreateBuildTimesQueries(string repository, string branch, int days)
         {
             var parameters = new List<KustoParameter> {
-                new KustoParameter("_Repository", KustoDataTypes.String,  repository.Split('/').Last()),
-                new KustoParameter("_SourceBranch", KustoDataTypes.String, branch),
-                new KustoParameter("_Days", KustoDataTypes.TimeSpan, $"{days}d")
+                new KustoParameter("_Repository", repository.Split('/').Last(), KustoDataType.String),
+                new KustoParameter("_SourceBranch", branch, KustoDataType.String),
+                new KustoParameter("_Days", $"{days}d", KustoDataType.TimeSpan)
             };
 
             string prProject = "public";

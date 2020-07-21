@@ -2,9 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.DotNet.DarcLib;
-using Newtonsoft.Json;
-using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,7 +9,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
-using Xunit;
+using FluentAssertions;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.Logging.Abstractions;
+using NUnit.Framework;
+using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Darc.Tests
 {
@@ -32,7 +33,7 @@ namespace Microsoft.DotNet.Darc.Tests
         private const string InputJsonFile = "input.json";
         public string OutputJsonFile { get => "output.json";}
         private string RootInputsPath { get => Path.Combine(Environment.CurrentDirectory, inputRootDir, TestFilesInput, _testName); }
-        
+         
         public DependencyFlowTestDriver(string testName)
         {
             _testName = testName;
@@ -85,7 +86,7 @@ namespace Microsoft.DotNet.Darc.Tests
             foreach (var expectedNode in expectedNodes)
             {
                 DependencyFlowNode matchingNode = nodes.FirstOrDefault(n => n.Id == expectedNode.Id);
-                Assert.NotNull(matchingNode);
+                matchingNode.Should().NotBeNull();
 
                 AssertFlowNodeIsEqual(matchingNode, expectedNode);
             }
@@ -94,7 +95,7 @@ namespace Microsoft.DotNet.Darc.Tests
             foreach (var node in nodes)
             {
                 DependencyFlowNode matchingNode = expectedNodes.FirstOrDefault(n => n.Id == node.Id);
-                Assert.NotNull(matchingNode);
+                matchingNode.Should().NotBeNull();
 
                 AssertFlowNodeIsEqual(matchingNode, node);
             }
@@ -102,13 +103,13 @@ namespace Microsoft.DotNet.Darc.Tests
 
         public void AssertFlowNodeIsEqual(DependencyFlowNode node, DependencyFlowNode expectedNode)
         {
-            Assert.Equal(node.Repository, expectedNode.Repository);
-            Assert.Equal(node.Branch, expectedNode.Branch);
-            Assert.Equal(node.OfficialBuildTime, expectedNode.OfficialBuildTime);
-            Assert.Equal(node.PrBuildTime, expectedNode.PrBuildTime);
-            Assert.Equal(node.BestCasePathTime, expectedNode.BestCasePathTime);
-            Assert.Equal(node.WorstCasePathTime, expectedNode.WorstCasePathTime);
-            Assert.Equal(node.OnLongestBuildPath, expectedNode.OnLongestBuildPath);
+            expectedNode.Repository.Should().Be(node.Repository);
+            expectedNode.Branch.Should().Be(node.Branch);
+            expectedNode.OfficialBuildTime.Should().Be(node.OfficialBuildTime);
+            expectedNode.PrBuildTime.Should().Be(node.PrBuildTime);
+            expectedNode.BestCasePathTime.Should().Be(node.BestCasePathTime);
+            expectedNode.WorstCasePathTime.Should().Be(node.WorstCasePathTime);
+            expectedNode.OnLongestBuildPath.Should().Be(node.OnLongestBuildPath);
         }
 
         public void AssertFlowEdgeListIsEqual(List<DependencyFlowEdge> edges, List<DependencyFlowEdge> expectedEdges)
@@ -117,7 +118,7 @@ namespace Microsoft.DotNet.Darc.Tests
             foreach (var expectedEdge in expectedEdges)
             {
                 DependencyFlowEdge matchingEdge = edges.FirstOrDefault(e => e.Subscription.Id == expectedEdge.Subscription.Id);
-                Assert.NotNull(matchingEdge);
+                matchingEdge.Should().NotBeNull();
 
                 AssertFlowEdgeIsEqual(matchingEdge, expectedEdge);
             }
@@ -126,7 +127,7 @@ namespace Microsoft.DotNet.Darc.Tests
             foreach (var edge in edges)
             {
                 DependencyFlowEdge matchingEdge = edges.FirstOrDefault(e => e.Subscription.Id == edge.Subscription.Id);
-                Assert.NotNull(matchingEdge);
+                matchingEdge.Should().NotBeNull();
 
                 AssertFlowEdgeIsEqual(matchingEdge, edge);
             }
@@ -136,8 +137,8 @@ namespace Microsoft.DotNet.Darc.Tests
         {
             AssertFlowNodeIsEqual(edge.To, expectedEdge.To);
             AssertFlowNodeIsEqual(edge.From, expectedEdge.From);
-            Assert.Equal(edge.OnLongestBuildPath, expectedEdge.OnLongestBuildPath);
-            Assert.Equal(edge.BackEdge, expectedEdge.BackEdge);
+            expectedEdge.OnLongestBuildPath.Should().Be(edge.OnLongestBuildPath);
+            expectedEdge.BackEdge.Should().Be(edge.BackEdge);
         }
 
         public static void GetGraphAndCompare(string testInputsName, 

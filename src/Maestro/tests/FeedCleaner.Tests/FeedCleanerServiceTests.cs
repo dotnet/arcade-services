@@ -2,30 +2,32 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using FluentAssertions;
 using Maestro.AzureDevOps;
 using Maestro.Data;
 using Maestro.Data.Models;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
-using Xunit;
+using Moq;
+using NUnit.Framework;
 
 namespace FeedCleanerService.Tests
 {
+    [TestFixture, NonParallelizable]
     public class FeedCleanerServiceTests : IDisposable
     {
-        private readonly Lazy<BuildAssetRegistryContext> _context;
-        private readonly Mock<IHostEnvironment> Env;
-        private readonly ServiceProvider Provider;
-        private readonly IServiceScope Scope;
-        private readonly Dictionary<string, AzureDevOpsFeed> Feeds;
-        private readonly Mock<IAzureDevOpsClient> AzdoMock;
+        private Lazy<BuildAssetRegistryContext> _context;
+        private Mock<IHostEnvironment> Env;
+        private ServiceProvider Provider;
+        private IServiceScope Scope;
+        private Dictionary<string, AzureDevOpsFeed> Feeds;
+        private Mock<IAzureDevOpsClient> AzdoMock;
 
         private readonly string SomeAccount = "someAccount";
         private readonly string UnmanagedFeedName = "some-other-feed";
@@ -33,7 +35,8 @@ namespace FeedCleanerService.Tests
         private readonly string FeedWithAllPackagesReleasedName = "darc-pub-some-repo-12345679";
         private readonly string FeedWithUnreleasedPackagesName = "darc-int-some-repo-12345678";
 
-        public FeedCleanerServiceTests()
+        [SetUp]
+        public void FeedCleanerServiceTests_SetUp()
         {
             var services = new ServiceCollection();
             Env = new Mock<IHostEnvironment>(MockBehavior.Strict);
@@ -76,6 +79,7 @@ namespace FeedCleanerService.Tests
             SetupAssetsFromFeeds();
         }
 
+        [TearDown]
         public void Dispose()
         {
             Env.VerifyAll();
@@ -83,24 +87,24 @@ namespace FeedCleanerService.Tests
             Provider.Dispose();
         }
 
-        [Fact]
+        [Test]
         public async Task OnlyDeletesReleasedPackagesFromManagedFeeds()
         {
             FeedCleanerService cleaner = ConfigureFeedCleaner();
             await cleaner.CleanManagedFeedsAsync();
             var unreleasedFeed = Feeds[FeedWithUnreleasedPackagesName];
-            Assert.Equal(2, unreleasedFeed.Packages.Count);
+            unreleasedFeed.Packages.Should().HaveCount(2);
             var packagesWithDeletedVersions = unreleasedFeed.Packages.Where(p => p.Versions.Any(v => v.IsDeleted)).ToList();
-            Assert.Single(packagesWithDeletedVersions);
-            Assert.Equal("releasedPackage1", packagesWithDeletedVersions.First().Name);
+            packagesWithDeletedVersions.Should().ContainSingle();
+            packagesWithDeletedVersions.First().Name.Should().Be("releasedPackage1");
             var deletedVersions = packagesWithDeletedVersions.First().Versions.Where(v => v.IsDeleted).ToList();
-            Assert.Single(deletedVersions);
-            Assert.Equal("1.0", deletedVersions.First().Version);
+            deletedVersions.Should().ContainSingle();
+            deletedVersions.First().Version.Should().Be("1.0");
 
-            Assert.DoesNotContain(Feeds[UnmanagedFeedName].Packages, p => p.Versions.Any(v => v.IsDeleted));
+            Feeds[UnmanagedFeedName].Packages.Should().NotContain(p => p.Versions.Any(v => v.IsDeleted));
         }
 
-        [Fact]
+        [Test]
         public async Task UpdatesAssetLocationsForReleasedPackages()
         {
             FeedCleanerService cleaner = ConfigureFeedCleaner();
@@ -108,30 +112,28 @@ namespace FeedCleanerService.Tests
 
             // Check the assets for the feed where all packages were released.
             var assetsInDeletedFeed = _context.Value.Assets.Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithAllPackagesReleasedName))).ToList();
-            Assert.Equal(4, assetsInDeletedFeed.Count);
-            Assert.Contains(assetsInDeletedFeed,
-                a => a.Name.Equals("Newtonsoft.Json") &&
+            assetsInDeletedFeed.Should().HaveCount(4);
+            assetsInDeletedFeed.Should().Contain(                a => a.Name.Equals("Newtonsoft.Json") &&
                 a.Version == "12.0.2" &&
                 a.Locations.Any(l => l.Location.Equals("https://api.nuget.org/v3/index.json")));
 
             // All other assets should also have been updated to be in the release feed
-            Assert.DoesNotContain(assetsInDeletedFeed,
-                a => !a.Name.Equals("Newtonsoft.Json") &&
+            assetsInDeletedFeed.Should().NotContain(                a => !a.Name.Equals("Newtonsoft.Json") &&
                 !a.Locations.Any(l => l.Location.Contains(ReleaseFeedName)));
 
             // "releasedPackage1" should've been released and have its location updated to the released feed.
             var assetsInRemainingFeed = _context.Value.Assets.Where(a => a.Locations.Any(l => l.Location.Contains(FeedWithUnreleasedPackagesName))).ToList();
-            Assert.Equal(2, assetsInRemainingFeed.Count);
+            assetsInRemainingFeed.Should().HaveCount(2);
             var releasedAssets = assetsInRemainingFeed.Where(a => a.Locations.Any(l => l.Location.Contains(ReleaseFeedName))).ToList();
-            Assert.Single(releasedAssets);
-            Assert.Equal("releasedPackage1", releasedAssets.First().Name);
-            Assert.Equal("1.0", releasedAssets.First().Version);
+            releasedAssets.Should().ContainSingle();
+            releasedAssets.First().Name.Should().Be("releasedPackage1");
+            releasedAssets.First().Version.Should().Be("1.0");
 
             // "unreleasedPackage1" hasn't been released, should only have the stable feed as its location
             var unreleasedAssets = assetsInRemainingFeed.Where(a => a.Locations.All(l => l.Location.Contains(FeedWithUnreleasedPackagesName))).ToList();
-            Assert.Single(unreleasedAssets);
-            Assert.Equal("unreleasedPackage1", unreleasedAssets.FirstOrDefault().Name);
-            Assert.Equal("1.0", unreleasedAssets.FirstOrDefault().Version);
+            unreleasedAssets.Should().ContainSingle();
+            unreleasedAssets.FirstOrDefault().Name.Should().Be("unreleasedPackage1");
+            unreleasedAssets.FirstOrDefault().Version.Should().Be("1.0");
         }
 
         private BuildAssetRegistryContext GetContext()

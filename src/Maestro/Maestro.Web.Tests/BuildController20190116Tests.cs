@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Maestro.Data;
 using Maestro.Web.Api.v2019_01_16.Controllers;
 using Maestro.Web.Api.v2019_01_16.Models;
@@ -14,24 +15,14 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
-using Xunit;
-using Xunit.Abstractions;
+using NUnit.Framework;
 
 namespace Maestro.Web.Tests
 {
-    [Collection(nameof(DatabaseCollection))]
+    [TestFixture, NonParallelizable]
     public class BuildController20190116Tests
     {
-        private readonly ITestOutputHelper _output;
-        private readonly TestDatabaseFixture _database;
-
-        public BuildController20190116Tests(ITestOutputHelper output, TestDatabaseFixture database)
-        {
-            _output = output;
-            _database = database;
-        }
-
-        [Fact]
+        [Test]
         public async Task MinimalBuildIsCreatedAndCanRetrieved()
         {
             using TestData data = await BuildDefaultAsync();
@@ -55,49 +46,49 @@ namespace Maestro.Web.Tests
                     AzureDevOpsBranch = branch,
                 });
 
-                Assert.IsAssignableFrom<ObjectResult>(result);
+                result.Should().BeAssignableTo<ObjectResult>();
                 var objResult = (ObjectResult) result;
-                Assert.Equal((int) HttpStatusCode.Created, objResult.StatusCode);
-                Assert.IsAssignableFrom<Build>(objResult.Value);
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.Created);
+                objResult.Value.Should().BeAssignableTo<Build>();
                 var build = (Build) objResult.Value;
 
                 id = build.Id;
-                Assert.Equal(commitHash, build.Commit);
-                Assert.Equal(account, build.AzureDevOpsAccount);
-                Assert.Equal(project, build.AzureDevOpsProject);
-                Assert.Equal(buildNumber, build.AzureDevOpsBuildNumber);
-                Assert.Equal(repository, build.AzureDevOpsRepository);
-                Assert.Equal(branch, build.AzureDevOpsBranch);
-                Assert.Equal(data.Clock.UtcNow, build.DateProduced);
+                build.Commit.Should().Be(commitHash);
+                build.AzureDevOpsAccount.Should().Be(account);
+                build.AzureDevOpsProject.Should().Be(project);
+                build.AzureDevOpsBuildNumber.Should().Be(buildNumber);
+                build.AzureDevOpsRepository.Should().Be(repository);
+                build.AzureDevOpsBranch.Should().Be(branch);
+                build.DateProduced.Should().Be(data.Clock.UtcNow);
             }
 
             {
                 var result = await data.Controller.GetBuild(id);
-                Assert.IsAssignableFrom<ObjectResult>(result);
+                result.Should().BeAssignableTo<ObjectResult>();
                 var objResult = (ObjectResult) result;
-                Assert.Equal((int) HttpStatusCode.OK, objResult.StatusCode);
-                Assert.IsAssignableFrom<Build>(objResult.Value);
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
+                objResult.Value.Should().BeAssignableTo<Build>();
                 var build = (Build) objResult.Value;
-                Assert.Equal(commitHash, build.Commit);
-                Assert.Equal(account, build.AzureDevOpsAccount);
-                Assert.Equal(project, build.AzureDevOpsProject);
-                Assert.Equal(buildNumber, build.AzureDevOpsBuildNumber);
-                Assert.Equal(repository, build.AzureDevOpsRepository);
-                Assert.Equal(branch, build.AzureDevOpsBranch);
-                Assert.Equal(data.Clock.UtcNow, build.DateProduced);
+                build.Commit.Should().Be(commitHash);
+                build.AzureDevOpsAccount.Should().Be(account);
+                build.AzureDevOpsProject.Should().Be(project);
+                build.AzureDevOpsBuildNumber.Should().Be(buildNumber);
+                build.AzureDevOpsRepository.Should().Be(repository);
+                build.AzureDevOpsBranch.Should().Be(branch);
+                build.DateProduced.Should().Be(data.Clock.UtcNow);
             }
         }
 
-        [Fact]
+        [Test]
         public async Task NonsenseBuildIdReturnsNotFound()
         {
             using TestData data = await BuildDefaultAsync();
             var result = await data.Controller.GetBuild(-99999);
-            Assert.IsAssignableFrom<StatusCodeResult>(result);
-            Assert.Equal((int) HttpStatusCode.NotFound, ((StatusCodeResult) result).StatusCode);
+            result.Should().BeAssignableTo<StatusCodeResult>();
+            ((StatusCodeResult) result).StatusCode.Should().Be((int) HttpStatusCode.NotFound);
         }
 
-        [Fact]
+        [Test]
         public async Task BuildWithDependenciesIsRegistered()
         {
             using TestData data = await BuildDefaultAsync();
@@ -154,30 +145,30 @@ namespace Maestro.Web.Tests
                             new BuildRef(bBuild.Id, isProduct: true),
                         },
                     });
-                    Assert.IsAssignableFrom<ObjectResult>(result);
+                    result.Should().BeAssignableTo<ObjectResult>();
                     var objResult = (ObjectResult) result;
-                    Assert.Equal((int) HttpStatusCode.Created, objResult.StatusCode);
-                    Assert.IsAssignableFrom<Build>(objResult.Value);
+                    objResult.StatusCode.Should().Be((int) HttpStatusCode.Created);
+                    objResult.Value.Should().BeAssignableTo<Build>();
                     cBuild = (Build) objResult.Value;
                     cBuildId = cBuild.Id;
                 }
 
                 {
                     IActionResult result = await data.Controller.GetBuild(cBuildId);
-                    Assert.IsAssignableFrom<ObjectResult>(result);
+                    result.Should().BeAssignableTo<ObjectResult>();
                     var objResult = (ObjectResult) result;
-                    Assert.Equal((int) HttpStatusCode.OK, objResult.StatusCode);
-                    Assert.IsAssignableFrom<Build>(objResult.Value);
+                    objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
+                    objResult.Value.Should().BeAssignableTo<Build>();
                     cBuild = (Build) objResult.Value;
                 }
 
-                Assert.Equal(2, cBuild.Dependencies.Count);
-                Assert.Contains(cBuild.Dependencies, b => b.BuildId == aBuild.Id);
-                Assert.Contains(cBuild.Dependencies, b => b.BuildId == bBuild.Id);
+                cBuild.Dependencies.Should().HaveCount(2);
+                cBuild.Dependencies.Should().Contain(b => b.BuildId == aBuild.Id);
+                cBuild.Dependencies.Should().Contain(b => b.BuildId == bBuild.Id);
             }
         }
 
-        [Fact]
+        [Test]
         public async Task BuildGraphIncludesOnlyRelatedBuilds()
         {
             using TestData data = await BuildDefaultAsync();
@@ -212,45 +203,36 @@ namespace Maestro.Web.Tests
             BuildGraph graph;
             {
                 IActionResult result = await data.Controller.GetBuildGraph(cBuild.Id);
-                Assert.IsAssignableFrom<ObjectResult>(result);
+                result.Should().BeAssignableTo<ObjectResult>();
                 var objResult = (ObjectResult) result;
-                Assert.Equal((int) HttpStatusCode.OK, objResult.StatusCode);
-                Assert.IsAssignableFrom<BuildGraph>(objResult.Value);
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
+                objResult.Value.Should().BeAssignableTo<BuildGraph>();
                 graph = (BuildGraph) objResult.Value;
             }
 
-            Assert.Equal(3, graph.Builds.Count);
-            Assert.Contains(aBuild.Id, graph.Builds);
-            Assert.Contains(bBuild.Id, graph.Builds);
-            Assert.Contains(cBuild.Id, graph.Builds);
-            Assert.Contains(aBuild.Id, graph.Builds[cBuild.Id].Dependencies.Select(r => r.BuildId));
-            Assert.Contains(bBuild.Id, graph.Builds[cBuild.Id].Dependencies.Select(r => r.BuildId));
-            Assert.Empty(graph.Builds[aBuild.Id].Dependencies);
-            Assert.Empty(graph.Builds[bBuild.Id].Dependencies);
+            graph.Builds.Should().HaveCount(3);
+            graph.Builds.Should().ContainKey(aBuild.Id);
+            graph.Builds.Should().ContainKey(bBuild.Id);
+            graph.Builds.Should().ContainKey(cBuild.Id);
+            graph.Builds[cBuild.Id].Dependencies.Select(r => r.BuildId).Should().Contain(aBuild.Id);
+            graph.Builds[cBuild.Id].Dependencies.Select(r => r.BuildId).Should().Contain(bBuild.Id);
+            graph.Builds[aBuild.Id].Dependencies.Should().BeEmpty();
+            graph.Builds[bBuild.Id].Dependencies.Should().BeEmpty();
         }
 
         private Task<TestData> BuildDefaultAsync()
         {
-            return new TestDataBuilder(_database, _output).BuildAsync();
+            return new TestDataBuilder().BuildAsync();
         }
 
         private sealed class TestDataBuilder
         {
-            private readonly TestDatabaseFixture _database;
-            private readonly ITestOutputHelper _output;
-
-            public TestDataBuilder(TestDatabaseFixture database, ITestOutputHelper output)
-            {
-                _database = database;
-                _output = output;
-            }
-
             public async Task<TestData> BuildAsync()
             {
-                string connectionString = await _database.GetConnectionString();
+                string connectionString = await SharedData.Database.GetConnectionString();
 
                 ServiceCollection collection = new ServiceCollection();
-                collection.AddLogging(l => l.AddProvider(new XUnitLogger(_output)));
+                collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
                 collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
                 {
                     EnvironmentName = Environments.Development
