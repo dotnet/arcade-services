@@ -65,7 +65,8 @@ namespace Maestro.ScenarioTests
         }
 
         [Test]
-        public async Task Darc_GitHubFlow_NonBatched_WithCoherency_SharedCode()
+        [Ignore("Currently returns a 403, fixes in progress")]
+        public async Task Darc_GitHubFlow_NonBatched_WithCoherency()
         {
             TestContext.WriteLine("GitHub Dependency Flow, non-batched");
             await testLogic.NonBatchedFlowTestBase(
