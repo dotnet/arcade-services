@@ -9,7 +9,7 @@ using NUnit.Framework.Internal;
 namespace Maestro.ScenarioTests
 {
     [TestFixture]
-    [Category("ScenarioTest")]
+    [Category("PostDeployment")]
     public class ScenarioTests_Subscriptions : MaestroScenarioTestBase
     {
         private TestParameters _parameters;
@@ -35,7 +35,6 @@ namespace Maestro.ScenarioTests
         }
 
         [Test]
-        [Category("ScenarioTest")]
         public async Task Subscriptions_EndToEnd()
         {
             TestContext.WriteLine("Subscription management tests...");
