@@ -318,6 +318,7 @@ stages:
         MAESTRO_BASEURI: $(MaestroTestEndpoint)
         MAESTRO_TOKEN: $(scenario-test-maestro-token)
         GITHUB_TOKEN: $(maestro-scenario-test-github-token)
+        AZDO_TOKEN: $(dn-bot-dnceng-build-rw-code-rw-release-rw)
         DARC_PACKAGE_SOURCE: $(Pipeline.Workspace)\PackageArtifacts
 
     - powershell: |
