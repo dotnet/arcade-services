@@ -9,22 +9,24 @@ using Microsoft.ServiceFabric.Data;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.Extensions.Hosting;
 using Moq;
+using NUnit.Framework;
 using Octokit;
 using ServiceFabricMocks;
 
 namespace DependencyUpdateErrorProcessor.Tests
 {
-    public class DependencyUpdateErrorProcessorTests : IDisposable
+    public class DependencyUpdateErrorProcessorTests
     {
-        private readonly Lazy<TestBuildAssetRegistryContext> _context;
-        protected readonly Mock<IHostEnvironment> Env;
-        protected readonly ServiceProvider Provider;
-        protected readonly IServiceScope Scope;
-        protected readonly MockReliableStateManager StateManager;
-        protected readonly Mock<IGitHubClient> GithubClient;
-        protected readonly Mock<IGitHubApplicationClientFactory> GithubClientFactory;
+        private Lazy<TestBuildAssetRegistryContext> _context;
+        protected Mock<IHostEnvironment> Env;
+        protected ServiceProvider Provider;
+        protected IServiceScope Scope;
+        protected MockReliableStateManager StateManager;
+        protected Mock<IGitHubClient> GithubClient;
+        protected Mock<IGitHubApplicationClientFactory> GithubClientFactory;
 
-        public DependencyUpdateErrorProcessorTests()
+        [SetUp]
+        public void DependencyUpdateErrorProcessorTests_SetUp()
         {
             var services = new ServiceCollection();
             StateManager = new MockReliableStateManager();
@@ -62,7 +64,8 @@ namespace DependencyUpdateErrorProcessor.Tests
             return Scope.ServiceProvider.GetRequiredService<TestBuildAssetRegistryContext>();
         }
 
-        public void Dispose()
+        [TearDown]
+        public void DependencyUpdateErrorProcessorTests_TearDown()
         {
             Env.VerifyAll();
             Scope.Dispose();

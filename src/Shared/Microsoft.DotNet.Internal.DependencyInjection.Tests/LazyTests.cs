@@ -1,13 +1,15 @@
 using System;
 using System.Threading;
+using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Xunit;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.Internal.DependencyInjection.Tests
 {
+    [TestFixture]
     public class LazyTests
     {
-        [Fact]
+        [Test]
         public void UnresolvedNoCreation()
         {
             Tracker tracker = new Tracker();
@@ -16,11 +18,11 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Tests
             collection.EnableLazy();
             using (ServiceProvider provider = collection.BuildServiceProvider())
             {
-                Assert.Equal(0, tracker.Created);
+                tracker.Created.Should().Be(0);
             }
         }
 
-        [Fact]
+        [Test]
         public void ResolvedNoValueNoCreation()
         {
             Tracker tracker = new Tracker();
@@ -30,11 +32,11 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Tests
             using (ServiceProvider provider = collection.BuildServiceProvider())
             {
                 Lazy<Tracked> lazy = provider.GetRequiredService<Lazy<Tracked>>();
-                Assert.Equal(0, tracker.Created);
+                tracker.Created.Should().Be(0);
             }
         }
 
-        [Fact]
+        [Test]
         public void ResolvedCreatesValue()
         {
             Tracker tracker = new Tracker();
@@ -44,14 +46,14 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Tests
             using (ServiceProvider provider = collection.BuildServiceProvider())
             {
                 Lazy<Tracked> lazy = provider.GetRequiredService<Lazy<Tracked>>();
-                Assert.Equal(0, tracker.Created);
+                tracker.Created.Should().Be(0);
                 Tracked t = lazy.Value;
-                Assert.Equal(1, tracker.Created);
-                Assert.Equal(1, t.Id);
+                tracker.Created.Should().Be(1);
+                t.Id.Should().Be(1);
             }
         }
 
-        [Fact]
+        [Test]
         public void SingletonDisposes()
         {
             Tracker tracker = new Tracker();
@@ -63,12 +65,12 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Tests
             {
                 Lazy<Tracked> lazy = provider.GetRequiredService<Lazy<Tracked>>();
                 t = lazy.Value;
-                Assert.False(t.Disposed, "Not disposed before provider is");
+                t.Disposed.Should().BeFalse();
             }
-            Assert.True(t.Disposed, "Disposed with provider");
+            t.Disposed.Should().BeTrue();
         }
 
-        [Fact]
+        [Test]
         public void SingletonNotDisposedBetweenScopes()
         {
             Tracker tracker = new Tracker();
@@ -82,13 +84,13 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Tests
                 {
                     Lazy<Tracked> a = provider.GetRequiredService<Lazy<Tracked>>();
                     a1 = a.Value;
-                    Assert.Equal(1, tracker.Created);
+                    tracker.Created.Should().Be(1);
                 }
-                Assert.False(a1.Disposed);
+                a1.Disposed.Should().BeFalse();
             }
         }
 
-        [Fact]
+        [Test]
         public void ScopedDisposedBetweenScopes()
         {
             Tracker tracker = new Tracker();
@@ -102,13 +104,13 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Tests
                 {
                     Lazy<Tracked> a = scope.ServiceProvider.GetRequiredService<Lazy<Tracked>>();
                     a1 = a.Value;
-                    Assert.Equal(1, tracker.Created);
+                    tracker.Created.Should().Be(1);
                 }
-                Assert.True(a1.Disposed);
+                a1.Disposed.Should().BeTrue();
             }
         }
 
-        [Fact]
+        [Test]
         public void ResolvesDifferentLazy()
         {
             Tracker tracker = new Tracker();
@@ -119,11 +121,11 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Tests
             {
                 Lazy<Tracked> a = provider.GetRequiredService<Lazy<Tracked>>();
                 Lazy<Tracked> b = provider.GetRequiredService<Lazy<Tracked>>();
-                Assert.NotSame(a, b);
+                b.Should().NotBeSameAs(a);
             }
         }
 
-        [Fact]
+        [Test]
         public void LazyResolutionIsLazy()
         {
             Tracker tracker = new Tracker();
@@ -133,15 +135,15 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Tests
             using (ServiceProvider provider = collection.BuildServiceProvider())
             {
                 Lazy<Tracked> a = provider.GetRequiredService<Lazy<Tracked>>();
-                Assert.False(a.IsValueCreated);
+                a.IsValueCreated.Should().BeFalse();
                 var a1 = a.Value;
                 var a2 = a.Value;
-                Assert.Same(a1, a2);
-                Assert.Equal(1, tracker.Created);
+                a2.Should().BeSameAs(a1);
+                tracker.Created.Should().Be(1);
             }
         }
 
-        [Fact]
+        [Test]
         public void ResolvesSameObject()
         {
             Tracker tracker = new Tracker();
@@ -154,12 +156,12 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Tests
                 Tracked a1 = a.Value;
                 Lazy<Tracked> b = provider.GetRequiredService<Lazy<Tracked>>();
                 Tracked b1 = b.Value;
-                Assert.Same(a1, b1);
-                Assert.Equal(1, tracker.Created);
+                b1.Should().BeSameAs(a1);
+                tracker.Created.Should().Be(1);
             }
         }
 
-        [Fact]
+        [Test]
         public void ScopeResolutionIsIndependent()
         {
             Tracker tracker = new Tracker();
@@ -173,21 +175,21 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Tests
                 {
                     Lazy<Tracked> a = scope.ServiceProvider.GetRequiredService<Lazy<Tracked>>();
                     a1 = a.Value;
-                    Assert.Equal(1, tracker.Created);
+                    tracker.Created.Should().Be(1);
                 }
-                Assert.True(a1.Disposed);
+                a1.Disposed.Should().BeTrue();
                 using (IServiceScope scope =provider.CreateScope())
                 {
                     Lazy<Tracked> b = scope.ServiceProvider.GetRequiredService<Lazy<Tracked>>();
                     b1 = b.Value;
-                    Assert.Equal(2, tracker.Created);
+                    tracker.Created.Should().Be(2);
                 }
-                Assert.True(b1.Disposed);
-                Assert.NotSame(a1, b1);
+                b1.Disposed.Should().BeTrue();
+                b1.Should().NotBeSameAs(a1);
             }
         }
 
-        [Fact]
+        [Test]
         public void SingletonSharedBetweenScopes()
         {
             Tracker tracker = new Tracker();
@@ -201,19 +203,19 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Tests
                 {
                     Lazy<Tracked> a = scope.ServiceProvider.GetRequiredService<Lazy<Tracked>>();
                     a1 = a.Value;
-                    Assert.Equal(1, tracker.Created);
+                    tracker.Created.Should().Be(1);
                 }
                 using (IServiceScope scope =provider.CreateScope())
                 {
                     Lazy<Tracked> b = scope.ServiceProvider.GetRequiredService<Lazy<Tracked>>();
                     b1 = b.Value;
-                    Assert.Equal(1, tracker.Created);
+                    tracker.Created.Should().Be(1);
                 }
-                Assert.Same(a1, b1);
+                b1.Should().BeSameAs(a1);
             }
         }
 
-        [Fact]
+        [Test]
         public void TransientIsUniqueAndDisposed()
         {
             Tracker tracker = new Tracker();
@@ -227,14 +229,14 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Tests
                 {
                     Lazy<Tracked> a = scope.ServiceProvider.GetRequiredService<Lazy<Tracked>>();
                     a1 = a.Value;
-                    Assert.Equal(1, tracker.Created);
+                    tracker.Created.Should().Be(1);
                     Lazy<Tracked> b = scope.ServiceProvider.GetRequiredService<Lazy<Tracked>>();
                     b1 = b.Value;
-                    Assert.Equal(2, tracker.Created);
-                    Assert.NotSame(a1,b1);
+                    tracker.Created.Should().Be(2);
+                    b1.Should().NotBeSameAs(a1);
                 }
-                Assert.True(a1.Disposed);
-                Assert.True(b1.Disposed);
+                a1.Disposed.Should().BeTrue();
+                b1.Disposed.Should().BeTrue();
             }
         }
 

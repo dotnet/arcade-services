@@ -5,14 +5,16 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Maestro.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using NUnit.Framework;
 using Octokit;
-using Xunit;
 
 namespace DependencyUpdateErrorProcessor.Tests
 {
+    [TestFixture]
     public class UpdateGithubIssueTest : DependencyUpdateErrorProcessorTests
     {
         private const string SubscriptionId = "00000000-0000-0000-0000-000000000001";
@@ -23,7 +25,7 @@ namespace DependencyUpdateErrorProcessor.Tests
         private const int RepoId = 0;
         private const int IssueNumber = 1;
         private const int CommentId = 1;
-        [Fact]
+        [Test]
         public async Task CreateIssueAndUpdateIssueBody()
         {
             RepositoryBranchUpdateHistoryEntry firstError =
@@ -75,17 +77,15 @@ namespace DependencyUpdateErrorProcessor.Tests
                     Context);
             await errorProcessor.ProcessDependencyUpdateErrorsAsync();
 
-            Assert.Single(newIssues);
-            Assert.Contains(RepoUrl, newIssues[0].Title);
-            Assert.Equal("DependencyUpdateError", newIssues[0].Labels[0]);
-            Assert.Contains(SubscriptionId, newIssues[0].Body);
-            Assert.Contains(MethodName, newIssues[0].Body);
-            Assert.Contains(RepoUrl, newIssues[0].Body);
-            Assert.Contains("1/1/2200 12:00:00 AM", newIssues[0].Body);
-            Assert.Contains(Branch, newIssues[0].Body);
-            Assert.Contains(
-                $"[marker]: <> (subscriptionId: '{SubscriptionId}', method: '{MethodName}', errorMessage: '{ErrorMessage}')",
-                newIssues[0].Body);
+            newIssues.Should().ContainSingle();
+            newIssues[0].Title.Should().Contain(RepoUrl);
+            newIssues[0].Labels[0].Should().Be("DependencyUpdateError");
+            newIssues[0].Body.Should().Contain(SubscriptionId);
+            newIssues[0].Body.Should().Contain(MethodName);
+            newIssues[0].Body.Should().Contain(RepoUrl);
+            newIssues[0].Body.Should().Contain("1/1/2200 12:00:00 AM");
+            newIssues[0].Body.Should().Contain(Branch);
+            newIssues[0].Body.Should().Contain(                $"[marker]: <> (subscriptionId: '{SubscriptionId}', method: '{MethodName}', errorMessage: '{ErrorMessage}')");
 
         }
 
@@ -121,7 +121,7 @@ namespace DependencyUpdateErrorProcessor.Tests
             return issue;
         }
 
-        [Fact]
+        [Test]
         public async Task CreateIssueAndAddAdditionalComment()
         {
             RepositoryBranchUpdateHistoryEntry firstError =
@@ -187,18 +187,18 @@ namespace DependencyUpdateErrorProcessor.Tests
                 ActivatorUtilities.CreateInstance<DependencyUpdateErrorProcessor>(Scope.ServiceProvider,
                     Context);
             await errorProcessor.ProcessDependencyUpdateErrorsAsync();
-            Assert.Single(newIssues);
-            Assert.Equal("DependencyUpdateError", newIssues[0].Labels[0]);
-            Assert.Contains(RepoUrl, newIssues[0].Body);
-            Assert.Contains(SubscriptionId, newIssues[0].Body);
-            Assert.Contains(SubscriptionId, newIssues[0].Body);
-            Assert.Contains(MethodName, newIssues[0].Body);
-            Assert.DoesNotContain(SubscriptionId, newCommentInfo[0]);
-            Assert.Contains("2/1/2200 12:00:00 AM", newCommentInfo[0]);
-            Assert.Contains("ProcessPendingUpdatesAsync", newCommentInfo[0]);
+            newIssues.Should().ContainSingle();
+            newIssues[0].Labels[0].Should().Be("DependencyUpdateError");
+            newIssues[0].Body.Should().Contain(RepoUrl);
+            newIssues[0].Body.Should().Contain(SubscriptionId);
+            newIssues[0].Body.Should().Contain(SubscriptionId);
+            newIssues[0].Body.Should().Contain(MethodName);
+            newCommentInfo[0].Should().NotContain(SubscriptionId);
+            newCommentInfo[0].Should().Contain("2/1/2200 12:00:00 AM");
+            newCommentInfo[0].Should().Contain("ProcessPendingUpdatesAsync");
         }
 
-        [Fact]
+        [Test]
         public async Task CreateIssueAndUpdateComment()
         {
             const string AnotherMethod = "ProcessPendingUpdatesAsync";
@@ -280,16 +280,16 @@ namespace DependencyUpdateErrorProcessor.Tests
                 ActivatorUtilities.CreateInstance<DependencyUpdateErrorProcessor>(Scope.ServiceProvider,
                     Context);
             await errorProcessor.ProcessDependencyUpdateErrorsAsync();
-            Assert.Single(newIssues);
-            Assert.Equal("DependencyUpdateError", newIssues[0].Labels[0]);
-            Assert.Contains(RepoUrl, newIssues[0].Body);
-            Assert.Contains(SubscriptionId, newIssues[0].Body);
-            Assert.Contains(AnotherMethod, newCommentInfo[0]);
-            Assert.DoesNotContain(SubscriptionId, newCommentInfo[0]);
-            Assert.Contains("2/1/2200 12:00:00 AM", newCommentInfo[0]);
-            Assert.Contains(AnotherMethod, newCommentInfo[1]);
-            Assert.Contains("3/1/2200 12:00:00 AM", newCommentInfo[1]);
-            Assert.DoesNotContain(SubscriptionId, newCommentInfo[1]);
+            newIssues.Should().ContainSingle();
+            newIssues[0].Labels[0].Should().Be("DependencyUpdateError");
+            newIssues[0].Body.Should().Contain(RepoUrl);
+            newIssues[0].Body.Should().Contain(SubscriptionId);
+            newCommentInfo[0].Should().Contain(AnotherMethod);
+            newCommentInfo[0].Should().NotContain(SubscriptionId);
+            newCommentInfo[0].Should().Contain("2/1/2200 12:00:00 AM");
+            newCommentInfo[1].Should().Contain(AnotherMethod);
+            newCommentInfo[1].Should().Contain("3/1/2200 12:00:00 AM");
+            newCommentInfo[1].Should().NotContain(SubscriptionId);
         }
     }
 }

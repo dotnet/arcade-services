@@ -12,6 +12,8 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
     {
         private static readonly ImmutableList<string> s_exemptTypes = ImmutableList.Create(
             "System.Fabric.ServiceContext",
+            "System.Fabric.StatelessServiceContext",
+            "System.Fabric.StatefulServiceContext",
             "Microsoft.Extensions.Options.IConfigureOptions`1",
             "Microsoft.Extensions.Caching.Memory.MemoryCacheOptions",
             "Microsoft.Extensions.Caching.Memory.MemoryDistributedCacheOptions",

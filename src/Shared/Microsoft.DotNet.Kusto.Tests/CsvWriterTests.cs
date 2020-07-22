@@ -5,125 +5,127 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using Xunit;
+using FluentAssertions;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.Kusto.Tests
 {
+    [TestFixture]
     public class CsvWriterTests
     {
-        [Fact]
+        [Test]
         public async Task EmptyValue()
         {
             var writer = new StringWriter();
             await writer.WriteCsvLineAsync("");
-            Assert.Equal("\"\"\r\n", writer.ToString());
+            writer.ToString().Should().Be("\"\"\r\n");
         }
 
-        [Fact]
+        [Test]
         public async Task NoFieldsThrows()
         {
             var writer = new StringWriter();
-            await Assert.ThrowsAsync<ArgumentException>(() => writer.WriteCsvLineAsync());
+            await (((Func<Task>)(() => writer.WriteCsvLineAsync()))).Should().ThrowExactlyAsync<ArgumentException>();
         }
 
-        [Fact]
+        [Test]
         public void ParseEmptyValue()
         {
             string[][] values = CsvWriterExtensions.ParseCsvFile("\"\"\r\n");
-            Assert.Single(values);
-            Assert.Single(values[0]);
-            Assert.Equal("", values[0][0]);
+            values.Should().ContainSingle();
+            values[0].Should().ContainSingle();
+            values[0][0].Should().Be("");
         }
 
-        [Fact]
+        [Test]
         public void ParseEmptyFileNoNewline()
         {
             string[][] values = CsvWriterExtensions.ParseCsvFile("");
-            Assert.Empty(values);
+            values.Should().BeEmpty();
         }
 
-        [Fact]
+        [Test]
         public void ParseEmptyFileWithNewline()
         {
             string[][] values = CsvWriterExtensions.ParseCsvFile("\n");
-            Assert.Empty(values);
+            values.Should().BeEmpty();
         }
 
-        [Fact]
+        [Test]
         public void ParseEmptyFileWithCarriageReturnNewline()
         {
             var writer = new StringWriter();
             string[][] values = CsvWriterExtensions.ParseCsvFile("\r\n");
-            Assert.Empty(values);
+            values.Should().BeEmpty();
         }
 
-        [Fact]
+        [Test]
         public async Task SimpleSingleValue()
         {
             var writer = new StringWriter();
             await writer.WriteCsvLineAsync("a");
-            Assert.Equal("a\r\n", writer.ToString());
+            writer.ToString().Should().Be("a\r\n");
         }
 
-        [Fact]
+        [Test]
         public void ParseSimpleSingleValue()
         {
             var writer = new StringWriter();
             string[][] values = CsvWriterExtensions.ParseCsvFile("a\r\n");
-            Assert.Single(values);
-            Assert.Single(values[0]);
-            Assert.Equal("a", values[0][0]);
+            values.Should().ContainSingle();
+            values[0].Should().ContainSingle();
+            values[0][0].Should().Be("a");
         }
 
-        [Fact]
+        [Test]
         public async Task MultipleFields()
         {
             var writer = new StringWriter();
             await writer.WriteCsvLineAsync("a", "1", "", "first");
-            Assert.Equal("a,1,,first\r\n", writer.ToString());
+            writer.ToString().Should().Be("a,1,,first\r\n");
         }
 
-        [Fact]
+        [Test]
         public void ParseMultipleFields()
         {
             string[][] values = CsvWriterExtensions.ParseCsvFile("a,1,,first\r\n");
-            Assert.Single(values);
-            Assert.Equal(new[] {"a", "1", "", "first"}, values[0]);
+            values.Should().ContainSingle();
+            values[0].Should().Equal(new[] {"a", "1", "", "first"});
         }
 
-        [Fact]
+        [Test]
         public async Task QuotedField()
         {
             var writer = new StringWriter();
             await writer.WriteCsvLineAsync("a", "a \"quoted\" string \r\n newlines", "first");
-            Assert.Equal("a,\"a \"\"quoted\"\" string \r\n newlines\",first\r\n", writer.ToString());
+            writer.ToString().Should().Be("a,\"a \"\"quoted\"\" string \r\n newlines\",first\r\n");
         }
 
-        [Fact]
+        [Test]
         public void ParseQuotedField()
         {
             string[][] values =
                 CsvWriterExtensions.ParseCsvFile("a,\"a \"\"quoted\"\" string \r\n newlines\",first\r\n");
-            Assert.Single(values);
-            Assert.Equal(new[] {"a", "a \"quoted\" string \r\n newlines", "first"}, values[0]);
+            values.Should().ContainSingle();
+            values[0].Should().Equal(new[] {"a", "a \"quoted\" string \r\n newlines", "first"});
         }
 
-        [Fact]
+        [Test]
         public void ParseMultipleSingleFieldRecordsNoNewline()
         {
             string[][] values = CsvWriterExtensions.ParseCsvFile("a\nb");
-            Assert.Equal(2, values.Length);
-            Assert.Equal(new[] {"a"}, values[0]);
-            Assert.Equal(new[] {"b"}, values[1]);
+            values.Should().HaveCount(2);
+            values[0].Should().Equal(new[] {"a"});
+            values[1].Should().Equal(new[] {"b"});
         }
 
-        [Fact]
+        [Test]
         public void ParseMultipleSingleFieldRecordsNewline()
         {
             string[][] values = CsvWriterExtensions.ParseCsvFile("a\nb\n");
-            Assert.Equal(2, values.Length);
-            Assert.Equal(new[] {"a"}, values[0]);
-            Assert.Equal(new[] {"b"}, values[1]);
+            values.Should().HaveCount(2);
+            values[0].Should().Equal(new[] {"a"});
+            values[1].Should().Equal(new[] {"b"});
         }
     }
 }

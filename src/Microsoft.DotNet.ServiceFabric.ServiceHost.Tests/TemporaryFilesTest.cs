@@ -1,17 +1,20 @@
 using System;
 using System.IO;
+using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Xunit;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 {
+    [TestFixture, NonParallelizable]
     public class TemporaryFilesTest : IDisposable
     {
-        public TemporaryFilesTest()
+        [SetUp]        public void TemporaryFilesTest_SetUp()
         {
             CleanTempFolderForTest();
         }
 
+        [TearDown]
         public void Dispose()
         {
             CleanTempFolderForTest();
@@ -33,7 +36,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
         }
 
 
-        [Fact]
+        [Test]
         public void CleanupResilientToOpenHandles()
         {
             StreamWriter writer = null;
@@ -49,7 +52,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                     parent = Path.GetDirectoryName(testPath);
                 }
 
-                Assert.True(Directory.Exists(parent));
+                Directory.Exists(parent).Should().BeTrue();
             }
             finally
             {
@@ -57,7 +60,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             }
         }
 
-        [Fact]
+        [Test]
         public void DisposeCleansUp()
         {
             string parent;
@@ -70,10 +73,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 parent = Path.GetDirectoryName(testPath);
             }
 
-            Assert.False(Directory.Exists(parent));
+            Directory.Exists(parent).Should().BeFalse();
         }
 
-        [Fact]
+        [Test]
         public void InitializeCreatedRoot()
         {
             using (var tempFiles = new TemporaryFiles(MockBuilder.StatelessServiceContext(),
@@ -82,11 +85,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 tempFiles.Initialize();
                 string testPath = tempFiles.GetFilePath("asdfpoiu");
                 string parent = Path.GetDirectoryName(testPath);
-                Assert.True(Directory.Exists(parent));
+                Directory.Exists(parent).Should().BeTrue();
             }
         }
 
-        [Fact]
+        [Test]
         public void PreInitializeIsNoop()
         {
             using (var tempFiles = new TemporaryFiles(MockBuilder.StatelessServiceContext(),
@@ -94,11 +97,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             {
                 string testPath = tempFiles.GetFilePath("asdfpoiu");
                 string parent = Path.GetDirectoryName(testPath);
-                Assert.False(Directory.Exists(parent));
+                Directory.Exists(parent).Should().BeFalse();
             }
         }
 
-        [Fact]
+        [Test]
         public void SecondCleanupFixesBrokenFirstCleanup()
         {
             StreamWriter writer = null;
@@ -126,7 +129,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 parent = Path.GetDirectoryName(testPath);
             }
 
-            Assert.False(Directory.Exists(parent));
+            Directory.Exists(parent).Should().BeFalse();
         }
     }
 }

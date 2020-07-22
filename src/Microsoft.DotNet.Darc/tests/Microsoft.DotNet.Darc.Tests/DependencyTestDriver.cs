@@ -2,16 +2,17 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.DotNet.DarcLib;
-using Microsoft.Extensions.Logging.Abstractions;
-using NuGet.Versioning;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
-using Xunit;
+using FluentAssertions;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.Extensions.Logging.Abstractions;
+using NUnit.Framework;
+using NuGet.Versioning;
 
 namespace Microsoft.DotNet.Darc.Tests
 {
@@ -203,7 +204,7 @@ namespace Microsoft.DotNet.Darc.Tests
                             dependency.Type.ToString() == dep.SelectSingleNode("Type").InnerText);
                     });
 
-                    Assert.NotNull(matchingDependency);
+                    matchingDependency.Should().NotBeNull();
                 }
             }
             finally
@@ -222,7 +223,7 @@ namespace Microsoft.DotNet.Darc.Tests
                         graphNode.Repository == repoUri &&
                         graphNode.Commit == commit);
 
-                Assert.NotNull(matchingNode);
+                matchingNode.Should().NotBeNull();
                 AssertDependencyGraphNodeIsEqual(matchingNode, node);
             }
         }
@@ -230,8 +231,8 @@ namespace Microsoft.DotNet.Darc.Tests
         private void AssertDependencyGraphNodeIsEqual(DependencyGraphNode graphNode, XmlNode xmlNode)
         {
             // Check root commit info
-            Assert.Equal(graphNode.Repository, xmlNode.SelectSingleNode("RepoUri").InnerText);
-            Assert.Equal(graphNode.Commit, xmlNode.SelectSingleNode("Commit").InnerText);
+            xmlNode.SelectSingleNode("RepoUri").InnerText.Should().Be(graphNode.Repository);
+            xmlNode.SelectSingleNode("Commit").InnerText.Should().Be(graphNode.Commit);
 
             // Check dependencies
             XmlNodeList dependencyNodes = xmlNode.SelectNodes("Dependencies/Dependency");
@@ -253,7 +254,7 @@ namespace Microsoft.DotNet.Darc.Tests
                         dependency.Type.ToString() == type);
                 });
 
-                Assert.NotNull(matchingDependency);
+                matchingDependency.Should().NotBeNull();
             }
 
             AssertMatchingGraphNodeReferenceList(xmlNode.SelectNodes("/Children/Child"), graphNode.Children);
@@ -271,7 +272,7 @@ namespace Microsoft.DotNet.Darc.Tests
                     graphNode.Repository == repoUri &&
                     graphNode.Commit == commit);
 
-                Assert.NotNull(matchingNode);
+                matchingNode.Should().NotBeNull();
             }
         }
 
@@ -289,9 +290,7 @@ namespace Microsoft.DotNet.Darc.Tests
             {
                 string expectedOutput = TestHelpers.NormalizeLineEndings(await expectedOutputsReader.ReadToEndAsync());
                 string actualOutput = TestHelpers.NormalizeLineEndings(await actualOutputsReader.ReadToEndAsync());
-                Assert.Equal(
-                    expectedOutput,
-                    actualOutput);
+                actualOutput.Should().Be(                    expectedOutput);
             }
         }
 
