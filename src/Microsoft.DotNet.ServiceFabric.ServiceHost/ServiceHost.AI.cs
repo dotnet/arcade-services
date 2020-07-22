@@ -81,6 +81,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 o.Rules.Remove(o.Rules.FirstOrDefault(r =>
                     r.ProviderName ==
                     "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider"));
+
+                // These two categories log a lot of noise at "Information", let's raise them to warning
+                o.Rules.Add(new LoggerFilterRule(null, "Microsoft.AspNetCore.Mvc.ViewFeatures.Filters.ValidateAntiforgeryTokenAuthorizationFilter", LogLevel.Warning, null));
+                o.Rules.Add(new LoggerFilterRule(null, "Microsoft.AspNetCore.Mvc.ViewFeatures.Filters.AutoValidateAntiforgeryTokenAuthorizationFilter", LogLevel.Warning, null));
             });
             RemoveImplementations(services, typeof(PerformanceCollectorModule));
             services.AddSingleton<ITelemetryModule>(
