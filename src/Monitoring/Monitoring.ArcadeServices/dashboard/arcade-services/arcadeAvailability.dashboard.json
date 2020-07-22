@@ -3466,7 +3466,7 @@
     "list": []
   },
   "time": {
-    "from": "now-90d",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {
