@@ -14,18 +14,6 @@ namespace Maestro.ScenarioTests
     {
         private TestParameters _parameters;
 
-        private string repo1Name = "maestro-test1";
-        private string repo2Name = "maestro-test2";
-        private string channel1Name = "subscriptionTestChannel1";
-        private string channel2Name = "subscriptionTestChannel2";
-
-        [SetUp]
-        public async Task InitializeAsync()
-        {
-            _parameters = await TestParameters.GetAsync();
-            SetTestParameters(_parameters);
-        }
-
         [TearDown]
         public Task DisposeAsync()
         {
@@ -34,10 +22,16 @@ namespace Maestro.ScenarioTests
         }
 
         [Test]
-        [Category("PostDeployment")]
         public async Task Subscriptions_EndToEnd()
         {
             TestContext.WriteLine("Subscription management tests...");
+            string repo1Name = "maestro-test1";
+            string repo2Name = "maestro-test2";
+            string channel1Name = "subscriptionTestChannel1";
+            string channel2Name = "subscriptionTestChannel2";
+
+            _parameters = await TestParameters.GetAsync();
+            SetTestParameters(_parameters);
 
             string repo1Uri = GetRepoUrl(repo1Name);
             string repo2Uri = GetRepoUrl(repo2Name);
@@ -256,7 +250,6 @@ namespace Maestro.ScenarioTests
                     await DeleteSubscriptionById(yamlSubscription3Id.Value);
 
                     TestContext.WriteLine("End of test case. Starting clean up.");
-
                 }
             }
         }
