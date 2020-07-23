@@ -324,11 +324,10 @@ namespace FeedCleanerService
             string packageContentsUri = $"{FeedConstants.NuGetOrgPackageBaseUrl}{name.ToLower()}/{version}/{name.ToLower()}.{version}.nupkg";
             try
             {
-                using (HttpRequestMessage headRequest = new HttpRequestMessage(HttpMethod.Head, new Uri(packageContentsUri)))
-                using (HttpResponseMessage response = await _httpClient.SendAsync(headRequest))
-                {
-                    response.EnsureSuccessStatusCode();
-                }
+                using HttpRequestMessage headRequest = new HttpRequestMessage(HttpMethod.Head, new Uri(packageContentsUri));
+                using HttpResponseMessage response = await _httpClient.SendAsync(headRequest);
+
+                response.EnsureSuccessStatusCode();
                 Logger.LogInformation($"Found {name}.{version} in nuget.org URI: {packageContentsUri}");
                 return true;
             }
