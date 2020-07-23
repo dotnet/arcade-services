@@ -4,17 +4,19 @@ using System.Fabric;
 using System.Linq;
 using System.Reflection;
 using Castle.DynamicProxy;
+using FluentAssertions;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Moq;
-using Xunit;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 {
+    [TestFixture]
     public class LoggingServiceProxyInterceptorTests
     {
-        [Fact]
+        [Test]
         public void AggregateExceptionIsUnwrapped()
         {
             var telemetryChannel = new FakeChannel();
@@ -34,29 +36,27 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 service.Object,
                 new LoggingServiceProxyInterceptor(client, ctx, "other://uri.test"));
 
-            var invocationException = Assert.Throws<InvalidOperationException>(() => impl.TestServiceMethod());
+            var invocationException = (((Func<object>)(() => impl.TestServiceMethod()))).Should().Throw<InvalidOperationException>().Which;
             client.Flush();
             List<DependencyTelemetry> dependencyTelemetries =
                 telemetryChannel.Telemetry.OfType<DependencyTelemetry>().ToList();
-            Assert.Single(dependencyTelemetries);
+            dependencyTelemetries.Should().ContainSingle();
             DependencyTelemetry dependencyTelemetry = dependencyTelemetries[0];
-            Assert.False(dependencyTelemetry.Success);
-            Assert.Equal("ServiceFabricRemoting", dependencyTelemetry.Type);
-            Assert.Equal("other://uri.test", dependencyTelemetry.Target);
-            Assert.StartsWith("other://uri.test", dependencyTelemetry.Data);
-            Assert.Contains(nameof(IFakeService), dependencyTelemetry.Data, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains(nameof(IFakeService.TestServiceMethod),
-                dependencyTelemetry.Data,
-                StringComparison.OrdinalIgnoreCase);
+            dependencyTelemetry.Success.Should().BeFalse();
+            dependencyTelemetry.Type.Should().Be("ServiceFabricRemoting");
+            dependencyTelemetry.Target.Should().Be("other://uri.test");
+            dependencyTelemetry.Data.Should().StartWith("other://uri.test");
+            dependencyTelemetry.Data.Should().Contain(nameof(IFakeService));
+            dependencyTelemetry.Data.Should().Contain(nameof(IFakeService.TestServiceMethod));
 
             List<ExceptionTelemetry> exceptionTelemetries =
                 telemetryChannel.Telemetry.OfType<ExceptionTelemetry>().ToList();
-            Assert.Single(exceptionTelemetries);
+            exceptionTelemetries.Should().ContainSingle();
             ExceptionTelemetry exceptionTelemetry = exceptionTelemetries[0];
-            Assert.Same(invocationException, exceptionTelemetry.Exception);
+            exceptionTelemetry.Exception.Should().BeSameAs(invocationException);
         }
 
-        [Fact]
+        [Test]
         public void ComplexAggregateExceptionIsReported()
         {
             var telemetryChannel = new FakeChannel();
@@ -77,29 +77,27 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 service.Object,
                 new LoggingServiceProxyInterceptor(client, ctx, "other://uri.test"));
 
-            var invocationException = Assert.Throws<AggregateException>(() => impl.TestServiceMethod());
+            var invocationException = (((Func<object>)(() => impl.TestServiceMethod()))).Should().Throw<AggregateException>().Which;
             client.Flush();
             List<DependencyTelemetry> dependencyTelemetries =
                 telemetryChannel.Telemetry.OfType<DependencyTelemetry>().ToList();
-            Assert.Single(dependencyTelemetries);
+            dependencyTelemetries.Should().ContainSingle();
             DependencyTelemetry dependencyTelemetry = dependencyTelemetries[0];
-            Assert.False(dependencyTelemetry.Success);
-            Assert.Equal("ServiceFabricRemoting", dependencyTelemetry.Type);
-            Assert.Equal("other://uri.test", dependencyTelemetry.Target);
-            Assert.StartsWith("other://uri.test", dependencyTelemetry.Data);
-            Assert.Contains(nameof(IFakeService), dependencyTelemetry.Data, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains(nameof(IFakeService.TestServiceMethod),
-                dependencyTelemetry.Data,
-                StringComparison.OrdinalIgnoreCase);
+            dependencyTelemetry.Success.Should().BeFalse();
+            dependencyTelemetry.Type.Should().Be("ServiceFabricRemoting");
+            dependencyTelemetry.Target.Should().Be("other://uri.test");
+            dependencyTelemetry.Data.Should().StartWith("other://uri.test");
+            dependencyTelemetry.Data.Should().Contain(nameof(IFakeService));
+            dependencyTelemetry.Data.Should().Contain(nameof(IFakeService.TestServiceMethod));
 
             List<ExceptionTelemetry> exceptionTelemetries =
                 telemetryChannel.Telemetry.OfType<ExceptionTelemetry>().ToList();
-            Assert.Single(exceptionTelemetries);
+            exceptionTelemetries.Should().ContainSingle();
             ExceptionTelemetry exceptionTelemetry = exceptionTelemetries[0];
-            Assert.Same(invocationException, exceptionTelemetry.Exception);
+            exceptionTelemetry.Exception.Should().BeSameAs(invocationException);
         }
 
-        [Fact]
+        [Test]
         public void NormalExceptionIsReported()
         {
             var telemetryChannel = new FakeChannel();
@@ -118,29 +116,27 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 service.Object,
                 new LoggingServiceProxyInterceptor(client, ctx, "other://uri.test"));
 
-            var invocationException = Assert.Throws<InvalidOperationException>(() => impl.TestServiceMethod());
+            var invocationException = (((Func<object>)(() => impl.TestServiceMethod()))).Should().Throw<InvalidOperationException>().Which;
             client.Flush();
             List<DependencyTelemetry> dependencyTelemetries =
                 telemetryChannel.Telemetry.OfType<DependencyTelemetry>().ToList();
-            Assert.Single(dependencyTelemetries);
+            dependencyTelemetries.Should().ContainSingle();
             DependencyTelemetry dependencyTelemetry = dependencyTelemetries[0];
-            Assert.False(dependencyTelemetry.Success);
-            Assert.Equal("ServiceFabricRemoting", dependencyTelemetry.Type);
-            Assert.Equal("other://uri.test", dependencyTelemetry.Target);
-            Assert.StartsWith("other://uri.test", dependencyTelemetry.Data);
-            Assert.Contains(nameof(IFakeService), dependencyTelemetry.Data, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains(nameof(IFakeService.TestServiceMethod),
-                dependencyTelemetry.Data,
-                StringComparison.OrdinalIgnoreCase);
+            dependencyTelemetry.Success.Should().BeFalse();
+            dependencyTelemetry.Type.Should().Be("ServiceFabricRemoting");
+            dependencyTelemetry.Target.Should().Be("other://uri.test");
+            dependencyTelemetry.Data.Should().StartWith("other://uri.test");
+            dependencyTelemetry.Data.Should().Contain(nameof(IFakeService));
+            dependencyTelemetry.Data.Should().Contain(nameof(IFakeService.TestServiceMethod));
 
             List<ExceptionTelemetry> exceptionTelemetries =
                 telemetryChannel.Telemetry.OfType<ExceptionTelemetry>().ToList();
-            Assert.Single(exceptionTelemetries);
+            exceptionTelemetries.Should().ContainSingle();
             ExceptionTelemetry exceptionTelemetry = exceptionTelemetries[0];
-            Assert.Same(invocationException, exceptionTelemetry.Exception);
+            exceptionTelemetry.Exception.Should().BeSameAs(invocationException);
         }
 
-        [Fact]
+        [Test]
         public void SetsDependencyData()
         {
             var telemetryChannel = new FakeChannel();
@@ -160,18 +156,16 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             client.Flush();
             List<DependencyTelemetry> dependencyTelemetries =
                 telemetryChannel.Telemetry.OfType<DependencyTelemetry>().ToList();
-            Assert.Single(dependencyTelemetries);
+            dependencyTelemetries.Should().ContainSingle();
             DependencyTelemetry dependencyTelemetry = dependencyTelemetries[0];
-            Assert.True(dependencyTelemetry.Success ?? true);
-            Assert.Equal("ServiceFabricRemoting", dependencyTelemetry.Type);
-            Assert.Equal("other://uri.test", dependencyTelemetry.Target);
-            Assert.StartsWith("other://uri.test", dependencyTelemetry.Data);
-            Assert.Contains(nameof(IFakeService), dependencyTelemetry.Data, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains(nameof(IFakeService.TestServiceMethod),
-                dependencyTelemetry.Data,
-                StringComparison.OrdinalIgnoreCase);
+            (dependencyTelemetry.Success ?? true).Should().BeTrue();
+            dependencyTelemetry.Type.Should().Be("ServiceFabricRemoting");
+            dependencyTelemetry.Target.Should().Be("other://uri.test");
+            dependencyTelemetry.Data.Should().StartWith("other://uri.test");
+            dependencyTelemetry.Data.Should().Contain(nameof(IFakeService));
+            dependencyTelemetry.Data.Should().Contain(nameof(IFakeService.TestServiceMethod));
 
-            Assert.Empty(telemetryChannel.Telemetry.OfType<ExceptionTelemetry>());
+            telemetryChannel.Telemetry.OfType<ExceptionTelemetry>().Should().BeEmpty();
         }
     }
 }

@@ -1,162 +1,168 @@
 using System;
 using System.Threading.Tasks;
 using Castle.DynamicProxy;
+using FluentAssertions;
 using Moq;
-using Xunit;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 {
+    [TestFixture]
     public class AsyncInterceptorTests
     {
-        [Fact]
+        [Test]
         public async Task TestIntArg()
         {
             await TestInterception((impl, target) =>
             {
-                Assert.Equal(Inter.IntReturn, impl.IntArgs(123, "TestParam"));
-                Assert.Equal(123, target.IntParam);
-                Assert.Equal("TestParam", target.StringParam);
-                Assert.Equal(1, target.CallCount);
+                impl.IntArgs(123, "TestParam").Should().Be(Inter.IntReturn);
+                target.IntParam.Should().Be(123);
+                target.StringParam.Should().Be("TestParam");
+                target.CallCount.Should().Be(1);
                 return Task.CompletedTask;
             });
         }
 
-        [Fact]
+        [Test]
         public async Task TestIntNoArg()
         {
             await TestInterception((impl, target) =>
             {
-                Assert.Equal(Inter.IntReturn,impl.IntNoArgs());
-                Assert.Equal(0, target.IntParam);
-                Assert.Null(target.StringParam);
-                Assert.Equal(1, target.CallCount);
+                impl.IntNoArgs().Should().Be(Inter.IntReturn);
+                target.IntParam.Should().Be(0);
+                target.StringParam.Should().BeNull();
+                target.CallCount.Should().Be(1);
                 return Task.CompletedTask;
             });
         }
 
-        [Fact]
+        [Test]
         public async Task TestIntTaskArg()
         {
             await TestInterception(async (impl, target) =>
             {
-                Assert.Equal(Inter.IntReturn, await impl.IntTaskArgs(123, "TestParam"));
-                Assert.Equal(123, target.IntParam);
-                Assert.Equal("TestParam", target.StringParam);
-                Assert.Equal(1, target.CallCount);
+                (await impl.IntTaskArgs(123, "TestParam")).Should().Be(Inter.IntReturn);
+                target.IntParam.Should().Be(123);
+                target.StringParam.Should().Be("TestParam");
+                target.CallCount.Should().Be(1);
             });
         }
 
-        [Fact]
+        [Test]
         public async Task TestIntTaskNoArg()
         {
             await TestInterception(async (impl, target) =>
             {
-                Assert.Equal(Inter.IntReturn, await impl.IntTaskNoArgs());
-                Assert.Equal(0, target.IntParam);
-                Assert.Null(target.StringParam);
-                Assert.Equal(1, target.CallCount);
+                (await impl.IntTaskNoArgs()).Should().Be(Inter.IntReturn);
+                target.IntParam.Should().Be(0);
+                target.StringParam.Should().BeNull();
+                target.CallCount.Should().Be(1);
             });
         }
 
-        [Fact]
+        [Test]
         public async Task TestStringArg()
         {
             await TestInterception((impl, target) =>
             {
-                Assert.Equal(Inter.StringReturn, impl.StringArgs(123, "TestParam"));
-                Assert.Equal(123, target.IntParam);
-                Assert.Equal("TestParam", target.StringParam);
-                Assert.Equal(1, target.CallCount);
+                impl.StringArgs(123, "TestParam").Should().Be(Inter.StringReturn);
+                target.IntParam.Should().Be(123);
+                target.StringParam.Should().Be("TestParam");
+                target.CallCount.Should().Be(1);
                 return Task.CompletedTask;
             });
         }
 
-        [Fact]
+        [Test]
         public async Task TestStringNoArg()
         {
             await TestInterception((impl, target) =>
             {
-                Assert.Equal(Inter.StringReturn, impl.StringNoArgs());
-                Assert.Equal(0, target.IntParam);
-                Assert.Null(target.StringParam);
-                Assert.Equal(1, target.CallCount);
+                impl.StringNoArgs().Should().Be(Inter.StringReturn);
+                target.IntParam.Should().Be(0);
+                target.StringParam.Should().BeNull();
+                target.CallCount.Should().Be(1);
                 return Task.CompletedTask;
             });
         }
 
-        [Fact]
+        [Test]
         public async Task TestStringTaskArg()
         {
             await TestInterception(async (impl, target) =>
             {
-                Assert.Equal(Inter.StringReturn, await impl.StringTaskArgs(123, "TestParam"));
-                Assert.Equal(123, target.IntParam);
-                Assert.Equal("TestParam", target.StringParam);
-                Assert.Equal(1, target.CallCount);
+                (await impl.StringTaskArgs(123, "TestParam")).Should().Be(Inter.StringReturn);
+                target.IntParam.Should().Be(123);
+                target.StringParam.Should().Be("TestParam");
+                target.CallCount.Should().Be(1);
             });
         }
 
-        [Fact]
+        [Test]
         public async Task TestStringTaskNoArg()
         {
             await TestInterception(async (impl, target) =>
             {
-                Assert.Equal(Inter.StringReturn, await impl.StringTaskNoArgs());
-                Assert.Equal(0, target.IntParam);
-                Assert.Null(target.StringParam);
-                Assert.Equal(1, target.CallCount);
+                (await impl.StringTaskNoArgs()).Should().Be(Inter.StringReturn);
+                target.IntParam.Should().Be(0);
+                target.StringParam.Should().BeNull();
+                target.CallCount.Should().Be(1);
             });
         }
 
-        [Fact]
+        [Test]
         public async Task TestTaskArg()
         {
             await TestInterception(async (impl, target) =>
             {
                 await impl.TaskArgs(123, "TestParam");
-                Assert.Equal(123, target.IntParam);
-                Assert.Equal("TestParam", target.StringParam);
-                Assert.Equal(1, target.CallCount);
+                target.IntParam.Should().Be(123);
+                target.StringParam.Should().Be("TestParam");
+                target.CallCount.Should().Be(1);
             });
         }
 
-        [Fact]
+        [Test]
         public async Task TestTaskNoArg()
         {
             await TestInterception(async (impl, target) =>
             {
                 await impl.TaskNoArgs();
-                Assert.Equal(0, target.IntParam);
-                Assert.Null(target.StringParam);
-                Assert.Equal(1, target.CallCount);
+                target.IntParam.Should().Be(0);
+                target.StringParam.Should().BeNull();
+                target.CallCount.Should().Be(1);
             });
         }
 
-        [Fact]
+        [Test]
         public async Task TestVoidArgs()
         {
-            await Assert.ThrowsAsync<NotSupportedException>(() =>
-                TestInterception((impl, target) =>
-                {
-                    impl.VoidArgs(123, "TestParam");
-                    return Task.CompletedTask;
-                })
-            );
+            await ((Func<Task>) (() =>
+                        TestInterception((impl, target) =>
+                        {
+                            impl.VoidArgs(123, "TestParam");
+                            return Task.CompletedTask;
+                        })
+                    ))
+                .Should()
+                .ThrowExactlyAsync<NotSupportedException>();
         }
 
-        [Fact]
+        [Test]
         public async Task TestVoidNoArg()
         {
-            await Assert.ThrowsAsync<NotSupportedException>(() =>
-                TestInterception((impl, target) =>
-                {
-                    impl.VoidNoArgs();
-                    return Task.CompletedTask;
-                })
-            );
+            await ((Func<Task>) (() =>
+                        TestInterception((impl, target) =>
+                        {
+                            impl.VoidNoArgs();
+                            return Task.CompletedTask;
+                        })
+                    ))
+                .Should()
+                .ThrowExactlyAsync<NotSupportedException>();
         }
 
-        [Fact]
+        [Test]
         public void IntThrowIsTransparent()
         {
             var mock = new Mock<IInter>();
@@ -168,11 +174,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 mock.Object,
                 new TestInterceptor());
 
-            var ex = Assert.Throws<InvalidOperationException>(() => impl.IntNoArgs());
-            Assert.Equal("Test exception text", ex.Message);
+            var ex = (((Func<object>)(() => impl.IntNoArgs()))).Should().Throw<InvalidOperationException>().Which;
+            ex.Message.Should().Be("Test exception text");
         }
 
-        [Fact]
+        [Test]
         public void StringThrowIsTransparent()
         {
             var mock = new Mock<IInter>();
@@ -184,11 +190,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 mock.Object,
                 new TestInterceptor());
 
-            var ex = Assert.Throws<InvalidOperationException>(() => impl.StringNoArgs());
-            Assert.Equal("Test exception text", ex.Message);
+            var ex = (((Func<object>)(() => impl.StringNoArgs()))).Should().Throw<InvalidOperationException>().Which;
+            ex.Message.Should().Be("Test exception text");
         }
 
-        [Fact]
+        [Test]
         public async Task TaskImmediateThrowIsTransparent()
         {
             var mock = new Mock<IInter>();
@@ -200,11 +206,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 mock.Object,
                 new TestInterceptor());
 
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => impl.TaskNoArgs());
-            Assert.Equal("Test exception text", ex.Message);
+            var ex = (await (((Func<Task>)(() => impl.TaskNoArgs()))).Should().ThrowAsync<InvalidOperationException>()).Which;
+            ex.Message.Should().Be("Test exception text");
         }
 
-        [Fact]
+        [Test]
         public async Task TaskDelayedThrowIsTransparent()
         {
             var mock = new Mock<IInter>();
@@ -216,11 +222,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 mock.Object,
                 new TestInterceptor());
 
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => impl.TaskNoArgs());
-            Assert.Equal("Test exception text", ex.Message);
+            var ex = (await (((Func<Task>)(() => impl.TaskNoArgs()))).Should().ThrowAsync<InvalidOperationException>()).Which;
+            ex.Message.Should().Be("Test exception text");
         }
 
-        [Fact]
+        [Test]
         public async Task IntTaskImmediateThrowIsTransparent()
         {
             var mock = new Mock<IInter>();
@@ -232,11 +238,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 mock.Object,
                 new TestInterceptor());
 
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => impl.IntTaskNoArgs());
-            Assert.Equal("Test exception text", ex.Message);
+            var ex = (await (((Func<Task>)(() => impl.IntTaskNoArgs()))).Should().ThrowAsync<InvalidOperationException>()).Which;
+            ex.Message.Should().Be("Test exception text");
         }
 
-        [Fact]
+        [Test]
         public async Task IntTaskDelayedThrowIsTransparent()
         {
             var mock = new Mock<IInter>();
@@ -248,11 +254,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 mock.Object,
                 new TestInterceptor());
 
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => impl.IntTaskNoArgs());
-            Assert.Equal("Test exception text", ex.Message);
+            var ex = (await (((Func<Task>)(() => impl.IntTaskNoArgs()))).Should().ThrowAsync<InvalidOperationException>()).Which;
+            ex.Message.Should().Be("Test exception text");
         }
 
-        [Fact]
+        [Test]
         public async Task StringTaskImmediateThrowIsTransparent()
         {
             var mock = new Mock<IInter>();
@@ -264,11 +270,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 mock.Object,
                 new TestInterceptor());
 
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => impl.StringTaskNoArgs());
-            Assert.Equal("Test exception text", ex.Message);
+            var ex = (await (((Func<Task>)(() => impl.StringTaskNoArgs()))).Should().ThrowAsync<InvalidOperationException>()).Which;
+            ex.Message.Should().Be("Test exception text");
         }
 
-        [Fact]
+        [Test]
         public async Task StringTaskDelayedThrowIsTransparent()
         {
             var mock = new Mock<IInter>();
@@ -280,8 +286,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
                 mock.Object,
                 new TestInterceptor());
 
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => impl.StringTaskNoArgs());
-            Assert.Equal("Test exception text", ex.Message);
+            var ex = (await (((Func<Task>)(() => impl.StringTaskNoArgs()))).Should().ThrowAsync<InvalidOperationException>()).Which;
+            ex.Message.Should().Be("Test exception text");
         }
 
         private static async Task TestInterception(Func<IInter, Inter, Task> test)
@@ -298,7 +304,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 
             await test(impl, inter);
 
-            Assert.Equal(1, interceptor.Count);
+            interceptor.Count.Should().Be(1);
         }
 
         // ReSharper disable once MemberCanBePrivate.Global This is Mocked, so much be public

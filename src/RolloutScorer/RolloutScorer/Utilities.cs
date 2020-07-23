@@ -26,7 +26,18 @@ namespace RolloutScorer
 
             WriteTrace($"Issue {issue.Number} has labels {string.Join(", ", issue.Labels.Select(l => $"'{l.Name}'"))}", log, logLevel);
 
-            bool isIssueLabel = issue.Labels.Any(l => l.Name == issueLabel) && issue.Labels.Any(l => l.Name == repoLabel);
+            bool isIssueLabel = false;
+
+            if (issueLabel == GithubLabelNames.IssueLabel)
+            {
+                isIssueLabel = issue.Labels.Any(l => l.Name == repoLabel)
+                    && !issue.Labels.Any(l => l.Name == GithubLabelNames.HotfixLabel || l.Name == GithubLabelNames.RollbackLabel || l.Name == GithubLabelNames.DowntimeLabel);
+            }
+            else
+            {
+                isIssueLabel = issue.Labels.Any(l => l.Name == issueLabel) && issue.Labels.Any(l => l.Name == repoLabel);
+            }
+
             if (isIssueLabel)
             {
                 WriteDebug($"Issue {issue.Number} determined to be {issueLabel} for {repoLabel}", log, logLevel);

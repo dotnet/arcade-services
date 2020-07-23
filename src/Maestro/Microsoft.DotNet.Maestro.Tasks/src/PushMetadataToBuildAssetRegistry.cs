@@ -89,24 +89,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     }
 
                     BuildData finalBuild = MergeBuildManifests(buildsManifestMetadata);
-                    SigningInformation finalSigningInfo = MergeSigningInfo(signingInformation);
-                    
-                    // Inject an entry of MergedManifest.xml to the in-memory merged manifest
-                    string location = null;
-                    AssetData assetData = finalBuild.Assets.FirstOrDefault();
-
-                    if (assetData != null)
-                    {
-                        AssetLocationData assetLocationData = assetData.Locations.FirstOrDefault();
-
-                        if (assetLocationData != null)
-                        {
-                            location = assetLocationData.Location;
-                        }
-                    }
-
-                    finalBuild.Assets = finalBuild.Assets.Add(GetManifestAsAsset(finalBuild.Assets, location, MergedManifestFileName));
-
                     IMaestroApi client = ApiFactory.GetAuthenticated(MaestroApiEndpoint, BuildAssetRegistryToken);
 
                     var deps = await GetBuildDependenciesAsync(client, cancellationToken);
@@ -127,6 +109,24 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     // upload it to the BlobArtifacts folder only when publishingVersion >= 3
                     if (manifestBuildData.PublishingVersion >= 3)
                     {
+                        SigningInformation finalSigningInfo = MergeSigningInfo(signingInformation);
+
+                        // Inject an entry of MergedManifest.xml to the in-memory merged manifest
+                        string location = null;
+                        AssetData assetData = finalBuild.Assets.FirstOrDefault();
+
+                        if (assetData != null)
+                        {
+                            AssetLocationData assetLocationData = assetData.Locations.FirstOrDefault();
+
+                            if (assetLocationData != null)
+                            {
+                                location = assetLocationData.Location;
+                            }
+                        }
+
+                        finalBuild.Assets = finalBuild.Assets.Add(GetManifestAsAsset(finalBuild.Assets, location, MergedManifestFileName));
+
                         CreateAndPushMergedManifest(finalBuild.Assets, finalSigningInfo, manifestBuildData);
                     }
 

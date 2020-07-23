@@ -3,6 +3,7 @@ using System.IO;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
@@ -11,10 +12,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Net.Http.Headers;
 using Moq;
-using Xunit;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.Web.Authentication.Tests
 {
+    [TestFixture]
     public class SimpleSigninTests
     {
         private const string LoginPath = "/cookie/login";
@@ -24,7 +26,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
         private const string Target = "https://example.test/target";
         private static readonly string s_escapedTarget = Uri.EscapeDataString(Target);
 
-        [Fact]
+        [Test]
         public async Task OtherUrlIsIgnored()
         {
             Mock<IAuthenticationService> auth = new Mock<IAuthenticationService>();
@@ -34,7 +36,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             auth.VerifyNoOtherCalls();
         }
 
-        [Fact]
+        [Test]
         public async Task BasicSignOnIssuesChallenge()
         {
             Mock<IAuthenticationService> auth = new Mock<IAuthenticationService>();
@@ -53,7 +55,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             auth.VerifyNoOtherCalls();
         }
 
-        [Fact]
+        [Test]
         public async Task BasicSignInWithTargetIssuesChallengeWithTarget()
         {
             Mock<IAuthenticationService> auth = new Mock<IAuthenticationService>();
@@ -72,7 +74,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             auth.VerifyNoOtherCalls();
         }
 
-        [Fact]
+        [Test]
         public async Task BasicSignOutSignsOutAndRedirectsToRoot()
         {
             Mock<IAuthenticationService> auth = new Mock<IAuthenticationService>();
@@ -82,8 +84,8 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
 
             var ctx = await RunMockAuthContext(auth, $"https://example.test{LogoutPath}");
 
-            Assert.Equal(302, ctx.Response.StatusCode);
-            Assert.Equal("/", ctx.Response.Headers.TryGetValue(HeaderNames.Location, out var locationHeader) ? locationHeader.ToString() : "<NONE>");
+            ctx.Response.StatusCode.Should().Be(302);
+            (ctx.Response.Headers.TryGetValue(HeaderNames.Location, out var locationHeader) ? locationHeader.ToString() : "<NONE>").Should().Be("/");
 
             auth.Verify(a => a.SignOutAsync(
                 It.IsAny<HttpContext>(),
@@ -93,7 +95,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             auth.VerifyNoOtherCalls();
         }
 
-        [Fact]
+        [Test]
         public async Task CallbackTriggersCallbackToRoot()
         {
             Mock<IAuthenticationService> auth = new Mock<IAuthenticationService>();
@@ -117,8 +119,8 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
 
             var ctx = await RunMockAuthContext(auth, $"https://example.test{AuthCallbackUrl}", c => c.User = user);
 
-            Assert.Equal(302, ctx.Response.StatusCode);
-            Assert.Equal("/", ctx.Response.Headers.TryGetValue(HeaderNames.Location, out var locationHeader) ? locationHeader.ToString() : "<NONE>");
+            ctx.Response.StatusCode.Should().Be(302);
+            (ctx.Response.Headers.TryGetValue(HeaderNames.Location, out var locationHeader) ? locationHeader.ToString() : "<NONE>").Should().Be("/");
 
             auth.Verify(a => a.SignInAsync(
                 It.IsAny<HttpContext>(),
@@ -130,7 +132,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             auth.VerifyNoOtherCalls();
         }
 
-        [Fact]
+        [Test]
         public async Task CallbackWithTargetTriggersCallbackToTarget()
         {
             Mock<IAuthenticationService> auth = new Mock<IAuthenticationService>();
@@ -154,8 +156,8 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
 
             var ctx = await RunMockAuthContext(auth, $"https://example.test{AuthCallbackUrl}?r={s_escapedTarget}", c => c.User = user);
 
-            Assert.Equal(302, ctx.Response.StatusCode);
-            Assert.Equal(Target, ctx.Response.Headers.TryGetValue(HeaderNames.Location, out var locationHeader) ? locationHeader.ToString() : "<NONE>");
+            ctx.Response.StatusCode.Should().Be(302);
+            (ctx.Response.Headers.TryGetValue(HeaderNames.Location, out var locationHeader) ? locationHeader.ToString() : "<NONE>").Should().Be(Target);
 
             auth.Verify(a => a.SignInAsync(
                 It.IsAny<HttpContext>(),
@@ -167,7 +169,7 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
             auth.VerifyNoOtherCalls();
         }
 
-        [Fact]
+        [Test]
         public async Task FailedCallbackReturnsError()
         {
             Mock<IAuthenticationService> auth = new Mock<IAuthenticationService>();
@@ -193,8 +195,8 @@ namespace Microsoft.DotNet.Web.Authentication.Tests
                 }
             );
 
-            Assert.Equal(400, ctx.Response.StatusCode);
-            Assert.Equal("ExampleErrorMessage", Encoding.UTF8.GetString(stream.ToArray()));
+            ctx.Response.StatusCode.Should().Be(400);
+            Encoding.UTF8.GetString(stream.ToArray()).Should().Be("ExampleErrorMessage");
 
             auth.VerifyNoOtherCalls();
         }

@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.Fabric;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Maestro.Data;
 using Maestro.Web.Api.v2020_02_20.Controllers;
 using Maestro.Web.Api.v2020_02_20.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.EntityFrameworkCore;
@@ -18,24 +17,14 @@ using Microsoft.Extensions.Hosting.Internal;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Moq;
-using Xunit;
-using Xunit.Abstractions;
+using NUnit.Framework;
 
 namespace Maestro.Web.Tests
 {
-    [Collection(nameof(DatabaseCollection))]
+    [TestFixture]
     public class ChannelsController20200220Tests
     {
-        private readonly ITestOutputHelper _output;
-        private readonly TestDatabaseFixture _database;
-
-        public ChannelsController20200220Tests(ITestOutputHelper output, TestDatabaseFixture database)
-        {
-            _output = output;
-            _database = database;
-        }
-
-        [Fact]
+        [Test]
         public async Task CreateChannel()
         {
             using TestData data = await BuildDefaultAsync();
@@ -44,28 +33,28 @@ namespace Maestro.Web.Tests
             string classification = "TEST-CLASSIFICATION";
             {
                 IActionResult result = await data.Controller.CreateChannel(channelName, classification);
-                Assert.IsAssignableFrom<ObjectResult>(result);
+                result.Should().BeAssignableTo<ObjectResult>();
                 var objResult = (ObjectResult) result;
-                Assert.Equal((int) HttpStatusCode.Created, objResult.StatusCode);
-                Assert.IsAssignableFrom<Channel>(objResult.Value);
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.Created);
+                objResult.Value.Should().BeAssignableTo<Channel>();
                 channel = (Channel) objResult.Value;
-                Assert.Equal(channelName, channel.Name);
-                Assert.Equal(classification, channel.Classification);
+                channel.Name.Should().Be(channelName);
+                channel.Classification.Should().Be(classification);
             }
 
             {
                 IActionResult result = await data.Controller.GetChannel(channel.Id);
-                Assert.IsAssignableFrom<ObjectResult>(result);
+                result.Should().BeAssignableTo<ObjectResult>();
                 var objResult = (ObjectResult) result;
-                Assert.Equal((int) HttpStatusCode.OK, objResult.StatusCode);
-                Assert.IsAssignableFrom<Channel>(objResult.Value);
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
+                objResult.Value.Should().BeAssignableTo<Channel>();
                 channel = (Channel) objResult.Value;
-                Assert.Equal(channelName, channel.Name);
-                Assert.Equal(classification, channel.Classification);
+                channel.Name.Should().Be(channelName);
+                channel.Classification.Should().Be(classification);
             }
         }
 
-        [Fact]
+        [Test]
         public async Task ListRepositories()
         {
             using TestData data = await BuildDefaultAsync();
@@ -103,33 +92,24 @@ namespace Maestro.Web.Tests
             List<string> repositories;
             {
                 IActionResult result = await data.Controller.ListRepositories(channel.Id);
-                Assert.IsAssignableFrom<ObjectResult>(result);
+                result.Should().BeAssignableTo<ObjectResult>();
                 var objResult = (ObjectResult) result;
-                Assert.Equal((int) HttpStatusCode.OK, objResult.StatusCode);
-                Assert.IsAssignableFrom<IEnumerable<string>>(objResult.Value);
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
+                objResult.Value.Should().BeAssignableTo<IEnumerable<string>>();
                 repositories = ((IEnumerable<string>) objResult.Value).ToList();
             }
 
-            Assert.Single(repositories, repository);
+            repositories.Should().ContainSingle();
         }
 
 
         private Task<TestData> BuildDefaultAsync()
         {
-            return new TestDataBuilder(_database, _output).BuildAsync();
+            return new TestDataBuilder().BuildAsync();
         }
 
         private sealed class TestDataBuilder
         {
-            private readonly TestDatabaseFixture _database;
-            private readonly ITestOutputHelper _output;
-
-            public TestDataBuilder(TestDatabaseFixture database, ITestOutputHelper output)
-            {
-                _database = database;
-                _output = output;
-            }
-
             private Type _backgroundQueueType = typeof(NeverBackgroundQueue);
 
             public TestDataBuilder WithImmediateBackgroundQueue()
@@ -140,10 +120,10 @@ namespace Maestro.Web.Tests
 
             public async Task<TestData> BuildAsync()
             {
-                string connectionString = await _database.GetConnectionString();
+                string connectionString = await SharedData.Database.GetConnectionString();
 
                 var collection = new ServiceCollection();
-                collection.AddLogging(l => l.AddProvider(new XUnitLogger(_output)));
+                collection.AddLogging(l => l.AddProvider(new NUnitLogger()));
                 collection.AddSingleton<IHostEnvironment>(new HostingEnvironment
                 {
                     EnvironmentName = Environments.Development
@@ -158,7 +138,6 @@ namespace Maestro.Web.Tests
                 collection.AddSingleton<ISystemClock, TestClock>();
                 collection.AddSingleton(Mock.Of<IRemoteFactory>());
                 collection.AddSingleton(typeof(IBackgroundQueue), _backgroundQueueType);
-                collection.AddSingleton(_output);
                 ServiceProvider provider = collection.BuildServiceProvider();
 
                 var clock = (TestClock) provider.GetRequiredService<ISystemClock>();
