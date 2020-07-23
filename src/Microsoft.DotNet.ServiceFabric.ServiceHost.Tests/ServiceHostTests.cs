@@ -2,18 +2,20 @@ using System;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using FluentAssertions;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Rest;
-using Xunit;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
 {
+    [TestFixture]
     public class ServiceHostTests
     {
-        [Fact]
+        [Test]
         public void HttpExceptionsAreAugmentedByRichTelemetry()
         {
             Environment.SetEnvironmentVariable("ENVIRONMENT", "XUnit");
@@ -36,15 +38,15 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             client.Flush();
 
             var exceptionTelemetries = channel.Telemetry.OfType<ExceptionTelemetry>().ToList();
-            Assert.Single(exceptionTelemetries);
+            exceptionTelemetries.Should().ContainSingle();
             var exceptionTelemetry = exceptionTelemetries[0];
-            Assert.True(exceptionTelemetry.Properties.TryGetValue("statusCode", out var statusCodeTest));
-            Assert.Equal("418", statusCodeTest);
-            Assert.True(exceptionTelemetry.Properties.TryGetValue("responseText", out var responseText));
-            Assert.Equal("Test content", responseText);
+            exceptionTelemetry.Properties.TryGetValue("statusCode", out var statusCodeTest).Should().BeTrue();
+            statusCodeTest.Should().Be("418");
+            exceptionTelemetry.Properties.TryGetValue("responseText", out var responseText).Should().BeTrue();
+            responseText.Should().Be("Test content");
         }
 
-        [Fact]
+        [Test]
         public void HttpExceptionsContentIsTruncatedByRichTelemetry()
         {
             Environment.SetEnvironmentVariable("ENVIRONMENT", "XUnit");
@@ -68,11 +70,11 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Tests
             client.Flush();
 
             var exceptionTelemetries = channel.Telemetry.OfType<ExceptionTelemetry>().ToList();
-            Assert.Single(exceptionTelemetries);
+            exceptionTelemetries.Should().ContainSingle();
             var exceptionTelemetry = exceptionTelemetries[0];
-            Assert.True(exceptionTelemetry.Properties.TryGetValue("responseText", out var responseText));
-            Assert.StartsWith("Test content", responseText);
-            Assert.True(responseText.Length < bigContent.Length, "responseText.Length < bigContent.Length");
+            exceptionTelemetry.Properties.TryGetValue("responseText", out var responseText).Should().BeTrue();
+            responseText.Should().StartWith("Test content");
+            (responseText.Length < bigContent.Length).Should().BeTrue();
         }
     }
 }

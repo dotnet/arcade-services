@@ -18,13 +18,14 @@ using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.VisualStudio.Services.Common;
 using Moq;
-using Xunit;
-using Xunit.Abstractions;
+using NUnit.Framework;
+
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
 
 namespace SubscriptionActorService.Tests
 {
+    [TestFixture]
     public class PullRequestActorTests : SubscriptionOrPullRequestActorTests
     {
         private const long InstallationId = 1174;
@@ -32,20 +33,21 @@ namespace SubscriptionActorService.Tests
         private const string InProgressPrHeadBranch = "pr.head.branch";
         private const string PrUrl = "https://git.com/pr/123";
 
-        private readonly Dictionary<string, Mock<IRemote>> DarcRemotes =
-            new Dictionary<string, Mock<IRemote>>();
+        private Dictionary<string, Mock<IRemote>> DarcRemotes;
 
-        private readonly Mock<IRemoteFactory> RemoteFactory;
+        private Mock<IRemoteFactory> RemoteFactory;
 
-        private readonly Mock<IMergePolicyEvaluator> MergePolicyEvaluator;
+        private Mock<IMergePolicyEvaluator> MergePolicyEvaluator;
 
-        private readonly Dictionary<ActorId, Mock<ISubscriptionActor>> SubscriptionActors =
-            new Dictionary<ActorId, Mock<ISubscriptionActor>>();
+        private Dictionary<ActorId, Mock<ISubscriptionActor>> SubscriptionActors;
 
         private string NewBranch;
 
-        public PullRequestActorTests(ITestOutputHelper output) : base(output)
+        [SetUp]
+        public void PullRequestActorTests_SetUp()
         {
+            DarcRemotes = new Dictionary<string, Mock<IRemote>>();
+            SubscriptionActors = new Dictionary<ActorId, Mock<ISubscriptionActor>>();
             MergePolicyEvaluator = CreateMock<IMergePolicyEvaluator>();
             RemoteFactory = new Mock<IRemoteFactory>(MockBehavior.Strict);
         }
@@ -384,12 +386,9 @@ namespace SubscriptionActorService.Tests
             return actor;
         }
 
+        [TestFixture, NonParallelizable]
         public class ProcessPendingUpdatesAsync : PullRequestActorTests
         {
-            public ProcessPendingUpdatesAsync(ITestOutputHelper output) : base(output)
-            {
-            }
-
             private async Task WhenProcessPendingUpdatesAsyncIsCalled()
             {
                 await Execute(
@@ -452,7 +451,7 @@ namespace SubscriptionActorService.Tests
                 ExpectedActorState.Remove(PullRequestActorImplementation.PullRequestUpdate);
             }
 
-            [Fact]
+            [Test]
             public async Task NoPendingUpdates()
             {
                 GivenATestChannel();
@@ -470,7 +469,7 @@ namespace SubscriptionActorService.Tests
                 ThenUpdateReminderIsRemoved();
             }
 
-            [Fact]
+            [Test]
             public async Task PendingUpdatesNotUpdatablePr()
             {
                 GivenATestChannel();
@@ -491,7 +490,7 @@ namespace SubscriptionActorService.Tests
                 }
             }
 
-            [Fact]
+            [Test]
             public async Task PendingUpdatesUpdatablePr()
             {
                 GivenATestChannel();
@@ -521,12 +520,9 @@ namespace SubscriptionActorService.Tests
             }
         }
 
+        [TestFixture, NonParallelizable]
         public class UpdateAssetsAsync : PullRequestActorTests
         {
-            public UpdateAssetsAsync(ITestOutputHelper output) : base(output)
-            {
-            }
-
             private async Task WhenUpdateAssetsAsyncIsCalled(Build forBuild)
             {
                 await Execute(
@@ -548,9 +544,8 @@ namespace SubscriptionActorService.Tests
                     });
             }
 
-            [Theory]
-            [InlineData(false)]
-            [InlineData(true)]
+            [TestCase(false)]
+            [TestCase(true)]
             public async Task UpdateWithAssetsNoExistingPR(bool batchable)
             {
                 GivenATestChannel();
@@ -578,9 +573,8 @@ namespace SubscriptionActorService.Tests
                 AndDependencyFlowEventsShouldBeAdded();
             }
 
-            [Theory]
-            [InlineData(false)]
-            [InlineData(true)]
+            [TestCase(false)]
+            [TestCase(true)]
             public async Task UpdateWithAssetsExistingPR(bool batchable)
             {
                 GivenATestChannel();
@@ -606,9 +600,8 @@ namespace SubscriptionActorService.Tests
                 }
             }
 
-            [Theory]
-            [InlineData(false)]
-            [InlineData(true)]
+            [TestCase(false)]
+            [TestCase(true)]
             public async Task UpdateWithAssetsExistingPRNotUpdatable(bool batchable)
             {
                 GivenATestChannel();
@@ -631,9 +624,8 @@ namespace SubscriptionActorService.Tests
                 }
             }
 
-            [Theory]
-            [InlineData(false)]
-            [InlineData(true)]
+            [TestCase(false)]
+            [TestCase(true)]
             public async Task UpdateWithNoAssets(bool batchable)
             {
                 GivenATestChannel();

@@ -14,6 +14,7 @@ namespace Microsoft.DotNet.Darc.Options
     internal class DeleteBuildFromChannelCommandLineOptions : CommandLineOptions
     {
         [Option("id", Required = true, HelpText = "BAR id of build to assign to channel.")]
+        [RedactFromLogging]
         public int Id { get; set; }
 
         [Option("channel", Required = true, HelpText = "Channel to remove the build from.")]

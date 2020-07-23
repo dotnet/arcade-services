@@ -216,6 +216,13 @@ namespace RolloutScorer
 
             ScorecardBuildBreakdown lastBuild = BuildBreakdowns.Last();
             Utilities.WriteDebug($"Last build is for {Repo} is {lastBuild.BuildSummary.BuildNumber} ({lastBuild.BuildSummary.WebLink})", Log, LogLevel);
+
+            if (lastBuild.Score.Rollbacks == 1)
+            {
+                Utilities.WriteDebug($"Last build ({lastBuild.BuildSummary.BuildNumber}) was a rollback; rollout marked as FAILED.", Log, LogLevel);
+                return true;
+            }
+
             string lastBuildResult = lastBuild.BuildSummary.Result;
             Utilities.WriteDebug($"Build {lastBuild.BuildSummary.BuildNumber} has result '{lastBuildResult}'", Log, LogLevel);
             switch (lastBuildResult)

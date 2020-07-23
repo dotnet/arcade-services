@@ -5,6 +5,7 @@
     <SignAssembly>false</SignAssembly>
     <LangVersion>8.0</LangVersion>
     <UserSecretsId>a523e3e9-b284-4c40-962d-e06de454891e</UserSecretsId>
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
   <ItemGroup>
     <!-- The weird implicit package reference sometimes is included, and sometimes not. Remove it. -->
@@ -12,14 +13,9 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
     <PackageReference Include="Octokit" />
-    <PackageReference Include="coverlet.collector" />
-    <PackageReference Include="nunit" />
-    <PackageReference Include="NUnit3TestAdapter">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Microsoft.DotNet.Darc\src\Darc\Microsoft.DotNet.Darc.csproj" />
     <ProjectReference Include="..\..\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
   </ItemGroup>
 

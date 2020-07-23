@@ -13,6 +13,11 @@ namespace Maestro.ScenarioTests
     {
         public static async Task<string> RunExecutableAsync(string executable, params string[] args)
         {
+            return await RunExecutableAsyncWithInput(executable, "", args);
+        }
+
+        public static async Task<string> RunExecutableAsyncWithInput(string executable, string input, params string[] args)
+        {
             TestContext.WriteLine(FormatExecutableCall(executable, args));
             var output = new StringBuilder();
 
@@ -30,25 +35,39 @@ namespace Maestro.ScenarioTests
             {
                 RedirectStandardError = true,
                 RedirectStandardOutput = true,
+                RedirectStandardInput = true,
+                UseShellExecute = false
             };
+
             foreach (string arg in args)
             {
-                psi.ArgumentList.Add(arg);
+                // The string append used by Process will accept null params 
+                // and then throw without identifying the param, so we need to handle it here to get logging
+                if (arg != null)
+                {
+                    psi.ArgumentList.Add(arg);
+                }
+                else
+                {
+                    WriteOutput("Null parameter encountered while constructing command string.");
+                }
             }
 
             using var process = new Process
             {
                 StartInfo = psi
             };
+
             var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             process.EnableRaisingEvents = true;
             process.Exited += (s, e) => { tcs.TrySetResult(true); };
             process.Start();
 
             Task<bool> exitTask = tcs.Task;
+            Task stdin = Task.Run(() => { process.StandardInput.Write(input); process.StandardInput.Close(); });
             Task<string> stdout = process.StandardOutput.ReadLineAsync();
             Task<string> stderr = process.StandardError.ReadLineAsync();
-            var list = new List<Task> { exitTask, stdout, stderr };
+            var list = new List<Task> { exitTask, stdout, stderr, stdin };
             while (list.Count != 0)
             {
                 var done = await Task.WhenAny(list);
@@ -77,6 +96,12 @@ namespace Maestro.ScenarioTests
                     {
                         list.Add(stderr = process.StandardError.ReadLineAsync());
                     }
+                    continue;
+                }
+
+                if (done == stdin)
+                {
+                    await stdin;
                     continue;
                 }
 

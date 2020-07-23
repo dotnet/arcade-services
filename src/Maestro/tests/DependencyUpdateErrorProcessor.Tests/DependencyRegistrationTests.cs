@@ -1,23 +1,24 @@
 using System;
+using FluentAssertions;
 using Microsoft.DotNet.Internal.DependencyInjection.Testing;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
-using Xunit;
+using NUnit.Framework;
 
 namespace DependencyUpdateErrorProcessor.Tests
 {
+    [TestFixture]
     public class DependencyRegistrationTests
     {
-        [Fact]
+        [Test]
         public void AreDependenciesRegistered()
         {
-            Assert.True(DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
+            DependencyInjectionValidation.IsDependencyResolutionCoherent(s =>
                     {
                         Environment.SetEnvironmentVariable("ENVIRONMENT", "XUNIT");
                         ServiceHost.ConfigureDefaultServices(s);
                         Program.Configure(s);
                     },
-                    out string message),
-                message);
+                    out string message).Should().BeTrue();
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
+using FluentAssertions;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Builder;
@@ -13,163 +14,151 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.WebEncoders.Testing;
-using Xunit;
-using Xunit.Abstractions;
+using NUnit.Framework;
 
 namespace Microsoft.DotNet.Web.Authentication.Tests
 {
+    [TestFixture, Parallelizable(ParallelScope.All)]
     public class DefaultAuthorizeActionModelConventionTests
     {
-        private readonly ITestOutputHelper _output;
-
-        public DefaultAuthorizeActionModelConventionTests(ITestOutputHelper output)
-        {
-            _output = output;
-        }
-
-        [InlineData("no/no", HttpStatusCode.Unauthorized)]
-        [InlineData("no/anonymous", HttpStatusCode.OK, "No:Anonymous:Value")]
-        [InlineData("no/any", HttpStatusCode.Unauthorized)]
-        [InlineData("no/role", HttpStatusCode.Unauthorized)]
-        [InlineData("anonymous/no", HttpStatusCode.OK, "Anonymous:No:Value")]
-        [InlineData("anonymous/anonymous", HttpStatusCode.OK, "Anonymous:Anonymous:Value")]
-        [InlineData("anonymous/any", HttpStatusCode.OK, "Anonymous:Any:Value")]
-        [InlineData("anonymous/role", HttpStatusCode.OK, "Anonymous:Role:Value")]
-        [InlineData("any/no", HttpStatusCode.Unauthorized)]
-        [InlineData("any/anonymous", HttpStatusCode.OK, "Any:Anonymous:Value")]
-        [InlineData("any/any", HttpStatusCode.Unauthorized)]
-        [InlineData("any/role", HttpStatusCode.Unauthorized)]
-        [InlineData("role/no", HttpStatusCode.Unauthorized)]
-        [InlineData("role/anonymous", HttpStatusCode.OK, "Role:Anonymous:Value")]
-        [InlineData("role/any", HttpStatusCode.Unauthorized)]
-        [InlineData("role/role", HttpStatusCode.Unauthorized)]
-        [Theory]
+        [TestCase("no/no", HttpStatusCode.Unauthorized)]
+        [TestCase("no/anonymous", HttpStatusCode.OK, "No:Anonymous:Value")]
+        [TestCase("no/any", HttpStatusCode.Unauthorized)]
+        [TestCase("no/role", HttpStatusCode.Unauthorized)]
+        [TestCase("anonymous/no", HttpStatusCode.OK, "Anonymous:No:Value")]
+        [TestCase("anonymous/anonymous", HttpStatusCode.OK, "Anonymous:Anonymous:Value")]
+        [TestCase("anonymous/any", HttpStatusCode.OK, "Anonymous:Any:Value")]
+        [TestCase("anonymous/role", HttpStatusCode.OK, "Anonymous:Role:Value")]
+        [TestCase("any/no", HttpStatusCode.Unauthorized)]
+        [TestCase("any/anonymous", HttpStatusCode.OK, "Any:Anonymous:Value")]
+        [TestCase("any/any", HttpStatusCode.Unauthorized)]
+        [TestCase("any/role", HttpStatusCode.Unauthorized)]
+        [TestCase("role/no", HttpStatusCode.Unauthorized)]
+        [TestCase("role/anonymous", HttpStatusCode.OK, "Role:Anonymous:Value")]
+        [TestCase("role/any", HttpStatusCode.Unauthorized)]
+        [TestCase("role/role", HttpStatusCode.Unauthorized)]
         public async Task NoUser(string route, HttpStatusCode expectedCode, string body = null)
         {
             using HttpClient client = CreateHttpClient();
             using HttpResponseMessage response = await client.GetAsync($"https://example.test/test-auth/{route}");
-            Assert.Equal(expectedCode, response.StatusCode);
+            response.StatusCode.Should().Be(expectedCode);
             if (body != null)
             {
-                Assert.Equal(body, await response.Content.ReadAsStringAsync());
+                (await response.Content.ReadAsStringAsync()).Should().Be(body);
             }
         }
 
-        [InlineData("no/no", HttpStatusCode.OK, "No:No:Value")]
-        [InlineData("no/anonymous", HttpStatusCode.OK, "No:Anonymous:Value")]
-        [InlineData("no/any", HttpStatusCode.OK, "No:Any:Value")]
-        [InlineData("no/role", HttpStatusCode.Forbidden)]
-        [InlineData("anonymous/no", HttpStatusCode.OK, "Anonymous:No:Value")]
-        [InlineData("anonymous/anonymous", HttpStatusCode.OK, "Anonymous:Anonymous:Value")]
-        [InlineData("anonymous/any", HttpStatusCode.OK, "Anonymous:Any:Value")]
-        [InlineData("anonymous/role", HttpStatusCode.OK, "Anonymous:Role:Value")]
-        [InlineData("any/no", HttpStatusCode.OK, "Any:No:Value")]
-        [InlineData("any/anonymous", HttpStatusCode.OK, "Any:Anonymous:Value")]
-        [InlineData("any/any", HttpStatusCode.OK, "Any:Any:Value")]
-        [InlineData("any/role", HttpStatusCode.Forbidden)]
-        [InlineData("role/no", HttpStatusCode.Forbidden)]
-        [InlineData("role/anonymous", HttpStatusCode.OK, "Role:Anonymous:Value")]
-        [InlineData("role/any", HttpStatusCode.Forbidden)]
-        [InlineData("role/role", HttpStatusCode.Forbidden)]
-        [Theory]
+        [TestCase("no/no", HttpStatusCode.OK, "No:No:Value")]
+        [TestCase("no/anonymous", HttpStatusCode.OK, "No:Anonymous:Value")]
+        [TestCase("no/any", HttpStatusCode.OK, "No:Any:Value")]
+        [TestCase("no/role", HttpStatusCode.Forbidden)]
+        [TestCase("anonymous/no", HttpStatusCode.OK, "Anonymous:No:Value")]
+        [TestCase("anonymous/anonymous", HttpStatusCode.OK, "Anonymous:Anonymous:Value")]
+        [TestCase("anonymous/any", HttpStatusCode.OK, "Anonymous:Any:Value")]
+        [TestCase("anonymous/role", HttpStatusCode.OK, "Anonymous:Role:Value")]
+        [TestCase("any/no", HttpStatusCode.OK, "Any:No:Value")]
+        [TestCase("any/anonymous", HttpStatusCode.OK, "Any:Anonymous:Value")]
+        [TestCase("any/any", HttpStatusCode.OK, "Any:Any:Value")]
+        [TestCase("any/role", HttpStatusCode.Forbidden)]
+        [TestCase("role/no", HttpStatusCode.Forbidden)]
+        [TestCase("role/anonymous", HttpStatusCode.OK, "Role:Anonymous:Value")]
+        [TestCase("role/any", HttpStatusCode.Forbidden)]
+        [TestCase("role/role", HttpStatusCode.Forbidden)]
         public async Task UserBadRole(string route, HttpStatusCode expectedCode, string body = null)
         {
             using HttpClient client = CreateHttpClient("TestUser", "BadRole");
             using HttpResponseMessage response = await client.GetAsync($"https://example.test/test-auth/{route}");
-            Assert.Equal(expectedCode, response.StatusCode);
+            response.StatusCode.Should().Be(expectedCode);
             if (body != null)
             {
-                Assert.Equal(body, await response.Content.ReadAsStringAsync());
+                (await response.Content.ReadAsStringAsync()).Should().Be(body);
             }
         }
 
-        [InlineData("no/no", HttpStatusCode.OK, "No:No:Value")]
-        [InlineData("no/anonymous", HttpStatusCode.OK, "No:Anonymous:Value")]
-        [InlineData("no/any", HttpStatusCode.OK, "No:Any:Value")]
-        [InlineData("no/role", HttpStatusCode.Forbidden)]
-        [InlineData("anonymous/no", HttpStatusCode.OK, "Anonymous:No:Value")]
-        [InlineData("anonymous/anonymous", HttpStatusCode.OK, "Anonymous:Anonymous:Value")]
-        [InlineData("anonymous/any", HttpStatusCode.OK, "Anonymous:Any:Value")]
-        [InlineData("anonymous/role", HttpStatusCode.OK, "Anonymous:Role:Value")]
-        [InlineData("any/no", HttpStatusCode.OK, "Any:No:Value")]
-        [InlineData("any/anonymous", HttpStatusCode.OK, "Any:Anonymous:Value")]
-        [InlineData("any/any", HttpStatusCode.OK, "Any:Any:Value")]
-        [InlineData("any/role", HttpStatusCode.Forbidden)]
-        [InlineData("role/no", HttpStatusCode.OK, "Role:No:Value")]
-        [InlineData("role/anonymous", HttpStatusCode.OK, "Role:Anonymous:Value")]
-        [InlineData("role/any", HttpStatusCode.OK, "Role:Any:Value")]
-        [InlineData("role/role", HttpStatusCode.Forbidden)]
-        [Theory]
+        [TestCase("no/no", HttpStatusCode.OK, "No:No:Value")]
+        [TestCase("no/anonymous", HttpStatusCode.OK, "No:Anonymous:Value")]
+        [TestCase("no/any", HttpStatusCode.OK, "No:Any:Value")]
+        [TestCase("no/role", HttpStatusCode.Forbidden)]
+        [TestCase("anonymous/no", HttpStatusCode.OK, "Anonymous:No:Value")]
+        [TestCase("anonymous/anonymous", HttpStatusCode.OK, "Anonymous:Anonymous:Value")]
+        [TestCase("anonymous/any", HttpStatusCode.OK, "Anonymous:Any:Value")]
+        [TestCase("anonymous/role", HttpStatusCode.OK, "Anonymous:Role:Value")]
+        [TestCase("any/no", HttpStatusCode.OK, "Any:No:Value")]
+        [TestCase("any/anonymous", HttpStatusCode.OK, "Any:Anonymous:Value")]
+        [TestCase("any/any", HttpStatusCode.OK, "Any:Any:Value")]
+        [TestCase("any/role", HttpStatusCode.Forbidden)]
+        [TestCase("role/no", HttpStatusCode.OK, "Role:No:Value")]
+        [TestCase("role/anonymous", HttpStatusCode.OK, "Role:Anonymous:Value")]
+        [TestCase("role/any", HttpStatusCode.OK, "Role:Any:Value")]
+        [TestCase("role/role", HttpStatusCode.Forbidden)]
         public async Task UserControllerRole(string route, HttpStatusCode expectedCode, string body = null)
         {
             using HttpClient client = CreateHttpClient("TestUser", "ControllerRole");
             using HttpResponseMessage response = await client.GetAsync($"https://example.test/test-auth/{route}");
-            Assert.Equal(expectedCode, response.StatusCode);
+            response.StatusCode.Should().Be(expectedCode);
             if (body != null)
             {
-                Assert.Equal(body, await response.Content.ReadAsStringAsync());
+                (await response.Content.ReadAsStringAsync()).Should().Be(body);
             }
         }
 
-        [InlineData("no/no", HttpStatusCode.OK, "No:No:Value")]
-        [InlineData("no/anonymous", HttpStatusCode.OK, "No:Anonymous:Value")]
-        [InlineData("no/any", HttpStatusCode.OK, "No:Any:Value")]
-        [InlineData("no/role", HttpStatusCode.OK, "No:Role:Value")]
-        [InlineData("anonymous/no", HttpStatusCode.OK, "Anonymous:No:Value")]
-        [InlineData("anonymous/anonymous", HttpStatusCode.OK, "Anonymous:Anonymous:Value")]
-        [InlineData("anonymous/any", HttpStatusCode.OK, "Anonymous:Any:Value")]
-        [InlineData("anonymous/role", HttpStatusCode.OK, "Anonymous:Role:Value")]
-        [InlineData("any/no", HttpStatusCode.OK, "Any:No:Value")]
-        [InlineData("any/anonymous", HttpStatusCode.OK, "Any:Anonymous:Value")]
-        [InlineData("any/any", HttpStatusCode.OK, "Any:Any:Value")]
-        [InlineData("any/role", HttpStatusCode.OK, "Any:Role:Value")]
-        [InlineData("role/no", HttpStatusCode.Forbidden)]
-        [InlineData("role/anonymous", HttpStatusCode.OK, "Role:Anonymous:Value")]
-        [InlineData("role/any", HttpStatusCode.Forbidden)]
-        [InlineData("role/role", HttpStatusCode.Forbidden)]
-        [Theory]
+        [TestCase("no/no", HttpStatusCode.OK, "No:No:Value")]
+        [TestCase("no/anonymous", HttpStatusCode.OK, "No:Anonymous:Value")]
+        [TestCase("no/any", HttpStatusCode.OK, "No:Any:Value")]
+        [TestCase("no/role", HttpStatusCode.OK, "No:Role:Value")]
+        [TestCase("anonymous/no", HttpStatusCode.OK, "Anonymous:No:Value")]
+        [TestCase("anonymous/anonymous", HttpStatusCode.OK, "Anonymous:Anonymous:Value")]
+        [TestCase("anonymous/any", HttpStatusCode.OK, "Anonymous:Any:Value")]
+        [TestCase("anonymous/role", HttpStatusCode.OK, "Anonymous:Role:Value")]
+        [TestCase("any/no", HttpStatusCode.OK, "Any:No:Value")]
+        [TestCase("any/anonymous", HttpStatusCode.OK, "Any:Anonymous:Value")]
+        [TestCase("any/any", HttpStatusCode.OK, "Any:Any:Value")]
+        [TestCase("any/role", HttpStatusCode.OK, "Any:Role:Value")]
+        [TestCase("role/no", HttpStatusCode.Forbidden)]
+        [TestCase("role/anonymous", HttpStatusCode.OK, "Role:Anonymous:Value")]
+        [TestCase("role/any", HttpStatusCode.Forbidden)]
+        [TestCase("role/role", HttpStatusCode.Forbidden)]
         public async Task UserActionRole(string route, HttpStatusCode expectedCode, string body = null)
         {
             using HttpClient client = CreateHttpClient("TestUser", "ActionRole");
             using HttpResponseMessage response = await client.GetAsync($"https://example.test/test-auth/{route}");
-            Assert.Equal(expectedCode, response.StatusCode);
+            response.StatusCode.Should().Be(expectedCode);
             if (body != null)
             {
-                Assert.Equal(body, await response.Content.ReadAsStringAsync());
+                (await response.Content.ReadAsStringAsync()).Should().Be(body);
             }
         }
 
-        [InlineData("no/no", HttpStatusCode.OK, "No:No:Value")]
-        [InlineData("no/anonymous", HttpStatusCode.OK, "No:Anonymous:Value")]
-        [InlineData("no/any", HttpStatusCode.OK, "No:Any:Value")]
-        [InlineData("no/role", HttpStatusCode.OK, "No:Role:Value")]
-        [InlineData("anonymous/no", HttpStatusCode.OK, "Anonymous:No:Value")]
-        [InlineData("anonymous/anonymous", HttpStatusCode.OK, "Anonymous:Anonymous:Value")]
-        [InlineData("anonymous/any", HttpStatusCode.OK, "Anonymous:Any:Value")]
-        [InlineData("anonymous/role", HttpStatusCode.OK, "Anonymous:Role:Value")]
-        [InlineData("any/no", HttpStatusCode.OK, "Any:No:Value")]
-        [InlineData("any/anonymous", HttpStatusCode.OK, "Any:Anonymous:Value")]
-        [InlineData("any/any", HttpStatusCode.OK, "Any:Any:Value")]
-        [InlineData("any/role", HttpStatusCode.OK, "Any:Role:Value")]
-        [InlineData("role/no", HttpStatusCode.OK, "Role:No:Value")]
-        [InlineData("role/anonymous", HttpStatusCode.OK, "Role:Anonymous:Value")]
-        [InlineData("role/any", HttpStatusCode.OK, "Role:Any:Value")]
-        [InlineData("role/role", HttpStatusCode.OK, "Role:Role:Value")]
-        [Theory]
+        [TestCase("no/no", HttpStatusCode.OK, "No:No:Value")]
+        [TestCase("no/anonymous", HttpStatusCode.OK, "No:Anonymous:Value")]
+        [TestCase("no/any", HttpStatusCode.OK, "No:Any:Value")]
+        [TestCase("no/role", HttpStatusCode.OK, "No:Role:Value")]
+        [TestCase("anonymous/no", HttpStatusCode.OK, "Anonymous:No:Value")]
+        [TestCase("anonymous/anonymous", HttpStatusCode.OK, "Anonymous:Anonymous:Value")]
+        [TestCase("anonymous/any", HttpStatusCode.OK, "Anonymous:Any:Value")]
+        [TestCase("anonymous/role", HttpStatusCode.OK, "Anonymous:Role:Value")]
+        [TestCase("any/no", HttpStatusCode.OK, "Any:No:Value")]
+        [TestCase("any/anonymous", HttpStatusCode.OK, "Any:Anonymous:Value")]
+        [TestCase("any/any", HttpStatusCode.OK, "Any:Any:Value")]
+        [TestCase("any/role", HttpStatusCode.OK, "Any:Role:Value")]
+        [TestCase("role/no", HttpStatusCode.OK, "Role:No:Value")]
+        [TestCase("role/anonymous", HttpStatusCode.OK, "Role:Anonymous:Value")]
+        [TestCase("role/any", HttpStatusCode.OK, "Role:Any:Value")]
+        [TestCase("role/role", HttpStatusCode.OK, "Role:Role:Value")]
         public async Task UserBothRole(string route, HttpStatusCode expectedCode, string body = null)
         {
             using HttpClient client = CreateHttpClient("TestUser", "ControllerRole;ActionRole");
             using HttpResponseMessage response = await client.GetAsync($"https://example.test/test-auth/{route}");
-            Assert.Equal(expectedCode, response.StatusCode);
+            response.StatusCode.Should().Be(expectedCode);
             if (body != null)
             {
-                Assert.Equal(body, await response.Content.ReadAsStringAsync());
+                (await response.Content.ReadAsStringAsync()).Should().Be(body);
             }
         }
 
         private HttpClient CreateHttpClient(string user = null, string role = null)
         {
-            var factory = new TestAppFactory(_output);
+            var factory = new TestAppFactory();
             factory.ConfigureServices(services =>
                 {
                     services.AddControllers(o =>
