@@ -21,7 +21,6 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 2,
   "links": [],
   "panels": [
     {
@@ -63,7 +62,6 @@
         "x": 7,
         "y": 0
       },
-      "hiddenSeries": false,
       "id": 44,
       "legend": {
         "avg": false,
@@ -467,7 +465,6 @@
         "x": 19,
         "y": 0
       },
-      "hiddenSeries": false,
       "id": 48,
       "legend": {
         "alignAsTable": false,
@@ -888,7 +885,6 @@
         "x": 7,
         "y": 8
       },
-      "hiddenSeries": false,
       "id": 42,
       "legend": {
         "avg": false,
@@ -1293,7 +1289,6 @@
         "x": 19,
         "y": 8
       },
-      "hiddenSeries": false,
       "id": 49,
       "legend": {
         "alignAsTable": false,
@@ -1442,7 +1437,6 @@
         "x": 0,
         "y": 16
       },
-      "hiddenSeries": false,
       "id": 12,
       "legend": {
         "avg": false,
@@ -2084,7 +2078,6 @@
         "x": 19,
         "y": 16
       },
-      "hiddenSeries": false,
       "id": 50,
       "legend": {
         "alignAsTable": false,
@@ -2274,7 +2267,6 @@
         "x": 0,
         "y": 24
       },
-      "hiddenSeries": false,
       "id": 3,
       "legend": {
         "avg": false,
@@ -2888,7 +2880,6 @@
         "x": 19,
         "y": 24
       },
-      "hiddenSeries": false,
       "id": 52,
       "legend": {
         "alignAsTable": false,
@@ -2974,8 +2965,7 @@
             "resourceGroup": "select",
             "resourceName": "select",
             "timeGrain": "auto",
-            "timeGrains": [],
-            "top": "10"
+            "timeGrains": []
           },
           "queryType": "Application Insights",
           "refId": "A"
@@ -3459,7 +3449,7 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 22,
+  "schemaVersion": 20,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -3485,7 +3475,5 @@
     ]
   },
   "timezone": "",
-  "title": "Service Availability",
-  "uid": "arcadeAvailability",
-  "version": 44
+  "title": "Service Availability"
 }
