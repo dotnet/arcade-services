@@ -26,7 +26,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
         public static readonly string AzureStorageProxyFeedPattern =
             @"https://([a-z-]+).azurewebsites.net/container/([^/]+)/sig/\w+/se/([0-9]{4}-[0-9]{2}-[0-9]{2})/" + MaestroManagedFeedNamePattern + "/index.json";
 
-        public static readonly string NuGetOrgRegistrationBaseUrl = "https://api.nuget.org/v3/registration3-gz-semver2";
+        public static readonly string NuGetOrgPackageBaseUrl = "https://api.nuget.org/v3-flatcontainer/";
         public static readonly string NuGetOrgLocation = "https://api.nuget.org/v3/index.json";
     }
 }
