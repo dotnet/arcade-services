@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.Extensions.Configuration;
 using Octokit;

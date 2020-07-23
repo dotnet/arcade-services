@@ -282,7 +282,7 @@ WITH traverse AS (
             {timeToInclusionInMinutesColumnName},
             0 as Depth
         from {edgeTable}
-        WHERE {buildIdColumnName} = {{@id}}
+        WHERE {buildIdColumnName} = @id
     UNION ALL
         SELECT
             {edgeTable}.{buildIdColumnName},
@@ -298,7 +298,7 @@ WITH traverse AS (
 )
 SELECT DISTINCT {buildIdColumnName}, {dependencyIdColumnName}, {isProductColumnName}, {timeToInclusionInMinutesColumnName}
 FROM traverse;",
-               new SqlParameter("@id", buildId));
+               new SqlParameter("id", buildId));
 
             List<BuildDependency> things = await edges.ToListAsync();
             var buildIds = new HashSet<int>(things.SelectMany(t => new[] { t.BuildId, t.DependentBuildId }));
