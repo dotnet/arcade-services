@@ -2,7 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Fabric;
 using System.Fabric.Health;
 using System.Threading.Tasks;
@@ -41,7 +40,7 @@ namespace Microsoft.DotNet.Internal.Health
                 Description = message
             };
 
-            HealthReport report;
+            System.Fabric.Health.HealthReport report;
             if (_statefulServiceContext != null)
             {
                 report = new PartitionHealthReport(_statefulServiceContext.PartitionId, healthInfo);

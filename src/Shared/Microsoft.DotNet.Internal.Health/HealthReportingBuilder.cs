@@ -23,7 +23,8 @@ namespace Microsoft.DotNet.Internal.Health
 
         public HealthReportingBuilder AddAzureTable(Action<AzureTableHealthReportingOptions> configure)
         {
-            _services.AddSingleton<IHealthReportProvider, AzureTableHealthReportProvider>();
+            _services.AddSingleton<AzureTableHealthReportProvider>();
+            _services.AddSingleton<IHealthReportProvider>(p => p.GetRequiredService<AzureTableHealthReportProvider>());
             _services.Configure(configure);
             return this;
         }

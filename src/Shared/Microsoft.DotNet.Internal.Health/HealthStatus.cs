@@ -6,8 +6,11 @@ namespace Microsoft.DotNet.Internal.Health
 {
     public enum HealthStatus
     {
+        Invalid = 0,
         Healthy,
         Warning,
         Error,
+
+        Unknown,
     }
 }
