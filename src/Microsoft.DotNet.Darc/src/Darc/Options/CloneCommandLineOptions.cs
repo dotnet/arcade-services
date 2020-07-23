@@ -19,9 +19,11 @@ namespace Microsoft.DotNet.Darc.Options
         public string Version { get; set; }
 
         [Option("repos-folder", HelpText = @"Full path to folder where all the repos will be cloned to, e.g. C:\repos.  Default: current directory.")]
+        [RedactFromLogging]
         public string ReposFolder { get; set; }
 
         [Option("git-dir-folder", HelpText = @"Advanced: Full path to folder where .git folders will be stored, e.g. C:\myrepos\.git\modules.  Default: each repo's folder.")]
+        [RedactFromLogging]
         public string GitDirFolder { get; set; }
 
         [Option("include-toolset", HelpText = "Include toolset dependencies.")]

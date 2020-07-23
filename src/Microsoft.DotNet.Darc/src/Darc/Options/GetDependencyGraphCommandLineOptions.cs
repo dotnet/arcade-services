@@ -19,12 +19,14 @@ namespace Microsoft.DotNet.Darc.Options
         public string RepoUri { get; set; }
 
         [Option('v', "version", HelpText = "Branch, commit or tag to look up if looking up version information remotely.")]
+        [RedactFromLogging]
         public string Version { get; set; }
 
         [Option("asset-name", HelpText = "Get the graph based on a single asset and not the whole Version.Details.xml contents.")]
         public string AssetName { get; set; }
 
         [Option("repos-folder", HelpText = @"Full path to folder where all the repos are locally stored. i.e. C:\repos")]
+        [RedactFromLogging]
         public string ReposFolder { get; set; }
 
         [Option("remotes-map", Separator = ';', HelpText = @"';' separated key value pair defining the remote to local path mapping. i.e 'https://github.com/dotnet/arcade,C:\repos\arcade;'"
@@ -35,9 +37,11 @@ namespace Microsoft.DotNet.Darc.Options
         public bool Flat { get; set; }
 
         [Option("graphviz", HelpText = @"Writes the repository graph in GraphViz (dot) form, into the specified file.")]
+        [RedactFromLogging]
         public string GraphVizOutputFile { get; set; }
 
         [Option("output-file", HelpText = @"Writes the non-GraphViz (dot) output to the specified file into the specified file.")]
+        [RedactFromLogging]
         public string OutputFile { get; set; }
 
         [Option("include-toolset", HelpText = "Include toolset dependencies.")]
