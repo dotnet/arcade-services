@@ -20,7 +20,8 @@ namespace Microsoft.DotNet.Internal.Health
 
         public AzureTableHealthReportProvider(
             IOptions<AzureTableHealthReportingOptions> options,
-            ILogger<AzureTableHealthReportProvider> logger)
+            ILogger<AzureTableHealthReportProvider> logger,
+            IHttpClientFactory clientFactory)
         {
             _logger = logger;
             UriBuilder builder = new UriBuilder(options.Value.WriteSasUri);
@@ -28,7 +29,7 @@ namespace Microsoft.DotNet.Internal.Health
             builder.Query = null;
             _baseUrl = builder.ToString();
 
-            _client = new HttpClient();
+            _client = clientFactory.CreateClient();
             _client.DefaultRequestHeaders.Add("x-ms-version", "2019-12-12");
         }
 

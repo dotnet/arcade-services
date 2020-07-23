@@ -242,6 +242,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                 });
             services.TryAddSingleton<IMetricTracker, ApplicationInsightsMetricTracker>();
             services.TryAddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
+            services.AddHttpClient();
         }
 
         public static HostEnvironment InitializeEnvironment()

@@ -13,6 +13,10 @@ namespace Microsoft.DotNet.Internal.Health
         Task UpdateStatus(string subStatusName, HealthStatus status, string message);
     }
 
+    /// <summary>
+    /// An injectable service health reporter for reporting status of a service
+    /// </summary>
+    /// <typeparam name="TService">Type of the service health is being reported for, the full name will be used as the name in reports</typeparam>
     public interface IHealthReport<[UsedImplicitly] TService> : IHealthReport
     {
     }
