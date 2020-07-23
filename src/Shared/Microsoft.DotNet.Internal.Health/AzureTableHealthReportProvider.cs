@@ -44,7 +44,7 @@ namespace Microsoft.DotNet.Internal.Health
             try
             {
                 using HttpResponseMessage response = await _client.PutAsync(
-                    $"{_baseUrl}(PartitionKey='{Uri.EscapeDataString(serviceName)}',RowKey='{Uri.EscapeDataString(serviceName)}'){_sasQuery}",
+                    $"{_baseUrl}(PartitionKey='{Uri.EscapeDataString(serviceName)}',RowKey='{Uri.EscapeDataString(subStatusName)}'){_sasQuery}",
                     content
                 );
                 response.EnsureSuccessStatusCode();
