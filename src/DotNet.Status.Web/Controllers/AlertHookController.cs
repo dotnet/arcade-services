@@ -330,9 +330,7 @@ namespace DotNet.Status.Web.Controllers
             string automationId = string.Format(BodyLabelTextFormat, id);
             var request = new SearchIssuesRequest(automationId)
             {
-                // We need to manually quote the label here, because of
-                // https://github.com/octokit/octokit.net/issues/2044
-                Labels = searchedLabels.Select(label => '"' + label + '"'),
+                Labels = searchedLabels,
                 Order = SortDirection.Descending,
                 SortField = IssueSearchSort.Created,
                 Type = IssueTypeQualifier.Issue,
