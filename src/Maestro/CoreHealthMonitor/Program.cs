@@ -1,3 +1,4 @@
+using Microsoft.DotNet.Internal.Health;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,7 +23,12 @@ namespace CoreHealthMonitor
         public static void Configure(IServiceCollection services)
         {
             services.Configure<DriveMonitorOptions>("DriveMonitoring", (o, s) => s.Bind(o));
-            services.AddHealthMonitoring();
+            services.AddHealthReporting(
+                b =>
+                {
+                    b.AddServiceFabric();
+                }
+            );
         }
     }
 }
