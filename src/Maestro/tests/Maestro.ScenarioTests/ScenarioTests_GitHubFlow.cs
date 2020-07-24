@@ -1,13 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
+using System;
+using System.Threading.Tasks;
 
 namespace Maestro.ScenarioTests
 {
@@ -16,19 +9,12 @@ namespace Maestro.ScenarioTests
     public class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
     {
         private TestParameters _parameters;
-        private EndToEndFlowLogic testLogic;
-
-        public ScenarioTests_GitHubFlow()
-        {
-        }
 
         [SetUp]
         public async Task InitializeAsync()
         {
             _parameters = await TestParameters.GetAsync();
             SetTestParameters(_parameters);
-
-            testLogic = new EndToEndFlowLogic(_parameters);
         }
 
         [TearDown]
@@ -41,6 +27,8 @@ namespace Maestro.ScenarioTests
         [Test]
         public async Task Darc_GitHubFlow_Batched()
         {
+            EndToEndFlowLogic testLogic = new EndToEndFlowLogic(_parameters);
+
             TestContext.WriteLine("Github Dependency Flow, batched");
             await testLogic.DarcBatchedFlowTestBase($"GitHub_BatchedTestBranch_{Environment.MachineName}", 
                 $"GitHub Batched Channel {Environment.MachineName}", 
@@ -50,6 +38,8 @@ namespace Maestro.ScenarioTests
         [Test]
         public async Task Darc_GitHubFlow_NonBatched_AllChecksSuccessful()
         {
+            EndToEndFlowLogic testLogic = new EndToEndFlowLogic(_parameters);
+
             TestContext.WriteLine("GitHub Dependency Flow, non-batched, all checks successful");
             await testLogic.NonBatchedFlowTestBase($"GitHub_NonBatchedTestBranch_AllChecks_{Environment.MachineName}", 
                 $"GitHub Non-Batched All Checks Channel {Environment.MachineName}", false, true).ConfigureAwait(false);
@@ -58,6 +48,8 @@ namespace Maestro.ScenarioTests
         [Test]
         public async Task Darc_GitHubFlow_NonBatched()
         {
+            EndToEndFlowLogic testLogic = new EndToEndFlowLogic(_parameters);
+
             TestContext.WriteLine("GitHub Dependency Flow, non-batched");
             await testLogic.NonBatchedFlowTestBase($"GitHub_NonBatchedTestBranch_{Environment.MachineName}", 
                 $"GitHub Non-Batched Channel {Environment.MachineName}", 
@@ -67,6 +59,8 @@ namespace Maestro.ScenarioTests
         [Test]
         public async Task Darc_GitHubFlow_NonBatched_WithCoherency()
         {
+            EndToEndFlowLogic testLogic = new EndToEndFlowLogic(_parameters);
+
             TestContext.WriteLine("GitHub Dependency Flow, non-batched");
             await testLogic.NonBatchedFlowTestBase(
                 $"GitHub_NonBatchedTestCoherencyBranch_{Environment.MachineName}", 

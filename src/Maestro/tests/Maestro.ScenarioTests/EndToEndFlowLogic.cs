@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 
 namespace Maestro.ScenarioTests
 {
-    [TestFixture]
     public class EndToEndFlowLogic : MaestroScenarioTestBase
     {
         private readonly string sourceBuildNumber = "654321";
@@ -236,10 +235,23 @@ namespace Maestro.ScenarioTests
             TestContext.WriteLine($"Creating test channel {testChannelName}");
             await using (AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false))
             {
-                await using (AsyncDisposableValue<string> subscription1Id = allChecks ? await CreateSubscriptionAsync(testChannelName, sourceRepoName, targetRepoName, targetBranch,
-                        UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--all-checks-passed", "--ignore-checks", "license/cla" }, trigger: true)
-                    : await CreateSubscriptionAsync(testChannelName, sourceRepoName, targetRepoName, targetBranch,
-                         UpdateFrequency.None.ToString(), "maestro-auth-test"))
+                await using (AsyncDisposableValue<string> subscription1Id = allChecks ? 
+                    await CreateSubscriptionAsync(
+                        testChannelName, 
+                        sourceRepoName, 
+                        targetRepoName, 
+                        targetBranch,
+                        UpdateFrequency.None.ToString(), 
+                        "maestro-auth-test", 
+                        additionalOptions: new List<string> { "--all-checks-passed", "--ignore-checks", "license/cla" }, 
+                        trigger: true)
+                    : await CreateSubscriptionAsync(
+                        testChannelName, 
+                        sourceRepoName, 
+                        targetRepoName, 
+                        targetBranch,
+                         UpdateFrequency.None.ToString(), 
+                         "maestro-auth-test"))
                 {
                     TestContext.WriteLine("Set up build for intake into target repository");
                     Build build = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, sourceBuildNumber, source1Assets);
