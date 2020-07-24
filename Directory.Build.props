@@ -9,17 +9,15 @@
   <PropertyGroup Condition="'$(CopyrightNetFoundation)' != ''">
     <Copyright>$(CopyrightNetFoundation)</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <IsShipping>false</IsShipping>
-    <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
-    <DebugType>Full</DebugType>
   </PropertyGroup>
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    
     <NoWarn>$(NoWarn);NU5125</NoWarn>
-
     <LangVersion>8.0</LangVersion>
+    <IsShipping>false</IsShipping>
+    <WarnOnPackingNonPackableProject>false</WarnOnPackingNonPackableProject>
+    <DebugType>Full</DebugType>
 
     <EnableCentralPackageVersions>true</EnableCentralPackageVersions>
     <CentralPackagesFile>$(MSBuildThisFileDirectory)eng/Packages.props</CentralPackagesFile>
