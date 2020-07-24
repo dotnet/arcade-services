@@ -126,7 +126,6 @@ namespace Maestro.ScenarioTests
                 Type = DependencyType.Product,
                 Pinned = false
             };
-            expectedDependenciesSource1.Add(foo);
 
             DependencyDetail parentBar = new DependencyDetail
             {
