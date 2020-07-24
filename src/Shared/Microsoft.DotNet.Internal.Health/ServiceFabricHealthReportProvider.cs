@@ -70,7 +70,7 @@ namespace Microsoft.DotNet.Internal.Health
             {
                 report = new StatefulServiceReplicaHealthReport(
                     _context.PartitionId,
-                    long.Parse(instance),
+                    _context.ReplicaOrInstanceId,
                     healthInfo
                 );
             }
@@ -78,7 +78,7 @@ namespace Microsoft.DotNet.Internal.Health
             {
                 report = new StatelessServiceInstanceHealthReport(
                     _context.PartitionId,
-                    long.Parse(instance),
+                    _context.ReplicaOrInstanceId,
                     healthInfo
                 );
             }
