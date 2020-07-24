@@ -789,38 +789,43 @@ function Check-Github-PullRequest($expectedPRTitle, $targetRepoName, $targetBran
 
 function Check-Github-PullRequest-Checks($targetRepoName, $targetBranch)
 {
+    Write-Host "Checking Opened PR in $targetBranch $targetRepoName ..."
     $pullRequest = Check-Github-PullRequest-Created $targetRepoName $targetBranch
     if (!$pullRequest) 
     {
         return $false
     }
 
+    Check-Github-PullRequest-Completed $targetRepoName $pullRequest.number
+
     # Get the checks for the created PR
     $checks = Get-Github-Checks $targetRepoName $pullRequest.head.sha
-    if (!$checks) 
+    if (-not $checks) 
     {
         return $false        
     }
-    return Validate-Github-PullRequest-Checks $checks
+    Validate-Github-PullRequest-Checks $checks
 }
 
 function Validate-Github-PullRequest-Checks($checks) {
     # Make sure that at least 1 check has an external ID set to "maestro-policy-{...}" and that every check with this external ID are completed
     $cnt = 0
-    $allChecksCompleted = $true
-    foreach($check in $checks.check_runs.PsObject.Properties)
-    {
-        if ($check.external_id -match "maestro-policy") 
+    foreach($check in $checks.check_runs)
+    {   
+        $externalId = $($check.external_id)
+        $status = $($check.status)
+        if ($externalId -match "maestro-policy") 
         {
             $cnt++
-            if ($check.status -match "completed") 
+            if ($status -ne "completed") 
             {
-                $allChecksCompleted = $false
-                break
+                throw "All the check(s) are not completed."
             }
         }
     }
-    return $cnt -gt 1 -and $allChecksCompleted
+    if ($cnt -lt 1) {
+        throw "Pull request failed to find one or more check(s)."
+    } 
 }
 
 function Validate-Arcade-PullRequest-Contents($pullRequest, $expectedPRTitle, $targetRepoName, $targetBranch, $expectedDependencies) {

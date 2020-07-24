@@ -79,13 +79,9 @@ try {
 
     Write-Host "Waiting on PR to be opened in $targetRepoUri"
 
-    $hasChecks = Check-Github-PullRequest-Checks $targetRepoName $targetBranch 
-
-    if (!$hasChecks) {
-        throw "Pull request failed to find one or more check(s)."
-    } else {
-        Write-Host "Test passed"
-    }
+    Check-Github-PullRequest-Checks $targetRepoName $targetBranch 
+    
+    Write-Host "Test passed"
 } finally {
     Teardown
 }
