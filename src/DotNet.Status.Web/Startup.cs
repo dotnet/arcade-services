@@ -20,6 +20,7 @@ using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.DotNet.Web.Authentication;
 using Microsoft.DotNet.Web.Authentication.GitHub;
 using Microsoft.Extensions.Configuration;
@@ -121,6 +122,7 @@ namespace DotNet.Status.Web
             services.Configure<GitHubClientOptions>(o =>
                 o.ProductHeader = new ProductHeaderValue("DotNetEngineeringStatus",
                     Assembly.GetEntryAssembly().GetName().Version.ToString()));
+            services.Configure<ExponentialRetryOptions>(o => { });
         }
 
         private void AddServices(IServiceCollection services)
@@ -212,6 +214,7 @@ namespace DotNet.Status.Web
             services.AddSingleton<ZenHubClient>();
             services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
+            services.AddSingleton<ExponentialRetry>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

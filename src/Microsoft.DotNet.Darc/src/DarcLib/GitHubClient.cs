@@ -502,7 +502,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Git file with tree item contents.</returns>
         private async Task<GitFile> GetGitItemImpl(string path, TreeItem treeItem, string owner, string repo)
         {
-            Octokit.Blob blob = await ExponentialRetry.RetryAsync(
+            Octokit.Blob blob = await ExponentialRetry.Default.RetryAsync(
                                 async () => await Client.Git.Blob.Get(owner, repo, treeItem.Sha),
                                 ex => _logger.LogError(ex, $"Failed to get blob at sha {treeItem.Sha}"),
                                 ex => ex is ApiException apiex && apiex.StatusCode >= HttpStatusCode.InternalServerError);

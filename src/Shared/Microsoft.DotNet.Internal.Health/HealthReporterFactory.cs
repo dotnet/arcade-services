@@ -25,30 +25,28 @@ namespace Microsoft.DotNet.Internal.Health
         {
             private readonly HealthReporterFactory _factory;
             private readonly string _serviceName;
-            private readonly string _instance;
 
-            public ExternalHealthReport(HealthReporterFactory factory, string serviceName, string instance = null)
+            public ExternalHealthReport(HealthReporterFactory factory, string serviceName)
             {
                 _factory = factory;
                 _serviceName = serviceName;
-                _instance = instance;
             }
 
             public Task UpdateStatusAsync(string subStatus, HealthStatus status, string message)
             {
-                return _factory.UpdateStatusAsync(_serviceName, _instance, subStatus, status, message);
+                return _factory.UpdateStatusAsync(_serviceName, null, subStatus, status, message);
             }
 
-            public Task<HealthReport> GetHealth(string subStatus)
+            public Task<IList<HealthReport>> GetServiceStatusAsync()
             {
-                return _factory.GetStatusAsync(_serviceName, _instance, subStatus);
+                return _factory.GetServiceStatusAsync(_serviceName);
             }
         }
 
-        private async Task<HealthReport> GetStatusAsync(string serviceName, string instance, string subStatus)
+        private async Task<IList<HealthReport>> GetServiceStatusAsync(string serviceName)
         {
-            var results = await Task.WhenAll(_providers.Select(p => p.GetStatusAsync(serviceName, instance, subStatus)));
-            return results.FirstOrDefault(r => r != null);
+            var results = await Task.WhenAll(_providers.Select(p => p.GetAllStatusAsync(serviceName))).ConfigureAwait(false);
+            return results.FirstOrDefault(r => r != null && r.Count > 0);
         }
 
         private Task UpdateStatusAsync(
@@ -85,9 +83,9 @@ namespace Microsoft.DotNet.Internal.Health
                 _factory = factory;
             }
 
-            public async Task UpdateStatusAsync(string subStatus, HealthStatus status, string message)
+            public Task UpdateStatusAsync(string subStatus, HealthStatus status, string message)
             {
-                await _factory.UpdateStatusAsync(
+                return _factory.UpdateStatusAsync(
                     typeof(T).FullName,
                     _factory._instance.GetCurrentInstanceName(),
                     subStatus,
@@ -110,11 +108,6 @@ namespace Microsoft.DotNet.Internal.Health
         public IExternalHealthReporter ForExternal(string serviceName)
         {
             return new ExternalHealthReport(this, serviceName);
-        }
-
-        public IExternalHealthReporter ForExternalInstance(string serviceName, string instance)
-        {
-            return new ExternalHealthReport(this, serviceName, instance);
         }
     }
 }

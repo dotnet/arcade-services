@@ -1664,7 +1664,7 @@ namespace Microsoft.DotNet.Darc.Operations
         /// <param name="filePath">Full path to the file to delete.</param>
         private static async Task DeleteFileWithRetryAsync(string filePath)
         {
-            await ExponentialRetry.RetryAsync(
+            await ExponentialRetry.Default.RetryAsync(
                 () =>
                 {
                     if (File.Exists(filePath))

@@ -87,11 +87,6 @@ namespace Microsoft.DotNet.Internal.Health
             return Task.CompletedTask;
         }
 
-        public Task<HealthReport> GetStatusAsync(string serviceName, string instance, string subStatusName)
-        {
-            return Task.FromResult<HealthReport>(null);
-        }
-
         public Task<IList<HealthReport>> GetAllStatusAsync(string serviceName)
         {
             return Task.FromResult<IList<HealthReport>>(null);

@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Metrics;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
@@ -248,6 +249,8 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             services.Configure<HttpClientFactoryOptions>(
                 o => o.HttpMessageHandlerBuilderActions.Add(EnableCertificateRevocationCheck)
             );
+            services.AddSingleton<ExponentialRetry>();
+            services.Configure<ExponentialRetryOptions>(o => { });
         }
 
         private static void EnableCertificateRevocationCheck(HttpMessageHandlerBuilder builder)
