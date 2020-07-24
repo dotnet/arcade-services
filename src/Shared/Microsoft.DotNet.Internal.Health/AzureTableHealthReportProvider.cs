@@ -3,7 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
-using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -30,7 +31,7 @@ namespace Microsoft.DotNet.Internal.Health
             IHttpClientFactory clientFactory)
         {
             _logger = logger;
-            UriBuilder builder = new UriBuilder(options.Value.WriteSasUri);
+            var builder = new UriBuilder(options.Value.WriteSasUri);
             _sasQuery = builder.Query;
             builder.Query = null;
             _baseUrl = builder.ToString();
@@ -38,9 +39,40 @@ namespace Microsoft.DotNet.Internal.Health
             _client = clientFactory.CreateClient();
             _client.DefaultRequestHeaders.Add("x-ms-version", "2013-08-15");
         }
-
-        public async Task UpdateStatusAsync(string serviceName, string subStatusName, HealthStatus status, string message)
+        
+        private static string GetRowKey(string instance, string subStatus) => EscapeKeyField(instance ?? "") + "|" + EscapeKeyField(subStatus);
+        private static (string instance, string subStatus) ParseRowKey(string rowKey)
         {
+            var parts = rowKey.Split('|');
+            var subStatus = UnescapeKeyField(parts[1]);
+            if (string.IsNullOrEmpty(parts[0]))
+                return (null, subStatus);
+            return (UnescapeKeyField(parts[0]), subStatus);
+        }
+
+        private static string EscapeKeyField(string value) =>
+            value.Replace(":", "\0")
+                .Replace("|", ":pipe:")
+                .Replace("\\", ":back:")
+                .Replace("/", ":slash:")
+                .Replace("#", ":hash:")
+                .Replace("?", ":question:")
+                .Replace("\0", ":colon:");
+
+        private static string UnescapeKeyField(string value) =>
+            value.Replace(":colon:", "\0")
+                .Replace(":pipe:", "|")
+                .Replace(":back:", "\\")
+                .Replace(":slash:", "/")
+                .Replace(":hash:", "#")
+                .Replace(":question:", "?")
+                .Replace("\0", ":");
+
+        public async Task UpdateStatusAsync(string serviceName, string instance, string subStatusName, HealthStatus status, string message)
+        {
+            string partitionKey = EscapeKeyField(serviceName);
+            string rowKey = GetRowKey(instance, subStatusName);
+
             async Task Attempt()
             {
                 HttpContent content = new ByteArrayContent(JsonSerializer.SerializeToUtf8Bytes(
@@ -50,7 +82,7 @@ namespace Microsoft.DotNet.Internal.Health
                 content.Headers.ContentType = MediaTypeHeaderValue.Parse("application/json");
 
                 string requestUri =
-                    $"{_baseUrl}(PartitionKey='{Uri.EscapeDataString(serviceName)}',RowKey='{Uri.EscapeDataString(subStatusName)}'){_sasQuery}";
+                    $"{_baseUrl}(PartitionKey='{Uri.EscapeDataString(partitionKey)}',RowKey='{Uri.EscapeDataString(rowKey)}'){_sasQuery}";
                 using HttpResponseMessage response = await _client.PutAsync(requestUri, content);
                 response.EnsureSuccessStatusCode();
             }
@@ -72,13 +104,16 @@ namespace Microsoft.DotNet.Internal.Health
             }
         }
 
-        public async Task<HealthReport> GetStatusAsync(string serviceName, string subStatusName)
+        public async Task<HealthReport> GetStatusAsync(string serviceName, string instance, string subStatusName)
         {
+            string partitionKey = EscapeKeyField(serviceName);
+            string rowKey = GetRowKey(instance, subStatusName);
+
             async Task<HealthReport> Attempt()
             {
                 using var request = new HttpRequestMessage(
                     HttpMethod.Get,
-                    $"{_baseUrl}(PartitionKey='{Uri.EscapeDataString(serviceName)}',RowKey='{Uri.EscapeDataString(subStatusName)}'){_sasQuery}"
+                    $"{_baseUrl}(PartitionKey='{Uri.EscapeDataString(partitionKey)}',RowKey='{Uri.EscapeDataString(rowKey)}'){_sasQuery}"
                 );
 
                 request.Headers.Accept.ParseAdd("application/json;odata=nometadata");
@@ -86,7 +121,9 @@ namespace Microsoft.DotNet.Internal.Health
                 using HttpResponseMessage response = await _client.SendAsync(request);
 
                 if (response.StatusCode == HttpStatusCode.NotFound)
-                    return new HealthReport(serviceName,
+                    return new HealthReport(
+                        serviceName,
+                        instance,
                         subStatusName,
                         HealthStatus.Unknown,
                         "",
@@ -97,6 +134,7 @@ namespace Microsoft.DotNet.Internal.Health
                 var entity = JsonSerializer.Deserialize<Entity>(await response.Content.ReadAsByteArrayAsync());
                 return new HealthReport(
                     serviceName,
+                    instance,
                     subStatusName,
                     entity.Status,
                     entity.Message,
@@ -110,12 +148,62 @@ namespace Microsoft.DotNet.Internal.Health
                 _ => true);
         }
 
+        public async Task<IList<HealthReport>> GetAllStatusAsync(string serviceName)
+        {
+            string partitionKey = EscapeKeyField(serviceName);
+            string filter = $"PartitionKey eq '{partitionKey}'";
+
+            async Task<IList<HealthReport>> Attempt()
+            {
+                using var request = new HttpRequestMessage(
+                    HttpMethod.Get,
+                    $"{_baseUrl}(){_sasQuery}&$filter={Uri.EscapeDataString(filter)}"
+                );
+
+                request.Headers.Accept.ParseAdd("application/json;odata=nometadata");
+
+                using HttpResponseMessage response = await _client.SendAsync(request);
+
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                    return Array.Empty<HealthReport>();
+
+                response.EnsureSuccessStatusCode();
+                var entities = JsonSerializer.Deserialize<ValueList<Entity>>(await response.Content.ReadAsByteArrayAsync());
+                return entities.Value.Select(
+                    e =>
+                    {
+                        var (instance, subStatus) = ParseRowKey(e.RowKey);
+                        return new HealthReport(
+                            serviceName,
+                            instance,
+                            subStatus,
+                            e.Status,
+                            e.Message,
+                            e.Timestamp.Value
+                        );
+                    }
+                ).ToList();
+            }
+
+            return await ExponentialRetry.RetryAsync(
+                Attempt,
+                e => _logger.LogWarning(e, "Failed to fetch status, trying again"),
+                _ => true);
+        }
+
+        private class ValueList<T>
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("value")]
+            public T[] Value { get; set; }
+        }
+
         private class Entity
         {
             public DateTimeOffset? Timestamp { get; set; }
             [JsonConverter(typeof(JsonStringEnumConverter))]
             public HealthStatus Status { get; set; }
             public string Message { get; set; }
+            public string RowKey { get; set; }
         }
 
         public void Dispose()
@@ -126,17 +214,19 @@ namespace Microsoft.DotNet.Internal.Health
 
     public class HealthReport
     {
-        public HealthReport(string serviceName, string subStatusName, HealthStatus health, string message, DateTimeOffset asOf)
+        public HealthReport(string serviceName, string instance, string subStatusName, HealthStatus health, string message, DateTimeOffset asOf)
         {
-            ServiceName = serviceName;
-            SubStatusName = subStatusName;
+            Service= serviceName;
+            Instance = instance;
+            SubStatus = subStatusName;
             Health = health;
             Message = message;
             AsOf = asOf;
         }
 
-        public string ServiceName { get; }
-        public string SubStatusName { get; }
+        public string Service { get; }
+        public string Instance { get; }
+        public string SubStatus{ get; }
         public HealthStatus Health { get; }
         public string Message { get; }
         public DateTimeOffset AsOf { get; }

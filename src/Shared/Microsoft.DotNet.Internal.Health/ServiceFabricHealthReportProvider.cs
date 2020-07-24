@@ -2,35 +2,53 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
+using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Health;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
 
 namespace Microsoft.DotNet.Internal.Health
 {
+    public class ServiceFabricHealthReportOptions
+    {
+        public string ServiceUri { get; set; }
+    }
+
     public class ServiceFabricHealthReportProvider : IHealthReportProvider
     {
-        private readonly StatelessServiceContext _statelessServiceContext;
+        private readonly IOptions<ServiceFabricHealthReportOptions> _options;
+        private readonly ServiceContext _context;
         private readonly FabricClient _fabricClient;
+        private readonly bool _isStateful;
 
-        private readonly StatefulServiceContext _statefulServiceContext;
-
-        public ServiceFabricHealthReportProvider(StatefulServiceContext statefulServiceContext) : this()
+        public ServiceFabricHealthReportProvider(StatefulServiceContext statefulServiceContext, IOptions<ServiceFabricHealthReportOptions> options) : this(statefulServiceContext, options, true)
         {
-            _statefulServiceContext = statefulServiceContext;
         }
 
-        private ServiceFabricHealthReportProvider(StatelessServiceContext statelessServiceContext) : this()
+        public ServiceFabricHealthReportProvider(StatelessServiceContext statelessServiceContext, IOptions<ServiceFabricHealthReportOptions> options) : this(statelessServiceContext, options, false)
         {
-            _statelessServiceContext = statelessServiceContext;
         }
 
-        private ServiceFabricHealthReportProvider()
+        private ServiceFabricHealthReportProvider(ServiceContext context, IOptions<ServiceFabricHealthReportOptions> options, bool isStateful)
         {
+            _context = context;
+            _options = options;
+            _isStateful = isStateful;
             _fabricClient = new FabricClient();
         }
 
-        public Task UpdateStatusAsync(string serviceName, string subStatusName, HealthStatus status, string message)
+        private Uri GetServiceUri()
+        {
+            string optionsUri = _options.Value.ServiceUri;
+            if (!string.IsNullOrEmpty(optionsUri))
+                return new Uri(optionsUri);
+
+            return _context.ServiceName;
+        }
+
+        public Task UpdateStatusAsync(string serviceName, string instance, string subStatusName, HealthStatus status, string message)
         {
             var healthInfo = new HealthInformation(
                 GetType().FullName,
@@ -41,17 +59,42 @@ namespace Microsoft.DotNet.Internal.Health
             };
 
             System.Fabric.Health.HealthReport report;
-            if (_statefulServiceContext != null)
+            if (instance == null)
             {
-                report = new PartitionHealthReport(_statefulServiceContext.PartitionId, healthInfo);
+                report = new ServiceHealthReport(
+                    GetServiceUri(),
+                    healthInfo
+                );
+            }
+            else if (_isStateful)
+            {
+                report = new StatefulServiceReplicaHealthReport(
+                    _context.PartitionId,
+                    long.Parse(instance),
+                    healthInfo
+                );
             }
             else
             {
-                report = new StatelessServiceInstanceHealthReport(_statelessServiceContext.PartitionId, _statelessServiceContext.InstanceId, healthInfo);
+                report = new StatelessServiceInstanceHealthReport(
+                    _context.PartitionId,
+                    long.Parse(instance),
+                    healthInfo
+                );
             }
 
             _fabricClient.HealthManager.ReportHealth(report, new HealthReportSendOptions {Immediate = true});
             return Task.CompletedTask;
+        }
+
+        public Task<HealthReport> GetStatusAsync(string serviceName, string instance, string subStatusName)
+        {
+            return Task.FromResult<HealthReport>(null);
+        }
+
+        public Task<IList<HealthReport>> GetAllStatusAsync(string serviceName)
+        {
+            return Task.FromResult<IList<HealthReport>>(null);
         }
 
         private static HealthState MapStatus(HealthStatus status)

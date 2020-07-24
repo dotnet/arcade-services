@@ -23,15 +23,36 @@ namespace Microsoft.DotNet.Internal.Health
 
         public HealthReportingBuilder AddAzureTable(Action<AzureTableHealthReportingOptions> configure)
         {
-            _services.AddSingleton<AzureTableHealthReportProvider>();
-            _services.AddSingleton<IHealthReportProvider>(p => p.GetRequiredService<AzureTableHealthReportProvider>());
-            _services.Configure(configure);
+            AddProvider<AzureTableHealthReportProvider, AzureTableHealthReportingOptions>(configure);
             return this;
         }
 
         public HealthReportingBuilder AddServiceFabric()
         {
-            _services.AddSingleton<IHealthReportProvider, ServiceFabricHealthReportProvider>();
+            AddProvider<ServiceFabricHealthReportProvider>();
+            return this;
+        }
+
+        public HealthReportingBuilder AddProvider<T>() where T : class, IHealthReportProvider
+        {
+            _services.AddSingleton<T>();
+            _services.AddSingleton<IHealthReportProvider>(p => p.GetRequiredService<T>());
+            return this;
+        }
+
+        public HealthReportingBuilder AddProvider<T>(T provider) where T : class, IHealthReportProvider
+        {
+            _services.AddSingleton(provider);
+            _services.AddSingleton<IHealthReportProvider>(provider);
+            return this;
+        }
+        public HealthReportingBuilder AddProvider<TProvider, TOptions>(Action<TOptions> configure)
+            where TProvider : class, IHealthReportProvider
+            where TOptions : class
+        {
+            _services.AddSingleton<TProvider>();
+            _services.AddSingleton<IHealthReportProvider>(p => p.GetRequiredService<TProvider>());
+            _services.Configure(configure);
             return this;
         }
     }
