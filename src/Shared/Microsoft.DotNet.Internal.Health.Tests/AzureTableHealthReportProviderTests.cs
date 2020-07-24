@@ -196,12 +196,12 @@ namespace Microsoft.DotNet.Internal.Health.Tests
                 Match match = ex.Match(tableRequestUri.AbsolutePath);
                 string partitionKey = Uri.UnescapeDataString(match.Groups[1].Value);
                 string rowKey = Uri.UnescapeDataString(match.Groups[2].Value);
-                partitionKey.Should().Be(typeof(AzureTableHealthReportProvider).FullName);
+                partitionKey.Should().Be(GetType().FullName);
                 rowKey.Should().Be("|TEST:slash:SUB-STATUS");
             }
             
-            report.Service.Should().Be(typeof(AzureTableHealthReportProvider).FullName);
-            report.SubStatus.Should().Be("TEST-SUB-STATUS");
+            report.Service.Should().Be(GetType().FullName);
+            report.SubStatus.Should().Be("TEST/SUB-STATUS");
             report.Health.Should().Be(HealthStatus.Healthy);
             report.Message.Should().Be("TEST STATUS MESSAGES");
             report.AsOf.Should().Be(new DateTimeOffset(2001, 2, 3, 16, 5, 6, 7, TimeSpan.Zero));
@@ -280,7 +280,7 @@ namespace Microsoft.DotNet.Internal.Health.Tests
 
             HealthReport report = await provider.GetStatusAsync(GetType().FullName, null, "TEST-SUB-STATUS");
             
-            report.Service.Should().Be(typeof(AzureTableHealthReportProvider).FullName);
+            report.Service.Should().Be(GetType().FullName);
             report.SubStatus.Should().Be("TEST-SUB-STATUS");
             report.Health.Should().Be(HealthStatus.Unknown);
         }

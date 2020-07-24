@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Health;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,6 +20,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
@@ -243,13 +245,24 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             services.TryAddSingleton<IMetricTracker, ApplicationInsightsMetricTracker>();
             services.TryAddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
             services.AddHttpClient();
+            services.Configure<HttpClientFactoryOptions>(
+                o => o.HttpMessageHandlerBuilderActions.Add(EnableCertificateRevocationCheck)
+            );
+        }
+
+        private static void EnableCertificateRevocationCheck(HttpMessageHandlerBuilder builder)
+        {
+            if (builder.PrimaryHandler is HttpClientHandler httpHandler)
+            {
+                httpHandler.CheckCertificateRevocationList = true;
+            }
         }
 
         public static HostEnvironment InitializeEnvironment()
         {
             string environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
-                              Environment.GetEnvironmentVariable("ENVIRONMENT") ??
-                              throw new InvalidOperationException("Could Not find environment.");
+                Environment.GetEnvironmentVariable("ENVIRONMENT") ??
+                throw new InvalidOperationException("Could Not find environment.");
             string contentRoot = AppContext.BaseDirectory;
             var contentRootFileProvider = new PhysicalFileProvider(contentRoot);
             return new HostEnvironment(environment, GetApplicationName(), contentRoot, contentRootFileProvider);
