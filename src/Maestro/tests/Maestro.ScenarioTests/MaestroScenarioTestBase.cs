@@ -177,7 +177,7 @@ namespace Maestro.ScenarioTests
         {
             string targetRepoUri = GetAzDoRepoUrl(targetRepoName);
             TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
-            Microsoft.DotNet.DarcLib.PullRequest pullRequest = await WaitForAzDoPullRequestAsync(targetRepoUri, targetBranch);
+            Microsoft.DotNet.DarcLib.PullRequest pullRequest = await WaitForAzDoPullRequestAsync(GetAzDoRepoAuthUrl(targetRepoName), targetBranch);
 
             StringAssert.AreEqualIgnoringCase(expectedPRTitle, pullRequest.Title);
 
@@ -598,6 +598,34 @@ namespace Maestro.ScenarioTests
             return shareable.TryTake()!;
         }
 
+        public string GetAzDoRepoAuthUrl(string repoName)
+        {
+            return $"https://{_parameters.GitHubUser}:{_parameters.AzDoToken}@dev.azure.com/{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/_git/{repoName}";
+        }
+
+        public async Task<TemporaryDirectory> CloneAzDoRepositoryAsync(string repoName, string targetBranch)
+        {
+            using var shareable = Shareable.Create(TemporaryDirectory.Get());
+            string directory = shareable.Peek()!.Directory;
+
+            string authUrl = GetAzDoRepoAuthUrl(repoName);
+            await RunGitAsync("clone", "--quiet", authUrl, directory).ConfigureAwait(false);
+
+            using (ChangeDirectory(directory))
+            {
+                // The GitHubUser and AzDoUser have the same user name so this uses the existing parameter
+                await RunGitAsync("config", "user.email", $"{_parameters.GitHubUser}@test.com").ConfigureAwait(false);
+                await RunGitAsync("config", "user.name", _parameters.GitHubUser).ConfigureAwait(false);
+            }
+
+                //  string fetchUrl = GetRepoFetchUrl(org, repository);
+                //string repoUrl = GetAzDoRepoUrl(repoName);
+                //_parameters.AzDoClient.Clone(repoUrl, targetBranch, directory);
+
+
+                return shareable.TryTake()!;
+        }
+
         public async Task CheckoutRemoteRefAsync(string commit)
         {
             await RunGitAsync("fetch", "origin", commit);
@@ -651,7 +679,7 @@ namespace Maestro.ScenarioTests
             string assetLocation1, LocationType assetLocationType1,
             string assetLocation2 = null, LocationType assetLocationType2 = LocationType.None)
         {
-           var locationsListBuilder = ImmutableList.CreateBuilder<AssetLocationData>();
+            var locationsListBuilder = ImmutableList.CreateBuilder<AssetLocationData>();
 
             AssetLocationData location1 = new AssetLocationData(assetLocationType1)
             { Location = assetLocation1 };
