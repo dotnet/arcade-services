@@ -26,8 +26,8 @@ namespace Maestro.ScenarioTests
         public async Task Subscriptions_EndToEnd()
         {
             TestContext.WriteLine("Subscription management tests...");
-            string repo1Name = "maestro-test1";
-            string repo2Name = "maestro-test2";
+            string repo1Name = TestRepository.TestRepo1Name;
+            string repo2Name = TestRepository.TestRepo2Name;
             string channel1Name = $"SubscriptionEndToEnd_TestChannel1_{Environment.MachineName}";
             string channel2Name = $"SubscriptionEndToEnd_TestChannel2_{Environment.MachineName}";
 

@@ -1,17 +1,15 @@
+using Maestro.ScenarioTests.ObjectHelpers;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
+using NUnit.Framework;
+using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Channels;
 using System.Threading.Tasks;
-using Maestro.ScenarioTests.ObjectHelpers;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using NUnit.Framework;
-using Octokit;
 
 namespace Maestro.ScenarioTests
 {
