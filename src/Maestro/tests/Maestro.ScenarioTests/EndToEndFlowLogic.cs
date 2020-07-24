@@ -111,15 +111,36 @@ namespace Maestro.ScenarioTests
             {
                 Name = "Baz",
                 Version = "1.3.0",
-                RepoUri = GetRepoUrl(TestRepository.TestRepo3Name),
+                RepoUri = GetRepoUrl(TestRepository.TestRepo1Name),
                 Commit = TestRepository.CoherencyTestRepo2Commit,
                 Type = DependencyType.Product,
                 Pinned = false,
                 CoherentParentDependencyName = "Foo"
             };
 
-            expectedCoherencyDependencies.Add(foo);
-            expectedCoherencyDependencies.Add(bar);
+            DependencyDetail parentFoo = new DependencyDetail
+            {
+                Name = "Foo",
+                Version = "1.1.0",
+                RepoUri = GetRepoUrl(TestRepository.TestRepo2Name),
+                Commit = TestRepository.CoherencyTestRepo1Commit,
+                Type = DependencyType.Product,
+                Pinned = false
+            };
+            expectedDependenciesSource1.Add(foo);
+
+            DependencyDetail parentBar = new DependencyDetail
+            {
+                Name = "Bar",
+                Version = "2.1.0",
+                RepoUri = GetRepoUrl(TestRepository.TestRepo2Name),
+                Commit = TestRepository.CoherencyTestRepo1Commit,
+                Type = DependencyType.Product,
+                Pinned = false
+            };
+
+            expectedCoherencyDependencies.Add(parentFoo);
+            expectedCoherencyDependencies.Add(parentBar);
             expectedCoherencyDependencies.Add(baz);
         }
 
@@ -197,11 +218,12 @@ namespace Maestro.ScenarioTests
         {
             string targetRepoName = TestRepository.TestRepo2Name;
             string sourceRepoName = TestRepository.TestRepo1Name;
-            string childRepoName = TestRepository.TestRepo2Name;
+            string childRepoName = TestRepository.TestRepo1Name;
             string sourceBranch = TestRepository.SourceBranch;
 
             if (isCoherencyTest)
             {
+                sourceRepoName = TestRepository.TestRepo2Name;
                 targetRepoName = TestRepository.TestRepo3Name;
                 sourceBranch = TestRepository.CoherencySourceBranch;
             }
@@ -209,6 +231,7 @@ namespace Maestro.ScenarioTests
             string testChannelName = channelName;
             string sourceRepoUri = isAzDoTest ? GetAzDoRepoUrl(sourceRepoName) : GetRepoUrl(sourceRepoName);
             string targetRepoUri = isAzDoTest ? GetAzDoRepoUrl(targetRepoName) : GetRepoUrl(targetRepoName);
+            string childSourceRepoUri = isAzDoTest ? GetAzDoRepoUrl(childRepoName) : GetRepoUrl(childRepoName);
 
             TestContext.WriteLine($"Creating test channel {testChannelName}");
             await using (AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false))
@@ -224,7 +247,7 @@ namespace Maestro.ScenarioTests
 
                     if (isCoherencyTest)
                     {
-                        Build build2 = await CreateBuildAsync(GetRepoUrl(childRepoName), TestRepository.SourceBranch, TestRepository.CoherencyTestRepo2Commit,
+                        Build build2 = await CreateBuildAsync(childSourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo2Commit,
                             source2BuildNumber, childSourceBuildAssets);
                         await AddBuildToChannelAsync(build2.Id, testChannelName);
                     }
@@ -240,7 +263,7 @@ namespace Maestro.ScenarioTests
 
                             if (isCoherencyTest)
                             {
-                                await AddDependenciesToLocalRepo(reposFolder.Directory, childSourceAssets.ToList(), targetRepoUri, "Foo");
+                                await AddDependenciesToLocalRepo(reposFolder.Directory, childSourceAssets.ToList(), childSourceRepoUri, "Foo");
                             }
 
                             TestContext.WriteLine("Pushing branch to remote");

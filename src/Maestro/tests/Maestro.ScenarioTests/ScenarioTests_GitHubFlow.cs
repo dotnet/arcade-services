@@ -65,7 +65,6 @@ namespace Maestro.ScenarioTests
         }
 
         [Test]
-        [Ignore("Currently returns an error, investigation in progress")]
         public async Task Darc_GitHubFlow_NonBatched_WithCoherency()
         {
             TestContext.WriteLine("GitHub Dependency Flow, non-batched");
