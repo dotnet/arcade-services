@@ -19,6 +19,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Services.Utility;
+using Maestro.Contracts;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -415,6 +416,101 @@ namespace Microsoft.DotNet.DarcLib
             {
                 await Client.Issue.Comment.Create(owner, repo, id, message + CommentMarker);
             }
+        }
+
+        public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations)
+        {
+            (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
+
+            // Get the latest commit for the current PR
+            IList<Commit> commits = await GetPullRequestCommitsAsync(pullRequestUrl);
+            Commit latestCommit = commits[commits.Count - 1];
+
+            // Get all the checks runs for the current PR
+            CheckRunsResponse existingChecks = await Client.Check.Run.GetAllForReference(owner,repo, latestCommit.Sha);
+            // Convert the IReadOnlyList of CheckRun to a List of CheckRun
+            List<CheckRun> existingChecksList = new List<CheckRun>(existingChecks.CheckRuns);
+
+            foreach (var eval in evaluations)
+            {
+                CheckRun existingCheck = existingChecks.CheckRuns.SingleOrDefault(c => c.ExternalId == $"maestro-policy-{eval.MergePolicyName}-{latestCommit.Sha}");
+                NewCheckRun newCheck = CreateNewCheck(eval, latestCommit.Sha);
+                // If the check doesn't exist yet, create it
+                if (existingCheck == null)
+                {
+                    await Client.Check.Run.Create(owner,repo, newCheck);
+                }
+
+                // If the check exist, checks that the status are different to update it
+                else if (existingCheck != null && newCheck.Status != existingCheck.Status)
+                {
+                    CheckRunUpdate updatedCheck = new CheckRunUpdate();
+                    updatedCheck.Status = newCheck.Status;
+                    updatedCheck.Conclusion = newCheck.Conclusion;
+                    updatedCheck.Name = newCheck.Name;
+                    updatedCheck.CompletedAt = newCheck.CompletedAt;
+                    existingChecksList.Remove(existingCheck);
+                    await Client.Check.Run.Update(owner,repo, existingCheck.Id, updatedCheck);
+                }
+            }
+
+            // Remove the check(s) in existingChecks that aren't in evaluations 
+            foreach (var remainingCheck in existingChecksList)
+            {
+                MergePolicyEvaluationResult.SingleResult remainingCheckCommon = evaluations.SingleOrDefault(eval => remainingCheck.ExternalId == $"maestro-policy-{eval.MergePolicyName}-{latestCommit.Sha}");
+                // Avoid deleting check(s) that aren't from maestro
+                if (remainingCheckCommon != null)
+                {
+                    CheckRunUpdate updatedCheck = new CheckRunUpdate();
+                    updatedCheck.Status = "completed";
+                    updatedCheck.Conclusion = "skipped";
+                    updatedCheck.Name = remainingCheck.Name;
+                    updatedCheck.CompletedAt = remainingCheck.CompletedAt;
+                    await Client.Check.Run.Update(owner, repo, remainingCheck.Id, updatedCheck);
+                }
+            }
+        }
+
+        private NewCheckRun CreateNewCheck(MergePolicyEvaluationResult.SingleResult result, string sha)
+        {
+            if (result.MergePolicyName == null)
+            {
+                var newCheck = new NewCheckRun($"- ❌ **{result.Message}**", sha);
+                newCheck.ExternalId = $"maestro-policy-{result.MergePolicyName}-{sha}";
+                newCheck.Status = CheckStatus.Completed;
+                newCheck.Conclusion = "failure";
+                newCheck.CompletedAt = DateTime.Now;
+                return newCheck;
+            }
+
+            if (result.Success == null)
+            {
+                var newCheck = new NewCheckRun($"- ❓ **{result.Message}**", sha);
+                newCheck.ExternalId = $"maestro-policy-{result.MergePolicyName}-{sha}";
+                newCheck.Status = CheckStatus.InProgress;
+                return newCheck;
+
+            }
+
+            if (result.Success == true)
+            {
+                var newCheck = new NewCheckRun($"- ✔️ **{result.MergePolicyDisplayName}** Succeeded" + (result.Message == null
+                           ? ""
+                           : $" - {result.Message}"), sha);
+                newCheck.ExternalId = $"maestro-policy-{result.MergePolicyName}-{sha}";
+                newCheck.Status = CheckStatus.Completed;
+                newCheck.Conclusion = "success";
+                newCheck.CompletedAt = DateTime.Now;
+                return newCheck;
+
+            }
+            var newCheckRun = new NewCheckRun($"- ❌ **{result.MergePolicyDisplayName}** {result.Message}", sha);
+            newCheckRun.ExternalId = $"maestro-policy-{result.MergePolicyName}-{sha}";
+            newCheckRun.Status = CheckStatus.Completed;
+            newCheckRun.Conclusion = "success";
+            newCheckRun.CompletedAt = DateTime.Now;
+            return newCheckRun;
+
         }
 
         /// <summary>

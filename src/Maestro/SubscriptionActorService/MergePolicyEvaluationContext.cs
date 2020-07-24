@@ -30,17 +30,17 @@ namespace SubscriptionActorService
 
         public void Pending(string message)
         {
-            PolicyResults.Add(new MergePolicyEvaluationResult.SingleResult(null, message, CurrentPolicy));
+            PolicyResults.Add(new MergePolicyEvaluationResult.SingleResult(null, message, CurrentPolicy.Name, CurrentPolicy.DisplayName));
         }
 
         public void Succeed(string message)
         {
-            PolicyResults.Add(new MergePolicyEvaluationResult.SingleResult(true, message, CurrentPolicy));
+            PolicyResults.Add(new MergePolicyEvaluationResult.SingleResult(true, message, CurrentPolicy.Name, CurrentPolicy.DisplayName));
         }
 
         public void Fail(string message)
         {
-            PolicyResults.Add(new MergePolicyEvaluationResult.SingleResult(false, message, CurrentPolicy));
+            PolicyResults.Add(new MergePolicyEvaluationResult.SingleResult(false, message, CurrentPolicy.Name, CurrentPolicy.DisplayName));
         }
     }
 }

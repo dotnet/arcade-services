@@ -20,8 +20,12 @@ using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.ServiceFabric.Data;
+using Octokit;
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
+using Commit = Microsoft.DotNet.DarcLib.Commit;
+using PullRequest = Microsoft.DotNet.DarcLib.PullRequest;
+using Subscription = Maestro.Data.Models.Subscription;
 
 namespace SubscriptionActorService
 {
@@ -394,12 +398,14 @@ namespace SubscriptionActorService
             IRemote darc = await DarcRemoteFactory.GetRemoteAsync(targetRepository, Logger);
 
             InProgressPullRequest pr = maybePr.Value;
+            
             PrStatus status = await darc.GetPullRequestStatusAsync(prUrl);
             switch (status)
             {
                 // If the PR is currently open, then evaluate the merge policies, which will potentially
                 // merge the PR if they are successul.
                 case PrStatus.Open:
+                    
                     ActionResult<MergePolicyCheckResult> checkPolicyResult = await CheckMergePolicyAsync(pr, darc);
                     pr.MergePolicyResult = checkPolicyResult.Result;
 
@@ -472,20 +478,15 @@ namespace SubscriptionActorService
                 pr,
                 darc,
                 policyDefinitions);
+            
+            var sortedResults = result.Results.OrderBy(r => r.MergePolicyName).ToList();
+            await UpdateMergeStatusAsync(darc, pr.Url, sortedResults);
 
             if (result.Failed || result.Pending)
             {
-                await UpdateStatusCommentAsync(
-                    darc,
-                    pr.Url,
-                    $@"## Auto-Merge Status
-This pull request has not been merged because Maestro++ is waiting on the following merge policies.
-
-{string.Join("\n", result.Results.OrderBy(r => r.Policy == null ? " " : r.Policy.Name).Select(DisplayPolicy))}");
-
                 return ActionResult.Create(
                     result.Pending ? MergePolicyCheckResult.PendingPolicies : MergePolicyCheckResult.FailedPolicies,
-                    $"NOT Merged: PR '{pr.Url}' failed policies {string.Join(", ", result.Results.Where(r => r.Success == null || r.Success == false).Select(r => r.Policy?.Name + r.Message))}");
+                    $"NOT Merged: PR '{pr.Url}' failed policies {string.Join(", ", result.Results.Where(r => r.Success == null || r.Success == false).Select(r => r.MergePolicyName + r.Message))}");
             }
 
             if (result.Succeeded)
@@ -501,14 +502,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
                     // Failure to merge is not exceptional, report on it.
                 }
 
-                await UpdateStatusCommentAsync(
-                    darc,
-                    pr.Url,
-                    $@"## Auto-Merge Status
-This pull request {(merged ? "has been merged" : "will be merged")} because the following merge policies have succeeded.
-
-{string.Join("\n", result.Results.OrderBy(r => r.Policy == null ? " " : r.Policy.Name).Select(DisplayPolicy))}");
-
+                
                 if (merged)
                 {
                     return ActionResult.Create(
@@ -522,31 +516,17 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             return ActionResult.Create(MergePolicyCheckResult.NoPolicies, "NOT Merged: There are no merge policies");
         }
 
-        private string DisplayPolicy(MergePolicyEvaluationResult.SingleResult result)
-        {
-            if (result.Policy == null)
-            {
-                return $"- ❌ **{result.Message}**";
-            }
+        
 
-            if (result.Success == null)
-            {
-                return $"- ❓ **{result.Message}**";
-            }
-
-            if (result.Success == true)
-            {
-                return $"- ✔️ **{result.Policy.DisplayName}** Succeeded" + (result.Message == null
-                           ? ""
-                           : $" - {result.Message}");
-            }
-
-            return $"- ❌ **{result.Policy.DisplayName}** {result.Message}";
-        }
 
         private Task UpdateStatusCommentAsync(IRemote darc, string prUrl, string message)
         {
             return darc.CreateOrUpdatePullRequestStatusCommentAsync(prUrl, message);
+        }
+
+        private Task UpdateMergeStatusAsync(IRemote darc, string prUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations)
+        {
+            return darc.CreateOrUpdatePullRequestStatusMergeStatusInfoAsync(prUrl, evaluations);
         }
 
         private async Task UpdateSubscriptionsForMergedPRAsync(

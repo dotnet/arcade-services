@@ -3,17 +3,22 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
+using Maestro.Contracts;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
+using Octokit;
+using Asset = Microsoft.DotNet.Maestro.Client.Models.Asset;
+using Subscription = Microsoft.DotNet.Maestro.Client.Models.Subscription;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -322,6 +327,12 @@ namespace Microsoft.DotNet.DarcLib
         {
             CheckForValidGitClient();
             return _gitClient.CreateOrUpdatePullRequestCommentAsync(pullRequestUrl, message);
+        }
+
+        public Task CreateOrUpdatePullRequestStatusMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations)
+        {
+            CheckForValidGitClient();
+            return _gitClient.CreateOrUpdatePullRequestMergeStatusInfoAsync(pullRequestUrl, evaluations);
         }
 
         public async Task<PrStatus> GetPullRequestStatusAsync(string pullRequestUrl)

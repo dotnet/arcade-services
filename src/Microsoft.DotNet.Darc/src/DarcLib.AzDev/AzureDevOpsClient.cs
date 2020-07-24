@@ -11,6 +11,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Maestro.Contracts;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
 using Microsoft.VisualStudio.Services.Common;
@@ -18,6 +19,7 @@ using Microsoft.VisualStudio.Services.WebApi;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using Octokit;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -532,6 +534,38 @@ namespace Microsoft.DotNet.DarcLib
                 }
             };
             await client.CreateThreadAsync(newCommentThread, repoName, id);
+        }
+
+        public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations)
+        {
+            await CreateOrUpdatePullRequestCommentAsync(pullRequestUrl,
+                    $@"## Auto-Merge Status
+                    This pull request has not been merged because Maestro++ is waiting on the following merge policies.
+                    {string.Join("\n", evaluations.OrderBy(r => r.MergePolicyName == null ? " " : r.MergePolicyName).Select(DisplayPolicy))}
+           ");
+
+        }
+
+        private string DisplayPolicy(MergePolicyEvaluationResult.SingleResult result)
+        {
+            if (result.MergePolicyName == null)
+            {
+                return $"- ❌ **{result.Message}**";
+            }
+
+            if (result.Success == null)
+            {
+                return $"- ❓ **{result.Message}**";
+            }
+
+            if (result.Success == true)
+            {
+                return $"- ✔️ **{result.MergePolicyDisplayName}** Succeeded" + (result.Message == null
+                           ? ""
+                           : $" - {result.Message}");
+            }
+
+            return $"- ❌ **{result.MergePolicyDisplayName}** {result.Message}";
         }
 
         /// <summary>
@@ -1466,5 +1500,7 @@ namespace Microsoft.DotNet.DarcLib
             (string account, string project, string repo, int id) prInfo = ParsePullRequestUri(pullRequestUri);
             await DeleteBranchAsync(prInfo.account, prInfo.project, prInfo.repo, pr.HeadBranch);
         }
+
+
     }
 }

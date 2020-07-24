@@ -4,8 +4,12 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Maestro.Contracts;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NuGet.Versioning;
+using Octokit;
+using Asset = Microsoft.DotNet.Maestro.Client.Models.Asset;
+using Subscription = Microsoft.DotNet.Maestro.Client.Models.Subscription;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -199,6 +203,14 @@ namespace Microsoft.DotNet.DarcLib
         Task CreateOrUpdatePullRequestStatusCommentAsync(string pullRequestUrl, string message);
 
         /// <summary>
+        ///     Create a comment on a pull request, or update the last comment if it was made by Maestro.
+        /// </summary>
+        /// <param name="pullRequestUrl">Url of pull request.</param>
+        /// <param name="message">Comment message.</param>
+        /// <returns>Async task.</returns>
+        Task CreateOrUpdatePullRequestStatusMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations);
+
+        /// <summary>
         ///     Get the status of a pull request.
         /// </summary>
         /// <param name="pullRequestUrl">Url of pull request.</param>
@@ -350,6 +362,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="branch">Branch</param>
         /// <returns>Latest commit</returns>
         Task<string> GetLatestCommitAsync(string repoUri, string branch);
+
 
         /// <summary>
         /// Checks that a repository exists

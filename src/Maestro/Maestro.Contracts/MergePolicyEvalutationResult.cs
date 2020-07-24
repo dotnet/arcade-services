@@ -1,13 +1,8 @@
-// Licensed to the .NET Foundation under one or more agreements.
-// The .NET Foundation licenses this file to you under the MIT license.
-// See the LICENSE file in the project root for more information.
-
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using Maestro.MergePolicies;
 
-namespace SubscriptionActorService
+namespace Maestro.Contracts
 {
     public class MergePolicyEvaluationResult
     {
@@ -26,16 +21,18 @@ namespace SubscriptionActorService
 
         public class SingleResult
         {
-            public SingleResult(bool? success, string message, MergePolicy policy)
+            public SingleResult(bool? success, string message, string mergePolicyName, string mergePolicyDisplayName)
             {
                 Success = success;
                 Message = message;
-                Policy = policy;
+                MergePolicyName = mergePolicyName;
+                MergePolicyDisplayName = mergePolicyDisplayName;
             }
 
             public bool? Success { get; }
             public string Message { get; }
-            public MergePolicy Policy { get; }
+            public string MergePolicyName { get; }
+            public string MergePolicyDisplayName { get; }
         }
     }
 }

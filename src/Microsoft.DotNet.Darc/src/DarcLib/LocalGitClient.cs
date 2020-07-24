@@ -9,8 +9,10 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Maestro.Contracts;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
+using Octokit;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -78,6 +80,11 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         public Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations)
         {
             throw new NotImplementedException();
         }
