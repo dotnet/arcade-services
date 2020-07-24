@@ -1,0 +1,5 @@
+{
+  "DriveMonitoring": {
+    "MinimumFreeSpaceBytes" : 10000000 
+  }
+}
