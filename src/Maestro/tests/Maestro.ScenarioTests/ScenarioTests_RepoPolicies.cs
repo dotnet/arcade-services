@@ -49,12 +49,13 @@ namespace Maestro.ScenarioTests
             TestContext.WriteLine("Setting repository merge policy to all checks successful");
             await SetRepositoryPolicies(repoUrl, branchName, new string[] { "--all-checks-passed", "--ignore-checks", "A,B" });
             string allChecksPolicies = await GetRepositoryPolicies(repoUrl, branchName);
+            string actualPolicy = TestHelpers.ParseOutSpecificRepoPolicy(allChecksPolicies, repoUrl +  $" @ {branchName}");
             string expectedAllChecksPolicies = $"{repoUrl} @ {branchName}\r\n- Merge Policies:\r\n  AllChecksSuccessful\r\n    ignoreChecks = \r\n" +
                 "                   [\r\n" +
                 "                     \"A\",\r\n" +
                 "                     \"B\"\r\n" +
                 "                   ]\r\n";
-            StringAssert.AreEqualIgnoringCase(expectedAllChecksPolicies, allChecksPolicies, "Repository policy is incorrect for all checks successful case");
+            StringAssert.AreEqualIgnoringCase(expectedAllChecksPolicies, actualPolicy, "Repository policy is incorrect for all checks successful case");
         }
     }
 }

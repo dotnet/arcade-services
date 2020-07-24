@@ -152,6 +152,14 @@ namespace Maestro.ScenarioTests
 
             return output.ToString();
         }
+
+        public static string ParseOutSpecificRepoPolicy(string allReturnedPolicies, string repoUrlAndBranch)
+        {
+            int startingIndex = allReturnedPolicies.IndexOf(repoUrlAndBranch);
+            string removeEarlierPolicies = allReturnedPolicies.Substring(startingIndex);
+            string[] removeLaterPolicies = removeEarlierPolicies.Split(']');
+            return removeLaterPolicies[0] + ']';
+        }
     }
 
     public class MaestroTestException : Exception
