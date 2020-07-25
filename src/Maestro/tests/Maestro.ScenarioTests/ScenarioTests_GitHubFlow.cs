@@ -6,6 +6,7 @@ namespace Maestro.ScenarioTests
 {
     [TestFixture]
     [Category("PostDeployment")]
+    [NonParallelizable]
     public class ScenarioTests_GitHubFlow : MaestroScenarioTestBase
     {
         private TestParameters _parameters;
