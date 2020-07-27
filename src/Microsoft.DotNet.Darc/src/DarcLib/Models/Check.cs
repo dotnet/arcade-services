@@ -13,8 +13,17 @@ namespace Microsoft.DotNet.DarcLib
             Url = url;
         }
 
+        public Check(CheckState status, string name, string url, string externalID)
+        {
+            Status = status;
+            Name = name;
+            Url = url;
+            ExternalID = externalID;
+        }
+
         public CheckState Status { get; }
         public string Name { get; }
         public string Url { get; }
+        public string ExternalID { get; }
     }
 }

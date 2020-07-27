@@ -475,7 +475,9 @@ namespace Microsoft.DotNet.DarcLib
         {
             if (result.MergePolicyName == null)
             {
-                var newCheck = new NewCheckRun($"- ❌ **{result.Message}**", sha);
+                var newCheck = new NewCheckRun($"{result.MergePolicyDisplayName}", sha);
+                var output = new NewCheckRunOutput(result.MergePolicyName, result.Message);
+                newCheck.Output = output;
                 newCheck.ExternalId = $"maestro-policy-{result.MergePolicyName}-{sha}";
                 newCheck.Status = CheckStatus.Completed;
                 newCheck.Conclusion = "failure";
@@ -485,7 +487,9 @@ namespace Microsoft.DotNet.DarcLib
 
             if (result.Success == null)
             {
-                var newCheck = new NewCheckRun($"- ❓ **{result.Message}**", sha);
+                var newCheck = new NewCheckRun($"{result.MergePolicyDisplayName}", sha);
+                var output = new NewCheckRunOutput(result.MergePolicyName, result.Message);
+                newCheck.Output = output;
                 newCheck.ExternalId = $"maestro-policy-{result.MergePolicyName}-{sha}";
                 newCheck.Status = CheckStatus.InProgress;
                 return newCheck;
@@ -494,9 +498,9 @@ namespace Microsoft.DotNet.DarcLib
 
             if (result.Success == true)
             {
-                var newCheck = new NewCheckRun($"- ✔️ **{result.MergePolicyDisplayName}** Succeeded" + (result.Message == null
-                           ? ""
-                           : $" - {result.Message}"), sha);
+                var newCheck = new NewCheckRun($"{result.MergePolicyDisplayName}", sha);
+                var output = new NewCheckRunOutput(result.MergePolicyName, result.Message == null ? "" : $" - {result.Message}");
+                newCheck.Output = output;
                 newCheck.ExternalId = $"maestro-policy-{result.MergePolicyName}-{sha}";
                 newCheck.Status = CheckStatus.Completed;
                 newCheck.Conclusion = "success";
@@ -504,7 +508,9 @@ namespace Microsoft.DotNet.DarcLib
                 return newCheck;
 
             }
-            var newCheckRun = new NewCheckRun($"- ❌ **{result.MergePolicyDisplayName}** {result.Message}", sha);
+            var newCheckRun = new NewCheckRun($"{result.MergePolicyDisplayName} {result.Message}", sha);
+            var newCheckRunOutput = new NewCheckRunOutput(result.MergePolicyName, result.Message);
+            newCheckRun.Output = newCheckRunOutput;
             newCheckRun.ExternalId = $"maestro-policy-{result.MergePolicyName}-{sha}";
             newCheckRun.Status = CheckStatus.Completed;
             newCheckRun.Conclusion = "success";
@@ -832,6 +838,7 @@ namespace Microsoft.DotNet.DarcLib
                 run =>
                 {
                     var name = run.Name;
+                    var externalID = run.ExternalId;
                     var url = run.HtmlUrl;
                     CheckState state;
                     switch (run.Status.Value)
@@ -864,7 +871,7 @@ namespace Microsoft.DotNet.DarcLib
                             break;
                     }
 
-                    return new Check(state, name, url);
+                    return new Check(state, name, url, externalID);
                 })
                 .ToList();
         }
