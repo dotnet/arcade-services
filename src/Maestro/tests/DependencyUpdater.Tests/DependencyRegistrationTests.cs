@@ -26,7 +26,7 @@ namespace DependencyUpdater.Tests
 
                         s.AddScoped<DependencyUpdater>();
                     },
-                    out string message).Should().BeTrue();
+                    out string message).Should().BeTrue(message);
         }
     }
 }

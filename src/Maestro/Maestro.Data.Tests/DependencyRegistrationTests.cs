@@ -29,7 +29,7 @@ namespace Maestro.Data.Tests
                             options.EnableServiceProviderCaching(false);
                         });
                     },
-                    out string message).Should().BeTrue();
+                    out string message).Should().BeTrue(message);
         }
 
     }

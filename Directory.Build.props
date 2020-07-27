@@ -32,6 +32,7 @@
   <ItemGroup Condition=" '$(IsTestProject)' == 'true' ">
     <PackageReference Include="FluentAssertions" />
     <PackageReference Include="Microsoft.CodeCoverage" />
+    <PackageReference Include="Moq" />
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit3TestAdapter">
       <PrivateAssets>all</PrivateAssets>
