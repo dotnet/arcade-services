@@ -120,7 +120,7 @@ namespace Maestro.ScenarioTests
                     }
                     else
                     {
-                        rethrow ex;
+                        throw;
                     }
                 }
                 if (prs.Count() == 1)
