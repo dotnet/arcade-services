@@ -203,10 +203,11 @@ namespace Microsoft.DotNet.DarcLib
         Task CreateOrUpdatePullRequestStatusCommentAsync(string pullRequestUrl, string message);
 
         /// <summary>
-        ///     Create a comment on a pull request, or update the last comment if it was made by Maestro.
+        ///     Create new check(s), update them with a new status,
+        ///     or remove each merge policy check that isn't in evaluations
         /// </summary>
         /// <param name="pullRequestUrl">Url of pull request.</param>
-        /// <param name="message">Comment message.</param>
+        /// <param name="evaluations">List of merge policies.</param>
         /// <returns>Async task.</returns>
         Task CreateOrUpdatePullRequestStatusMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations);
 

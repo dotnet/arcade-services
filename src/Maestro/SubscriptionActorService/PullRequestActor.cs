@@ -516,14 +516,13 @@ namespace SubscriptionActorService
             return ActionResult.Create(MergePolicyCheckResult.NoPolicies, "NOT Merged: There are no merge policies");
         }
 
-        
-
-
-        private Task UpdateStatusCommentAsync(IRemote darc, string prUrl, string message)
-        {
-            return darc.CreateOrUpdatePullRequestStatusCommentAsync(prUrl, message);
-        }
-
+        /// <summary>
+        ///     Create new checks or update the status of existing checks for a PR.
+        /// </summary>
+        /// <param name="prUrl">Pull request URL</param>
+        /// <param name="darc">Darc remote</param>
+        /// <param name="evaluations">List of merge policies</param>
+        /// <returns>Result of the policy check.</returns>
         private Task UpdateMergeStatusAsync(IRemote darc, string prUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations)
         {
             return darc.CreateOrUpdatePullRequestStatusMergeStatusInfoAsync(prUrl, evaluations);

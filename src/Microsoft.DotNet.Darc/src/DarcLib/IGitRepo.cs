@@ -122,11 +122,11 @@ namespace Microsoft.DotNet.DarcLib
         Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message);
 
         /// <summary>
-        ///     Create a new comment, or update the last comment with an updated message,
-        ///     if that comment was created by Darc.
+        ///     Create new check(s), update them with a new status,
+        ///     or remove each merge policy check that isn't in evaluations
         /// </summary>
         /// <param name="pullRequestUrl">Url of pull request</param>
-        /// <param name="message">Message to post</param>
+        /// <param name="evalutations">List of merge policies</param>
         Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations);
 
         /// <summary>

@@ -871,7 +871,7 @@ namespace Microsoft.DotNet.DarcLib
                             break;
                     }
 
-                    return new Check(state, name, url, externalID);
+                    return new Check(state, name, url, true);
                 })
                 .ToList();
         }
