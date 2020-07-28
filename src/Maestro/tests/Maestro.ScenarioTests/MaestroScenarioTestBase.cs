@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -102,10 +103,26 @@ namespace Maestro.ScenarioTests
 
         private async Task<Microsoft.DotNet.DarcLib.PullRequest> WaitForAzDoPullRequestAsync(string targetRepoUri, string targetBranch)
         {
+            IEnumerable<int> prs = new List<int>();
             int attempts = 10;
+
             while (attempts-- > 0)
             {
-                var prs = await AzDoClient.SearchPullRequestsAsync(targetRepoUri, targetBranch, Microsoft.DotNet.DarcLib.PrStatus.Open).ConfigureAwait(false);
+                try
+                {
+                    prs = await AzDoClient.SearchPullRequestsAsync(targetRepoUri, targetBranch, Microsoft.DotNet.DarcLib.PrStatus.Open).ConfigureAwait(false);
+                }
+                catch (HttpRequestException ex)
+                {
+                    if (ex.Message == "Response status code does not indicate success: 404 (Not Found).")
+                    {
+                        // This is expected before the PR has been created
+                    }
+                    else
+                    {
+                        rethrow ex;
+                    }
+                }
                 if (prs.Count() == 1)
                 {
                     return await AzDoClient.GetPullRequestAsync($"{targetRepoUri}/pullrequests/{prs.FirstOrDefault()}?api-version=5.0");
@@ -116,7 +133,7 @@ namespace Maestro.ScenarioTests
                 }
 
                 await Task.Delay(60 * 1000).ConfigureAwait(false);
-            }
+             }
 
             throw new MaestroTestException($"No pull request was created in {targetRepoUri} targeting {targetBranch}");
         }
@@ -177,7 +194,7 @@ namespace Maestro.ScenarioTests
         {
             string targetRepoUri = GetAzDoRepoUrl(targetRepoName);
             TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
-            Microsoft.DotNet.DarcLib.PullRequest pullRequest = await WaitForAzDoPullRequestAsync(GetAzDoRepoAuthUrl(targetRepoName), targetBranch);
+            Microsoft.DotNet.DarcLib.PullRequest pullRequest = await WaitForAzDoPullRequestAsync(targetRepoUri, targetBranch);
 
             StringAssert.AreEqualIgnoringCase(expectedPRTitle, pullRequest.Title);
 
@@ -618,12 +635,12 @@ namespace Maestro.ScenarioTests
                 await RunGitAsync("config", "user.name", _parameters.GitHubUser).ConfigureAwait(false);
             }
 
-                //  string fetchUrl = GetRepoFetchUrl(org, repository);
-                //string repoUrl = GetAzDoRepoUrl(repoName);
-                //_parameters.AzDoClient.Clone(repoUrl, targetBranch, directory);
+            //  string fetchUrl = GetRepoFetchUrl(org, repository);
+            //string repoUrl = GetAzDoRepoUrl(repoName);
+            //_parameters.AzDoClient.Clone(repoUrl, targetBranch, directory);
 
 
-                return shareable.TryTake()!;
+            return shareable.TryTake()!;
         }
 
         public async Task CheckoutRemoteRefAsync(string commit)
