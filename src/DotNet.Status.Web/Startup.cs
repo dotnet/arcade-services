@@ -20,6 +20,7 @@ using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Services.Utility;
 using Microsoft.DotNet.Web.Authentication;
 using Microsoft.DotNet.Web.Authentication.GitHub;
 using Microsoft.Extensions.Configuration;
@@ -121,6 +122,7 @@ namespace DotNet.Status.Web
             services.Configure<GitHubClientOptions>(o =>
                 o.ProductHeader = new ProductHeaderValue("DotNetEngineeringStatus",
                     Assembly.GetEntryAssembly().GetName().Version.ToString()));
+            services.Configure<ExponentialRetryOptions>(o => { });
         }
 
         private void AddServices(IServiceCollection services)
@@ -147,6 +149,10 @@ namespace DotNet.Status.Web
                 o.Rules.Remove(o.Rules.FirstOrDefault(r =>
                     r.ProviderName ==
                     "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider"));
+
+                // These two categories log a lot of noise at "Information", let's raise them to warning
+                o.Rules.Add(new LoggerFilterRule(null, "Microsoft.AspNetCore.Mvc.ViewFeatures.Filters.ValidateAntiforgeryTokenAuthorizationFilter", LogLevel.Warning, null));
+                o.Rules.Add(new LoggerFilterRule(null, "Microsoft.AspNetCore.Mvc.ViewFeatures.Filters.AutoValidateAntiforgeryTokenAuthorizationFilter", LogLevel.Warning, null));
             });
 
             services.AddAuthentication("contextual")
@@ -208,6 +214,7 @@ namespace DotNet.Status.Web
             services.AddSingleton<ZenHubClient>();
             services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
+            services.AddSingleton<ExponentialRetry>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -224,7 +231,6 @@ namespace DotNet.Status.Web
                 app.UseExceptionHandler("/Error");
                 app.UseHttpsRedirection();
             }
-            
             app.UseAuthentication();
             app.UseRouting();
             app.UseAuthorization();

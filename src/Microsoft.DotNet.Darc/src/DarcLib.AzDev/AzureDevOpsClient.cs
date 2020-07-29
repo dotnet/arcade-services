@@ -335,8 +335,8 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
-            VssConnection connection = CreateVssConnection(accountName);
-            GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+            using VssConnection connection = CreateVssConnection(accountName);
+            using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
             GitPullRequest pr = await client.GetPullRequestAsync(projectName, repoName, id);
             // Strip out the refs/heads prefix on BaseBranch and HeadBranch because almost
@@ -368,8 +368,8 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
 
-            VssConnection connection = CreateVssConnection(accountName);
-            GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+            using VssConnection connection = CreateVssConnection(accountName);
+            using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
             GitPullRequest createdPr = await client.CreatePullRequestAsync(
                 new GitPullRequest
@@ -395,8 +395,8 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUri);
 
-            VssConnection connection = CreateVssConnection(accountName);
-            GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+            using VssConnection connection = CreateVssConnection(accountName);
+            using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
             await client.UpdatePullRequestAsync(
                 new GitPullRequest
@@ -417,24 +417,20 @@ namespace Microsoft.DotNet.DarcLib
         public async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
-            using (VssConnection connection = CreateVssConnection(accountName))
+            using VssConnection connection = CreateVssConnection(accountName);
+            using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+
+            var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
+            IList<Commit> commits = new List<Commit>(pullRequest.Commits.Length);
+            foreach (var commit in pullRequest.Commits)
             {
-                using (GitHttpClient client = await connection.GetClientAsync<GitHttpClient>())
-                {
-
-                    var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
-                    IList<Commit> commits = new List<Commit>(pullRequest.Commits.Length);
-                    foreach (var commit in pullRequest.Commits)
-                    {
-                        commits.Add(new Commit(
-                            commit.Author.Name == "DotNet-Bot" ? "dotnet-maestro[bot]" : commit.Author.Name,
-                            commit.CommitId,
-                            commit.Comment));
-                    }
-
-                    return commits;
-                }
+                commits.Add(new Commit(
+                    commit.Author.Name == "DotNet-Bot" ? "dotnet-maestro[bot]" : commit.Author.Name,
+                    commit.CommitId,
+                    commit.Comment));
             }
+
+            return commits;
         }
 
         public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters,
@@ -442,33 +438,28 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
-            using (VssConnection connection = CreateVssConnection(accountName))
-            {
-                using (GitHttpClient client = await connection.GetClientAsync<GitHttpClient>())
+            using VssConnection connection = CreateVssConnection(accountName);
+            using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+            var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
+
+            await client.UpdatePullRequestAsync(
+                new GitPullRequest
                 {
-
-                    var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
-
-                    await client.UpdatePullRequestAsync(
-                        new GitPullRequest
-                        {
-                            Status = PullRequestStatus.Completed,
-                            CompletionOptions = new GitPullRequestCompletionOptions
-                            {
-                                MergeCommitMessage = mergeCommitMessage,
-                                BypassPolicy = true,
-                                BypassReason = "All required checks were successful",
-                                SquashMerge = parameters.SquashMerge,
-                                DeleteSourceBranch = parameters.DeleteSourceBranch
-                            },
-                            LastMergeSourceCommit = new GitCommitRef
-                                {CommitId = pullRequest.LastMergeSourceCommit.CommitId, Comment = mergeCommitMessage}
-                        },
-                        projectName,
-                        repoName,
-                        id);
-                }
-            }
+                    Status = PullRequestStatus.Completed,
+                    CompletionOptions = new GitPullRequestCompletionOptions
+                    {
+                        MergeCommitMessage = mergeCommitMessage,
+                        BypassPolicy = true,
+                        BypassReason = "All required checks were successful",
+                        SquashMerge = parameters.SquashMerge,
+                        DeleteSourceBranch = parameters.DeleteSourceBranch
+                    },
+                    LastMergeSourceCommit = new GitCommitRef
+                    { CommitId = pullRequest.LastMergeSourceCommit.CommitId, Comment = mergeCommitMessage }
+                },
+                projectName,
+                repoName,
+                id);
         }
 
         /// <summary>
@@ -487,8 +478,8 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
-            VssConnection connection = CreateVssConnection(accountName);
-            GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+            using VssConnection connection = CreateVssConnection(accountName);
+            using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
             Comment prComment = new Comment()
             {

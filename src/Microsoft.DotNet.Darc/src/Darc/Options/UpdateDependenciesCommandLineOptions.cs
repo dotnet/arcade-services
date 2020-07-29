@@ -11,6 +11,7 @@ namespace Microsoft.DotNet.Darc.Options
     class UpdateDependenciesCommandLineOptions : CommandLineOptions
     {
         [Option("id", HelpText = "Optional BAR id of build to be used instead of the latest build in the channel.")]
+        [RedactFromLogging]
         public int BARBuildId { get; set; }
 
         [Option('c', "channel", HelpText = "Channel to pull dependencies from.")]
@@ -28,6 +29,7 @@ namespace Microsoft.DotNet.Darc.Options
 
         [Option("packages-folder", HelpText = "An optional path to a folder which contains the NuGet " +
             "packages whose versions will be used to update existing dependencies.")]
+        [RedactFromLogging]
         public string PackagesFolder { get; set; }
 
         [Option("dry-run", HelpText = "Show what will be updated, but make no changes.")]

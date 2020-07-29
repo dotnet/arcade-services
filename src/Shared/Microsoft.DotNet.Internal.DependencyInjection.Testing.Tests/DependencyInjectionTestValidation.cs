@@ -17,7 +17,7 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
                     s.AddSingleton<NeedsValue>();
                 },
                 out string message);
-            isCoherent.Should().BeTrue();
+            isCoherent.Should().BeTrue(message);
         }
 
         [Test]
@@ -35,7 +35,7 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
                     s.AddSingleton<NeedsValue>();
                 },
                 out string message);
-            isCoherent.Should().BeTrue();
+            isCoherent.Should().BeTrue(message);
         }
 
         [Test]
@@ -44,7 +44,7 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
             bool isCoherent = DependencyInjectionValidation.IsDependencyResolutionCoherent(
                 s => { s.AddSingleton<NeedsSimpleOptional>(); },
                 out string message);
-            isCoherent.Should().BeTrue();
+            isCoherent.Should().BeTrue(message);
         }
 
         [Test]
@@ -53,7 +53,7 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
             bool isCoherent = DependencyInjectionValidation.IsDependencyResolutionCoherent(
                 s => { s.AddSingleton<NeedsSimple>(); },
                 out string message);
-            isCoherent.Should().BeFalse();
+            isCoherent.Should().BeFalse(message);
             message.Should().Contain(nameof(NeedsSimple));
         }
 
@@ -63,7 +63,7 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
             bool isCoherent = DependencyInjectionValidation.IsDependencyResolutionCoherent(
                 s => { s.AddSingleton<NeedsSome>(); },
                 out string message);
-            isCoherent.Should().BeFalse();
+            isCoherent.Should().BeFalse(message);
             message.Should().Contain(nameof(NeedsSome));
         }
 
@@ -76,7 +76,7 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
                     s.AddSingleton<NeedsSimpleOptional>();
                 },
                 out string message);
-            isCoherent.Should().BeTrue();
+            isCoherent.Should().BeTrue(message);
         }
 
         [Test]
@@ -88,7 +88,7 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing.Tests
                     s.AddSingleton<NeedsSimple>();
                 },
                 out string message);
-            isCoherent.Should().BeTrue();
+            isCoherent.Should().BeTrue(message);
         }
 
         [Test]
