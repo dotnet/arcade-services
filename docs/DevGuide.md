@@ -25,7 +25,7 @@
         - Repository: https://github.com/maestro-auth-test/maestro-test3
         - Installation Id: 289474
 
-After successfully running `bootstrap.ps1` running the `MaestroApplication` project via F5 in VS (launch as elevated) will run the application on `http://localhost:8080`
+After successfully running `bootstrap.ps1` running the `MaestroApplication` project via F5 in VS (launch as elevated) will run the application on `http://localhost:8080`. However, for running some local debuginng using darc, such as scenario tests, darc http client library requires SSL (https) endpoint when calling it with Bearer token. One solution is to use ngrok for redirection. Install it from  https://ngrok.com/ or `choco install ngrok`, do ngrok http 8080 and then use the ngrok url for the --bar-uri.
 
 ## Azure AppConfiguration
 
