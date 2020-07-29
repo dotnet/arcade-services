@@ -21,7 +21,7 @@ namespace Maestro.MergePolicies
         public static async Task EvaluateChecksAsync(IMergePolicyEvaluationContext context, HashSet<string> ignoredChecks)
         {
             IEnumerable<Check> checks = await context.Darc.GetPullRequestChecksAsync(context.PullRequest.Url);
-            IEnumerable<Check> notIgnoredChecks = checks.Where(c => !ignoredChecks.Contains(c.Name) && !c.MergePolicyCheck);
+            IEnumerable<Check> notIgnoredChecks = checks.Where(c => !ignoredChecks.Contains(c.Name) && c.MergePolicyCheck);
 
             if (!notIgnoredChecks.Any())
             {

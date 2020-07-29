@@ -427,34 +427,34 @@ namespace Microsoft.DotNet.DarcLib
             Commit latestCommit = commits[commits.Count - 1];
 
             // Get all the checks runs for the current PR
-            CheckRunsResponse existingChecks = await Client.Check.Run.GetAllForReference(owner,repo, latestCommit.Sha);
+            CheckRunsResponse existingChecksRuns = await Client.Check.Run.GetAllForReference(owner,repo, latestCommit.Sha);
             // Convert the IReadOnlyList of CheckRun to a List of CheckRun
-            List<CheckRun> existingChecksList = new List<CheckRun>(existingChecks.CheckRuns);
+            List<CheckRun> existingChecksList = new List<CheckRun>(existingChecksRuns.CheckRuns);
 
             foreach (var eval in evaluations)
             {
-                CheckRun existingCheck = existingChecks.CheckRuns.SingleOrDefault(c => c.ExternalId == $"maestro-policy-{eval.MergePolicyName}-{latestCommit.Sha}");
-                NewCheckRun newCheck = CreateNewCheck(eval, latestCommit.Sha);
+                CheckRun existingCheckRun = existingChecksRuns.CheckRuns.SingleOrDefault(c => c.ExternalId == $"maestro-policy-{eval.MergePolicyName}-{latestCommit.Sha}");
+                NewCheckRun newCheckRun = CreateNewCheckRun(eval, latestCommit.Sha);
                 // If the check doesn't exist yet, create it
-                if (existingCheck == null)
+                if (existingCheckRun == null)
                 {
-                    await Client.Check.Run.Create(owner,repo, newCheck);
+                    await Client.Check.Run.Create(owner,repo, newCheckRun);
                 }
 
                 // If the check exist, checks that the status are different to update it
-                else if (existingCheck != null && newCheck.Status != existingCheck.Status)
+                else if (existingCheckRun != null && newCheckRun.Status != existingCheckRun.Status)
                 {
                     CheckRunUpdate updatedCheck = new CheckRunUpdate();
-                    updatedCheck.Status = newCheck.Status;
-                    updatedCheck.Conclusion = newCheck.Conclusion;
-                    updatedCheck.Name = newCheck.Name;
-                    updatedCheck.CompletedAt = newCheck.CompletedAt;
-                    existingChecksList.Remove(existingCheck);
-                    await Client.Check.Run.Update(owner,repo, existingCheck.Id, updatedCheck);
+                    updatedCheck.Status = newCheckRun.Status;
+                    updatedCheck.Conclusion = newCheckRun.Conclusion;
+                    updatedCheck.Name = newCheckRun.Name;
+                    updatedCheck.CompletedAt = newCheckRun.CompletedAt;
+                    existingChecksList.Remove(existingCheckRun);
+                    await Client.Check.Run.Update(owner,repo, existingCheckRun.Id, updatedCheck);
                 }
             }
 
-            // Remove the check(s) in existingChecks that aren't in evaluations 
+            // Remove the check(s) in existingChecksRuns that aren't in evaluations 
             foreach (var remainingCheck in existingChecksList)
             {
                 MergePolicyEvaluationResult.SingleResult remainingCheckCommon = evaluations.SingleOrDefault(eval => remainingCheck.ExternalId == $"maestro-policy-{eval.MergePolicyName}-{latestCommit.Sha}");
@@ -471,8 +471,11 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
-        private NewCheckRun CreateNewCheck(MergePolicyEvaluationResult.SingleResult result, string sha)
+        private NewCheckRun CreateNewCheckRun(MergePolicyEvaluationResult.SingleResult result, string sha)
         {
+
+            // TODO: Investigate this condition, in which situation can this happen (and what we should do if that happens) ?
+            // Initially we just returned a faile status with the result message
             if (result.MergePolicyName == null)
             {
                 var newCheck = new NewCheckRun($"{result.MergePolicyDisplayName}", sha);
