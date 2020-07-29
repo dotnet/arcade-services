@@ -101,8 +101,11 @@ namespace Maestro.ScenarioTests
             throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
         }
 
-        private async Task<Microsoft.DotNet.DarcLib.PullRequest> WaitForAzDoPullRequestAsync(string targetRepoUri, string targetBranch)
+        internal async Task<Microsoft.DotNet.DarcLib.PullRequest> WaitForAzDoPullRequestAsync(string targetRepoName, string targetBranch)
         {
+            string searchBaseUrl = GetAzDoRepoUrl(targetRepoName);
+            string apiBaseUrl = GetAzDoApiRepoUrl(targetRepoName);
+
             IEnumerable<int> prs = new List<int>();
             int attempts = 10;
 
@@ -110,7 +113,7 @@ namespace Maestro.ScenarioTests
             {
                 try
                 {
-                    prs = await AzDoClient.SearchPullRequestsAsync(targetRepoUri, targetBranch, Microsoft.DotNet.DarcLib.PrStatus.Open).ConfigureAwait(false);
+                    prs = await AzDoClient.SearchPullRequestsAsync(searchBaseUrl, targetBranch, Microsoft.DotNet.DarcLib.PrStatus.Open).ConfigureAwait(false);
                 }
                 catch (HttpRequestException ex)
                 {
@@ -125,17 +128,17 @@ namespace Maestro.ScenarioTests
                 }
                 if (prs.Count() == 1)
                 {
-                    return await AzDoClient.GetPullRequestAsync($"{targetRepoUri}/pullrequests/{prs.FirstOrDefault()}?api-version=5.0");
+                    return await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{prs.FirstOrDefault()}");
                 }
                 if (prs.Count() > 1)
                 {
-                    throw new MaestroTestException($"More than one pull request found in {targetRepoUri} targeting {targetBranch}");
+                    throw new MaestroTestException($"More than one pull request found in {searchBaseUrl} targeting {targetBranch}");
                 }
 
                 await Task.Delay(60 * 1000).ConfigureAwait(false);
              }
 
-            throw new MaestroTestException($"No pull request was created in {targetRepoUri} targeting {targetBranch}");
+            throw new MaestroTestException($"No pull request was created in {searchBaseUrl} targeting {targetBranch}");
         }
 
         public async Task CheckBatchedGitHubPullRequest(string targetBranch, string source1RepoName, string source2RepoName,
@@ -178,8 +181,8 @@ namespace Maestro.ScenarioTests
         public async Task CheckBatchedAzDoPullRequest(string source1RepoName, string source2RepoName, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete = false)
         {
-            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{source1RepoName} {_parameters.GitHubTestOrg}/{source2RepoName}";
-            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, false);
+            string expectedPRTitle = $"[{targetBranch}] Update dependencies from dnceng/internal/{source1RepoName} dnceng/internal/{source2RepoName}";
+            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, true);
         }
 
         public async Task CheckNonBatchedAzDoPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
@@ -192,9 +195,9 @@ namespace Maestro.ScenarioTests
         public async Task CheckAzDoPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated)
         {
-            string targetRepoUri = GetAzDoRepoUrl(targetRepoName);
+            string targetRepoUri = GetAzDoApiRepoUrl(targetRepoName);
             TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
-            Microsoft.DotNet.DarcLib.PullRequest pullRequest = await WaitForAzDoPullRequestAsync(targetRepoUri, targetBranch);
+            Microsoft.DotNet.DarcLib.PullRequest pullRequest = await WaitForAzDoPullRequestAsync(targetRepoName, targetBranch);
 
             StringAssert.AreEqualIgnoringCase(expectedPRTitle, pullRequest.Title);
 
@@ -204,7 +207,7 @@ namespace Maestro.ScenarioTests
             }
 
             Microsoft.DotNet.DarcLib.PrStatus expectedPRState = isCompleted ? Microsoft.DotNet.DarcLib.PrStatus.Closed : Microsoft.DotNet.DarcLib.PrStatus.Open;
-            var prStatus = AzDoClient.GetPullRequestStatusAsync(targetRepoUri);
+            var prStatus = AzDoClient.GetPullRequestStatusAsync(GetAzDoApiRepoUrl(targetRepoName));
             Assert.AreEqual(expectedPRState, prStatus);
 
             using (ChangeDirectory(repoDirectory))
@@ -275,6 +278,11 @@ namespace Maestro.ScenarioTests
         public string GetAzDoRepoUrl(string repoName, string azdoAccount = "dnceng", string azdoProject = "internal")
         {
             return $"https://dev.azure.com/{azdoAccount}/{azdoProject}/_git/{repoName}";
+        }
+
+        public string GetAzDoApiRepoUrl(string repoName, string azdoAccount = "dnceng", string azdoProject = "internal")
+        {
+            return $"https://dev.azure.com/{azdoAccount}/{azdoProject}/_apis/git/repositories/{repoName}";
         }
 
         public Task<string> RunDarcAsyncWithInput(string input, params string[] args)
@@ -382,7 +390,7 @@ namespace Maestro.ScenarioTests
             bool targetIsAzDo = false,
             bool trigger = false)
         {
-            string sourceUrl = sourceIsAzDo ? GetAzDoRepoUrl(sourceRepo, azdoProject: sourceOrg) : GetRepoUrl(sourceOrg, sourceRepo);
+            string sourceUrl = sourceIsAzDo ? GetAzDoRepoUrl(sourceRepo) : GetRepoUrl(sourceOrg, sourceRepo);
             string targetUrl = targetIsAzDo ? GetAzDoRepoUrl(targetRepo) : GetRepoUrl(targetRepo);
 
             string[] command = {"add-subscription", "-q",

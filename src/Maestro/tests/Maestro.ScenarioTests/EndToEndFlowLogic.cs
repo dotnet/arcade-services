@@ -158,13 +158,12 @@ namespace Maestro.ScenarioTests
             {
                 TestContext.WriteLine($"Adding a subscription from {source1RepoName} to {targetRepoName}");
                 await using (AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(testChannelName, source1RepoName, targetRepoName, targetBranch,
-                    UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" }))
+                    UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" }, sourceIsAzDo: isAzDoTest, targetIsAzDo: isAzDoTest))
                 {
                     TestContext.WriteLine($"Adding a subscription from {source2RepoName} to {targetRepoName}");
                     await using (AsyncDisposableValue<string> subscription2Id = await CreateSubscriptionAsync(testChannelName, source2RepoName, targetRepoName, targetBranch,
-                        UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" }))
+                        UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" }, sourceIsAzDo: isAzDoTest, targetIsAzDo: isAzDoTest))
                     {
-
                         TestContext.WriteLine("Set up build1 for intake into target repository");
                         Build build1 = await CreateBuildAsync(source1RepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, sourceBuildNumber, source1Assets);
                         await AddBuildToChannelAsync(build1.Id, testChannelName);
