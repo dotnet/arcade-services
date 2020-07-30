@@ -111,10 +111,7 @@ namespace Maestro.ScenarioTests
 
         public void Dispose()
         {
-            if (_dir != null)
-            {
-                _dir.Dispose();
-            }
+            _dir?.Dispose();
         }
     }
 }
