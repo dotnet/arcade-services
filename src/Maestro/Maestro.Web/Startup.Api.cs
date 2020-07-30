@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.ApiVersioning;
 using Microsoft.AspNetCore.ApiVersioning.Swashbuckle;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Net.Http.Headers;
 using Microsoft.OpenApi;
 using Microsoft.OpenApi.Interfaces;
 using Microsoft.OpenApi.Models;
@@ -161,7 +162,13 @@ namespace Maestro.Web
                             Type = SecuritySchemeType.ApiKey,
                             In = ParameterLocation.Header,
                             Scheme = "bearer",
+                            Name = HeaderNames.Authorization
                         });
+
+                    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                    {
+                        {new OpenApiSecurityScheme{Reference = new OpenApiReference{Id = "Bearer", Type = ReferenceType.SecurityScheme}}, Array.Empty<string>()},
+                    });
                 });
         }
 
