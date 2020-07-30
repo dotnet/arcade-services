@@ -36,7 +36,6 @@ namespace Maestro.ScenarioTests
                     -Merge Policies:
                     AllChecksSuccessful
                       ignoreChecks =
-          
                                      [
                                        ""A"",
                                        ""B""
@@ -46,13 +45,16 @@ namespace Maestro.ScenarioTests
                "https://github.com/maestro-auth-test/maestro-test1 @ RepoPoliciesTestBranch_DESKTOP-8VPP7ON");
 
             string expectedPolicy =
-                $"RepoPoliciesTestBranch_DESKTOP-8VPP7ON\r\n- Merge Policies:\r\n  AllChecksSuccessful\r\n    ignoreChecks = \r\n" +
-                "                   [\r\n" +
-                "                     \"A\",\r\n" +
-                "                     \"B\"\r\n" +
-                "                   ]\r\n";
+                @"https://github.com/maestro-auth-test/maestro-test1 @ RepoPoliciesTestBranch_DESKTOP-8VPP7ON
+                    -Merge Policies:
+                    AllChecksSuccessful
+                      ignoreChecks =
+                                     [
+                                       ""A"",
+                                       ""B""
+                                     ]";
 
-            StringAssert.AreNotEqualIgnoringCase(expectedPolicy, parsedPolicy);
+            StringAssert.AreEqualIgnoringCase(expectedPolicy, parsedPolicy);
         }
 
         [Test]
@@ -64,7 +66,6 @@ namespace Maestro.ScenarioTests
                 -Merge Policies:
                 AllChecksSuccessful
                   ignoreChecks =
-          
                                  [
                                    ""A"",
                                    ""B""
@@ -74,13 +75,16 @@ namespace Maestro.ScenarioTests
                 "https://github.com/maestro-auth-test/maestro-test1 @ RepoPoliciesTestBranch_2");
 
             string expectedPolicy =
-                            $"RepoPoliciesTestBranch_2\r\n- Merge Policies:\r\n  AllChecksSuccessful\r\n    ignoreChecks = \r\n" +
-                "                   [\r\n" +
-                "                     \"A\",\r\n" +
-                "                     \"B\"\r\n" +
-                "                   ]\r\n";
+                @"https://github.com/maestro-auth-test/maestro-test1 @ RepoPoliciesTestBranch_2
+                -Merge Policies:
+                AllChecksSuccessful
+                  ignoreChecks =
+                                 [
+                                   ""A"",
+                                   ""B""
+                                 ]";
 
-            StringAssert.AreNotEqualIgnoringCase(expectedPolicy, parsedPolicy);
+            StringAssert.AreEqualIgnoringCase(expectedPolicy, parsedPolicy);
         }
 
         [Test]
@@ -92,7 +96,6 @@ namespace Maestro.ScenarioTests
                 -Merge Policies:
                 AllChecksSuccessful
                   ignoreChecks =
-          
                                  [
                                    ""A"",
                                    ""B""
@@ -101,14 +104,10 @@ namespace Maestro.ScenarioTests
             string parsedPolicy = TestHelpers.ParseOutSpecificRepoPolicy(extraPolicies,
                 "https://github.com/maestro-auth-test/maestro-test1 @ RepoPoliciesTestBranch");
 
-            string expectedPolicy =
-                            $"RepoPoliciesTestBranch\r\n- Merge Policies:\r\n  AllChecksSuccessful\r\n    ignoreChecks = \r\n" +
-                "                   [\r\n" +
-                "                     \"A\",\r\n" +
-                "                     \"B\"\r\n" +
-                "                   ]\r\n";
+            string expectedPolicy = @"https://github.com/maestro-auth-test/maestro-test1 @ RepoPoliciesTestBranch
+                - Merge Policies:[]";
 
-            StringAssert.AreNotEqualIgnoringCase(expectedPolicy, parsedPolicy);
+            StringAssert.AreEqualIgnoringCase(expectedPolicy, parsedPolicy);
         }
 
         [Test]
@@ -131,14 +130,10 @@ namespace Maestro.ScenarioTests
             string parsedPolicy = TestHelpers.ParseOutSpecificRepoPolicy(extraPolicies,
                 "https://github.com/maestro-auth-test/maestro-test1 @ RepoPoliciesTestBranch_2");
 
-            string expectedPolicy =
-                            $"RepoPoliciesTestBranch_2\r\n- Merge Policies:\r\n  AllChecksSuccessful\r\n    ignoreChecks = \r\n" +
-                "                   [\r\n" +
-                "                     \"A\",\r\n" +
-                "                     \"B\"\r\n" +
-                "                   ]\r\n";
+            string expectedPolicy = @"https://github.com/maestro-auth-test/maestro-test1 @ RepoPoliciesTestBranch_2
+                - Merge Policies:[]";
 
-            StringAssert.AreNotEqualIgnoringCase(expectedPolicy, parsedPolicy);
+            StringAssert.AreEqualIgnoringCase(expectedPolicy, parsedPolicy);
         }
     }
 }
