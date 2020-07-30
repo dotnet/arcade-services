@@ -442,7 +442,7 @@ namespace Microsoft.DotNet.DarcLib
                 }
 
                 // If the check exist, checks that the status are different to update it
-                else if (existingCheckRun != null && newCheckRun.Status != existingCheckRun.Status)
+                else if (newCheckRun.Status != existingCheckRun.Status)
                 {
                     CheckRunUpdate updatedCheck = new CheckRunUpdate();
                     updatedCheck.Status = newCheckRun.Status;
@@ -473,21 +473,9 @@ namespace Microsoft.DotNet.DarcLib
 
         private NewCheckRun CreateNewCheckRun(MergePolicyEvaluationResult.SingleResult result, string sha)
         {
-
-            // TODO: Investigate this condition, in which situation can this happen (and what we should do if that happens) ?
-            // Initially we just returned a faile status with the result message
             if (result.MergePolicyName == null)
-            {
-                var newCheck = new NewCheckRun($"{result.MergePolicyDisplayName}", sha);
-                var output = new NewCheckRunOutput(result.MergePolicyName, result.Message);
-                newCheck.Output = output;
-                newCheck.ExternalId = $"maestro-policy-{result.MergePolicyName}-{sha}";
-                newCheck.Status = CheckStatus.Completed;
-                newCheck.Conclusion = "failure";
-                newCheck.CompletedAt = DateTime.Now;
-                return newCheck;
-            }
-
+                throw new ArgumentNullException(nameof(result.MergePolicyName));
+            
             if (result.Success == null)
             {
                 var newCheck = new NewCheckRun($"{result.MergePolicyDisplayName}", sha);
@@ -509,17 +497,16 @@ namespace Microsoft.DotNet.DarcLib
                 newCheck.Conclusion = "success";
                 newCheck.CompletedAt = DateTime.Now;
                 return newCheck;
-
             }
+
             var newCheckRun = new NewCheckRun($"{result.MergePolicyDisplayName} {result.Message}", sha);
             var newCheckRunOutput = new NewCheckRunOutput(result.MergePolicyName, result.Message);
             newCheckRun.Output = newCheckRunOutput;
             newCheckRun.ExternalId = $"maestro-policy-{result.MergePolicyName}-{sha}";
             newCheckRun.Status = CheckStatus.Completed;
-            newCheckRun.Conclusion = "success";
+            newCheckRun.Conclusion = "failure";
             newCheckRun.CompletedAt = DateTime.Now;
             return newCheckRun;
-
         }
 
         /// <summary>

@@ -46,12 +46,31 @@ namespace SubscriptionActorService
                 }
                 else
                 {
-                    context.CurrentPolicy = null;
+
+                    context.CurrentPolicy = new NotImplementedMergePolicy(definition.Name);
                     context.Fail($"Unknown Merge Policy: '{definition.Name}'");
                 }
             }
 
             return context.Result;
+        }
+
+        private class NotImplementedMergePolicy : MergePolicy
+        {
+            private string _definitionName;
+
+            public NotImplementedMergePolicy(string definitionName)
+            {
+                _definitionName = definitionName;
+            }
+
+            public override string DisplayName => $"Not implemented merge policy '{_definitionName}'";
+
+            public override Task EvaluateAsync(IMergePolicyEvaluationContext context, MergePolicyProperties properties)
+            {
+                throw new System.NotImplementedException();
+            }
+
         }
     }
 }
