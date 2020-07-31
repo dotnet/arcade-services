@@ -19,7 +19,6 @@ using Microsoft.VisualStudio.Services.WebApi;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
-using Octokit;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -543,7 +542,6 @@ namespace Microsoft.DotNet.DarcLib
                     This pull request has not been merged because Maestro++ is waiting on the following merge policies.
                     {string.Join("\n", evaluations.OrderBy(r => r.MergePolicyName == null ? " " : r.MergePolicyName).Select(DisplayPolicy))}
            ");
-
         }
 
         private string DisplayPolicy(MergePolicyEvaluationResult.SingleResult result)
@@ -1500,7 +1498,5 @@ namespace Microsoft.DotNet.DarcLib
             (string account, string project, string repo, int id) prInfo = ParsePullRequestUri(pullRequestUri);
             await DeleteBranchAsync(prInfo.account, prInfo.project, prInfo.repo, pr.HeadBranch);
         }
-
-
     }
 }

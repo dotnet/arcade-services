@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 using Maestro.Contracts;
 using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
-using Octokit;
 
 namespace Microsoft.DotNet.DarcLib
 {

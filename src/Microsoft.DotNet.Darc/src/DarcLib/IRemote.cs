@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Maestro.Contracts;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NuGet.Versioning;
-using Octokit;
 using Asset = Microsoft.DotNet.Maestro.Client.Models.Asset;
 using Subscription = Microsoft.DotNet.Maestro.Client.Models.Subscription;
 
@@ -209,7 +208,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="pullRequestUrl">Url of pull request.</param>
         /// <param name="evaluations">List of merge policies.</param>
         /// <returns>Async task.</returns>
-        Task CreateOrUpdatePullRequestStatusMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations);
+        Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations);
 
         /// <summary>
         ///     Get the status of a pull request.

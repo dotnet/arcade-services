@@ -20,10 +20,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.ServiceFabric.Data;
-using Octokit;
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
-using Commit = Microsoft.DotNet.DarcLib.Commit;
 using PullRequest = Microsoft.DotNet.DarcLib.PullRequest;
 using Subscription = Maestro.Data.Models.Subscription;
 
@@ -405,7 +403,6 @@ namespace SubscriptionActorService
                 // If the PR is currently open, then evaluate the merge policies, which will potentially
                 // merge the PR if they are successul.
                 case PrStatus.Open:
-                    
                     ActionResult<MergePolicyCheckResult> checkPolicyResult = await CheckMergePolicyAsync(pr, darc);
                     pr.MergePolicyResult = checkPolicyResult.Result;
 
@@ -479,16 +476,13 @@ namespace SubscriptionActorService
                 darc,
                 policyDefinitions);
             
-            var sortedResults = result.Results.OrderBy(r => r.MergePolicyName).ToList();
-            await UpdateMergeStatusAsync(darc, pr.Url, sortedResults);
-
+            await UpdateMergeStatusAsync(darc, pr.Url, result.Results);
             if (result.Failed || result.Pending)
             {
                 return ActionResult.Create(
                     result.Pending ? MergePolicyCheckResult.PendingPolicies : MergePolicyCheckResult.FailedPolicies,
                     $"NOT Merged: PR '{pr.Url}' failed policies {string.Join(", ", result.Results.Where(r => r.Success == null || r.Success == false).Select(r => r.MergePolicyName + r.Message))}");
             }
-
             if (result.Succeeded)
             {
                 var merged = false;
@@ -501,18 +495,14 @@ namespace SubscriptionActorService
                 {
                     // Failure to merge is not exceptional, report on it.
                 }
-
-                
                 if (merged)
                 {
                     return ActionResult.Create(
                         MergePolicyCheckResult.Merged,
                         $"Merged: PR '{pr.Url}' passed policies {string.Join(", ", policyDefinitions.Select(p => p.Name))}");
                 }
-
                 return ActionResult.Create(MergePolicyCheckResult.FailedToMerge, $"NOT Merged: PR '{pr.Url}' has merge conflicts.");
             }
-
             return ActionResult.Create(MergePolicyCheckResult.NoPolicies, "NOT Merged: There are no merge policies");
         }
 
@@ -525,7 +515,7 @@ namespace SubscriptionActorService
         /// <returns>Result of the policy check.</returns>
         private Task UpdateMergeStatusAsync(IRemote darc, string prUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations)
         {
-            return darc.CreateOrUpdatePullRequestStatusMergeStatusInfoAsync(prUrl, evaluations);
+            return darc.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, evaluations);
         }
 
         private async Task UpdateSubscriptionsForMergedPRAsync(

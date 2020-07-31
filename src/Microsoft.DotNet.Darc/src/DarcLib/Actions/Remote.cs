@@ -16,7 +16,6 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
-using Octokit;
 using Asset = Microsoft.DotNet.Maestro.Client.Models.Asset;
 using Subscription = Microsoft.DotNet.Maestro.Client.Models.Subscription;
 
@@ -329,7 +328,7 @@ namespace Microsoft.DotNet.DarcLib
             return _gitClient.CreateOrUpdatePullRequestCommentAsync(pullRequestUrl, message);
         }
 
-        public Task CreateOrUpdatePullRequestStatusMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations)
+        public Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations)
         {
             CheckForValidGitClient();
             return _gitClient.CreateOrUpdatePullRequestMergeStatusInfoAsync(pullRequestUrl, evaluations);

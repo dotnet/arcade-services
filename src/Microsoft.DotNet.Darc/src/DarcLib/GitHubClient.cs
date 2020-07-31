@@ -421,92 +421,106 @@ namespace Microsoft.DotNet.DarcLib
         public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
-
-            // Get the latest commit for the current PR
-            IList<Commit> commits = await GetPullRequestCommitsAsync(pullRequestUrl);
-            Commit latestCommit = commits[commits.Count - 1];
-
+            // Get the sha of the latest commit for the current PR
+            var prSha = (await Client.PullRequest.Get(owner, repo, id))?.Head?.Sha ?? null;
+            if (prSha == null)
+            {
+                return;
+            }
             // Get all the checks runs for the current PR
-            CheckRunsResponse existingChecksRuns = await Client.Check.Run.GetAllForReference(owner,repo, latestCommit.Sha);
+            CheckRunsResponse existingChecksRuns = await Client.Check.Run.GetAllForReference(owner, repo, prSha);
             // Convert the IReadOnlyList of CheckRun to a List of CheckRun
             List<CheckRun> existingChecksList = new List<CheckRun>(existingChecksRuns.CheckRuns);
-
             foreach (var eval in evaluations)
             {
-                CheckRun existingCheckRun = existingChecksRuns.CheckRuns.SingleOrDefault(c => c.ExternalId == $"maestro-policy-{eval.MergePolicyName}-{latestCommit.Sha}");
-                NewCheckRun newCheckRun = CreateNewCheckRun(eval, latestCommit.Sha);
+                CheckRun existingCheckRun = existingChecksRuns.CheckRuns.SingleOrDefault(c => c.ExternalId == $"maestro-policy-{eval.MergePolicyName}-{prSha}");
+                NewCheckRun newCheckRun = CreateNewCheckRun(eval, prSha);
                 // If the check doesn't exist yet, create it
                 if (existingCheckRun == null)
                 {
-                    await Client.Check.Run.Create(owner,repo, newCheckRun);
+                    await Client.Check.Run.Create(owner, repo, newCheckRun);
                 }
-
                 // If the check exist, checks that the status are different to update it
                 else if (newCheckRun.Status != existingCheckRun.Status)
                 {
-                    CheckRunUpdate updatedCheck = new CheckRunUpdate();
-                    updatedCheck.Status = newCheckRun.Status;
-                    updatedCheck.Conclusion = newCheckRun.Conclusion;
-                    updatedCheck.Name = newCheckRun.Name;
-                    updatedCheck.CompletedAt = newCheckRun.CompletedAt;
-                    existingChecksList.Remove(existingCheckRun);
-                    await Client.Check.Run.Update(owner,repo, existingCheckRun.Id, updatedCheck);
+                    await Client.Check.Run.Update(owner, repo, existingCheckRun.Id, ToCheckRunUpdate(newCheckRun));
                 }
+                    existingChecksList.Remove(existingCheckRun);
             }
-
             // Remove the check(s) in existingChecksRuns that aren't in evaluations 
             foreach (var remainingCheck in existingChecksList)
             {
-                MergePolicyEvaluationResult.SingleResult remainingCheckCommon = evaluations.SingleOrDefault(eval => remainingCheck.ExternalId == $"maestro-policy-{eval.MergePolicyName}-{latestCommit.Sha}");
                 // Avoid deleting check(s) that aren't from maestro
-                if (remainingCheckCommon != null)
+                if (remainingCheck.ExternalId.StartsWith("maestro-policy-"))
                 {
-                    CheckRunUpdate updatedCheck = new CheckRunUpdate();
-                    updatedCheck.Status = "completed";
-                    updatedCheck.Conclusion = "skipped";
-                    updatedCheck.Name = remainingCheck.Name;
-                    updatedCheck.CompletedAt = remainingCheck.CompletedAt;
-                    await Client.Check.Run.Update(owner, repo, remainingCheck.Id, updatedCheck);
+                    CheckRunUpdate updatedCheckRun = ToCheckRunUpdate(remainingCheck);
+                    updatedCheckRun.Status = "completed";
+                    updatedCheckRun.Conclusion = "skipped";
+                    await Client.Check.Run.Update(owner, repo, remainingCheck.Id, updatedCheckRun);
                 }
             }
         }
 
+
+        /// <summary>
+        ///     Create a NewCheckRun based on the result of the merge policy
+        /// </summary>
+        /// <param name="result">The evaluation of the merge policy</param>
+        /// <param name="sha">Sha of the latest commit</param>
+        /// <returns>The new check run</returns>
         private NewCheckRun CreateNewCheckRun(MergePolicyEvaluationResult.SingleResult result, string sha)
         {
             if (result.MergePolicyName == null)
                 throw new ArgumentNullException(nameof(result.MergePolicyName));
             
+            var newCheck = new NewCheckRun($"{result.MergePolicyDisplayName}", sha);
+            var output = new NewCheckRunOutput(result.MergePolicyName, result?.Message ?? "");
+            newCheck.ExternalId = $"maestro-policy-{result.MergePolicyName}-{sha}";
+            newCheck.Output = output;
+            newCheck.Status = CheckStatus.Completed;
             if (result.Success == null)
             {
-                var newCheck = new NewCheckRun($"{result.MergePolicyDisplayName}", sha);
-                var output = new NewCheckRunOutput(result.MergePolicyName, result.Message);
-                newCheck.Output = output;
-                newCheck.ExternalId = $"maestro-policy-{result.MergePolicyName}-{sha}";
                 newCheck.Status = CheckStatus.InProgress;
                 return newCheck;
 
             }
-
             if (result.Success == true)
             {
-                var newCheck = new NewCheckRun($"{result.MergePolicyDisplayName}", sha);
-                var output = new NewCheckRunOutput(result.MergePolicyName, result.Message == null ? "" : $" - {result.Message}");
-                newCheck.Output = output;
-                newCheck.ExternalId = $"maestro-policy-{result.MergePolicyName}-{sha}";
-                newCheck.Status = CheckStatus.Completed;
                 newCheck.Conclusion = "success";
                 newCheck.CompletedAt = DateTime.Now;
                 return newCheck;
             }
+            newCheck.Conclusion = "failure";
+            newCheck.CompletedAt = DateTime.Now;
+            return newCheck;
+        }
 
-            var newCheckRun = new NewCheckRun($"{result.MergePolicyDisplayName} {result.Message}", sha);
-            var newCheckRunOutput = new NewCheckRunOutput(result.MergePolicyName, result.Message);
-            newCheckRun.Output = newCheckRunOutput;
-            newCheckRun.ExternalId = $"maestro-policy-{result.MergePolicyName}-{sha}";
-            newCheckRun.Status = CheckStatus.Completed;
-            newCheckRun.Conclusion = "failure";
-            newCheckRun.CompletedAt = DateTime.Now;
-            return newCheckRun;
+        /// <summary>
+        ///     Update a NewCheckRun to CheckRunUpdate
+        /// </summary>
+        /// <param name="newCheckRun">The NewCheckRun that needs to be updated</param>
+        /// <returns>The updated CheckRun</returns>
+        private CheckRunUpdate ToCheckRunUpdate(NewCheckRun newCheckRun)
+        {
+            CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
+            updatedCheckRun.Status = newCheckRun.Status;
+            updatedCheckRun.Conclusion = newCheckRun.Conclusion;
+            updatedCheckRun.Name = newCheckRun.Name;
+            updatedCheckRun.CompletedAt = newCheckRun.CompletedAt;
+            return updatedCheckRun;
+        }
+
+        /// <summary>
+        ///     Update a CheckRun to CheckRunUpdate
+        /// </summary>
+        /// <param name="checkRun">The CheckRun that needs to be updated</param>
+        /// <returns>The updated CheckRun</returns>
+        private CheckRunUpdate ToCheckRunUpdate(CheckRun checkRun)
+        {
+            CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
+            updatedCheckRun.Name = checkRun.Name;
+            updatedCheckRun.CompletedAt = checkRun.CompletedAt;
+            return updatedCheckRun;
         }
 
         /// <summary>
