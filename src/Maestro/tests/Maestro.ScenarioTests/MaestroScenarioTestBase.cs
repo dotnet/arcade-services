@@ -153,14 +153,14 @@ namespace Maestro.ScenarioTests
             await RunDarcAsync("delete-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branch).ConfigureAwait(false);
         }
 
-        public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string sourceChannelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency)
+        public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string sourceChannelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency, string[] args)
         {
-            string output = await RunDarcAsync("add-subscription", "-q", "--no-trigger",
+            string output = await RunDarcAsync(new[] {"add-subscription", "-q",
                 "--channel", sourceChannelName,
                 "--source-repo", GetRepoUrl("dotnet", sourceRepo),
                 "--target-repo", GetRepoUrl(targetRepo),
                 "--target-branch", targetBranch,
-                "--update-frequency", updateFrequency).ConfigureAwait(false);
+                "--update-frequency", updateFrequency }.Concat(args).ToArray()).ConfigureAwait(false);
 
             Match match = Regex.Match(output, "Successfully created new subscription with id '([a-f0-9-]+)'");
             if (match.Success)
@@ -322,6 +322,33 @@ namespace Maestro.ScenarioTests
         public async Task<string> GetRepositoryPolicies(string repoUri, string branchName)
         {
             return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
+        }
+
+        public async Task<bool> CheckGithubPullRequestChecks(string targetRepoName, string targetBranch)
+        {
+            TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
+            PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
+
+            return await ValidateGithubMaestroCheckRunsSuccessful(targetRepoName, targetBranch, pullRequest);
+        }
+
+        public async Task<bool> ValidateGithubMaestroCheckRunsSuccessful(string targetRepoName, string targetBranch, PullRequest pullRequest)
+        {
+            TestContext.WriteLine($"Checking maestro merge policies check in {targetBranch} {targetRepoName}");
+            CheckRunsResponse existingCheckRuns = await GitHubApi.Check.Run.GetAllForReference(pullRequest.Id, pullRequest.Head.Sha);
+            int cnt = 0;
+            foreach (var checkRun in existingCheckRuns.CheckRuns)
+            {
+                if (checkRun.ExternalId.StartsWith("maestro-policy-"))
+                {
+                    cnt++;
+                    if (checkRun.Status != "completed" && checkRun.Conclusion != "success")
+                    {
+                        return false;
+                    }
+                }
+            }
+            return cnt >= 1;
         }
     }
 }
