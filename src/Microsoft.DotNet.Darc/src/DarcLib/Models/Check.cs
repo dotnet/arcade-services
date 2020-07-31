@@ -6,17 +6,17 @@ namespace Microsoft.DotNet.DarcLib
 {
     public class Check
     {
-        public Check(CheckState status, string name, string url, bool mergePolicyCheck = false)
+        public Check(CheckState status, string name, string url, bool isMaestroMergePolicy = false)
         {
             Status = status;
             Name = name;
             Url = url;
-            MergePolicyCheck = mergePolicyCheck;
+            IsMaestroMergePolicy = isMaestroMergePolicy;
         }
 
         public CheckState Status { get; }
         public string Name { get; }
         public string Url { get; }
-        public bool MergePolicyCheck { get; }
+        public bool IsMaestroMergePolicy { get; }
     }
 }
