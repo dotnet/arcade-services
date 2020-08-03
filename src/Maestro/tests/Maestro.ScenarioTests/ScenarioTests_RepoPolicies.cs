@@ -8,9 +8,11 @@ namespace Maestro.ScenarioTests
     [TestFixture]
     [Category("PostDeployment")]
     public class ScenarioTests_RepoPolicies : MaestroScenarioTestBase
-    {
+    { 
+        // The RepoPolicies logic does a partial string match for the branch name in the base,
+        // so it's important that this branch name not be a substring or superstring of another branch name
+        private readonly string branchName = $"MaestroRepoPoliciesTestBranch_{Environment.MachineName}";
         private readonly string repoName = TestRepository.TestRepo1Name;
-        private readonly string branchName = $"RepoPoliciesTestBranch_{Environment.MachineName}";
         private TestParameters _parameters;
 
         [TearDown]
