@@ -954,6 +954,13 @@
       <Commit>d8c200414ccf65e0be94358937e9c711c0fd532d</Commit>
     </Dependency>
     <Dependency>
+      <Name>System.Security.Cryptography.Cng</Name>
+      <Version>4.6.0-preview.19067.6</Version>
+      <Type>Product</Type>
+      <RepoUri>corefx</RepoUri>
+      <Commit>abcdabcd4ccf65e0be94358937e9c711c0fd532d</Commit>
+    </Dependency>
+    <Dependency>
       <Name>System.Security.Cryptography.Pkcs</Name>
       <Version>4.6.0-preview.19067.6</Version>
       <Type>Product</Type>
@@ -3507,7 +3514,7 @@
           <Version>4.6.0-preview.19067.6</Version>
           <Type>Product</Type>
           <RepoUri>corefx</RepoUri>
-          <Commit>d8c200414ccf65e0be94358937e9c711c0fd532d</Commit>
+          <Commit>abcdabcd4ccf65e0be94358937e9c711c0fd532d</Commit>
         </Dependency>
         <Dependency>
           <Name>System.CodeDom</Name>
