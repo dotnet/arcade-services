@@ -85,7 +85,7 @@ namespace Microsoft.DotNet.DarcLib
             return GetFileContentsAsync(accountName, projectName, repoName, filePath, branch);
         }
 
-        private static readonly List<string> VersionTypes = new List<string>() {"branch", "commit", "tag"};
+        private static readonly List<string> VersionTypes = new List<string>() { "branch", "commit", "tag" };
         /// <summary>
         ///     Retrieve the contents of a text file in a repo on a specific branch
         /// </summary>
@@ -244,6 +244,27 @@ namespace Microsoft.DotNet.DarcLib
             string keyword = null,
             string author = null)
         {
+            return await SearchPullRequestsAsync(repoUri, status, pullRequestBranch: pullRequestBranch, keyword, author);
+        }
+
+        /// <summary>
+        ///     Search pull requests matching the specified criteria
+        /// </summary>
+        /// <param name="repoUri">URI of repo containing the pull request</param>
+        /// <param name="status">Current PR status</param>
+        /// <param name="pullRequestBranch">Source branch for PR</param>
+        /// <param name="targetPullRequestBranch">Target branch for PR</param>
+        /// <param name="keyword">Keyword</param>
+        /// <param name="author">Author</param>
+        /// <returns>List of pull requests matching the specified criteria</returns>
+        public async Task<IEnumerable<int>> SearchPullRequestsAsync(
+        string repoUri,
+        PrStatus status,
+        string pullRequestBranch = null,
+        string targetPullRequestBranch = null,
+        string keyword = null,
+        string author = null)
+        {
             (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
             var query = new StringBuilder();
             AzureDevOpsPrStatus prStatus;
@@ -264,8 +285,17 @@ namespace Microsoft.DotNet.DarcLib
                     break;
             }
 
-            query.Append(
-                $"searchCriteria.sourceRefName=refs/heads/{pullRequestBranch}&searchCriteria.status={prStatus.ToString().ToLower()}");
+            query.Append($"searchCriteria.status={prStatus.ToString().ToLower()}");
+
+            if (!string.IsNullOrEmpty(pullRequestBranch))
+            {
+                query.Append($"&searchCriteria.sourceRefName=refs/heads/{pullRequestBranch}");
+            }
+
+            if (!string.IsNullOrEmpty(targetPullRequestBranch))
+            {
+                query.Append($"&searchCriteria.targetRefName=refs/heads/{targetPullRequestBranch}");
+            }
 
             if (!string.IsNullOrEmpty(keyword))
             {
