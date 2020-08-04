@@ -478,7 +478,7 @@ namespace DependencyUpdateErrorProcessor
 
                 case RepositoryBranchUpdateHistoryEntry pendingUpdatesEntry when pendingUpdatesEntry.Method == "ProcessPendingUpdatesAsync":
                     description =
-$@"[marker]: <> (subscriptionId: '', method: '{updateHistoryError.Method}', errorMessage: '{updateHistoryError.ErrorMessage}')
+$@"[marker]: <> (subscriptionId: '', method: '{updateHistoryError.Method}', errorMessage: '{updateHistoryError.ErrorMessage.Replace("'", string.Empty)}')
 **Repository :** '{pendingUpdatesEntry.Repository}'
 **Branch Name :** '{pendingUpdatesEntry.Branch}'
 **Error Message :**  '{updateHistoryError.ErrorMessage}'
@@ -515,7 +515,7 @@ $@"[marker]: <> (subscriptionId: '', method: '{updateHistoryError.Method}', erro
                     }
 
                     description =
-$@"[marker]: <> (subscriptionId: '', method: '{updateHistoryError.Method}', errorMessage: '{updateHistoryError.ErrorMessage}')
+$@"[marker]: <> (subscriptionId: '', method: '{updateHistoryError.Method}', errorMessage: '{updateHistoryError.ErrorMessage.Replace("'", string.Empty)}')
 {detailsBlock}
 **Error Message :**  '{updateHistoryError.ErrorMessage}'
 **Method :**   '{updateHistoryError.Method}'
@@ -573,7 +573,7 @@ $@"[marker]: <> (subscriptionId: '', method: '{updateHistoryError.Method}', erro
                 return string.Empty;
             }
             description =
-$@"[marker]: <> (subscriptionId: '{subscriptionId}', method: '{updateHistoryError.Method}', errorMessage: '{updateHistoryError.ErrorMessage}')
+$@"[marker]: <> (subscriptionId: '{subscriptionId}', method: '{updateHistoryError.Method}', errorMessage: '{updateHistoryError.ErrorMessage.Replace("'", string.Empty)}')
 **SubscriptionId:** '{subscriptionId}'
 **Source Repository :**  '{subscription.SourceRepository}'
 **Target Repository :**  '{subscription.TargetRepository}'

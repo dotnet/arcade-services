@@ -661,8 +661,10 @@ This pull request {(merged ? "has been merged" : "will be merged")} because the 
             catch (HttpRequestException reqEx) when (reqEx.Message.Contains("401 (Unauthorized)"))
             {
                 // We want to preserve the HttpRequestException's information but it's not serializable
-                // So, use the low-tech version of just storing the message / stacktrace.
-                throw new DarcAuthenticationFailureException($"Failure to authenticate to repository: Exception info:{Environment.NewLine}  {reqEx.Message}{Environment.NewLine}  {reqEx.StackTrace}");
+                // We'll log the full exception object so it's in Application Insights, and strip any single quotes from the message to ensure 
+                // GitHub issues are properly created.
+                Logger.LogError(reqEx, "Failure to authenticate to repository");
+                throw new DarcAuthenticationFailureException($"Failure to authenticate: {reqEx.Message}");
             }
         }
 

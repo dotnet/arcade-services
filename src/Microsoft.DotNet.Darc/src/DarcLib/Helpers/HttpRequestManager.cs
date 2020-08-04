@@ -90,8 +90,8 @@ namespace Microsoft.DotNet.DarcLib
                     // For CLI users this will look normal, but translating to a DarcAuthenticationFailureException means it opts in to automated failure logging.
                     if (ex is HttpRequestException && ex.Message.Contains("401 (Unauthorized)"))
                     {
-                        _logger.LogError("Non-continuable HTTP 401 error encountered while making request");
-                        throw new DarcAuthenticationFailureException($"Failure to authenticate: Exception info:{Environment.NewLine}  {ex.Message}{Environment.NewLine}  {ex.StackTrace}");
+                        _logger.LogError(ex, "Non-continuable HTTP 401 error encountered while making request");
+                        throw new DarcAuthenticationFailureException($"Failure to authenticate: {ex.Message}");
                     }
 
                     if (retriesRemaining <= 0)
