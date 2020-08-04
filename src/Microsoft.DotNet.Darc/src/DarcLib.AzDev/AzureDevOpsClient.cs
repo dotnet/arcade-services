@@ -264,11 +264,8 @@ namespace Microsoft.DotNet.DarcLib
                     break;
             }
 
-            //query.Append(
-            //    $"searchCriteria.sourceRefName=refs/heads/{pullRequestBranch}&searchCriteria.status={prStatus.ToString().ToLower()}");
-
             query.Append(
-    $"searchCriteria.targetRefName=refs/heads/{pullRequestBranch}&searchCriteria.status={prStatus.ToString().ToLower()}");
+                $"searchCriteria.sourceRefName=refs/heads/{pullRequestBranch}&searchCriteria.status={prStatus.ToString().ToLower()}");
 
             if (!string.IsNullOrEmpty(keyword))
             {
