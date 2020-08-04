@@ -478,7 +478,7 @@ namespace DependencyUpdateErrorProcessor
 
                 case RepositoryBranchUpdateHistoryEntry pendingUpdatesEntry when pendingUpdatesEntry.Method == "ProcessPendingUpdatesAsync":
                     description =
-$@"[marker]: <> (subscriptionId: '', method: '{updateHistoryError.Method}', errorMessage: '{updateHistoryError.ErrorMessage.Replace("'", string.Empty)}')
+$@"{GetGitHubIssueMarkerString(string.Empty, updateHistoryError.Method, updateHistoryError.ErrorMessage)}
 **Repository :** '{pendingUpdatesEntry.Repository}'
 **Branch Name :** '{pendingUpdatesEntry.Branch}'
 **Error Message :**  '{updateHistoryError.ErrorMessage}'
@@ -515,7 +515,7 @@ $@"[marker]: <> (subscriptionId: '', method: '{updateHistoryError.Method}', erro
                     }
 
                     description =
-$@"[marker]: <> (subscriptionId: '', method: '{updateHistoryError.Method}', errorMessage: '{updateHistoryError.ErrorMessage.Replace("'", string.Empty)}')
+$@"{GetGitHubIssueMarkerString(string.Empty, updateHistoryError.Method, updateHistoryError.ErrorMessage)}
 {detailsBlock}
 **Error Message :**  '{updateHistoryError.ErrorMessage}'
 **Method :**   '{updateHistoryError.Method}'
@@ -573,7 +573,7 @@ $@"[marker]: <> (subscriptionId: '', method: '{updateHistoryError.Method}', erro
                 return string.Empty;
             }
             description =
-$@"[marker]: <> (subscriptionId: '{subscriptionId}', method: '{updateHistoryError.Method}', errorMessage: '{updateHistoryError.ErrorMessage.Replace("'", string.Empty)}')
+$@"{GetGitHubIssueMarkerString(subscriptionId, updateHistoryError.Method, updateHistoryError.ErrorMessage)}
 **SubscriptionId:** '{subscriptionId}'
 **Source Repository :**  '{subscription.SourceRepository}'
 **Target Repository :**  '{subscription.TargetRepository}'
@@ -615,5 +615,14 @@ $@"[marker]: <> (subscriptionId: '{subscriptionId}', method: '{updateHistoryErro
         {
             return Task.FromResult(TimeSpan.MaxValue);
         }
+
+        private static string GetGitHubIssueMarkerString(string subscriptionId, string method, string errorMessage)
+        {
+            // Deal with the fact that this is going to be handled in a regex that has issues with () and '
+            // (See 'CommentMarker' above)
+            string sanitizedErrorMessage = errorMessage?.Replace("'", string.Empty).Replace('(', '[').Replace(')', ']');
+            return $@"[marker]: <> (subscriptionId: '{subscriptionId}', method: '{method}', errorMessage: '{sanitizedErrorMessage}')";
+        }
+
     }
 }
