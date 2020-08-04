@@ -87,7 +87,7 @@ namespace SubscriptionActorService
                     case "github.com":
                         if (installationId == default)
                         {
-                            throw new GithubApplicationInstallationException($"No installation is avaliable for repository '{normalizedUrl}'");
+                            throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'");
                         }
 
                         gitClient = new GitHubClient(gitExe, await _gitHubTokenProvider.GetTokenForInstallationAsync(installationId),
@@ -104,6 +104,5 @@ namespace SubscriptionActorService
                 return new Remote(gitClient, new MaestroBarClient(_context), logger);
             }
         }
-
     }
 }

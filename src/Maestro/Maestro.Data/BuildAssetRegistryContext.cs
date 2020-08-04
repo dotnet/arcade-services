@@ -90,7 +90,7 @@ FOR SYSTEM_TIME ALL
                     Timestamp = EF.Property<DateTime>(u, "SysStartTime")
                 });
 
-        public IQueryable<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory => SubscriptionUpdates.FromSqlRaw(@"
+        public virtual IQueryable<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory => SubscriptionUpdates.FromSqlRaw(@"
 SELECT * FROM [SubscriptionUpdates]
 FOR SYSTEM_TIME ALL
 ")
@@ -354,21 +354,19 @@ FROM traverse;",
         }
     }
 
-    public class SubscriptionUpdateHistoryEntry
+    public class SubscriptionUpdateHistoryEntry : UpdateHistoryEntry
     {
         public Guid SubscriptionId { get; set; }
-        public string Action { get; set; }
-        public bool Success { get; set; }
-        public string ErrorMessage { get; set; }
-        public string Method { get; set; }
-        public string Arguments { get; set; }
-        public DateTime Timestamp { get; set; }
     }
 
-    public class RepositoryBranchUpdateHistoryEntry
+    public class RepositoryBranchUpdateHistoryEntry : UpdateHistoryEntry
     {
         public string Repository { get; set; }
         public string Branch { get; set; }
+    }
+
+    public class UpdateHistoryEntry
+    {
         public string Action { get; set; }
         public bool Success { get; set; }
         public string ErrorMessage { get; set; }
