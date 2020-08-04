@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
-using Octokit;
 
 
 namespace Maestro.ScenarioTests
@@ -19,6 +18,10 @@ namespace Maestro.ScenarioTests
         [SetUp]
         public async Task InitializeAsync()
         {
+            Environment.SetEnvironmentVariable("MAESTRO_BASEURI", "https://1072664df082.ngrok.io");
+            Environment.SetEnvironmentVariable("MAESTRO_TOKEN", "AAAABhtDEzXWLBrOxb_OV0unfUU");
+            Environment.SetEnvironmentVariable("GITHUB_TOKEN", "d920ec398ebb64dd97172313b9cdada3acddc1cc");
+            Environment.SetEnvironmentVariable("DARC_PACKAGE_SOURCE", "C:\Users\t-lorisw\arcade-services\artifacts\packages\Debug\NonShipping\Microsoft.DotNet.Darc.0.0.99-dev.nupkg");
             _parameters = await TestParameters.GetAsync();
             SetTestParameters(_parameters);
         }
@@ -39,7 +42,7 @@ namespace Maestro.ScenarioTests
             var targetBranch = _random.Next(int.MaxValue).ToString();
 
             TestContext.WriteLine("GitHub Dependency Flow, non-batched, all checks successful");
-            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new string[] { "--trigger", "--all-checks-passed" });
+            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new string[] {"--all-checks-passed" });
         }
 
         [Test]
@@ -51,7 +54,7 @@ namespace Maestro.ScenarioTests
             var targetBranch = _random.Next(int.MaxValue).ToString();
 
             TestContext.WriteLine("GitHub Dependency Flow, non-batched, standard");
-            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new string[] { "--trigger","--standard-automerge" });
+            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new string[] {"--standard-automerge" });
         }
 
         public async Task AutoMergeFlowTestBase(string targetRepo, string sourceRepo, string targetBranch, string testChannelName, string[] args)

@@ -49,7 +49,7 @@ namespace Maestro.ScenarioTests
             }
             await TestHelpers.RunExecutableAsync(dotnetExe, toolInstallArgs.ToArray());
 
-            string darcExe = Path.Join(testDir.Peek()!.Directory, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
+            string darcExe = "darc.exe"; //Path.Join(testDir.Peek()!.Directory, RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "darc.exe" : "darc");
 
             Assembly assembly = typeof(TestParameters).Assembly;
             var githubApi =
