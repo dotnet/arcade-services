@@ -264,8 +264,11 @@ namespace Microsoft.DotNet.DarcLib
                     break;
             }
 
+            //query.Append(
+            //    $"searchCriteria.sourceRefName=refs/heads/{pullRequestBranch}&searchCriteria.status={prStatus.ToString().ToLower()}");
+
             query.Append(
-                $"searchCriteria.sourceRefName=refs/heads/{pullRequestBranch}&searchCriteria.status={prStatus.ToString().ToLower()}");
+    $"searchCriteria.targetRefName=refs/heads/{pullRequestBranch}&searchCriteria.status={prStatus.ToString().ToLower()}");
 
             if (!string.IsNullOrEmpty(keyword))
             {
@@ -282,7 +285,7 @@ namespace Microsoft.DotNet.DarcLib
                 HttpMethod.Get,
                 accountName,
                 projectName,
-                $"repositories/{repoName}/pullrequests?{query}",
+                $"_apis/git/repositories/{repoName}/pullrequests?{query}",
                 _logger);
 
             JArray values = JArray.Parse(content["value"].ToString());
