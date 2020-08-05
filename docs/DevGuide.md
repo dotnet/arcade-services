@@ -40,7 +40,7 @@ Maestro.Web uses Azure AppConfiguration (AAC) to dynamically enable/disable auto
 - https://zimmergren.net/introduction-azure-app-configuration-store-csharp-dotnetcore/
 - https://docs.microsoft.com/en-us/azure/azure-app-configuration/howto-integrate-azure-managed-service-identity
 
-## Running scenario tests
+## Running scenario tests against a local cluster
 
 If you want to run the C# scenario tests (make sure that you followed the getting started steps beforehands), you will need to setup some variable environments:
 
