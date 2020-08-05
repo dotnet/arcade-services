@@ -2866,6 +2866,48 @@
       }
     },
     {
+      "alert": {
+        "alertRuleTags": {
+          "NotificationId": "b87805b575d141e4b2b6d258f5e3a79e"
+        },
+        "conditions": [
+          {
+            "evaluator": {
+              "params": [
+                10
+              ],
+              "type": "gt"
+            },
+            "operator": {
+              "type": "and"
+            },
+            "query": {
+              "params": [
+                "A",
+                "5m",
+                "now"
+              ]
+            },
+            "reducer": {
+              "params": [],
+              "type": "avg"
+            },
+            "type": "query"
+          }
+        ],
+        "executionErrorState": "keep_state",
+        "for": "5m",
+        "frequency": "1m",
+        "handler": 1,
+        "message": "The number of failed Maestro requests per hour is above 10. This may indicate a deployment in progress or a systemic problem that needs to be investigated.",
+        "name": "Maestro Failed Requests/Hour alert",
+        "noDataState": "keep_state",
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
+      },
       "aliasColors": {},
       "bars": true,
       "dashLength": 10,
