@@ -331,3 +331,7 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder
 .mfractor/
+
+# Secrets
+serviceDependencies.json
+serviceDependencies.local.json
