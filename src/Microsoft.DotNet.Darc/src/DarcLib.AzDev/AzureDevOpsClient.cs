@@ -482,7 +482,7 @@ namespace Microsoft.DotNet.DarcLib
         ///     to the first thread that has a comment marker for any comment.
         ///     Create a new thread if no comment markers were found.
         /// </remarks>
-        public async Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message)
+        private async Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message)
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 

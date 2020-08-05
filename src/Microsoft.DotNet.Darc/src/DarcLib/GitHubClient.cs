@@ -418,6 +418,16 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
+        /// <summary>
+        ///     Returns the ID used to identify the maestro merge policies checks in a PR
+        /// </summary>
+        /// <param name="mergePolicyName">Name of the merge policy</param>
+        /// <param name="sha">Sha of the latest commit in the PR</param>
+        private string CheckRunId(string mergePolicyName, string sha)
+        {
+            return $"maestro-policy-{mergePolicyName}-{sha}";
+        }
+
         public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
@@ -429,11 +439,11 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             // Get a list of all the merge policies checks runs for the current PR
-            List <CheckRun> existingChecksRuns = (await Client.Check.Run.GetAllForReference(owner, repo, prSha)).CheckRuns.Where(e => e.ExternalId.StartsWith("maestro-policy-")).ToList(); 
+            List <CheckRun> existingChecksRuns = (await Client.Check.Run.GetAllForReference(owner, repo, prSha)).CheckRuns.Where(e => e.ExternalId.StartsWith("maestro-policy-")).ToList();
 
-            var toBeAdded = evaluations.Where(e => existingChecksRuns.All(c => c.ExternalId != $"maestro-policy-{e.MergePolicyName}-{prSha}"));
-            var toBeUpdated = existingChecksRuns.Where(c => evaluations.Any(e => c.ExternalId == $"maestro-policy-{e.MergePolicyName}-{prSha}"));
-            var toBeDeleted = existingChecksRuns.Where(c => evaluations.All(e => c.ExternalId != $"maestro-policy-{e.MergePolicyName}-{prSha}"));
+            var toBeAdded = evaluations.Where(e => existingChecksRuns.All(c => c.ExternalId != CheckRunId(e.MergePolicyName, prSha)));
+            var toBeUpdated = existingChecksRuns.Where(c => evaluations.Any(e => c.ExternalId == CheckRunId(e.MergePolicyName, prSha)));
+            var toBeDeleted = existingChecksRuns.Where(c => evaluations.All(e => c.ExternalId != CheckRunId(e.MergePolicyName, prSha)));
 
             foreach (var newCheckRun in toBeAdded)
             {
@@ -468,7 +478,7 @@ namespace Microsoft.DotNet.DarcLib
 
             var newCheck = new NewCheckRun(result.MergePolicyDisplayName, sha);
             var output = new NewCheckRunOutput(result.MergePolicyName, result?.Message ?? "");
-            newCheck.ExternalId = $"maestro-policy-{result.MergePolicyName}-{sha}";
+            newCheck.ExternalId = CheckRunId(result.MergePolicyName, sha);
             newCheck.Output = output;
             newCheck.Status = CheckStatus.Completed;
 

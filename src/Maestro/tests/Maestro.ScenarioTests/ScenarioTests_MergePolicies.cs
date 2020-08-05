@@ -19,7 +19,7 @@ namespace Maestro.ScenarioTests
         public async Task InitializeAsync()
         {
             Environment.SetEnvironmentVariable("MAESTRO_BASEURI", "https://1072664df082.ngrok.io");
-            Environment.SetEnvironmentVariable("DARC_PACKAGE_SOURCE", "C:\Users\t-lorisw\arcade-services\artifacts\packages\Debug\NonShipping\Microsoft.DotNet.Darc.0.0.99-dev.nupkg");
+            Environment.SetEnvironmentVariable("DARC_PACKAGE_SOURCE", @"C:\Users\t-lorisw\arcade-services\artifacts\packages\Debug\NonShipping\");
             _parameters = await TestParameters.GetAsync();
             SetTestParameters(_parameters);
         }
@@ -52,7 +52,7 @@ namespace Maestro.ScenarioTests
             var targetBranch = _random.Next(int.MaxValue).ToString();
 
             TestContext.WriteLine("GitHub Dependency Flow, non-batched, standard");
-            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new string[] {"--standard-automerge" });
+            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new string[] {"--standard-automerge","--trigger" });
         }
 
         public async Task AutoMergeFlowTestBase(string targetRepo, string sourceRepo, string targetBranch, string testChannelName, string[] args)
@@ -97,7 +97,7 @@ namespace Maestro.ScenarioTests
                 await using IAsyncDisposable ___ = await PushGitBranchAsync("origin", targetBranch);
 
                 TestContext.WriteLine($"Adding a subscription from ${sourceRepo} to ${targetRepo}");
-                await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none", args);
+                await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none", sourceRepoUri, targetRepoUri, args);
 
                 await TriggerSubscriptionAsync(sub.Value);
 

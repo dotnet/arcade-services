@@ -23,6 +23,8 @@ namespace Maestro.ScenarioTests
         [SetUp]
         public async Task InitializeAsync()
         {
+            Environment.SetEnvironmentVariable("MAESTRO_BASEURI", "https://1072664df082.ngrok.io");
+            Environment.SetEnvironmentVariable("DARC_PACKAGE_SOURCE", @"C:\Users\t-lorisw\arcade-services\artifacts\packages\Debug\NonShipping\");
             _parameters = await TestParameters.GetAsync();
             SetTestParameters(_parameters);
         }
@@ -51,8 +53,9 @@ namespace Maestro.ScenarioTests
                 });
             var targetRepo = "maestro-test2";
             var targetBranch = _random.Next(int.MaxValue).ToString();
+            var targetRepoUri = GetRepoUrl(targetRepo);
             await using AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
-            await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none", new string[] { "--no-trigger"});
+            await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch,"none", sourceRepoUri, targetRepoUri, new string[] { "--no-trigger"});
             Build build = await CreateBuildAsync(GetRepoUrl("dotnet", sourceRepo), sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
             await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
 

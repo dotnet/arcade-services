@@ -194,14 +194,6 @@ namespace Microsoft.DotNet.DarcLib
         Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters);
 
         /// <summary>
-        ///     Create a comment on a pull request, or update the last comment if it was made by Maestro.
-        /// </summary>
-        /// <param name="pullRequestUrl">Url of pull request.</param>
-        /// <param name="message">Comment message.</param>
-        /// <returns>Async task.</returns>
-        Task CreateOrUpdatePullRequestStatusCommentAsync(string pullRequestUrl, string message);
-
-        /// <summary>
         ///     Create new check(s), update them with a new status,
         ///     or remove each merge policy check that isn't in evaluations
         /// </summary>

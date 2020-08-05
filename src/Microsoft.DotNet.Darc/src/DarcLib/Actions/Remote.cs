@@ -322,12 +322,6 @@ namespace Microsoft.DotNet.DarcLib
             return await _gitClient.SearchPullRequestsAsync(repoUri, pullRequestBranch, status, keyword, author);
         }
 
-        public Task CreateOrUpdatePullRequestStatusCommentAsync(string pullRequestUrl, string message)
-        {
-            CheckForValidGitClient();
-            return _gitClient.CreateOrUpdatePullRequestCommentAsync(pullRequestUrl, message);
-        }
-
         public Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations)
         {
             CheckForValidGitClient();

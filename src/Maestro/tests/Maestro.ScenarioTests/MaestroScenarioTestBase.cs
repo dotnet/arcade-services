@@ -153,12 +153,12 @@ namespace Maestro.ScenarioTests
             await RunDarcAsync("delete-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branch).ConfigureAwait(false);
         }
 
-        public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string sourceChannelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency, string[] args)
+        public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string sourceChannelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency,string sourceRepoURI, string targetRepoURI, string[] args)
         {
             string output = await RunDarcAsync(new[] {"add-subscription", "-q",
                 "--channel", sourceChannelName,
-                "--source-repo", GetRepoUrl("dotnet", sourceRepo),
-                "--target-repo", GetRepoUrl(targetRepo),
+                "--source-repo", sourceRepoURI,
+                "--target-repo", targetRepoURI,
                 "--target-branch", targetBranch,
                 "--update-frequency", updateFrequency }.Concat(args).ToArray()).ConfigureAwait(false);
 
