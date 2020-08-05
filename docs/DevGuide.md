@@ -24,7 +24,7 @@
     1. 
         - Repository: https://github.com/maestro-auth-test/maestro-test3
         - Installation Id: 289474
-1. Run `.\Build.cmd -pack` at the top-level of the folder (in arcade-services)
+1. Run `.\Build.cmd -pack` at the root of the repo
 1. Install ngrok from  https://ngrok.com/ or `choco install ngrok`
 1. (optional - when darc is used) Run `ngrok http 8080` and then use the reported ngrok url for the --bar-uri darc argument
 
