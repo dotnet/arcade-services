@@ -53,6 +53,8 @@ namespace DotNet.Status.Web.Controllers
         [GitHubWebHook(EventName = "issues")]
         public async Task<IActionResult> IssuesHook(JsonElement data)
         {
+            // because system.text.json default serialization setting can't deser web hook json payload we need custom JsonSerializerOptions
+            // just for this controller. see https://github.com/dotnet/core-eng/issues/10378
             var issueEvent = JsonSerializer.Deserialize<IssuesHookData>(data.ToString(), SerializerOptions());
 
             string action = issueEvent.Action;
