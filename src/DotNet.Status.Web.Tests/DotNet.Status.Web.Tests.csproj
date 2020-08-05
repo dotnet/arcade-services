@@ -5,6 +5,12 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="Files\IssueEventPayload.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Files\IssueEventPayload.json" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Moq" />
   </ItemGroup>
   <ItemGroup>
