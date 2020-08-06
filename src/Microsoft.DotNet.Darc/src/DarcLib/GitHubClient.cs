@@ -445,20 +445,20 @@ namespace Microsoft.DotNet.DarcLib
             var toBeUpdated = existingChecksRuns.Where(c => evaluations.Any(e => c.ExternalId == CheckRunId(e.MergePolicyName, prSha)));
             var toBeDeleted = existingChecksRuns.Where(c => evaluations.All(e => c.ExternalId != CheckRunId(e.MergePolicyName, prSha)));
 
-            foreach (var newCheckRun in toBeAdded)
+            foreach (var newCheckRunValidation in toBeAdded)
             {
-                await Client.Check.Run.Create(owner, repo, CheckRunForAdd(newCheckRun, prSha));
+                await Client.Check.Run.Create(owner, repo, CheckRunForAdd(newCheckRunValidation, prSha));
             }
             foreach (var updatedCheckRun in toBeUpdated)
             {
-                await Client.Check.Run.Update(owner, repo, updatedCheckRun.Id, CheckRunForUpdate(updatedCheckRun));
+                
+                MergePolicyEvaluationResult.SingleResult eval = evaluations.Single(e => updatedCheckRun.ExternalId == CheckRunId(e.MergePolicyName, prSha));
+                CheckRunUpdate newCheckRunUpdateValidation = CheckRunForUpdate(updatedCheckRun, eval);
+                await Client.Check.Run.Update(owner, repo, updatedCheckRun.Id, newCheckRunUpdateValidation);
             }
             foreach (var deletedCheckRun in toBeDeleted)
             {
-                CheckRunUpdate updatedCheckRun = CheckRunForUpdate(deletedCheckRun);
-                updatedCheckRun.Status = "completed";
-                updatedCheckRun.Conclusion = "skipped";
-                await Client.Check.Run.Update(owner, repo, deletedCheckRun.Id, updatedCheckRun);
+                await Client.Check.Run.Update(owner, repo, deletedCheckRun.Id, CheckRunForDelete(deletedCheckRun));
             }
         }
 
@@ -476,45 +476,101 @@ namespace Microsoft.DotNet.DarcLib
                 throw new ArgumentNullException(nameof(result.MergePolicyName));
             }
 
-            var newCheck = new NewCheckRun(result.MergePolicyDisplayName, sha);
-            var output = new NewCheckRunOutput(result.MergePolicyName, result?.Message ?? "");
-            newCheck.ExternalId = CheckRunId(result.MergePolicyName, sha);
-            newCheck.Output = output;
-            newCheck.Status = CheckStatus.Completed;
-
-            if (result.Success == null)
-            {
-                newCheck.Status = CheckStatus.InProgress;
-            }
-            else if (result.Success == true)
-            {
-                newCheck.Conclusion = "success";
-                newCheck.CompletedAt = DateTime.Now;
-            }
-            else
-            {
-                newCheck.Conclusion = "failure";
-                newCheck.CompletedAt = DateTime.UtcNow;
-            }
-            return newCheck;
+            var newCheckRun = new NewCheckRun(result.MergePolicyDisplayName, sha);
+            newCheckRun.ExternalId = CheckRunId(result.MergePolicyName, sha);
+            UpdateCheckRun(newCheckRun, result);
+            return newCheckRun;
         }
 
         /// <summary>
-        ///     Update a NewCheckRun to CheckRunUpdate
+        ///     Update a check run based on a NewCheckRun and evaluation
         /// </summary>
         /// <param name="newCheckRun">The NewCheckRun that needs to be updated</param>
+        /// <param name="eval">The result of that updated check run</param>
         /// <returns>The updated CheckRun</returns>
-        private CheckRunUpdate CheckRunForUpdate(CheckRun checkRun)
+        private CheckRunUpdate CheckRunForUpdate(CheckRun checkRun, MergePolicyEvaluationResult.SingleResult eval)
+        {
+            if (eval.MergePolicyName == null)
+            {
+                throw new ArgumentNullException(nameof(eval.MergePolicyName));
+            }
+
+            CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
+            updatedCheckRun.Name = checkRun.Name;
+            updatedCheckRun.ExternalId = checkRun.ExternalId;
+            UpdateCheckRun(updatedCheckRun, eval);
+            return updatedCheckRun;
+        }
+
+        /// <summary>
+        ///     Create a CheckRunUpdate based on a check run that needs to be deleted
+        /// </summary>
+        /// <param name="checkRun">The check run that needs to be deleted</param>
+        /// <returns>The deleted check run</returns>
+        private CheckRunUpdate CheckRunForDelete(CheckRun checkRun)
         {
             CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
-            updatedCheckRun.Status = checkRun.Status;
-            updatedCheckRun.ExternalId = checkRun.ExternalId;
-            updatedCheckRun.Conclusion = checkRun.Conclusion;
-            updatedCheckRun.Output = new NewCheckRunOutput(checkRun.Output.Title, checkRun.Output.Summary);
-            updatedCheckRun.Output.Text = checkRun.Output.Text;
             updatedCheckRun.Name = checkRun.Name;
+            updatedCheckRun.ExternalId = checkRun.ExternalId;
+            updatedCheckRun.Output = new NewCheckRunOutput(checkRun.Output.Title, checkRun.Output.Summary);
             updatedCheckRun.CompletedAt = checkRun.CompletedAt;
+            updatedCheckRun.Status = "completed";
+            updatedCheckRun.Conclusion = "skipped";
             return updatedCheckRun;
+        }
+
+        /// <summary>
+        ///     Create some properties of a NewCheckRun
+        /// </summary>
+        /// <param name="newCheckRun">The NewCheckRun that needs to be created</param>
+        /// <param name="result">The result of that new check run</param>
+        private void UpdateCheckRun(NewCheckRun newCheckRun, MergePolicyEvaluationResult.SingleResult result)
+        {
+            var output = new NewCheckRunOutput(result.MergePolicyName, result?.Message ?? "");
+            newCheckRun.Output = output;
+            newCheckRun.Status = CheckStatus.Completed;
+
+            if (result.Success == null)
+            {
+                newCheckRun.Status = CheckStatus.InProgress;
+            }
+            else if (result.Success == true)
+            {
+                newCheckRun.Conclusion = "success";
+                newCheckRun.CompletedAt = DateTime.Now;
+            }
+            else
+            {
+                newCheckRun.Conclusion = "failure";
+                newCheckRun.CompletedAt = DateTime.UtcNow;
+            }
+        }
+
+        /// <summary>
+        ///     Update some properties of a CheckRunUpdate
+        /// </summary>
+        /// <param name="newUpdateCheckRun">The CheckRunUpdate that needs to be updated</param>
+        /// <param name="result">The result of that new check run</param>
+        private void UpdateCheckRun(CheckRunUpdate newUpdateCheckRun, MergePolicyEvaluationResult.SingleResult result)
+        {
+            var output = new NewCheckRunOutput(result.MergePolicyName, result?.Message ?? "");
+            newUpdateCheckRun.Output = output;
+            newUpdateCheckRun.Status = CheckStatus.Completed;
+
+            if (result.Success == null)
+            {
+                newUpdateCheckRun.Status = CheckStatus.InProgress;
+            }
+            else if (result.Success == true)
+            {
+                newUpdateCheckRun.Conclusion = "success";
+                newUpdateCheckRun.CompletedAt = DateTime.Now;
+            }
+            else
+            {
+                newUpdateCheckRun.Conclusion = "failure";
+                newUpdateCheckRun.CompletedAt = DateTime.UtcNow;
+            }
         }
 
         /// <summary>
