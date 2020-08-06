@@ -13,6 +13,7 @@ using Octokit;
 using Octokit.Internal;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -22,7 +23,7 @@ namespace DarcBot
     public static class GitHubWebHook
     {
         // Search for triage item identifier information, example - "[BuildId=123456,RecordId=0dc87500-1d33-11ea-8b24-4baedbda8954,Index=0]"
-        private static readonly Regex _darcBotIssueIdentifierRegex = new Regex(@"\[BuildId=(?<buildid>[^,]+),RecordId=(?<recordid>[^,]+),Index=(?<index>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
+        private static readonly Regex _darcBotIssueIdentifierRegex = new Regex(@"\[BuildId=(?<buildid>[^,]+),RecordId=(?<recordid>[^,]+),Index=(?<index>[^\]]+)\]\s+\[Category=(?<category>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
         // Search for a darcbot property, example = "[Category=foo]"
         private static readonly Regex _darcBotPropertyRegex = new Regex(@"\[(?<key>.+)=(?<value>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
         private static readonly string _docLink = "[DarcBot documentation](https://github.com/dotnet/arcade-services/blob/master/src/GitHubApps/DarcBot/ReadMe.md)";
@@ -51,12 +52,10 @@ namespace DarcBot
                 return new OkObjectResult($"DarcBot has nothing to do with github issue action '{issuePayload.Action}'");
             }
 
-            // Determine identifiable information for triage item
-            TriageItem triageItem = GetTriageItemProperties(issuePayload.Issue.Body);
+            // Determine identifiable information for triage items
+            var triageItems = GetTriageItemsProperties(issuePayload.Issue.Body);
 
-            triageItem.Url = issuePayload.Issue.HtmlUrl;
-
-            if (triageItem == null)
+            if (!triageItems.Any())
             {
                 /* Item is not a triage item (does not contain identifiable information), do nothing */
                 log.LogInformation($"{issuePayload.Issue.Url} is not a triage type issue.");
@@ -88,6 +87,8 @@ namespace DarcBot
                 Credentials = new Credentials(token.Token)
             };
 
+            string updatedCategory = null;
+
             if (issuePayload.Action == "created" ||
                 issuePayload.Action == "opened" ||
                 issuePayload.Action == "reopened")
@@ -109,8 +110,8 @@ namespace DarcBot
                 {
                     if (checkissue.Number != issuePayload.Issue.Number)
                     {
-                        TriageItem issueItem = GetTriageItemProperties(checkissue.Body);
-                        if (triageItem.Equals(issueItem))
+                        var issueItems = GetTriageItemsProperties(checkissue.Body);
+                        if (issueItems.Count == triageItems.Count && !issueItems.Except(triageItems).Any())
                         {
                             await gitHubClient.Issue.Comment.Create(issuePayload.Repository.Id, issuePayload.Issue.Number, $"DarcBot has detected a duplicate issue.\n\nClosing as duplicate of {checkissue.HtmlUrl}\n\nFor more information see {_docLink}");
                             var issueUpdate = new IssueUpdate
@@ -128,7 +129,8 @@ namespace DarcBot
                 var update = issue.ToUpdate();
                 update.AddLabel(_darcBotLabelName);
                 await gitHubClient.Issue.Update(issuePayload.Repository.Id, issuePayload.Issue.Number, update);
-                triageItem.UpdatedCategory = "InTriage";
+
+                updatedCategory = "InTriage";
             }
 
             if (issuePayload.Action == "closed")
@@ -141,20 +143,29 @@ namespace DarcBot
                     string category = GetDarcBotProperty("category", comment.Body);
                     if (!string.IsNullOrEmpty(category))
                     {
-                        triageItem.UpdatedCategory = category;
+                        updatedCategory = category;
                     }
                 }
             }
 
-            log.LogInformation($"buildId: {triageItem.BuildId}, recordId: {triageItem.RecordId}, index: {triageItem.Index}, category: {triageItem.UpdatedCategory}, url: {triageItem.Url}");
+            foreach (var triageItem in triageItems)
+            {
+                triageItem.Url = issuePayload.Issue.HtmlUrl;
+                if (updatedCategory != null)
+                {
+                    triageItem.UpdatedCategory = updatedCategory;
+                    triageItem.Url = issuePayload.Issue.HtmlUrl;
+                }
+                log.LogInformation($"buildId: {triageItem.BuildId}, recordId: {triageItem.RecordId}, index: {triageItem.Index}, category: {triageItem.UpdatedCategory}, url: {triageItem.Url}");
+            }
 
-            await IngestTriageItemsIntoKusto(new[] { triageItem }, log);
+            await IngestTriageItemsIntoKusto(triageItems, log);
 
             await gitHubClient.Issue.Comment.Create(issuePayload.Repository.Id, issuePayload.Issue.Number, $"DarcBot has updated the 'TimelineIssuesTriage' database.\n**PowerBI reports may take up to 24 hours to refresh**\n\nSee {_docLink} for more information and 'darcbot' usage.");
             return new OkObjectResult("Success");
         }
 
-        private static async Task IngestTriageItemsIntoKusto(TriageItem[] triageItems, ILogger log)
+        private static async Task IngestTriageItemsIntoKusto(ICollection<TriageItem> triageItems, ILogger log)
         {
             log.LogInformation("Entering IngestTriageItemIntoKusto");
             string kustoIngestConnectionString = System.Environment.GetEnvironmentVariable("KustoIngestConnectionString");
@@ -195,36 +206,30 @@ namespace DarcBot
             return null;
         }
 
-        private static TriageItem GetTriageItemProperties(string body)
+        private static IList<TriageItem> GetTriageItemsProperties(string body)
         {
-            if (string.IsNullOrEmpty(body))
+            var items = new List<TriageItem>();
+
+            var matches = _darcBotIssueIdentifierRegex.Matches(body ?? "");
+
+            foreach(Match match in matches)
             {
-                return null;
+                TriageItem triageItem = new TriageItem();
+                int.TryParse(match.Groups["buildid"].Value, out int buildId);
+                int.TryParse(match.Groups["index"].Value, out int index);
+                Guid.TryParse(match.Groups["recordid"].Value, out Guid recordId);
+                var category = match.Groups["category"].Value;
+
+                triageItem.BuildId = buildId;
+                triageItem.RecordId = recordId;
+                triageItem.Index = index;
+                triageItem.UpdatedCategory = category;
+                triageItem.ModifiedDateTime = DateTime.UtcNow;
+
+                items.Add(triageItem);
             }
 
-            TriageItem triageItem = new TriageItem();
-
-            Match propertyMatch = _darcBotPropertyRegex.Match(body);
-            if (propertyMatch.Success)
-            {
-                triageItem.UpdatedCategory = GetDarcBotProperty("category", body);
-            }
-
-            Match triageIdentifierMatch = _darcBotIssueIdentifierRegex.Match(body);
-            if (!triageIdentifierMatch.Success)
-            {
-                return null;
-            }
-
-            int.TryParse(triageIdentifierMatch.Groups["buildid"].Value, out int buildId);
-            int.TryParse(triageIdentifierMatch.Groups["index"].Value, out int index);
-            Guid.TryParse(triageIdentifierMatch.Groups["recordid"].Value, out Guid recordId);
-
-            triageItem.BuildId = buildId;
-            triageItem.RecordId = recordId;
-            triageItem.Index = index;
-            triageItem.ModifiedDateTime = DateTime.Now;
-            return triageItem;
+            return items;
         }
     }
 }
