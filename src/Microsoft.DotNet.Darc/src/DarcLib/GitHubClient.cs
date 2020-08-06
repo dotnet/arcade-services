@@ -496,8 +496,6 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
-            updatedCheckRun.Name = checkRun.Name;
-            updatedCheckRun.ExternalId = checkRun.ExternalId;
             UpdateCheckRun(updatedCheckRun, eval);
             return updatedCheckRun;
         }
@@ -510,8 +508,6 @@ namespace Microsoft.DotNet.DarcLib
         private CheckRunUpdate CheckRunForDelete(CheckRun checkRun)
         {
             CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
-            updatedCheckRun.Name = checkRun.Name;
-            updatedCheckRun.ExternalId = checkRun.ExternalId;
             updatedCheckRun.Output = new NewCheckRunOutput(checkRun.Output.Title, checkRun.Output.Summary);
             updatedCheckRun.CompletedAt = checkRun.CompletedAt;
             updatedCheckRun.Status = "completed";
