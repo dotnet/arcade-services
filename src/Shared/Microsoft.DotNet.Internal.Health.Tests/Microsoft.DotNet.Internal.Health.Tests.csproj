@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk" ToolsVersion="Current">
+  <PropertyGroup>
+    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <IsPackable>false</IsPackable>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions.Json" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Microsoft.DotNet.Internal.Health\Microsoft.DotNet.Internal.Health.csproj" />
+    <ProjectReference Include="..\Microsoft.DotNet.Internal.Testing.Utility\Microsoft.DotNet.Internal.Testing.Utility.csproj" />
+  </ItemGroup>
+</Project>

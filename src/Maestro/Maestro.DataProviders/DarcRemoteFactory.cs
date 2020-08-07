@@ -68,7 +68,7 @@ namespace Maestro.DataProviders
                     case "github.com":
                         if (installationId == default)
                         {
-                            throw new GithubApplicationInstallationException($"No installation is avaliable for repository '{normalizedUrl}'");
+                            throw new GithubApplicationInstallationException($"No installation is available for repository '{normalizedUrl}'");
                         }
                         gitClient = new GitHubClient(null, await GitHubTokenProvider.GetTokenForInstallationAsync(installationId),
                             logger, null, Cache.Cache);

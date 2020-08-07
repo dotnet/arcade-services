@@ -15,6 +15,7 @@
     <PackageReference Include="Octokit" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Microsoft.DotNet.Darc\src\Darc\Microsoft.DotNet.Darc.csproj" />
     <ProjectReference Include="..\..\Client\src\Microsoft.DotNet.Maestro.Client.csproj" />
   </ItemGroup>
 

@@ -13,6 +13,7 @@ namespace Microsoft.DotNet.Darc.Options
     internal class GetDependencyFlowGraphCommandLineOptions : CommandLineOptions
     {
         [Option("graphviz", HelpText = @"Writes the flow graph in GraphViz (dot) form, into the specified file.")]
+        [RedactFromLogging]
         public string GraphVizOutputFile { get; set; }
 
         [Option("include-disabled-subscriptions", HelpText = @"Include edges that have disabled subscriptions")]
