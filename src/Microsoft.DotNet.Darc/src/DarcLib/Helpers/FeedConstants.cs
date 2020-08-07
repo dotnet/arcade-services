@@ -9,6 +9,9 @@ namespace Microsoft.DotNet.DarcLib.Helpers
     /// </summary>
     public class FeedConstants
     {
+        public static readonly string MaestroManagedPublicFeedPrefix = "darc-pub";
+        public static readonly string MaestroManagedInternalFeedPrefix = "darc-int";
+
         public static readonly string MaestroManagedFeedNamePattern = @"darc-(?<type>(int|pub))-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)";
 
         public static readonly string[] MaestroManagedFeedPatterns =
