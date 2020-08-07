@@ -20,7 +20,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1596679232426,
+  "iteration": 1596758519061,
   "links": [
     {
       "icon": "external link",
@@ -969,7 +969,7 @@
             "dimension": "none",
             "metricName": "select",
             "rawQuery": true,
-            "rawQueryString": "customEvents\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\n| where customDimensions.localizedName == \"Standard Dv3 Family vCPUs\" and customDimensions.location == \"westus\"\n| summarize cores = toint(avg(toint(customMeasurements.current))) by bin(timestamp, 15m)\n| order by timestamp desc",
+            "rawQueryString": "customEvents\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\n| where customDimensions.localizedName == \"Total Regional vCPUs\"\n| summarize cores = toint(max(toint(customMeasurements.current))) by bin(timestamp, $__interval)\n| order by timestamp desc",
             "timeColumn": "timestamp",
             "timeGrain": "auto",
             "valueColumn": "cores"
