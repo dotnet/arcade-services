@@ -138,8 +138,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
     [XmlRoot(ElementName = "FileExtensionSignInfo")]
     public class FileExtensionSignInfo
     {
-        [XmlAttribute(AttributeName = "Extension")]
-        public string Extension { get; set; }
+        [XmlAttribute(AttributeName = "Include")]
+        public string Include { get; set; }
 
         [XmlAttribute(AttributeName = "CertificateName")]
         public string CertificateName { get; set; }
@@ -148,8 +148,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
     [XmlRoot(ElementName = "FileSignInfo")]
     public class FileSignInfo
     {
-        [XmlAttribute(AttributeName = "File")]
-        public string File { get; set; }
+        [XmlAttribute(AttributeName = "Include")]
+        public string Include { get; set; }
 
         [XmlAttribute(AttributeName = "CertificateName")]
         public string CertificateName { get; set; }
@@ -158,15 +158,15 @@ namespace Microsoft.DotNet.Maestro.Tasks
     [XmlRoot(ElementName = "ItemsToSign")]
     public class ItemsToSign
     {
-        [XmlAttribute(AttributeName = "File")]
-        public string File { get; set; }
+        [XmlAttribute(AttributeName = "Include")]
+        public string Include { get; set; }
     }
 
     [XmlRoot(ElementName = "StrongNameSignInfo")]
     public class StrongNameSignInfo
     {
-        [XmlAttribute(AttributeName = "File")]
-        public string File { get; set; }
+        [XmlAttribute(AttributeName = "Include")]
+        public string Include { get; set; }
 
         [XmlAttribute(AttributeName = "PublicKeyToken")]
         public string PublicKeyToken { get; set; }

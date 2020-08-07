@@ -18,7 +18,7 @@ namespace DependencyUpdateErrorProcessor.Tests
                         ServiceHost.ConfigureDefaultServices(s);
                         Program.Configure(s);
                     },
-                    out string message).Should().BeTrue();
+                    out string message).Should().BeTrue(message);
         }
     }
 }

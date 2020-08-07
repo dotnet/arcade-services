@@ -7,11 +7,10 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Console;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
-    internal abstract class Operation : IDisposable
+    public abstract class Operation : IDisposable
     {
         private readonly ServiceProvider _provider;
 

@@ -15,12 +15,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
         public bool Equals(FileSignInfo x, FileSignInfo y)
         {
             return x.CertificateName.Equals(y.CertificateName, StringComparison.OrdinalIgnoreCase) &&
-                x.File.Equals(y.File, StringComparison.OrdinalIgnoreCase);
+                x.Include.Equals(y.Include, StringComparison.OrdinalIgnoreCase);
         }
 
         public int GetHashCode(FileSignInfo obj)
         {
-            return (obj.CertificateName, obj.File).GetHashCode();
+            return (obj.CertificateName, obj.Include).GetHashCode();
         }
     }
 }

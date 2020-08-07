@@ -15,6 +15,7 @@
     <PackageReference Update="EntityFrameworkCore.Triggers" Version="1.1.1" />
     <PackageReference Update="FluentAssertions" Version="5.10.3" />
     <PackageReference Update="FluentValidation.AspNetCore" Version="8.6.2" />
+    <PackageReference Update="FluentAssertions.Json" Version="5.5.0" />
     <PackageReference Update="GitHubJwt" Version="0.0.2" />
     <PackageReference Update="Humanizer.Core" Version="2.4.2" />
     <PackageReference Update="JetBrains.Annotations" Version="11.1.0" PrivateAssets="All" />
@@ -33,6 +34,7 @@
     <PackageReference Update="Microsoft.AspNetCore.Mvc.Testing" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.AspNetCore.WebHooks.Receivers" Version="1.0.0-preview2-final" />
     <PackageReference Update="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" Version="1.0.0-preview2-final" />
+    <PackageReference Update="Microsoft.Azure.Cosmos.Table" Version="1.0.7" />
     <PackageReference Update="Microsoft.Azure.KeyVault" Version="3.0.4" />
     <PackageReference Update="Microsoft.Azure.Kusto.Ingest" Version="8.1.0" />
     <PackageReference Update="Microsoft.Azure.Management.Fluent" Version="1.31.0" />
@@ -66,6 +68,7 @@
     <PackageReference Update="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.FileProviders.Physical" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.Hosting.Abstractions" Version="$(DotNetAssemblyVersion)" />
+    <PackageReference Update="Microsoft.Extensions.Http" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.Identity.Core" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.Logging" Version="$(DotNetAssemblyVersion)" />
     <PackageReference Update="Microsoft.Extensions.Logging.Abstractions" Version="$(DotNetAssemblyVersion)" />

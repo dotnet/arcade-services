@@ -356,7 +356,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
 
                     foreach (var incoherence in graph.IncoherentDependencies)
                     {
-                        build.Incoherencies.Add(new Data.Models.BuildIncoherence
+                        incoherencies.Add(new Data.Models.BuildIncoherence
                         {
                             Name = incoherence.Name,
                             Version = incoherence.Version,

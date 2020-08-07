@@ -20,17 +20,20 @@ namespace Microsoft.DotNet.GitHub.Authentication
         private readonly IOptions<GitHubClientOptions> _gitHubClientOptions;
         private readonly ConcurrentDictionary<long, AccessToken> _tokenCache;
         public readonly ILogger<GitHubTokenProvider> _logger;
+        private readonly ExponentialRetry _retry;
 
         public GitHubTokenProvider(
             IInstallationLookup installationLookup,
             IGitHubAppTokenProvider tokens,
             IOptions<GitHubClientOptions> gitHubClientOptions,
-            ILogger<GitHubTokenProvider> logger)
+            ILogger<GitHubTokenProvider> logger,
+            ExponentialRetry retry)
         {
             _installationLookup = installationLookup;
             _tokens = tokens;
             _gitHubClientOptions = gitHubClientOptions;
             _logger = logger;
+            _retry = retry;
             _tokenCache = new ConcurrentDictionary<long, AccessToken>();
         }
 
@@ -42,7 +45,7 @@ namespace Microsoft.DotNet.GitHub.Authentication
                 return cachedToken.Token;
             }
 
-            return await ExponentialRetry.RetryAsync(
+            return await _retry.RetryAsync(
                 async () =>
                 {
                     string jwt = _tokens.GetAppToken();

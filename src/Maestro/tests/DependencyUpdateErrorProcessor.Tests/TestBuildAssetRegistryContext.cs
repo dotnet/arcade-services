@@ -17,11 +17,13 @@ namespace DependencyUpdateErrorProcessor.Tests
             DbContextOptions<TestBuildAssetRegistryContext> options) : base(
             hostingEnvironment, options)
         {
-
         }
 
-        public List<RepositoryBranchUpdateHistoryEntry> RepoBranchUpdateInMemory { get; set; }
+        public List<RepositoryBranchUpdateHistoryEntry> RepoBranchUpdateInMemory { get; set; } = new List<RepositoryBranchUpdateHistoryEntry>();
         public override IQueryable<RepositoryBranchUpdateHistoryEntry> RepositoryBranchUpdateHistory => RepoBranchUpdateInMemory.AsQueryable();
+
+        public List<SubscriptionUpdateHistoryEntry> SubscriptionUpdateInMemory { get; set; } = new List<SubscriptionUpdateHistoryEntry>();
+        public override IQueryable<SubscriptionUpdateHistoryEntry> SubscriptionUpdateHistory => SubscriptionUpdateInMemory.AsQueryable();
 
         public override Task<long> GetInstallationId(string repositoryUrl)
         {

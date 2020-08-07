@@ -6,6 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using DotNet.Status.Web.Options;
 using Microsoft.AspNetCore.Mvc;
@@ -49,14 +51,26 @@ namespace DotNet.Status.Web.Controllers
         }
 
         [GitHubWebHook(EventName = "issues")]
-        public async Task<IActionResult> IssuesHook(IssuesHookData data)
+        public async Task<IActionResult> IssuesHook(JsonElement data)
         {
-            string action = data.Action;
-            _logger.LogInformation("Processing issues action '{action}' for issue {repo}/{number}", data.Action, data.Repository.Name, data.Issue.Number);
+            // because system.text.json default serialization setting can't deser web hook json payload we need custom JsonSerializerOptions
+            // just for this controller. see https://github.com/dotnet/core-eng/issues/10378
+            var issueEvent = JsonSerializer.Deserialize<IssuesHookData>(data.ToString(), SerializerOptions());
 
-            await ProcessRcaRulesAsync(data, action);
+            string action = issueEvent.Action;
+            _logger.LogInformation("Processing issues action '{action}' for issue {repo}/{number}", issueEvent.Action, issueEvent.Repository.Name, issueEvent.Issue.Number);
+
+            await ProcessRcaRulesAsync(issueEvent, action);
 
             return NoContent();
+        }
+
+        public static JsonSerializerOptions SerializerOptions()
+        {
+            JsonSerializerOptions options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+            options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+
+            return options;
         }
 
         private async Task ProcessRcaRulesAsync(IssuesHookData data, string action)

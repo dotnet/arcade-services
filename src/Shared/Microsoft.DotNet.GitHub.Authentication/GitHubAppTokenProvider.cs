@@ -39,7 +39,8 @@ namespace Microsoft.DotNet.GitHub.Authentication
                 new GitHubJwtFactoryOptions
                 {
                     AppIntegrationId = gitHubAppId,
-                    ExpirationSeconds = 600
+                    // Due to clock drift, use 9:30 to avoid "'Expiration time' claim ('exp') is too far in the future"
+                    ExpirationSeconds = 570 
                 });
             return generator.CreateEncodedJwtToken();
         }

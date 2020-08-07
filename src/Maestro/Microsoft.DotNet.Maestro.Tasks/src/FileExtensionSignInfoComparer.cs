@@ -14,13 +14,13 @@ namespace Microsoft.DotNet.Maestro.Tasks
     {
         public bool Equals(FileExtensionSignInfo x, FileExtensionSignInfo y)
         {
-            return x.Extension.Equals(y.Extension, StringComparison.OrdinalIgnoreCase) &&
+            return x.Include.Equals(y.Include, StringComparison.OrdinalIgnoreCase) &&
                 x.CertificateName.Equals(y.CertificateName, StringComparison.OrdinalIgnoreCase);
         }
 
         public int GetHashCode(FileExtensionSignInfo obj)
         {
-            return (obj.Extension, obj.CertificateName).GetHashCode();
+            return (obj.Include, obj.CertificateName).GetHashCode();
         }
     }
 }

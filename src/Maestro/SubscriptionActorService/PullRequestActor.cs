@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection.Metadata;
 using System.Runtime.Serialization;
 using System.Text;
@@ -589,39 +590,51 @@ namespace SubscriptionActorService
                 Assets = assets,
                 IsCoherencyUpdate = false
             };
-            if (pr != null && !canUpdate)
+
+            try
             {
-                await StateManager.AddOrUpdateStateAsync(
-                    PullRequestUpdate,
-                    new List<UpdateAssetsParameters> {updateParameter},
-                    (n, old) =>
-                    {
-                        old.Add(updateParameter);
-                        return old;
-                    });
-                await Reminders.TryRegisterReminderAsync(
-                    PullRequestUpdate,
-                    Array.Empty<byte>(),
-                    TimeSpan.FromMinutes(5),
-                    TimeSpan.FromMinutes(5));
-                return ActionResult.Create<object>(
-                    null,
-                    $"Current Pull request '{pr.Url}' cannot be updated, update queued.");
-            }
+                if (pr != null && !canUpdate)
+                {
+                    await StateManager.AddOrUpdateStateAsync(
+                        PullRequestUpdate,
+                        new List<UpdateAssetsParameters> { updateParameter },
+                        (n, old) =>
+                        {
+                            old.Add(updateParameter);
+                            return old;
+                        });
+                    await Reminders.TryRegisterReminderAsync(
+                        PullRequestUpdate,
+                        Array.Empty<byte>(),
+                        TimeSpan.FromMinutes(5),
+                        TimeSpan.FromMinutes(5));
+                    return ActionResult.Create<object>(
+                        null,
+                        $"Current Pull request '{pr.Url}' cannot be updated, update queued.");
+                }
 
-            if (pr != null)
-            {   
-                await UpdatePullRequestAsync(pr, new List<UpdateAssetsParameters> {updateParameter});
-                return ActionResult.Create<object>(null, $"Pull Request '{pr.Url}' updated.");
-            }
+                if (pr != null)
+                {
+                    await UpdatePullRequestAsync(pr, new List<UpdateAssetsParameters> { updateParameter });
+                    return ActionResult.Create<object>(null, $"Pull Request '{pr.Url}' updated.");
+                }
 
-            string prUrl = await CreatePullRequestAsync(new List<UpdateAssetsParameters> {updateParameter});
-            if (prUrl == null)
+                string prUrl = await CreatePullRequestAsync(new List<UpdateAssetsParameters> { updateParameter });
+                if (prUrl == null)
+                {
+                    return ActionResult.Create<object>(null, "Updates require no changes, no pull request created.");
+                }
+
+                return ActionResult.Create<object>(null, $"Pull request '{prUrl}' created.");
+            }
+            catch (HttpRequestException reqEx) when (reqEx.Message.Contains("401 (Unauthorized)"))
             {
-                return ActionResult.Create<object>(null, "Updates require no changes, no pull request created.");
+                // We want to preserve the HttpRequestException's information but it's not serializable
+                // We'll log the full exception object so it's in Application Insights, and strip any single quotes from the message to ensure 
+                // GitHub issues are properly created.
+                Logger.LogError(reqEx, "Failure to authenticate to repository");
+                throw new DarcAuthenticationFailureException($"Failure to authenticate: {reqEx.Message}");
             }
-
-            return ActionResult.Create<object>(null, $"Pull request '{prUrl}' created.");
         }
 
         /// <summary>
