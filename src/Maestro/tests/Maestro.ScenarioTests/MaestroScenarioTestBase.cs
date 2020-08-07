@@ -127,7 +127,13 @@ namespace Maestro.ScenarioTests
                 }
             });
         }
-
+        public async Task AddDependenciesToLocalRepo(string repoPath, string name, string repoUri, bool isToolset = false)
+        {
+            using (ChangeDirectory(repoPath))
+            {
+                await RunDarcAsync(new string[] { "add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri });
+            }
+        }
         public async Task<string> GetTestChannelsAsync()
         {
             return await RunDarcAsync("get-channels").ConfigureAwait(false);
@@ -153,7 +159,7 @@ namespace Maestro.ScenarioTests
             await RunDarcAsync("delete-default-channel", "--channel", testChannelName, "--repo", repoUri, "--branch", branch).ConfigureAwait(false);
         }
 
-        public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string sourceChannelName, string sourceRepo, string targetRepo, string targetBranch, string updateFrequency,string sourceRepoURI, string targetRepoURI, string[] args)
+        public async Task<AsyncDisposableValue<string>> CreateSubscriptionAsync(string sourceChannelName, string sourceRepoURI, string targetRepoURI, string targetBranch, string updateFrequency, string[] args)
         {
             string output = await RunDarcAsync(new[] {"add-subscription", "-q",
                 "--channel", sourceChannelName,

@@ -55,7 +55,7 @@ namespace Maestro.ScenarioTests
             var targetBranch = _random.Next(int.MaxValue).ToString();
             var targetRepoUri = GetRepoUrl(targetRepo);
             await using AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
-            await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch,"none", sourceRepoUri, targetRepoUri, new string[] { "--no-trigger"});
+            await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepoUri, targetRepoUri, targetBranch, "none", new string[] { "--no-trigger"});
             Build build = await CreateBuildAsync(GetRepoUrl("dotnet", sourceRepo), sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
             await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
 

@@ -18,8 +18,6 @@ namespace Maestro.ScenarioTests
         [SetUp]
         public async Task InitializeAsync()
         {
-            Environment.SetEnvironmentVariable("MAESTRO_BASEURI", "https://1072664df082.ngrok.io");
-            Environment.SetEnvironmentVariable("DARC_PACKAGE_SOURCE", @"C:\Users\t-lorisw\arcade-services\artifacts\packages\Debug\NonShipping\");
             _parameters = await TestParameters.GetAsync();
             SetTestParameters(_parameters);
         }
@@ -52,7 +50,19 @@ namespace Maestro.ScenarioTests
             var targetBranch = _random.Next(int.MaxValue).ToString();
 
             TestContext.WriteLine("GitHub Dependency Flow, non-batched, standard");
-            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new string[] {"--standard-automerge","--trigger" });
+            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new string[] {"--standard-automerge", "--trigger"});
+        }
+
+        [Test]
+        public async Task Darc_GitHubFlow_AutoMerge_GithubChecks_NoRequestedChanges()
+        {
+            string testChannelName = "Test Channel " + _random.Next(int.MaxValue);
+            var sourceRepo = "maestro-test1";
+            var targetRepo = "maestro-test2";
+            var targetBranch = _random.Next(int.MaxValue).ToString();
+
+            TestContext.WriteLine("GitHub Dependency Flow, non-batched, no requested changes");
+            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new string[] { "--no-requested-changes" });
         }
 
         public async Task AutoMergeFlowTestBase(string targetRepo, string sourceRepo, string targetBranch, string testChannelName, string[] args)
@@ -77,6 +87,9 @@ namespace Maestro.ScenarioTests
             TestContext.WriteLine($"Creating test channel {testChannelName}");
             await using AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
 
+            TestContext.WriteLine($"Adding a subscription from ${sourceRepo} to ${targetRepo}");
+            await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepoUri, targetRepoUri, targetBranch, "none", args);
+            
             TestContext.WriteLine("Set up build for intake into target repository");
             Build build = await CreateBuildAsync(sourceRepoUri, sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
             await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
@@ -87,18 +100,13 @@ namespace Maestro.ScenarioTests
             {
                 await RunGitAsync("checkout", "-b", targetBranch).ConfigureAwait(false);
                 TestContext.WriteLine("Adding dependencies to target repo");
-                await RunDarcAsync("add-dependency",
-                    "--name", "Microsoft.DotNet.Arcade.Sdk",
-                    "--type", "toolset",
-                    "--repo", sourceRepoUri);
+                await AddDependenciesToLocalRepo(repo.Directory, "Foo", sourceRepoUri);
+                await AddDependenciesToLocalRepo(repo.Directory, "Bar", sourceRepoUri);
 
                 TestContext.WriteLine("Pushing branch to remote");
                 await RunGitAsync("commit", "-am", "Add dependencies.");
                 await using IAsyncDisposable ___ = await PushGitBranchAsync("origin", targetBranch);
-
-                TestContext.WriteLine($"Adding a subscription from ${sourceRepo} to ${targetRepo}");
-                await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none", sourceRepoUri, targetRepoUri, args);
-
+                
                 await TriggerSubscriptionAsync(sub.Value);
 
                 TestContext.WriteLine($"Waiting on PR to be opened in ${targetRepoUri}");
