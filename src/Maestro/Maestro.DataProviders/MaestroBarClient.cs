@@ -150,10 +150,31 @@ namespace Maestro.DataProviders
                 other.TargetBranch)
                 {
                     Channel = ToClientModelChannel(other.Channel),
-                    Policy = ToClientModelSubscriptionPolicy(other.PolicyObject)
+                    Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),
+                    LastAppliedBuild = ToClientModelBuild(other.LastAppliedBuild)
                 };
         }
-        
+
+        private Build ToClientModelBuild(Maestro.Data.Models.Build other)
+        {
+            return new Build(
+                other.Id,
+                other.DateProduced,
+                other.Staleness,
+                other.Released,
+                other.Stable,
+                other.Commit,
+                null,
+                null,
+                other.DependentBuildIds.Select(ToClientModelBuildDependency).ToImmutableList(),
+                null);
+        }
+
+        private BuildRef ToClientModelBuildDependency(Maestro.Data.Models.BuildDependency other)
+        {
+            return new BuildRef(other.BuildId, other.IsProduct, other.TimeToInclusionInMinutes);
+        }
+
         private SubscriptionPolicy ToClientModelSubscriptionPolicy(Maestro.Data.Models.SubscriptionPolicy other)
         {
             return new SubscriptionPolicy(
@@ -164,7 +185,10 @@ namespace Maestro.DataProviders
 
         public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(string sourceRepo = null, string targetRepo = null, int? channelId = null)
         {
-            IQueryable<Data.Models.Subscription> query = _context.Subscriptions.Include(s => s.Channel);
+            IQueryable<Data.Models.Subscription> query = _context.Subscriptions
+                .Include(s => s.Channel)
+                .Include(s => s.LastAppliedBuild)
+                .Include(s => s.LastAppliedBuild.DependentBuildIds);
 
             if (!string.IsNullOrEmpty(sourceRepo))
             {

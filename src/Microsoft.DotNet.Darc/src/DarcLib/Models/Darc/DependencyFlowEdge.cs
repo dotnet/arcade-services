@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DotNet.Maestro.Client.Models;
+using System.Linq;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -27,5 +28,8 @@ namespace Microsoft.DotNet.DarcLib
         public bool? PartOfCycle { get; set; }
         public bool BackEdge { get; set; }
         public bool OnLongestBuildPath { get; set; }
+
+        public bool IsTooling =>
+            Subscription.LastAppliedBuild?.Dependencies.All(d => !d.IsProduct) ?? false;
     }
 }
