@@ -28,7 +28,7 @@ $sourceAssets = @(
 
 try {
     Write-Host
-    Write-Host "GitHub Dependency Flow, non-batched with auto merge on all checks successful merge policies"
+    Write-Host "GitHub Dependency Flow, non-batched, no requested changes merge policies"
     Write-Host
 
     # Import common tooling and prep for tests
@@ -49,7 +49,7 @@ try {
     $buildId = New-Build -repository $sourceRepoUri -branch $sourceBranch -commit $sourceCommit -buildNumber $sourceBuildNumber -assets $sourceAssets
     # Add the build to the target channel
     Add-Build-To-Channel $buildId $testChannelName
-
+    
     Write-Host "Cloning target repo to prepare the target branch"
     # Clone the target repo, branch, add the new dependencies and push the branch
     GitHub-Clone $targetRepoName
@@ -74,8 +74,7 @@ try {
 
     # Add the subscription, but tell darc to immediately trigger it (add-subscription with --trigger option)
     Write-Host "Adding a subscription from $sourceRepoName to $targetRepoName"
-
-    $subscriptionId = Darc-Add-Subscription-And-Trigger --channel "$testChannelName" --source-repo "$sourceRepoUri" --target-repo "$targetRepoUri" --update-frequency none --target-branch "$targetBranch" --all-checks-passed
+    $subscriptionId = Darc-Add-Subscription-And-Trigger --channel "$testChannelName" --source-repo "$sourceRepoUri" --target-repo "$targetRepoUri" --update-frequency none --target-branch "$targetBranch" --no-requested-changes
 
     Write-Host "Waiting on PR to be opened in $targetRepoUri"
 

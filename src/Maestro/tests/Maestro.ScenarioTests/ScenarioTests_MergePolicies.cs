@@ -38,7 +38,7 @@ namespace Maestro.ScenarioTests
             var targetRepo = "maestro-test2";
             var targetBranch = _random.Next(int.MaxValue).ToString();
 
-            TestContext.WriteLine("GitHub Dependency Flow, non-batched, all checks successful");
+            TestContext.WriteLine("GitHub Dependency Flow, non-batched, all checks successful merge policies");
             await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> {"--all-checks-passed" });
         }
 
@@ -50,7 +50,7 @@ namespace Maestro.ScenarioTests
             var targetRepo = "maestro-test2";
             var targetBranch = _random.Next(int.MaxValue).ToString();
 
-            TestContext.WriteLine("GitHub Dependency Flow, non-batched, standard");
+            TestContext.WriteLine("GitHub Dependency Flow, non-batched, standard merge policies");
             await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> { "--standard-automerge"});
         }
 
@@ -62,7 +62,7 @@ namespace Maestro.ScenarioTests
             var targetRepo = "maestro-test2";
             var targetBranch = _random.Next(int.MaxValue).ToString();
 
-            TestContext.WriteLine("GitHub Dependency Flow, non-batched, no requested changes");
+            TestContext.WriteLine("GitHub Dependency Flow, non-batched, no requested changes merge policies");
             await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> { "--no-requested-changes" });
         }
 
