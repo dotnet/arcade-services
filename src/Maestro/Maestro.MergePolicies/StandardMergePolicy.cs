@@ -19,17 +19,29 @@ namespace Maestro.MergePolicies
         {
             s_standardGitHubProperties = new MergePolicyProperties(new Dictionary<string, JToken>
             {
-                { "ignoreChecks", JToken.FromObject("WIP") },
-                { "ignoreChecks", JToken.FromObject("license/cla") },
-                { "ignoreChecks", JToken.FromObject("auto-merge.config.enforce") },
+                { 
+                    "ignoreChecks", 
+                    JToken.FromObject(new []
+                    {
+                        "WIP",
+                        "license/cla",
+                        "auto-merge.config.enforce",
+                    })
+                },
             });
 
             s_standardAzureDevOpsProperties = new MergePolicyProperties(new Dictionary<string, JToken>
             {
-                { "ignoreChecks", JToken.FromObject("Comment requirements") },
-                { "ignoreChecks", JToken.FromObject("Minimum number of reviewers") },
-                { "ignoreChecks", JToken.FromObject("Required reviewers") },
-                { "ignoreChecks", JToken.FromObject("Work item linking") },
+                {
+                    "ignoreChecks",
+                    JToken.FromObject(new []
+                    {
+                        "Comment requirements",
+                        "Minimum number of reviewers",
+                        "auto-merge.config.enforce",
+                        "Work item linking",
+                    })
+                },
             });
         }
 

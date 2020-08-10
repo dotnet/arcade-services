@@ -21,7 +21,7 @@ namespace Maestro.ScenarioTests
                 .AddUserSecrets<TestParameters>()
                 .Build();
 
-            string maestroBaseUri = Environment.GetEnvironmentVariable("MAESTRO_BASEURI") ?? "https://maestro-int.westus2.cloudapp.azure.com";
+            string maestroBaseUri = Environment.GetEnvironmentVariable("MAESTRO_BASEURI") ??  userSecrets["MAESTRO_BASEURI"] ?? "https://maestro-int.westus2.cloudapp.azure.com";
             string maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
             string githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
             string darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE");
