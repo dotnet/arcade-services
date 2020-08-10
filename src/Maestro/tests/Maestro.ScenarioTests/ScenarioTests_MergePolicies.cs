@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
+using Microsoft.Azure.KeyVault.Models;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
 
@@ -37,8 +38,8 @@ namespace Maestro.ScenarioTests
             var targetRepo = "maestro-test2";
             var targetBranch = _random.Next(int.MaxValue).ToString();
 
-            TestContext.WriteLine("GitHub Dependency Flow, non-batched, all checks successful");
-            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new string[] {"--all-checks-passed" });
+            TestContext.WriteLine("GitHub Dependency Flow, non-batched, all checks successful merge policies");
+            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> {"--all-checks-passed" });
         }
 
         [Test]
@@ -49,8 +50,8 @@ namespace Maestro.ScenarioTests
             var targetRepo = "maestro-test2";
             var targetBranch = _random.Next(int.MaxValue).ToString();
 
-            TestContext.WriteLine("GitHub Dependency Flow, non-batched, standard");
-            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new string[] {"--standard-automerge", "--trigger"});
+            TestContext.WriteLine("GitHub Dependency Flow, non-batched, standard merge policies");
+            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> { "--standard-automerge"});
         }
 
         [Test]
@@ -61,11 +62,11 @@ namespace Maestro.ScenarioTests
             var targetRepo = "maestro-test2";
             var targetBranch = _random.Next(int.MaxValue).ToString();
 
-            TestContext.WriteLine("GitHub Dependency Flow, non-batched, no requested changes");
-            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new string[] { "--no-requested-changes" });
+            TestContext.WriteLine("GitHub Dependency Flow, non-batched, no requested changes merge policies");
+            await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> { "--no-requested-changes" });
         }
 
-        public async Task AutoMergeFlowTestBase(string targetRepo, string sourceRepo, string targetBranch, string testChannelName, string[] args)
+        public async Task AutoMergeFlowTestBase(string targetRepo, string sourceRepo, string targetBranch, string testChannelName, List<string> args, bool doCreateCheck = false)
         {
             string targetRepoUri = GetRepoUrl(targetRepo);
             var sourceRepoUri = GetRepoUrl(sourceRepo);
@@ -88,7 +89,7 @@ namespace Maestro.ScenarioTests
             await using AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
 
             TestContext.WriteLine($"Adding a subscription from ${sourceRepo} to ${targetRepo}");
-            await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepoUri, targetRepoUri, targetBranch, "none", args);
+            await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none","maestro-auth-test", additionalOptions: args);
             
             TestContext.WriteLine("Set up build for intake into target repository");
             Build build = await CreateBuildAsync(sourceRepoUri, sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
@@ -110,7 +111,7 @@ namespace Maestro.ScenarioTests
                 await TriggerSubscriptionAsync(sub.Value);
 
                 TestContext.WriteLine($"Waiting on PR to be opened in ${targetRepoUri}");
-                bool testResult = await CheckGithubPullRequestChecks(targetRepo, targetBranch);
+                bool testResult = await CheckGithubPullRequestChecks(targetRepo, targetBranch, doCreateCheck);
                 Assert.IsTrue(testResult);
             }
         }

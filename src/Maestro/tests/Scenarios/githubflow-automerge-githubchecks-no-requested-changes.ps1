@@ -28,7 +28,7 @@ $sourceAssets = @(
 
 try {
     Write-Host
-    Write-Host "GitHub Dependency Flow, non-batched with auto merge on all checks successful"
+    Write-Host "GitHub Dependency Flow, non-batched, no requested changes merge policies"
     Write-Host
 
     # Import common tooling and prep for tests

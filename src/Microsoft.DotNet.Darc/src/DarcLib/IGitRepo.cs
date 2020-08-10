@@ -3,9 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using Maestro.Contracts;
-using Octokit;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib

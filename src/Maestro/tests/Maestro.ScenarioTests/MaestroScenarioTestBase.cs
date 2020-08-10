@@ -437,19 +437,40 @@ namespace Maestro.ScenarioTests
         {
             return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
         }
+        public async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, PullRequest pr, Repository repo, int attempts = 7)
+        {
+            while (attempts-- > 0)
+            {
+                TestContext.WriteLine($"Starting check for merge, attempts remaining {attempts}");
+                pr = await GitHubApi.PullRequest.Get(repo.Id, pr.Number);
 
-        public async Task<bool> CheckGithubPullRequestChecks(string targetRepoName, string targetBranch)
+                if (pr.State == ItemState.Closed)
+                {
+                    return true;
+                }
+
+                await Task.Delay(60 * 1000).ConfigureAwait(false);
+            }
+
+            throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
+        }
+
+        public async Task<bool> CheckGithubPullRequestChecks(string targetRepoName, string targetBranch, bool doCreateCheck)
         {
             TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
             PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
+            Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepoName).ConfigureAwait(false);
 
-            return await ValidateGithubMaestroCheckRunsSuccessful(targetRepoName, targetBranch, pullRequest);
+            TestContext.WriteLine($"Checking for automatic merging of PR in {targetBranch} {targetRepoName}");
+            await WaitForMergedPullRequestAsync(targetRepoName, targetBranch, pullRequest, repo);
+            
+            return await ValidateGithubMaestroCheckRunsSuccessful(targetRepoName, targetBranch, pullRequest, repo);
         }
 
-        public async Task<bool> ValidateGithubMaestroCheckRunsSuccessful(string targetRepoName, string targetBranch, PullRequest pullRequest)
+        public async Task<bool> ValidateGithubMaestroCheckRunsSuccessful(string targetRepoName, string targetBranch, PullRequest pullRequest, Repository repo)
         {
             TestContext.WriteLine($"Checking maestro merge policies check in {targetBranch} {targetRepoName}");
-            CheckRunsResponse existingCheckRuns = await GitHubApi.Check.Run.GetAllForReference(pullRequest.Id, pullRequest.Head.Sha);
+            CheckRunsResponse existingCheckRuns = await GitHubApi.Check.Run.GetAllForReference(repo.Id, pullRequest.Head.Sha);
             int cnt = 0;
             foreach (var checkRun in existingCheckRuns.CheckRuns)
             {
