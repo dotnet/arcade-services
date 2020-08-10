@@ -46,7 +46,6 @@ namespace SubscriptionActorService
                 }
                 else
                 {
-
                     context.CurrentPolicy = new NotImplementedMergePolicy(definition.Name);
                     context.Fail($"Unknown Merge Policy: '{definition.Name}'");
                 }

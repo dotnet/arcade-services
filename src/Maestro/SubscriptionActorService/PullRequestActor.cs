@@ -23,8 +23,6 @@ using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.ServiceFabric.Data;
 using Asset = Maestro.Contracts.Asset;
 using AssetData = Microsoft.DotNet.Maestro.Client.Models.AssetData;
-using PullRequest = Microsoft.DotNet.DarcLib.PullRequest;
-using Subscription = Maestro.Data.Models.Subscription;
 
 namespace SubscriptionActorService
 {
