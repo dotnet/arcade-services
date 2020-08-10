@@ -461,15 +461,6 @@ namespace Maestro.ScenarioTests
             PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
             Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepoName).ConfigureAwait(false);
 
-            if (doCreateCheck)
-            {
-                NewCheckRun newCheckRun = new NewCheckRun("Maestro merge policy test", pullRequest.Head.Sha);
-                newCheckRun.Conclusion = "failure";
-                newCheckRun.Status = CheckStatus.Completed;
-                newCheckRun.CompletedAt = DateTime.UtcNow;
-                await GitHubApi.Check.Run.Create(repo.Id, newCheckRun);
-            }
-
             TestContext.WriteLine($"Checking for automatic merging of PR in {targetBranch} {targetRepoName}");
             await WaitForMergedPullRequestAsync(targetRepoName, targetBranch, pullRequest, repo);
             
