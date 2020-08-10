@@ -200,7 +200,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="pullRequestUrl">Url of pull request.</param>
         /// <param name="evaluations">List of merge policies.</param>
         /// <returns>Async task.</returns>
-        Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations);
+        Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations);
 
         /// <summary>
         ///     Get the status of a pull request.

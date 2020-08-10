@@ -12,7 +12,7 @@ namespace SubscriptionActorService
 {
     public interface IMergePolicyEvaluator
     {
-        Task<MergePolicyEvaluationResult> EvaluateAsync(
+        Task<MergePolicyEvaluationResults> EvaluateAsync(
             IPullRequest pr,
             IRemote darc,
             IReadOnlyList<MergePolicyDefinition> policyDefinitions);

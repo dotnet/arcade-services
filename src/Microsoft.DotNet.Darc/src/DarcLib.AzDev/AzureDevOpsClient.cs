@@ -528,35 +528,35 @@ namespace Microsoft.DotNet.DarcLib
             await client.CreateThreadAsync(newCommentThread, repoName, id);
         }
 
-        public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations)
+        public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
         {
             await CreateOrUpdatePullRequestCommentAsync(pullRequestUrl,
                     $@"## Auto-Merge Status
                     This pull request has not been merged because Maestro++ is waiting on the following merge policies.
-                    {string.Join("\n", evaluations.OrderBy(r => r.MergePolicyName == null ? " " : r.MergePolicyName).Select(DisplayPolicy))}
+                    {string.Join("\n", evaluations.OrderBy(r => r.MergePolicyInfo.Name).Select(DisplayPolicy))}
            ");
         }
 
-        private string DisplayPolicy(MergePolicyEvaluationResult.SingleResult result)
+        private string DisplayPolicy(MergePolicyEvaluationResult result)
         {
-            if (result.MergePolicyName == null)
+            if (result.MergePolicyInfo.Name == null)
             {
                 return $"- ❌ **{result.Message}**";
             }
 
-            if (result.Success == null)
+            if (result.Status == MergePolicyEvaluationStatus.Pending)
             {
                 return $"- ❓ **{result.Message}**";
             }
 
-            if (result.Success == true)
+            if (result.Status == MergePolicyEvaluationStatus.Success)
             {
-                return $"- ✔️ **{result.MergePolicyDisplayName}** Succeeded" + (result.Message == null
+                return $"- ✔️ **{result.MergePolicyInfo.DisplayName}** Succeeded" + (result.Message == null
                            ? ""
                            : $" - {result.Message}");
             }
 
-            return $"- ❌ **{result.MergePolicyDisplayName}** {result.Message}";
+            return $"- ❌ **{result.MergePolicyInfo.DisplayName}** {result.Message}";
         }
 
         /// <summary>

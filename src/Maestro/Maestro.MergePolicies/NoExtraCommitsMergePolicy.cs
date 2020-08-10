@@ -2,6 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Maestro.Contracts;
+using Microsoft.DotNet.DarcLib;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Maestro.MergePolicies
@@ -13,10 +16,18 @@ namespace Maestro.MergePolicies
     {
         public override string DisplayName => "No Extra Commits";
 
-        public override Task EvaluateAsync(IMergePolicyEvaluationContext context, MergePolicyProperties properties)
+        public override Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc)
         {
-            context.Fail("Merge Policy Not Yet Implemented.");
-            return Task.CompletedTask;
+            return Fail("Merge Policy Not Yet Implemented.");
+        }
+    }
+
+    public class NoExtraCommitsMergePolicyBuilder : IMergePolicyBuilder
+    {
+        public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
+        {
+            IReadOnlyList<IMergePolicy> policies = new List<IMergePolicy> { new NoExtraCommitsMergePolicy() };
+            return Task.FromResult(policies);
         }
     }
 }

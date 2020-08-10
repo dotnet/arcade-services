@@ -423,12 +423,12 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="mergePolicyName">Name of the merge policy</param>
         /// <param name="sha">Sha of the latest commit in the PR</param>
-        private string CheckRunId(string mergePolicyName, string sha)
+        private string CheckRunId(MergePolicyEvaluationResult result, string sha)
         {
-            return $"maestro-policy-{mergePolicyName}-{sha}";
+            return $"maestro-policy-{result.MergePolicyInfo.Name}-{sha}";
         }
 
-        public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations)
+        public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
             // Get the sha of the latest commit for the current PR
@@ -441,19 +441,18 @@ namespace Microsoft.DotNet.DarcLib
             // Get a list of all the merge policies checks runs for the current PR
             List <CheckRun> existingChecksRuns = (await Client.Check.Run.GetAllForReference(owner, repo, prSha)).CheckRuns.Where(e => e.ExternalId.StartsWith("maestro-policy-")).ToList();
 
-            var toBeAdded = evaluations.Where(e => existingChecksRuns.All(c => c.ExternalId != CheckRunId(e.MergePolicyName, prSha)));
-            var toBeUpdated = existingChecksRuns.Where(c => evaluations.Any(e => c.ExternalId == CheckRunId(e.MergePolicyName, prSha)));
-            var toBeDeleted = existingChecksRuns.Where(c => evaluations.All(e => c.ExternalId != CheckRunId(e.MergePolicyName, prSha)));
+            var toBeAdded = evaluations.Where(e => existingChecksRuns.All(c => c.ExternalId != CheckRunId(e, prSha)));
+            var toBeUpdated = existingChecksRuns.Where(c => evaluations.Any(e => c.ExternalId == CheckRunId(e, prSha)));
+            var toBeDeleted = existingChecksRuns.Where(c => evaluations.All(e => c.ExternalId != CheckRunId(e, prSha)));
 
             foreach (var newCheckRunValidation in toBeAdded)
             {
                 await Client.Check.Run.Create(owner, repo, CheckRunForAdd(newCheckRunValidation, prSha));
             }
             foreach (var updatedCheckRun in toBeUpdated)
-            {
-                
-                MergePolicyEvaluationResult.SingleResult eval = evaluations.Single(e => updatedCheckRun.ExternalId == CheckRunId(e.MergePolicyName, prSha));
-                CheckRunUpdate newCheckRunUpdateValidation = CheckRunForUpdate(updatedCheckRun, eval);
+            {                
+                MergePolicyEvaluationResult eval = evaluations.Single(e => updatedCheckRun.ExternalId == CheckRunId(e, prSha));
+                CheckRunUpdate newCheckRunUpdateValidation = CheckRunForUpdate(eval);
                 await Client.Check.Run.Update(owner, repo, updatedCheckRun.Id, newCheckRunUpdateValidation);
             }
             foreach (var deletedCheckRun in toBeDeleted)
@@ -469,15 +468,10 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="result">The evaluation of the merge policy</param>
         /// <param name="sha">Sha of the latest commit</param>
         /// <returns>The new check run</returns>
-        private NewCheckRun CheckRunForAdd(MergePolicyEvaluationResult.SingleResult result, string sha)
+        private NewCheckRun CheckRunForAdd(MergePolicyEvaluationResult result, string sha)
         {
-            if (result.MergePolicyName == null)
-            {
-                throw new ArgumentNullException(nameof(result.MergePolicyName));
-            }
-
-            var newCheckRun = new NewCheckRun(result.MergePolicyDisplayName, sha);
-            newCheckRun.ExternalId = CheckRunId(result.MergePolicyName, sha);
+            var newCheckRun = new NewCheckRun(result.MergePolicyInfo.DisplayName, sha);
+            newCheckRun.ExternalId = CheckRunId(result, sha);
             UpdateCheckRun(newCheckRun, result);
             return newCheckRun;
         }
@@ -488,13 +482,8 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="newCheckRun">The NewCheckRun that needs to be updated</param>
         /// <param name="eval">The result of that updated check run</param>
         /// <returns>The updated CheckRun</returns>
-        private CheckRunUpdate CheckRunForUpdate(CheckRun checkRun, MergePolicyEvaluationResult.SingleResult eval)
+        private CheckRunUpdate CheckRunForUpdate(MergePolicyEvaluationResult eval)
         {
-            if (eval.MergePolicyName == null)
-            {
-                throw new ArgumentNullException(nameof(eval.MergePolicyName));
-            }
-
             CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
             UpdateCheckRun(updatedCheckRun, eval);
             return updatedCheckRun;
@@ -520,17 +509,17 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="newCheckRun">The NewCheckRun that needs to be created</param>
         /// <param name="result">The result of that new check run</param>
-        private void UpdateCheckRun(NewCheckRun newCheckRun, MergePolicyEvaluationResult.SingleResult result)
+        private void UpdateCheckRun(NewCheckRun newCheckRun, MergePolicyEvaluationResult result)
         {
-            var output = new NewCheckRunOutput(result.MergePolicyName, result?.Message ?? "");
+            var output = new NewCheckRunOutput(result.MergePolicyInfo.DisplayName, result.Message ?? "");
             newCheckRun.Output = output;
             newCheckRun.Status = CheckStatus.Completed;
 
-            if (result.Success == null)
+            if (result.Status == MergePolicyEvaluationStatus.Pending)
             {
                 newCheckRun.Status = CheckStatus.InProgress;
             }
-            else if (result.Success == true)
+            else if (result.Status == MergePolicyEvaluationStatus.Success)
             {
                 newCheckRun.Conclusion = "success";
                 newCheckRun.CompletedAt = DateTime.Now;
@@ -547,17 +536,17 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="newUpdateCheckRun">The CheckRunUpdate that needs to be updated</param>
         /// <param name="result">The result of that new check run</param>
-        private void UpdateCheckRun(CheckRunUpdate newUpdateCheckRun, MergePolicyEvaluationResult.SingleResult result)
+        private void UpdateCheckRun(CheckRunUpdate newUpdateCheckRun, MergePolicyEvaluationResult result)
         {
-            var output = new NewCheckRunOutput(result.MergePolicyName, result?.Message ?? "");
+            var output = new NewCheckRunOutput(result.MergePolicyInfo.DisplayName, result.Message ?? "");
             newUpdateCheckRun.Output = output;
             newUpdateCheckRun.Status = CheckStatus.Completed;
 
-            if (result.Success == null)
+            if (result.Status == MergePolicyEvaluationStatus.Pending)
             {
                 newUpdateCheckRun.Status = CheckStatus.InProgress;
             }
-            else if (result.Success == true)
+            else if (result.Status == MergePolicyEvaluationStatus.Success)
             {
                 newUpdateCheckRun.Conclusion = "success";
                 newUpdateCheckRun.CompletedAt = DateTime.Now;

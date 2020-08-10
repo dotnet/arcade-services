@@ -472,7 +472,7 @@ namespace SubscriptionActorService
         private async Task<ActionResult<MergePolicyCheckResult>> CheckMergePolicyAsync(IPullRequest pr, IRemote darc)
         {
             IReadOnlyList<MergePolicyDefinition> policyDefinitions = await GetMergePolicyDefinitions();
-            MergePolicyEvaluationResult result = await MergePolicyEvaluator.EvaluateAsync(
+            MergePolicyEvaluationResults result = await MergePolicyEvaluator.EvaluateAsync(
                 pr,
                 darc,
                 policyDefinitions);
@@ -482,7 +482,7 @@ namespace SubscriptionActorService
             {
                 return ActionResult.Create(
                     result.Pending ? MergePolicyCheckResult.PendingPolicies : MergePolicyCheckResult.FailedPolicies,
-                    $"NOT Merged: PR '{pr.Url}' failed policies {string.Join(", ", result.Results.Where(r => r.Success == null || r.Success == false).Select(r => r.MergePolicyName + r.Message))}");
+                    $"NOT Merged: PR '{pr.Url}' failed policies {string.Join(", ", result.Results.Where(r => r.Status != MergePolicyEvaluationStatus.Success).Select(r => r.MergePolicyInfo.Name + r.Message))}");
             }
             if (result.Succeeded)
             {
@@ -514,7 +514,7 @@ namespace SubscriptionActorService
         /// <param name="darc">Darc remote</param>
         /// <param name="evaluations">List of merge policies</param>
         /// <returns>Result of the policy check.</returns>
-        private Task UpdateMergeStatusAsync(IRemote darc, string prUrl, IReadOnlyList<MergePolicyEvaluationResult.SingleResult> evaluations)
+        private Task UpdateMergeStatusAsync(IRemote darc, string prUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
         {
             return darc.CreateOrUpdatePullRequestMergeStatusInfoAsync(prUrl, evaluations);
         }
