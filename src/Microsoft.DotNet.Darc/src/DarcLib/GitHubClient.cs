@@ -425,7 +425,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="sha">Sha of the latest commit in the PR</param>
         private string CheckRunId(MergePolicyEvaluationResult result, string sha)
         {
-            return $"{MergePolicyConstants.MeastroMergePolicyCheckRunPrefix}{result.MergePolicyInfo.Name}-{sha}";
+            return $"{MergePolicyConstants.MaestroMergePolicyCheckRunPrefix}{result.MergePolicyInfo.Name}-{sha}";
         }
 
         public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
@@ -441,7 +441,7 @@ namespace Microsoft.DotNet.DarcLib
             // Get a list of all the merge policies checks runs for the current PR
             List <CheckRun> existingChecksRuns = 
                 (await Client.Check.Run.GetAllForReference(owner, repo, prSha))
-                .CheckRuns.Where(e => e.ExternalId.StartsWith(MergePolicyConstants.MeastroMergePolicyCheckRunPrefix)).ToList();
+                .CheckRuns.Where(e => e.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix)).ToList();
 
             var toBeAdded = evaluations.Where(e => existingChecksRuns.All(c => c.ExternalId != CheckRunId(e, prSha)));
             var toBeUpdated = existingChecksRuns.Where(c => evaluations.Any(e => c.ExternalId == CheckRunId(e, prSha)));
@@ -916,7 +916,7 @@ namespace Microsoft.DotNet.DarcLib
                             break;
                     }
 
-                    return new Check(state, name, url, isMaestroMergePolicy: run.ExternalId.StartsWith(MergePolicyConstants.MeastroMergePolicyCheckRunPrefix));
+                    return new Check(state, name, url, isMaestroMergePolicy: run.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix));
                 })
                 .ToList();
         }

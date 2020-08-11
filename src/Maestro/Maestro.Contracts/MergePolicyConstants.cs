@@ -14,6 +14,6 @@ namespace Maestro.Contracts
 
         public const string IgnoreChecksMergePolicyPropertyName = "ignoreChecks";
 
-        public const string MeastroMergePolicyCheckRunPrefix = "maestro-policy-";
+        public const string MaestroMergePolicyCheckRunPrefix = "maestro-policy-";
     }
 }

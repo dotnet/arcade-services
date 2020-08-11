@@ -474,7 +474,7 @@ namespace Maestro.ScenarioTests
             int cnt = 0;
             foreach (var checkRun in existingCheckRuns.CheckRuns)
             {
-                if (checkRun.ExternalId.StartsWith(MergePolicyConstants.MeastroMergePolicyCheckRunPrefix))
+                if (checkRun.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix))
                 {
                     cnt++;
                     if (checkRun.Status != "completed")
