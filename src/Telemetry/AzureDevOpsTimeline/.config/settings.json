@@ -1,5 +1,5 @@
 {
-  "HealthTableUri": "{vault(health-report-table-sas-uri)]",
+  "HealthTableUri": "[vault(health-report-table-sas-uri)]",
   "KeyVaultUri": "",
 
   "KustoDatabase": "engineeringdata",
