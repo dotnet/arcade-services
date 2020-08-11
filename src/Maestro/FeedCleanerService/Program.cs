@@ -31,7 +31,7 @@ namespace FeedCleanerService
 
         public static void Configure(IServiceCollection services)
         {
-            services.Configure((Action<FeedCleanerOptions, IServiceProvider>) ((options, provider) =>
+            services.Configure<FeedCleanerOptions>((options, provider) =>
             {
                 var config1 = provider.GetRequiredService<IConfiguration>();
                 options.Enabled = config1.GetSection("FeedCleaner").GetValue<bool>("Enabled");
@@ -46,7 +46,7 @@ namespace FeedCleanerService
                 {
                     options.AzdoAccounts.Add(token2.GetValue<string>("Account"));
                 }
-            }));
+            });
             services.AddDefaultJsonConfiguration();
             services.AddBuildAssetRegistry((provider, options) =>
             {

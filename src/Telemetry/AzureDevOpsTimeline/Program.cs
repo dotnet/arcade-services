@@ -26,7 +26,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                         services =>
                         {
                             services.AddDefaultJsonConfiguration();
-                            services.Configure((Action<AzureDevOpsTimelineOptions, IServiceProvider>) ((o, p) =>
+                            services.Configure<AzureDevOpsTimelineOptions>((o, p) =>
                             {
                                 var c = p.GetRequiredService<IConfiguration>();
                                 o.AzureDevOpsAccessToken = c["AzureDevOpsAccessToken"];
@@ -40,7 +40,7 @@ namespace Microsoft.DotNet.AzureDevOpsTimeline
                                 o.InitialDelay = c["InitialDelay"];
                                 o.Interval = c["Interval"];
                                 o.BuildBatchSize = c["BuildBatchSize"];
-                            }));
+                            });
                         });
                 });
         }

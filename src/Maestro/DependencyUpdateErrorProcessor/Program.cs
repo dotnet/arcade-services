@@ -49,7 +49,7 @@ namespace DependencyUpdateErrorProcessor
                     ?.InformationalVersion);
             });
             services.Configure<GitHubTokenProviderOptions>("GitHub", (o, s) => s.Bind(o));
-            services.Configure((Action<DependencyUpdateErrorProcessorOptions, IServiceProvider>) ((options, provider) =>
+            services.Configure<DependencyUpdateErrorProcessorOptions>((options, provider) =>
             {
                 var config1 = provider.GetRequiredService<IConfiguration>();
                 if (!bool.TryParse(config1["EnableDependencyUpdateErrorProcessor"], out var errorProcessorFlag))
@@ -62,7 +62,7 @@ namespace DependencyUpdateErrorProcessor
                 options.IsEnabled = errorProcessorFlag;
                 options.GithubUrl = config1["GithubUrl"];
                 options.FyiHandle = config1["FyiHandle"];
-            }));
+            });
             services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         }

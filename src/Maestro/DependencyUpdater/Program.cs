@@ -53,12 +53,12 @@ namespace DependencyUpdater
                         .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                         ?.InformationalVersion);
             });
-            services.Configure((Action<GitHubTokenProviderOptions, IServiceProvider>) ((options, provider) =>
+            services.Configure<GitHubTokenProviderOptions>((options, provider) =>
             {
                 var config1 = provider.GetRequiredService<IConfiguration>();
                 IConfigurationSection section1 = config1.GetSection("GitHub");
                 section1.Bind(options);
-            }));
+            });
             services.AddGitHubTokenProvider();
 
             services.AddAzureDevOpsTokenProvider();
