@@ -20,6 +20,7 @@ using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Internal.Health;
 using Microsoft.DotNet.Web.Authentication;
 using Microsoft.DotNet.Web.Authentication.GitHub;
 using Microsoft.Extensions.Configuration;
@@ -212,6 +213,12 @@ namespace DotNet.Status.Web
             services.AddSingleton<ZenHubClient>();
             services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
+            services.AddHealthReporting(
+                b =>
+                {
+                    b.AddLogging();
+                    b.AddAzureTable((o, p) => o.WriteSasUri = p.GetRequiredService<IConfiguration>()["HealthTableUri"]);
+                });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

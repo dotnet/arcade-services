@@ -3,6 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using Microsoft.DotNet.Internal.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Microsoft.DotNet.Internal.Health
@@ -18,10 +20,10 @@ namespace Microsoft.DotNet.Internal.Health
         
         public HealthReportingBuilder AddAzureTable(string statusTableUrl)
         {
-            return AddAzureTable(o => o.WriteSasUri = statusTableUrl);
+            return AddAzureTable((o, _) => o.WriteSasUri = statusTableUrl);
         }
 
-        public HealthReportingBuilder AddAzureTable(Action<AzureTableHealthReportingOptions> configure)
+        public HealthReportingBuilder AddAzureTable(Action<AzureTableHealthReportingOptions, IServiceProvider> configure)
         {
             AddProvider<AzureTableHealthReportProvider, AzureTableHealthReportingOptions>(configure);
             return this;
@@ -30,6 +32,12 @@ namespace Microsoft.DotNet.Internal.Health
         public HealthReportingBuilder AddServiceFabric()
         {
             AddProvider<ServiceFabricHealthReportProvider>();
+            return this;
+        }
+
+        public HealthReportingBuilder AddLogging()
+        {
+            AddProvider<LogHealthReporter>();
             return this;
         }
 
@@ -46,7 +54,8 @@ namespace Microsoft.DotNet.Internal.Health
             _services.AddSingleton<IHealthReportProvider>(provider);
             return this;
         }
-        public HealthReportingBuilder AddProvider<TProvider, TOptions>(Action<TOptions> configure)
+
+        public HealthReportingBuilder AddProvider<TProvider, TOptions>(Action<TOptions, IServiceProvider> configure)
             where TProvider : class, IHealthReportProvider
             where TOptions : class
         {

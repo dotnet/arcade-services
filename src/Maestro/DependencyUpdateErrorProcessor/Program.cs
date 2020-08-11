@@ -1,16 +1,20 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
+
+using System;
 using System.Reflection;
 using Maestro.Data;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Octokit;
+using ServiceCollectionExtensions = Microsoft.DotNet.Internal.DependencyInjection.ServiceCollectionExtensions;
 
 namespace DependencyUpdateErrorProcessor
 {
@@ -45,21 +49,20 @@ namespace DependencyUpdateErrorProcessor
                     ?.InformationalVersion);
             });
             services.Configure<GitHubTokenProviderOptions>("GitHub", (o, s) => s.Bind(o));
-            services.Configure<DependencyUpdateErrorProcessorOptions>(
-                (options, provider) =>
+            services.Configure((Action<DependencyUpdateErrorProcessorOptions, IServiceProvider>) ((options, provider) =>
+            {
+                var config1 = provider.GetRequiredService<IConfiguration>();
+                if (!bool.TryParse(config1["EnableDependencyUpdateErrorProcessor"], out var errorProcessorFlag))
                 {
-                    var config = provider.GetRequiredService<IConfiguration>();
-                    if (!bool.TryParse(config["EnableDependencyUpdateErrorProcessor"], out var errorProcessorFlag))
-                    {
-                        var logger = provider.GetRequiredService<ILoggerProvider>().CreateLogger(nameof(Program));
-                        // Logging statement is added to track the feature flag returns. 
-                        logger.LogError(
-                            $"Value of the dependency update error processor feature flag '{config["EnableDependencyUpdateErrorProcessor"]}'");
-                    }
-                    options.IsEnabled = errorProcessorFlag;
-                    options.GithubUrl = config["GithubUrl"];
-                    options.FyiHandle = config["FyiHandle"];
-                });
+                    var logger = provider.GetRequiredService<ILoggerProvider>().CreateLogger(nameof(Program));
+                    // Logging statement is added to track the feature flag returns. 
+                    logger.LogError(
+                        $"Value of the dependency update error processor feature flag '{config1["EnableDependencyUpdateErrorProcessor"]}'");
+                }
+                options.IsEnabled = errorProcessorFlag;
+                options.GithubUrl = config1["GithubUrl"];
+                options.FyiHandle = config1["FyiHandle"];
+            }));
             services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         }

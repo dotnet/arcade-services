@@ -12,9 +12,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.DotNet.Internal.Health;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Metrics;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
@@ -243,6 +245,13 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             services.TryAddSingleton<IMetricTracker, ApplicationInsightsMetricTracker>();
             services.TryAddSingleton(typeof(IActorProxyFactory<>), typeof(ActorProxyFactory<>));
             services.AddHttpClient();
+            services.AddHealthReporting(
+                b =>
+                {
+                    b.AddServiceFabric();
+                    b.AddLogging();
+                    b.AddAzureTable((o, p) => o.WriteSasUri = p.GetRequiredService<IConfiguration>()["HealthTableUri"]);
+                });
         }
 
         public static HostEnvironment InitializeEnvironment()

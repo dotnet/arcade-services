@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using Maestro.AzureDevOps;
 using Maestro.Contracts;
 using Maestro.Data;
@@ -15,7 +16,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
+using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.DotNet.Internal.Logging;
+using ServiceCollectionExtensions = Microsoft.DotNet.Internal.DependencyInjection.ServiceCollectionExtensions;
 
 namespace DependencyUpdater
 {
@@ -50,13 +53,12 @@ namespace DependencyUpdater
                         .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                         ?.InformationalVersion);
             });
-            services.Configure<GitHubTokenProviderOptions>(
-                (options, provider) =>
-                {
-                    var config = provider.GetRequiredService<IConfiguration>();
-                    IConfigurationSection section = config.GetSection("GitHub");
-                    section.Bind(options);
-                });
+            services.Configure((Action<GitHubTokenProviderOptions, IServiceProvider>) ((options, provider) =>
+            {
+                var config1 = provider.GetRequiredService<IConfiguration>();
+                IConfigurationSection section1 = config1.GetSection("GitHub");
+                section1.Bind(options);
+            }));
             services.AddGitHubTokenProvider();
 
             services.AddAzureDevOpsTokenProvider();
