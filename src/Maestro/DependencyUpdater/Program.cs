@@ -51,8 +51,8 @@ namespace DependencyUpdater
             });
             services.Configure<GitHubTokenProviderOptions>((options, provider) =>
             {
-                var config1 = provider.GetRequiredService<IConfiguration>();
-                IConfigurationSection section1 = config1.GetSection("GitHub");
+                var config = provider.GetRequiredService<IConfiguration>();
+                IConfigurationSection section1 = config.GetSection("GitHub");
                 section1.Bind(options);
             });
             services.AddGitHubTokenProvider();
