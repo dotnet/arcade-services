@@ -2,9 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using Maestro.AzureDevOps;
-using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.DataProviders;
 using Microsoft.DncEng.Configuration.Extensions;
@@ -17,8 +15,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using Microsoft.DotNet.Internal.DependencyInjection;
-using Microsoft.DotNet.Internal.Logging;
-using ServiceCollectionExtensions = Microsoft.DotNet.Internal.DependencyInjection.ServiceCollectionExtensions;
 
 namespace DependencyUpdater
 {
@@ -62,8 +58,7 @@ namespace DependencyUpdater
             services.AddGitHubTokenProvider();
 
             services.AddAzureDevOpsTokenProvider();
-            services.Configure<AzureDevOpsTokenProviderOptions>(
-                (options, provider) =>
+            services.Configure<AzureDevOpsTokenProviderOptions>((options, provider) =>
                 {
                     var config = provider.GetRequiredService<IConfiguration>();
                     var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
