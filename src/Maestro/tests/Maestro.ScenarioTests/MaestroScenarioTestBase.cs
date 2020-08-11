@@ -455,7 +455,7 @@ namespace Maestro.ScenarioTests
             throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
         }
 
-        public async Task<bool> CheckGithubPullRequestChecks(string targetRepoName, string targetBranch, bool doCreateCheck)
+        public async Task<bool> CheckGithubPullRequestChecks(string targetRepoName, string targetBranch)
         {
             TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
             PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
