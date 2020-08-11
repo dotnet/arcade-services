@@ -314,24 +314,26 @@ namespace FeedCleanerService
 
         /// <summary>
         /// Checks whether a package is available in NuGet.org
-        /// by using the package registration URL for a given package + version combination.
+        /// by making a HEAD request to the package contents URI.
         /// </summary>
         /// <param name="name">Package to search for</param>
         /// <param name="version">Version to search for</param>
-        /// <returns>True if the package is available in the NuGet.org registry, false if not</returns>
+        /// <returns>True if the package is available in NuGet.org, false if not</returns>
         private async Task<bool> IsPackageAvailableInNugetOrgAsync(string name, string version)
         {
+            string packageContentsUri = $"{FeedConstants.NuGetOrgPackageBaseUrl}{name.ToLower()}/{version}/{name.ToLower()}.{version}.nupkg";
             try
             {
-                using (HttpResponseMessage response = await _httpClient.GetAsync($"{FeedConstants.NuGetOrgRegistrationBaseUrl}/{name.ToLower()}/{version}.json"))
-                {
-                    response.EnsureSuccessStatusCode();
-                }
+                using HttpRequestMessage headRequest = new HttpRequestMessage(HttpMethod.Head, new Uri(packageContentsUri));
+                using HttpResponseMessage response = await _httpClient.SendAsync(headRequest);
+
+                response.EnsureSuccessStatusCode();
+                Logger.LogInformation($"Found {name}.{version} in nuget.org URI: {packageContentsUri}");
                 return true;
             }
             catch (HttpRequestException e) when (e.Message.Contains("404 (Not Found)"))
             {
-                Logger.LogInformation($"Unable to find {name}.{version} in nuget.org.");
+                Logger.LogInformation($"Unable to find {name}.{version} in nuget.org URI: {packageContentsUri}");
                 return false;
             }
         }

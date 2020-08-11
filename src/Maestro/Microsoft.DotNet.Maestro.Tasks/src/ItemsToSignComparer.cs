@@ -14,12 +14,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
     {
         public bool Equals(ItemsToSign x, ItemsToSign y)
         {
-            return x.File.Equals(y.File, StringComparison.OrdinalIgnoreCase);
+            return x.Include.Equals(y.Include, StringComparison.OrdinalIgnoreCase);
         }
 
         public int GetHashCode(ItemsToSign obj)
         {
-            return (obj.File).GetHashCode();
+            return (obj.Include).GetHashCode();
         }
     }
 }

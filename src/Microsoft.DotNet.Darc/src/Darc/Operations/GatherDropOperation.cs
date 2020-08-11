@@ -1186,10 +1186,10 @@ namespace Microsoft.DotNet.Darc.Operations
                     return downloadedAsset;
                 }
             }
-            else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out string feedAccount, out string feedVisibility, out string feedName))
+            else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out string feedAccount, out string feedProject, out string feedName))
             {
-                string packageContentUri = await DownloadAssetFromAzureDevOpsFeedAsync(client, asset, assetLocation,
-                    feedAccount, feedVisibility, feedName, targetFilePaths, errors, downloadOutput);
+                string packageContentUri = await DownloadAssetFromAzureDevOpsFeedAsync(client, asset,
+                    feedAccount, feedProject, feedName, targetFilePaths, errors, downloadOutput);
 
                 if (packageContentUri != null)
                 {
@@ -1214,11 +1214,26 @@ namespace Microsoft.DotNet.Darc.Operations
             return downloadedAsset;
         }
 
+        /// <summary>
+        /// Download a package from an azure devops nuget feed.
+        /// </summary>
+        /// <param name="client">Http client to use for the download</param>
+        /// <param name="asset">Asset</param>
+        /// <param name="feedAccount">Azure devops account</param>
+        /// <param name="feedProject">Azure devops project. For organization scoped feeds, this will be empty.</param>
+        /// <param name="feedName">Name of feed</param>
+        /// <param name="targetFilePaths">Locations that the package should be downloaded to.</param>
+        /// <param name="errors">Any errors should be added to this list.</param>
+        /// <param name="downloadOutput">Buffer to add download logging info to.</param>
+        /// <returns>Package content url if the asset was successfully downloaded, null otherwise.</returns>
+        /// <remarks>
+        ///     The feed project parameter is interesting here. It can be empty and unused for organization-scoped 
+        ///     feeds, meaning their download url is slightly different from a project scoped feed.
+        /// </remarks>
         private async Task<string> DownloadAssetFromAzureDevOpsFeedAsync(HttpClient client,
                                                                                 Asset asset,
-                                                                                AssetLocation assetLocation,
                                                                                 string feedAccount,
-                                                                                string feedVisibility,
+                                                                                string feedProject,
                                                                                 string feedName,
                                                                                 IEnumerable<string> targetFilePaths,
                                                                                 List<string> errors,
@@ -1235,22 +1250,17 @@ namespace Microsoft.DotNet.Darc.Operations
                 assetName = Path.GetFileName(assetName);
             }
 
-            string packageContentUrl = $"https://pkgs.dev.azure.com/{feedAccount}/{feedVisibility}_apis/packaging/feeds/{feedName}/nuget/packages/{assetName}/versions/{asset.Version}/content";
+            string packageContentUrl = $"https://pkgs.dev.azure.com/{feedAccount}/{feedProject}_apis/packaging/feeds/{feedName}/nuget/packages/{assetName}/versions/{asset.Version}/content";
 
-            // feedVisibility == "" means that the feed is internal.
-            AuthenticationHeaderValue authHeader = null;
-            if (string.IsNullOrEmpty(feedVisibility))
+            if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
             {
-                if (string.IsNullOrEmpty(_options.AzureDevOpsPat))
-                {
-                    LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
-                    _options.AzureDevOpsPat = localSettings.AzureDevOpsToken;
-                }
-
-                authHeader = new AuthenticationHeaderValue(
-                    "Basic",
-                    Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _options.AzureDevOpsPat))));
+                LocalSettings localSettings = LocalSettings.LoadSettingsFile(_options);
+                _options.AzureDevOpsPat = localSettings.AzureDevOpsToken;
             }
+
+            AuthenticationHeaderValue authHeader = new AuthenticationHeaderValue(
+                "Basic",
+                Convert.ToBase64String(Encoding.ASCII.GetBytes(string.Format("{0}:{1}", "", _options.AzureDevOpsPat))));
 
             using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(_options.AssetDownloadTimeoutInSeconds));
             var cancellationToken = cancellationTokenSource.Token;
@@ -1293,6 +1303,11 @@ namespace Microsoft.DotNet.Darc.Operations
         ///     AzDO feed uris look like: 
         ///         - https://pkgs.dev.azure.com/dnceng/public/_packaging/public-feed-name/nuget/v3/index.json
         ///         - https://pkgs.dev.azure.com/dnceng/_packaging/internal-feed-name/nuget/v3/index.json
+        ///
+        ///         - https://pkgs.dev.azure.com/dnceng/internal/_packaging/internal-feed-name2/nuget/v3/index.json
+        ///
+        ///     Whether or not the "internal/" or "public/" bits of the URI appear corresponds to whether the feed
+        ///     is scoped to the organization or scoped to the project.
         /// </remarks>
         private static bool IsAzureDevOpsFeedUrl(string location, out string feedAccount, out string feedVisibility, out string feedName)
         {
@@ -1415,7 +1430,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 }
                 return downloadedAsset;
             }
-            else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out string feedAccount, out string feedVisibility, out string feedName))
+            else if (IsAzureDevOpsFeedUrl(assetLocation.Location, out string feedAccount, out string feedProject, out string feedName))
             {
                 // If we are here, it means this is a symbols package or a nupkg published as a blob,
                 // remove some known paths from the name
@@ -1443,9 +1458,8 @@ namespace Microsoft.DotNet.Darc.Operations
 
                 string packageContentUrl = await DownloadAssetFromAzureDevOpsFeedAsync(client,
                     mangledAsset,
-                    assetLocation,
                     feedAccount,
-                    feedVisibility,
+                    feedProject,
                     feedName,
                     targetFilePaths,
                     errors,

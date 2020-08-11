@@ -14,6 +14,8 @@ using Octokit;
 
 namespace DependencyUpdateErrorProcessor.Tests
 {
+    // Does not exercise any SubscriptionUpdateHistoryEntry codepaths since these invariantly
+    // update the body of the issue currently (Covered in CreateGithubIssueTest).
     [TestFixture]
     public class UpdateGithubIssueTest : DependencyUpdateErrorProcessorTests
     {

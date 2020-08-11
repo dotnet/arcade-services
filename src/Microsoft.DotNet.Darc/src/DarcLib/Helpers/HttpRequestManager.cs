@@ -87,19 +87,26 @@ namespace Microsoft.DotNet.DarcLib
                 }
                 catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
                 {
+                    // For CLI users this will look normal, but translating to a DarcAuthenticationFailureException means it opts in to automated failure logging.
+                    if (ex is HttpRequestException && ex.Message.Contains("401 (Unauthorized)"))
+                    {
+                        _logger.LogError(ex, "Non-continuable HTTP 401 error encountered while making request");
+                        throw new DarcAuthenticationFailureException($"Failure to authenticate: {ex.Message}");
+                    }
+
                     if (retriesRemaining <= 0)
                     {
                         if (_logFailure)
                         {
-                            _logger.LogError($"There was an error executing method '{_method}' against URI '{_requestUri}' " +
-                                $"after {retriesRemaining} attempts. Exception: {ex.ToString()}");
+                            _logger.LogError("There was an error executing method '{method}' against URI '{requestUri}' " +
+                                "after {maxRetries} attempts. Exception: {exception}", _method, _requestUri, retryCount, ex);
                         }
                         throw;
                     }
                     else if (_logFailure)
                     {
-                        _logger.LogWarning($"There was an error executing method '{_method}' against URI '{_requestUri}'. " +
-                            $"{retriesRemaining} attempts remaining. Exception: {ex.ToString()}");
+                        _logger.LogWarning("There was an error executing method '{method}' against URI '{requestUri}'. " +
+                            "{retriesRemaining} attempts remaining. Exception: {ex.ToString()}", _method, _requestUri, retriesRemaining, ex);
                     }
                 }
                 --retriesRemaining;

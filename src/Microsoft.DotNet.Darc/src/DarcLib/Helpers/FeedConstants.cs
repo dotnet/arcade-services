@@ -9,6 +9,9 @@ namespace Microsoft.DotNet.DarcLib.Helpers
     /// </summary>
     public class FeedConstants
     {
+        public static readonly string MaestroManagedPublicFeedPrefix = "darc-pub";
+        public static readonly string MaestroManagedInternalFeedPrefix = "darc-int";
+
         public static readonly string MaestroManagedFeedNamePattern = @"darc-(?<type>(int|pub))-(?<repository>.+?)-(?<sha>[A-Fa-f0-9]{7,40})-?(?<subversion>\d*)";
 
         public static readonly string[] MaestroManagedFeedPatterns =
@@ -26,7 +29,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
         public static readonly string AzureStorageProxyFeedPattern =
             @"https://([a-z-]+).azurewebsites.net/container/([^/]+)/sig/\w+/se/([0-9]{4}-[0-9]{2}-[0-9]{2})/" + MaestroManagedFeedNamePattern + "/index.json";
 
-        public static readonly string NuGetOrgRegistrationBaseUrl = "https://api.nuget.org/v3/registration3-gz-semver2";
+        public static readonly string NuGetOrgPackageBaseUrl = "https://api.nuget.org/v3-flatcontainer/";
         public static readonly string NuGetOrgLocation = "https://api.nuget.org/v3/index.json";
     }
 }

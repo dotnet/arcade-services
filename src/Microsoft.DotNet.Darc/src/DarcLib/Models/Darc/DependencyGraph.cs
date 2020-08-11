@@ -884,7 +884,7 @@ namespace Microsoft.DotNet.DarcLib
                     }
                 }
 
-                if (!includeToolset)
+                if (!includeToolset && dependencies != null)
                 {
                     dependencies = dependencies.Where(dependency => dependency.Type != DependencyType.Toolset);
                 }
