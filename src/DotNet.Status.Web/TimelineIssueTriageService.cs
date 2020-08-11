@@ -20,11 +20,11 @@ namespace DotNet.Status.Web
     public class TimelineIssueTriageService : ITimelineIssueTriageService
     {
         // Search for triage item identifier information, example - "[BuildId=123456,RecordId=0dc87500-1d33-11ea-8b24-4baedbda8954,Index=0]"
-        private static readonly Regex _darcBotIssueIdentifierRegex = new Regex(@"\[BuildId=(?<buildid>[^,]+),RecordId=(?<recordid>[^,]+),Index=(?<index>[^\]]+)\]\s+\[Category=(?<category>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
-        // Search for a darcbot property, example = "[Category=foo]"
-        private static readonly Regex _darcBotPropertyRegex = new Regex(@"\[(?<key>.+)=(?<value>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
-        private static readonly string _docLink = "[DarcBot documentation](https://github.com/dotnet/arcade-services/blob/master/src/GitHubApps/DarcBot/ReadMe.md)";
-        private static readonly string _darcBotLabelName = "darcbot";
+        private static readonly Regex _triageIssueIdentifierRegex = new Regex(@"\[BuildId=(?<buildid>[^,]+),RecordId=(?<recordid>[^,]+),Index=(?<index>[^\]]+)\]\s+\[Category=(?<category>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
+        // Search for a triage item property, example = "[Category=foo]"
+        private static readonly Regex _triagePropertyRegex = new Regex(@"\[(?<key>.+)=(?<value>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
+        private static readonly string _docLink = "[Documentation](https://github.com/dotnet/arcade-services/blob/master/docs/BuildFailuresIssueTriage.md)";
+        private static readonly string _labelName = "darcbot";
 
         private readonly ILogger<TimelineIssueTriageService> _logger;
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
@@ -80,19 +80,19 @@ namespace DotNet.Status.Web
                     SortProperty = IssueSort.Created,
                     SortDirection = SortDirection.Ascending,
                 };
-                openIssues.Labels.Add(_darcBotLabelName);
+                openIssues.Labels.Add(_labelName);
 
                 _logger.LogInformation("Getting open issues");
-                var existingDarcBotIssues = await gitHubClient.Issue.GetAllForRepository(issuePayload.Repository.Id, openIssues);
-                _logger.LogInformation($"There are {existingDarcBotIssues.Count} open issues with the '{_darcBotLabelName}' label");
-                foreach (var existingIssue in existingDarcBotIssues)
+                var existingTriageIssues = await gitHubClient.Issue.GetAllForRepository(issuePayload.Repository.Id, openIssues);
+                _logger.LogInformation($"There are {existingTriageIssues.Count} open issues with the '{_labelName}' label");
+                foreach (var existingIssue in existingTriageIssues)
                 {
                     if (existingIssue.Number != issuePayload.Issue.Number)
                     {
                         var existingIssueItems = GetTriageItemsProperties(existingIssue.Body);
                         if (existingIssueItems.Count == triageItems.Count && !existingIssueItems.Except(triageItems).Any())
                         {
-                            await gitHubClient.Issue.Comment.Create(issuePayload.Repository.Id, issuePayload.Issue.Number, $"DarcBot has detected a duplicate issue.\n\nClosing as duplicate of {existingIssue.HtmlUrl}\n\nFor more information see {_docLink}");
+                            await gitHubClient.Issue.Comment.Create(issuePayload.Repository.Id, issuePayload.Issue.Number, $"Duplicate issue was detected.\n\nClosing as duplicate of {existingIssue.HtmlUrl}\n\nFor more information see {_docLink}");
                             var issueUpdate = new IssueUpdate
                             {
                                 State = ItemState.Closed,
@@ -106,10 +106,10 @@ namespace DotNet.Status.Web
 
                 // No duplicates, add label and move issue to triage
                 var issue = await gitHubClient.Issue.Get(issuePayload.Repository.Id, issuePayload.Issue.Number);
-                if (!issue.Labels.Any(l => l.Name == _darcBotLabelName))
+                if (!issue.Labels.Any(l => l.Name == _labelName))
                 {
                     var update = issue.ToUpdate();
-                    update.AddLabel(_darcBotLabelName);
+                    update.AddLabel(_labelName);
                     await gitHubClient.Issue.Update(issuePayload.Repository.Id, issuePayload.Issue.Number, update);
                 }
 
@@ -123,7 +123,7 @@ namespace DotNet.Status.Web
                 foreach (var comment in comments)
                 {
                     // Look for category information in comment
-                    string category = GetDarcBotProperty("category", comment.Body);
+                    string category = GetTriageIssueProperty("category", comment.Body);
                     if (!string.IsNullOrEmpty(category))
                     {
                         updatedCategory = category;
@@ -144,7 +144,7 @@ namespace DotNet.Status.Web
 
             await IngestTriageItemsIntoKusto(triageItems);
 
-            await gitHubClient.Issue.Comment.Create(issuePayload.Repository.Id, issuePayload.Issue.Number, $"DarcBot has updated the 'TimelineIssuesTriage' database.\n**PowerBI reports may take up to 24 hours to refresh**\n\nSee {_docLink} for more information and 'darcbot' usage.");
+            await gitHubClient.Issue.Comment.Create(issuePayload.Repository.Id, issuePayload.Issue.Number, $"Bot has updated the 'TimelineIssuesTriage' database.\n**PowerBI reports may take up to 24 hours to refresh**\n\nSee {_docLink} for more information.");
 
             return;
         }
@@ -169,9 +169,9 @@ namespace DotNet.Status.Web
                 });
         }
 
-        private string GetDarcBotProperty(string propertyName, string body)
+        private string GetTriageIssueProperty(string propertyName, string body)
         {
-            MatchCollection propertyMatches = _darcBotPropertyRegex.Matches(body);
+            MatchCollection propertyMatches = _triagePropertyRegex.Matches(body);
             foreach (Match propertyMatch in propertyMatches)
             {
                 if (propertyMatch.Success)
@@ -191,7 +191,7 @@ namespace DotNet.Status.Web
         {
             var items = new List<TriageItem>();
 
-            var matches = _darcBotIssueIdentifierRegex.Matches(body ?? "");
+            var matches = _triageIssueIdentifierRegex.Matches(body ?? "");
 
             foreach (Match match in matches)
             {
