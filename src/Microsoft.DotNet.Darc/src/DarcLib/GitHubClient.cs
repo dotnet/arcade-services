@@ -499,7 +499,6 @@ namespace Microsoft.DotNet.DarcLib
         private CheckRunUpdate CheckRunForDelete(CheckRun checkRun)
         {
             CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
-            updatedCheckRun.Output = new NewCheckRunOutput(checkRun.Output.Title, checkRun.Output.Summary);
             updatedCheckRun.CompletedAt = checkRun.CompletedAt;
             updatedCheckRun.Status = "completed";
             updatedCheckRun.Conclusion = "skipped";
@@ -513,7 +512,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="result">The result of that new check run</param>
         private void UpdateCheckRun(NewCheckRun newCheckRun, MergePolicyEvaluationResult result)
         {
-            var output = new NewCheckRunOutput(result.MergePolicyInfo.DisplayName, result.Message ?? "");
+            var output = FormatOutput(result);
             newCheckRun.Output = output;
             newCheckRun.Status = CheckStatus.Completed;
 
@@ -533,6 +532,11 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
+        private static NewCheckRunOutput FormatOutput(MergePolicyEvaluationResult result)
+        {
+            return new NewCheckRunOutput(result.Message ?? "no details", string.Empty);
+        }
+
         /// <summary>
         ///     Update some properties of a CheckRunUpdate
         /// </summary>
@@ -540,7 +544,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="result">The result of that new check run</param>
         private void UpdateCheckRun(CheckRunUpdate newUpdateCheckRun, MergePolicyEvaluationResult result)
         {
-            var output = new NewCheckRunOutput(result.MergePolicyInfo.DisplayName, result.Message ?? "");
+            var output = FormatOutput(result);
             newUpdateCheckRun.Output = output;
             newUpdateCheckRun.Status = CheckStatus.Completed;
 
