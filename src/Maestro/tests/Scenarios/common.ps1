@@ -664,15 +664,6 @@ function Get-Github-File-Contents($targetRepoName, $path, $ref) {
     $uri = "$(Get-Github-RepoApiUri($targetRepoName))/contents/${path}?ref=$ref"
     Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Get | ConvertFrom-Json
 }
-
-function Get-Github-Checks($targetRepoName, $sha) 
-{
-    $uri = "$(Get-Github-RepoApiUri($targetRepoName))/commits/$sha/check-runs"
-    $headers = Get-Github-Headers
-    $headers.Add('Accept', 'application/vnd.github.antiope-preview+json')
-    Invoke-WebRequest -Uri $uri -Headers $headers -Method Get | ConvertFrom-Json
-}
-
 function Check-Github-PullRequest-Completed($targetRepoName, $pullRequestNumber) {
     $uri = "$(Get-Github-RepoApiUri($targetRepoName))/pulls/$pullRequestNumber/merge"
     Write-Host "Checking $uri until it reports a completed merge"
@@ -786,48 +777,6 @@ function Check-Github-PullRequest($expectedPRTitle, $targetRepoName, $targetBran
     }
     return $true
 }
-
-function Check-Github-PullRequest-Checks($targetRepoName, $targetBranch)
-{
-    Write-Host "Checking Opened PR in $targetBranch $targetRepoName ..."
-    $pullRequest = Check-Github-PullRequest-Created $targetRepoName $targetBranch
-    if (!$pullRequest) 
-    {
-        return $false
-    }
-
-    Check-Github-PullRequest-Completed $targetRepoName $pullRequest.number
-
-    # Get the checks for the created PR
-    $checks = Get-Github-Checks $targetRepoName $pullRequest.head.sha
-    if (-not $checks) 
-    {
-        return $false        
-    }
-    Validate-Github-PullRequest-Checks $checks
-}
-
-function Validate-Github-PullRequest-Checks($checks) {
-    # Make sure that at least 1 check has an external ID set to "maestro-policy-{...}" and that every check with this external ID are completed
-    $cnt = 0
-    foreach($check in $checks.check_runs)
-    {   
-        $externalId = $($check.external_id)
-        $status = $($check.status)
-        if ($externalId -match "maestro-policy") 
-        {
-            $cnt++
-            if ($status -ne "completed") 
-            {
-                throw "All the check(s) are not completed."
-            }
-        }
-    }
-    if ($cnt -lt 1) {
-        throw "Pull request failed to find one or more check(s)."
-    } 
-}
-
 function Validate-Arcade-PullRequest-Contents($pullRequest, $expectedPRTitle, $targetRepoName, $targetBranch, $expectedDependencies) {
     Validate-Github-PullRequest-Contents $pullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies
     Write-Host "Validating dependency update PR changes specific to arcade..."
