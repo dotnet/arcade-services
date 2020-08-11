@@ -58,6 +58,9 @@ namespace DotNet.Status.Web.Tests
                     Number = 217,
                     State = ItemState.Open,
                     Title = "Intermittent serialization error in GC during build",
+                    Url = "https://api.github.com/repos/thatguy-int-tests/issue-notify-tests/issues/217",
+                    Html_Url = "https://github.com/thatguy-int-tests/issue-notify-tests/issues/217",
+                    Body = "This one is a mystery"
                 },
                 Label = new IssuesHookLabel
                 {
@@ -67,6 +70,7 @@ namespace DotNet.Status.Web.Tests
                 {
                     Name = "issue-notify-tests",
                     Owner = new IssuesHookUser { Login = "thatguy-int-tests" },
+                    Id = 987654321,
                 },
                 Sender = new IssuesHookUser
                 {
