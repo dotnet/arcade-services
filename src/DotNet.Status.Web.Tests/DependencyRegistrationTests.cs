@@ -49,7 +49,7 @@ namespace DotNet.Status.Web.Tests
                         startup.ConfigureServices(s);
                     },
                     out string message,
-                    additionalScopedTypes: controllerTypes).Should().BeTrue();
+                    additionalScopedTypes: controllerTypes).Should().BeTrue(message);
         }
     }
 }

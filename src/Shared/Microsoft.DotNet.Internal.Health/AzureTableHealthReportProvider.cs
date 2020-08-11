@@ -21,6 +21,8 @@ namespace Microsoft.DotNet.Internal.Health
     {
         private readonly HttpClient _client;
         private readonly ILogger<AzureTableHealthReportProvider> _logger;
+        private readonly ExponentialRetry _retry;
+
         private readonly string _sasQuery;
         private readonly string _baseUrl;
         private static readonly JsonSerializerOptions s_jsonSerializerOptions = new JsonSerializerOptions {IgnoreNullValues = true};
@@ -28,9 +30,11 @@ namespace Microsoft.DotNet.Internal.Health
         public AzureTableHealthReportProvider(
             IOptions<AzureTableHealthReportingOptions> options,
             ILogger<AzureTableHealthReportProvider> logger,
-            IHttpClientFactory clientFactory)
+            IHttpClientFactory clientFactory,
+            ExponentialRetry retry)
         {
             _logger = logger;
+            _retry = retry;
             var builder = new UriBuilder(options.Value.WriteSasUri);
             _sasQuery = builder.Query;
             builder.Query = null;
@@ -83,19 +87,19 @@ namespace Microsoft.DotNet.Internal.Health
 
                 string requestUri =
                     $"{_baseUrl}(PartitionKey='{Uri.EscapeDataString(partitionKey)}',RowKey='{Uri.EscapeDataString(rowKey)}'){_sasQuery}";
-                using HttpResponseMessage response = await _client.PutAsync(requestUri, content);
+                using HttpResponseMessage response = await _client.PutAsync(requestUri, content).ConfigureAwait(false);
                 response.EnsureSuccessStatusCode();
             }
 
             try
             {
-                await ExponentialRetry.RetryAsync(
+                await _retry.RetryAsync(
                     Attempt,
                     e => _logger.LogWarning("Failed to update status for {service}/{subStatus}, retrying",
                         serviceName,
                         subStatusName),
                     e => true
-                );
+                ).ConfigureAwait(false);
             }
             catch (Exception e)
             {
@@ -104,51 +108,7 @@ namespace Microsoft.DotNet.Internal.Health
             }
         }
 
-        public async Task<HealthReport> GetStatusAsync(string serviceName, string instance, string subStatusName)
-        {
-            string partitionKey = EscapeKeyField(serviceName);
-            string rowKey = GetRowKey(instance, subStatusName);
-
-            async Task<HealthReport> Attempt()
-            {
-                using var request = new HttpRequestMessage(
-                    HttpMethod.Get,
-                    $"{_baseUrl}(PartitionKey='{Uri.EscapeDataString(partitionKey)}',RowKey='{Uri.EscapeDataString(rowKey)}'){_sasQuery}"
-                );
-
-                request.Headers.Accept.ParseAdd("application/json;odata=nometadata");
-
-                using HttpResponseMessage response = await _client.SendAsync(request);
-
-                if (response.StatusCode == HttpStatusCode.NotFound)
-                    return new HealthReport(
-                        serviceName,
-                        instance,
-                        subStatusName,
-                        HealthStatus.Unknown,
-                        "",
-                        DateTimeOffset.MinValue);
-
-                response.EnsureSuccessStatusCode();
-
-                var entity = JsonSerializer.Deserialize<Entity>(await response.Content.ReadAsByteArrayAsync());
-                return new HealthReport(
-                    serviceName,
-                    instance,
-                    subStatusName,
-                    entity.Status,
-                    entity.Message,
-                    entity.Timestamp.Value
-                );
-            }
-
-            return await ExponentialRetry.RetryAsync(
-                Attempt,
-                e => _logger.LogWarning(e, "Failed to fetch status, trying again"),
-                _ => true);
-        }
-
-        public async Task<IList<HealthReport>> GetAllStatusAsync(string serviceName)
+        public Task<IList<HealthReport>> GetAllStatusAsync(string serviceName)
         {
             string partitionKey = EscapeKeyField(serviceName);
             string filter = $"PartitionKey eq '{partitionKey}'";
@@ -162,13 +122,13 @@ namespace Microsoft.DotNet.Internal.Health
 
                 request.Headers.Accept.ParseAdd("application/json;odata=nometadata");
 
-                using HttpResponseMessage response = await _client.SendAsync(request);
+                using HttpResponseMessage response = await _client.SendAsync(request).ConfigureAwait(false);
 
                 if (response.StatusCode == HttpStatusCode.NotFound)
                     return Array.Empty<HealthReport>();
 
                 response.EnsureSuccessStatusCode();
-                var entities = JsonSerializer.Deserialize<ValueList<Entity>>(await response.Content.ReadAsByteArrayAsync());
+                var entities = JsonSerializer.Deserialize<ValueList<Entity>>(await response.Content.ReadAsByteArrayAsync().ConfigureAwait(false));
                 return entities.Value.Select(
                     e =>
                     {
@@ -185,7 +145,7 @@ namespace Microsoft.DotNet.Internal.Health
                 ).ToList();
             }
 
-            return await ExponentialRetry.RetryAsync(
+            return _retry.RetryAsync(
                 Attempt,
                 e => _logger.LogWarning(e, "Failed to fetch status, trying again"),
                 _ => true);
@@ -193,7 +153,7 @@ namespace Microsoft.DotNet.Internal.Health
 
         private class ValueList<T>
         {
-            [System.Text.Json.Serialization.JsonPropertyName("value")]
+            [JsonPropertyName("value")]
             public T[] Value { get; set; }
         }
 

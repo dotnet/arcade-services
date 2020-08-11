@@ -26,11 +26,13 @@ namespace SubscriptionActorService
             BuildAssetRegistryContext context,
             TemporaryFiles tempFiles,
             ILocalGit localGit,
-            OperationManager operations)
+            OperationManager operations,
+            ExponentialRetry retry)
         {
             _tempFiles = tempFiles;
             _localGit = localGit;
             _operations = operations;
+            _retry = retry;
             _configuration = configuration;
             _gitHubTokenProvider = gitHubTokenProvider;
             _azureDevOpsTokenProvider = azureDevOpsTokenProvider;
@@ -47,6 +49,7 @@ namespace SubscriptionActorService
         private readonly TemporaryFiles _tempFiles;
         private readonly ILocalGit _localGit;
         private readonly OperationManager _operations;
+        private readonly ExponentialRetry _retry;
 
 
         public Task<IRemote> GetBarOnlyRemoteAsync(ILogger logger)
@@ -74,7 +77,7 @@ namespace SubscriptionActorService
 
                 long installationId = await _context.GetInstallationId(normalizedUrl);
 
-                var gitExe = await ExponentialRetry.RetryAsync(
+                var gitExe = await _retry.RetryAsync(
                     async () => await _localGit.GetPathToLocalGitAsync(),
                     ex => logger.LogError(ex, $"Failed to install git to local temporary directory."),
                     ex => true);

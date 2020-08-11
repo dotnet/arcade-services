@@ -9,6 +9,5 @@ namespace Microsoft.DotNet.Internal.Health
         IServiceHealthReporter<T> ForService<T>();
         IInstanceHealthReporter<T> ForInstance<T>();
         IExternalHealthReporter ForExternal(string serviceName);
-        IExternalHealthReporter ForExternalInstance(string serviceName, string instance);
     }
 }

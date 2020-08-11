@@ -21,7 +21,7 @@ namespace SubscriptionActorService.Tests
                         s.AddScoped<SubscriptionActor>();
                         s.AddScoped<PullRequestActor>();
                     },
-                    out string message).Should().BeTrue();
+                    out string message).Should().BeTrue(message);
         }
     }
 }

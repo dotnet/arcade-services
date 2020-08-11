@@ -10,7 +10,6 @@ namespace Microsoft.DotNet.Internal.Health
     public interface IHealthReportProvider
     {
         Task UpdateStatusAsync(string serviceName, string instance, string subStatusName, HealthStatus status, string message);
-        Task<HealthReport> GetStatusAsync(string serviceName, string instance, string subStatusName);
         Task<IList<HealthReport>> GetAllStatusAsync(string serviceName);
     }
 }

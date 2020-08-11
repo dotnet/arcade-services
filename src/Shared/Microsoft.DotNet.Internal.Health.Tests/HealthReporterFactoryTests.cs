@@ -22,11 +22,6 @@ namespace Microsoft.DotNet.Internal.Health.Tests
                 HealthStatus status,
                 string message);
 
-            public abstract Task<HealthReport> GetStatusAsync(
-                string serviceName,
-                string instance,
-                string subStatusName);
-
             public abstract Task<IList<HealthReport>> GetAllStatusAsync(string serviceName);
         }
 
@@ -242,61 +237,6 @@ namespace Microsoft.DotNet.Internal.Health.Tests
             provider.VerifyNoOtherCalls();
             serviceName.Should().Equal(externalService);
             instance.Should().Equal((string) null);
-            subStatus.Should().Equal(testSubStatus);
-            status.Should().Equal(HealthStatus.Warning);
-            message.Should().Equal(testMessage);
-        }
-
-        [Test]
-        public async Task ExternalInstanceCallsProviderOnceWithCorrectParameters()
-        {
-            const string externalInstance = "EXTERNAL-INSTANCE";
-            const string externalService = "EXTERNAL-SERVICE";
-            const string testSubStatus = "TEST-SUB-STATUS";
-            const string testMessage = "TEST MESSAGE";
-            const string testInstance = "TEST-INSTANCE";
-
-            var serviceName = new List<string>();
-            var instance = new List<string>();
-            var subStatus = new List<string>();
-            var status = new List<HealthStatus>();
-            var message = new List<string>();
-
-            var provider = new Mock<MockProvider>();
-            provider.Setup(
-                    p => p.UpdateStatusAsync(
-                        Capture.In(serviceName),
-                        Capture.In(instance),
-                        Capture.In(subStatus),
-                        Capture.In(status),
-                        Capture.In(message)
-                    )
-                )
-                .Returns(Task.CompletedTask)
-                .Verifiable();
-            var instanceAccessor = new Mock<IInstanceAccessor>();
-            instanceAccessor.Setup(i => i.GetCurrentInstanceName()).Returns(testInstance);
-            var collection = new ServiceCollection();
-            collection.AddSingleton(instanceAccessor.Object);
-            collection.AddHealthReporting(builder => builder.AddProvider(provider.Object));
-            await using ServiceProvider services = collection.BuildServiceProvider();
-            var factory = services.GetRequiredService<IHealthReporterFactory>();
-            IExternalHealthReporter reporter = factory.ForExternalInstance(externalService, externalInstance);
-
-            await reporter.UpdateStatusAsync(testSubStatus, HealthStatus.Warning, testMessage);
-            provider.Verify(
-                p => p.UpdateStatusAsync(
-                    It.IsAny<string>(),
-                    It.IsAny<string>(),
-                    It.IsAny<string>(),
-                    It.IsAny<HealthStatus>(),
-                    It.IsAny<string>()
-                ),
-                Times.Once
-            );
-            provider.VerifyNoOtherCalls();
-            serviceName.Should().Equal(externalService);
-            instance.Should().Equal(externalInstance);
             subStatus.Should().Equal(testSubStatus);
             status.Should().Equal(HealthStatus.Warning);
             message.Should().Equal(testMessage);
