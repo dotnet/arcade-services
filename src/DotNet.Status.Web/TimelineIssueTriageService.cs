@@ -68,9 +68,7 @@ namespace DotNet.Status.Web
 
             string updatedCategory = null;
 
-            if (issuePayload.Action == "created" ||
-                issuePayload.Action == "opened" ||
-                issuePayload.Action == "reopened")
+            if (issuePayload.Action == "opened" || issuePayload.Action == "reopened")
             {
                 // First, look for duplicate issues that are open
                 var openIssues = new RepositoryIssueRequest
