@@ -1,0 +1,21 @@
+{
+  "$comment": "This is an example config",
+  "KeyVaultUri": "https://helixtest.vault.azure.net/",
+
+  "Name": "helix-test",
+  "Location": "westus2",
+  "ResourceGroup": "helix-test",
+  "SubscriptionId": "cab65fc3-d077-467d-931f-3932eabf36d3",
+  "CertificateSourceVault": {
+    "ResourceGroup": "helix-gateway-test",
+    "Name": "helixtest"
+  },
+  "UserAssignedIdentity": {
+    "Name": "HelixTest-Identity",
+    "ResourceGroup": "helix-gateway-test"
+  },
+  "ExternalPorts": [
+    443
+  ],
+  "SslCertificateName": "helix-test-westus2-cloudapp-azure-com"
+}
