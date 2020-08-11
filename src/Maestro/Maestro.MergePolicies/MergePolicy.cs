@@ -74,19 +74,7 @@ namespace Maestro.MergePolicies
 
     public interface IMergePolicyBuilder
     {
-        public string Name
-        {
-            get
-            {
-                string name = GetType().Name;
-                if (name.EndsWith(nameof(IMergePolicyBuilder).Substring(1))) // remove suffix 'MergePolicyBuilder'
-                {
-                    name = name.Substring(0, name.Length - nameof(IMergePolicyBuilder).Length - 1);
-                }
-
-                return name;
-            }
-        }
+        public string Name { get; }
 
         /// <summary>
         /// Creates list of instances of concrete merge policies which shall be evaluated 

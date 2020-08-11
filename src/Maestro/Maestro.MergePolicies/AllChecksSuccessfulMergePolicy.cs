@@ -71,6 +71,8 @@ namespace Maestro.MergePolicies
 
     public class AllChecksSuccessfulMergePolicyBuilder : IMergePolicyBuilder
     {
+        public string Name => "AllChecksSuccessful";
+
         public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
         {
             var ignoreChecks = new HashSet<string>(properties.Get<string[]>("ignoreChecks") ?? Array.Empty<string>());

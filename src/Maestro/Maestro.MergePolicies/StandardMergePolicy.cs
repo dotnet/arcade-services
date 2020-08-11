@@ -15,6 +15,8 @@ namespace Maestro.MergePolicies
         private static readonly MergePolicyProperties s_standardGitHubProperties;
         private static readonly MergePolicyProperties s_standardAzureDevOpsProperties;
 
+        public string Name => "Standard";
+
         static StandardMergePolicyBuilder()
         {
             s_standardGitHubProperties = new MergePolicyProperties(new Dictionary<string, JToken>

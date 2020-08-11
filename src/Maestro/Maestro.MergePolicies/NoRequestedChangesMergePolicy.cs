@@ -31,6 +31,8 @@ namespace Maestro.MergePolicies
 
     public class NoRequestedChangesMergePolicyBuilder : IMergePolicyBuilder
     {
+        public string Name => "NoRequestedChanges";
+
         public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
         {
             IReadOnlyList<IMergePolicy> policies = new List<IMergePolicy> { new NoRequestedChangesMergePolicy() };
