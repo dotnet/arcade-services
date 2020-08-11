@@ -14,6 +14,7 @@ using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Win32;
 
 namespace CoreHealthMonitor
 {
@@ -66,7 +67,7 @@ namespace CoreHealthMonitor
                 long freeSpace = drive.AvailableFreeSpace;
 
                 _logger.LogInformation(
-                    "Available drive space on {drive} is at {freeSpace} below threshold of {threshold} bytes",
+                    "Available drive space on {drive} is at {freeSpace}, checking for threshold of {threshold} bytes",
                     drive.Name,
                     freeSpace,
                     threshold
@@ -95,18 +96,32 @@ namespace CoreHealthMonitor
 
         private async Task UploadMemoryDumpsAsync(CancellationToken cancellationToken)
         {
-            string folder = _memoryDumpOptions.Value.Folder;
+            string folder = Registry.GetValue(
+                @"HKKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps",
+                "DumpFolder",
+                null
+            ) as string;
+
             string containerUri = _memoryDumpOptions.Value.ContainerUri;
             if (string.IsNullOrEmpty(folder) || string.IsNullOrEmpty(containerUri))
             {
                 _logger.LogWarning("Memory dump monitoring settings not specified, skipping");
             }
+            else if (!Directory.Exists(folder))
+            {
+                _logger.LogError("Memory dump directory '{folder}' does not exist", folder);
+            }
             else
             {
                 foreach (string file in Directory.GetFiles(folder))
                 {
-                    string blobName = $"{_context.NodeContext.NodeName}/{_clock.UtcNow:YYYY-MM-ddTHH-mm-ss}-{Path.GetFileName(file)}";
-                    _logger.LogError("Found crash dump at '{crashDumpPath}', uploading to '{blobName}'", file, blobName);
+                    string blobName =
+                        $"{_context.NodeContext.NodeName}/{_clock.UtcNow:YYYY-MM-ddTHH-mm-ss}-{Path.GetFileName(file)}";
+                    _logger.LogError(
+                        "Found crash dump at '{crashDumpPath}', uploading to '{blobName}'",
+                        file,
+                        blobName
+                    );
                     try
                     {
                         await using FileStream stream = File.OpenRead(file);

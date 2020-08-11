@@ -11,7 +11,6 @@ namespace CoreHealthMonitor
 
     public class MemoryDumpOptions
     {
-        public string Folder { get; set; }
         public string ContainerUri { get; set; }
     }
 }

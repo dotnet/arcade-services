@@ -1,5 +1,8 @@
 {
   "DriveMonitoring": {
-    "MinimumFreeSpaceBytes" : 10000000 
+    "MinimumFreeSpaceBytes": 10000000
+  },
+  "MemoryDump": {
+    "ContainerUri": "[vault(maestrostorage-memory-dumps-container-sas-uri)]"
   }
 }
