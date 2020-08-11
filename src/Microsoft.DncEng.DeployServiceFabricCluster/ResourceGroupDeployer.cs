@@ -75,8 +75,23 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
             var credentials = ServiceConfigurationExtensions.GetAzureTokenCredential(_config);
             var keyVaultUri = new Uri($"https://{Settings.CertificateSourceVault.Name}.vault.azure.net/");
             var client = new SecretClient(keyVaultUri, credentials);
-            var secret = client.GetSecret(certificateName);
-            return secret.Value.Id.AbsoluteUri;
+            return client.GetSecret(certificateName).Value.Id.AbsoluteUri;
+        }
+
+        protected List<string> GetKeyVaultSecretIds(string certificateName)
+        {
+            var credentials = ServiceConfigurationExtensions.GetAzureTokenCredential(_config);
+            var keyVaultUri = new Uri($"https://{Settings.CertificateSourceVault.Name}.vault.azure.net/");
+            var client = new SecretClient(keyVaultUri, credentials);
+            return client.GetPropertiesOfSecretVersions(certificateName).Select(secretProps =>
+            {
+                if (secretProps.ExpiresOn.HasValue && secretProps.ExpiresOn.Value < DateTimeOffset.Now.AddDays(-1))
+                {
+                    return null!;
+                }
+
+                return secretProps.Id.AbsoluteUri;
+            }).Where(n => n != null).ToList();
         }
 
         protected async Task<IPublicIPAddress> DeployPublicIp(ICollection<IGenericResource> unexpectedResources, IAzure azure, string name, string domainName, CancellationToken cancellationToken)

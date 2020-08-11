@@ -13,21 +13,27 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                 {
                     return null;
                 }
-                return new[]
-                    {
-                        ("AppGatewayRule", "65200-65535"),
-                        ("ServiceFabricTcp", ServiceFabricConstants.TcpGatewayPort.ToString()),
-                        ("ServiceFabricHttp", ServiceFabricConstants.HttpGatewayPort.ToString()),
-                    }.Concat(ExternalPorts
-                        .Distinct()
-                        .Select((p, i) =>
-                            ("SslEndpoint-" + p, p.ToString())))
-                    .ToDictionary(t => t.Item1, t => t.Item2);
+
+                var result = new Dictionary<string, string>
+                {
+                    {"AppGatewayRule", "65200-65535"},
+                    {"ServiceFabricTcp", ServiceFabricConstants.TcpGatewayPort.ToString()},
+                    {"ServiceFabricHttp", ServiceFabricConstants.HttpGatewayPort.ToString()},
+                };
+                foreach (var port in ExternalPorts)
+                {
+                    result[$"SslEndpoint-{port}"] = port.ToString();
+                }
+
+                return result;
             }
         }
 
+        // These properties are filled by the config system
+#pragma warning disable 8618 // Non-nullable property is uninitialized
         public ResourceReference UserAssignedIdentity { get; set; }
         public List<int> ExternalPorts { get; set; }
         public string SslCertificateName { get; set; }
+#pragma warning restore 8618
     }
 }

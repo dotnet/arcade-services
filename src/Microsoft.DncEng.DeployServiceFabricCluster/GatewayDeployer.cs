@@ -40,7 +40,7 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                 r.ResourceType == "networkSecurityGroups" &&
                 r.Name == nsgName);
 
-            var neededRules = Settings.NeededSecurityGroupRules;
+            var neededRules = Settings.NeededSecurityGroupRules ?? throw new InvalidOperationException("Configuration not set correctly.");
 
             if (nsg == null)
             {

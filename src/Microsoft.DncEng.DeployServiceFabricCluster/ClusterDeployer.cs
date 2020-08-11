@@ -338,9 +338,9 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                                                 ["id"] = GetCertificateSourceVaultId(),
                                             },
                                             ["vaultCertificates"] = new JArray(
-                                                Settings.Certificates.Select(certName => new JObject
+                                                Settings.Certificates.SelectMany(GetKeyVaultSecretIds).Select(certUrl => new JObject
                                                 {
-                                                    ["certificateUrl"] = GetKeyVaultSecretId(certName),
+                                                    ["certificateUrl"] = certUrl,
                                                     ["certificateStore"] = "My",
                                                 })),
                                         },
