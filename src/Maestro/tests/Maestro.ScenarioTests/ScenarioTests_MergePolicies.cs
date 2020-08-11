@@ -66,7 +66,7 @@ namespace Maestro.ScenarioTests
             await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> { "--no-requested-changes" });
         }
 
-        public async Task AutoMergeFlowTestBase(string targetRepo, string sourceRepo, string targetBranch, string testChannelName, List<string> args, bool doCreateCheck = false)
+        public async Task AutoMergeFlowTestBase(string targetRepo, string sourceRepo, string targetBranch, string testChannelName, List<string> args)
         {
             string targetRepoUri = GetRepoUrl(targetRepo);
             var sourceRepoUri = GetRepoUrl(sourceRepo);
@@ -111,7 +111,7 @@ namespace Maestro.ScenarioTests
                 await TriggerSubscriptionAsync(sub.Value);
 
                 TestContext.WriteLine($"Waiting on PR to be opened in ${targetRepoUri}");
-                bool testResult = await CheckGithubPullRequestChecks(targetRepo, targetBranch, doCreateCheck);
+                bool testResult = await CheckGithubPullRequestChecks(targetRepo, targetBranch);
                 Assert.IsTrue(testResult);
             }
         }
