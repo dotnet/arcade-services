@@ -461,14 +461,13 @@ namespace Maestro.ScenarioTests
             PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
             Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepoName).ConfigureAwait(false);
 
-            TestContext.WriteLine($"Checking for automatic merging of PR in {targetBranch} {targetRepoName}");
-            await WaitForMergedPullRequestAsync(targetRepoName, targetBranch, pullRequest, repo);
-            
             return await ValidateGithubMaestroCheckRunsSuccessful(targetRepoName, targetBranch, pullRequest, repo);
         }
 
         public async Task<bool> ValidateGithubMaestroCheckRunsSuccessful(string targetRepoName, string targetBranch, PullRequest pullRequest, Repository repo)
         {
+            // Waiting 5 minutes for maestro to add the checks to the PR
+            await Task.Delay(300000);
             TestContext.WriteLine($"Checking maestro merge policies check in {targetBranch} {targetRepoName}");
             CheckRunsResponse existingCheckRuns = await GitHubApi.Check.Run.GetAllForReference(repo.Id, pullRequest.Head.Sha);
             int cnt = 0;
@@ -477,7 +476,7 @@ namespace Maestro.ScenarioTests
                 if (checkRun.ExternalId.StartsWith("maestro-policy-"))
                 {
                     cnt++;
-                    if (checkRun.Status != "completed" && checkRun.Conclusion != "success")
+                    if (checkRun.Status != "completed")
                     {
                         return false;
                     }
