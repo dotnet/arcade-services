@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Maestro.Contracts;
 using Maestro.ScenarioTests.ObjectHelpers;
 using Microsoft.DotNet.Darc;
 using Microsoft.DotNet.Maestro.Client.Models;
@@ -81,7 +82,7 @@ namespace Maestro.ScenarioTests
                         subscription2Id.Value,
                         UpdateFrequency.None,
                         false,
-                        new List<string> { Constants.NoExtraCommitsMergePolicyName, Constants.AllCheckSuccessfulMergePolicyName, Constants.NoRequestedChangesMergePolicyName },
+                        new List<string> { MergePolicyConstants.NoExtraCommitsMergePolicyName, MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName },
                         new List<string> { "WIP", "license/cla" });
 
                     string expectedSubscription2Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription2, null);
@@ -101,7 +102,7 @@ namespace Maestro.ScenarioTests
                         subscription3Id.Value,
                         UpdateFrequency.None,
                         false,
-                        new List<string> { Constants.NoExtraCommitsMergePolicyName, Constants.AllCheckSuccessfulMergePolicyName, Constants.NoRequestedChangesMergePolicyName },
+                        new List<string> { MergePolicyConstants.NoExtraCommitsMergePolicyName, MergePolicyConstants.AllCheckSuccessfulMergePolicyName, MergePolicyConstants.NoRequestedChangesMergePolicyName },
                         new List<string> { "WIP", "license/cla" });
 
                     string expectedSubscription3Info = UxHelpers.GetTextSubscriptionDescription(expectedSubscription3, null);
@@ -183,7 +184,7 @@ namespace Maestro.ScenarioTests
                         yamlSubscriptionId.Value, 
                         UpdateFrequency.EveryWeek, 
                         false, 
-                        new List<string> { Constants.StandardMergePolicyName });
+                        new List<string> { MergePolicyConstants.StandardMergePolicyName });
 
                     string expectedYamlSubscriptionInfo = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription, null);
 
@@ -212,7 +213,7 @@ namespace Maestro.ScenarioTests
                         channel1Name, 
                         yamlSubscription2Id.Value, 
                         UpdateFrequency.EveryWeek, false, 
-                        new List<string> { Constants.StandardMergePolicyName });
+                        new List<string> { MergePolicyConstants.StandardMergePolicyName });
 
                     string expectedYamlSubscriptionInfo2 = UxHelpers.GetTextSubscriptionDescription(expectedYamlSubscription2, null);
 

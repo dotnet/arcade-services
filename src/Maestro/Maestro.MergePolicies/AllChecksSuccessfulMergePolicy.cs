@@ -29,7 +29,7 @@ namespace Maestro.MergePolicies
         public override async Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc)
         {
             IEnumerable<Check> checks = await darc.GetPullRequestChecksAsync(pr.Url);
-            IEnumerable<Check> notIgnoredChecks = checks.Where(c => !_ignoreChecks.Contains(c.Name) && c.IsMaestroMergePolicy);
+            IEnumerable<Check> notIgnoredChecks = checks.Where(c => !_ignoreChecks.Contains(c.Name) && !c.IsMaestroMergePolicy);
 
             if (!notIgnoredChecks.Any())
             {
@@ -71,7 +71,7 @@ namespace Maestro.MergePolicies
 
     public class AllChecksSuccessfulMergePolicyBuilder : IMergePolicyBuilder
     {
-        public string Name => "AllChecksSuccessful";
+        public string Name => MergePolicyConstants.AllCheckSuccessfulMergePolicyName;
 
         public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
         {

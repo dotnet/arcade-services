@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Maestro.Contracts;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,12 +16,6 @@ namespace Microsoft.DotNet.Darc
         public const int SuccessCode = 0;
         public const int MaxPopupTries = 3;
         public static string DarcDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".darc");
-
-        public const string AllCheckSuccessfulMergePolicyName = "AllChecksSuccessful";
-        public const string StandardMergePolicyName = "Standard";
-        public const string NoExtraCommitsMergePolicyName = "NoExtraCommits";
-        public const string NoRequestedChangesMergePolicyName = "NoRequestedChanges";
-        public const string IgnoreChecksMergePolicyPropertyName = "ignoreChecks";
 
         /// <summary>
         /// Available update frequencies for subscriptions.  Currently the enumeration values aren't available
@@ -51,35 +46,35 @@ namespace Microsoft.DotNet.Darc
             "Each policy may have a set of required properties." +
             "See below for available merge policies:",
             "",
-            $"{StandardMergePolicyName} - Corresponds to either StandardGitHub or StandardAzureDevOps depending on the target repo type",
+            $"{MergePolicyConstants.StandardMergePolicyName} - Corresponds to either StandardGitHub or StandardAzureDevOps depending on the target repo type",
             "The standard github merge policy is:",
-            $"- {AllCheckSuccessfulMergePolicyName} with the 'WIP' and 'license/cla' checks ignored.",
-            $"- {NoRequestedChangesMergePolicyName}",
+            $"- {MergePolicyConstants.AllCheckSuccessfulMergePolicyName} with the 'WIP' and 'license/cla' checks ignored.",
+            $"- {MergePolicyConstants.NoRequestedChangesMergePolicyName}",
             "The standard Azure DevOps merge policy is:",
-            $"- {AllCheckSuccessfulMergePolicyName} with the 'Comment requirements', 'Minimum number of reviewers', 'Required reviewers',",
+            $"- {MergePolicyConstants.AllCheckSuccessfulMergePolicyName} with the 'Comment requirements', 'Minimum number of reviewers', 'Required reviewers',",
             "  and 'Work item linking' checks ignored.",
-            $"- {NoRequestedChangesMergePolicyName}",
+            $"- {MergePolicyConstants.NoRequestedChangesMergePolicyName}",
             "YAML format:",
-            $"- Name: {StandardMergePolicyName}",
+            $"- Name: {MergePolicyConstants.StandardMergePolicyName}",
             "",
-            $"{AllCheckSuccessfulMergePolicyName} - All PR checks must be successful, potentially ignoring a specified set of checks.",
+            $"{MergePolicyConstants.AllCheckSuccessfulMergePolicyName} - All PR checks must be successful, potentially ignoring a specified set of checks.",
             "Checks might be ignored if they are unrelated to PR validation. The check name corresponds to the string that shows up",
             "in GitHub/Azure DevOps.",
             "YAML format:",
-            $"- Name: {AllCheckSuccessfulMergePolicyName}",
+            $"- Name: {MergePolicyConstants.AllCheckSuccessfulMergePolicyName}",
             "  Properties:",
-            $"    {IgnoreChecksMergePolicyPropertyName}:",
+            $"    {MergePolicyConstants.IgnoreChecksMergePolicyPropertyName}:",
             "    - WIP",
             "    - license/cla",
             "    - <other check names>",
             "",
-            $"{NoExtraCommitsMergePolicyName} - If additional non-bot commits appear in the PR, the PR should not be merged.",
+            $"{MergePolicyConstants.NoExtraCommitsMergePolicyName} - If additional non-bot commits appear in the PR, the PR should not be merged.",
             "YAML format:",
-            $"- Name: {NoExtraCommitsMergePolicyName}",
+            $"- Name: {MergePolicyConstants.NoExtraCommitsMergePolicyName}",
             "",
-            $"{NoRequestedChangesMergePolicyName} - If changes are requested on the PR (or the PR is rejected), it will not be merged.",
+            $"{MergePolicyConstants.NoRequestedChangesMergePolicyName} - If changes are requested on the PR (or the PR is rejected), it will not be merged.",
             "YAML format:",
-            $"- Name: {NoRequestedChangesMergePolicyName}",
+            $"- Name: {MergePolicyConstants.NoRequestedChangesMergePolicyName}",
         };
     }
 }

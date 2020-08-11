@@ -539,11 +539,6 @@ namespace Microsoft.DotNet.DarcLib
 
         private string DisplayPolicy(MergePolicyEvaluationResult result)
         {
-            if (result.MergePolicyInfo.Name == null)
-            {
-                return $"- ❌ **{result.Message}**";
-            }
-
             if (result.Status == MergePolicyEvaluationStatus.Pending)
             {
                 return $"- ❓ **{result.Message}**";

@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Maestro.Contracts;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
@@ -473,7 +474,7 @@ namespace Maestro.ScenarioTests
             int cnt = 0;
             foreach (var checkRun in existingCheckRuns.CheckRuns)
             {
-                if (checkRun.ExternalId.StartsWith("maestro-policy-"))
+                if (checkRun.ExternalId.StartsWith(MergePolicyConstants.MeastroMergePolicyCheckRunPrefix))
                 {
                     cnt++;
                     if (checkRun.Status != "completed")

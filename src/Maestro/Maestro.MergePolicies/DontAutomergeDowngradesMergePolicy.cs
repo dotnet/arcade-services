@@ -60,7 +60,7 @@ namespace Maestro.MergePolicies
 
     public class DontAutomergeDowngradesMergePolicyBuilder : IMergePolicyBuilder
     {
-        public string Name => "DontAutomergeDowngrades";
+        public string Name => MergePolicyConstants.DontAutomergeDowngradesPolicyName;
         public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
         {
             IReadOnlyList<IMergePolicy> policies = new List<IMergePolicy> { new DontAutomergeDowngradesMergePolicy() };
