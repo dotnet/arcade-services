@@ -256,7 +256,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             services.AddHealthReporting(
                 b =>
                 {
-                    b.AddServiceFabric();
+                    b.AddServiceFabric((o, p) => { });
                     b.AddLogging();
                     b.AddAzureTable((o, p) => o.WriteSasUri = p.GetRequiredService<IConfiguration>()["HealthTableUri"]);
                 });

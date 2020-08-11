@@ -50,19 +50,19 @@ namespace DependencyUpdateErrorProcessor
             services.Configure<DependencyUpdateErrorProcessorOptions>(
                 (options, provider) =>
                 {
-                    var config1 = provider.GetRequiredService<IConfiguration>();
-                    if (!bool.TryParse(config1["EnableDependencyUpdateErrorProcessor"], out var errorProcessorFlag))
+                    var config = provider.GetRequiredService<IConfiguration>();
+                    if (!bool.TryParse(config["EnableDependencyUpdateErrorProcessor"], out var errorProcessorFlag))
                     {
                         var logger = provider.GetRequiredService<ILoggerProvider>().CreateLogger(nameof(Program));
                         // Logging statement is added to track the feature flag returns. 
                         logger.LogError(
-                            $"Value of the dependency update error processor feature flag '{config1["EnableDependencyUpdateErrorProcessor"]}'"
+                            $"Value of the dependency update error processor feature flag '{config["EnableDependencyUpdateErrorProcessor"]}'"
                         );
                     }
 
                     options.IsEnabled = errorProcessorFlag;
-                    options.GithubUrl = config1["GithubUrl"];
-                    options.FyiHandle = config1["FyiHandle"];
+                    options.GithubUrl = config["GithubUrl"];
+                    options.FyiHandle = config["FyiHandle"];
                 }
             );
             services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();

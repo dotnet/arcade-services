@@ -26,12 +26,6 @@ namespace CoreHealthMonitor
         {
             services.Configure("DriveMonitoring", (Action<DriveMonitorOptions, IConfiguration>) ((o, s) => s.Bind(o)));
             services.Configure<MemoryDumpOptions>("MemoryDump", (o, s) => s.Bind(o));
-            services.AddHealthReporting(
-                b =>
-                {
-                    b.AddServiceFabric();
-                }
-            );
         }
     }
 }

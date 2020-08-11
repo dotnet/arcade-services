@@ -35,6 +35,12 @@ namespace Microsoft.DotNet.Internal.Health
             return this;
         }
 
+        public HealthReportingBuilder AddServiceFabric(Action<ServiceFabricHealthReportOptions, IServiceProvider> configure)
+        {
+            AddProvider<ServiceFabricHealthReportProvider, ServiceFabricHealthReportOptions>(configure);
+            return this;
+        }
+
         public HealthReportingBuilder AddLogging()
         {
             AddProvider<LogHealthReporter>();
