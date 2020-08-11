@@ -69,7 +69,7 @@ namespace CoreHealthMonitor
                 if (freeSpace < threshold)
                 {
                     _logger.LogInformation(
-                        "Available drive space on {drive} is at {freeSpace} above threshold of {threshold} bytes",
+                        "Available drive space on {drive} is at {freeSpace} below threshold of {threshold} bytes",
                         drive.Name,
                         freeSpace,
                         threshold
