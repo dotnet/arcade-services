@@ -23,8 +23,6 @@ namespace Maestro.ScenarioTests
         [SetUp]
         public async Task InitializeAsync()
         {
-            Environment.SetEnvironmentVariable("MAESTRO_BASEURI", "https://1072664df082.ngrok.io");
-            Environment.SetEnvironmentVariable("DARC_PACKAGE_SOURCE", @"C:\Users\t-lorisw\arcade-services\artifacts\packages\Debug\NonShipping\");
             _parameters = await TestParameters.GetAsync();
             SetTestParameters(_parameters);
         }
