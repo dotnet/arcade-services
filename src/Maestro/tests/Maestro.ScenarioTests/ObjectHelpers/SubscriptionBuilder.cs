@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using Maestro.Contracts;
 using Microsoft.DotNet.Darc;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Newtonsoft.Json.Linq;
@@ -28,40 +29,40 @@ namespace Maestro.ScenarioTests.ObjectHelpers
                 return expectedSubscription;
             }
 
-            if (mergePolicyNames.Contains(Constants.StandardMergePolicyName))
+            if (mergePolicyNames.Contains(MergePolicyConstants.StandardMergePolicyName))
             {
                 mergePolicies.Add(new MergePolicy
                 {
-                    Name = Constants.StandardMergePolicyName
+                    Name = MergePolicyConstants.StandardMergePolicyName
                 });
             }
 
-            if (mergePolicyNames.Contains(Constants.NoExtraCommitsMergePolicyName))
+            if (mergePolicyNames.Contains(MergePolicyConstants.NoExtraCommitsMergePolicyName))
             {
                 mergePolicies.Add(
                     new MergePolicy
                     {
-                        Name = Constants.NoExtraCommitsMergePolicyName
+                        Name = MergePolicyConstants.NoExtraCommitsMergePolicyName
                     });
             }
 
-            if (mergePolicyNames.Contains(Constants.AllCheckSuccessfulMergePolicyName) && ignoreChecks.Any())
+            if (mergePolicyNames.Contains(MergePolicyConstants.AllCheckSuccessfulMergePolicyName) && ignoreChecks.Any())
             {
                 mergePolicies.Add(
                     new MergePolicy
                     {
-                        Name = Constants.AllCheckSuccessfulMergePolicyName,
+                        Name = MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
                         Properties = ImmutableDictionary.Create<string, JToken>()
-                            .Add(Constants.IgnoreChecksMergePolicyPropertyName, JToken.FromObject(ignoreChecks))
+                            .Add(MergePolicyConstants.IgnoreChecksMergePolicyPropertyName, JToken.FromObject(ignoreChecks))
                     });
             }
 
-            if (mergePolicyNames.Contains(Constants.NoRequestedChangesMergePolicyName))
+            if (mergePolicyNames.Contains(MergePolicyConstants.NoRequestedChangesMergePolicyName))
             {
                 mergePolicies.Add(
                     new MergePolicy
                     {
-                        Name = Constants.NoRequestedChangesMergePolicyName,
+                        Name = MergePolicyConstants.NoRequestedChangesMergePolicyName,
                         Properties = ImmutableDictionary.Create<string, JToken>()
                     });
             }

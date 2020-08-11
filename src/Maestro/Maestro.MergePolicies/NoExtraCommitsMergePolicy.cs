@@ -24,7 +24,7 @@ namespace Maestro.MergePolicies
 
     public class NoExtraCommitsMergePolicyBuilder : IMergePolicyBuilder
     {
-        public string Name => "NoExtraCommits";
+        public string Name => MergePolicyConstants.NoExtraCommitsMergePolicyName;
 
         public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
         {
