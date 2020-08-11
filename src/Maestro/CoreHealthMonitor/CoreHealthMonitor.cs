@@ -68,12 +68,6 @@ namespace CoreHealthMonitor
 
                 if (freeSpace < threshold)
                 {
-                    _logger.LogInformation(
-                        "Available drive space on {drive} is at {freeSpace} above threshold of {threshold} bytes",
-                        drive.Name,
-                        freeSpace,
-                        threshold
-                    );
                     await _health.UpdateStatusAsync(
                             "DriveSpace:" + drive.Name,
                             HealthStatus.Error,
@@ -83,12 +77,6 @@ namespace CoreHealthMonitor
                 }
                 else
                 {
-                    _logger.LogError(
-                        "Available drive space on {drive} is at {freeSpace} below threshold of {threshold} bytes",
-                        drive.Name,
-                        freeSpace,
-                        threshold
-                    );
                     await _health.UpdateStatusAsync(
                             "DriveSpace:" + drive.Name,
                             HealthStatus.Healthy,
