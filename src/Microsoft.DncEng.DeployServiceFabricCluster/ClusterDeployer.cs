@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net.Http.Headers;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Storage;
@@ -13,92 +12,30 @@ using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.Network.Fluent;
 using Microsoft.Azure.Management.Network.Fluent.LoadBalancer.Definition;
 using Microsoft.Azure.Management.Network.Fluent.Models;
-using Microsoft.Azure.Management.Network.Fluent.Network.Definition;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
-using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
-using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
-using Microsoft.Azure.Management.ResourceManager.Fluent.Models;
 using Microsoft.Azure.Management.Storage.Fluent;
 using Microsoft.Azure.Management.Storage.Fluent.Models;
-using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.Rest;
 using Microsoft.Rest.Azure;
-using Microsoft.Rest.TransientFaultHandling;
 using Newtonsoft.Json.Linq;
-using IUpdate = Microsoft.Azure.Management.Network.Fluent.NetworkSecurityGroup.Update.IUpdate;
-using IWithCreate = Microsoft.Azure.Management.Network.Fluent.NetworkSecurityGroup.Definition.IWithCreate;
 
 namespace Microsoft.DncEng.DeployServiceFabricCluster
 {
-    internal class ServiceFabricClusterCreator
+    internal class ClusterDeployer : ResourceGroupDeployer<string, ClusterSettings>
     {
-        private const string MsftAdTenantId = "72f988bf-86f1-41af-91ab-2d7cd011db47";
-
-        private static readonly AzureServiceTokenProvider TokenProvider = new AzureServiceTokenProvider();
-
-        private readonly ILogger _logger;
-        private readonly ServiceFabricClusterConfiguration _config;
-
-        private IDictionary<string, string> DefaultTags => new Dictionary<string, string>
+        public ClusterDeployer(ClusterSettings settings, ILogger<ClusterDeployer> logger, IConfiguration config) : base(settings, logger, config)
         {
-            ["resourceType"] = "Service Fabric",
-            ["clusterName"] = _config.Name,
-        };
-
-        public ServiceFabricClusterCreator(ServiceFabricClusterConfiguration config, ILogger logger)
-        {
-            _config = config;
-            _logger = logger;
         }
 
-        private class AzureCredentialsTokenProvider : ITokenProvider
+        protected override void PopulateDefaultTags()
         {
-            private readonly AzureServiceTokenProvider _inner;
-
-            public AzureCredentialsTokenProvider(AzureServiceTokenProvider inner)
-            {
-                _inner = inner;
-            }
-
-            public async Task<AuthenticationHeaderValue> GetAuthenticationHeaderAsync(CancellationToken cancellationToken)
-            {
-                string token = await _inner.GetAccessTokenAsync("https://management.azure.com", MsftAdTenantId);
-                return new AuthenticationHeaderValue("Bearer", token);
-            }
+            base.PopulateDefaultTags();
+            DefaultTags["ClusterName"] = Settings.Name;
         }
 
-        private (IAzure, IResourceManager) Authenticate()
+        protected override async Task<string> DeployResourcesAsync(List<IGenericResource> unexpectedResources, IAzure azure, IResourceManager resourceManager, CancellationToken cancellationToken)
         {
-            string version = Assembly.GetEntryAssembly()?
-                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-                .InformationalVersion ?? "1.0.0";
-
-            var tokenCredentials = new TokenCredentials(new AzureCredentialsTokenProvider(TokenProvider));
-            var credentials = new AzureCredentials(tokenCredentials, null, MsftAdTenantId, AzureEnvironment.AzureGlobalCloud);
-
-            HttpLoggingDelegatingHandler.Level logLevel = HttpLoggingDelegatingHandler.Level.Headers;
-            var retryPolicy = new RetryPolicy(new DefaultTransientErrorDetectionStrategy(), 5);
-            var programName = "DncEng Service Fabric Cluster Creator";
-
-            return (Azure.Management.Fluent.Azure.Configure()
-                    .WithLogLevel(logLevel)
-                    .WithRetryPolicy(retryPolicy)
-                    .WithUserAgent(programName, version)
-                    .Authenticate(credentials)
-                    .WithSubscription(_config.SubscriptionId.ToString()),
-                ResourceManager.Configure()
-                    .WithLogLevel(logLevel)
-                    .WithRetryPolicy(retryPolicy)
-                    .WithUserAgent(programName, version)
-                    .Authenticate(credentials)
-                    .WithSubscription(_config.SubscriptionId.ToString()));
-        }
-
-        public async Task CreateClusterAsync(CancellationToken cancellationToken)
-        {
-            var (azure, resourceManager) = Authenticate();
-
             var (artifactStorageClient, artifactsLocationInfo) = await EnsureArtifactStorage(azure, cancellationToken);
             string artifactsLocation = artifactStorageClient.Uri.AbsoluteUri;
 
@@ -111,19 +48,6 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                 await artifactStorageClient.UploadBlobAsync(relative, stream, cancellationToken);
             }
 
-
-            if (!await azure.ResourceGroups.ContainAsync(_config.ResourceGroup, cancellationToken))
-            {
-                await azure.ResourceGroups.Define(_config.ResourceGroup)
-                    .WithRegion(_config.Location)
-                    .WithTags(DefaultTags)
-                    .CreateAsync(cancellationToken);
-            }
-
-            var unexpectedResources =
-                (await resourceManager.GenericResources.ListByResourceGroupAsync(_config.ResourceGroup, loadAllPages: true, cancellationToken: cancellationToken))
-                .ToList();
-
             IgnoreResources(unexpectedResources, new[]
             {
                 ("microsoft.alertsManagement", "*"),
@@ -133,102 +57,38 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
             });
 
             var (supportLogStorage, applicationDiagnosticsStorage) = await EnsureStorageAccounts(azure, cancellationToken);
-
             string instrumentationKey = await DeployApplicationInsights(unexpectedResources, resourceManager, cancellationToken);
+            var clusterIp = await DeployPublicIp(unexpectedResources, azure, Settings.Name + "-IP", Settings.Name, cancellationToken);
 
-            INetworkSecurityGroup nsg = await DeployNetworkSecurityGroup(unexpectedResources, azure, cancellationToken);
+            string clusterEndpoint = await DeployServiceFabric(unexpectedResources, resourceManager, clusterIp, supportLogStorage, cancellationToken);
 
-            IReadOnlyList<IPublicIPAddress> publicIps = await DeployPublicIps(unexpectedResources, azure, cancellationToken);
-
-            INetwork vnet = await DeployVirtualNetwork(unexpectedResources, azure, nsg, cancellationToken);
-
-            string clusterEndpoint = await DeployServiceFabric(unexpectedResources, resourceManager, publicIps.First(), supportLogStorage, cancellationToken);
-
-            foreach (var (nodeType, ip) in _config.NodeTypes.Zip(publicIps))
+            int idx = 1;
+            foreach (var nodeType in Settings.NodeTypes)
             {
-                ISubnet subnet = vnet.Subnets["Node-" + nodeType.Name];
+                var backendAddressPool = await EnsureBackendAddressPool(azure, nodeType, cancellationToken);
+                var subnet = await GetSubnet(azure, idx, cancellationToken);
 
-                ILoadBalancer lb = await DeployLoadBalancer(unexpectedResources, azure, nodeType, ip, cancellationToken);
-
-                await DeployScaleSet(unexpectedResources, resourceManager, nodeType, lb, subnet, clusterEndpoint, instrumentationKey, artifactsLocation, artifactsLocationInfo, supportLogStorage, applicationDiagnosticsStorage, cancellationToken);
-            }
-
-            foreach (IGenericResource resource in unexpectedResources)
-            {
-                _logger.LogWarning("Unexpected resource '{resourceId}' consider deleting it.", resource.Id);
-            }
-        }
-
-        private async Task<(StorageAccountInfo supportLogStorage, StorageAccountInfo applicationDiagnosticsStorage)> EnsureStorageAccounts(IAzure azure, CancellationToken cancellationToken)
-        {
-            StorageAccountInfo[] accounts = await Task.WhenAll(
-                EnsureStorageAccount(azure, _config.ResourceGroup, "sflogs" + _config.SubscriptionId.ToString("N").Substring(0, 18), cancellationToken),
-                EnsureStorageAccount(azure, _config.ResourceGroup, "sfdg" + _config.SubscriptionId.ToString("N").Substring(0, 20), cancellationToken)
-            );
-            return (accounts[0], accounts[1]);
-        }
-
-        private class StorageAccountInfo
-        {
-            public StorageAccountInfo(string name, string key, BlobServiceClient client, IStorageAccount storageAccount)
-            {
-                Name = name;
-                Key = key;
-                Client = client;
-                StorageAccount = storageAccount;
-            }
-
-            public BlobServiceClient Client { get; }
-            public IStorageAccount StorageAccount { get; }
-            public string Name { get; }
-            public string Key { get; }
-        }
-
-        private async Task<StorageAccountInfo> EnsureStorageAccount(IAzure azure, string resourceGroupName, string storageAccountName, CancellationToken cancellationToken)
-        {
-            _logger.LogInformation("Ensuring storage account '{accountName}' exists.", storageAccountName);
-
-            IStorageAccount storageAccount = (await azure.StorageAccounts.ListAsync(true, cancellationToken)).FirstOrDefault(s => s.Name == storageAccountName);
-            if (storageAccount == null)
-            {
-                IResourceGroup resourceGroup = await azure.ResourceGroups.GetByNameAsync(resourceGroupName, cancellationToken);
-                if (resourceGroup == null)
+                if (nodeType.Name == "Primary")
                 {
-                    resourceGroup = await azure.ResourceGroups.Define(resourceGroupName)
-                        .WithRegion(_config.Location)
-                        .CreateAsync(cancellationToken);
+                    ILoadBalancer lb = await DeployLoadBalancer(unexpectedResources, azure, nodeType, clusterIp, cancellationToken);
+                    await DeployScaleSet(unexpectedResources, resourceManager, nodeType, lb, backendAddressPool, subnet, clusterEndpoint, instrumentationKey, artifactsLocation, artifactsLocationInfo, supportLogStorage, applicationDiagnosticsStorage, cancellationToken);
+                }
+                else
+                {
+                    await DeployScaleSet(unexpectedResources, resourceManager, nodeType, null, backendAddressPool, subnet, clusterEndpoint, instrumentationKey, artifactsLocation, artifactsLocationInfo, supportLogStorage, applicationDiagnosticsStorage, cancellationToken);
                 }
 
-                storageAccount = await azure.StorageAccounts.Define(storageAccountName)
-                    .WithRegion(_config.Location)
-                    .WithExistingResourceGroup(resourceGroup)
-                    .WithSku(StorageAccountSkuType.Standard_LRS)
-                    .WithTags(DefaultTags)
-                    .CreateAsync(cancellationToken);
+                idx++;
             }
 
-            StorageAccountKey key = (await storageAccount.GetKeysAsync(cancellationToken)).First();
-
-            var credential = new StorageSharedKeyCredential(storageAccount.Name, key.Value);
-
-            var account = new BlobServiceClient(new Uri(storageAccount.Inner.PrimaryEndpoints.Blob), credential);
-
-            return new StorageAccountInfo(storageAccountName, key.Value, account, storageAccount);
-        }
-
-        private async Task<(BlobContainerClient container, StorageAccountInfo account)> EnsureArtifactStorage(IAzure azure, CancellationToken cancellationToken)
-        {
-            string storageAccountName = "stage" + _config.SubscriptionId.ToString("N").Substring(0, 19);
-            StorageAccountInfo accountInfo = await EnsureStorageAccount(azure, "ARM_Deploy_Staging", storageAccountName, cancellationToken);
-
-            BlobContainerClient container = accountInfo.Client.GetBlobContainerClient(_config.Name + "-stageartifacts");
-            await container.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: cancellationToken);
-
-            return (container, accountInfo);
+            return "";
         }
 
         private async Task DeployScaleSet(ICollection<IGenericResource> unexpectedResources,
-            IResourceManager resourceManager, ServiceFabricNodeType nodeType, ILoadBalancer lb, ISubnet subnet, string clusterEndpoint,
+            IResourceManager resourceManager, ServiceFabricNodeType nodeType, ILoadBalancer? lb,
+            string backendAddressPool,
+            ISubnet subnet,
+            string clusterEndpoint,
             string instrumentationKey,
             string artifactsLocation,
             StorageAccountInfo artifactsLocationInfo,
@@ -236,7 +96,7 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
             StorageAccountInfo applicationDiagnosticsStorage,
             CancellationToken cancellationToken)
         {
-            string scaleSetName = $"{_config.Name}-{nodeType.Name}";
+            string scaleSetName = $"{Settings.Name}-{nodeType.Name}";
 
             IGenericResource scaleSetResource = unexpectedResources.FirstOrDefault(r =>
                 r.ResourceProviderNamespace == "Microsoft.Compute" &&
@@ -257,8 +117,8 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                         ["apiVersion"] = "2018-06-01",
                         ["type"] = "Microsoft.Compute/virtualMachineScaleSets",
                         ["name"] = scaleSetName,
-                        ["location"] = _config.Location,
-                        ["identity"] = string.IsNullOrEmpty(nodeType.UserAssignedIdentityId) ? new JObject
+                        ["location"] = Settings.Location,
+                        ["identity"] = nodeType.UserAssignedIdentity == null ? new JObject
                         {
                             ["type"] =  "SystemAssigned",
                         } : new JObject
@@ -266,7 +126,7 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                             ["type"] = "userAssigned",
                             ["userAssignedIdentities"] = new JObject
                             {
-                                [nodeType.UserAssignedIdentityId] = new JObject{},
+                                [GetResourceId(nodeType.UserAssignedIdentity, "Microsoft.ManagedIdentity/userAssignedIdentities")] = new JObject{},
                             },
                         },
                         ["properties"] = new JObject
@@ -307,7 +167,7 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                                                     {
                                                         ["commonNames"] = new JArray
                                                         {
-                                                            _config.CertificateCommonName,
+                                                            Settings.SslCertificateCommonName,
                                                         },
                                                         ["x509StoreName"] = "My",
                                                     },
@@ -439,11 +299,18 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                                                         ["name"] = $"NIC-{nodeType.Name}-1",
                                                         ["properties"] = new JObject
                                                         {
-                                                            ["loadBalancerBackendAddressPools"] = new JArray
+                                                            ["loadBalancerBackendAddressPools"] = lb != null ? new JArray
                                                             {
                                                                 new JObject
                                                                 {
                                                                     ["id"] = lb.Backends.First().Value.Inner.Id,
+                                                                },
+                                                            } : null,
+                                                            ["applicationGatewayBackendAddressPools"] = new JArray
+                                                            {
+                                                                new JObject
+                                                                {
+                                                                    ["id"] = backendAddressPool,
                                                                 },
                                                             },
                                                             ["subnet"] = new JObject
@@ -459,8 +326,8 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                                 },
                                 ["osProfile"] = new JObject
                                 {
-                                    ["adminUsername"] = _config.AdminUsername,
-                                    ["adminPassword"] = _config.AdminPassword,
+                                    ["adminUsername"] = Settings.AdminUsername,
+                                    ["adminPassword"] = Settings.AdminPassword,
                                     ["computernamePrefix"] = nodeType.Name,
                                     ["secrets"] = new JArray
                                     {
@@ -468,12 +335,12 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                                         {
                                             ["sourceVault"] = new JObject
                                             {
-                                                ["id"] = _config.CertificateSourceVaultId,
+                                                ["id"] = GetCertificateSourceVaultId(),
                                             },
                                             ["vaultCertificates"] = new JArray(
-                                                _config.CertificateUrls.Select(u => new JObject
+                                                Settings.Certificates.SelectMany(GetKeyVaultSecretIds).Select(certUrl => new JObject
                                                 {
-                                                    ["certificateUrl"] = u,
+                                                    ["certificateUrl"] = certUrl,
                                                     ["certificateStore"] = "My",
                                                 })),
                                         },
@@ -515,199 +382,37 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
             }, cancellationToken);
         }
 
-        private async Task<string> DeployServiceFabric(ICollection<IGenericResource> unexpectedResources,
-            IResourceManager resourceManager, IPublicIPAddress primaryIp, StorageAccountInfo supportLogStorage,
-            CancellationToken cancellationToken)
+        private string GetCertificateSourceVaultId()
         {
-            IGenericResource svcFabResource = unexpectedResources.FirstOrDefault(r =>
-                r.ResourceProviderNamespace == "Microsoft.ServiceFabric" &&
-                r.ResourceType == "clusters" &&
-                r.Name == _config.Name);
-
-            if (svcFabResource != null)
-            {
-                unexpectedResources.Remove(svcFabResource);
-
-                while (true)
-                {
-                    IGenericResource svcFab = await resourceManager.GenericResources.GetByIdAsync(svcFabResource.Id, cancellationToken: cancellationToken);
-                    var props = (JObject) svcFab.Properties;
-                    string state = props["clusterState"]?.Value<string>() ?? "Ready";
-
-                    if (state == "Ready" ||
-                        state == "WaitingForNodes")
-                    {
-                        break;
-                    }
-
-                    _logger.LogInformation("Service Fabric Resource is in state '{state}', cannot deploy yet.", state);
-                    await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken);
-                }
-            }
-
-            try
-            {
-                JObject outputs = await DeployTemplateAsync("ServiceFabric", resourceManager, new JObject
-                {
-                    ["resources"] = new JArray
-                    {
-                        new JObject
-                        {
-                            ["apiVersion"] = "2018-02-01",
-                            ["type"] = "Microsoft.ServiceFabric/clusters",
-                            ["name"] = _config.Name,
-                            ["location"] = _config.Location,
-                            ["tags"] = JObject.FromObject(DefaultTags),
-                            ["properties"] = new JObject
-                            {
-                                ["addonFeatures"] = new JArray(),
-                                ["certificateCommonNames"] = new JObject
-                                {
-                                    ["commonNames"] = new JArray
-                                    {
-                                        new JObject
-                                        {
-                                            ["certificateCommonName"] = _config.CertificateCommonName,
-                                            ["certificateIssuerThumbprint"] = "",
-                                        },
-                                    },
-                                    ["x509StoreName"] = "My",
-                                },
-                                ["clientCertificateCommonNames"] = new JArray
-                                {
-                                    new JObject
-                                    {
-                                        ["certificateCommonName"] = _config.AdminClientCertificateCommonName,
-                                        ["certificateIssuerThumbprint"] =
-                                            _config.AdminClientCertificateIssuerThumbprint,
-                                        ["isAdmin"] = true,
-                                    },
-                                },
-                                ["diagnosticsStorageAccountConfig"] = new JObject
-                                {
-                                    ["blobEndpoint"] = supportLogStorage.StorageAccount.EndPoints.Primary.Blob,
-                                    ["protectedAccountKeyName"] = "StorageAccountKey1",
-                                    ["queueEndpoint"] = supportLogStorage.StorageAccount.EndPoints.Primary.Queue,
-                                    ["storageAccountName"] = supportLogStorage.Name,
-                                    ["tableEndpoint"] = supportLogStorage.StorageAccount.EndPoints.Primary.Table,
-                                },
-                                ["fabricSettings"] = new JArray
-                                {
-                                    new JObject
-                                    {
-                                        ["parameters"] = new JArray
-                                        {
-                                            new JObject
-                                            {
-                                                ["name"] = "ClusterProtectionLevel",
-                                                ["value"] = "EncryptAndSign",
-                                            },
-                                        },
-                                        ["name"] = "Security",
-                                    },
-                                    new JObject
-                                    {
-                                        ["parameters"] = new JArray
-                                        {
-                                            new JObject
-                                            {
-                                                ["name"] = "EnableDefaultServicesUpgrade",
-                                                ["value"] = "true",
-                                            },
-                                        },
-                                        ["name"] = "ClusterManager",
-                                    },
-                                },
-                                ["managementEndpoint"] = $"https://{primaryIp.Fqdn}:{_config.HttpGatewayPort}",
-                                ["reliabilityLevel"] = "Silver",
-                                ["upgradeMode"] = "Automatic",
-                                ["vmImage"] = "Windows",
-                                ["nodeTypes"] = new JArray(
-                                    _config.NodeTypes.Select(nt => new JObject
-                                    {
-                                        ["name"] = nt.Name,
-                                        ["applicationPorts"] = new JObject
-                                        {
-                                            ["startPort"] = 20000,
-                                            ["endPort"] = 30000,
-                                        },
-                                        ["clientConnectionEndpointPort"] = _config.TcpGatewayPort,
-                                        ["durabilityLevel"] = "Silver",
-                                        ["ephemeralPorts"] = new JObject
-                                        {
-                                            ["startPort"] = 49152,
-                                            ["endPort"] = 65534,
-                                        },
-                                        ["httpGatewayEndpointPort"] = _config.HttpGatewayPort,
-                                        ["isPrimary"] = nt.Name == "Primary",
-                                        ["vmInstanceCount"] = nt.InstanceCount,
-                                    })),
-                            },
-                        },
-                    },
-                    ["outputs"] = new JObject
-                    {
-                        ["clusterEndpoint"] = new JObject
-                        {
-                            ["value"] =
-                                $"[reference(resourceId('Microsoft.ServiceFabric/clusters', '{_config.Name}')).clusterEndpoint]",
-                            ["type"] = "string",
-                        },
-                    },
-                }, cancellationToken);
-
-                return outputs.Value<JObject>("clusterEndpoint").Value<string>("value");
-            }
-            catch (CloudException ex)
-            {
-                if (svcFabResource != null)
-                {
-                    // retrieve the properties
-                    IGenericResource svcFab = await resourceManager.GenericResources.GetByIdAsync(svcFabResource.Id, cancellationToken: cancellationToken);
-
-                    string endpoint = ((JObject) svcFab.Properties).Value<string>("clusterEndpoint");
-                    if (!string.IsNullOrEmpty(endpoint))
-                    {
-                        _logger.LogWarning(ex, "Error deploying Service Fabric: {message}", ex.Message);
-                        _logger.LogInformation("Service Fabric exists and has a cluster endpoint, proceeding to VM deployment");
-                        return endpoint;
-                    }
-                }
-
-                throw;
-            }
+            return GetResourceId(Settings.CertificateSourceVault, "Microsoft.KeyVault/vaults");
         }
 
         private async Task<ILoadBalancer> DeployLoadBalancer(ICollection<IGenericResource> unexpectedResources, IAzure azure, ServiceFabricNodeType nodeType, IPublicIPAddress publicIp, CancellationToken cancellationToken)
         {
-            string lbName = $"{_config.Name}-{nodeType.Name}-LB";
+            string lbName = $"{Settings.Name}-{nodeType.Name}-LB";
 
             IGenericResource existingLoadBalancer = unexpectedResources.FirstOrDefault(r =>
                 string.Equals(r.ResourceProviderNamespace, "Microsoft.Network", StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(r.ResourceType, "loadBalancers", StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(r.Name, lbName, StringComparison.OrdinalIgnoreCase));
 
+            Debug.Assert(nodeType.Name == "Primary");
+
             var neededProbesAndRules = new List<(string name, int externalPort, int internalPort)>();
 
-            if (nodeType.Name == "Primary")
+            neededProbesAndRules.AddRange(new[]
             {
-                neededProbesAndRules.AddRange(new[]
-                {
-                    ("FabricTcpGateway", _config.TcpGatewayPort, _config.TcpGatewayPort),
-                    ("FabricHttpGateway", _config.HttpGatewayPort, _config.HttpGatewayPort),
-                });
-            }
-
-            neededProbesAndRules.AddRange(nodeType.Endpoints
-                .Select((ep, i) => ($"App-{i}", ep.ExternalPort, ep.InternalPort)));
+                ("FabricTcpGateway", ServiceFabricConstants.TcpGatewayPort, ServiceFabricConstants.TcpGatewayPort),
+                ("FabricHttpGateway", ServiceFabricConstants.HttpGatewayPort, ServiceFabricConstants.HttpGatewayPort),
+            });
 
             if (existingLoadBalancer == null)
             {
-                _logger.LogInformation("Creating new load balancer {lbName}", lbName);
+                Logger.LogInformation("Creating new load balancer {lbName}", lbName);
 
-                IWithLBRuleOrNat def = azure.LoadBalancers.Define(lbName)
-                    .WithRegion(_config.Location)
-                    .WithExistingResourceGroup(_config.ResourceGroup);
+                var def = azure.LoadBalancers.Define(lbName)
+                    .WithRegion(Settings.Location)
+                    .WithExistingResourceGroup(Settings.ResourceGroup);
 
                 foreach (var (name, externalPort, internalPort) in neededProbesAndRules)
                 {
@@ -730,13 +435,13 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                         .Attach();
                 }
 
-                return await ((IWithLBRuleOrNatOrCreate) def)
+                return await ((IWithLBRuleOrNatOrCreate)def)
                     .WithTags(DefaultTags)
                     .WithSku(LoadBalancerSkuType.Standard)
                     .CreateAsync(cancellationToken);
             }
 
-            _logger.LogInformation("Updating existing load balancer {lbName}", lbName);
+            Logger.LogInformation("Updating existing load balancer {lbName}", lbName);
 
             unexpectedResources.Remove(existingLoadBalancer);
 
@@ -778,210 +483,209 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
             return await update.ApplyAsync(cancellationToken);
         }
 
-        private async Task<INetwork> DeployVirtualNetwork(ICollection<IGenericResource> unexpectedResources, IAzure azure, INetworkSecurityGroup nsg, CancellationToken cancellationToken)
+        private async Task<ISubnet> GetSubnet(IAzure azure, int index, CancellationToken cancellationToken)
         {
-            string vnetName = _config.Name + "-vnet";
-
-            IGenericResource existingNetworkResource = unexpectedResources.FirstOrDefault(r =>
-                string.Equals(r.ResourceProviderNamespace, "Microsoft.Network", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(r.ResourceType, "virtualNetworks", StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(r.Name, vnetName, StringComparison.OrdinalIgnoreCase));
-
-            IEnumerable<(string, string)> neededSubnets = new[]
+            var network = await azure.Networks.GetByIdAsync(GetResourceId(Settings.VNet, "Microsoft.Network/virtualNetworks"), cancellationToken);
+            var subnetName = $"Cluster-{Settings.ClusterIndex}-Node-{index}";
+            if (!network.Subnets.TryGetValue(subnetName, out var subnet))
             {
-                ("AppGateway", "10.0.0.0/24"),
-            }.Concat(_config.NodeTypes.Select((n, i) =>
-                ("Node-" + n.Name, "10.0." + (i + 1) + ".0/24")));
-
-            if (existingNetworkResource == null)
-            {
-                _logger.LogInformation("Creating new virtual network {vnetName}", vnetName);
-
-                IWithCreateAndSubnet networkDef = azure.Networks.Define(vnetName)
-                    .WithRegion(_config.Location)
-                    .WithExistingResourceGroup(_config.ResourceGroup)
-                    .WithAddressSpace("10.0.0.0/16");
-                 foreach (var (name, prefix) in neededSubnets)
-                 {
-                     networkDef = networkDef.DefineSubnet(name)
-                         .WithAddressPrefix(prefix)
-                         .WithExistingNetworkSecurityGroup(nsg)
-                         .Attach();
-                 }
-
-                 return await networkDef
-                     .WithTags(DefaultTags)
-                     .CreateAsync(cancellationToken);
+                throw new InvalidOperationException($"Subnet {subnetName} not found.");
             }
 
-            _logger.LogInformation("Updating existing virtual network {vnetName}", vnetName);
+            return subnet;
+        }
 
-            unexpectedResources.Remove(existingNetworkResource);
+        private async Task<string> EnsureBackendAddressPool(IAzure azure, ServiceFabricNodeType type, CancellationToken cancellationToken)
+        {
+            var backendName = $"{Settings.Name}-{type.Name}";
+            return await EnsureBackendAddressPool(azure, backendName, type.Ports, cancellationToken);
+        }
 
-            INetwork existingNetwork = await azure.Networks.GetByIdAsync(existingNetworkResource.Id, cancellationToken);
-
-            Azure.Management.Network.Fluent.Network.Update.IUpdate update = existingNetwork.Update();
-            foreach (string space in existingNetwork.AddressSpaces)
+        private async Task<string> EnsureBackendAddressPool(IAzure azure, string backendName, List<int> ports, CancellationToken cancellationToken)
+        {
+            var gatewayId = GetResourceId(Settings.Gateway, "Microsoft.Network/applicationGateways");
+            var gateway = await azure.ApplicationGateways.GetByIdAsync(gatewayId, cancellationToken);
+            var backendId = $"{gatewayId}/backendAddressPools/{backendName}";
+            if (!gateway.Backends.ContainsKey(backendName))
             {
-                update = update.WithoutAddressSpace(space);
-            }
-            foreach (KeyValuePair<string, ISubnet> subnet in existingNetwork.Subnets)
-            {
-                update = update.WithoutSubnet(subnet.Key);
-            }
-
-            update = update.WithAddressSpace("10.0.0.0/16");
-            foreach (var (name, prefix) in neededSubnets)
-            {
-                update = update.DefineSubnet(name)
-                    .WithAddressPrefix(prefix)
-                    .WithExistingNetworkSecurityGroup(nsg)
+                var update = gateway.Update()
+                    .DefineBackend(backendName)
                     .Attach();
-            }
-
-            update = update.WithTags(DefaultTags);
-
-            return await update.ApplyAsync(cancellationToken);
-        }
-
-        private async Task<IReadOnlyList<IPublicIPAddress>> DeployPublicIps(ICollection<IGenericResource> unexpectedResources, IAzure azure, CancellationToken cancellationToken)
-        {
-            IEnumerable<(string name, string domainName)> expectedIps = _config.NodeTypes.Select((nt, i) =>
-                (name: $"{_config.Name}-{nt.Name}-IP", domainName: _config.Name + (i == 0 ? "" : "-" + i)));
-
-            var ips = new List<IPublicIPAddress>();
-
-            foreach (var (name, domainName) in expectedIps)
-            {
-                IGenericResource existingIp = unexpectedResources.FirstOrDefault(r =>
-                    string.Equals(r.ResourceProviderNamespace, "Microsoft.Network", StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(r.ResourceType, "publicIPAddresses", StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(r.Name, name, StringComparison.OrdinalIgnoreCase));
-
-                if (existingIp == null)
+                foreach (var port in ports)
                 {
-                    _logger.LogInformation("Creating new IP address {ipName}", name);
-
-                    ips.Add(await azure.PublicIPAddresses.Define(name)
-                        .WithRegion(_config.Location)
-                        .WithExistingResourceGroup(_config.ResourceGroup)
-                        .WithTags(DefaultTags)
-                        .WithSku(PublicIPSkuType.Standard)
-                        .WithStaticIP()
-                        .WithLeafDomainLabel(domainName)
-                        .CreateAsync(cancellationToken));
-                    continue;
-                }
-
-                unexpectedResources.Remove(existingIp);
-
-                _logger.LogInformation("Updating existing IP address {ipName}", name);
-                ips.Add(await (await azure.PublicIPAddresses.GetByResourceGroupAsync(_config.ResourceGroup, name, cancellationToken))
-                    .Update()
-                    .WithTags(DefaultTags)
-                    .WithStaticIP()
-                    .WithLeafDomainLabel(domainName)
-                    .ApplyAsync(cancellationToken));
-            }
-
-            return ips;
-        }
-
-        private async Task<INetworkSecurityGroup> DeployNetworkSecurityGroup(List<IGenericResource> allResources, IAzure azure, CancellationToken cancellationToken)
-        {
-            string nsgName = _config.Name + "-nsg";
-
-            IGenericResource nsg = allResources.FirstOrDefault(r =>
-                r.ResourceProviderNamespace == "Microsoft.Network" &&
-                r.ResourceType == "networkSecurityGroups" &&
-                r.Name == nsgName);
-
-            var neededRules = new[]
-                {
-                    ("AppGatewayRule", "65200-65535"),
-                    ("ServiceFabricTcp", _config.TcpGatewayPort.ToString()),
-                    ("ServiceFabricHttp", _config.HttpGatewayPort.ToString()),
-                }.Concat(_config.NodeTypes
-                    .SelectMany(n => n.Endpoints)
-                    .Select(e => e.InternalPort)
-                    .Distinct()
-                    .Select((p, i) =>
-                    ("SslEndpoint-" + i, p.ToString())))
-                .ToDictionary(t => t.Item1, t => t.Item2);
-
-            if (nsg == null)
-            {
-                _logger.LogInformation("Creating new network security group {nsgName}.", nsgName);
-                IWithCreate nsgDef = azure.NetworkSecurityGroups.Define(nsgName)
-                    .WithRegion(_config.Location)
-                    .WithExistingResourceGroup(_config.ResourceGroup)
-                    .WithTags(DefaultTags);
-
-                var index = 1;
-                foreach ((string key, string range) in neededRules)
-                {
-                    nsgDef = nsgDef.DefineRule(key)
-                        .AllowInbound()
-                        .FromAnyAddress()
-                        .FromAnyPort()
-                        .ToAnyAddress()
-                        .ToPortRanges(range)
-                        .WithProtocol(SecurityRuleProtocol.Tcp)
-                        .WithPriority(1000 + index)
+                    update = update
+                        .DefineBackendHttpConfiguration($"{backendName}-{port}")
+                        .WithProtocol(ApplicationGatewayProtocol.Http)
+                        .WithPort(port)
+                        .WithCookieBasedAffinity()
+                        .WithRequestTimeout(20)
                         .Attach();
-
-                    index++;
                 }
 
-                return await nsgDef.CreateAsync(cancellationToken);
+                await update.ApplyAsync(cancellationToken);
             }
 
-            allResources.Remove(nsg);
-
-            _logger.LogInformation("Updating existing network security group {nsgName}.", nsg.Name);
-            INetworkSecurityGroup existingGroup = await azure.NetworkSecurityGroups.GetByIdAsync(nsg.Id, cancellationToken);
-            IEnumerable<string> existingRules = existingGroup.SecurityRules.Keys;
-
-            IUpdate updatedNsg = existingGroup.Update();
-            foreach (string rule in existingRules)
-            {
-                updatedNsg = updatedNsg.WithoutRule(rule);
-            }
-
-            {
-                var index = 1;
-                foreach ((string key, string range) in neededRules)
-                {
-                    updatedNsg = updatedNsg.DefineRule(key)
-                        .AllowInbound()
-                        .FromAnyAddress()
-                        .FromAnyPort()
-                        .ToAnyAddress()
-                        .ToPortRanges(range)
-                        .WithProtocol(SecurityRuleProtocol.Tcp)
-                        .WithPriority(1000 + index)
-                        .Attach();
-
-                    index++;
-                }
-            }
-
-            existingGroup = await updatedNsg.ApplyAsync(cancellationToken);
-
-            return existingGroup;
+            return backendId;
         }
 
-        private static void IgnoreResources(ICollection<IGenericResource> unexpectedResources, (string ns, string type)[] ignorables)
+        private async Task<string> DeployServiceFabric(ICollection<IGenericResource> unexpectedResources,
+            IResourceManager resourceManager, IPublicIPAddress primaryIp, StorageAccountInfo supportLogStorage,
+            CancellationToken cancellationToken)
         {
-            var toIgnore = unexpectedResources.Where(r =>
-                ignorables.Any(t =>
-                    string.Equals(r.ResourceProviderNamespace, t.ns, StringComparison.OrdinalIgnoreCase) &&
-                    (string.Equals(r.ResourceType, t.type, StringComparison.OrdinalIgnoreCase) ||
-                     t.type == "*")))
-                .ToList();
-            foreach (IGenericResource resource in toIgnore)
+            IGenericResource svcFabResource = unexpectedResources.FirstOrDefault(r =>
+                r.ResourceProviderNamespace == "Microsoft.ServiceFabric" &&
+                r.ResourceType == "clusters" &&
+                r.Name == Settings.Name);
+
+            if (svcFabResource != null)
             {
-                unexpectedResources.Remove(resource);
+                unexpectedResources.Remove(svcFabResource);
+
+                while (true)
+                {
+                    IGenericResource svcFab = await resourceManager.GenericResources.GetByIdAsync(svcFabResource.Id, cancellationToken: cancellationToken);
+                    var props = (JObject)svcFab.Properties;
+                    string state = props["clusterState"]?.Value<string>() ?? "Ready";
+
+                    if (state == "Ready" ||
+                        state == "WaitingForNodes")
+                    {
+                        break;
+                    }
+
+                    Logger.LogInformation("Service Fabric Resource is in state '{state}', cannot deploy yet.", state);
+                    await Task.Delay(TimeSpan.FromSeconds(60), cancellationToken);
+                }
+            }
+
+            try
+            {
+                JObject outputs = await DeployTemplateAsync("ServiceFabric", resourceManager, new JObject
+                {
+                    ["resources"] = new JArray
+                    {
+                        new JObject
+                        {
+                            ["apiVersion"] = "2018-02-01",
+                            ["type"] = "Microsoft.ServiceFabric/clusters",
+                            ["name"] = Settings.Name,
+                            ["location"] = Settings.Location,
+                            ["tags"] = JObject.FromObject(DefaultTags),
+                            ["properties"] = new JObject
+                            {
+                                ["addonFeatures"] = new JArray(),
+                                ["certificateCommonNames"] = new JObject
+                                {
+                                    ["commonNames"] = new JArray
+                                    {
+                                        new JObject
+                                        {
+                                            ["certificateCommonName"] = Settings.SslCertificateCommonName,
+                                            ["certificateIssuerThumbprint"] = "",
+                                        },
+                                    },
+                                    ["x509StoreName"] = "My",
+                                },
+                                ["clientCertificateCommonNames"] = new JArray
+                                {
+                                    new JObject
+                                    {
+                                        ["certificateCommonName"] = Settings.AdminClientCertificateCommonName,
+                                        ["certificateIssuerThumbprint"] = Settings.AdminClientCertificateIssuerThumbprint,
+                                        ["isAdmin"] = true,
+                                    },
+                                },
+                                ["diagnosticsStorageAccountConfig"] = new JObject
+                                {
+                                    ["blobEndpoint"] = supportLogStorage.StorageAccount.EndPoints.Primary.Blob,
+                                    ["protectedAccountKeyName"] = "StorageAccountKey1",
+                                    ["queueEndpoint"] = supportLogStorage.StorageAccount.EndPoints.Primary.Queue,
+                                    ["storageAccountName"] = supportLogStorage.Name,
+                                    ["tableEndpoint"] = supportLogStorage.StorageAccount.EndPoints.Primary.Table,
+                                },
+                                ["fabricSettings"] = new JArray
+                                {
+                                    new JObject
+                                    {
+                                        ["parameters"] = new JArray
+                                        {
+                                            new JObject
+                                            {
+                                                ["name"] = "ClusterProtectionLevel",
+                                                ["value"] = "EncryptAndSign",
+                                            },
+                                        },
+                                        ["name"] = "Security",
+                                    },
+                                    new JObject
+                                    {
+                                        ["parameters"] = new JArray
+                                        {
+                                            new JObject
+                                            {
+                                                ["name"] = "EnableDefaultServicesUpgrade",
+                                                ["value"] = "true",
+                                            },
+                                        },
+                                        ["name"] = "ClusterManager",
+                                    },
+                                },
+                                ["managementEndpoint"] = $"https://{primaryIp.Fqdn}:{ServiceFabricConstants.HttpGatewayPort}",
+                                ["reliabilityLevel"] = "Silver",
+                                ["upgradeMode"] = "Automatic",
+                                ["vmImage"] = "Windows",
+                                ["nodeTypes"] = new JArray(
+                                    Settings.NodeTypes.Select(nt => new JObject
+                                    {
+                                        ["name"] = nt.Name,
+                                        ["applicationPorts"] = new JObject
+                                        {
+                                            ["startPort"] = 20000,
+                                            ["endPort"] = 30000,
+                                        },
+                                        ["clientConnectionEndpointPort"] = ServiceFabricConstants.TcpGatewayPort,
+                                        ["durabilityLevel"] = "Silver",
+                                        ["ephemeralPorts"] = new JObject
+                                        {
+                                            ["startPort"] = 49152,
+                                            ["endPort"] = 65534,
+                                        },
+                                        ["httpGatewayEndpointPort"] = ServiceFabricConstants.HttpGatewayPort,
+                                        ["isPrimary"] = nt.Name == "Primary",
+                                        ["vmInstanceCount"] = nt.InstanceCount,
+                                    })),
+                            },
+                        },
+                    },
+                    ["outputs"] = new JObject
+                    {
+                        ["clusterEndpoint"] = new JObject
+                        {
+                            ["value"] = $"[reference(resourceId('Microsoft.ServiceFabric/clusters', '{Settings.Name}')).clusterEndpoint]",
+                            ["type"] = "string",
+                        },
+                    },
+                }, cancellationToken);
+
+                return outputs.Value<JObject>("clusterEndpoint").Value<string>("value");
+            }
+            catch (CloudException ex)
+            {
+                if (svcFabResource != null)
+                {
+                    // retrieve the properties
+                    IGenericResource svcFab = await resourceManager.GenericResources.GetByIdAsync(svcFabResource.Id, cancellationToken: cancellationToken);
+
+                    string endpoint = ((JObject)svcFab.Properties).Value<string>("clusterEndpoint");
+                    if (!string.IsNullOrEmpty(endpoint))
+                    {
+                        Logger.LogWarning(ex, "Error deploying Service Fabric: {message}", ex.Message);
+                        Logger.LogInformation("Service Fabric exists and has a cluster endpoint, proceeding to VM deployment");
+                        return endpoint;
+                    }
+                }
+
+                throw;
             }
         }
 
@@ -991,9 +695,9 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
             IGenericResource ai = allResources.FirstOrDefault(r =>
                 r.ResourceProviderNamespace == "Microsoft.Insights" &&
                 r.ResourceType == "components" &&
-                r.Name == _config.Name);
-            
-            _logger.LogInformation("Deploying application insights '{appInsightsName}'", _config.Name);
+                r.Name == Settings.Name);
+
+            Logger.LogInformation("Deploying application insights '{appInsightsName}'", Settings.Name);
 
             if (ai != null)
             {
@@ -1008,13 +712,13 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                     {
                         ["apiVersion"] = "2015-05-01",
                         ["type"] = "Microsoft.Insights/components",
-                        ["name"] = _config.Name,
-                        ["location"] = _config.Location,
+                        ["name"] = Settings.Name,
+                        ["location"] = Settings.Location,
                         ["kind"] = "web",
                         ["tags"] = JObject.FromObject(DefaultTags),
                         ["properties"] = new JObject
                         {
-                            ["applicationId"] = _config.Name,
+                            ["applicationId"] = Settings.Name,
                         },
                     },
                 },
@@ -1023,7 +727,7 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                     ["instrumentationKey"] = new JObject
                     {
                         ["value"] =
-                            $"[reference(resourceId('Microsoft.Insights/components', '{_config.Name}'), '2015-05-01').InstrumentationKey]",
+                            $"[reference(resourceId('Microsoft.Insights/components', '{Settings.Name}'), '2015-05-01').InstrumentationKey]",
                         ["type"] = "string",
                     },
                 },
@@ -1032,28 +736,86 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
             return result.Value<JObject>("instrumentationKey").Value<string>("value");
         }
 
-        private async Task<JObject> DeployTemplateAsync(string name, IResourceManager resourceManager, JObject template, CancellationToken cancellationToken)
+        private async Task<(StorageAccountInfo supportLogStorage, StorageAccountInfo applicationDiagnosticsStorage)> EnsureStorageAccounts(IAzure azure, CancellationToken cancellationToken)
         {
-            template["$schema"] = "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json";
-            template["contentVersion"] = "1.0.0.0";
+            StorageAccountInfo[] accounts = await Task.WhenAll(
+                EnsureStorageAccount(azure, Settings.ResourceGroup, "sflogs" + Settings.SubscriptionId.ToString("N").Substring(0, 18), cancellationToken),
+                EnsureStorageAccount(azure, Settings.ResourceGroup, "sfdg" + Settings.SubscriptionId.ToString("N").Substring(0, 20), cancellationToken)
+            );
+            return (accounts[0], accounts[1]);
+        }
 
-            _logger.LogInformation("Deploying template '{templateName}'", name);
-
-            if (resourceManager.Deployments.CheckExistence(_config.ResourceGroup, name))
+        private static void IgnoreResources(ICollection<IGenericResource> unexpectedResources, (string ns, string type)[] ignorables)
+        {
+            var toIgnore = unexpectedResources.Where(r =>
+                    ignorables.Any(t =>
+                        string.Equals(r.ResourceProviderNamespace, t.ns, StringComparison.OrdinalIgnoreCase) &&
+                        (string.Equals(r.ResourceType, t.type, StringComparison.OrdinalIgnoreCase) ||
+                         t.type == "*")))
+                .ToList();
+            foreach (IGenericResource resource in toIgnore)
             {
-                await resourceManager.Deployments.DeleteByResourceGroupAsync(_config.ResourceGroup, name, cancellationToken);
+                unexpectedResources.Remove(resource);
+            }
+        }
+
+        private async Task<(BlobContainerClient container, StorageAccountInfo account)> EnsureArtifactStorage(IAzure azure, CancellationToken cancellationToken)
+        {
+            string storageAccountName = "stage" + Settings.SubscriptionId.ToString("N").Substring(0, 19);
+            StorageAccountInfo accountInfo = await EnsureStorageAccount(azure, "ARM_Deploy_Staging", storageAccountName, cancellationToken);
+
+            BlobContainerClient container = accountInfo.Client.GetBlobContainerClient(Settings.Name + "-stageartifacts");
+            await container.CreateIfNotExistsAsync(PublicAccessType.None, cancellationToken: cancellationToken);
+
+            return (container, accountInfo);
+        }
+
+        private async Task<StorageAccountInfo> EnsureStorageAccount(IAzure azure, string resourceGroupName, string storageAccountName, CancellationToken cancellationToken)
+        {
+            Logger.LogInformation("Ensuring storage account '{accountName}' exists.", storageAccountName);
+
+            var storageAccount = (await azure.StorageAccounts.ListAsync(true, cancellationToken)).FirstOrDefault(s => s.Name == storageAccountName);
+            if (storageAccount == null)
+            {
+                IResourceGroup resourceGroup = await azure.ResourceGroups.GetByNameAsync(resourceGroupName, cancellationToken);
+                if (resourceGroup == null)
+                {
+                    resourceGroup = await azure.ResourceGroups.Define(resourceGroupName)
+                        .WithRegion(Settings.Location)
+                        .CreateAsync(cancellationToken);
+                }
+
+                storageAccount = await azure.StorageAccounts.Define(storageAccountName)
+                    .WithRegion(Settings.Location)
+                    .WithExistingResourceGroup(resourceGroup)
+                    .WithSku(StorageAccountSkuType.Standard_LRS)
+                    .WithTags(DefaultTags)
+                    .CreateAsync(cancellationToken);
             }
 
-            var deployment = await resourceManager.Deployments.Define(name)
-                .WithExistingResourceGroup(_config.ResourceGroup)
-                .WithTemplate(template)
-                .WithParameters(new JObject())
-                .WithMode(DeploymentMode.Incremental)
-                .CreateAsync(cancellationToken);
+            StorageAccountKey key = (await storageAccount.GetKeysAsync(cancellationToken)).First();
 
-            await deployment.RefreshAsync(cancellationToken);
+            var credential = new StorageSharedKeyCredential(storageAccount.Name, key.Value);
 
-            return (JObject) deployment.Outputs;
+            var account = new BlobServiceClient(new Uri(storageAccount.Inner.PrimaryEndpoints.Blob), credential);
+
+            return new StorageAccountInfo(storageAccountName, key.Value, account, storageAccount);
+        }
+
+        private class StorageAccountInfo
+        {
+            public StorageAccountInfo(string name, string key, BlobServiceClient client, IStorageAccount storageAccount)
+            {
+                Name = name;
+                Key = key;
+                Client = client;
+                StorageAccount = storageAccount;
+            }
+
+            public BlobServiceClient Client { get; }
+            public IStorageAccount StorageAccount { get; }
+            public string Name { get; }
+            public string Key { get; }
         }
     }
 }
