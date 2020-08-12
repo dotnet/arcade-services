@@ -53,7 +53,11 @@ namespace DotNet.Status.Web.Tests
             kustoIngestClientMock.Setup(x => x.IngestFromStreamAsync(It.IsAny<System.IO.Stream>(), It.IsAny<KustoIngestionProperties>(), null))
                 .Returns(Task.FromResult(Mock.Of<IKustoIngestionResult>()));
 
-            collection.AddSingleton(kustoIngestClientMock.Object);
+            var kustoIngestClientFactoryMock = new Mock<IKustoIngestClientFactory>();
+            kustoIngestClientFactoryMock.Setup(x => x.GetClient())
+                .Returns(kustoIngestClientMock.Object);
+
+            collection.AddSingleton(kustoIngestClientFactoryMock.Object);
 
             var services = collection.BuildServiceProvider();
             return new TestData(services.GetRequiredService<TelemetryController>(), services);

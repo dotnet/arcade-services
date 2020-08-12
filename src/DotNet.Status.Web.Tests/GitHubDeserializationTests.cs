@@ -7,7 +7,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Reflection;
 using System.Text.Json;
- 
+
 namespace DotNet.Status.Web.Tests
 {
     [TestFixture]
@@ -32,7 +32,7 @@ namespace DotNet.Status.Web.Tests
             Assembly asm = thisClass.Assembly;
             var resource = string.Format($"{thisClass.Namespace}.Files.IssueEventPayload.json");
             using var stream = asm.GetManifestResourceStream(resource);
-            var reader = new StreamReader(stream);
+            using var reader = new StreamReader(stream);
 
             return reader.ReadToEnd();
         }

@@ -4,6 +4,7 @@
 
 
 using DotNet.Status.Web.Controllers;
+using DotNet.Status.Web.Options;
 using Microsoft.DotNet.GitHub.Authentication;
 using Microsoft.DotNet.Kusto;
 using Microsoft.Extensions.Logging;
@@ -19,10 +20,6 @@ namespace DotNet.Status.Web
 {
     public class TimelineIssueTriageService : ITimelineIssueTriageService
     {
-        // Search for triage item identifier information, example - "[BuildId=123456,RecordId=0dc87500-1d33-11ea-8b24-4baedbda8954,Index=0]"
-        private static readonly Regex _triageIssueIdentifierRegex = new Regex(@"\[BuildId=(?<buildid>[^,]+),RecordId=(?<recordid>[^,]+),Index=(?<index>[^\]]+)\]\s+\[Category=(?<category>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
-        // Search for a triage item property, example = "[Category=foo]"
-        private static readonly Regex _triagePropertyRegex = new Regex(@"\[(?<key>.+)=(?<value>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
         private static readonly string _docLink = "[Documentation](https://github.com/dotnet/arcade-services/blob/master/docs/BuildFailuresIssueTriage.md)";
         private static readonly string _labelName = "darcbot";
 
@@ -30,17 +27,25 @@ namespace DotNet.Status.Web
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
         private readonly IKustoIngestClientFactory _kustoIngestClientFactory;
         private readonly IOptions<KustoOptions> _kustoOptions;
+        private readonly IOptions<GitHubConnectionOptions> _githubOptions;
+        private readonly ZenHubClient _zenHub;
+        private readonly TimelineIssueTriageLogic _logic;
 
         public TimelineIssueTriageService(
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
             IKustoIngestClientFactory clientFactory,
             IOptions<KustoOptions> kustoOptions,
+            IOptions<GitHubConnectionOptions> githubOptions,
+            ZenHubClient zenHub,
             ILogger<TimelineIssueTriageService> logger)
         {
             _logger = logger;
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
             _kustoIngestClientFactory = clientFactory;
             _kustoOptions = kustoOptions;
+            _githubOptions = githubOptions;
+            _zenHub = zenHub;
+            _logic = new TimelineIssueTriageLogic();
         }
 
         public async Task ProcessIssueEvent(IssuesHookData issuePayload)
@@ -88,7 +93,7 @@ namespace DotNet.Status.Web
                     if (existingIssue.Number != issuePayload.Issue.Number)
                     {
                         var existingIssueItems = GetTriageItemsProperties(existingIssue.Body);
-                        if (existingIssueItems.Count == triageItems.Count && !existingIssueItems.Except(triageItems).Any())
+                        if (IsDuplicate(triageItems, existingIssueItems))
                         {
                             await gitHubClient.Issue.Comment.Create(issuePayload.Repository.Id, issuePayload.Issue.Number, $"Duplicate issue was detected.\n\nClosing as duplicate of {existingIssue.HtmlUrl}\n\nFor more information see {_docLink}");
                             var issueUpdate = new IssueUpdate
@@ -109,6 +114,24 @@ namespace DotNet.Status.Web
                     var update = issue.ToUpdate();
                     update.AddLabel(_labelName);
                     await gitHubClient.Issue.Update(issuePayload.Repository.Id, issuePayload.Issue.Number, update);
+
+                    // add into notification epic -> currently 8/2020 its First Response epic
+                    NotificationEpicOptions epic = _githubOptions.Value.NotificationEpic;
+
+                    if (epic != null)
+                    {
+                        var epicRepoData = await gitHubClient.Repository.Get(_githubOptions.Value.Organization, epic.Repository);
+
+                        _logger.LogInformation("Adding the issue to ZenHub Epic...");
+                        await _zenHub.AddIssueToEpicAsync(
+                            new ZenHubClient.IssueIdentifier(issuePayload.Repository.Id, issue.Number),
+                            new ZenHubClient.IssueIdentifier(epicRepoData.Id, epic.IssueNumber)
+                        );
+                    }
+                    else
+                    {
+                        _logger.LogInformation("No ZenHub epic configured, skipping...");
+                    }
                 }
 
                 updatedCategory = "InTriage";
@@ -167,52 +190,80 @@ namespace DotNet.Status.Web
                 });
         }
 
+        private bool IsDuplicate(IList<TriageItem> triageItems, IList<TriageItem> existingIssueItems)
+        {
+            return _logic.IsDuplicate(triageItems, existingIssueItems);
+        }
+
         private string GetTriageIssueProperty(string propertyName, string body)
         {
-            MatchCollection propertyMatches = _triagePropertyRegex.Matches(body);
-            foreach (Match propertyMatch in propertyMatches)
-            {
-                if (propertyMatch.Success)
-                {
-                    string key = propertyMatch.Groups["key"].Value;
-                    string value = propertyMatch.Groups["value"].Value;
-                    if (propertyName.Equals(key, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return value;
-                    }
-                }
-            }
-            return null;
+            return _logic.GetTriageIssueProperty(propertyName, body);
         }
 
         private IList<TriageItem> GetTriageItemsProperties(string body)
         {
-            var items = new List<TriageItem>();
+            return _logic.GetTriageItemsProperties(body);
+        }
 
-            var matches = _triageIssueIdentifierRegex.Matches(body ?? "");
+        public class TimelineIssueTriageLogic
+        {
+            // Search for triage item identifier information, example - "[BuildId=123456,RecordId=0dc87500-1d33-11ea-8b24-4baedbda8954,Index=0]"
+            private static readonly Regex _triageIssueIdentifierRegex = new Regex(@"\[BuildId=(?<buildid>[^,]+),RecordId=(?<recordid>[^,]+),Index=(?<index>[^\]]+)\]\s+\[Category=(?<category>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
+            // Search for a triage item property, example = "[Category=foo]"
+            private static readonly Regex _triagePropertyRegex = new Regex(@"\[(?<key>[^=]+)=(?<value>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
 
-            foreach (Match match in matches)
+            public IList<TriageItem> GetTriageItemsProperties(string body)
             {
-                TriageItem triageItem = new TriageItem();
-                int.TryParse(match.Groups["buildid"].Value, out int buildId);
-                int.TryParse(match.Groups["index"].Value, out int index);
-                Guid.TryParse(match.Groups["recordid"].Value, out Guid recordId);
-                var category = match.Groups["category"].Value;
+                var items = new List<TriageItem>();
 
-                triageItem.BuildId = buildId;
-                triageItem.RecordId = recordId;
-                triageItem.Index = index;
-                triageItem.UpdatedCategory = category;
-                triageItem.ModifiedDateTime = DateTime.UtcNow;
+                var matches = _triageIssueIdentifierRegex.Matches(body ?? "");
 
-                items.Add(triageItem);
+                foreach (Match match in matches)
+                {
+                    TriageItem triageItem = new TriageItem();
+                    int.TryParse(match.Groups["buildid"].Value, out int buildId);
+                    int.TryParse(match.Groups["index"].Value, out int index);
+                    Guid.TryParse(match.Groups["recordid"].Value, out Guid recordId);
+                    var category = match.Groups["category"].Value;
+
+                    triageItem.BuildId = buildId;
+                    triageItem.RecordId = recordId;
+                    triageItem.Index = index;
+                    triageItem.UpdatedCategory = category;
+                    triageItem.ModifiedDateTime = DateTime.UtcNow;
+
+                    items.Add(triageItem);
+                }
+
+                return items;
             }
 
-            return items;
+            public string GetTriageIssueProperty(string propertyName, string body)
+            {
+                MatchCollection propertyMatches = _triagePropertyRegex.Matches(body);
+                foreach (Match propertyMatch in propertyMatches)
+                {
+                    if (propertyMatch.Success)
+                    {
+                        string key = propertyMatch.Groups["key"].Value;
+                        string value = propertyMatch.Groups["value"].Value;
+                        if (propertyName.Equals(key, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return value;
+                        }
+                    }
+                }
+                return null;
+            }
+
+            public bool IsDuplicate(IList<TriageItem> triageItems, IList<TriageItem> existingIssueItems)
+            {
+                return existingIssueItems.Count == triageItems.Count && !existingIssueItems.Except(triageItems).Any();
+            }
         }
     }
 
-    internal class TriageItem
+    public class TriageItem
     {
         public DateTime ModifiedDateTime { get; set; }
         public int BuildId { get; set; }
