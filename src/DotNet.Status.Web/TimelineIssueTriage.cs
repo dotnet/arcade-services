@@ -18,26 +18,26 @@ using System.Threading.Tasks;
 
 namespace DotNet.Status.Web
 {
-    public class TimelineIssueTriageService : ITimelineIssueTriageService
+    public class TimelineIssueTriage : ITimelineIssueTriage
     {
         private static readonly string _docLink = "[Documentation](https://github.com/dotnet/arcade-services/blob/master/docs/BuildFailuresIssueTriage.md)";
         private static readonly string _labelName = "darcbot";
 
-        private readonly ILogger<TimelineIssueTriageService> _logger;
+        private readonly ILogger<TimelineIssueTriage> _logger;
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
         private readonly IKustoIngestClientFactory _kustoIngestClientFactory;
         private readonly IOptions<KustoOptions> _kustoOptions;
         private readonly IOptions<GitHubConnectionOptions> _githubOptions;
         private readonly ZenHubClient _zenHub;
-        private readonly TimelineIssueTriageLogic _logic;
+        private readonly TimelineIssueTriageInternal _internal;
 
-        public TimelineIssueTriageService(
+        public TimelineIssueTriage(
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
             IKustoIngestClientFactory clientFactory,
             IOptions<KustoOptions> kustoOptions,
             IOptions<GitHubConnectionOptions> githubOptions,
             ZenHubClient zenHub,
-            ILogger<TimelineIssueTriageService> logger)
+            ILogger<TimelineIssueTriage> logger)
         {
             _logger = logger;
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
@@ -45,7 +45,7 @@ namespace DotNet.Status.Web
             _kustoOptions = kustoOptions;
             _githubOptions = githubOptions;
             _zenHub = zenHub;
-            _logic = new TimelineIssueTriageLogic();
+            _internal = new TimelineIssueTriageInternal();
         }
 
         public async Task ProcessIssueEvent(IssuesHookData issuePayload)
@@ -197,20 +197,20 @@ namespace DotNet.Status.Web
 
         private bool IsDuplicate(IList<TriageItem> triageItems, IList<TriageItem> existingIssueItems)
         {
-            return _logic.IsDuplicate(triageItems, existingIssueItems);
+            return _internal.IsDuplicate(triageItems, existingIssueItems);
         }
 
         private string GetTriageIssueProperty(string propertyName, string body)
         {
-            return _logic.GetTriageIssueProperty(propertyName, body);
+            return _internal.GetTriageIssueProperty(propertyName, body);
         }
 
         private IList<TriageItem> GetTriageItems(string body)
         {
-            return _logic.GetTriageItems(body);
+            return _internal.GetTriageItems(body);
         }
 
-        public class TimelineIssueTriageLogic
+        public class TimelineIssueTriageInternal
         {
             // Search for triage item identifier information, example - "[BuildId=123456,RecordId=0dc87500-1d33-11ea-8b24-4baedbda8954,Index=0]"
             private static readonly Regex _triageIssueIdentifierRegex = new Regex(@"\[BuildId=(?<buildid>[^,]+),RecordId=(?<recordid>[^,]+),Index=(?<index>[^\]]+)\]\s+\[Category=(?<category>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);

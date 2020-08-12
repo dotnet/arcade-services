@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace DotNet.Status.Web
 {
-    public interface ITimelineIssueTriageService
+    public interface ITimelineIssueTriage
     {
         Task ProcessIssueEvent(IssuesHookData issuePayload);
     }

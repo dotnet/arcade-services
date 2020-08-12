@@ -9,9 +9,9 @@ using System.Reflection;
 namespace DotNet.Status.Web.Tests
 {
     [TestFixture]
-    public class TimeLineIssueServiceLogicTests
+    public class TimeLineIssueTriageTests
     {
-        private TimelineIssueTriageService.TimelineIssueTriageLogic _logic => new TimelineIssueTriageService.TimelineIssueTriageLogic();
+        private TimelineIssueTriage.TimelineIssueTriageInternal _sut => new TimelineIssueTriage.TimelineIssueTriageInternal();
 
         [TestCase("")]
         [TestCase("[]")]
@@ -20,7 +20,7 @@ namespace DotNet.Status.Web.Tests
         [TestCase("Build\nIndex\nRecord\n")]
         public void ParseZeroBuildInfoFromNotTriageIssue(string body)
         {
-            var result = _logic.GetTriageItems(body);
+            var result = _sut.GetTriageItems(body);
             result.Should().BeEmpty();
         }
 
@@ -39,7 +39,7 @@ namespace DotNet.Status.Web.Tests
         [TestCase("a\n[BuildId=534863,RecordId=041c699a-ea24-59c7-817f-32bc9df73765,Index=0]\n[Category =Build]")]
         public void ParseZeroBuildInfoFromNotFullBuildInfosInTriageIssue(string body)
         {
-            var result = _logic.GetTriageItems(body);
+            var result = _sut.GetTriageItems(body);
             result.Should().BeEmpty();
         }
 
@@ -59,7 +59,7 @@ namespace DotNet.Status.Web.Tests
             534863, "041c699a-ea24-59c7-817f-32bc9df73765", 13, "")]
         public void ParseSingleBuildInfoFromTriageIssue(string body, int buildId, string recordId, int index, string category)
         {
-            var result = _logic.GetTriageItems(body);
+            var result = _sut.GetTriageItems(body);
             result.Should().HaveCount(1);
             var expected = new TriageItem { BuildId = buildId, RecordId = Guid.Parse(recordId), Index = index, UpdatedCategory = category };
             result.Should().Contain(expected);
@@ -72,7 +72,7 @@ namespace DotNet.Status.Web.Tests
         {
             var body = GetTestPayload($"{fileName}.body.txt");
             var expected = JsonConvert.DeserializeObject<TriageItem[]>(GetTestPayload($"{fileName}.expected.json"));
-            var result = _logic.GetTriageItems(body);
+            var result = _sut.GetTriageItems(body);
             result.Should().Equal(expected, IsParsedTriageEqual);
         }
 
@@ -101,8 +101,8 @@ namespace DotNet.Status.Web.Tests
                 new TriageItem { BuildId = 10, RecordId = Guid.Parse("041c699a-ea24-59c7-817f-32bc9df73730"), Index = 1 },
             };
 
-            _logic.IsDuplicate(a, b).Should().BeTrue();
-            _logic.IsDuplicate(b, a).Should().BeTrue();
+            _sut.IsDuplicate(a, b).Should().BeTrue();
+            _sut.IsDuplicate(b, a).Should().BeTrue();
         }
 
         [Test]
@@ -122,8 +122,8 @@ namespace DotNet.Status.Web.Tests
                 new TriageItem { BuildId = 10, RecordId = Guid.Parse("041c699a-ea24-59c7-817f-32bc9df73730"), Index = 1 },
             };
 
-            _logic.IsDuplicate(a, b).Should().BeFalse();
-            _logic.IsDuplicate(b, a).Should().BeFalse();
+            _sut.IsDuplicate(a, b).Should().BeFalse();
+            _sut.IsDuplicate(b, a).Should().BeFalse();
         }
 
         [Test]
@@ -142,8 +142,8 @@ namespace DotNet.Status.Web.Tests
                 new TriageItem { BuildId = 60, RecordId = Guid.Parse("041c699a-ea24-59c7-817f-32bc9df73760"), Index = 6 },
             };
 
-            _logic.IsDuplicate(a, b).Should().BeFalse();
-            _logic.IsDuplicate(b, a).Should().BeFalse();
+            _sut.IsDuplicate(a, b).Should().BeFalse();
+            _sut.IsDuplicate(b, a).Should().BeFalse();
         }
 
         [TestCase("[Category=Build]", "Category", "Build")]
@@ -162,7 +162,7 @@ namespace DotNet.Status.Web.Tests
         [TestCase("text\ntext[Category=Build]text\ntext", "Category", "Build")]
         public void ParseProperProperty(string body, string key, string expected)
         {
-            _logic.GetTriageIssueProperty(key, body).Should().Be(expected);
+            _sut.GetTriageIssueProperty(key, body).Should().Be(expected);
         }
 
         [TestCase("", "")]
@@ -176,7 +176,7 @@ namespace DotNet.Status.Web.Tests
         [TestCase("[Category=Build", "Category")]
         public void NotProperProperty_ReturnsNull(string body, string key)
         {
-            _logic.GetTriageIssueProperty(key, body).Should().BeNull();
+            _sut.GetTriageIssueProperty(key, body).Should().BeNull();
         }
 
         [Test, AutoData]
@@ -199,7 +199,7 @@ namespace DotNet.Status.Web.Tests
 
         private static string GetTestPayload(string name)
         {
-            Type thisClass = typeof(TimeLineIssueServiceLogicTests);
+            Type thisClass = typeof(TimeLineIssueTriageTests);
             Assembly asm = thisClass.Assembly;
             var resource = string.Format($"{thisClass.Namespace}.Files.{name}");
             using var stream = asm.GetManifestResourceStream(resource);

@@ -25,12 +25,12 @@ namespace DotNet.Status.Web.Controllers
         private readonly IOptions<GitHubConnectionOptions> _githubOptions;
         private readonly ILogger<GitHubHookController> _logger;
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
-        private readonly ITimelineIssueTriageService _timelineIssueTriage;
+        private readonly ITimelineIssueTriage _timelineIssueTriage;
 
         public GitHubHookController(
             IOptions<GitHubConnectionOptions> githubOptions,
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
-            ITimelineIssueTriageService timelineIssueTriage,
+            ITimelineIssueTriage timelineIssueTriage,
             ILogger<GitHubHookController> logger)
         {
             _githubOptions = githubOptions;
