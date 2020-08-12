@@ -710,7 +710,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     nameof(FileExtensionSignInfo),
                     new XAttribute[]
                     {
-                        new XAttribute(nameof(fileExtensionSignInfo.Extension), fileExtensionSignInfo.Extension),
+                        new XAttribute(nameof(fileExtensionSignInfo.Include), fileExtensionSignInfo.Include),
                         new XAttribute(nameof(fileExtensionSignInfo.CertificateName), fileExtensionSignInfo.CertificateName)
                     }));
             }
@@ -721,7 +721,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     nameof(FileSignInfo),
                     new XAttribute[]
                     {
-                        new XAttribute(nameof(fileSignInfo.File), fileSignInfo.File),
+                        new XAttribute(nameof(fileSignInfo.Include), fileSignInfo.Include),
                         new XAttribute(nameof(fileSignInfo.CertificateName), fileSignInfo.CertificateName)
                     }));
             }
@@ -732,7 +732,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     nameof(ItemsToSign),
                     new XAttribute[]
                     {
-                        new XAttribute(nameof(itemsToSign.File), itemsToSign.File)
+                        new XAttribute(nameof(itemsToSign.Include), itemsToSign.Include)
                     }));
             }
 
@@ -742,7 +742,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     nameof(StrongNameSignInfo),
                     new XAttribute[]
                     {
-                        new XAttribute(nameof(strongNameSignInfo.File), strongNameSignInfo.File),
+                        new XAttribute(nameof(strongNameSignInfo.Include), strongNameSignInfo.Include),
                         new XAttribute(nameof(strongNameSignInfo.PublicKeyToken), strongNameSignInfo.PublicKeyToken),
                         new XAttribute(nameof(strongNameSignInfo.CertificateName), strongNameSignInfo.CertificateName)
                     }));

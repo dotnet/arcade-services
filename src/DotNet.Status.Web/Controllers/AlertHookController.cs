@@ -182,7 +182,7 @@ namespace DotNet.Status.Web.Controllers
             {
                 Body = $@":{icon}: Metric state changed to *{notification.State}*
 
-> {notification.Message.Replace("\n", "\n> ")}
+> {notification.Message?.Replace("\n", "\n> ")}
 
 {metricText}
 

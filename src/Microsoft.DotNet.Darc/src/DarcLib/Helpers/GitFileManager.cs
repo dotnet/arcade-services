@@ -390,6 +390,8 @@ namespace Microsoft.DotNet.DarcLib
 
             InsertManagedPackagesBlock(nugetConfig, packageSourcesNode, managedSources);
 
+            CreateOrUpdateDisabledSourcesBlock(nugetConfig, managedSources, FeedConstants.MaestroManagedInternalFeedPrefix);
+
             return nugetConfig;
         }
 
@@ -403,6 +405,65 @@ namespace Microsoft.DotNet.DarcLib
             var nextNodeToWalk = toRemove.NextSibling;
             toRemove.ParentNode.RemoveChild(toRemove);
             return nextNodeToWalk;
+        }
+
+        // Ensure that the file contains a <disabledPackageSources> node.
+        // - If it exists, do not modify values other than key nodes starting with disableFeedKeyPrefix, 
+        //   which we'll ensure are after any <clear/> tags and set to 'true'
+        // - If it does not exist, add it
+        // - Ensure all disableFeedKeyPrefix key values have entries under <disabledPackageSources> with value="true"
+        private void CreateOrUpdateDisabledSourcesBlock(XmlDocument nugetConfig, List<(string key, string feed)> managedSources, string disableFeedKeyPrefix)
+        {
+            _logger.LogInformation($"Ensuring a <disabledPackageSources> node exists and is actively disabling any feed starting with {disableFeedKeyPrefix}");
+            XmlNode disabledSourcesNode = nugetConfig.SelectSingleNode("//configuration/disabledPackageSources");
+            if (disabledSourcesNode == null)
+            {
+                XmlNode configNode = nugetConfig.SelectSingleNode("//configuration");
+                _logger.LogInformation("Config file did not previously have <disabledSourcesNode>, adding");
+                disabledSourcesNode = nugetConfig.CreateElement("disabledPackageSources");
+                configNode.AppendChild(disabledSourcesNode);
+            }
+            XmlNode insertAfterNode = null;
+
+            // If there's a clear node in the children of the disabledSources, we want to put any of our entries after the last one seen.
+            if (disabledSourcesNode.HasChildNodes)
+            {
+                for (int i = 0; i < disabledSourcesNode.ChildNodes.Count; i++)
+                {
+                    if (disabledSourcesNode.ChildNodes[i].Name.Equals("clear", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        insertAfterNode = disabledSourcesNode.ChildNodes[i];
+                    }
+                    // while we traverse, we may as well remove all the existing entries for what we're updating.
+                    if (disabledSourcesNode.ChildNodes[i].Name.Equals("add", StringComparison.InvariantCultureIgnoreCase) &&
+                        disabledSourcesNode.ChildNodes[i].Attributes["key"]?.Value.StartsWith(disableFeedKeyPrefix) == true)
+                    {
+                        RemoveCurrentNode(disabledSourcesNode.ChildNodes[i]);
+                    }
+                }
+                if (insertAfterNode != null)
+                {
+                    _logger.LogDebug("Found a <clear/> node in disabledPackageSources; will insert or update as needed after it.");
+                }
+            }
+
+            foreach (var (key, _) in managedSources.Where(m => m.key.StartsWith(disableFeedKeyPrefix, StringComparison.InvariantCultureIgnoreCase)))
+            {
+                XmlElement addEntry = nugetConfig.CreateElement("add");
+                addEntry.SetAttribute("key", key);
+                addEntry.SetAttribute("value", "true");
+
+                // There's a clear, we'll insert after it
+                if (insertAfterNode != null)
+                {
+                    disabledSourcesNode.InsertAfter(addEntry, insertAfterNode);
+                }
+                // No <clear/>, just put it at the end.
+                else
+                {
+                    disabledSourcesNode.AppendChild(addEntry);
+                }
+            }
         }
 
         // Insert the following structure at the beginning of the nodes pointed by `packageSourcesNode`.
