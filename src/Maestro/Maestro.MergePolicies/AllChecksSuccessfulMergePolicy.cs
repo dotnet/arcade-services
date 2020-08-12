@@ -33,7 +33,7 @@ namespace Maestro.MergePolicies
 
             if (!notIgnoredChecks.Any())
             {
-                return await Fail("No un-ignored checks.");
+                return await Fail("Waiting for checks.");
             }
 
             ILookup<CheckState, Check> statuses = notIgnoredChecks.ToLookup(

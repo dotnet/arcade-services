@@ -472,7 +472,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>The new check run</returns>
         private NewCheckRun CheckRunForAdd(MergePolicyEvaluationResult result, string sha)
         {
-            var newCheckRun = new NewCheckRun(result.MergePolicyInfo.DisplayName, sha);
+            var newCheckRun = new NewCheckRun($"{MergePolicyConstants.MaestroMergePolicyDisplayName} - {result.MergePolicyInfo.DisplayName}", sha);
             newCheckRun.ExternalId = CheckRunId(result, sha);
             UpdateCheckRun(newCheckRun, result);
             return newCheckRun;
