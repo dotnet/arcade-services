@@ -20,11 +20,10 @@ namespace DotNet.Status.Web.Tests
         [TestCase("Build\nIndex\nRecord\n")]
         public void ParseZeroBuildInfoFromNotTriageIssue(string body)
         {
-            var result = _logic.GetTriageItemsProperties(body);
+            var result = _logic.GetTriageItems(body);
             result.Should().BeEmpty();
         }
 
-        [TestCase("[]")]
         [TestCase("[Movies=aha]")]
         [TestCase("[Movies](http://that.movie.yo)")]
         [TestCase("Build RecordId Index")]
@@ -40,7 +39,7 @@ namespace DotNet.Status.Web.Tests
         [TestCase("a\n[BuildId=534863,RecordId=041c699a-ea24-59c7-817f-32bc9df73765,Index=0]\n[Category =Build]")]
         public void ParseZeroBuildInfoFromNotFullBuildInfosInTriageIssue(string body)
         {
-            var result = _logic.GetTriageItemsProperties(body);
+            var result = _logic.GetTriageItems(body);
             result.Should().BeEmpty();
         }
 
@@ -60,7 +59,7 @@ namespace DotNet.Status.Web.Tests
             534863, "041c699a-ea24-59c7-817f-32bc9df73765", 13, "")]
         public void ParseSingleBuildInfoFromTriageIssue(string body, int buildId, string recordId, int index, string category)
         {
-            var result = _logic.GetTriageItemsProperties(body);
+            var result = _logic.GetTriageItems(body);
             result.Should().HaveCount(1);
             var expected = new TriageItem { BuildId = buildId, RecordId = Guid.Parse(recordId), Index = index, UpdatedCategory = category };
             result.Should().Contain(expected);
@@ -73,7 +72,7 @@ namespace DotNet.Status.Web.Tests
         {
             var body = GetTestPayload($"{fileName}.body.txt");
             var expected = JsonConvert.DeserializeObject<TriageItem[]>(GetTestPayload($"{fileName}.expected.json"));
-            var result = _logic.GetTriageItemsProperties(body);
+            var result = _logic.GetTriageItems(body);
             result.Should().Equal(expected, IsParsedTriageEqual);
         }
 

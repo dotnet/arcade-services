@@ -59,7 +59,7 @@ namespace DotNet.Status.Web
             }
 
             // Determine identifiable information for triage items
-            var triageItems = GetTriageItemsProperties(issuePayload.Issue.Body);
+            var triageItems = GetTriageItems(issuePayload.Issue.Body);
 
             if (!triageItems.Any())
             {
@@ -92,7 +92,7 @@ namespace DotNet.Status.Web
                 {
                     if (existingIssue.Number != issuePayload.Issue.Number)
                     {
-                        var existingIssueItems = GetTriageItemsProperties(existingIssue.Body);
+                        var existingIssueItems = GetTriageItems(existingIssue.Body);
                         if (IsDuplicate(triageItems, existingIssueItems))
                         {
                             await gitHubClient.Issue.Comment.Create(issuePayload.Repository.Id, issuePayload.Issue.Number, $"Duplicate issue was detected.\n\nClosing as duplicate of {existingIssue.HtmlUrl}\n\nFor more information see {_docLink}");
@@ -115,23 +115,7 @@ namespace DotNet.Status.Web
                     update.AddLabel(_labelName);
                     await gitHubClient.Issue.Update(issuePayload.Repository.Id, issuePayload.Issue.Number, update);
 
-                    // add into notification epic -> currently 8/2020 its First Response epic
-                    NotificationEpicOptions epic = _githubOptions.Value.NotificationEpic;
-
-                    if (epic != null)
-                    {
-                        var epicRepoData = await gitHubClient.Repository.Get(_githubOptions.Value.Organization, epic.Repository);
-
-                        _logger.LogInformation("Adding the issue to ZenHub Epic...");
-                        await _zenHub.AddIssueToEpicAsync(
-                            new ZenHubClient.IssueIdentifier(issuePayload.Repository.Id, issue.Number),
-                            new ZenHubClient.IssueIdentifier(epicRepoData.Id, epic.IssueNumber)
-                        );
-                    }
-                    else
-                    {
-                        _logger.LogInformation("No ZenHub epic configured, skipping...");
-                    }
+                    await AddToZenHubTopic(issuePayload, gitHubClient, issue);
                 }
 
                 updatedCategory = "InTriage";
@@ -170,6 +154,27 @@ namespace DotNet.Status.Web
             return;
         }
 
+        private async Task AddToZenHubTopic(IssuesHookData issuePayload, IGitHubClient gitHubClient, Issue issue)
+        {
+            // add into notification epic -> currently 8/2020 it's First Response epic
+            NotificationEpicOptions epic = _githubOptions.Value.NotificationEpic;
+
+            if (epic != null)
+            {
+                var epicRepoData = await gitHubClient.Repository.Get(_githubOptions.Value.Organization, epic.Repository);
+
+                _logger.LogInformation("Adding the issue to ZenHub Epic...");
+                await _zenHub.AddIssueToEpicAsync(
+                    new ZenHubClient.IssueIdentifier(issuePayload.Repository.Id, issue.Number),
+                    new ZenHubClient.IssueIdentifier(epicRepoData.Id, epic.IssueNumber)
+                );
+            }
+            else
+            {
+                _logger.LogInformation("No ZenHub epic configured, skipping...");
+            }
+        }
+
         private async Task IngestTriageItemsIntoKusto(ICollection<TriageItem> triageItems)
         {
             _logger.LogInformation("Entering IngestTriageItemIntoKusto");
@@ -200,9 +205,9 @@ namespace DotNet.Status.Web
             return _logic.GetTriageIssueProperty(propertyName, body);
         }
 
-        private IList<TriageItem> GetTriageItemsProperties(string body)
+        private IList<TriageItem> GetTriageItems(string body)
         {
-            return _logic.GetTriageItemsProperties(body);
+            return _logic.GetTriageItems(body);
         }
 
         public class TimelineIssueTriageLogic
@@ -212,7 +217,7 @@ namespace DotNet.Status.Web
             // Search for a triage item property, example = "[Category=foo]"
             private static readonly Regex _triagePropertyRegex = new Regex(@"\[(?<key>[^=]+)=(?<value>[^\]]+)\]", RegexOptions.Multiline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
 
-            public IList<TriageItem> GetTriageItemsProperties(string body)
+            public IList<TriageItem> GetTriageItems(string body)
             {
                 var items = new List<TriageItem>();
 
@@ -246,10 +251,9 @@ namespace DotNet.Status.Web
                     if (propertyMatch.Success)
                     {
                         string key = propertyMatch.Groups["key"].Value;
-                        string value = propertyMatch.Groups["value"].Value;
                         if (propertyName.Equals(key, StringComparison.OrdinalIgnoreCase))
                         {
-                            return value;
+                            return propertyMatch.Groups["value"].Value;
                         }
                     }
                 }
