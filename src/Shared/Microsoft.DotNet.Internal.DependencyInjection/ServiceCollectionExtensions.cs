@@ -1,11 +1,13 @@
 ﻿using System;
+using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace Microsoft.DotNet.Internal.DependencyInjection
+// ReSharper disable once CheckNamespace
+namespace Microsoft.Extensions.DependencyInjection
 {
-    public static class ServiceCollectionExtensions
+    public static class DotNetArcadeServicesServiceCollectionExtensions
     {
         public static IServiceCollection EnableLazy(this IServiceCollection services)
         {
