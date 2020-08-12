@@ -5,19 +5,16 @@
 using System;
 using System.Reflection;
 using Maestro.AzureDevOps;
-using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.MergePolicies;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.GitHub.Authentication;
-using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Octokit;
-using ServiceCollectionExtensions = Microsoft.DotNet.Internal.DependencyInjection.ServiceCollectionExtensions;
 
 namespace SubscriptionActorService
 {
