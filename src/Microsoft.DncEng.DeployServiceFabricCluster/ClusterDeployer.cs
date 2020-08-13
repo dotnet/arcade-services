@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Storage;
@@ -68,11 +69,24 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
 
             var (supportLogStorage, applicationDiagnosticsStorage) =
                 await EnsureStorageAccounts(azure, cancellationToken);
-            string instrumentationKey = await DeployApplicationInsights(
-                unexpectedResources,
-                resourceManager,
-                cancellationToken
-            );
+            string instrumentationKey;
+            if (Settings.ApplicationInsights != null)
+            {
+                instrumentationKey = await UseExistingApplicationInsights(
+                    resourceManager,
+                    Settings.ApplicationInsights,
+                    cancellationToken
+                );
+            }
+            else
+            {
+                instrumentationKey = await DeployApplicationInsights(
+                    unexpectedResources,
+                    resourceManager,
+                    cancellationToken
+                );
+            }
+
             var clusterIp = await DeployPublicIp(
                 unexpectedResources,
                 azure,
@@ -799,13 +813,32 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
             return result.Value<JObject>("instrumentationKey").Value<string>("value");
         }
 
+        private async Task<string> UseExistingApplicationInsights(IResourceManager resourceManager, ResourceReference aiResource, CancellationToken cancellationToken)
+        {
+            var id = GetResourceId(aiResource, "Microsoft.Insights/components");
+            var resource = await resourceManager.GenericResources.GetByIdAsync(id, cancellationToken: cancellationToken);
+            return ((JObject) resource.Properties).Value<string>("InstrumentationKey");
+        }
+
         private async Task<(StorageAccountInfo supportLogStorage, StorageAccountInfo applicationDiagnosticsStorage)> EnsureStorageAccounts(IAzure azure, CancellationToken cancellationToken)
         {
             StorageAccountInfo[] accounts = await Task.WhenAll(
-                EnsureStorageAccount(azure, Settings.ResourceGroup, "sflogs" + Settings.SubscriptionId.ToString("N").Substring(0, 18), cancellationToken),
-                EnsureStorageAccount(azure, Settings.ResourceGroup, "sfdg" + Settings.SubscriptionId.ToString("N").Substring(0, 20), cancellationToken)
+                EnsureStorageAccount(azure, Settings.ResourceGroup, "sflogs" + UniqueString(18), cancellationToken),
+                EnsureStorageAccount(azure, Settings.ResourceGroup, "sfdg" + UniqueString(20), cancellationToken)
             );
             return (accounts[0], accounts[1]);
+        }
+
+        private string UniqueString(int length)
+        {
+            using var ms = new MemoryStream();
+            using var writer = new StreamWriter(ms);
+            writer.Write(Settings.SubscriptionId.ToString());
+            writer.Write(Settings.ResourceGroup);
+            ms.Position = 0;
+            using var hasher = SHA256.Create();
+            var bytes = hasher.ComputeHash(ms);
+            return BitConverter.ToString(bytes).Replace("-", "").Substring(0, length).ToLowerInvariant();
         }
 
         private static void IgnoreResources(ICollection<IGenericResource> unexpectedResources, (string ns, string type)[] ignorables)

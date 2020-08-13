@@ -33,5 +33,7 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
         public ResourceReference Gateway { get; set; }
         public ResourceReference VNet { get; set; }
         public int ClusterIndex { get; set; }
+
+        public ResourceReference ApplicationInsights { get; set; }
     }
 }
