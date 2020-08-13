@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -34,33 +35,59 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
             DefaultTags["ClusterName"] = Settings.Name;
         }
 
-        protected override async Task<string> DeployResourcesAsync(List<IGenericResource> unexpectedResources, IAzure azure, IResourceManager resourceManager, CancellationToken cancellationToken)
+        protected override async Task<string> DeployResourcesAsync(
+            List<IGenericResource> unexpectedResources,
+            IAzure azure,
+            IResourceManager resourceManager,
+            CancellationToken cancellationToken)
         {
             var (artifactStorageClient, artifactsLocationInfo) = await EnsureArtifactStorage(azure, cancellationToken);
             string artifactsLocation = artifactStorageClient.Uri.AbsoluteUri;
 
             string searchDir = Path.Join(AppContext.BaseDirectory, "scripts");
+            List<string> fileNames = new List<string>();
             foreach (string file in Directory.EnumerateFiles(searchDir, "*", SearchOption.AllDirectories))
             {
+                fileNames.Add(Path.GetRelativePath(searchDir, file));
                 string relative = file.Substring(searchDir.Length + 1);
                 await using var stream = new FileStream(file, FileMode.Open, FileAccess.Read);
                 await artifactStorageClient.DeleteBlobIfExistsAsync(relative, cancellationToken: cancellationToken);
                 await artifactStorageClient.UploadBlobAsync(relative, stream, cancellationToken);
             }
 
-            IgnoreResources(unexpectedResources, new[]
-            {
-                ("microsoft.alertsManagement", "*"),
-                ("Microsoft.Insights", "metricalerts"),
-                ("Microsoft.Insights", "webtests"),
-                ("Microsoft.Storage", "storageAccounts"),
-            });
+            IgnoreResources(
+                unexpectedResources,
+                new[]
+                {
+                    ("microsoft.alertsManagement", "*"),
+                    ("Microsoft.Insights", "metricalerts"),
+                    ("Microsoft.Insights", "webtests"),
+                    ("Microsoft.Storage", "storageAccounts"),
+                }
+            );
 
-            var (supportLogStorage, applicationDiagnosticsStorage) = await EnsureStorageAccounts(azure, cancellationToken);
-            string instrumentationKey = await DeployApplicationInsights(unexpectedResources, resourceManager, cancellationToken);
-            var clusterIp = await DeployPublicIp(unexpectedResources, azure, Settings.Name + "-IP", Settings.Name, cancellationToken);
+            var (supportLogStorage, applicationDiagnosticsStorage) =
+                await EnsureStorageAccounts(azure, cancellationToken);
+            string instrumentationKey = await DeployApplicationInsights(
+                unexpectedResources,
+                resourceManager,
+                cancellationToken
+            );
+            var clusterIp = await DeployPublicIp(
+                unexpectedResources,
+                azure,
+                Settings.Name + "-IP",
+                Settings.Name,
+                cancellationToken
+            );
 
-            string clusterEndpoint = await DeployServiceFabric(unexpectedResources, resourceManager, clusterIp, supportLogStorage, cancellationToken);
+            string clusterEndpoint = await DeployServiceFabric(
+                unexpectedResources,
+                resourceManager,
+                clusterIp,
+                supportLogStorage,
+                cancellationToken
+            );
 
             int idx = 1;
             foreach (var nodeType in Settings.NodeTypes)
@@ -70,12 +97,48 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
 
                 if (nodeType.Name == "Primary")
                 {
-                    ILoadBalancer lb = await DeployLoadBalancer(unexpectedResources, azure, nodeType, clusterIp, cancellationToken);
-                    await DeployScaleSet(unexpectedResources, resourceManager, nodeType, lb, backendAddressPool, subnet, clusterEndpoint, instrumentationKey, artifactsLocation, artifactsLocationInfo, supportLogStorage, applicationDiagnosticsStorage, cancellationToken);
+                    ILoadBalancer lb = await DeployLoadBalancer(
+                        unexpectedResources,
+                        azure,
+                        nodeType,
+                        clusterIp,
+                        cancellationToken
+                    );
+                    await DeployScaleSet(
+                        unexpectedResources,
+                        resourceManager,
+                        nodeType,
+                        lb,
+                        backendAddressPool,
+                        subnet,
+                        clusterEndpoint,
+                        instrumentationKey,
+                        artifactsLocation,
+                        fileNames,
+                        artifactsLocationInfo,
+                        supportLogStorage,
+                        applicationDiagnosticsStorage,
+                        cancellationToken
+                    );
                 }
                 else
                 {
-                    await DeployScaleSet(unexpectedResources, resourceManager, nodeType, null, backendAddressPool, subnet, clusterEndpoint, instrumentationKey, artifactsLocation, artifactsLocationInfo, supportLogStorage, applicationDiagnosticsStorage, cancellationToken);
+                    await DeployScaleSet(
+                        unexpectedResources,
+                        resourceManager,
+                        nodeType,
+                        null,
+                        backendAddressPool,
+                        subnet,
+                        clusterEndpoint,
+                        instrumentationKey,
+                        artifactsLocation,
+                        fileNames,
+                        artifactsLocationInfo,
+                        supportLogStorage,
+                        applicationDiagnosticsStorage,
+                        cancellationToken
+                    );
                 }
 
                 idx++;
@@ -84,13 +147,17 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
             return "";
         }
 
-        private async Task DeployScaleSet(ICollection<IGenericResource> unexpectedResources,
-            IResourceManager resourceManager, ServiceFabricNodeType nodeType, ILoadBalancer? lb,
+        private async Task DeployScaleSet(
+            ICollection<IGenericResource> unexpectedResources,
+            IResourceManager resourceManager,
+            ServiceFabricNodeType nodeType,
+            ILoadBalancer? lb,
             string backendAddressPool,
             ISubnet subnet,
             string clusterEndpoint,
             string instrumentationKey,
             string artifactsLocation,
+            List<string> fileNames,
             StorageAccountInfo artifactsLocationInfo,
             StorageAccountInfo supportLogStorage,
             StorageAccountInfo applicationDiagnosticsStorage,
@@ -270,11 +337,7 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                                                 },
                                                 ["settings"] = new JObject
                                                 {
-                                                    ["fileUris"] = new JArray
-                                                    {
-                                                        artifactsLocation + "/startup.ps1",
-                                                        artifactsLocation + "/Set-TlsConfiguration.ps1",
-                                                    },
+                                                    ["fileUris"] = new JArray(fileNames.Select(file => artifactsLocation + "/" + file.Replace('\\', '/'))),
                                                     ["commandToExecute"] = $"powershell.exe -ExecutionPolicy Bypass -NoProfile -Command ./startup.ps1 \"\"\"{instrumentationKey}\"\"\"",
                                                 },
                                             },
