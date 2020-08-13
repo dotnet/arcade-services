@@ -254,7 +254,8 @@ For help filling out this form, see the [Root Cause Analysis](https://github.com
         public ItemState State { get; set; }
         public string Url { get; set; }
         [JsonPropertyName("html_url")]
-        public string Html_Url { get; set; }
+        [Newtonsoft.Json.JsonProperty("html_url")]
+        public string HtmlUrl { get; set; }
     }
 
     public class IssuesHookLabel

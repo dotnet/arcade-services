@@ -138,11 +138,11 @@ namespace DotNet.Status.Web
 
             foreach (var triageItem in triageItems)
             {
-                triageItem.Url = issuePayload.Issue.Html_Url;
+                triageItem.Url = issuePayload.Issue.HtmlUrl;
                 if (updatedCategory != null)
                 {
                     triageItem.UpdatedCategory = updatedCategory;
-                    triageItem.Url = issuePayload.Issue.Html_Url;
+                    triageItem.Url = issuePayload.Issue.HtmlUrl;
                 }
                 _logger.LogInformation($"buildId: {triageItem.BuildId}, recordId: {triageItem.RecordId}, index: {triageItem.Index}, category: {triageItem.UpdatedCategory}, url: {triageItem.Url}");
             }
