@@ -230,23 +230,6 @@ namespace Microsoft.DotNet.Darc.Operations
                 return Constants.ErrorCode;
             }
 
-            var queueTimeVariables = $"{{" +
-                $"\"BARBuildId\": \"{ build.Id }\", " +
-                $"\"PublishingInfraVersion\": \"{ _options.PublishingInfraVersion }\", " +
-                $"\"PromoteToChannelIds\": \"{ string.Join(",", targetChannels.Select(tch => tch.Id)) }\", " +
-                $"\"EnableSigningValidation\": \"{ _options.DoSigningValidation }\", " +
-                $"\"SigningValidationAdditionalParameters\": \"{ _options.SigningValidationAdditionalParameters }\", " +
-                $"\"EnableNugetValidation\": \"{ _options.DoNuGetValidation }\", " +
-                $"\"EnableSourceLinkValidation\": \"{ _options.DoSourcelinkValidation }\", " +
-                $"\"EnableSDLValidation\": \"{ _options.DoSDLValidation }\", " +
-                $"\"SDLValidationCustomParams\": \"{ _options.SDLValidationParams }\", " +
-                $"\"SDLValidationContinueOnError\": \"{ _options.SDLValidationContinueOnError }\", " +
-                $"\"PublishInstallersAndChecksums\": \"{ _options.PublishInstallersAndChecksums }\", " +
-                $"\"SymbolPublishingAdditionalParameters\": \"{ _options.SymbolPublishingAdditionalParameters }\", " +
-                $"\"ArtifactsPublishingAdditionalParameters\": \"{ _options.ArtifactPublishingAdditionalParameters }\", " +
-                $"}}";
-
-
             if (!BuildPromotionPipelinesForAccount.TryGetValue(
                 build.AzureDevOpsAccount,
                 out (string project, int pipelineId) promotionPipelineInformation))
@@ -255,13 +238,33 @@ namespace Microsoft.DotNet.Darc.Operations
                 return Constants.ErrorCode;
             }
 
+            // Construct the templateParameters and queue time variables. 
+            // Publishing v2 uses variables and v3 uses parameters, so just use the same values for both.
+            var promotionPipelineVariables = new Dictionary<string, string>
+            {
+                { "BarBuildId", build.Id.ToString() },
+                { "PublishingInfraVersion", _options.PublishingInfraVersion.ToString() },
+                { "PromoteToChannelIds", string.Join(",", targetChannels.Select(tch => tch.Id)) },
+                { "EnableSigningValidation", _options.DoSigningValidation.ToString() },
+                { "SigningValidationAdditionalParameters", _options.SigningValidationAdditionalParameters },
+                { "EnableNugetValidation", _options.DoNuGetValidation.ToString() },
+                { "EnableSourceLinkValidation", _options.DoSourcelinkValidation.ToString() },
+                { "EnableSDLValidation", _options.DoSDLValidation.ToString() },
+                { "SDLValidationCustomParams", _options.SDLValidationParams },
+                { "SDLValidationContinueOnError", _options.SDLValidationContinueOnError },
+                { "PublishInstallersAndChecksums", _options.PublishInstallersAndChecksums.ToString() },
+                { "SymbolPublishingAdditionalParameters", _options.SymbolPublishingAdditionalParameters },
+                { "ArtifactsPublishingAdditionalParameters", _options.ArtifactPublishingAdditionalParameters }
+            };
+
             int azdoBuildId = await azdoClient.StartNewBuildAsync(build.AzureDevOpsAccount,
                 promotionPipelineInformation.project,
                 promotionPipelineInformation.pipelineId,
                 arcadeSDKSourceBranch,
                 arcadeSDKSourceSHA,
-                queueTimeVariables)
-                .ConfigureAwait(false);
+                promotionPipelineVariables,
+                promotionPipelineVariables
+                ).ConfigureAwait(false);
 
             string promotionBuildUrl = $"https://{build.AzureDevOpsAccount}.visualstudio.com/{promotionPipelineInformation.project}/_build/results?buildId={azdoBuildId}";
 
