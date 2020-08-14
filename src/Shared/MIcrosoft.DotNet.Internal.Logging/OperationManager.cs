@@ -26,7 +26,7 @@ namespace Microsoft.DotNet.Internal.Logging
         }
 
         /// <summary>
-        /// Bing an operation.  This will create a logging scope (including setting Activity.Id)
+        /// Begin an operation.  This will create a logging scope (including setting Activity.Id)
         /// as well as create a new scoped IServiceProvider (available on the return value <see cref="Operation.ServiceProvider"/>)
         /// </summary>
         /// <param name="name">Logging format string for scope. <example><code>Processing message {messageId}</code></example></param>
