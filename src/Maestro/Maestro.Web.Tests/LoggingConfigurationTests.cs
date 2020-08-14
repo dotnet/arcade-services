@@ -114,7 +114,7 @@ namespace Maestro.Web.Tests
         [Test]
         public void LoggingScopeDoesNotDisposeScopedDependencies()
         {
-            TestData data = Setup();
+            using TestData data = Setup();
             TrackedDisposable toDispose;
             using (var op = data.OperationManager.BeginLoggingScope("TEST-SCOPE:{TEST_KEY}", "TEST_VALUE"))
             {
