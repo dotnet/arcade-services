@@ -84,6 +84,12 @@ namespace Microsoft.DotNet.Darc.Operations
                     return Constants.ErrorCode;
                 }
 
+                if (_options.PublishingInfraVersion > 2 && _options.DoSDLValidation)
+                {
+                    Console.WriteLine($"Publishing version '{_options.PublishingInfraVersion}' does not support running SDL when adding a build to a channel");
+                    return Constants.ErrorCode;
+                }
+
                 List<Channel> targetChannels = new List<Channel>();
 
                 if (!string.IsNullOrEmpty(_options.Channel))
@@ -249,13 +255,17 @@ namespace Microsoft.DotNet.Darc.Operations
                 { "SigningValidationAdditionalParameters", _options.SigningValidationAdditionalParameters },
                 { "EnableNugetValidation", _options.DoNuGetValidation.ToString() },
                 { "EnableSourceLinkValidation", _options.DoSourcelinkValidation.ToString() },
-                { "EnableSDLValidation", _options.DoSDLValidation.ToString() },
-                { "SDLValidationCustomParams", _options.SDLValidationParams },
-                { "SDLValidationContinueOnError", _options.SDLValidationContinueOnError },
                 { "PublishInstallersAndChecksums", _options.PublishInstallersAndChecksums.ToString() },
                 { "SymbolPublishingAdditionalParameters", _options.SymbolPublishingAdditionalParameters },
                 { "ArtifactsPublishingAdditionalParameters", _options.ArtifactPublishingAdditionalParameters }
             };
+
+            if (_options.DoSDLValidation)
+            {
+                promotionPipelineVariables.Add("EnableSDLValidation", _options.DoSDLValidation.ToString());
+                promotionPipelineVariables.Add("SDLValidationCustomParams", _options.SDLValidationParams);
+                promotionPipelineVariables.Add("SDLValidationContinueOnError", _options.SDLValidationContinueOnError);
+            }
 
             int azdoBuildId = await azdoClient.StartNewBuildAsync(build.AzureDevOpsAccount,
                 promotionPipelineInformation.project,
