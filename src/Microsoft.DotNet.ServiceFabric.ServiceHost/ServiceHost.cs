@@ -24,6 +24,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http;
+using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
@@ -260,6 +261,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     b.AddLogging();
                     b.AddAzureTable((o, p) => o.WriteSasUri = p.GetRequiredService<IConfiguration>()["HealthTableUri"]);
                 });
+            services.AddSingleton<ISystemClock, SystemClock>();
         }
 
         private static void EnableCertificateRevocationCheck(HttpMessageHandlerBuilder builder)
