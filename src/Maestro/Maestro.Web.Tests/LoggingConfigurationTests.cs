@@ -174,7 +174,7 @@ namespace Maestro.Web.Tests
         [Test]
         public void LoggingWithFullScopes()
         {
-            TestData data = Setup();
+            using TestData data = Setup();
             using (data.TelemetryClient.StartOperation<RequestTelemetry>("Fake operation"))
             {
                 data.Logger.LogError("Outside");
