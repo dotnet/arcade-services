@@ -47,6 +47,10 @@ namespace Microsoft.DotNet.Internal.Health
                 _client = clientFactory.CreateClient();
                 _client.DefaultRequestHeaders.Add("x-ms-version", "2013-08-15");
             }
+            else
+            {
+                _logger.LogWarning("AzureTableHealth WriteSas is not configured, no status will be written to table");
+            }
         }
         
         private static string GetRowKey(string instance, string subStatus) => EscapeKeyField(instance ?? "") + "|" + EscapeKeyField(subStatus);
