@@ -95,7 +95,7 @@ namespace Maestro.ScenarioTests
         {
             return TestHelpers.RunExecutableAsyncWithInput(_parameters.DarcExePath, input, args.Concat(new[]
             {
-                "-p", _parameters.MaestroToken,
+                "--p", _parameters.MaestroToken,
                 "--bar-uri", _parameters.MaestroBaseUri,
                 "--github-pat", _parameters.GitHubToken,
                 "--azdev-pat", _parameters.AzDoToken,
@@ -106,7 +106,7 @@ namespace Maestro.ScenarioTests
         {
             return TestHelpers.RunExecutableAsync(_parameters.DarcExePath, args.Concat(new[]
             {
-                "-p", _parameters.MaestroToken,
+                "--p", _parameters.MaestroToken,
                 "--bar-uri", _parameters.MaestroBaseUri,
                 "--github-pat", _parameters.GitHubToken,
                 "--azdev-pat", _parameters.AzDoToken,
@@ -149,7 +149,7 @@ namespace Maestro.ScenarioTests
         {
             using (ChangeDirectory(repoPath))
             {
-                await RunDarcAsync(new string[] { "add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri });
+                await RunDarcAsync(new string[] { "add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri});
             }
         }
         public async Task<string> GetTestChannelsAsync()
@@ -438,7 +438,7 @@ namespace Maestro.ScenarioTests
         {
             return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
         }
-        public async Task<bool> WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, PullRequest pr, Repository repo, int attempts = 7)
+        public async Task WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, PullRequest pr, Repository repo, int attempts = 7)
         {
             while (attempts-- > 0)
             {
@@ -447,7 +447,7 @@ namespace Maestro.ScenarioTests
 
                 if (pr.State == ItemState.Closed)
                 {
-                    return true;
+                    return;
                 }
 
                 await Task.Delay(60 * 1000).ConfigureAwait(false);
@@ -468,7 +468,7 @@ namespace Maestro.ScenarioTests
         public async Task<bool> ValidateGithubMaestroCheckRunsSuccessful(string targetRepoName, string targetBranch, PullRequest pullRequest, Repository repo)
         {
             // Waiting 5 minutes for maestro to add the checks to the PR
-            await Task.Delay(300000);
+            await Task.Delay(TimeSpan.FromMinutes(5));
             TestContext.WriteLine($"Checking maestro merge policies check in {targetBranch} {targetRepoName}");
             CheckRunsResponse existingCheckRuns = await GitHubApi.Check.Run.GetAllForReference(repo.Id, pullRequest.Head.Sha);
             int cnt = 0;
