@@ -88,6 +88,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 if (_options.IncludeBuildTimes)
                 {
                     flowGraph.MarkBackEdges();
+                    await flowGraph.MarkToolingEdges(remoteFactory, Logger);
                     flowGraph.CalculateLongestBuildPaths();
                     flowGraph.MarkLongestBuildPath();
                 }

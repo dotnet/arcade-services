@@ -6,6 +6,7 @@ using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -125,6 +126,44 @@ namespace Microsoft.DotNet.DarcLib
             {
                 RemoveEdge(edge);
             }
+        }
+
+        public async Task MarkToolingEdges(IRemoteFactory remoteFactory, ILogger logger)
+        {
+            var stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            foreach (var edge in Edges)
+            {
+                var lastAppliedBuildId = edge.Subscription.LastAppliedBuild?.Id;
+                if (lastAppliedBuildId.HasValue)
+                {
+                    var remote = await remoteFactory.GetRemoteAsync(edge.To.Repository, logger);
+
+                    //Console.WriteLine($"edge.Subscription.LastAppliedBuild = {lastAppliedBuildId}");
+                    //var sourceAssets = await remote.GetAssetsAsync(
+                    //    buildId: lastAppliedBuildId.Value);
+                    var sourceBuild = await remote.GetBuildAsync(lastAppliedBuildId.Value);
+
+                    var dependencies = await remote.GetDependenciesAsync(
+                        repoUri: edge.To.Repository,
+                        branchOrCommit: edge.To.Branch);
+
+                    var hasProductDependencies = dependencies
+                        .Where(dependency => dependency.Type == DependencyType.Product
+                            && sourceBuild.Assets.Any(asset => asset.Name == dependency.Name))
+                        .Any();
+
+                    edge.IsTooling = !hasProductDependencies;
+                }
+                else
+                {
+                    //Console.WriteLine($"edge.Subscription.LastAppliedBuild is null");
+                    edge.IsTooling = false;
+                }
+            }
+
+            //Console.WriteLine($"MarkToolingEdges time: {stopwatch.Elapsed}");
         }
 
         /// <summary>
@@ -252,7 +291,7 @@ namespace Microsoft.DotNet.DarcLib
                     }
                     else
                     {
-                        visitedNodes.Add(node, new HashSet<DependencyFlowNode>(){node});
+                        visitedNodes.Add(node, new HashSet<DependencyFlowNode>() { node });
                     }
 
                     foreach (DependencyFlowEdge edge in node.IncomingEdges)
@@ -269,7 +308,7 @@ namespace Microsoft.DotNet.DarcLib
                             {
                                 visitedNodes.Add(child, new HashSet<DependencyFlowNode>(visitedNodes[node]));
                             }
-                            
+
                             nodesToVisit.Enqueue(child);
                         }
                     }
@@ -283,7 +322,7 @@ namespace Microsoft.DotNet.DarcLib
         ///     Determine and mark the absolute longest build path in the flow graph, based on the Best Case time.
         /// </summary>
         public void MarkLongestBuildPath()
-        {            
+        {
             // Find the node with the worst best case time, we will treat it as the starting point and walk down the path
             // from this node to a product node
             DependencyFlowNode startNode = Nodes.OrderByDescending(n => n.BestCasePathTime).FirstOrDefault();
@@ -291,7 +330,7 @@ namespace Microsoft.DotNet.DarcLib
             {
                 startNode.OnLongestBuildPath = true;
                 MarkLongestPath(startNode);
-            } 
+            }
         }
 
         private void MarkLongestPath(DependencyFlowNode node)
@@ -302,7 +341,7 @@ namespace Microsoft.DotNet.DarcLib
 
             if (edgesOfInterest.Count > 0)
             {
-                DependencyFlowEdge pathEdge = edgesOfInterest.Aggregate( (e1, e2) => e1.To.BestCasePathTime > e2.To.BestCasePathTime ? e1: e2);
+                DependencyFlowEdge pathEdge = edgesOfInterest.Aggregate((e1, e2) => e1.To.BestCasePathTime > e2.To.BestCasePathTime ? e1 : e2);
 
                 // Mark the edge and the node as on the longest build path
                 pathEdge.OnLongestBuildPath = true;
@@ -341,7 +380,7 @@ namespace Microsoft.DotNet.DarcLib
                     flowNode.OfficialBuildTime = 0;
                     flowNode.PrBuildTime = 0;
                 }
-                
+
                 // Add a the output mapping.
                 flowNode.OutputChannels.Add(channel.Channel.Name);
             }

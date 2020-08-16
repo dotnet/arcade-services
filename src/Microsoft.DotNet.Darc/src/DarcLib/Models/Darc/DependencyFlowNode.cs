@@ -65,7 +65,7 @@ namespace Microsoft.DotNet.DarcLib
                 }
 
                 // Tooling subscriptions should not be included in longest path calculation
-                edgesOfInterest = edgesOfInterest.Where(e => !e.IsTooling).ToList();
+                edgesOfInterest = edgesOfInterest.Where(e => e.IsTooling == false).ToList();
 
                 var maxWorstCaseEdgeTime = edgesOfInterest
                     .Select(e => e.To.WorstCasePathTime + e.To.PrBuildTime)

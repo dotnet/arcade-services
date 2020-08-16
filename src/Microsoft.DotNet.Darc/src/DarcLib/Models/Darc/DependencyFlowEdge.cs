@@ -28,8 +28,6 @@ namespace Microsoft.DotNet.DarcLib
         public bool? PartOfCycle { get; set; }
         public bool BackEdge { get; set; }
         public bool OnLongestBuildPath { get; set; }
-
-        public bool IsTooling =>
-            Subscription.LastAppliedBuild?.Dependencies.All(d => !d.IsProduct) ?? false;
+        public bool? IsTooling { get; set; }
     }
 }

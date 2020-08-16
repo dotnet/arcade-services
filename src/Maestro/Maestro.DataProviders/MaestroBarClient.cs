@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Maestro.DataProviders
 {
@@ -151,7 +152,7 @@ namespace Maestro.DataProviders
                 {
                     Channel = ToClientModelChannel(other.Channel),
                     Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),
-                    LastAppliedBuild = ToClientModelBuild(other.LastAppliedBuild)
+                    LastAppliedBuild = other.LastAppliedBuild != null ? ToClientModelBuild(other.LastAppliedBuild) : null
                 };
         }
 
@@ -166,7 +167,7 @@ namespace Maestro.DataProviders
                 other.Commit,
                 null,
                 null,
-                other.DependentBuildIds.Select(ToClientModelBuildDependency).ToImmutableList(),
+                null,
                 null);
         }
 
@@ -187,8 +188,7 @@ namespace Maestro.DataProviders
         {
             IQueryable<Data.Models.Subscription> query = _context.Subscriptions
                 .Include(s => s.Channel)
-                .Include(s => s.LastAppliedBuild)
-                .Include(s => s.LastAppliedBuild.DependentBuildIds);
+                .Include(s => s.LastAppliedBuild);
 
             if (!string.IsNullOrEmpty(sourceRepo))
             {
@@ -242,9 +242,40 @@ namespace Maestro.DataProviders
 
         #endregion
 
-        public Task<Build> GetBuildAsync(int buildId)
+        public async Task<Build> GetBuildAsync(int buildId)
         {
-            throw new NotImplementedException();
+            var build = await _context.Builds.Where(b => b.Id == buildId)
+                .Include(b => b.BuildChannels)
+                .ThenInclude(bc => bc.Channel)
+                .Include(b => b.Assets)
+                .FirstOrDefaultAsync();
+
+            if (build != null)
+            {
+                var channels = build.BuildChannels?
+                    .Select(bc => ToClientModelChannel(bc.Channel))
+                    .ToImmutableList();
+
+                var assets = build.Assets?
+                    .Select(a => new Asset(a.Id, a.BuildId, a.NonShipping, a.Name, a.Version, null))
+                    .ToImmutableList();
+
+                return new Build(
+                    build.Id,
+                    build.DateProduced,
+                    build.Staleness,
+                    build.Released,
+                    build.Stable,
+                    build.Commit,
+                    channels,
+                    assets,
+                    null,
+                    null);
+            }
+            else
+            {
+                return null;
+            }
         }
 
         public Task<Build> UpdateBuildAsync(int buildId, BuildUpdate buildUpdate)

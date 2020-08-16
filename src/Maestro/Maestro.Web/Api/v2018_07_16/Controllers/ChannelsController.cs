@@ -330,6 +330,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             if (includeBuildTimes)
             {
                 flowGraph.MarkBackEdges();
+                await flowGraph.MarkToolingEdges(_remoteFactory, Logger);
                 flowGraph.CalculateLongestBuildPaths();
                 flowGraph.MarkLongestBuildPath();
             }
