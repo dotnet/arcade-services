@@ -36,8 +36,8 @@ namespace Microsoft.DotNet.DarcLib.Tests
                 OfficialBuildTime = 100.0,
             };
 
-            var edge1 = AddEdge(node, worstCasePathTime: 10, bestCasePathTime: 5, prBuildTime: 1, isProductNode: true);
-            var edge2 = AddEdge(node, worstCasePathTime: 20, bestCasePathTime: 2, prBuildTime: 1, isProductNode: true);
+            var edge1 = AddEdge(node, worstCasePathTime: 10, bestCasePathTime: 5, prBuildTime: 1, isToolingOnlyEdge: false);
+            var edge2 = AddEdge(node, worstCasePathTime: 20, bestCasePathTime: 2, prBuildTime: 1, isToolingOnlyEdge: false);
 
             node.CalculateLongestPathTime();
 
@@ -53,9 +53,9 @@ namespace Microsoft.DotNet.DarcLib.Tests
                 OfficialBuildTime = 100.0,
             };
 
-            var edge1 = AddEdge(node, worstCasePathTime: 10, bestCasePathTime: 5, prBuildTime: 1, isProductNode: true);
-            var edge2 = AddEdge(node, worstCasePathTime: 20, bestCasePathTime: 2, prBuildTime: 1, isProductNode: true);
-            AddEdge(node, worstCasePathTime: 30, bestCasePathTime: 20, prBuildTime: 1, isProductNode: false);
+            var edge1 = AddEdge(node, worstCasePathTime: 10, bestCasePathTime: 5, prBuildTime: 1, isToolingOnlyEdge: false);
+            var edge2 = AddEdge(node, worstCasePathTime: 20, bestCasePathTime: 2, prBuildTime: 1, isToolingOnlyEdge: false);
+            AddEdge(node, worstCasePathTime: 30, bestCasePathTime: 20, prBuildTime: 1, isToolingOnlyEdge: true);
 
             node.CalculateLongestPathTime();
 
@@ -68,7 +68,7 @@ namespace Microsoft.DotNet.DarcLib.Tests
             double worstCasePathTime,
             double bestCasePathTime,
             double prBuildTime,
-            bool isProductNode)
+            bool isToolingOnlyEdge)
         {
             var toNode = new DependencyFlowNode("test", "test", Guid.NewGuid().ToString())
             {
@@ -89,11 +89,15 @@ namespace Microsoft.DotNet.DarcLib.Tests
                 assets: ImmutableList<Asset>.Empty,
                 dependencies: new List<BuildRef>
                 {
-                    new BuildRef(buildId: 1, isProduct: isProductNode, timeToInclusionInMinutes: 1)
+                    new BuildRef(buildId: 1, isProduct: !isToolingOnlyEdge, timeToInclusionInMinutes: 1)
                 }.ToImmutableList(),
                 incoherencies: ImmutableList<BuildIncoherence>.Empty);
 
-            var edge = new DependencyFlowEdge(fromNode, toNode, subscription);
+            var edge = new DependencyFlowEdge(fromNode, toNode, subscription)
+            {
+                IsToolingOnly = isToolingOnlyEdge
+            };
+
             fromNode.OutgoingEdges.Add(edge);
             return edge;
         }
