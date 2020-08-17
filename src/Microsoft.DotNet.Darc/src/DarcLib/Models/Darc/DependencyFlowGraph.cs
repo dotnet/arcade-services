@@ -334,7 +334,7 @@ namespace Microsoft.DotNet.DarcLib
             // The edges we are interested in are those that haven't been marked as on the longest build path 
             // and aren't back edges, both of which indicate a cycle
             var edgesOfInterest = node.OutgoingEdges
-                .Where(e => !e.OnLongestBuildPath && !e.BackEdge && !e.IsToolingOnly.GetValueOrDefault())
+                .Where(e => !e.OnLongestBuildPath && !e.BackEdge && !e.IsToolingOnly)
                 .ToList();
 
             if (edgesOfInterest.Count > 0)

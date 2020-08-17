@@ -42,7 +42,7 @@ namespace Microsoft.DotNet.DarcLib
         public double BestCasePathTime { get; set; }
         public bool OnLongestBuildPath { get; set; }
 
-        public bool IsToolingOnly => OutgoingEdges.All(e => e.IsToolingOnly == true);
+        public bool IsToolingOnly => OutgoingEdges.All(e => e.IsToolingOnly);
 
         public void CalculateLongestPathTime()
         {
@@ -67,7 +67,7 @@ namespace Microsoft.DotNet.DarcLib
                 }
 
                 // Tooling subscriptions should not be included in longest path calculation
-                edgesOfInterest = edgesOfInterest.Where(e => e.IsToolingOnly == false).ToList();
+                edgesOfInterest = edgesOfInterest.Where(e => !e.IsToolingOnly).ToList();
 
                 var maxWorstCaseEdgeTime = edgesOfInterest
                     .Select(e => e.To.WorstCasePathTime + e.To.PrBuildTime)
