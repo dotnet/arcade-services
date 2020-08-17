@@ -121,8 +121,7 @@ namespace Microsoft.DotNet.DarcLib
                         $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={versionType}&version={branchOrCommit}&includeContent=true",
                         _logger,
                         // Don't log the failure so users don't get confused by 404 messages popping up in expected circumstances.
-                        logFailure: false,
-                        retryCount: 0);
+                        logFailure: false);
                     return content["content"].ToString();
                 }
                 catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)") || reqEx.Message.Contains("400 (Bad Request)"))

@@ -25,15 +25,18 @@ namespace DotNet.Status.Web.Controllers
         private readonly IOptions<GitHubConnectionOptions> _githubOptions;
         private readonly ILogger<GitHubHookController> _logger;
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
+        private readonly ITimelineIssueTriage _timelineIssueTriage;
 
         public GitHubHookController(
             IOptions<GitHubConnectionOptions> githubOptions,
             IGitHubApplicationClientFactory gitHubApplicationClientFactory,
+            ITimelineIssueTriage timelineIssueTriage,
             ILogger<GitHubHookController> logger)
         {
             _githubOptions = githubOptions;
             _logger = logger;
             _gitHubApplicationClientFactory = gitHubApplicationClientFactory;
+            _timelineIssueTriage = timelineIssueTriage;
             _ensureLabels = new Lazy<Task>(EnsureLabelsAsync);
         }
 
@@ -61,6 +64,7 @@ namespace DotNet.Status.Web.Controllers
             _logger.LogInformation("Processing issues action '{action}' for issue {repo}/{number}", issueEvent.Action, issueEvent.Repository.Name, issueEvent.Issue.Number);
 
             await ProcessRcaRulesAsync(issueEvent, action);
+            await ProcessTimelineIssueTriageAsync(issueEvent, action);
 
             return NoContent();
         }
@@ -71,6 +75,11 @@ namespace DotNet.Status.Web.Controllers
             options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
 
             return options;
+        }
+
+        private async Task ProcessTimelineIssueTriageAsync(IssuesHookData data, string action)
+        {
+            await _timelineIssueTriage.ProcessIssueEvent(data);
         }
 
         private async Task ProcessRcaRulesAsync(IssuesHookData data, string action)
@@ -232,15 +241,21 @@ For help filling out this form, see the [Root Cause Analysis](https://github.com
     {
         public string Name { get; set; }
         public IssuesHookUser Owner { get; set; }
+        public long Id { get; set; }
     }
 
     public class IssuesHookIssue
     {
         public int Number { get; set; }
         public string Title { get; set; }
+        public string Body { get; set; }
         public IssuesHookUser Assignee { get; set; }
         public ImmutableArray<IssuesHookLabel> Labels { get; set; }
         public ItemState State { get; set; }
+        public string Url { get; set; }
+        [JsonPropertyName("html_url")]
+        [Newtonsoft.Json.JsonProperty("html_url")]
+        public string HtmlUrl { get; set; }
     }
 
     public class IssuesHookLabel

@@ -1,0 +1,42 @@
+<details><summary>*Please do not modify this auto-generated section*</summary>
+
+[BuildId=666778,RecordId=6c5bbe10-d41c-5008-b9b3-09c7d6d8c0b3,Index=0]
+[Category=Pool provider]
+
+[BuildId=674578,RecordId=4ec48297-f0d4-5d6c-7d7c-174fafbbae1c,Index=1]
+[Category=Test]
+
+[BuildId=688348,RecordId=3b5945b0-87a7-52cf-843a-406c21a8e27e,Index=2]
+[Category=Helix]
+
+</details>
+
+See [documentation](https://github.com/dotnet/arcade-services/blob/master/src/GitHubApps/src/DarcBot/ReadMe.md) for more information
+
+---
+
+Failure Message - 20200601.42
+>We stopped hearing from agent Azure Pipelines 11. Verify the agent machine is running and has a healthy network connection. Anything that terminates an agent process, starves it for CPU, or blocks its network access can cause this error. For more information, see: https://go.microsoft.com/fwlink/?li
+
+[Build Url](https://dev.azure.com/dnceng/public/_build/results?buildId=666778)
+[Log Url]()
+
+---
+
+Failure Message - 20200606.1
+>We stopped hearing from agent Azure Pipelines 32. Verify the agent machine is running and has a healthy network connection. Anything that terminates an agent process, starves it for CPU, or blocks its network access can cause this error. For more information, see: https://go.microsoft.com/fwlink/?li
+
+[Build Url](https://dev.azure.com/dnceng/public/_build/results?buildId=674578)
+[Log Url]()
+
+---
+
+Failure Message - 20200615.71
+>We stopped hearing from agent NetCorePublic-Pool 211. Verify the agent machine is running and has a healthy network connection. Anything that terminates an agent process, starves it for CPU, or blocks its network access can cause this error. For more information, see: https://go.microsoft.com/fwlink
+
+[Build Url](https://dev.azure.com/dnceng/public/_build/results?buildId=688348)
+[Log Url]()
+
+---
+
+[Add additional comments here]

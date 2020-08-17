@@ -2,9 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Reflection;
 using Maestro.AzureDevOps;
-using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.MergePolicies;
 using Microsoft.DncEng.Configuration.Extensions;
@@ -60,7 +60,7 @@ namespace SubscriptionActorService
                         .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                         ?.InformationalVersion);
             });
-            services.Configure<GitHubTokenProviderOptions>("GitHub", (o, s) => s.Bind(o));
+            services.Configure("GitHub", (Action<GitHubTokenProviderOptions, IConfiguration>) ((o, s) => s.Bind(o)));
             services.Configure<AzureDevOpsTokenProviderOptions>((options, provider) =>
             {
                 var config = provider.GetRequiredService<IConfiguration>();
