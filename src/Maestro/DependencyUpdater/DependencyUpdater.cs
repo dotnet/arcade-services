@@ -240,8 +240,8 @@ namespace DependencyUpdater
 
                     if (flowGraph.Nodes.Count > 0)
                     {
-
                         flowGraph.MarkBackEdges();
+                        await flowGraph.MarkToolingEdges(RemoteFactory, Logger);
                         flowGraph.CalculateLongestBuildPaths();
                         flowGraph.MarkLongestBuildPath();
 

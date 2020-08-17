@@ -42,6 +42,8 @@ namespace Microsoft.DotNet.DarcLib
         public double BestCasePathTime { get; set; }
         public bool OnLongestBuildPath { get; set; }
 
+        public bool IsToolingOnly => OutgoingEdges.All(e => e.IsTooling == true);
+
         public void CalculateLongestPathTime()
         {
             // If the node does not have any outgoing edges, then it is a root, and its official build time is

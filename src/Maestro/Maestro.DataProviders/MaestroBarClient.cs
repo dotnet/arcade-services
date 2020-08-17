@@ -156,8 +156,24 @@ namespace Maestro.DataProviders
                 };
         }
 
-        private Build ToClientModelBuild(Maestro.Data.Models.Build other)
+        private Build ToClientModelBuild(Data.Models.Build other)
         {
+            var channels = other.BuildChannels?
+                .Select(bc => ToClientModelChannel(bc.Channel))
+                .ToImmutableList();
+
+            var assets = other.Assets?
+                .Select(a => new Asset(a.Id, a.BuildId, a.NonShipping, a.Name, a.Version, null))
+                .ToImmutableList();
+
+            var dependencies = other.DependentBuildIds?
+                .Select(ToClientModelBuildDependency)
+                .ToImmutableList();
+
+            var incoherences = other.Incoherencies?
+                .Select(ToClientModelBuildIncoherence)
+                .ToImmutableList();
+
             return new Build(
                 other.Id,
                 other.DateProduced,
@@ -165,23 +181,34 @@ namespace Maestro.DataProviders
                 other.Released,
                 other.Stable,
                 other.Commit,
-                null,
-                null,
-                null,
-                null);
+                channels,
+                assets,
+                dependencies,
+                incoherences);
         }
 
-        private BuildRef ToClientModelBuildDependency(Maestro.Data.Models.BuildDependency other)
+        private BuildRef ToClientModelBuildDependency(Data.Models.BuildDependency other)
         {
             return new BuildRef(other.BuildId, other.IsProduct, other.TimeToInclusionInMinutes);
         }
 
-        private SubscriptionPolicy ToClientModelSubscriptionPolicy(Maestro.Data.Models.SubscriptionPolicy other)
+        private SubscriptionPolicy ToClientModelSubscriptionPolicy(Data.Models.SubscriptionPolicy other)
         {
             return new SubscriptionPolicy(
                 other.Batchable,
                 (UpdateFrequency) other.UpdateFrequency
             );
+        }
+
+        private BuildIncoherence ToClientModelBuildIncoherence(Data.Models.BuildIncoherence other)
+        {
+            return new BuildIncoherence
+            {
+                Commit = other.Commit,
+                Name = other.Name,
+                Repository = other.Repository,
+                Version = other.Version
+            };
         }
 
         public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(string sourceRepo = null, string targetRepo = null, int? channelId = null)
@@ -252,25 +279,7 @@ namespace Maestro.DataProviders
 
             if (build != null)
             {
-                var channels = build.BuildChannels?
-                    .Select(bc => ToClientModelChannel(bc.Channel))
-                    .ToImmutableList();
-
-                var assets = build.Assets?
-                    .Select(a => new Asset(a.Id, a.BuildId, a.NonShipping, a.Name, a.Version, null))
-                    .ToImmutableList();
-
-                return new Build(
-                    build.Id,
-                    build.DateProduced,
-                    build.Staleness,
-                    build.Released,
-                    build.Stable,
-                    build.Commit,
-                    channels,
-                    assets,
-                    null,
-                    null);
+                return ToClientModelBuild(build);
             }
             else
             {

@@ -325,7 +325,11 @@ namespace Microsoft.DotNet.DarcLib
         {
             // Find the node with the worst best case time, we will treat it as the starting point and walk down the path
             // from this node to a product node
-            DependencyFlowNode startNode = Nodes.OrderByDescending(n => n.BestCasePathTime).FirstOrDefault();
+            DependencyFlowNode startNode = Nodes
+                .Where(n => !n.IsToolingOnly)
+                .OrderByDescending(n => n.BestCasePathTime)
+                .FirstOrDefault();
+
             if (startNode != null)
             {
                 startNode.OnLongestBuildPath = true;
@@ -337,7 +341,9 @@ namespace Microsoft.DotNet.DarcLib
         {
             // The edges we are interested in are those that haven't been marked as on the longest build path 
             // and aren't back edges, both of which indicate a cycle
-            var edgesOfInterest = node.OutgoingEdges.Where(e => !e.OnLongestBuildPath && !e.BackEdge).ToList();
+            var edgesOfInterest = node.OutgoingEdges
+                .Where(e => !e.OnLongestBuildPath && !e.BackEdge && !e.IsTooling.GetValueOrDefault())
+                .ToList();
 
             if (edgesOfInterest.Count > 0)
             {
