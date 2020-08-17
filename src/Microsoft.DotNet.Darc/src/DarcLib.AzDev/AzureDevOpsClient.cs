@@ -533,8 +533,7 @@ namespace Microsoft.DotNet.DarcLib
             await CreateOrUpdatePullRequestCommentAsync(pullRequestUrl,
                     $@"## Auto-Merge Status
                     This pull request has not been merged because Maestro++ is waiting on the following merge policies.
-                    {string.Join("\n", evaluations.OrderBy(r => r.MergePolicyInfo.Name).Select(DisplayPolicy))}
-           ");
+                    {string.Join("\n", evaluations.OrderBy(r => r.MergePolicyInfo.Name).Select(DisplayPolicy))}");
         }
 
         private string DisplayPolicy(MergePolicyEvaluationResult result)
