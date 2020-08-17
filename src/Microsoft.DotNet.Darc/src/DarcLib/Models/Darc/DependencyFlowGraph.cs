@@ -139,12 +139,7 @@ namespace Microsoft.DotNet.DarcLib
                 if (lastAppliedBuildId.HasValue)
                 {
                     var remote = await remoteFactory.GetRemoteAsync(edge.To.Repository, logger);
-
-                    //Console.WriteLine($"edge.Subscription.LastAppliedBuild = {lastAppliedBuildId}");
-                    //var sourceAssets = await remote.GetAssetsAsync(
-                    //    buildId: lastAppliedBuildId.Value);
                     var sourceBuild = await remote.GetBuildAsync(lastAppliedBuildId.Value);
-
                     var dependencies = await remote.GetDependenciesAsync(
                         repoUri: edge.To.Repository,
                         branchOrCommit: edge.To.Branch);
@@ -154,16 +149,13 @@ namespace Microsoft.DotNet.DarcLib
                             && sourceBuild.Assets.Any(asset => asset.Name == dependency.Name))
                         .Any();
 
-                    edge.IsTooling = !hasProductDependencies;
+                    edge.IsToolingOnly = !hasProductDependencies;
                 }
                 else
                 {
-                    //Console.WriteLine($"edge.Subscription.LastAppliedBuild is null");
-                    edge.IsTooling = false;
+                    edge.IsToolingOnly = false;
                 }
             }
-
-            //Console.WriteLine($"MarkToolingEdges time: {stopwatch.Elapsed}");
         }
 
         /// <summary>
@@ -342,7 +334,7 @@ namespace Microsoft.DotNet.DarcLib
             // The edges we are interested in are those that haven't been marked as on the longest build path 
             // and aren't back edges, both of which indicate a cycle
             var edgesOfInterest = node.OutgoingEdges
-                .Where(e => !e.OnLongestBuildPath && !e.BackEdge && !e.IsTooling.GetValueOrDefault())
+                .Where(e => !e.OnLongestBuildPath && !e.BackEdge && !e.IsToolingOnly.GetValueOrDefault())
                 .ToList();
 
             if (edgesOfInterest.Count > 0)
