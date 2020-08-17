@@ -22,13 +22,8 @@ namespace Maestro.MergePolicies
             s_standardGitHubProperties = new MergePolicyProperties(new Dictionary<string, JToken>
             {
                 { 
-                    "ignoreChecks", 
-                    JToken.FromObject(new []
-                    {
-                        "WIP",
-                        "license/cla",
-                        "auto-merge.config.enforce",
-                    })
+                    "ignoreChecks",
+                    new JArray("WIP", "license/cla", "auto-merge.config.enfoce")
                 },
             });
 
