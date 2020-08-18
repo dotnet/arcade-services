@@ -4,8 +4,9 @@ using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Microsoft.Azure.KeyVault.Models;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.TeamFoundation.Build.WebApi;
 using NUnit.Framework;
-
+using Build = Microsoft.DotNet.Maestro.Client.Models.Build;
 
 namespace Maestro.ScenarioTests
 {
@@ -14,7 +15,9 @@ namespace Maestro.ScenarioTests
     public class ScenarioTests_MergePolicies : MaestroScenarioTestBase
     {
         private TestParameters _parameters;
-        private Random _random = new Random();
+        private readonly Random _random = new Random();
+        private readonly string sourceRepo = "maestro-test1";
+        private readonly string targetRepo = "maestro-test2";
 
         [SetUp]
         public async Task InitializeAsync()
@@ -30,13 +33,21 @@ namespace Maestro.ScenarioTests
             return Task.CompletedTask;
         }
 
+        private string GetTestChannelName()
+        {
+            return "Test Channel " + _random.Next(int.MaxValue);
+        }
+
+        private string GetTargetBranch()
+        {
+            return _random.Next(int.MaxValue).ToString();
+        }
+
         [Test]
         public async Task Darc_GitHubFlow_AutoMerge_GithubChecks_AllChecksSuccessful()
         {
-            string testChannelName = "Test Channel " + _random.Next(int.MaxValue);
-            var sourceRepo = "maestro-test1";
-            var targetRepo = "maestro-test2";
-            var targetBranch = _random.Next(int.MaxValue).ToString();
+            string testChannelName = GetTestChannelName();
+            var targetBranch = GetTargetBranch();
 
             await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> {"--all-checks-passed" });
         }
@@ -44,10 +55,8 @@ namespace Maestro.ScenarioTests
         [Test]
         public async Task Darc_GitHubFlow_AutoMerge_GithubChecks_Standard()
         {
-            string testChannelName = "Test Channel " + _random.Next(int.MaxValue);
-            var sourceRepo = "maestro-test1";
-            var targetRepo = "maestro-test2";
-            var targetBranch = _random.Next(int.MaxValue).ToString();
+            string testChannelName = GetTestChannelName();
+            var targetBranch = GetTargetBranch();
 
             await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> { "--standard-automerge"});
         }
@@ -55,10 +64,8 @@ namespace Maestro.ScenarioTests
         [Test]
         public async Task Darc_GitHubFlow_AutoMerge_GithubChecks_NoRequestedChanges()
         {
-            string testChannelName = "Test Channel " + _random.Next(int.MaxValue);
-            var sourceRepo = "maestro-test1";
-            var targetRepo = "maestro-test2";
-            var targetBranch = _random.Next(int.MaxValue).ToString();
+            string testChannelName = GetTestChannelName();
+            var targetBranch = GetTargetBranch();
 
             await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> { "--no-requested-changes" });
         }
