@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.TeamFoundation.TestManagement.WebApi;
 using NUnit.Framework;
 
 namespace Maestro.ScenarioTests
@@ -162,6 +163,10 @@ namespace Maestro.ScenarioTests
             };
             expectedDependenciesSource.Add(hamburger);
 
+            string[] expectedFeeds = {proxyFeed, azdoFeed1, azdoFeed3 };
+            string[] notExpectedFeeds = {regularFeed, azdoFeed2, buildContainer };
+
+         //   await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource, false, true, expectedFeeds, notExpectedFeeds);
 
             await new Task(() => throw new NotImplementedException());
         }

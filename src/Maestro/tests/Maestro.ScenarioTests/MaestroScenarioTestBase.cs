@@ -101,7 +101,7 @@ namespace Maestro.ScenarioTests
             throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
         }
 
-        internal async Task<Microsoft.DotNet.DarcLib.PullRequest> WaitForAzDoPullRequestAsync(string targetRepoName, string targetBranch)
+        internal async Task<int> GetAzDoPullRequestIdAsync(string targetRepoName, string targetBranch, bool isUpdated)
         {
             string searchBaseUrl = GetAzDoRepoUrl(targetRepoName);
             string apiBaseUrl = GetAzDoApiRepoUrl(targetRepoName);
@@ -113,7 +113,7 @@ namespace Maestro.ScenarioTests
             {
                 try
                 {
-                    prs = await AzDoClient.SearchPullRequestsAsync(searchBaseUrl, targetBranch, Microsoft.DotNet.DarcLib.PrStatus.Open).ConfigureAwait(false);
+                    prs = await AzDoClient.SearchPullRequestsAsync(searchBaseUrl, Microsoft.DotNet.DarcLib.PrStatus.Open, targetPullRequestBranch: targetBranch).ConfigureAwait(false);
                 }
                 catch (HttpRequestException ex)
                 {
@@ -126,19 +126,53 @@ namespace Maestro.ScenarioTests
                         throw;
                     }
                 }
+
                 if (prs.Count() == 1)
                 {
-                    return await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{prs.FirstOrDefault()}");
+                    return prs.FirstOrDefault();
                 }
+
                 if (prs.Count() > 1)
                 {
                     throw new MaestroTestException($"More than one pull request found in {searchBaseUrl} targeting {targetBranch}");
                 }
 
                 await Task.Delay(60 * 1000).ConfigureAwait(false);
-             }
+            }
 
             throw new MaestroTestException($"No pull request was created in {searchBaseUrl} targeting {targetBranch}");
+        }
+
+        internal async Task<Microsoft.DotNet.DarcLib.PullRequest> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string expectedPRTitle = null)
+        {
+            string apiBaseUrl = GetAzDoApiRepoUrl(targetRepoName);
+
+            if (!isUpdated)
+            {
+                return await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
+            }
+
+            if (string.IsNullOrEmpty(expectedPRTitle))
+            {
+                throw new ArgumentNullException(expectedPRTitle, "ExpectedPRTitle must be defined for AzDo PRs that require an update.");
+            }
+
+            Microsoft.DotNet.DarcLib.PullRequest pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
+
+            for (int tries = 7; tries > 0; tries--)
+            {
+                pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
+                string trimmedTitle = Regex.Replace(pr.Title, @"\s+", " ");
+
+                if (trimmedTitle == expectedPRTitle)
+                {
+                    return pr;
+                }
+
+                await Task.Delay(60 * 1000).ConfigureAwait(false);
+            }
+
+            throw new MaestroTestException($"The created pull request for {targetRepoName} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
         }
 
         public async Task CheckBatchedGitHubPullRequest(string targetBranch, string source1RepoName, string source2RepoName,
@@ -181,33 +215,32 @@ namespace Maestro.ScenarioTests
         public async Task CheckBatchedAzDoPullRequest(string source1RepoName, string source2RepoName, string targetRepoName, string targetBranch,
             List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete = false)
         {
-            string expectedPRTitle = $"[{targetBranch}] Update dependencies from dnceng/internal/{source1RepoName} dnceng/internal/{source2RepoName}";
-            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, true);
+            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source1RepoName} {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source2RepoName}";
+            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, true, null, null);
         }
 
         public async Task CheckNonBatchedAzDoPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
-            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false)
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false,
+            string[] expectedFeeds = null, string[] notExpectedFeeds = null)
         {
-            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
-            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated);
+            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{sourceRepoName}";
+            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
         }
 
         public async Task CheckAzDoPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
-            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated)
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated,
+            string[] expectedFeeds, string[] notExpectedFeeds)
         {
             string targetRepoUri = GetAzDoApiRepoUrl(targetRepoName);
             TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
-            Microsoft.DotNet.DarcLib.PullRequest pullRequest = await WaitForAzDoPullRequestAsync(targetRepoName, targetBranch);
+            int pullRequestId = await GetAzDoPullRequestIdAsync(targetRepoName, targetBranch, isUpdated);
+            Microsoft.DotNet.DarcLib.PullRequest pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, expectedPRTitle);
 
-            StringAssert.AreEqualIgnoringCase(expectedPRTitle, pullRequest.Title);
-
-            if (isUpdated)
-            {
-                await ValidatePullRequestDependencies(targetRepoName, targetBranch, expectedDependencies);
-            }
+            string trimmedTitle = Regex.Replace(pullRequest.Title, @"\s+", " ");
+            StringAssert.AreEqualIgnoringCase(expectedPRTitle, trimmedTitle);
 
             Microsoft.DotNet.DarcLib.PrStatus expectedPRState = isCompleted ? Microsoft.DotNet.DarcLib.PrStatus.Closed : Microsoft.DotNet.DarcLib.PrStatus.Open;
-            var prStatus = AzDoClient.GetPullRequestStatusAsync(GetAzDoApiRepoUrl(targetRepoName));
+            var prStatus = await AzDoClient.GetPullRequestStatusAsync(GetAzDoApiRepoUrl(targetRepoName) + $"/pullRequests/{pullRequestId}");
             Assert.AreEqual(expectedPRState, prStatus);
 
             using (ChangeDirectory(repoDirectory))
@@ -250,8 +283,8 @@ namespace Maestro.ScenarioTests
                 }
                 catch
                 {
-                    // If this throws it means that it was cleaned up by a different clean up method first
-                }
+                // If this throws it means that it was cleaned up by a different clean up method first
+            }
             });
         }
 
@@ -347,9 +380,9 @@ namespace Maestro.ScenarioTests
                 }
                 catch (MaestroTestException)
                 {
-                    // Ignore failures from delete-channel on cleanup, this delete is here to ensure that the channel is deleted
-                    // even if the test does not do an explicit delete as part of the test. Other failures are typical that the channel has already been deleted.
-                }
+                // Ignore failures from delete-channel on cleanup, this delete is here to ensure that the channel is deleted
+                // even if the test does not do an explicit delete as part of the test. Other failures are typical that the channel has already been deleted.
+            }
             });
         }
 
@@ -424,8 +457,8 @@ namespace Maestro.ScenarioTests
                 }
                 catch (MaestroTestException)
                 {
-                    // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
-                }
+                // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
+            }
             });
         }
 
@@ -446,8 +479,8 @@ namespace Maestro.ScenarioTests
                     }
                     catch (MaestroTestException)
                     {
-                        // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
-                    }
+                    // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
+                }
                 });
             }
 
@@ -677,8 +710,8 @@ namespace Maestro.ScenarioTests
                 }
                 catch
                 {
-                    // If this throws it means that it was cleaned up by a different clean up method first
-                }
+                // If this throws it means that it was cleaned up by a different clean up method first
+            }
             });
         }
 
