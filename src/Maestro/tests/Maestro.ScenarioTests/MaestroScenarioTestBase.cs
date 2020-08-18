@@ -438,6 +438,7 @@ namespace Maestro.ScenarioTests
         {
             return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
         }
+
         public async Task WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, PullRequest pr, Repository repo, int attempts = 7)
         {
             while (attempts-- > 0)

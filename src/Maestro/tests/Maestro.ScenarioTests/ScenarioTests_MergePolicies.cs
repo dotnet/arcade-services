@@ -14,6 +14,7 @@ namespace Maestro.ScenarioTests
     public class ScenarioTests_MergePolicies : MaestroScenarioTestBase
     {
         private TestParameters _parameters;
+        private Random _random = new Random();
 
         [SetUp]
         public async Task InitializeAsync()
@@ -32,10 +33,10 @@ namespace Maestro.ScenarioTests
         [Test]
         public async Task Darc_GitHubFlow_AutoMerge_GithubChecks_AllChecksSuccessful()
         {
-            string testChannelName = $"Github All Checks Successful Merge Policy Channel ${Environment.MachineName}";
+            string testChannelName = "Test Channel " + _random.Next(int.MaxValue);
             var sourceRepo = "maestro-test1";
             var targetRepo = "maestro-test2";
-            var targetBranch = $"GithubAllChecksSuccessfulMergePolicy_${Environment.MachineName}";
+            var targetBranch = _random.Next(int.MaxValue).ToString();
 
             await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> {"--all-checks-passed" });
         }
@@ -43,10 +44,10 @@ namespace Maestro.ScenarioTests
         [Test]
         public async Task Darc_GitHubFlow_AutoMerge_GithubChecks_Standard()
         {
-            string testChannelName = $"Github Standard Merge Policy Channel ${Environment.MachineName}";
+            string testChannelName = "Test Channel " + _random.Next(int.MaxValue);
             var sourceRepo = "maestro-test1";
             var targetRepo = "maestro-test2";
-            var targetBranch = $"GithubStandardMergePolicy_${Environment.MachineName}";
+            var targetBranch = _random.Next(int.MaxValue).ToString();
 
             await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> { "--standard-automerge"});
         }
@@ -54,10 +55,10 @@ namespace Maestro.ScenarioTests
         [Test]
         public async Task Darc_GitHubFlow_AutoMerge_GithubChecks_NoRequestedChanges()
         {
-            string testChannelName = $"Github No Requested Changes Merge Policy Channel ${Environment.MachineName}";
+            string testChannelName = "Test Channel " + _random.Next(int.MaxValue);
             var sourceRepo = "maestro-test1";
             var targetRepo = "maestro-test2";
-            var targetBranch = $"GithubNoRequestedChangesMergePolicy_${Environment.MachineName}";
+            var targetBranch = _random.Next(int.MaxValue).ToString();
 
             await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> { "--no-requested-changes" });
         }
@@ -68,7 +69,7 @@ namespace Maestro.ScenarioTests
             var sourceRepoUri = GetRepoUrl(sourceRepo);
             var sourceBranch = "dependencyflow-tests";
             var sourceCommit = "0b36b99e29b1751403e23cfad0a7dff585818051";
-            var sourceBuildNumber = 654321;
+            var sourceBuildNumber = _random.Next(int.MaxValue).ToString();
             ImmutableList<AssetData> sourceAssets = ImmutableList.Create<AssetData>()
                 .Add(new AssetData(true)
                 {
