@@ -267,6 +267,8 @@ namespace Microsoft.DotNet.Darc.Operations
                 promotionPipelineVariables.Add("SDLValidationContinueOnError", _options.SDLValidationContinueOnError);
             }
 
+            // Pass the same values to the variables and pipeline parameters so this works with the
+            // v2 and v3 versions of the promotion pipeline.
             int azdoBuildId = await azdoClient.StartNewBuildAsync(build.AzureDevOpsAccount,
                 promotionPipelineInformation.project,
                 promotionPipelineInformation.pipelineId,
