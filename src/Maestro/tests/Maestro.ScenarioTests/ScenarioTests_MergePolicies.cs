@@ -37,7 +37,6 @@ namespace Maestro.ScenarioTests
             var targetRepo = "maestro-test2";
             var targetBranch = $"GithubAllChecksSuccessfulMergePolicy_${Environment.MachineName}";
 
-            TestContext.WriteLine("GitHub Dependency Flow, non-batched");
             await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> {"--all-checks-passed" });
         }
 
@@ -49,7 +48,6 @@ namespace Maestro.ScenarioTests
             var targetRepo = "maestro-test2";
             var targetBranch = $"GithubStandardMergePolicy_${Environment.MachineName}";
 
-            TestContext.WriteLine("GitHub Dependency Flow, non-batched");
             await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> { "--standard-automerge"});
         }
 
@@ -61,7 +59,6 @@ namespace Maestro.ScenarioTests
             var targetRepo = "maestro-test2";
             var targetBranch = $"GithubNoRequestedChangesMergePolicy_${Environment.MachineName}";
 
-            TestContext.WriteLine("GitHub Dependency Flow, non-batched");
             await AutoMergeFlowTestBase(targetRepo, sourceRepo, targetBranch, testChannelName, new List<string> { "--no-requested-changes" });
         }
 
