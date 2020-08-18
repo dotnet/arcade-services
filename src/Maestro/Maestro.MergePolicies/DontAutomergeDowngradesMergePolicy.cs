@@ -21,16 +21,19 @@ namespace Maestro.MergePolicies
             {
                 if (HasAnyDowngrade(pr))
                 {
-                    return Fail("Some dependency updates are downgrades. Aborting auto-merge.");
+                    return Task.FromResult(
+                        Fail("Some dependency updates are downgrades. Aborting auto-merge."));
                 }
                 else
                 {
-                    return Succeed("No version downgrade detected.");
+                    return Task.FromResult(
+                        Succeed("No version downgrade detected."));
                 }
             }
             catch (Exception e)
             {
-                return Fail($"Failed to check version downgrades. Aborting auto-merge. {e.Message}");
+                return Task.FromResult(
+                    Fail($"Failed to check version downgrades. Aborting auto-merge. {e.Message}"));
             }
         }
 

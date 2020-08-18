@@ -18,7 +18,8 @@ namespace Maestro.MergePolicies
 
         public override Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc)
         {
-            return Fail("Merge Policy Not Yet Implemented.");
+            return Task.FromResult(
+                Fail("Merge Policy Not Yet Implemented."));
         }
     }
 

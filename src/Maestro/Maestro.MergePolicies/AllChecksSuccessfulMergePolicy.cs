@@ -33,7 +33,7 @@ namespace Maestro.MergePolicies
 
             if (!notIgnoredChecks.Any())
             {
-                return await Fail("Waiting for checks.");
+                return Fail("Waiting for checks.");
             }
 
             ILookup<CheckState, Check> statuses = notIgnoredChecks.ToLookup(
@@ -57,15 +57,15 @@ namespace Maestro.MergePolicies
 
             if (statuses.Contains(CheckState.Error))
             {
-                return await Fail($"Unsuccessful checks: {ListChecks(CheckState.Error)}");
+                return Fail($"Unsuccessful checks: {ListChecks(CheckState.Error)}");
             }
 
             if (statuses.Contains(CheckState.Pending))
             {
-                return await Pending($"Waiting on checks: {ListChecks(CheckState.Pending)}");
+                return Pending($"Waiting on checks: {ListChecks(CheckState.Pending)}");
             }
 
-            return await Succeed($"Successful checks: {ListChecks(CheckState.Success)}");
+            return Succeed($"Successful checks: {ListChecks(CheckState.Success)}");
         }
     }
 

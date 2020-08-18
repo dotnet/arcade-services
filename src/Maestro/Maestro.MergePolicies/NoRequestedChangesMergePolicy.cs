@@ -20,11 +20,11 @@ namespace Maestro.MergePolicies
 
             if (reviews.Any(r => r.Status == ReviewState.ChangesRequested || r.Status == ReviewState.Rejected))
             {
-                return await Fail("There are reviews that have requested changes.");
+                return Fail("There are reviews that have requested changes.");
             }
             else
             {
-                return await Succeed("No reviews have requested changes.");
+                return Succeed("No reviews have requested changes.");
             }
         }
     }
