@@ -74,7 +74,7 @@ namespace Maestro.MergePolicies
 
     public interface IMergePolicyBuilder
     {
-        public string Name { get; }
+        string Name { get; }
 
         /// <summary>
         /// Creates list of instances of concrete merge policies which shall be evaluated 
@@ -82,8 +82,6 @@ namespace Maestro.MergePolicies
         /// In most cases it will return array of exactly one merge policy, but in special cases like standard-policy
         /// it will return multiple pre-configured policies which that policies template consist of
         /// </summary>
-        /// <param name="properties"></param>
-        /// <returns></returns>
-        public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr);
+        Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr);
     }
 }

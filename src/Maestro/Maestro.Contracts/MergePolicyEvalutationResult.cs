@@ -16,26 +16,30 @@ namespace Maestro.Contracts
             Results = results.ToImmutableList();
         }
 
-        public IReadOnlyList<MergePolicyEvaluationResult> Results { get; }
+        public IImmutableList<MergePolicyEvaluationResult> Results { get; }
 
         public bool Succeeded => Results.Count > 0 && Results.All(r => r.Status == MergePolicyEvaluationStatus.Success);
 
-        public bool Pending => Results.Count > 0 && Results.Any(r => r.Status == MergePolicyEvaluationStatus.Pending);
+        public bool Pending => Results.Any(r => r.Status == MergePolicyEvaluationStatus.Pending);
 
-        public bool Failed => Results.Count > 0 && Results.Any(r => r.Status == MergePolicyEvaluationStatus.Failure);
+        public bool Failed => Results.Any(r => r.Status == MergePolicyEvaluationStatus.Failure);
     }
 
     public class MergePolicyEvaluationResult
     {
         public MergePolicyEvaluationResult(MergePolicyEvaluationStatus status, string message, IMergePolicyInfo mergePolicy)
         {
+            if (mergePolicy == null)
+            {
+                throw new ArgumentNullException(nameof(mergePolicy));
+            }
             if (mergePolicy.Name == null)
             {
-                throw new ArgumentNullException(nameof(mergePolicy.Name));
+                throw new ArgumentNullException($"{nameof(mergePolicy)}.{nameof(mergePolicy.Name)}");
             }
             if (mergePolicy.DisplayName == null)
             {
-                throw new ArgumentNullException(nameof(mergePolicy.DisplayName));
+                throw new ArgumentNullException($"{nameof(mergePolicy)}.{nameof(mergePolicy.DisplayName)}");
             }
 
             Status = status;

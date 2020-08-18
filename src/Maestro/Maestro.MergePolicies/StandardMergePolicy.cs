@@ -22,22 +22,25 @@ namespace Maestro.MergePolicies
             s_standardGitHubProperties = new MergePolicyProperties(new Dictionary<string, JToken>
             {
                 { 
-                    "ignoreChecks",
-                    new JArray("WIP", "license/cla", "auto-merge.config.enfoce")
+                    MergePolicyConstants.IgnoreChecksMergePolicyPropertyName, 
+                    new JArray(
+                        "WIP",
+                        "license/cla",
+                        "auto-merge.config.enforce"
+                    )
                 },
             });
 
             s_standardAzureDevOpsProperties = new MergePolicyProperties(new Dictionary<string, JToken>
             {
                 {
-                    "ignoreChecks",
-                    JToken.FromObject(new []
-                    {
+                    MergePolicyConstants.IgnoreChecksMergePolicyPropertyName,
+                    new JArray(
                         "Comment requirements",
                         "Minimum number of reviewers",
                         "auto-merge.config.enforce",
-                        "Work item linking",
-                    })
+                        "Work item linking"
+                    )
                 },
             });
         }
