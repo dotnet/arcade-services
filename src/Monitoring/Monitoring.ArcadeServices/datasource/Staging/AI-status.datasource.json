@@ -1,0 +1,22 @@
+{
+  "type": "grafana-azure-monitor-datasource",
+  "typeLogoUrl": "",
+  "access": "proxy",
+  "password": "",
+  "user": "",
+  "database": "",
+  "basicAuth": false,
+  "basicAuthUser": "",
+  "basicAuthPassword": "",
+  "withCredentials": false,
+  "isDefault": false,
+  "jsonData": {
+    "appInsightsAppId": "c8477562-e498-4b81-8a79-fd261af7c08e",
+    "azureLogAnalyticsSameAs": false,
+    "cloudName": "azuremonitor"
+  },
+  "readOnly": false,
+  "secureJsonData": {
+    "appInsightsApiKey": "[vault(status-app-insights-api-key)]"
+  }
+}
