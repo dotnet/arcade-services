@@ -130,9 +130,6 @@ namespace Microsoft.DotNet.DarcLib
 
         public async Task MarkToolingEdges(IRemoteFactory remoteFactory, ILogger logger)
         {
-            var stopwatch = new Stopwatch();
-            stopwatch.Start();
-
             foreach (var edge in Edges)
             {
                 var lastAppliedBuildId = edge.Subscription.LastAppliedBuild?.Id;
