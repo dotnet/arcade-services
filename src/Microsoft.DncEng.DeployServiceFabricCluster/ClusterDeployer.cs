@@ -835,6 +835,7 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
             using var writer = new StreamWriter(ms);
             writer.Write(Settings.SubscriptionId.ToString());
             writer.Write(Settings.ResourceGroup);
+            writer.Flush();
             ms.Position = 0;
             using var hasher = SHA256.Create();
             var bytes = hasher.ComputeHash(ms);
