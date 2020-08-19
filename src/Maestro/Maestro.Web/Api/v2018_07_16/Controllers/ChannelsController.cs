@@ -329,8 +329,18 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             if (includeBuildTimes)
             {
+                var edgesWithLastBuild = flowGraph.Edges
+                    .Where(e => e.Subscription.LastAppliedBuild != null);
+
+                foreach (var edge in edgesWithLastBuild)
+                {
+                    edge.IsToolingOnly = !_context.IsProductDependency(
+                        edge.Subscription.LastAppliedBuild.Id,
+                        edge.To.Repository,
+                        edge.To.Branch);
+                }
+
                 flowGraph.MarkBackEdges();
-                await flowGraph.MarkToolingEdges(_remoteFactory, Logger);
                 flowGraph.CalculateLongestBuildPaths();
                 flowGraph.MarkLongestBuildPath();
             }

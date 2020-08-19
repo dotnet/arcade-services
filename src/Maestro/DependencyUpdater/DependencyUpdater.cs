@@ -240,8 +240,18 @@ namespace DependencyUpdater
 
                     if (flowGraph.Nodes.Count > 0)
                     {
+                        var edgesWithLastBuild = flowGraph.Edges
+                            .Where(e => e.Subscription.LastAppliedBuild != null);
+
+                        foreach (var edge in edgesWithLastBuild)
+                        {
+                            edge.IsToolingOnly = !Context.IsProductDependency(
+                                edge.Subscription.LastAppliedBuild.Id,
+                                edge.To.Repository,
+                                edge.To.Branch);
+                        }
+
                         flowGraph.MarkBackEdges();
-                        await flowGraph.MarkToolingEdges(RemoteFactory, Logger);
                         flowGraph.CalculateLongestBuildPaths();
                         flowGraph.MarkLongestBuildPath();
 

@@ -3,10 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -125,33 +123,6 @@ namespace Microsoft.DotNet.DarcLib
             foreach (var edge in unreachableEdges)
             {
                 RemoveEdge(edge);
-            }
-        }
-
-        public async Task MarkToolingEdges(IRemoteFactory remoteFactory, ILogger logger)
-        {
-            foreach (var edge in Edges)
-            {
-                var lastAppliedBuildId = edge.Subscription.LastAppliedBuild?.Id;
-                if (lastAppliedBuildId.HasValue)
-                {
-                    var remote = await remoteFactory.GetRemoteAsync(edge.To.Repository, logger);
-                    var sourceBuild = await remote.GetBuildAsync(lastAppliedBuildId.Value);
-                    var dependencies = await remote.GetDependenciesAsync(
-                        repoUri: edge.To.Repository,
-                        branchOrCommit: edge.To.Branch);
-
-                    var hasProductDependencies = dependencies
-                        .Where(dependency => dependency.Type == DependencyType.Product
-                            && sourceBuild.Assets.Any(asset => asset.Name == dependency.Name))
-                        .Any();
-
-                    edge.IsToolingOnly = !hasProductDependencies;
-                }
-                else
-                {
-                    edge.IsToolingOnly = false;
-                }
             }
         }
 

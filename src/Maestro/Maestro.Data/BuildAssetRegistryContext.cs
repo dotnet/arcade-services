@@ -352,6 +352,17 @@ FROM traverse;",
             }
             return dict.Values.ToList();
         }
+
+        public bool IsProductDependency(int buildId, string repositoryName, string branchName)
+        {
+            return BuildDependencies
+                .Any(d => d.IsProduct
+                    && d.DependentBuildId == buildId
+                    && ((d.Build.GitHubRepository == repositoryName
+                            && d.Build.GitHubBranch == branchName)
+                        || (d.Build.AzureDevOpsRepository == repositoryName
+                            && d.Build.AzureDevOpsBranch == branchName)));
+        }
     }
 
     public class SubscriptionUpdateHistoryEntry : UpdateHistoryEntry
