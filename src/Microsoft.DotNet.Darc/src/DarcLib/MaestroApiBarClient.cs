@@ -192,13 +192,13 @@ namespace Microsoft.DotNet.DarcLib
         {
             var fromNode = nodesById[flowEdge.FromId];
             var toNode = nodesById[flowEdge.ToId];
-            var subscription = subscriptionsById[Guid.Empty/*TODO: flowEdge.SubscriptionId*/];
+            var subscription = subscriptionsById[flowEdge.SubscriptionId];
             return new DependencyFlowEdge(fromNode, toNode, subscription)
             {
-                //TODO: BackEdge = flowEdge.BackEdge,
-                //TODO: IsToolingOnly = flowEdge.IsToolingOnly,
+                BackEdge = flowEdge.BackEdge,
+                IsToolingOnly = flowEdge.IsToolingOnly,
                 OnLongestBuildPath = flowEdge.OnLongestBuildPath,
-                //TODO: PartOfCycle = flowEdge.PartOfCycle
+                PartOfCycle = flowEdge.PartOfCycle
             };
         }
 

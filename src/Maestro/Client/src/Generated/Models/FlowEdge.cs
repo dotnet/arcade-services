@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Immutable;
+using System.Dynamic;
 using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Maestro.Client.Models
@@ -19,7 +20,19 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         [JsonProperty("fromId")]
         public string FromId { get; }
 
+        [JsonProperty("subscriptionId")]
+        public Guid SubscriptionId { get; set; } 
+
         [JsonProperty("onLongestBuildPath")]
         public bool OnLongestBuildPath { get; set; }
+
+        [JsonProperty("backEdge")]
+        public bool BackEdge { get; set; }
+
+        [JsonProperty("isToolingOnly")]
+        public bool IsToolingOnly { get; set; }
+
+        [JsonProperty("partOfCycle")]
+        public bool PartOfCycle { get; set; }
     }
 }
