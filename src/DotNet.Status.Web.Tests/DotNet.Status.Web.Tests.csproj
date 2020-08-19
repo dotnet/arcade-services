@@ -23,8 +23,6 @@
     <EmbeddedResource Include="Files\triage-items-with-multi-builds.body.txt" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AutoFixture" />
-    <PackageReference Include="AutoFixture.NUnit3" />
     <PackageReference Include="Moq" />
   </ItemGroup>
   <ItemGroup>
