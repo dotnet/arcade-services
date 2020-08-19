@@ -220,6 +220,25 @@ namespace Microsoft.DotNet.Darc
             return subInfo.ToString();
         }
 
+        public static string DependencyToString(DependencyDetail dependency)
+        {
+            StringBuilder dependencyBuilder = new StringBuilder();
+
+            dependencyBuilder.AppendLine($"Name:             {dependency.Name}");
+            dependencyBuilder.AppendLine($"Version:          {dependency.Version}");
+            dependencyBuilder.AppendLine($"Repo:             {dependency.RepoUri}");
+            dependencyBuilder.AppendLine($"Commit:           {dependency.Commit}");
+            dependencyBuilder.AppendLine($"Type:             {dependency.Type}");
+            dependencyBuilder.AppendLine($"Pinned:           {dependency.Pinned}");
+
+            if (!string.IsNullOrEmpty(dependency.CoherentParentDependencyName))
+            {
+                dependencyBuilder.AppendLine($"Coherent Parent:  {dependency.CoherentParentDependencyName}");
+            }
+
+            return dependencyBuilder.ToString();
+        }
+
         public static string GetSimpleRepoName(string repoUri)
         {
             int lastSlash = repoUri.LastIndexOf("/");

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Maestro.ScenarioTests.ObjectHelpers;
@@ -14,19 +15,6 @@ namespace Maestro.ScenarioTests
     {
         private TestParameters _parameters;
 
-        private string repo1Name = "maestro-test1";
-        private string repo2Name = "maestro-test2";
-        private string repo3Name = "marstro-test3";
-        private string channel1Name = "subscriptionTestChannel1";
-        private string channel2Name = "subscriptionTestChannel2";
-
-        [SetUp]
-        public async Task InitializeAsync()
-        {
-            _parameters = await TestParameters.GetAsync();
-            SetTestParameters(_parameters);
-        }
-
         [TearDown]
         public Task DisposeAsync()
         {
@@ -38,12 +26,18 @@ namespace Maestro.ScenarioTests
         public async Task Subscriptions_EndToEnd()
         {
             TestContext.WriteLine("Subscription management tests...");
+            string repo1Name = TestRepository.TestRepo1Name;
+            string repo2Name = TestRepository.TestRepo2Name;
+            string channel1Name = $"SubscriptionEndToEnd_TestChannel1_{Environment.MachineName}";
+            string channel2Name = $"SubscriptionEndToEnd_TestChannel2_{Environment.MachineName}";
+
+            _parameters = await TestParameters.GetAsync();
+            SetTestParameters(_parameters);
 
             string repo1Uri = GetRepoUrl(repo1Name);
             string repo2Uri = GetRepoUrl(repo2Name);
-            string repo3Uri = GetRepoUrl(repo3Name);
             string repo1AzDoUri = GetAzDoRepoUrl(repo1Name);
-            string targetBranch = "master";
+            string targetBranch = $"SubscriptionEndToEnd_TargetBranch_{Environment.MachineName}";
 
             TestContext.WriteLine($"Creating channels {channel1Name} and {channel2Name}");
             await using (AsyncDisposableValue<string> channel1 = await CreateTestChannelAsync(channel1Name).ConfigureAwait(false))
@@ -138,7 +132,7 @@ namespace Maestro.ScenarioTests
                     // Should fail, merge policies are set separately for batched subs
                     TestContext.WriteLine("Attempt to create a batchable subscription with merge policies");
                     Assert.ThrowsAsync<MaestroTestException>(async () =>
-                        await CreateSubscriptionAsync(channel1Name, repo1Name, repo2Name, "master", "none", additionalOptions: new List<string> { "--standard-automerge", "--batchable" }),
+                        await CreateSubscriptionAsync(channel1Name, repo1Name, repo2Name, targetBranch, "none", additionalOptions: new List<string> { "--standard-automerge", "--batchable" }),
                         "Attempt to create a batchable subscription with merge policies");
 
                     // Create a batchable subscription
@@ -166,7 +160,7 @@ namespace Maestro.ScenarioTests
                     Channel: {channel1Name}
                     Source Repository URL: {repo1Uri}
                     Target Repository URL: {repo2Uri}
-                    Target Branch: master
+                    Target Branch: {targetBranch}
                     Update Frequency: everyWeek
                     Batchable: False
                     Merge Policies:
@@ -196,7 +190,7 @@ namespace Maestro.ScenarioTests
                     Channel: {channel1Name}
                     Source Repository URL: {repo1Uri}
                     Target Repository URL: {repo2Uri}
-                    Target Branch: master
+                    Target Branch: {targetBranch}
                     Update Frequency: everyweek
                     Batchable: False
                     Merge Policies:
@@ -225,7 +219,7 @@ namespace Maestro.ScenarioTests
                     Channel: {channel1Name}
                     Source Repository URL: {repo1Uri}
                     Target Repository URL: {repo2Uri}
-                    Target Branch: master
+                    Target Branch: {targetBranch}
                     Update Frequency: everyweek
                     Batchable: False
                     Merge Policies:
@@ -257,7 +251,6 @@ namespace Maestro.ScenarioTests
                     await DeleteSubscriptionById(yamlSubscription3Id.Value);
 
                     TestContext.WriteLine("End of test case. Starting clean up.");
-
                 }
             }
         }
