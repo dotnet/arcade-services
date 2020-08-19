@@ -1,10 +1,12 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
+
 using System.Reflection;
 using Maestro.Data;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -54,12 +56,15 @@ namespace DependencyUpdateErrorProcessor
                         var logger = provider.GetRequiredService<ILoggerProvider>().CreateLogger(nameof(Program));
                         // Logging statement is added to track the feature flag returns. 
                         logger.LogError(
-                            $"Value of the dependency update error processor feature flag '{config["EnableDependencyUpdateErrorProcessor"]}'");
+                            $"Value of the dependency update error processor feature flag '{config["EnableDependencyUpdateErrorProcessor"]}'"
+                        );
                     }
+
                     options.IsEnabled = errorProcessorFlag;
                     options.GithubUrl = config["GithubUrl"];
                     options.FyiHandle = config["FyiHandle"];
-                });
+                }
+            );
             services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
         }

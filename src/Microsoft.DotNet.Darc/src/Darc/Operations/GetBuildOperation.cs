@@ -38,8 +38,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 List<Build> matchingBuilds = null;
                 if (_options.Id != 0)
                 {
-                    if (!string.IsNullOrEmpty(_options.BuildUri) ||
-                        !string.IsNullOrEmpty(_options.Repo) ||
+                    if (!string.IsNullOrEmpty(_options.Repo) ||
                         !string.IsNullOrEmpty(_options.Commit))
                     {
                         Console.WriteLine("--id should not be used with other options.");
@@ -48,17 +47,6 @@ namespace Microsoft.DotNet.Darc.Operations
 
                     matchingBuilds = new List<Build>() { await remote.GetBuildAsync(_options.Id) };
                 }
-                else if (!string.IsNullOrEmpty(_options.BuildUri))
-                {
-                    if (_options.Id != 0 || !string.IsNullOrEmpty(_options.Repo) || !string.IsNullOrEmpty(_options.Commit))
-                    {
-                        Console.WriteLine("--uri should not be used with other options.");
-                        return Constants.ErrorCode;
-                    }
-
-                    Console.WriteLine("This option is not yet supported.");
-                    return Constants.ErrorCode;
-                }
                 else if (!string.IsNullOrEmpty(_options.Repo) || !string.IsNullOrEmpty(_options.Commit))
                 {
                     if (string.IsNullOrEmpty(_options.Repo) != string.IsNullOrEmpty(_options.Commit))
@@ -66,13 +54,17 @@ namespace Microsoft.DotNet.Darc.Operations
                         Console.WriteLine("--repo and --commit should be used together.");
                         return Constants.ErrorCode;
                     }
-                    else if (_options.Id != 0 || !string.IsNullOrEmpty(_options.BuildUri))
-                    {
-                        Console.WriteLine("--repo and --commit should not be used with other options.");
-                        return Constants.ErrorCode;
-                    }
+                    var subscriptions = await remote.GetSubscriptionsAsync();
+                    var possibleRepos = subscriptions
+                        .SelectMany(subscription => new List<string> { subscription.SourceRepository, subscription.TargetRepository })
+                        .Where(r => r.Contains(_options.Repo, StringComparison.OrdinalIgnoreCase))
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-                    matchingBuilds = (await remote.GetBuildsAsync(_options.Repo, _options.Commit)).ToList();
+                    matchingBuilds = new List<Build>();
+                    foreach (string repo in possibleRepos)
+                    {
+                        matchingBuilds.AddRange(await remote.GetBuildsAsync(repo, _options.Commit));
+                    }
                 }
                 else
                 {

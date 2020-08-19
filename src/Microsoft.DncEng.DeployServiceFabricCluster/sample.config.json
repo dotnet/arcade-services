@@ -1,54 +1,52 @@
 {
   "$comment": "This is an example config",
 
-  "KeyVaultUri": "https://maestroint.vault.azure.net/",
-  "Name": "maestro-test",
+  "KeyVaultUri": "https://helixtest.vault.azure.net/",
+  "Name": "helix-test-1",
   "Location": "westus2",
-  "ResourceGroup": "maestro-test-cluster",
+  "ResourceGroup": "helix-test-cluster",
   "SubscriptionId": "cab65fc3-d077-467d-931f-3932eabf36d3",
-  "AdminUsername": "dotnetbot",
-  "AdminPassword": "[vault(maestro-test-admin-password)]",
-  "CertificateCommonName": "maestro-test.westus2.cloudapp.azure.com",
-  "AdminClientCertificateCommonName": "maestro-test.westus2.cloudapp.azure.com",
-  "AdminClientCertificateIssuerThumbprint": "8a38755d0996823fe8fa3116a277ce446eac4e99",
-  "CertificateSourceVaultId": "/subscriptions/cab65fc3-d077-467d-931f-3932eabf36d3/resourceGroups/maestro/providers/Microsoft.KeyVault/vaults/maestroint",
-  "CertificateUrls": [
-    "https://maestroint.vault.azure.net:443/secrets/maestro-test-westus2-cloudapp-azure-com/5e1da438fcfc46dbba05ac4a0d48aa2c"
+  "ClusterIndex": 1,
+
+  "Gateway": {
+    "Name": "helix-test",
+    "ResourceGroup": "helix-test"
+  },
+  "VNet": {
+    "Name": "helix-test-vnet",
+    "ResourceGroup": "helix-test"
+  },
+  "CertificateSourceVault": {
+    "ResourceGroup": "helix-gateway-test",
+    "Name": "helixtest"
+  },
+  "SslCertificateCommonName": "helix-test-1.westus2.cloudapp.azure.com",
+  "Certificates": [
+    "helix-test-1-westus2-cloudapp-azure-com"
   ],
+
+  "AdminClientCertificateCommonName": "helix-client.westus2.cloudapp.azure.com",
+  "AdminClientCertificateIssuerThumbprint": "417e225037fbfaa4f95761d5ae729e1aea7e3a42",
+
+  "AdminUsername": "dotnetbot",
+  "AdminPassword": "",
+
   "NodeTypes": [
     {
       "Name": "Primary",
       "InstanceCount": 5,
-      "UserAssignedIdentityId": null,
-      "Endpoints": [
-        {
-          "ExternalPort": 443,
-          "InternalPort": 4430
-        }
+      "UserAssignedIdentity": {
+        "Name": "HelixTest-Identity",
+        "ResourceGroup": "helix-gateway-test"
+      },
+      "Ports": [
+        8080
       ],
       "Sku": "Standard_D8s_v3",
       "VmImage": {
         "Publisher": "MicrosoftWindowsServer",
         "Offer": "WindowsServer",
-        "Sku": "2016-Datacenter",
-        "Version": "latest"
-      }
-    },
-    {
-      "Name": "Secondary",
-      "InstanceCount": 3,
-      "UserAssignedIdentityId": null,
-      "Endpoints": [
-        {
-          "ExternalPort": 8080,
-          "InternalPort": 8080
-        }
-      ],
-      "Sku": "Standard_D8s_v3",
-      "VmImage": {
-        "Publisher": "MicrosoftWindowsServer",
-        "Offer": "WindowsServer",
-        "Sku": "2016-Datacenter",
+        "Sku": "2019-Datacenter",
         "Version": "latest"
       }
     }
