@@ -89,7 +89,7 @@ namespace Maestro.ScenarioTests
                 TestContext.WriteLine($"Starting check for merge, attempts remaining {attempts}");
                 pr = await GitHubApi.PullRequest.Get(repo.Id, pr.Number);
 
-                if (pr.State == ItemState.Closed)
+                if (pr.Merged == true)
                 {
                     return true;
                 }
@@ -155,44 +155,6 @@ namespace Maestro.ScenarioTests
 
                     await WaitForMergedPullRequestAsync(targetRepoName, targetBranch);
                 }
-            }
-        }
-
-        public async Task CheckBatchedAzDoPullRequest(string source1RepoName, string source2RepoName, string targetRepoName, string targetBranch,
-            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete = false)
-        {
-            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{source1RepoName} {_parameters.GitHubTestOrg}/{source2RepoName}";
-            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, false);
-        }
-
-        public async Task CheckNonBatchedAzDoPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
-            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false)
-        {
-            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.GitHubTestOrg}/{sourceRepoName}";
-            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated);
-        }
-
-        public async Task CheckAzDoPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
-            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated)
-        {
-            string targetRepoUri = GetAzDoRepoUrl(targetRepoName);
-            TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
-            Microsoft.DotNet.DarcLib.PullRequest pullRequest = await WaitForAzDoPullRequestAsync(targetRepoUri, targetBranch);
-
-            StringAssert.AreEqualIgnoringCase(expectedPRTitle, pullRequest.Title);
-
-            if (isUpdated)
-            {
-                await ValidatePullRequestDependencies(targetRepoName, targetBranch, expectedDependencies);
-            }
-
-            Microsoft.DotNet.DarcLib.PrStatus expectedPRState = isCompleted ? Microsoft.DotNet.DarcLib.PrStatus.Closed : Microsoft.DotNet.DarcLib.PrStatus.Open;
-            var prStatus = AzDoClient.GetPullRequestStatusAsync(targetRepoUri);
-            Assert.AreEqual(expectedPRState, prStatus);
-
-            using (ChangeDirectory(repoDirectory))
-            {
-                await ValidatePullRequestDependencies(targetRepoName, pullRequest.BaseBranch, expectedDependencies);
             }
         }
 
@@ -374,7 +336,7 @@ namespace Maestro.ScenarioTests
                 "--target-repo", targetUrl,
                 "--target-branch", targetBranch,
                 "--update-frequency", updateFrequency,
-                trigger?"--trigger":"--no-trigger"};
+                trigger? "--trigger" : "--no-trigger"};
 
             if (additionalOptions != null)
             {
@@ -632,7 +594,6 @@ namespace Maestro.ScenarioTests
         public async Task DeleteBranchAsync(string branchName)
         {
             await RunGitAsync("push", "origin", "--delete", branchName);
-
         }
 
         internal IImmutableList<AssetData> GetAssetData(string asset1Name, string asset1Version, string asset2Name, string asset2Version)
@@ -647,11 +608,15 @@ namespace Maestro.ScenarioTests
             return ImmutableList.Create(asset1, asset2);
         }
 
-        internal AssetData GetAssetDataWithLocations(string assetName, string assetVersion,
-            string assetLocation1, LocationType assetLocationType1,
-            string assetLocation2 = null, LocationType assetLocationType2 = LocationType.None)
+        internal AssetData GetAssetDataWithLocations(
+            string assetName, 
+            string assetVersion,
+            string assetLocation1, 
+            LocationType assetLocationType1,
+            string assetLocation2 = null, 
+            LocationType assetLocationType2 = LocationType.None)
         {
-           var locationsListBuilder = ImmutableList.CreateBuilder<AssetLocationData>();
+            var locationsListBuilder = ImmutableList.CreateBuilder<AssetLocationData>();
 
             AssetLocationData location1 = new AssetLocationData(assetLocationType1)
             { Location = assetLocation1 };

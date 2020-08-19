@@ -1,6 +1,7 @@
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -198,7 +199,7 @@ namespace Maestro.ScenarioTests
 
                                     if (isAzDoTest)
                                     {
-                                        await CheckBatchedAzDoPullRequest(source1RepoName, source2RepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory);
+                                        throw new NotImplementedException("AzDo Flow Tests are not part of the scope for this change.");
                                     }
                                     else
                                     {
@@ -277,7 +278,7 @@ namespace Maestro.ScenarioTests
                             {
                                 if (isAzDoTest)
                                 {
-                                    await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1, reposFolder.Directory, isCompleted: true, isUpdated: false);
+                                    throw new NotImplementedException("AzDo Flow Tests are not part of the scope for this change.");
                                 }
                                 else
                                 {
@@ -307,7 +308,7 @@ namespace Maestro.ScenarioTests
                             TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
                             if (isAzDoTest)
                             {
-                                await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1Updated, reposFolder.Directory);
+                                throw new NotImplementedException("AzDo Flow Tests are not part of the scope for this change.");
                             }
                             else
                             {
@@ -325,7 +326,7 @@ namespace Maestro.ScenarioTests
 
                             if (isAzDoTest)
                             {
-                                await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1Updated, reposFolder.Directory);
+                                throw new NotImplementedException("AzDo Flow Tests are not part of the scope for this change.");
                             }
                             else
                             {
