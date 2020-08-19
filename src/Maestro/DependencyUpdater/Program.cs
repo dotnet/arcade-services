@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using Maestro.AzureDevOps;
-using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.DataProviders;
 using Microsoft.DncEng.Configuration.Extensions;
@@ -15,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
-using Microsoft.DotNet.Internal.Logging;
+using Microsoft.DotNet.Internal.DependencyInjection;
 
 namespace DependencyUpdater
 {
@@ -50,18 +49,16 @@ namespace DependencyUpdater
                         .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
                         ?.InformationalVersion);
             });
-            services.Configure<GitHubTokenProviderOptions>(
-                (options, provider) =>
-                {
-                    var config = provider.GetRequiredService<IConfiguration>();
-                    IConfigurationSection section = config.GetSection("GitHub");
-                    section.Bind(options);
-                });
+            services.Configure<GitHubTokenProviderOptions>((options, provider) =>
+            {
+                var config = provider.GetRequiredService<IConfiguration>();
+                IConfigurationSection section1 = config.GetSection("GitHub");
+                section1.Bind(options);
+            });
             services.AddGitHubTokenProvider();
 
             services.AddAzureDevOpsTokenProvider();
-            services.Configure<AzureDevOpsTokenProviderOptions>(
-                (options, provider) =>
+            services.Configure<AzureDevOpsTokenProviderOptions>((options, provider) =>
                 {
                     var config = provider.GetRequiredService<IConfiguration>();
                     var tokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();

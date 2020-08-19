@@ -34,6 +34,7 @@
     <None Include="ApplicationInsights.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\CoreHealthMonitor\CoreHealthMonitor.csproj" />
     <ProjectReference Include="..\DependencyUpdateErrorProcessor\DependencyUpdateErrorProcessor.csproj" />
     <ProjectReference Include="..\DependencyUpdater\DependencyUpdater.csproj" />
     <ProjectReference Include="..\FeedCleanerService\FeedCleanerService.csproj" />
