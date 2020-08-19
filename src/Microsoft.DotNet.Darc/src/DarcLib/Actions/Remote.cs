@@ -1353,6 +1353,34 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///   Gets dependency flow graph for given channel.
+        /// </summary>
+        /// <param name="channelId">Channel ID</param>
+        /// <param name="days">Number of days over which the build times will be summarized</param>
+        /// <param name="includeArcade">Should arcade be included in generated graph</param>
+        /// <param name="includeBuildTimes">Should build times be calculated for each node</param>
+        /// <param name="includeDisabledSubscriptions">Should disabled subscriptions be included in the graph</param>
+        /// <param name="includedFrequencies">Include only subscription with specified frequencies. Leave null or empty to include all</param>
+        /// <returns>Dependency flow graph for given channel</returns>
+        public async Task<DependencyFlowGraph> GetDependencyFlowGraph(
+            int channelId,
+            int days,
+            bool includeArcade,
+            bool includeBuildTimes,
+            bool includeDisabledSubscriptions,
+            IReadOnlyList<string> includedFrequencies)
+        {
+            CheckForValidBarClient();
+            return await _barClient.GetDependencyFlowGraph(
+                channelId,
+                days,
+                includeArcade,
+                includeBuildTimes,
+                includeDisabledSubscriptions,
+                includedFrequencies);
+        }
+
+        /// <summary>
         ///     Called prior to operations requiring the BAR.  Throws if a bar client isn't available.
         /// </summary>
         private void CheckForValidBarClient()

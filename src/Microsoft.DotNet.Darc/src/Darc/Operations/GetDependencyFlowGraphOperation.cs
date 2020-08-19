@@ -93,6 +93,14 @@ namespace Microsoft.DotNet.Darc.Operations
                     flowGraph.MarkLongestBuildPath();
                 }
 
+                var flowGraphFromApi = await barOnlyRemote.GetDependencyFlowGraph(
+                    targetChannel.Id,
+                    _options.Days,
+                    includeArcade: true,
+                    includeBuildTimes: _options.IncludeBuildTimes,
+                    includeDisabledSubscriptions: _options.IncludeDisabledSubscriptions,
+                    includedFrequencies: _options.IncludedFrequencies?.ToList());
+
                 await LogGraphVizAsync(targetChannel, flowGraph, _options.IncludeBuildTimes);
 
                 return Constants.SuccessCode;

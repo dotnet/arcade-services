@@ -150,6 +150,58 @@ namespace Microsoft.DotNet.DarcLib
             return _barClient.Channels.DeleteChannelAsync(id);
         }
 
+        public async Task<DependencyFlowGraph> GetDependencyFlowGraph(
+            int channelId,
+            int days,
+            bool includeArcade,
+            bool includeBuildTimes,
+            bool includeDisabledSubscriptions,
+            IReadOnlyList<string> includedFrequencies)
+        {
+            var flowGraph = await _barClient.Channels.GetFlowGraphAsyncAsync(
+                channelId: channelId,
+                days: days,
+                includeArcade: includeArcade,
+                includeBuildTimes: includeBuildTimes,
+                includeDisabledSubscriptions: includeDisabledSubscriptions,
+                includedFrequencies: includedFrequencies?.ToImmutableList());
+
+            // TODO: Do we need all subscription or only the ones for "channel"?
+            var subscriptions = await _barClient.Subscriptions.ListSubscriptionsAsync();
+            var subscriptionsById = subscriptions.ToDictionary(s => s.Id);
+
+            var nodes = flowGraph.FlowRefs.Select(ToDependencyFlowNode).ToList();
+            var nodesById = nodes.ToImmutableDictionary(n => n.Id);
+
+            var edges = flowGraph.FlowEdges
+                .Select(edge => ToDependencyFlowEdge(edge, nodesById, subscriptionsById))
+                .ToList();
+
+            return new DependencyFlowGraph(nodes, edges);
+        }
+
+        private static DependencyFlowNode ToDependencyFlowNode(FlowRef flowRef)
+        {
+            return new DependencyFlowNode(flowRef.Repository, flowRef.Branch, flowRef.Id);
+        }
+
+        private DependencyFlowEdge ToDependencyFlowEdge(
+            FlowEdge flowEdge,
+            IReadOnlyDictionary<string, DependencyFlowNode> nodesById,
+            IReadOnlyDictionary<Guid, Subscription> subscriptionsById)
+        {
+            var fromNode = nodesById[flowEdge.FromId];
+            var toNode = nodesById[flowEdge.ToId];
+            var subscription = subscriptionsById[Guid.Empty/*TODO: flowEdge.SubscriptionId*/];
+            return new DependencyFlowEdge(fromNode, toNode, subscription)
+            {
+                //TODO: BackEdge = flowEdge.BackEdge,
+                //TODO: IsToolingOnly = flowEdge.IsToolingOnly,
+                OnLongestBuildPath = flowEdge.OnLongestBuildPath,
+                //TODO: PartOfCycle = flowEdge.PartOfCycle
+            };
+        }
+
         #endregion
 
         #region Subscription Operations

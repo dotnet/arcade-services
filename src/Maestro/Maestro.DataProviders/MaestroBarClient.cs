@@ -131,6 +131,18 @@ namespace Maestro.DataProviders
                 other.Classification);
         }
 
+        public Task<DependencyFlowGraph> GetDependencyFlowGraph(
+            int channelId,
+            int days,
+            bool includeArcade,
+            bool includeBuildTimes,
+            bool includeDisabledSubscriptions,
+            IReadOnlyList<string> includedFrequencies)
+        {
+            // TODO: Maestro.DataProviders.MaestroBarClient.GetDependencyFlowGraph
+            throw new NotImplementedException();
+        }
+
         public Task<Build> GetLatestBuildAsync(string repoUri, int channelId)
         {
             throw new NotImplementedException();

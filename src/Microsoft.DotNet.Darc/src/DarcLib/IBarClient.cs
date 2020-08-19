@@ -182,6 +182,14 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         Task<IEnumerable<Channel>> GetChannelsAsync(string classification = null);
 
+        Task<DependencyFlowGraph> GetDependencyFlowGraph(
+            int channelId,
+            int days,
+            bool includeArcade,
+            bool includeBuildTimes,
+            bool includeDisabledSubscriptions,
+            IReadOnlyList<string> includedFrequencies = default);
+
         #endregion
 
         #region Build/Asset Operations
