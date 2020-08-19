@@ -619,32 +619,6 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-
-            if (channelId == default(int))
-            {
-                throw new ArgumentNullException(nameof(channelId));
-            }
-
-            if (days == default(int))
-            {
-                throw new ArgumentNullException(nameof(days));
-            }
-
-            if (includeArcade == default(bool))
-            {
-                throw new ArgumentNullException(nameof(includeArcade));
-            }
-
-            if (includeBuildTimes == default(bool))
-            {
-                throw new ArgumentNullException(nameof(includeBuildTimes));
-            }
-
-            if (includeDisabledSubscriptions == default(bool))
-            {
-                throw new ArgumentNullException(nameof(includeDisabledSubscriptions));
-            }
-
             const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;

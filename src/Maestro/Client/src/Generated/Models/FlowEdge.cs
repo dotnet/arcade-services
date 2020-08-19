@@ -34,6 +34,6 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public bool IsToolingOnly { get; set; }
 
         [JsonProperty("partOfCycle")]
-        public bool PartOfCycle { get; set; }
+        public bool? PartOfCycle { get; set; }
     }
 }
