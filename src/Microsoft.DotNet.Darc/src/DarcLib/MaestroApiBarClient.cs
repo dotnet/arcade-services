@@ -166,7 +166,6 @@ namespace Microsoft.DotNet.DarcLib
                 includeDisabledSubscriptions: includeDisabledSubscriptions,
                 includedFrequencies: includedFrequencies?.ToImmutableList());
 
-            // TODO: Do we need all subscription or only the ones for "channel"?
             var subscriptions = await _barClient.Subscriptions.ListSubscriptionsAsync();
             var subscriptionsById = subscriptions.ToDictionary(s => s.Id);
 
