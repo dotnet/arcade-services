@@ -26,6 +26,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         [JsonProperty("onLongestBuildPath")]
         public bool OnLongestBuildPath { get; set; }
 
+        // TODO: This is explicitly ignored in Maestro API, should we return it?
         [JsonProperty("backEdge")]
         public bool BackEdge { get; set; }
 

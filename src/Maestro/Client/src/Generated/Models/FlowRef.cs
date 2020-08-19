@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using Newtonsoft.Json;
 
@@ -45,5 +46,11 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 
         [JsonProperty("goalTimeInMinutes")]
         public int GoalTimeInMinutes { get; set; }
+
+        [JsonProperty("inputChannels")]
+        public HashSet<string> InputChannels { get; set; }
+
+        [JsonProperty("outputChannels")]
+        public HashSet<string> OutputChannels { get; set; }
     }
 }

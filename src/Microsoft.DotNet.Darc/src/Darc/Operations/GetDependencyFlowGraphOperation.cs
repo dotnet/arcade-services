@@ -37,35 +37,35 @@ namespace Microsoft.DotNet.Darc.Operations
                 RemoteFactory remoteFactory = new RemoteFactory(_options);
                 var barOnlyRemote = await remoteFactory.GetBarOnlyRemoteAsync(Logger);
 
-                Channel engLatestChannel = await barOnlyRemote.GetChannelAsync(engLatestChannelId);
-                Channel eng3Channel = await barOnlyRemote.GetChannelAsync(eng3ChannelId);
+                //Channel engLatestChannel = await barOnlyRemote.GetChannelAsync(engLatestChannelId);
+                //Channel eng3Channel = await barOnlyRemote.GetChannelAsync(eng3ChannelId);
 
-                List<DefaultChannel> defaultChannels = (await barOnlyRemote.GetDefaultChannelsAsync()).ToList();
-                if (engLatestChannel != null)
-                {
-                    defaultChannels.Add(
-                        new DefaultChannel(0, "https://github.com/dotnet/arcade", true)
-                        {
-                            Branch = "master",
-                            Channel = engLatestChannel
-                        }
-                    );
-                }
-                if (eng3Channel != null)
-                {
-                    defaultChannels.Add(
-                        new DefaultChannel(0, "https://github.com/dotnet/arcade", true)
-                        {
-                            Branch = "release/3.x",
-                            Channel = eng3Channel
-                        }
-                    );
-                }
-                List<Subscription> subscriptions = (await barOnlyRemote.GetSubscriptionsAsync()).ToList();
+                //List<DefaultChannel> defaultChannels = (await barOnlyRemote.GetDefaultChannelsAsync()).ToList();
+                //if (engLatestChannel != null)
+                //{
+                //    defaultChannels.Add(
+                //        new DefaultChannel(0, "https://github.com/dotnet/arcade", true)
+                //        {
+                //            Branch = "master",
+                //            Channel = engLatestChannel
+                //        }
+                //    );
+                //}
+                //if (eng3Channel != null)
+                //{
+                //    defaultChannels.Add(
+                //        new DefaultChannel(0, "https://github.com/dotnet/arcade", true)
+                //        {
+                //            Branch = "release/3.x",
+                //            Channel = eng3Channel
+                //        }
+                //    );
+                //}
+                //List<Subscription> subscriptions = (await barOnlyRemote.GetSubscriptionsAsync()).ToList();
 
-                // Build, then prune out what we don't want to see if the user specified
-                // channels.
-                DependencyFlowGraph flowGraph = await DependencyFlowGraph.BuildAsync(defaultChannels, subscriptions, barOnlyRemote, _options.Days);
+                //// Build, then prune out what we don't want to see if the user specified
+                //// channels.
+                //DependencyFlowGraph flowGraph = await DependencyFlowGraph.BuildAsync(defaultChannels, subscriptions, barOnlyRemote, _options.Days);
 
                 Channel targetChannel = null;
                 if (!string.IsNullOrEmpty(_options.Channel))
@@ -78,23 +78,23 @@ namespace Microsoft.DotNet.Darc.Operations
                     }
                 }
 
-                if (targetChannel != null)
-                {
-                    flowGraph.PruneGraph(
-                        node => DependencyFlowGraph.IsInterestingNode(targetChannel.Name, node), 
-                        edge => DependencyFlowGraph.IsInterestingEdge(edge, _options.IncludeDisabledSubscriptions, _options.IncludedFrequencies));
-                }
+                //if (targetChannel != null)
+                //{
+                //    flowGraph.PruneGraph(
+                //        node => DependencyFlowGraph.IsInterestingNode(targetChannel.Name, node), 
+                //        edge => DependencyFlowGraph.IsInterestingEdge(edge, _options.IncludeDisabledSubscriptions, _options.IncludedFrequencies));
+                //}
 
-                if (_options.IncludeBuildTimes)
-                {
-                    flowGraph.MarkBackEdges();
-                    await flowGraph.MarkToolingEdges(remoteFactory, Logger);
-                    flowGraph.CalculateLongestBuildPaths();
-                    flowGraph.MarkLongestBuildPath();
-                }
+                //if (_options.IncludeBuildTimes)
+                //{
+                //    flowGraph.MarkBackEdges();
+                //    await flowGraph.MarkToolingEdges(remoteFactory, Logger);
+                //    flowGraph.CalculateLongestBuildPaths();
+                //    flowGraph.MarkLongestBuildPath();
+                //}
 
-                var flowGraphFromApi = await barOnlyRemote.GetDependencyFlowGraph(
-                    targetChannel.Id,
+                var flowGraph = await barOnlyRemote.GetDependencyFlowGraph(
+                    targetChannel?.Id ?? 0,
                     _options.Days,
                     includeArcade: true,
                     includeBuildTimes: _options.IncludeBuildTimes,

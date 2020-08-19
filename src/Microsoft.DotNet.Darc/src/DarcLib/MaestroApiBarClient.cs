@@ -177,12 +177,28 @@ namespace Microsoft.DotNet.DarcLib
                 .Select(edge => ToDependencyFlowEdge(edge, nodesById, subscriptionsById))
                 .ToList();
 
+            foreach (var edge in edges)
+            {
+                edge.From.OutgoingEdges.Add(edge);
+                edge.To.IncomingEdges.Add(edge);
+            }
+
             return new DependencyFlowGraph(nodes, edges);
         }
 
         private static DependencyFlowNode ToDependencyFlowNode(FlowRef flowRef)
         {
-            return new DependencyFlowNode(flowRef.Repository, flowRef.Branch, flowRef.Id);
+            return new DependencyFlowNode(flowRef.Repository, flowRef.Branch, flowRef.Id)
+            {
+                BestCasePathTime = flowRef.BestCasePathTime,
+                GoalTimeInMinutes = flowRef.GoalTimeInMinutes,
+                InputChannels = flowRef.InputChannels,
+                OfficialBuildTime = flowRef.OfficialBuildTime,
+                OnLongestBuildPath = flowRef.OnLongestBuildPath,
+                OutputChannels = flowRef.OutputChannels,
+                PrBuildTime = flowRef.PrBuildTime,
+                WorstCasePathTime = flowRef.WorstCasePathTime
+            };
         }
 
         private DependencyFlowEdge ToDependencyFlowEdge(
