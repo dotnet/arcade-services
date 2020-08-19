@@ -95,7 +95,7 @@ namespace Maestro.ScenarioTests
         {
             return TestHelpers.RunExecutableAsyncWithInput(_parameters.DarcExePath, input, args.Concat(new[]
             {
-                "--p", _parameters.MaestroToken,
+                "-p", _parameters.MaestroToken,
                 "--bar-uri", _parameters.MaestroBaseUri,
                 "--github-pat", _parameters.GitHubToken,
                 "--azdev-pat", _parameters.AzDoToken,
@@ -106,7 +106,7 @@ namespace Maestro.ScenarioTests
         {
             return TestHelpers.RunExecutableAsync(_parameters.DarcExePath, args.Concat(new[]
             {
-                "--p", _parameters.MaestroToken,
+                "-p", _parameters.MaestroToken,
                 "--bar-uri", _parameters.MaestroBaseUri,
                 "--github-pat", _parameters.GitHubToken,
                 "--azdev-pat", _parameters.AzDoToken,

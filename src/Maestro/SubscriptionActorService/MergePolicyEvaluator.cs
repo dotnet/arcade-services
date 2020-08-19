@@ -20,12 +20,12 @@ namespace SubscriptionActorService
 
         public MergePolicyEvaluator(IEnumerable<IMergePolicyBuilder> mergePolicies, OperationManager operations, ILogger<MergePolicyEvaluator> logger)
         {
-            MergePolicieBuilders = mergePolicies.ToImmutableDictionary(p => p.Name);
+            MergePolicyBuilders = mergePolicies.ToImmutableDictionary(p => p.Name);
             Logger = logger;
             _operations = operations;
         }
 
-        public IImmutableDictionary<string, IMergePolicyBuilder> MergePolicieBuilders { get; }
+        public IImmutableDictionary<string, IMergePolicyBuilder> MergePolicyBuilders { get; }
         public ILogger<MergePolicyEvaluator> Logger { get; }
 
         public async Task<MergePolicyEvaluationResults> EvaluateAsync(
@@ -36,7 +36,7 @@ namespace SubscriptionActorService
             var results = new List<MergePolicyEvaluationResult>();
             foreach (MergePolicyDefinition definition in policyDefinitions)
             {
-                if (MergePolicieBuilders.TryGetValue(definition.Name, out IMergePolicyBuilder policyBuilder))
+                if (MergePolicyBuilders.TryGetValue(definition.Name, out IMergePolicyBuilder policyBuilder))
                 {
                     using var oDef = _operations.BeginOperation("Evaluating Merge Definition {policyName}", definition.Name);
                     var policies = await policyBuilder.BuildMergePoliciesAsync(new MergePolicyProperties(definition.Properties), pr);
