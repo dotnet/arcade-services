@@ -17,6 +17,6 @@
   },
   "readOnly": false,
   "secureJsonData": {
-    "appInsightsApiKey": "[vault(status-app-insights-api-key)]"
+    "appInsightsApiKey": "[vault(dotneteng-status-app-insights-api-key)]"
   }
 }
