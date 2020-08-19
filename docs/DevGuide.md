@@ -24,6 +24,7 @@
     1. 
         - Repository: https://github.com/maestro-auth-test/maestro-test3
         - Installation Id: 289474
+1. Run `.\Build.cmd -pack` at the root of the repo
 1. Install ngrok from  https://ngrok.com/ or `choco install ngrok`
 1. (optional - when darc is used) Run `ngrok http 8080` and then use the reported ngrok url for the --bar-uri darc argument
 
@@ -38,6 +39,16 @@ Maestro.Web uses Azure AppConfiguration (AAC) to dynamically enable/disable auto
 - https://docs.microsoft.com/en-us/azure/azure-app-configuration/overview
 - https://zimmergren.net/introduction-azure-app-configuration-store-csharp-dotnetcore/
 - https://docs.microsoft.com/en-us/azure/azure-app-configuration/howto-integrate-azure-managed-service-identity
+
+## Running scenario tests against a local cluster
+
+If you want to run the C# scenario tests (make sure that you followed the getting started steps beforehands), you will need to setup some variable environments:
+
+   1. GITHUB_TOKEN : Get a github PAT
+   1. MAESTRO_TOKEN : Get a maestro bearer token (you can create one after running maestro app)
+   1. DARC_PACKAGE_SOURCE : Get the path to the darc nugget package (which would be in `arcade-services\artifacts\packages\Debug\NonShipping\`)
+   1. MAESTRO_BASEURI : Run ngrok and get the https url
+    
 
 ## Troubleshooting
 

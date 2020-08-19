@@ -39,7 +39,7 @@ namespace Microsoft.DotNet.Internal.Health
 
         private class ServiceWrapper<T> : IServiceHealthReporter<T>
         {
-            private IServiceHealthReporter<T> _impl;
+            private readonly IServiceHealthReporter<T> _impl;
             public ServiceWrapper(IHealthReporterFactory factory)
             {
                 _impl = factory.ForService<T>();

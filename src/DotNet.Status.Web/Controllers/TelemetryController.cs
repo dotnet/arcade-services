@@ -17,16 +17,16 @@ namespace DotNet.Status.Web.Controllers
     {
         private readonly ILogger<TelemetryController> _logger;
         private readonly IOptionsSnapshot<KustoOptions> _options;
-        private readonly IKustoIngestClient _client;
+        private readonly IKustoIngestClientFactory _clientFactory;
 
         public TelemetryController(
             ILogger<TelemetryController> logger,
             IOptionsSnapshot<KustoOptions> options,
-            IKustoIngestClient client)
+            IKustoIngestClientFactory clientFactory)
         {
             _logger = logger;
             _options = options;
-            _client = client;
+            _clientFactory = clientFactory;
         }
 
         [HttpPost("collect/arcade-validation")]
@@ -42,7 +42,7 @@ namespace DotNet.Status.Web.Controllers
             List<ArcadeValidationData> arcadeValidationDatas = new List<ArcadeValidationData>{ data };
 
             await KustoHelpers.WriteDataToKustoInMemoryAsync(
-                _client,
+                _clientFactory.GetClient(),
                 options.Database,
                 "ArcadeValidation",
                 _logger,

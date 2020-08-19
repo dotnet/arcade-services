@@ -4,6 +4,7 @@
 
 using System;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -20,12 +21,14 @@ using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.DotNet.GitHub.Authentication;
+using Microsoft.DotNet.Internal.Health;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.DotNet.Web.Authentication;
 using Microsoft.DotNet.Web.Authentication.GitHub;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Octokit;
@@ -123,6 +126,17 @@ namespace DotNet.Status.Web
                 o.ProductHeader = new ProductHeaderValue("DotNetEngineeringStatus",
                     Assembly.GetEntryAssembly().GetName().Version.ToString()));
             services.Configure<ExponentialRetryOptions>(o => { });
+            services.Configure<HttpClientFactoryOptions>(
+                o => o.HttpMessageHandlerBuilderActions.Add(EnableCertificateRevocationCheck)
+            );
+        }
+
+        private static void EnableCertificateRevocationCheck(HttpMessageHandlerBuilder builder)
+        {
+            if (builder.PrimaryHandler is HttpClientHandler httpHandler)
+            {
+                httpHandler.CheckCertificateRevocationList = true;
+            }
         }
 
         private void AddServices(IServiceCollection services)
@@ -214,7 +228,15 @@ namespace DotNet.Status.Web
             services.AddSingleton<ZenHubClient>();
             services.AddSingleton<IGitHubApplicationClientFactory, GitHubApplicationClientFactory>();
             services.AddSingleton<IGitHubClientFactory, GitHubClientFactory>();
+            services.AddSingleton<ITimelineIssueTriage, TimelineIssueTriage>();
             services.AddSingleton<ExponentialRetry>();
+            services.AddHttpClient();
+            services.AddHealthReporting(
+                b =>
+                {
+                    b.AddLogging();
+                    b.AddAzureTable((o, p) => o.WriteSasUri = p.GetRequiredService<IConfiguration>()["HealthTableUri"]);
+                });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

@@ -13,15 +13,18 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.DotNet.Internal.Health;
 using Microsoft.DotNet.Internal.Logging;
 using Microsoft.DotNet.Metrics;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
 using Microsoft.DotNet.Services.Utility;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Http;
+using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
@@ -251,6 +254,14 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             );
             services.AddSingleton<ExponentialRetry>();
             services.Configure<ExponentialRetryOptions>(o => { });
+            services.AddHealthReporting(
+                b =>
+                {
+                    b.AddServiceFabric((o, p) => { });
+                    b.AddLogging();
+                    b.AddAzureTable((o, p) => o.WriteSasUri = p.GetRequiredService<IConfiguration>()["HealthTableUri"]);
+                });
+            services.AddSingleton<ISystemClock, SystemClock>();
         }
 
         private static void EnableCertificateRevocationCheck(HttpMessageHandlerBuilder builder)

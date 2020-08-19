@@ -19,10 +19,12 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
         {
             string? configFile = null;
             string? environment = null;
+            string? deploy = null;
             var options = new OptionSet
             {
                 {"c|config=", c => configFile = c},
                 {"e|environment=", e => environment = e},
+                {"d|deploy=", d => deploy = d}
             };
 
             List<string> remaining = options.Parse(args);
@@ -33,6 +35,7 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
 
             RequireParameter(configFile, "--config");
             RequireParameter(environment, "--environment");
+            RequireParameter(deploy, "--deploy");
 
             if (!File.Exists(configFile))
             {
@@ -49,28 +52,37 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
                     configFileName + "{0}" + configExtension)
                 .Build();
 
-            var config = new ServiceFabricClusterConfiguration();
-            configuration.Bind(config);
+            switch (deploy.ToLowerInvariant())
+            {
+                case "gateway":
+                    await RunDeploy<GatewayDeployer, GatewaySettings>(configuration);
+                    break;
+                case "cluster":
+                    await RunDeploy<ClusterDeployer, ClusterSettings>(configuration);
+                    break;
+            }
+        }
 
+        private static async Task RunDeploy<T, TSettings>(IConfiguration configuration)
+            where T : ResourceGroupDeployer<string, TSettings>
+            where TSettings : ResourceGroupDeployerSettings, new()
+        {
+            var config = new TSettings();
+            configuration.Bind(config);
             config.Validate();
 
             var services = new ServiceCollection();
-
             services.AddLogging(builder =>
             {
                 builder.AddConsole();
             });
-
+            services.AddSingleton<T>();
             await using ServiceProvider provider = services.BuildServiceProvider();
-
-            ILoggerFactory loggerFactory = provider.GetRequiredService<ILoggerFactory>();
-            ILogger logger = loggerFactory.CreateLogger("ClusterCreation");
-            var creator = new ServiceFabricClusterCreator(config, logger);
-
+            var deployer = ActivatorUtilities.CreateInstance<T>(provider, config, configuration);
             var cts = new CancellationTokenSource();
             Console.CancelKeyPress += (_, __) => cts.Cancel();
-
-            await creator.CreateClusterAsync(cts.Token);
+            var result = await deployer.DeployAsync(cts.Token);
+            Console.WriteLine(result);
         }
 
         private static void RequireParameter([NotNull] string? parameter, string name)

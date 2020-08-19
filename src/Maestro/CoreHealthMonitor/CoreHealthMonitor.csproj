@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
+    <ServerGarbageCollection>True</ServerGarbageCollection>
+    <RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+    <TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include=".config\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Storage.Blobs" />
+    <PackageReference Include="JetBrains.Annotations" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Microsoft.DotNet.ServiceFabric.ServiceHost\Microsoft.DotNet.ServiceFabric.ServiceHost.csproj" />
+    <ProjectReference Include="..\..\Shared\Microsoft.DotNet.Internal.Health\Microsoft.DotNet.Internal.Health.csproj" />
+  </ItemGroup>
+
+</Project>

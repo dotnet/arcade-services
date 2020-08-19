@@ -22,6 +22,7 @@ namespace Microsoft.DotNet.Internal.Health
         private readonly HttpClient _client;
         private readonly ILogger<AzureTableHealthReportProvider> _logger;
         private readonly ExponentialRetry _retry;
+        private bool _isEnabled;
 
         private readonly string _sasQuery;
         private readonly string _baseUrl;
@@ -35,13 +36,21 @@ namespace Microsoft.DotNet.Internal.Health
         {
             _logger = logger;
             _retry = retry;
-            var builder = new UriBuilder(options.Value.WriteSasUri);
-            _sasQuery = builder.Query;
-            builder.Query = null;
-            _baseUrl = builder.ToString();
+            _isEnabled = !string.IsNullOrEmpty(options.Value.WriteSasUri);
+            if (_isEnabled)
+            {
+                var builder = new UriBuilder(options.Value.WriteSasUri);
+                _sasQuery = builder.Query;
+                builder.Query = null;
+                _baseUrl = builder.ToString();
 
-            _client = clientFactory.CreateClient();
-            _client.DefaultRequestHeaders.Add("x-ms-version", "2013-08-15");
+                _client = clientFactory.CreateClient();
+                _client.DefaultRequestHeaders.Add("x-ms-version", "2013-08-15");
+            }
+            else
+            {
+                _logger.LogWarning("AzureTableHealth WriteSas is not configured, no status will be written to table");
+            }
         }
         
         private static string GetRowKey(string instance, string subStatus) => EscapeKeyField(instance ?? "") + "|" + EscapeKeyField(subStatus);
@@ -74,6 +83,9 @@ namespace Microsoft.DotNet.Internal.Health
 
         public async Task UpdateStatusAsync(string serviceName, string instance, string subStatusName, HealthStatus status, string message)
         {
+            if (!_isEnabled)
+                return;
+
             string partitionKey = EscapeKeyField(serviceName);
             string rowKey = GetRowKey(instance, subStatusName);
 
@@ -110,6 +122,9 @@ namespace Microsoft.DotNet.Internal.Health
 
         public Task<IList<HealthReport>> GetAllStatusAsync(string serviceName)
         {
+            if (!_isEnabled)
+                return Task.FromResult<IList<HealthReport>>(Array.Empty<HealthReport>());
+
             string partitionKey = EscapeKeyField(serviceName);
             string filter = $"PartitionKey eq '{partitionKey}'";
 
