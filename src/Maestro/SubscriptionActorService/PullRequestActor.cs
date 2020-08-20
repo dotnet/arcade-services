@@ -715,7 +715,7 @@ namespace SubscriptionActorService
                 var description = new StringBuilder();
                 description.AppendLine("This pull request updates the following dependencies");
                 description.AppendLine();
-
+                
                 await CommitUpdatesAsync(requiredUpdates, description, DarcRemoteFactory, targetRepository, newBranchName);
 
                 var inProgressPr = new InProgressPullRequest
@@ -823,9 +823,7 @@ namespace SubscriptionActorService
 
             IRemote remote = await remoteFactory.GetRemoteAsync(targetRepository, Logger);
 
-            GitFileManager gitFileManager = new GitFileManager(null, Logger);
-            Dictionary<(string name, string version), string> versionsMap = await gitFileManager.GetVersionDetailsXml(targetRepository, newBranchName);
-
+            var allDependencies = requiredUpdates.SelectMany(ru => ru.deps.SelectMany(d => new[] { d.From, d.To })).ToList();
 
             // To keep a PR to as few commits as possible, if the number of
             // non-coherency updates is 1 then combine coherency updates with those.
@@ -841,13 +839,13 @@ namespace SubscriptionActorService
                 if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
                 {
                     await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                    await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description, versionsMap);
+                    await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description, allDependencies);
                     dependenciesToCommit.AddRange(coherencyUpdate.deps);
                 }
 
                 List<GitFile> committedFiles = await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
                     dependenciesToCommit.Select(du => du.To).ToList(), message.ToString());
-                await CalculatePRDescription(update, deps, committedFiles, description, versionsMap);
+                await CalculatePRDescription(update, deps, committedFiles, description, allDependencies);
             }
 
             // If the coherency update wasn't combined, then
@@ -856,7 +854,7 @@ namespace SubscriptionActorService
             {
                 var message = new StringBuilder();
                 await CalculateCommitMessage(coherencyUpdate.update, coherencyUpdate.deps, message);
-                await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description, versionsMap);
+                await CalculatePRDescription(coherencyUpdate.update, coherencyUpdate.deps, null, description, allDependencies);
 
                 await remote.CommitUpdatesAsync(targetRepository, newBranchName, remoteFactory,
                     coherencyUpdate.deps.Select(du => du.To).ToList(), message.ToString());
@@ -926,7 +924,7 @@ namespace SubscriptionActorService
         ///     Because PRs tend to be live for short periods of time, we can put more information
         ///     in the description than the commit message without worrying that links will go stale.
         /// </remarks>
-        private async Task CalculatePRDescription(UpdateAssetsParameters update, List<DependencyUpdate> deps, List<GitFile> committedFiles, StringBuilder description, Dictionary<(string, string), string> versionsMap)
+        private async Task CalculatePRDescription(UpdateAssetsParameters update, List<DependencyUpdate> deps, List<GitFile> committedFiles, StringBuilder description, List<DependencyDetail> allDependencies)
         {
             //Find the Coherency section of the PR description
             if (update.IsCoherencyUpdate)
@@ -983,35 +981,36 @@ namespace SubscriptionActorService
                 subscriptionSection.AppendLine();
                 subscriptionSection.AppendLine($"- **Updates**:");
 
-                Dictionary<(string from, string to), int> commitsSha = new Dictionary<(string, string), int>();
+                DependencyMap dependencyMapObject = new DependencyMap();
 
                 int markdownLinkNumber = 1;
                 foreach (DependencyUpdate dep in deps)
                 {
-                    string shaFrom = versionsMap[(dep.From.Name, dep.From.Version)];
-                    string shaTo = versionsMap[(dep.To.Name, dep.To.Version)];
+                    DependencyDetail from = allDependencies.Find(d => d.Name == dep.From.Name && d.Version == dep.From.Version);
+                    DependencyDetail to = allDependencies.Find(d => d.Name == dep.To.Name && d.Version == dep.To.Version);
 
-                    if (!commitsSha.ContainsKey((shaFrom, shaTo)))
+                    if (!dependencyMapObject.DependencyShaMap.ContainsKey((from.Commit, to.Commit)))
                     {
-                        commitsSha[(shaFrom, shaTo)] = markdownLinkNumber++;
+                        dependencyMapObject.DependencyShaMap[(from.Commit, to.Commit)] = markdownLinkNumber++;
                     }
                 }
 
                 foreach (DependencyUpdate dep in deps)
                 {
-                    string shaFrom = versionsMap[(dep.From.Name, dep.From.Version)];
-                    string shaTo = versionsMap[(dep.To.Name, dep.To.Version)];
-                    subscriptionSection.AppendLine($"  - **{dep.To.Name}**: [from {dep.From.Version} to {dep.To.Version}][{commitsSha[(shaFrom, shaTo)]}]");
+                    DependencyDetail from = allDependencies.Find(d => d.Name == dep.From.Name && d.Version == dep.From.Version);
+                    DependencyDetail to = allDependencies.Find(d => d.Name == dep.To.Name && d.Version == dep.To.Version);
+                    subscriptionSection.AppendLine($"  - **{dep.To.Name}**: [from {dep.From.Version} to {dep.To.Version}][{dependencyMapObject.DependencyShaMap[(from.Commit, to.Commit)]}]");
                 }
 
                 subscriptionSection.AppendLine();
                 foreach(int i in Enumerable.Range(1, markdownLinkNumber))
                 {
-                    foreach (KeyValuePair<(string, string), int> entry in commitsSha)
+                    foreach (KeyValuePair<(string, string), int> entry in dependencyMapObject.DependencyShaMap)
                     {
                         if (entry.Value == markdownLinkNumber) 
                         {
-                            subscriptionSection.AppendLine($"[{markdownLinkNumber}]: {GetChangesURI(owner, repo, entry.Key.Item1, entry.Key.Item2)}");
+                            DependencyDetail to = allDependencies.Find(d => d.Commit == entry.Key.Item1);
+                            subscriptionSection.AppendLine($"[{markdownLinkNumber}]: {GetChangesURI(owner, to.RepoUri, entry.Key.Item1, entry.Key.Item2)}");
                         }
                     }
                 }
