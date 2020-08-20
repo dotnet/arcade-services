@@ -10,6 +10,12 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Maestro.Contracts;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
+using NUnit.Framework;
+using Octokit;
+
 
 namespace Maestro.ScenarioTests
 {
@@ -289,7 +295,13 @@ namespace Maestro.ScenarioTests
                 }
             });
         }
-
+        public async Task AddDependenciesToLocalRepo(string repoPath, string name, string repoUri, bool isToolset = false)
+        {
+            using (ChangeDirectory(repoPath))
+            {
+                await RunDarcAsync(new string[] { "add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri});
+            }
+        }
         public async Task<string> GetTestChannelsAsync()
         {
             return await RunDarcAsync("get-channels").ConfigureAwait(false);
@@ -667,6 +679,54 @@ namespace Maestro.ScenarioTests
         public async Task<string> GetRepositoryPolicies(string repoUri, string branchName)
         {
             return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
+        }
+
+        public async Task WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, PullRequest pr, Repository repo, int attempts = 7)
+        {
+            while (attempts-- > 0)
+            {
+                TestContext.WriteLine($"Starting check for merge, attempts remaining {attempts}");
+                pr = await GitHubApi.PullRequest.Get(repo.Id, pr.Number);
+
+                if (pr.State == ItemState.Closed)
+                {
+                    return;
+                }
+
+                await Task.Delay(60 * 1000).ConfigureAwait(false);
+            }
+
+            throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
+        }
+
+        public async Task<bool> CheckGithubPullRequestChecks(string targetRepoName, string targetBranch)
+        {
+            TestContext.WriteLine($"Checking opened PR in {targetBranch} {targetRepoName}");
+            PullRequest pullRequest = await WaitForPullRequestAsync(targetRepoName, targetBranch);
+            Repository repo = await GitHubApi.Repository.Get(_parameters.GitHubTestOrg, targetRepoName).ConfigureAwait(false);
+
+            return await ValidateGithubMaestroCheckRunsSuccessful(targetRepoName, targetBranch, pullRequest, repo);
+        }
+
+        public async Task<bool> ValidateGithubMaestroCheckRunsSuccessful(string targetRepoName, string targetBranch, PullRequest pullRequest, Repository repo)
+        {
+            // Waiting 5 minutes for maestro to add the checks to the PR
+            await Task.Delay(TimeSpan.FromMinutes(5));
+            TestContext.WriteLine($"Checking maestro merge policies check in {targetBranch} {targetRepoName}");
+            CheckRunsResponse existingCheckRuns = await GitHubApi.Check.Run.GetAllForReference(repo.Id, pullRequest.Head.Sha);
+            int cnt = 0;
+            foreach (var checkRun in existingCheckRuns.CheckRuns)
+            {
+                if (checkRun.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix))
+                {
+                    cnt++;
+                    if (checkRun.Status != "completed")
+                    {
+                        return false;
+                    }
+                }
+            }
+            return cnt >= 1;
         }
     }
 }
