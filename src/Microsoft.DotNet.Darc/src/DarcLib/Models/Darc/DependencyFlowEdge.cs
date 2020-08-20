@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DotNet.Maestro.Client.Models;
-using System.Linq;
 
 namespace Microsoft.DotNet.DarcLib
 {

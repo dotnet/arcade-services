@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Immutable;
-using System.Dynamic;
 using Newtonsoft.Json;
 
 namespace Microsoft.DotNet.Maestro.Client.Models
