@@ -16,17 +16,6 @@ namespace Maestro.ScenarioTests
         private TestParameters _parameters;
         private Random _random = new Random();
 
-        public ScenarioTests_SdkUpdate()
-        {
-        }
-
-        [SetUp]
-        public async Task InitializeAsync()
-        {
-            _parameters = await TestParameters.GetAsync();
-            SetTestParameters(_parameters);
-        }
-
         [TearDown]
         public Task DisposeAsync()
         {
@@ -37,6 +26,9 @@ namespace Maestro.ScenarioTests
         [Test]
         public async Task ArcadeSdkUpdate()
         {
+            _parameters = await TestParameters.GetAsync();
+            SetTestParameters(_parameters);
+
             string testChannelName = "Test Channel " + _random.Next(int.MaxValue);
             var sourceRepo = "arcade";
             var sourceRepoUri = "https://github.com/dotnet/arcade";

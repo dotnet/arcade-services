@@ -12,7 +12,7 @@ namespace Maestro.ScenarioTests
     public class ScenarioTests_Builds : MaestroScenarioTestBase
     {
         private string repoUrl;
-        private readonly string repoName = "maestro-test1";
+        private readonly string repoName = TestRepository.TestRepo1Name;
         private readonly string sourceBuildNumber = "654321";
         private readonly string sourceCommit = "123456";
         private readonly string sourceBranch = "master";
