@@ -4,7 +4,6 @@
 
 using System;
 using Microsoft.DotNet.DarcLib;
-using Newtonsoft.Json;
 
 namespace Maestro.Web.Api.v2018_07_16.Models
 {
@@ -23,7 +22,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
             bool onLongestBuildPath,
             bool isToolingOnly,
             bool? partOfCycle,
-            bool isBackEdge)
+            bool backEdge)
         {
             ToId = to;
             FromId = from;
@@ -31,7 +30,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
             OnLongestBuildPath = onLongestBuildPath;
             IsToolingOnly = isToolingOnly;
             PartOfCycle = partOfCycle;
-            IsBackEdge = isBackEdge;
+            BackEdge = backEdge;
         }
 
         public static FlowEdge Create(DependencyFlowEdge other)
@@ -52,8 +51,6 @@ namespace Maestro.Web.Api.v2018_07_16.Models
         public bool OnLongestBuildPath { get; }
         public bool IsToolingOnly { get; }
         public bool? PartOfCycle { get; }
-
-        [JsonIgnore]
-        public bool IsBackEdge { get; set; }
+        public bool BackEdge { get; set; }
     }
 }
