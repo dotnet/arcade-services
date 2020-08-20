@@ -16,17 +16,6 @@ namespace Maestro.ScenarioTests
         private TestParameters _parameters;
         private Random _random = new Random();
 
-        public ScenarioTests_SdkUpdate()
-        {
-        }
-
-        [SetUp]
-        public async Task InitializeAsync()
-        {
-            _parameters = await TestParameters.GetAsync();
-            SetTestParameters(_parameters);
-        }
-
         [TearDown]
         public Task DisposeAsync()
         {
@@ -37,6 +26,9 @@ namespace Maestro.ScenarioTests
         [Test]
         public async Task ArcadeSdkUpdate()
         {
+            _parameters = await TestParameters.GetAsync();
+            SetTestParameters(_parameters);
+
             string testChannelName = "Test Channel " + _random.Next(int.MaxValue);
             var sourceRepo = "arcade";
             var sourceRepoUri = "https://github.com/dotnet/arcade";
@@ -51,8 +43,9 @@ namespace Maestro.ScenarioTests
                 });
             var targetRepo = "maestro-test2";
             var targetBranch = _random.Next(int.MaxValue).ToString();
+            var targetRepoUri = GetRepoUrl(targetRepo);
             await using AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false);
-            await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepo, targetRepo, targetBranch, "none");
+            await using AsyncDisposableValue<string> sub = await CreateSubscriptionAsync(testChannelName, sourceRepoUri, targetRepoUri, targetBranch, "none");
             Build build = await CreateBuildAsync(GetRepoUrl("dotnet", sourceRepo), sourceBranch, sourceCommit, sourceBuildNumber, sourceAssets);
             await using IAsyncDisposable _ = await AddBuildToChannelAsync(build.Id, testChannelName);
 

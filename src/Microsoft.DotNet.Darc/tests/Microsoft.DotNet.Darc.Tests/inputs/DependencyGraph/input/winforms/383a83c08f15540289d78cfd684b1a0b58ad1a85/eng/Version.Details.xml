@@ -17,9 +17,10 @@
       <Uri>corefx</Uri>
       <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
     </Dependency>
+    <!-- This dependency points to a sha with no dependency details file -->
     <Dependency Name="System.Security.Cryptography.Cng" Version="4.6.0-preview.19067.6">
       <Uri>corefx</Uri>
-      <Sha>d8c200414ccf65e0be94358937e9c711c0fd532d</Sha>
+      <Sha>abcdabcd4ccf65e0be94358937e9c711c0fd532d</Sha>
     </Dependency>
     <Dependency Name="System.CodeDom" Version="4.6.0-preview.19067.6">
       <Uri>corefx</Uri>

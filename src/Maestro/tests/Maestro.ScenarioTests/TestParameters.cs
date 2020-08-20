@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.Extensions.Configuration;
 using Octokit;
@@ -21,10 +22,11 @@ namespace Maestro.ScenarioTests
                 .AddUserSecrets<TestParameters>()
                 .Build();
 
-            string maestroBaseUri = Environment.GetEnvironmentVariable("MAESTRO_BASEURI") ?? "https://maestro-int.westus2.cloudapp.azure.com";
+            string maestroBaseUri = Environment.GetEnvironmentVariable("MAESTRO_BASEURI") ??  userSecrets["MAESTRO_BASEURI"] ?? "https://maestro-int.westus2.cloudapp.azure.com";
             string maestroToken = Environment.GetEnvironmentVariable("MAESTRO_TOKEN") ?? userSecrets["MAESTRO_TOKEN"];
             string githubToken = Environment.GetEnvironmentVariable("GITHUB_TOKEN") ?? userSecrets["GITHUB_TOKEN"];
             string darcPackageSource = Environment.GetEnvironmentVariable("DARC_PACKAGE_SOURCE");
+            string azdoToken = Environment.GetEnvironmentVariable("AZDO_TOKEN") ?? userSecrets["AZDO_TOKEN"];
 
             using var testDir = Shareable.Create(TemporaryDirectory.Get());
 
@@ -56,11 +58,14 @@ namespace Maestro.ScenarioTests
                 new GitHubClient(
                     new ProductHeaderValue(assembly.GetName().Name, assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion),
                     new InMemoryCredentialStore(new Credentials(githubToken)));
+            var azDoClient =
+                new Microsoft.DotNet.DarcLib.AzureDevOpsClient(await TestHelpers.Which("git"), azdoToken, null, testDir.TryTake()!.Directory);
 
-            return new TestParameters(darcExe, await TestHelpers.Which("git"), maestroBaseUri, maestroToken!, githubToken, maestroApi, githubApi, testDir.TryTake()!);
+            return new TestParameters(darcExe, await TestHelpers.Which("git"), maestroBaseUri, maestroToken!, githubToken, maestroApi, githubApi, azDoClient, testDir.TryTake()!, azdoToken);
         }
 
-        private TestParameters(string darcExePath, string gitExePath, string maestroBaseUri, string maestroToken, string gitHubToken, IMaestroApi maestroApi, GitHubClient gitHubApi, TemporaryDirectory dir)
+        private TestParameters(string darcExePath, string gitExePath, string maestroBaseUri, string maestroToken, string gitHubToken,
+            IMaestroApi maestroApi, GitHubClient gitHubApi, Microsoft.DotNet.DarcLib.AzureDevOpsClient azdoClient, TemporaryDirectory dir, string azdoToken)
         {
             _dir = dir;
             DarcExePath = darcExePath;
@@ -70,11 +75,13 @@ namespace Maestro.ScenarioTests
             GitHubToken = gitHubToken;
             MaestroApi = maestroApi;
             GitHubApi = gitHubApi;
+            AzDoClient = azdoClient;
+            AzDoToken = azdoToken;
         }
 
         public string DarcExePath { get; }
 
-        public string GitExePath { get;  }
+        public string GitExePath { get; }
 
         public string GitHubUser { get; } = "dotnet-maestro-bot";
 
@@ -90,6 +97,8 @@ namespace Maestro.ScenarioTests
 
         public GitHubClient GitHubApi { get; }
 
+        public Microsoft.DotNet.DarcLib.AzureDevOpsClient AzDoClient { get; }
+
         public int AzureDevOpsBuildDefinitionId { get; } = 6;
 
         public int AzureDevOpsBuildId { get; } = 144618;
@@ -98,9 +107,11 @@ namespace Maestro.ScenarioTests
 
         public string AzureDevOpsProject { get; } = "internal";
 
+        public string AzDoToken { get; }
+
         public void Dispose()
         {
-            _dir.Dispose();
+            _dir?.Dispose();
         }
     }
 }

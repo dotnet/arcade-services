@@ -17,6 +17,7 @@ using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.DotNet.Services.Utility;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.ServiceFabric.Actors;
 using Microsoft.ServiceFabric.Actors.Runtime;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
@@ -295,7 +296,24 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost.Actors
 
         protected override async Task RunAsync(CancellationToken cancellationToken)
         {
-            await base.RunAsync(cancellationToken);
+            var logger = Container.GetRequiredService<ILogger<DelegatedActor>>();
+            try
+            {
+                await using var _ =
+                    cancellationToken.Register(() => logger.LogInformation("Service abort cancellation requested"));
+                logger.LogInformation("Entering service 'RunAsync'");
+                await base.RunAsync(cancellationToken);
+                logger.LogWarning("Abnormal service exit without cancellation");
+            }
+            catch (OperationCanceledException e) when (e.CancellationToken == cancellationToken)
+            {
+                logger.LogInformation("Service shutdown complete");
+            }
+            catch (Exception e)
+            {
+                logger.LogCritical(e, "Unhandled exception crashing actor execution");
+                throw;
+            }
         }
 
         private ActorBase CreateActor(ActorId actorId)

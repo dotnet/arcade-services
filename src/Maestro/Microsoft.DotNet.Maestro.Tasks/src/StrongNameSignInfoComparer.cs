@@ -15,13 +15,13 @@ namespace Microsoft.DotNet.Maestro.Tasks
         public bool Equals(StrongNameSignInfo x, StrongNameSignInfo y)
         {
             return x.CertificateName.Equals(y.CertificateName, StringComparison.OrdinalIgnoreCase) &&
-                x.File.Equals(y.File, StringComparison.OrdinalIgnoreCase) &&
+                x.Include.Equals(y.Include, StringComparison.OrdinalIgnoreCase) &&
                 x.PublicKeyToken.Equals(y.PublicKeyToken, StringComparison.OrdinalIgnoreCase);
         }
 
         public int GetHashCode(StrongNameSignInfo obj)
         {
-            return (obj.CertificateName, obj.File, obj.PublicKeyToken).GetHashCode();
+            return (obj.CertificateName, obj.Include, obj.PublicKeyToken).GetHashCode();
         }
     }
 }

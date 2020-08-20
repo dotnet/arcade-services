@@ -664,7 +664,6 @@ function Get-Github-File-Contents($targetRepoName, $path, $ref) {
     $uri = "$(Get-Github-RepoApiUri($targetRepoName))/contents/${path}?ref=$ref"
     Invoke-WebRequest -Uri $uri -Headers $(Get-Github-Headers) -Method Get | ConvertFrom-Json
 }
-
 function Check-Github-PullRequest-Completed($targetRepoName, $pullRequestNumber) {
     $uri = "$(Get-Github-RepoApiUri($targetRepoName))/pulls/$pullRequestNumber/merge"
     Write-Host "Checking $uri until it reports a completed merge"
@@ -778,7 +777,6 @@ function Check-Github-PullRequest($expectedPRTitle, $targetRepoName, $targetBran
     }
     return $true
 }
-
 function Validate-Arcade-PullRequest-Contents($pullRequest, $expectedPRTitle, $targetRepoName, $targetBranch, $expectedDependencies) {
     Validate-Github-PullRequest-Contents $pullRequest $expectedPRTitle $targetRepoName $targetBranch $expectedDependencies
     Write-Host "Validating dependency update PR changes specific to arcade..."

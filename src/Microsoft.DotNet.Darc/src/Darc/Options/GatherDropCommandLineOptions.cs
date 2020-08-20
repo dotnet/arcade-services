@@ -12,15 +12,18 @@ namespace Microsoft.DotNet.Darc.Options
     internal class GatherDropCommandLineOptions : CommandLineOptions
     {
         [Option('i', "id", Separator = ',', HelpText = "BAR ID(s) of the root build(s) that we want to gather. comma separated.")]
+        [RedactFromLogging]
         public IEnumerable<int> RootBuildIds { get; set; }
 
         [Option('r', "repo", HelpText = "Gather a build drop for a build of this repo. Requires --commit or --channel.")]
         public string RepoUri { get; set; }
 
         [Option('c', "commit", HelpText = "Commit to gather a drop for.")]
+        [RedactFromLogging]
         public string Commit { get; set; }
 
         [Option('o',"output-dir", Required = true, HelpText = "Output directory to place build drop.")]
+        [RedactFromLogging]
         public string OutputDirectory { get; set; }
 
         [Option("max-downloads", Default = 4, HelpText = "Maximum concurrent downloads.")]
@@ -67,6 +70,7 @@ namespace Microsoft.DotNet.Darc.Options
 
         [Option("sas-suffixes", Separator = ',', HelpText = "List of potential uri suffixes that can be used if anonymous " +
             "access to a blob uri fails. Appended directly to the end of the URI (use full SAS suffix starting with '?'.")]
+        [RedactFromLogging]
         public IEnumerable<string> SASSuffixes { get; set; }
 
         [Option("asset-filter", HelpText = "Only download assets matching the given regex filter")]

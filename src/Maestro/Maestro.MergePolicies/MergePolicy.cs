@@ -4,6 +4,8 @@
 
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Maestro.Contracts;
+using Microsoft.DotNet.DarcLib;
 using Newtonsoft.Json.Linq;
 
 namespace Maestro.MergePolicies
@@ -29,7 +31,7 @@ namespace Maestro.MergePolicies
         }
     }
 
-    public abstract class MergePolicy
+    public abstract class MergePolicy : IMergePolicy
     {
         public string Name
         {
@@ -47,6 +49,30 @@ namespace Maestro.MergePolicies
 
         public abstract string DisplayName { get; }
 
-        public abstract Task EvaluateAsync(IMergePolicyEvaluationContext context, MergePolicyProperties properties);
+        public abstract Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc);
+
+        public MergePolicyEvaluationResult Pending(string message) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Pending, message, this);
+
+        public MergePolicyEvaluationResult Succeed(string message) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Success, message, this);
+
+        public MergePolicyEvaluationResult Fail(string message) => new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Failure, message, this);
+    }
+
+    public interface IMergePolicy : IMergePolicyInfo
+    {
+        Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc);
+    }
+
+    public interface IMergePolicyBuilder
+    {
+        string Name { get; }
+
+        /// <summary>
+        /// Creates list of instances of concrete merge policies which shall be evaluated 
+        /// for particular merge policy definition
+        /// In most cases it will return array of exactly one merge policy, but in special cases like standard-policy
+        /// it will return multiple pre-configured policies which that policies template consist of
+        /// </summary>
+        Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr);
     }
 }

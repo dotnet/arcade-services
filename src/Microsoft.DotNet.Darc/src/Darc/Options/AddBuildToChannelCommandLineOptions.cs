@@ -11,6 +11,7 @@ namespace Microsoft.DotNet.Darc.Options
     internal class AddBuildToChannelCommandLineOptions : CommandLineOptions
     {
         [Option("id", Required = true, HelpText = "BAR id of build to assign to channel.")]
+        [RedactFromLogging]
         public int Id { get; set; }
 
         [Option("publishing-infra-version", Default = 2, Required = false, HelpText = "Which version of the publishing infrastructure should be used.")]
@@ -26,12 +27,13 @@ namespace Microsoft.DotNet.Darc.Options
         public string SourceBranch { get; set; }
 
         [Option("source-sha", HelpText = "SHA that should be used as base for the promotion build.")]
+        [RedactFromLogging]
         public string SourceSHA { get; set; }
 
         [Option("validate-signing", HelpText = "Perform signing validation.")]
         public bool DoSigningValidation { get; set; }
 
-        [Option("signing-validation-parameters", HelpText = "Additional (MSBuild) properties to be passed to signing validation.")]
+        [Option("signing-validation-parameters", Default ="''", HelpText = "Additional (MSBuild) properties to be passed to signing validation.")]
         public string SigningValidationAdditionalParameters { get; set; }
 
         [Option("validate-nuget", HelpText = "Perform NuGet metadata validation.")]
@@ -43,16 +45,18 @@ namespace Microsoft.DotNet.Darc.Options
         [Option("validate-SDL", HelpText = "Perform SDL validation.")]
         public bool DoSDLValidation { get; set; }
 
-        [Option("sdl-validation-parameters", HelpText = "Custom parameters for SDL validation.")]
+        [Option("sdl-validation-parameters", Default = "''", HelpText = "Custom parameters for SDL validation.")]
         public string SDLValidationParams { get; set; }
 
         [Option("sdl-validation-continue-on-error", HelpText = "Ignore SDL validation errors.")]
         public string SDLValidationContinueOnError { get; set; }
 
-        [Option("symbol-publishing-parameters", HelpText = "Additional (MSBuild) properties to be passed to symbol publishing")]
+        [Option("symbol-publishing-parameters", Default = "''", HelpText = "Additional (MSBuild) properties to be passed to symbol publishing")]
+        [RedactFromLogging]
         public string SymbolPublishingAdditionalParameters { get; set; }
 
-        [Option("artifact-publishing-parameters", HelpText = "Additional (MSBuild) properties to be passed to asset publishing.")]
+        [Option("artifact-publishing-parameters", Default = "''", HelpText = "Additional (MSBuild) properties to be passed to asset publishing.")]
+        [RedactFromLogging]
         public string ArtifactPublishingAdditionalParameters { get; set; }
 
         [Option("publish-installers-and-checksums", HelpText = "Whether installers and checksums should be published.")]

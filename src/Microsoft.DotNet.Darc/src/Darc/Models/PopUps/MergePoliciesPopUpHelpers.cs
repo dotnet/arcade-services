@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Maestro.Contracts;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
@@ -24,21 +25,21 @@ namespace Microsoft.DotNet.Darc.Models.PopUps
             {
                 foreach (MergePolicy policy in mergePolicies)
                 {
-                    if (policy.Name.Equals(Constants.AllCheckSuccessfulMergePolicyName, StringComparison.OrdinalIgnoreCase))
+                    if (policy.Name.Equals(MergePolicyConstants.AllCheckSuccessfulMergePolicyName, StringComparison.OrdinalIgnoreCase))
                     {
                         // Should either have no properties, or one called "ignoreChecks"
                         if (policy.Properties != null &&
                             (policy.Properties.Count > 1 ||
                             (policy.Properties.Count == 1 &&
-                            !policy.Properties.TryGetValue(Constants.IgnoreChecksMergePolicyPropertyName, out _))))
+                            !policy.Properties.TryGetValue(MergePolicyConstants.IgnoreChecksMergePolicyPropertyName, out _))))
                         {
-                            logger.LogError($"{Constants.AllCheckSuccessfulMergePolicyName} merge policy should have no properties, or an '{Constants.IgnoreChecksMergePolicyPropertyName}' property. See help.");
+                            logger.LogError($"{MergePolicyConstants.AllCheckSuccessfulMergePolicyName} merge policy should have no properties, or an '{MergePolicyConstants.IgnoreChecksMergePolicyPropertyName}' property. See help.");
                             return false;
                         }
                     }
-                    else if (policy.Name.Equals(Constants.StandardMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
-                             policy.Name.Equals(Constants.NoExtraCommitsMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
-                             policy.Name.Equals(Constants.NoRequestedChangesMergePolicyName, StringComparison.OrdinalIgnoreCase))
+                    else if (policy.Name.Equals(MergePolicyConstants.StandardMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
+                             policy.Name.Equals(MergePolicyConstants.NoExtraCommitsMergePolicyName, StringComparison.OrdinalIgnoreCase) ||
+                             policy.Name.Equals(MergePolicyConstants.NoRequestedChangesMergePolicyName, StringComparison.OrdinalIgnoreCase))
                     {
                         // All good
                     }

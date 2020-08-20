@@ -20,7 +20,7 @@ namespace FeedCleanerService.Tests
                         Program.Configure(s);
                         s.AddScoped<FeedCleanerService>();
                     },
-                    out string message).Should().BeTrue();
+                    out string message).Should().BeTrue(message);
         }
     }
 }

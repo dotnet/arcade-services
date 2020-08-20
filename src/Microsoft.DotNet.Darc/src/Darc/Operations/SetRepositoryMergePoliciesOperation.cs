@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Maestro.Contracts;
 using Microsoft.DotNet.Darc.Helpers;
 using Microsoft.DotNet.Darc.Models.PopUps;
 using Microsoft.DotNet.Darc.Options;
@@ -45,7 +46,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 mergePolicies.Add(
                     new MergePolicy
                     {
-                        Name = Constants.NoExtraCommitsMergePolicyName
+                        Name = MergePolicyConstants.NoExtraCommitsMergePolicyName
                     });
             }
 
@@ -54,9 +55,9 @@ namespace Microsoft.DotNet.Darc.Operations
                 mergePolicies.Add(
                     new MergePolicy
                     {
-                        Name = Constants.AllCheckSuccessfulMergePolicyName,
+                        Name = MergePolicyConstants.AllCheckSuccessfulMergePolicyName,
                         Properties = ImmutableDictionary.Create<string, JToken>()
-                            .Add(Constants.IgnoreChecksMergePolicyPropertyName, JToken.FromObject(_options.IgnoreChecks))
+                            .Add(MergePolicyConstants.IgnoreChecksMergePolicyPropertyName, JToken.FromObject(_options.IgnoreChecks))
                     });
             }
 
@@ -65,7 +66,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 mergePolicies.Add(
                     new MergePolicy
                     {
-                        Name = Constants.NoRequestedChangesMergePolicyName,
+                        Name = MergePolicyConstants.NoRequestedChangesMergePolicyName,
                         Properties = ImmutableDictionary.Create<string, JToken>()
                     });
             }
@@ -75,7 +76,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 mergePolicies.Add(
                     new MergePolicy
                     {
-                        Name = Constants.StandardMergePolicyName,
+                        Name = MergePolicyConstants.StandardMergePolicyName,
                         Properties = ImmutableDictionary.Create<string, JToken>()
                     });
             }

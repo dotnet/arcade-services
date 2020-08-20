@@ -89,24 +89,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     }
 
                     BuildData finalBuild = MergeBuildManifests(buildsManifestMetadata);
-                    SigningInformation finalSigningInfo = MergeSigningInfo(signingInformation);
-                    
-                    // Inject an entry of MergedManifest.xml to the in-memory merged manifest
-                    string location = null;
-                    AssetData assetData = finalBuild.Assets.FirstOrDefault();
-
-                    if (assetData != null)
-                    {
-                        AssetLocationData assetLocationData = assetData.Locations.FirstOrDefault();
-
-                        if (assetLocationData != null)
-                        {
-                            location = assetLocationData.Location;
-                        }
-                    }
-
-                    finalBuild.Assets = finalBuild.Assets.Add(GetManifestAsAsset(finalBuild.Assets, location, MergedManifestFileName));
-
                     IMaestroApi client = ApiFactory.GetAuthenticated(MaestroApiEndpoint, BuildAssetRegistryToken);
 
                     var deps = await GetBuildDependenciesAsync(client, cancellationToken);
@@ -117,18 +99,36 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     }
                     finalBuild.Dependencies = deps;
 
+                    // Based on the in-memory merged manifest, create a physical XML file and
+                    // upload it to the BlobArtifacts folder only when publishingVersion >= 3
+                    if (manifestBuildData.PublishingVersion >= 3)
+                    {
+                        SigningInformation finalSigningInfo = MergeSigningInfo(signingInformation);
+
+                        // Inject an entry of MergedManifest.xml to the in-memory merged manifest
+                        string location = null;
+                        AssetData assetData = finalBuild.Assets.FirstOrDefault();
+
+                        if (assetData != null)
+                        {
+                            AssetLocationData assetLocationData = assetData.Locations.FirstOrDefault();
+
+                            if (assetLocationData != null)
+                            {
+                                location = assetLocationData.Location;
+                            }
+                        }
+
+                        finalBuild.Assets = finalBuild.Assets.Add(GetManifestAsAsset(finalBuild.Assets, location, MergedManifestFileName));
+
+                        CreateAndPushMergedManifest(finalBuild.Assets, finalSigningInfo, manifestBuildData);
+                    }
+
                     Client.Models.Build recordedBuild = await client.Builds.CreateAsync(finalBuild, cancellationToken);
                     BuildId = recordedBuild.Id;
 
                     Log.LogMessage(MessageImportance.High, $"Metadata has been pushed. Build id in the Build Asset Registry is '{recordedBuild.Id}'");
                     Console.WriteLine($"##vso[build.addbuildtag]BAR ID - {recordedBuild.Id}");
-
-                    // Based on the in-memory merged manifest, create a physical XML file and
-                    // upload it to the BlobArtifacts folder only when publishingVersion >= 3
-                    if (manifestBuildData.PublishingVersion >= 3)
-                    {
-                        CreateAndPushMergedManifest(finalBuild.Assets, finalSigningInfo, manifestBuildData);
-                    }
 
                     // Only 'create' the AzDO (VSO) variables if running in an AzDO build
                     if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BUILD_BUILDID")))
@@ -710,7 +710,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     nameof(FileExtensionSignInfo),
                     new XAttribute[]
                     {
-                        new XAttribute(nameof(fileExtensionSignInfo.Extension), fileExtensionSignInfo.Extension),
+                        new XAttribute(nameof(fileExtensionSignInfo.Include), fileExtensionSignInfo.Include),
                         new XAttribute(nameof(fileExtensionSignInfo.CertificateName), fileExtensionSignInfo.CertificateName)
                     }));
             }
@@ -721,7 +721,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     nameof(FileSignInfo),
                     new XAttribute[]
                     {
-                        new XAttribute(nameof(fileSignInfo.File), fileSignInfo.File),
+                        new XAttribute(nameof(fileSignInfo.Include), fileSignInfo.Include),
                         new XAttribute(nameof(fileSignInfo.CertificateName), fileSignInfo.CertificateName)
                     }));
             }
@@ -732,7 +732,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     nameof(ItemsToSign),
                     new XAttribute[]
                     {
-                        new XAttribute(nameof(itemsToSign.File), itemsToSign.File)
+                        new XAttribute(nameof(itemsToSign.Include), itemsToSign.Include)
                     }));
             }
 
@@ -742,7 +742,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     nameof(StrongNameSignInfo),
                     new XAttribute[]
                     {
-                        new XAttribute(nameof(strongNameSignInfo.File), strongNameSignInfo.File),
+                        new XAttribute(nameof(strongNameSignInfo.Include), strongNameSignInfo.Include),
                         new XAttribute(nameof(strongNameSignInfo.PublicKeyToken), strongNameSignInfo.PublicKeyToken),
                         new XAttribute(nameof(strongNameSignInfo.CertificateName), strongNameSignInfo.CertificateName)
                     }));

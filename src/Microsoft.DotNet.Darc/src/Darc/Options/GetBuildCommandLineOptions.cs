@@ -11,15 +11,14 @@ namespace Microsoft.DotNet.Darc.Options
     internal class GetBuildCommandLineOptions : CommandLineOptions
     {
         [Option("id", HelpText = "Build id.")]
+        [RedactFromLogging]
         public int Id { get; set; }
 
-        [Option("uri", HelpText = "Uri of the build.")]
-        public string BuildUri { get; set; }
-
-        [Option("repo", HelpText = "Full url of the repository that was built")]
+        [Option("repo", HelpText = "Full url of the repository that was built, or match on substring")]
         public string Repo { get; set; }
 
         [Option("commit", HelpText = "Full commit sha that was built")]
+        [RedactFromLogging]
         public string Commit { get; set; }
 
         public override Operation GetOperation()

@@ -7,15 +7,18 @@ using Microsoft.DotNet.Darc.Operations;
 
 namespace Microsoft.DotNet.Darc.Options
 {
-    abstract class CommandLineOptions
+    public abstract class CommandLineOptions
     {
         [Option('p', "password", HelpText = "BAR password.")]
+        [RedactFromLogging]
         public string BuildAssetRegistryPassword { get; set; }
 
         [Option("github-pat", HelpText = "Token used to authenticate GitHub.")]
+        [RedactFromLogging]
         public string GitHubPat { get; set; }
 
         [Option("azdev-pat", HelpText = "Token used to authenticate to Azure DevOps.")]
+        [RedactFromLogging]
         public string AzureDevOpsPat { get; set; }
 
         [Option("bar-uri", HelpText = "URI of the build asset registry service to use.")]
@@ -28,6 +31,7 @@ namespace Microsoft.DotNet.Darc.Options
         public bool Debug { get; set; }
 
         [Option("git-location", Default = "git", HelpText = "Location of git executable used for internal commands.")]
+        [RedactFromLogging]
         public string GitLocation { get; set; }
 
         [Option("output-format", Default = DarcOutputType.text,
