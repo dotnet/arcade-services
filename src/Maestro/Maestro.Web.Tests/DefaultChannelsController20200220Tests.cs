@@ -1,3 +1,7 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,9 +41,9 @@ namespace Maestro.Web.Tests
             Channel channel1, channel2;
             {
                 var result = await data.ChannelsController.CreateChannel($"{channelName}-1", classification);
-                channel1 = (Channel)((ObjectResult)result).Value;
+                channel1 = (Channel) ((ObjectResult) result).Value;
                 result = await data.ChannelsController.CreateChannel($"{channelName}-2", classification);
-                channel2 = (Channel)((ObjectResult)result).Value;
+                channel2 = (Channel) ((ObjectResult) result).Value;
             }
 
             DefaultChannel defaultChannel;
@@ -52,17 +56,17 @@ namespace Maestro.Web.Tests
                     Repository = repository
                 };
                 var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-                defaultChannel = (DefaultChannel)((ObjectResult)result).Value;
+                defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
             }
 
             DefaultChannel singleChannelGetDefaultChannel;
             {
                 IActionResult result = await data.DefaultChannelsController.Get(defaultChannel.Id);
                 result.Should().BeAssignableTo<ObjectResult>();
-                var objResult = (ObjectResult)result;
-                objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+                var objResult = (ObjectResult) result;
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
                 objResult.Value.Should().BeAssignableTo<DefaultChannel>();
-                singleChannelGetDefaultChannel = ((DefaultChannel)objResult.Value);
+                singleChannelGetDefaultChannel = ((DefaultChannel) objResult.Value);
             }
             singleChannelGetDefaultChannel.Id.Should().Be(defaultChannel.Id);
 
@@ -70,10 +74,10 @@ namespace Maestro.Web.Tests
             {
                 IActionResult result = data.DefaultChannelsController.List(repository, branch, channel2.Id);
                 result.Should().BeAssignableTo<ObjectResult>();
-                var objResult = (ObjectResult)result;
-                objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+                var objResult = (ObjectResult) result;
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
                 objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
-                listOfInsertedDefaultChannels = ((IEnumerable<DefaultChannel>)objResult.Value).ToList();
+                listOfInsertedDefaultChannels = ((IEnumerable<DefaultChannel>) objResult.Value).ToList();
             }
 
             listOfInsertedDefaultChannels.Should().ContainSingle();
@@ -92,9 +96,9 @@ namespace Maestro.Web.Tests
             Channel channel1, channel2;
             {
                 var result = await data.ChannelsController.CreateChannel($"{channelName}-1", classification);
-                channel1 = (Channel)((ObjectResult)result).Value;
+                channel1 = (Channel) ((ObjectResult) result).Value;
                 result = await data.ChannelsController.CreateChannel($"{channelName}-2", classification);
-                channel2 = (Channel)((ObjectResult)result).Value;
+                channel2 = (Channel) ((ObjectResult) result).Value;
             }
 
             DefaultChannel defaultChannel;
@@ -107,7 +111,7 @@ namespace Maestro.Web.Tests
                     Repository = repository
                 };
                 var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-                defaultChannel = (DefaultChannel)((ObjectResult)result).Value;
+                defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
             }
 
             DefaultChannel updatedDefaultChannel;
@@ -120,17 +124,17 @@ namespace Maestro.Web.Tests
                     Repository = $"NEW-{repository}"
                 };
                 var result = await data.DefaultChannelsController.Update(defaultChannel.Id, defaultChannelUpdateData);
-                updatedDefaultChannel = (DefaultChannel)((ObjectResult)result).Value;
+                updatedDefaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
             }
 
             List<DefaultChannel> defaultChannels;
             {
                 IActionResult result = data.DefaultChannelsController.List($"NEW-{repository}", $"{branch}-UPDATED", channel2.Id, false);
                 result.Should().BeAssignableTo<ObjectResult>();
-                var objResult = (ObjectResult)result;
-                objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+                var objResult = (ObjectResult) result;
+                objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
                 objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
-                defaultChannels = ((IEnumerable<DefaultChannel>)objResult.Value).ToList();
+                defaultChannels = ((IEnumerable<DefaultChannel>) objResult.Value).ToList();
             }
 
             defaultChannels.Should().ContainSingle();
@@ -149,7 +153,7 @@ namespace Maestro.Web.Tests
             Channel channel;
             {
                 var result = await data.ChannelsController.CreateChannel($"{channelName}", classification);
-                channel = (Channel)((ObjectResult)result).Value;
+                channel = (Channel) ((ObjectResult) result).Value;
             }
 
             DefaultChannel defaultChannel;
@@ -162,7 +166,7 @@ namespace Maestro.Web.Tests
                     Repository = repository
                 };
                 var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-                defaultChannel = (DefaultChannel)((ObjectResult)result).Value;
+                defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
             }
 
             string[] branchesThatMatch = new string[] { "FAKE-BRANCH-REGEX-", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-1", "FAKE-BRANCH-REGEX-RELEASE-BRANCH-2" };
@@ -174,10 +178,10 @@ namespace Maestro.Web.Tests
                 {
                     IActionResult result = data.DefaultChannelsController.List(repository, branchName, channel.Id);
                     result.Should().BeAssignableTo<ObjectResult>();
-                    var objResult = (ObjectResult)result;
-                    objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+                    var objResult = (ObjectResult) result;
+                    objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
                     objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
-                    defaultChannels = ((IEnumerable<DefaultChannel>)objResult.Value).ToList();
+                    defaultChannels = ((IEnumerable<DefaultChannel>) objResult.Value).ToList();
                 }
                 defaultChannels.Should().ContainSingle();
                 defaultChannels.Single().Channel.Id.Should().Be(channel.Id);
@@ -189,10 +193,10 @@ namespace Maestro.Web.Tests
                 {
                     IActionResult result = data.DefaultChannelsController.List(repository, branchName, channel.Id);
                     result.Should().BeAssignableTo<ObjectResult>();
-                    var objResult = (ObjectResult)result;
-                    objResult.StatusCode.Should().Be((int)HttpStatusCode.OK);
+                    var objResult = (ObjectResult) result;
+                    objResult.StatusCode.Should().Be((int) HttpStatusCode.OK);
                     objResult.Value.Should().BeAssignableTo<IEnumerable<DefaultChannel>>();
-                    defaultChannels = ((IEnumerable<DefaultChannel>)objResult.Value).ToList();
+                    defaultChannels = ((IEnumerable<DefaultChannel>) objResult.Value).ToList();
                 }
                 defaultChannels.Should().BeEmpty();
             }
@@ -240,7 +244,7 @@ namespace Maestro.Web.Tests
             Channel channel;
             {
                 var result = await data.ChannelsController.CreateChannel(channelName, classification);
-                channel = (Channel)((ObjectResult)result).Value;
+                channel = (Channel) ((ObjectResult) result).Value;
             }
 
             DefaultChannel defaultChannel;
@@ -253,7 +257,7 @@ namespace Maestro.Web.Tests
                     Repository = repository
                 };
                 var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
-                defaultChannel = (DefaultChannel)((ObjectResult)result).Value;
+                defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
             }
 
             DefaultChannelUpdateData defaultChannelUpdateData = new DefaultChannelUpdateData()
@@ -308,7 +312,7 @@ namespace Maestro.Web.Tests
                 collection.AddSingleton(typeof(IBackgroundQueue), _backgroundQueueType);
                 ServiceProvider provider = collection.BuildServiceProvider();
 
-                var clock = (TestClock)provider.GetRequiredService<ISystemClock>();
+                var clock = (TestClock) provider.GetRequiredService<ISystemClock>();
 
                 return new TestData(provider, clock);
             }
