@@ -57,15 +57,15 @@ namespace Maestro.MergePolicies
 
             if (statuses.Contains(CheckState.Error))
             {
-                return Fail($"Unsuccessful checks: {ListChecks(CheckState.Error)}");
+                return Fail($"Unsuccessful checks: {ListChecks(CheckState.Error).Count()}");
             }
 
             if (statuses.Contains(CheckState.Pending))
             {
-                return Pending($"Waiting on checks: {ListChecks(CheckState.Pending)}");
+                return Pending($"Waiting on checks: {ListChecks(CheckState.Pending).Count()}");
             }
 
-            return Succeed($"Successful checks: {ListChecks(CheckState.Success)}");
+            return Succeed($"Successful checks: {ListChecks(CheckState.Success).Count()}");
         }
     }
 
