@@ -3584,7 +3584,7 @@
             "dimension": "none",
             "metricName": "select",
             "rawQuery": true,
-            "rawQueryString": "let r = requests | where $__timeFilter();\r\nlet f = toscalar(r | summarize min(timestamp));\r\nlet t = toscalar(r | summarize max(timestamp));\r\nlet span=(t - f)/60;\r\nlet interval=case(span >= 1d, bin(span, 1d), span >= 1h, bin(span, 1h), 15m);\r\nlet intervalHours = interval / 1h;\r\nr\r\n| where success == false\n| make-series valueCount=count() default=0 on timestamp in range(f, t, interval)\r\n| mv-expand timestamp, valueCount\r\n| project timestamp=todatetime(timestamp), failuresCount=todouble(valueCount)/intervalHours",
+            "rawQueryString": "let r = requests | where $__timeFilter();\r\nlet f = toscalar(r | summarize min(timestamp));\r\nlet t = toscalar(r | summarize max(timestamp));\r\nlet span=(t - f)/60;\r\nlet interval=case(span >= 1d, bin(span, 1d), span >= 1h, bin(span, 1h), 15m);\r\nlet intervalHours = interval / 1h;\r\nr\r\n| where success == false\n| make-series kind=nonempty valueCount=count() default=0 on timestamp in range(f, t, interval)\r\n| mv-expand timestamp, valueCount\r\n| project timestamp=todatetime(timestamp), failuresCount=todouble(valueCount)/intervalHours",
             "timeColumn": "timestamp",
             "timeGrain": "auto",
             "valueColumn": "failuresCount"
