@@ -28,7 +28,8 @@ namespace Microsoft.DotNet.Darc.Operations
             {
                 IRemote remote = RemoteFactory.GetRemote(_options, _options.Repository, Logger);
 
-                _options.Branch = GitHelpers.NormalizeBranchName(_options.Branch);
+                // Users can ignore the flag and pass in -regex: but to prevent typos we'll avoid that.
+                _options.Branch = _options.UseBranchAsRegex ? $"-regex:{_options.Branch}" : GitHelpers.NormalizeBranchName(_options.Branch);
 
                 if (!(await UxHelpers.VerifyAndConfirmBranchExistsAsync(remote, _options.Repository, _options.Branch, !_options.NoConfirmation)))
                 {

@@ -338,6 +338,16 @@ namespace Microsoft.DotNet.Darc
         /// <returns>True if the branch exists, prompting is not desired, or if the user confirms that they want to continue. False otherwise.</returns>
         public static async Task<bool> VerifyAndConfirmBranchExistsAsync(IRemote remote, string repo, string branch, bool prompt)
         {
+            const string regexPrefix = "-regex:";
+            // IRemote doesn't currently provide a way for enumerating all branches in a repo, and the purpose of supporting regex is to allow new ones to match
+            // So in this case we'll just prompt 
+            if (branch.StartsWith(regexPrefix, StringComparison.InvariantCultureIgnoreCase))
+            {
+                Console.WriteLine($"Warning: Regular expression '{branch.Substring(regexPrefix.Length)}' will be used to match on branches in '{repo}'.");
+                Console.WriteLine("To ensure dependency updates (where desired), please verify all branches matching this pattern contain an eng/Version.Details.xml file.");
+                return !prompt || PromptForYesNo("Continue?");
+            }
+
             try
             {
                 branch = GitHelpers.NormalizeBranchName(branch);
