@@ -103,12 +103,13 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         ///   Trigger a <see cref="Subscription"/> manually by id
         /// </summary>
         /// <param name="id">The id of the <see cref="Subscription"/> to trigger.</param>
+        /// <param name="buildId">'bar-build-id' if specified, a specific build is requested</param>
         [HttpPost("{id}/trigger")]
         [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription), Description = "Subscription update has been triggered")]
         [ValidateModelState]
-        public override async Task<IActionResult> TriggerSubscription(Guid id)
+        public override async Task<IActionResult> TriggerSubscription(Guid id, [FromQuery(Name = "bar-build-id")] int buildId = 0)
         {
-            Data.Models.Subscription subscription = await TriggerSubscriptionCore(id);
+            Data.Models.Subscription subscription = await TriggerSubscriptionCore(id, buildId);
 
             if (subscription == null)
                 return NotFound();

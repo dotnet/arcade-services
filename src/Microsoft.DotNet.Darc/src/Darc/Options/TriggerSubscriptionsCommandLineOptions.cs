@@ -4,6 +4,8 @@
 
 using CommandLine;
 using Microsoft.DotNet.Darc.Operations;
+using Microsoft.DotNet.DarcLib;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.Darc.Options
 {
@@ -12,6 +14,9 @@ namespace Microsoft.DotNet.Darc.Options
     {
         [Option("id", HelpText = "Trigger a specific subscription by id.")]
         public string Id { get; set; }
+
+        [Option("build", HelpText = "If specified, selects a specific BAR build id to use; otherwise will use the latest available from the supplied '--source-repo'")]
+        public int Build { get; set; }
 
         [Option('q', "quiet", HelpText = "Do not confirm which subscriptions are about to be triggered.")]
         public bool NoConfirmation { get; set; }
