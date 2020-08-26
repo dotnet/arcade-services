@@ -38,7 +38,6 @@ namespace Maestro.Web
                     };
                 });
 
-            services.AddSwaggerGenNewtonsoftSupport();
             services.AddSwaggerGen(
                 options =>
                 {
@@ -136,7 +135,6 @@ namespace Maestro.Web
                         });
                     options.MapType<JToken>(() => new OpenApiSchema());
 
-                    options.SchemaGeneratorOptions.UseInlineDefinitionsForEnums = false;
                     options.DescribeAllParametersInCamelCase();
 
                     string xmlPath;
@@ -170,6 +168,7 @@ namespace Maestro.Web
                         {new OpenApiSecurityScheme{Reference = new OpenApiReference{Id = "Bearer", Type = ReferenceType.SecurityScheme}}, Array.Empty<string>()},
                     });
                 });
+            services.AddSwaggerGenNewtonsoftSupport();
         }
 
         private static string ToCamelCase(string value)

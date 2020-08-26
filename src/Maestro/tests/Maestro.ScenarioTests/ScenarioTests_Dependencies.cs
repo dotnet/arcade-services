@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Immutable;
 using System.Threading.Tasks;
 using Maestro.ScenarioTests.ObjectHelpers;
@@ -14,17 +15,6 @@ namespace Maestro.ScenarioTests
 
         private TestParameters _parameters;
 
-        public ScenarioTests_Dependencies()
-        {
-        }
-
-        [SetUp]
-        public async Task InitializeAsync()
-        {
-            _parameters = await TestParameters.GetAsync();
-            SetTestParameters(_parameters);
-        }
-
         [TearDown]
         public Task DisposeAsync()
         {
@@ -35,17 +25,20 @@ namespace Maestro.ScenarioTests
         [Test]
         public async Task ArcadeDependencies_EndToEnd()
         {
-            string source1RepoName = "maestro-test1";
-            string source2RepoName = "maestro-test3";
-            string targetRepoName = "maestro-test2";
+            _parameters = await TestParameters.GetAsync();
+            SetTestParameters(_parameters);
+
+            string source1RepoName = TestRepository.TestRepo1Name;
+            string source2RepoName = TestRepository.TestRepo3Name;
+            string targetRepoName = TestRepository.TestRepo2Name;
             string target1BuildNumber = "098765";
             string target2BuildNumber = "987654";
             string sourceBuildNumber = "654321";
             string sourceCommit = "SourceCommitVar";
             string targetCommit = "TargetCommitVar";
-            string sourceBranch = "DependenciesSourceBranch";
-            string targetBranch = "DependenciesTargetBranch";
-            string testChannelName = "Test Channel Dependencies";
+            string sourceBranch = $"DependenciesSourceBranch_{Environment.MachineName}";
+            string targetBranch = $"DependenciesTargetBranch_{Environment.MachineName}";
+            string testChannelName = $"TestChannel_Dependencies_{Environment.MachineName}";
 
             IImmutableList<AssetData> source1Assets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
             IImmutableList<AssetData> source2Assets = GetAssetData("Pizza", "3.1.0", "Hamburger", "4.1.0");

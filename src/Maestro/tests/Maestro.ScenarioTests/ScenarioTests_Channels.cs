@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using NUnit.Framework;
 
@@ -9,13 +10,6 @@ namespace Maestro.ScenarioTests
     {
         private TestParameters _parameters;
 
-        [SetUp]
-        public async Task InitializeAsync()
-        {
-            _parameters = await TestParameters.GetAsync();
-            SetTestParameters(_parameters);
-        }
-
         [TearDown]
         public Task DisposeAsync()
         {
@@ -26,8 +20,11 @@ namespace Maestro.ScenarioTests
         [Test]
         public async Task ArcadeChannels_EndToEnd()
         {
+            _parameters = await TestParameters.GetAsync();
+            SetTestParameters(_parameters);
+
             // Create a new channel
-            string testChannelName = "Test Channel End to End";
+            string testChannelName = $"Test Channel End to End {Environment.MachineName}";
 
             await using (AsyncDisposableValue<string> channel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false))
             {

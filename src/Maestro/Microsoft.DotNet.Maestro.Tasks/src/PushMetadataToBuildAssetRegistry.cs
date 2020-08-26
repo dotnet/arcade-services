@@ -99,12 +99,6 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     }
                     finalBuild.Dependencies = deps;
 
-                    Client.Models.Build recordedBuild = await client.Builds.CreateAsync(finalBuild, cancellationToken);
-                    BuildId = recordedBuild.Id;
-
-                    Log.LogMessage(MessageImportance.High, $"Metadata has been pushed. Build id in the Build Asset Registry is '{recordedBuild.Id}'");
-                    Console.WriteLine($"##vso[build.addbuildtag]BAR ID - {recordedBuild.Id}");
-
                     // Based on the in-memory merged manifest, create a physical XML file and
                     // upload it to the BlobArtifacts folder only when publishingVersion >= 3
                     if (manifestBuildData.PublishingVersion >= 3)
@@ -129,6 +123,12 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                         CreateAndPushMergedManifest(finalBuild.Assets, finalSigningInfo, manifestBuildData);
                     }
+
+                    Client.Models.Build recordedBuild = await client.Builds.CreateAsync(finalBuild, cancellationToken);
+                    BuildId = recordedBuild.Id;
+
+                    Log.LogMessage(MessageImportance.High, $"Metadata has been pushed. Build id in the Build Asset Registry is '{recordedBuild.Id}'");
+                    Console.WriteLine($"##vso[build.addbuildtag]BAR ID - {recordedBuild.Id}");
 
                     // Only 'create' the AzDO (VSO) variables if running in an AzDO build
                     if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("BUILD_BUILDID")))
