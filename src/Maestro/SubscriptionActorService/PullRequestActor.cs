@@ -245,6 +245,15 @@ namespace SubscriptionActorService
 
         protected abstract Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions();
 
+        private class DependencyMap
+        {
+            public DependencyMap()
+            {
+                DependencyShaMap = new Dictionary<(string from, string to), int>();
+            }
+            public Dictionary<(string from, string to), int> DependencyShaMap { get; set; }
+        }
+
         private async Task<string> GetSourceRepositoryAsync(Guid subscriptionId)
         {
             Subscription subscription = await Context.Subscriptions.FindAsync(subscriptionId);
@@ -983,12 +992,15 @@ namespace SubscriptionActorService
 
                 DependencyMap dependencyMapObject = new DependencyMap();
 
+                DependencyDetail FindDetail(string name, string version) {
+                    return allDependencies.First(d => d.Name == name && d.Version == version);
+                }
+
                 int markdownLinkNumber = 1;
                 foreach (DependencyUpdate dep in deps)
                 {
-                    DependencyDetail from = allDependencies.Find(d => d.Name == dep.From.Name && d.Version == dep.From.Version);
-                    DependencyDetail to = allDependencies.Find(d => d.Name == dep.To.Name && d.Version == dep.To.Version);
-
+                    DependencyDetail from = FindDetail(dep.From.Name, dep.From.Version);
+                    DependencyDetail to = FindDetail(dep.To.Name, dep.To.Version);
                     if (!dependencyMapObject.DependencyShaMap.ContainsKey((from.Commit, to.Commit)))
                     {
                         dependencyMapObject.DependencyShaMap[(from.Commit, to.Commit)] = markdownLinkNumber++;
@@ -997,8 +1009,8 @@ namespace SubscriptionActorService
 
                 foreach (DependencyUpdate dep in deps)
                 {
-                    DependencyDetail from = allDependencies.Find(d => d.Name == dep.From.Name && d.Version == dep.From.Version);
-                    DependencyDetail to = allDependencies.Find(d => d.Name == dep.To.Name && d.Version == dep.To.Version);
+                    DependencyDetail from = FindDetail(dep.From.Name, dep.From.Version);
+                    DependencyDetail to = FindDetail(dep.To.Name, dep.To.Version);
                     subscriptionSection.AppendLine($"  - **{dep.To.Name}**: [from {dep.From.Version} to {dep.To.Version}][{dependencyMapObject.DependencyShaMap[(from.Commit, to.Commit)]}]");
                 }
 
@@ -1010,7 +1022,7 @@ namespace SubscriptionActorService
                         if (entry.Value == markdownLinkNumber) 
                         {
                             DependencyDetail to = allDependencies.Find(d => d.Commit == entry.Key.Item1);
-                            subscriptionSection.AppendLine($"[{markdownLinkNumber}]: {GetChangesURI(owner, to.RepoUri, entry.Key.Item1, entry.Key.Item2)}");
+                            subscriptionSection.AppendLine($"[{markdownLinkNumber}]: {GetChangesURI(to.RepoUri, entry.Key.Item1, entry.Key.Item2)}");
                         }
                     }
                 }
