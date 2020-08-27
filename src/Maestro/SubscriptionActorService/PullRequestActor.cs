@@ -1058,7 +1058,7 @@ namespace SubscriptionActorService
 
         private string GetChangesURI(string repoURI, string from, string to)
         {
-            return $"{repoURI}/compare/{from}..{to}";
+            return $"{repoURI}/compare/{from}...{to}";
         }
 
         private async Task UpdatePullRequestAsync(InProgressPullRequest pr, List<UpdateAssetsParameters> updates)
