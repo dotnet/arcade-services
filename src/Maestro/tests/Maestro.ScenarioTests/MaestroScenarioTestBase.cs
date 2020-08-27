@@ -1,10 +1,3 @@
-using Maestro.ScenarioTests.ObjectHelpers;
-using Microsoft.DotNet.Internal.Testing.Utility;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using Newtonsoft.Json.Linq;
-using NUnit.Framework;
-using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -14,6 +7,13 @@ using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Maestro.ScenarioTests.ObjectHelpers;
+using Microsoft.DotNet.Internal.Testing.Utility;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
+using Newtonsoft.Json.Linq;
+using NUnit.Framework;
+using Octokit;
 
 namespace Maestro.ScenarioTests
 {
@@ -758,11 +758,11 @@ namespace Maestro.ScenarioTests
         }
 
         internal AssetData GetAssetDataWithLocations(
-            string assetName, 
+            string assetName,
             string assetVersion,
-            string assetLocation1, 
+            string assetLocation1,
             LocationType assetLocationType1,
-            string assetLocation2 = null, 
+            string assetLocation2 = null,
             LocationType assetLocationType2 = LocationType.None)
         {
             var locationsListBuilder = ImmutableList.CreateBuilder<AssetLocationData>();
@@ -816,24 +816,6 @@ namespace Maestro.ScenarioTests
         public async Task<string> GetRepositoryPolicies(string repoUri, string branchName)
         {
             return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
-        }
-
-        public async Task WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, PullRequest pr, Repository repo, int attempts = 7)
-        {
-            while (attempts-- > 0)
-            {
-                TestContext.WriteLine($"Starting check for merge, attempts remaining {attempts}");
-                pr = await GitHubApi.PullRequest.Get(repo.Id, pr.Number);
-
-                if (pr.State == ItemState.Closed)
-                {
-                    return;
-                }
-
-                await Task.Delay(60 * 1000).ConfigureAwait(false);
-            }
-
-            throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
         }
     }
 }
