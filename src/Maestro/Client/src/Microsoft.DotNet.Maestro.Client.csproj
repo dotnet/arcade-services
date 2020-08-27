@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <IsPackable>true</IsPackable>
@@ -7,7 +7,7 @@
 
     <SwaggerOutputDirectory>$(MSBuildProjectDirectory)\Generated</SwaggerOutputDirectory>
     <SwaggerClientName>MaestroApi</SwaggerClientName>
-    <SwaggerDocumentUri>http://localhost:8080/api/swagger.json</SwaggerDocumentUri>
+    <SwaggerDocumentUri>https://maestro-int.westus2.cloudapp.azure.com/api/swagger.json</SwaggerDocumentUri>
   </PropertyGroup>
 
   <ItemGroup>
