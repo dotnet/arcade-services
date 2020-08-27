@@ -188,14 +188,6 @@ stages:
             artifact: DotNetStatus
             displayName: Publish DotNet.Status.Web
 
-          - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\DarcBot
-            workingDirectory: src/GitHubApps/DarcBot
-            displayName: Publish DarcBot
-
-          - publish: $(Build.ArtifactStagingDirectory)\DarcBot
-            artifact: DarcBot
-            displayName: Publish DarcBot Artifacts
-
           - script: $(Build.SourcesDirectory)\.dotnet\dotnet publish -o $(Build.ArtifactStagingDirectory)\RolloutScorerAzureFunction\publish -f netcoreapp3.1
             workingDirectory: src/RolloutScorer/RolloutScorerAzureFunction
             displayName: dotnet publish RolloutScorerAzureFunction
@@ -319,4 +311,3 @@ stages:
         GrafanaHost: https://dotnet-eng-grafana.westus2.cloudapp.azure.com
         GrafanaKeyVault: dotnet-grafana
         GrafanaVariableGroup: Dotnet-Grafana-Production
-        DarcBotVariableGroup: Deploy DarcBot KeyVault Variables (Production)

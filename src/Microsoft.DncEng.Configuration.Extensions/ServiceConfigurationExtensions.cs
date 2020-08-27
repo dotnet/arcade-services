@@ -8,6 +8,7 @@ using Azure.Identity;
 using Microsoft.Azure.Services.AppAuthentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using IHostEnvironment = Microsoft.Extensions.Hosting.IHostEnvironment;
 
 namespace Microsoft.DncEng.Configuration.Extensions
@@ -86,6 +87,17 @@ namespace Microsoft.DncEng.Configuration.Extensions
             };
             builder.Add(source);
             return builder;
+        }
+
+        public static AzureServiceTokenProvider GetAzureServiceTokenProvider(IConfiguration configuration)
+        {
+            string userAssignedIdentityId = configuration[ConfigurationConstants.ManagedIdentityIdConfigurationKey];
+            if (string.IsNullOrEmpty(userAssignedIdentityId))
+            {
+                return new AzureServiceTokenProvider();
+            }
+
+            return new AzureServiceTokenProvider($"RunAs=App;AppId={userAssignedIdentityId}");
         }
 
         public static TokenCredential GetAzureTokenCredential(IConfiguration configuration)

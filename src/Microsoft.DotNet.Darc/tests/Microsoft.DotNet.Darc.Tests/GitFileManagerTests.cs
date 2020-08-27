@@ -35,11 +35,16 @@ namespace Microsoft.DotNet.Darc.Tests
         [TestCase("PreserveCommentsInRightLocationsWithNoExistingBlock", new string[] {
             "https://pkgs.dev.azure.com/dnceng/_packaging/darc-int-dotnet-arcade-b0437974/nuget/v3/index.json",
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
-        [TestCase("PreserveManagedFromFromOutside", new string[] {
+        [TestCase("PreserveManagedFeedFromOutside", new string[] {
             "https://pkgs.dev.azure.com/dnceng/_packaging/darc-int-dotnet-arcade-b0437974/nuget/v3/index.json",
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-corefx-4ac4c036/nuget/v3/index.json" })]
         [TestCase("WhiteSpaceCorrectlyFormatted", new string[] {
             "https://pkgs.dev.azure.com/dnceng/public/_packaging/darc-pub-dotnet-core-setup-7d57652f/nuget/v3/index.json" })]
+        [TestCase("NonManagedDisabledFeedSources", new string[0])]  // Don't do anything to normal disabled sources
+        [TestCase("RedisableCurrentlyEnabledIntSources", new string[] { // Flip enabled int source to disabled.
+            "https://pkgs.dev.azure.com/dnceng/_packaging/darc-int-dotnet-arcade-b0437974/nuget/v3/index.json" })]
+        [TestCase("EnsureAppendsDisableEntryAfterLastClear", new string[] { // Honor all existing disable entries and append after last found <clear/>
+            "https://pkgs.dev.azure.com/dnceng/_packaging/darc-int-dotnet-arcade-b0437974/nuget/v3/index.json" })]
         public async Task UpdatePackageSourcesTests(string testName, string[] managedFeeds)
         {
             GitFileManager gitFileManager = new GitFileManager(null, NullLogger.Instance);

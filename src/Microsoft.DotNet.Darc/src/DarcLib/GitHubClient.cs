@@ -433,7 +433,6 @@ namespace Microsoft.DotNet.DarcLib
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
             // Get the sha of the latest commit for the current PR
             string prSha = (await Client.PullRequest.Get(owner, repo, id))?.Head?.Sha;
-            
             if (prSha == null) 
             {
                 throw new InvalidOperationException("We cannot find the sha of the pull request");

@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using NUnit.Framework;
 
@@ -7,14 +8,14 @@ namespace Maestro.ScenarioTests
     [Category("PostDeployment")]
     public class ScenarioTests_DefaultChannels : MaestroScenarioTestBase
     {
-        private readonly string repoName = "maestro-test1";
+        private readonly string repoName = TestRepository.TestRepo1Name;
         private readonly string branchName;
         private readonly string branchNameWithRefsHeads;
         private TestParameters _parameters;
 
         public ScenarioTests_DefaultChannels()
         {
-            branchName = "ChannelTestBranch";
+            branchName = $"ChannelTestBranch_{Environment.MachineName}";
             branchNameWithRefsHeads = $"refs/heads/{branchName}";
         }
 
@@ -37,8 +38,8 @@ namespace Maestro.ScenarioTests
         {
             string repoUrl = GetRepoUrl(repoName);
 
-            string testChannelName1 = "Test Channel Default 1";
-            string testChannelName2 = "Test Channel Default 2";
+            string testChannelName1 = $"TestChannelDefault1_{Environment.MachineName}";
+            string testChannelName2 = $"TestChannelDefault2_{Environment.MachineName}";
 
             await using (AsyncDisposableValue<string> channel1 = await CreateTestChannelAsync(testChannelName1).ConfigureAwait(false))
             {

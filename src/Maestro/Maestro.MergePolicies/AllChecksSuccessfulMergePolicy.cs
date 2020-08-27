@@ -50,22 +50,21 @@ namespace Maestro.MergePolicies
                     }
                 });
 
-            string ListChecks(CheckState state)
+            int ListChecksCount(CheckState state)
             {
-                return string.Join(", ", statuses[state].Select(c => c.Name));
+                return statuses[state].Select(c => c.Name).Count();
             }
 
             if (statuses.Contains(CheckState.Error))
             {
-                return Fail($"Unsuccessful checks: {ListChecks(CheckState.Error)}");
+                return Fail($"Unsuccessful checks: {ListChecksCount(CheckState.Error)}");
             }
 
             if (statuses.Contains(CheckState.Pending))
             {
-                return Pending($"Waiting on checks: {ListChecks(CheckState.Pending)}");
+                return Pending($"Waiting on checks: {ListChecksCount(CheckState.Pending)}");
             }
-
-            return Succeed($"Successful checks: {ListChecks(CheckState.Success)}");
+            return Succeed($"Successful checks: {ListChecksCount(CheckState.Success)}");
         }
     }
 

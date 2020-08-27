@@ -2,9 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using Maestro.AzureDevOps;
 using Maestro.Data;
 using Microsoft.DncEng.Configuration.Extensions;
+using Microsoft.DotNet.Internal.DependencyInjection;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -31,18 +33,18 @@ namespace FeedCleanerService
         {
             services.Configure<FeedCleanerOptions>((options, provider) =>
             {
-                var config = provider.GetRequiredService<IConfiguration>();
-                options.Enabled = config.GetSection("FeedCleaner").GetValue<bool>("Enabled");
-                var releaseFeedsTokenMap = config.GetSection("FeedCleaner:ReleasePackageFeeds").GetChildren();
-                foreach (IConfigurationSection token in releaseFeedsTokenMap)
+                var config1 = provider.GetRequiredService<IConfiguration>();
+                options.Enabled = config1.GetSection("FeedCleaner").GetValue<bool>("Enabled");
+                var releaseFeedsTokenMap = config1.GetSection("FeedCleaner:ReleasePackageFeeds").GetChildren();
+                foreach (IConfigurationSection token1 in releaseFeedsTokenMap)
                 {
-                    options.ReleasePackageFeeds.Add((token.GetValue<string>("Account"), token.GetValue<string>("Project"), token.GetValue<string>("Name")));
+                    options.ReleasePackageFeeds.Add((token1.GetValue<string>("Account"), token1.GetValue<string>("Project"), token1.GetValue<string>("Name")));
                 }
 
-                var azdoAccountTokenMap = config.GetSection("AzureDevOps:Tokens").GetChildren();
-                foreach (IConfigurationSection token in azdoAccountTokenMap)
+                var azdoAccountTokenMap = config1.GetSection("AzureDevOps:Tokens").GetChildren();
+                foreach (IConfigurationSection token2 in azdoAccountTokenMap)
                 {
-                    options.AzdoAccounts.Add(token.GetValue<string>("Account"));
+                    options.AzdoAccounts.Add(token2.GetValue<string>("Account"));
                 }
             });
             services.AddDefaultJsonConfiguration();

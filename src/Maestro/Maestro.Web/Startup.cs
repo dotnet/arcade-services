@@ -273,7 +273,7 @@ namespace Maestro.Web
             services.AddMergePolicies();
             services.Configure<SwaggerOptions>(options =>
             {
-                options.SerializeAsV2 = true;
+                options.SerializeAsV2 = false;
                 options.RouteTemplate = "api/{documentName}/swagger.json";
                 options.PreSerializeFilters.Add(
                     (doc, req) =>
@@ -378,7 +378,7 @@ namespace Maestro.Web
                 app.MapWhen(
                     ctx => IsGet(ctx) &&
                         ctx.Request.Path.StartsWithSegments("/api") &&
-                        ctx.Request.Path != "/api/swagger.json",
+                        !ctx.Request.Path.Value.EndsWith("swagger.json"),
                     a => { a.Run(ApiRedirectHandler); });
             }
 

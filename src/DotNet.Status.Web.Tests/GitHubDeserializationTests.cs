@@ -7,7 +7,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Reflection;
 using System.Text.Json;
- 
+
 namespace DotNet.Status.Web.Tests
 {
     [TestFixture]
@@ -32,7 +32,7 @@ namespace DotNet.Status.Web.Tests
             Assembly asm = thisClass.Assembly;
             var resource = string.Format($"{thisClass.Namespace}.Files.IssueEventPayload.json");
             using var stream = asm.GetManifestResourceStream(resource);
-            var reader = new StreamReader(stream);
+            using var reader = new StreamReader(stream);
 
             return reader.ReadToEnd();
         }
@@ -58,6 +58,9 @@ namespace DotNet.Status.Web.Tests
                     Number = 217,
                     State = ItemState.Open,
                     Title = "Intermittent serialization error in GC during build",
+                    Url = "https://api.github.com/repos/thatguy-int-tests/issue-notify-tests/issues/217",
+                    HtmlUrl = "https://github.com/thatguy-int-tests/issue-notify-tests/issues/217",
+                    Body = "This one is a mystery"
                 },
                 Label = new IssuesHookLabel
                 {
@@ -67,6 +70,7 @@ namespace DotNet.Status.Web.Tests
                 {
                     Name = "issue-notify-tests",
                     Owner = new IssuesHookUser { Login = "thatguy-int-tests" },
+                    Id = 987654321,
                 },
                 Sender = new IssuesHookUser
                 {

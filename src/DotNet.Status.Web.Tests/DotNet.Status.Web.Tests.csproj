@@ -6,9 +6,21 @@
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Files\IssueEventPayload.json" />
+    <None Remove="Files\triage-items-with-diff-cat.body.txt" />
+    <None Remove="Files\triage-items-with-diff-cat.expected.json" />
+    <None Remove="Files\triage-items-with-invalid.body.txt" />
+    <None Remove="Files\triage-items-with-invalid.expected.json" />
+    <None Remove="Files\triage-items-with-multi-builds.body.txt" />
+    <None Remove="Files\triage-items-with-multi-builds.expected.json" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Files\IssueEventPayload.json" />
+    <EmbeddedResource Include="Files\triage-items-with-invalid.body.txt" />
+    <EmbeddedResource Include="Files\triage-items-with-invalid.expected.json" />
+    <EmbeddedResource Include="Files\triage-items-with-diff-cat.body.txt" />
+    <EmbeddedResource Include="Files\triage-items-with-diff-cat.expected.json" />
+    <EmbeddedResource Include="Files\triage-items-with-multi-builds.expected.json" />
+    <EmbeddedResource Include="Files\triage-items-with-multi-builds.body.txt" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Moq" />

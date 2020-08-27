@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Maestro.Data;
 using Maestro.Web.Api.v2020_02_20.Models;
@@ -27,6 +28,9 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
     public class DefaultChannelsController : v2018_07_16.Controllers.DefaultChannelsController
     {
         private readonly BuildAssetRegistryContext _context;
+        // Branch names can't possibly start with -, so we'll use this fact to guarantee the user 
+        // wants to use a regex, and not direct matching.
+        private const string _regexBranchPrefix = "-regex:";
 
         public DefaultChannelsController(BuildAssetRegistryContext context)
             : base(context)
@@ -53,13 +57,6 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 query = query.Where(dc => dc.Repository == repository);
             }
 
-            if (!string.IsNullOrEmpty(branch))
-            {
-                // Normalize the branch name to not include refs/heads
-                string normalizedBranchName = GitHelpers.NormalizeBranchName(branch);
-                query = query.Where(dc => dc.Branch == normalizedBranchName);
-            }
-
             if (channelId.HasValue)
             {
                 query = query.Where(dc => dc.ChannelId == channelId.Value);
@@ -71,6 +68,28 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             }
 
             List<DefaultChannel> results = query.AsEnumerable().Select(dc => new DefaultChannel(dc)).ToList();
+
+            if (!string.IsNullOrEmpty(branch))
+            {
+                List<DefaultChannel> branchFilteredResults = new List<DefaultChannel>();
+                foreach (DefaultChannel defaultChannel in results)
+                {
+                    // Branch name expressed as a regular expression: must start with '-regex:' and have at least one more character.
+                    // - Skips NormalizeBranchName here because internally everything is stored without that.
+                    //   If there's a pattern of users doing '-regex:/refs/heads/release.*' this could be revisited.
+                    if (defaultChannel.Branch.StartsWith(_regexBranchPrefix, StringComparison.InvariantCultureIgnoreCase) &&
+                        defaultChannel.Branch.Length > _regexBranchPrefix.Length &&
+                        new Regex(defaultChannel.Branch.Substring(_regexBranchPrefix.Length)).IsMatch(branch))
+                    {
+                        branchFilteredResults.Add(defaultChannel);
+                    }
+                    else if (defaultChannel.Branch == GitHelpers.NormalizeBranchName(branch))
+                    {
+                        branchFilteredResults.Add(defaultChannel);
+                    }
+                }
+                return Ok(branchFilteredResults);
+            }
             return Ok(results);
         }
 

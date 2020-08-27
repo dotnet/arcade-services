@@ -312,7 +312,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <summary>
         ///     Create a new branch in the specified repository.
         /// </summary>
-        /// <param name="repoUri">Repository to create a brahc in</param>
+        /// <param name="repoUri">Repository to create a branch in</param>
         /// <param name="baseBranch">Branch to create <paramref name="newBranch"/> off of</param>
         /// <param name="newBranch">New branch name.</param>
         /// <returns>Async task</returns>

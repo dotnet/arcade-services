@@ -12,6 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Maestro.Contracts;
+using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
 using Microsoft.VisualStudio.Services.Common;
@@ -122,8 +123,7 @@ namespace Microsoft.DotNet.DarcLib
                         $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={versionType}&version={branchOrCommit}&includeContent=true",
                         _logger,
                         // Don't log the failure so users don't get confused by 404 messages popping up in expected circumstances.
-                        logFailure: false,
-                        retryCount: 0);
+                        logFailure: false);
                     return content["content"].ToString();
                 }
                 catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)") || reqEx.Message.Contains("400 (Bad Request)"))
@@ -532,8 +532,8 @@ namespace Microsoft.DotNet.DarcLib
         {
             await CreateOrUpdatePullRequestCommentAsync(pullRequestUrl,
                     $@"## Auto-Merge Status
-                    This pull request has not been merged because Maestro++ is waiting on the following merge policies.
-                    {string.Join("\n", evaluations.OrderBy(r => r.MergePolicyInfo.Name).Select(DisplayPolicy))}");
+This pull request has not been merged because Maestro++ is waiting on the following merge policies.
+{string.Join("\n", evaluations.OrderBy(r => r.MergePolicyInfo.Name).Select(DisplayPolicy))}");
         }
 
         private string DisplayPolicy(MergePolicyEvaluationResult result)
@@ -1151,24 +1151,46 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="accountName">Account where the project is hosted.</param>
         /// <param name="projectName">Project where the build definition is.</param>
         /// <param name="azdoDefinitionId">ID of the build definition where a build should be queued.</param>
-        /// <param name="queueTimeVariables">A string in JSON format containing the queue time variables to be used.</param>
-        public async Task<int> StartNewBuildAsync(string accountName, string projectName, int azdoDefinitionId, string sourceBranch, string sourceVersion, string queueTimeVariables = null)
+        /// <param name="queueTimeVariables">Queue time variables as a Dictionary of (variable name, value).</param>
+        /// <param name="templateParameters">Template parameters as a Dictionary of (variable name, value).</param>
+        public async Task<int> StartNewBuildAsync(
+            string accountName,
+            string projectName,
+            int azdoDefinitionId,
+            string sourceBranch,
+            string sourceVersion,
+            Dictionary<string, string> queueTimeVariables = null,
+            Dictionary<string, string> templateParameters = null)
         {
-            var body = $"{{ \"definition\": " +
-                $"{{ \"id\": \"{azdoDefinitionId}\" }}, " +
-                $"\"sourceBranch\": \"{sourceBranch}\", " +
-                (sourceVersion != null ? $"\"sourceVersion\": \"{sourceVersion}\", " : string.Empty) +
-                $"\"parameters\": '{queueTimeVariables}' " +
-                $"}}";
+            var variables = new Dictionary<string, AzureDevOpsVariable>();
+            foreach ((string name, string value) in queueTimeVariables)
+            {
+                variables.Add(name, new AzureDevOpsVariable(value));
+            }
+
+            var body = new AzureDevOpsPipelineRunDefinition
+            {
+                Resources = new AzureDevOpsRunResourcesParameters
+                {
+                    Repositories = new Dictionary<string, AzureDevOpsRepositoryResourceParameter>
+                    {
+                        { "self", new AzureDevOpsRepositoryResourceParameter($"refs/heads/{sourceBranch}", sourceVersion) }
+                    }
+                },
+                TemplateParameters = templateParameters,
+                Variables = variables
+            };
+
+            string bodyAsString = JsonConvert.SerializeObject(body, Formatting.Indented);
 
             JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Post,
                 accountName,
                 projectName,
-                $"_apis/build/builds/",
+                $"_apis/pipelines/{azdoDefinitionId}/runs",
                 _logger,
-                body,
-                versionOverride: "5.1");
+                bodyAsString,
+                versionOverride: "6.0-preview.1");
 
             return content.GetValue("id").ToObject<int>();
         }
