@@ -64,6 +64,7 @@ namespace Maestro.MergePolicies
             {
                 return Pending($"Waiting on checks: {ListChecksCount(CheckState.Pending)}");
             }
+
             return Succeed($"Successful checks: {ListChecksCount(CheckState.Success)}");
         }
     }
