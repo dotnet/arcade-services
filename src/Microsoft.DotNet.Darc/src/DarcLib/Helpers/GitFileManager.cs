@@ -86,6 +86,15 @@ namespace Microsoft.DotNet.DarcLib
             return GetDependencyDetails(document, includePinned: includePinned);
         }
 
+        public async Task<Dictionary<(string, string), string>> GetVersionDetailsXml(string repoUri, string branch)
+        {
+            _logger.LogInformation($"Getting a collection of dependencies from '{VersionFiles.VersionDetailsXml}'...");
+
+            XmlDocument document = await ReadVersionDetailsXmlAsync(repoUri, branch);
+
+            return GetMapFromDependencyDetails(document);
+        }
+
         public async Task<IEnumerable<DependencyDetail>> ParseVersionDetailsXmlAsync(string repoUri, string branch, bool includePinned = true)
         {
             if (!string.IsNullOrEmpty(branch))
@@ -1162,6 +1171,42 @@ namespace Microsoft.DotNet.DarcLib
             }
 
             return dependencyDetails.Where(d => !d.Pinned);
+        }
+
+        private Dictionary<(string, string), string> GetMapFromDependencyDetails(XmlDocument document, bool includePinned = true)
+        {
+            Dictionary<(string, string), string> versionsMap = new Dictionary<(string, string), string>();
+            if (document != null)
+            {
+                BuildDependencies(document.DocumentElement.SelectNodes("//Dependency"));
+
+                void BuildDependencies(XmlNodeList dependencies)
+                {
+                    if (dependencies.Count > 0)
+                    {
+                        foreach (XmlNode dependency in dependencies)
+                        {
+                            if (dependency.NodeType != XmlNodeType.Comment && dependency.NodeType != XmlNodeType.Whitespace)
+                            {
+                                string name = dependency.Attributes[VersionFiles.NameAttributeName].Value?.Trim();
+                                string commit = dependency.SelectSingleNode(VersionFiles.ShaElementName)?.InnerText?.Trim();
+                                string version = dependency.Attributes[VersionFiles.VersionAttributeName].Value?.Trim();
+                                if (!versionsMap.ContainsKey((name,version)))
+                                {
+                                    versionsMap[(name, version)] = commit;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                _logger.LogError($"There was an error while reading '{VersionFiles.VersionDetailsXml}' and it came back empty. " +
+                    $"Look for exceptions above.");
+            }
+
+            return versionsMap;
         }
 
         private HashSet<string> FlattenLocations(Dictionary<string, HashSet<string>> assetLocationMap)

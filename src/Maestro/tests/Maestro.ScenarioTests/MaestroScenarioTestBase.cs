@@ -12,7 +12,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-
 namespace Maestro.ScenarioTests
 {
     public class MaestroScenarioTestBase
