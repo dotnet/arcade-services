@@ -353,7 +353,13 @@ namespace Maestro.DataProviders
 
             if (defaultChannel == null)
             {
-                return new BuildTime(0, 0, 0, 0);
+                return new BuildTime
+                {
+                    DefaultChannelId = 0,
+                    OfficialBuildTime = 0,
+                    PrBuildTime = 0,
+                    GoalTimeInMinutes = 0
+                };
             }
 
             MultiProjectKustoQuery queries = SharedKustoQueries.CreateBuildTimesQueries(defaultChannel.Repository, defaultChannel.Branch, days);
@@ -387,7 +393,13 @@ namespace Maestro.DataProviders
                 prTime = prBuildTime.TotalMinutes;
             }
 
-            return new BuildTime(defaultChannelId, officialTime, prTime, goalTime);
+            return new BuildTime
+            {
+                DefaultChannelId = defaultChannelId,
+                OfficialBuildTime = officialTime,
+                PrBuildTime = prTime,
+                GoalTimeInMinutes = goalTime
+            };
         }
     }
 }

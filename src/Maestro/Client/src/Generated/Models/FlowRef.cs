@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using Newtonsoft.Json;
 
@@ -7,7 +6,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class FlowRef
     {
-        public FlowRef(double officialBuildTime, double prBuildTime, bool onLongestBuildPath, double bestCasePathTime, double worstCasePathTime, int goalTimeInMinutes, string repository, string branch, string id)
+        public FlowRef(double officialBuildTime, double prBuildTime, bool onLongestBuildPath, double bestCasePathTime, double worstCasePathTime, int goalTimeInMinutes)
         {
             OfficialBuildTime = officialBuildTime;
             PrBuildTime = prBuildTime;
@@ -15,25 +14,22 @@ namespace Microsoft.DotNet.Maestro.Client.Models
             BestCasePathTime = bestCasePathTime;
             WorstCasePathTime = worstCasePathTime;
             GoalTimeInMinutes = goalTimeInMinutes;
-            Repository = repository;
-            Branch = branch;
-            Id = id;
         }
 
         [JsonProperty("repository")]
-        public string Repository { get; }
+        public string Repository { get; set; }
 
         [JsonProperty("branch")]
-        public string Branch { get; }
+        public string Branch { get; set; }
 
         [JsonProperty("id")]
-        public string Id { get; }
+        public string Id { get; set; }
 
         [JsonProperty("officialBuildTime")]
-        public double OfficialBuildTime { get; }
+        public double OfficialBuildTime { get; set; }
 
         [JsonProperty("prBuildTime")]
-        public double PrBuildTime { get; }
+        public double PrBuildTime { get; set; }
 
         [JsonProperty("onLongestBuildPath")]
         public bool OnLongestBuildPath { get; set; }
@@ -48,9 +44,9 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         public int GoalTimeInMinutes { get; set; }
 
         [JsonProperty("inputChannels")]
-        public HashSet<string> InputChannels { get; set; }
+        public IImmutableList<string> InputChannels { get; set; }
 
         [JsonProperty("outputChannels")]
-        public HashSet<string> OutputChannels { get; set; }
+        public IImmutableList<string> OutputChannels { get; set; }
     }
 }

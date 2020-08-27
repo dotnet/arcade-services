@@ -158,7 +158,7 @@ namespace Microsoft.DotNet.DarcLib
             bool includeDisabledSubscriptions,
             IReadOnlyList<string> includedFrequencies)
         {
-            var flowGraph = await _barClient.Channels.GetFlowGraphAsyncAsync(
+            var flowGraph = await _barClient.Channels.GetFlowGraphAsync(
                 channelId: channelId,
                 days: days,
                 includeArcade: includeArcade,
@@ -191,10 +191,10 @@ namespace Microsoft.DotNet.DarcLib
             {
                 BestCasePathTime = flowRef.BestCasePathTime,
                 GoalTimeInMinutes = flowRef.GoalTimeInMinutes,
-                InputChannels = flowRef.InputChannels,
+                InputChannels = flowRef.InputChannels.ToHashSet(),
                 OfficialBuildTime = flowRef.OfficialBuildTime,
                 OnLongestBuildPath = flowRef.OnLongestBuildPath,
-                OutputChannels = flowRef.OutputChannels,
+                OutputChannels = flowRef.OutputChannels.ToHashSet(),
                 PrBuildTime = flowRef.PrBuildTime,
                 WorstCasePathTime = flowRef.WorstCasePathTime
             };
