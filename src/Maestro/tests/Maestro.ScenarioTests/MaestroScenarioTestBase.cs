@@ -408,13 +408,7 @@ namespace Maestro.ScenarioTests
                 }
             });
         }
-        public async Task AddDependenciesToLocalRepo(string repoPath, string name, string repoUri, bool isToolset = false)
-        {
-            using (ChangeDirectory(repoPath))
-            {
-                await RunDarcAsync(new string[] { "add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri });
-            }
-        }
+
         public async Task<string> GetTestChannelsAsync()
         {
             return await RunDarcAsync("get-channels").ConfigureAwait(false);

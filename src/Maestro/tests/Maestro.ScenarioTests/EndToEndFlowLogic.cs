@@ -16,8 +16,8 @@ namespace Maestro.ScenarioTests
         private readonly IImmutableList<AssetData> source1Assets;
         private readonly IImmutableList<AssetData> source2Assets;
         private readonly IImmutableList<AssetData> source1AssetsUpdated;
-        IImmutableList<AssetData> childSourceBuildAssets;
-        IImmutableList<AssetData> childSourceAssets;
+        private readonly IImmutableList<AssetData> childSourceBuildAssets;
+        private readonly IImmutableList<AssetData> childSourceAssets;
         private readonly List<DependencyDetail> expectedDependenciesSource1;
         private readonly List<DependencyDetail> expectedDependenciesSource2;
         private readonly List<DependencyDetail> expectedDependenciesSource1Updated;
@@ -158,7 +158,7 @@ namespace Maestro.ScenarioTests
             foreach (DependencyDetail dependency in expectedDependenciesSource1Updated)
             {
                 expectedAzDoDependenciesSource1Updated.Add(
-                    new DependencyDetail(dependency) 
+                    new DependencyDetail(dependency)
                     { RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name) });
             }
 
@@ -188,11 +188,13 @@ namespace Maestro.ScenarioTests
             {
                 TestContext.WriteLine($"Adding a subscription from {source1RepoName} to {targetRepoName}");
                 await using (AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(testChannelName, source1RepoName, targetRepoName, targetBranch,
-                    UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" }, sourceIsAzDo: isAzDoTest, targetIsAzDo: isAzDoTest))
+                    UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" },
+                    sourceIsAzDo: isAzDoTest, targetIsAzDo: isAzDoTest))
                 {
                     TestContext.WriteLine($"Adding a subscription from {source2RepoName} to {targetRepoName}");
                     await using (AsyncDisposableValue<string> subscription2Id = await CreateSubscriptionAsync(testChannelName, source2RepoName, targetRepoName, targetBranch,
-                        UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" }, sourceIsAzDo: isAzDoTest, targetIsAzDo: isAzDoTest))
+                        UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" },
+                        sourceIsAzDo: isAzDoTest, targetIsAzDo: isAzDoTest))
                     {
                         TestContext.WriteLine("Set up build1 for intake into target repository");
                         Build build1 = await CreateBuildAsync(source1RepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, sourceBuildNumber, source1Assets);
@@ -205,7 +207,7 @@ namespace Maestro.ScenarioTests
 
                         TestContext.WriteLine("Cloning target repo to prepare the target branch");
 
-                        TemporaryDirectory reposFolder = isAzDoTest? await CloneAzDoRepositoryAsync(targetRepoName, targetBranch) : await CloneRepositoryAsync(targetRepoName);
+                        TemporaryDirectory reposFolder = isAzDoTest ? await CloneAzDoRepositoryAsync(targetRepoName, targetBranch) : await CloneRepositoryAsync(targetRepoName);
 
                         using (ChangeDirectory(reposFolder.Directory))
                         {
@@ -323,12 +325,11 @@ namespace Maestro.ScenarioTests
                                 return;
                             }
 
-                                // The remaining non-batched tests continue to make sure that updating works as expected
-                                await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1, reposFolder.Directory, false);
+                            // The remaining non-batched tests continue to make sure that updating works as expected
+                            await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1, reposFolder.Directory, false);
 
-
-                                TestContext.WriteLine("Set up another build for intake into target repository");
-                                Build build2 = await CreateBuildAsync(sourceRepoUri, sourceBranch, TestRepository.CoherencyTestRepo2Commit, source2BuildNumber, source1AssetsUpdated);
+                            TestContext.WriteLine("Set up another build for intake into target repository");
+                            Build build2 = await CreateBuildAsync(sourceRepoUri, sourceBranch, TestRepository.CoherencyTestRepo2Commit, source2BuildNumber, source1AssetsUpdated);
 
                             TestContext.WriteLine("Trigger the dependency update");
                             await TriggerSubscriptionAsync(subscription1Id.Value);
@@ -350,7 +351,7 @@ namespace Maestro.ScenarioTests
                             TestContext.WriteLine("Trigger the dependency update");
                             await TriggerSubscriptionAsync(subscription1Id.Value);
 
-                                TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
+                            TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
 
                             if (isAzDoTest)
                             {
@@ -366,7 +367,7 @@ namespace Maestro.ScenarioTests
             }
         }
 
-        private async Task<AsyncDisposableValue<string>> CreateSubscriptionForEndToEndTests(string testChannelName, string sourceRepoName, 
+        private async Task<AsyncDisposableValue<string>> CreateSubscriptionForEndToEndTests(string testChannelName, string sourceRepoName,
             string targetRepoName, string targetBranch, bool allChecks)
         {
             if (allChecks)
