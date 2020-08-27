@@ -36,7 +36,7 @@ namespace Microsoft.DotNet.Internal.Testing.Utility
                 string formattedFailReason = Environment.NewLine +
                     string.Join(Environment.NewLine, strArray.Select(x => x.IndentLines()));
                 Execute.Assertion.BecauseOf(because, becauseArgs)
-                    .AddPreFormattedFailure(
+                    .FailWith(
                         "Expected {context:collection} to satisfy all inspectors{reason}, but inspector is not satisfied:" +
                         formattedFailReason);
             }

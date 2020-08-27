@@ -2866,6 +2866,48 @@
       }
     },
     {
+      "alert": {
+        "alertRuleTags": {
+          "NotificationId": "b87805b575d141e4b2b6d258f5e3a79e"
+        },
+        "conditions": [
+          {
+            "evaluator": {
+              "params": [
+                10
+              ],
+              "type": "gt"
+            },
+            "operator": {
+              "type": "and"
+            },
+            "query": {
+              "params": [
+                "A",
+                "5m",
+                "now"
+              ]
+            },
+            "reducer": {
+              "params": [],
+              "type": "avg"
+            },
+            "type": "query"
+          }
+        ],
+        "executionErrorState": "keep_state",
+        "for": "5m",
+        "frequency": "1m",
+        "handler": 1,
+        "message": "The number of failed Maestro requests per hour is above 10. This may indicate a deployment in progress or a systemic problem that needs to be investigated.",
+        "name": "Maestro Failed Requests/Hour alert",
+        "noDataState": "keep_state",
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
+      },
       "aliasColors": {},
       "bars": true,
       "dashLength": 10,
@@ -2946,11 +2988,11 @@
             ],
             "metricName": "requests/count",
             "rawQuery": true,
-            "rawQueryString": "let r = requests | where $__timeFilter();\nlet f = toscalar(r | summarize min(timestamp));\nlet t = toscalar(r | summarize max(timestamp));\nr\n| where success == false and toint(resultCode) >= 500\n| make-series valueCount=count() default=0 on timestamp in range(f, t, 1m) by resultCode\n| mvexpand timestamp, valueCount\n| project timestamp=todatetime(timestamp), valueCount=toint(valueCount), resultCode",
+            "rawQueryString": "let r = requests | where $__timeFilter();\r\nlet f = toscalar(r | summarize min(timestamp));\r\nlet t = toscalar(r | summarize max(timestamp));\r\nlet span=(t - f)/60;\r\nlet interval=case(span >= 1d, bin(span, 1d), span >= 1h, bin(span, 1h), 15m);\r\nlet intervalHours = interval / 1h;\r\nr\r\n| where success == false and toint(resultCode) >= 500\r\n| make-series valueCount=count() default=0 on timestamp in range(f, t, interval) by resultCode\r\n| mv-expand timestamp, valueCount\r\n| project timestamp=todatetime(timestamp), failuresCount=todouble(valueCount)/intervalHours, resultCode",
             "segmentColumn": "resultCode",
             "timeColumn": "timestamp",
             "timeGrain": "auto",
-            "valueColumn": "valueCount"
+            "valueColumn": "failuresCount"
           },
           "azureLogAnalytics": {
             "query": "//change this example to create your own time series query\n<table name>                                                              //the table to query (e.g. Usage, Heartbeat, Perf)\n| where $__timeFilter(TimeGenerated)                                      //this is a macro used to show the full chart’s time range, choose the datetime column here\n| summarize count() by <group by column>, bin(TimeGenerated, $__interval) //change “group by column” to a column in your table, such as “Computer”. The $__interval macro is used to auto-select the time grain. Can also use 1h, 5m etc.\n| order by TimeGenerated asc",
@@ -2971,11 +3013,28 @@
           "refId": "A"
         }
       ],
-      "thresholds": [],
+      "thresholds": [
+        {
+          "colorMode": "warning",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 5,
+          "yaxis": "left"
+        },
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 10,
+          "yaxis": "left"
+        }
+      ],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Maestro Failed Requests",
+      "title": "Maestro Failed Requests/Hour",
       "tooltip": {
         "shared": true,
         "sort": 0,

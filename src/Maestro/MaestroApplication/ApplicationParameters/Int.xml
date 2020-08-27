@@ -4,7 +4,7 @@
              Name="fabric:/MaestroApplication" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="Environment" Value="Staging" />
-    <Parameter Name="WebCertThumbprint" Value="c6c9b4d8a878044286d6e1094b558aeedffabbce" />
+    <Parameter Name="WebCertThumbprint" Value="79565a771a2fcec8e266f18b7507ae5b81d4c012" />
     <Parameter Name="WebProtocol" Value="https" />
     <Parameter Name="WebPort" Value="4430" />
   </Parameters>

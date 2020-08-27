@@ -18,14 +18,14 @@ namespace Maestro.ScenarioTests
         private readonly IImmutableList<AssetData> source1AssetsUpdated;
         IImmutableList<AssetData> childSourceBuildAssets;
         IImmutableList<AssetData> childSourceAssets;
-        private List<DependencyDetail> expectedDependenciesSource1;
-        private List<DependencyDetail> expectedDependenciesSource2;
-        private List<DependencyDetail> expectedDependenciesSource1Updated;
-        private List<DependencyDetail> expectedCoherencyDependencies;
-        private List<DependencyDetail> expectedAzDoDependenciesSource1;
-        private List<DependencyDetail> expectedAzDoDependenciesSource2;
-        private List<DependencyDetail> expectedAzDoDependenciesSource1Updated;
-        private TestParameters _parameters;
+        private readonly List<DependencyDetail> expectedDependenciesSource1;
+        private readonly List<DependencyDetail> expectedDependenciesSource2;
+        private readonly List<DependencyDetail> expectedDependenciesSource1Updated;
+        private readonly List<DependencyDetail> expectedCoherencyDependencies;
+        private readonly List<DependencyDetail> expectedAzDoDependenciesSource1;
+        private readonly List<DependencyDetail> expectedAzDoDependenciesSource2;
+        private readonly List<DependencyDetail> expectedAzDoDependenciesSource1Updated;
+        private readonly TestParameters _parameters;
 
         public EndToEndFlowLogic(TestParameters parameters)
         {

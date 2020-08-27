@@ -705,10 +705,6 @@ namespace Maestro.ScenarioTests
                 await RunGitAsync("config", "user.name", _parameters.GitHubUser).ConfigureAwait(false);
             }
 
-            //  string fetchUrl = GetRepoFetchUrl(org, repository);
-            //string repoUrl = GetAzDoRepoUrl(repoName);
-            //_parameters.AzDoClient.Clone(repoUrl, targetBranch, directory);
-
 
             return shareable.TryTake()!;
         }
@@ -762,11 +758,11 @@ namespace Maestro.ScenarioTests
         }
 
         internal AssetData GetAssetDataWithLocations(
-            string assetName,
+            string assetName, 
             string assetVersion,
-            string assetLocation1,
+            string assetLocation1, 
             LocationType assetLocationType1,
-            string assetLocation2 = null,
+            string assetLocation2 = null, 
             LocationType assetLocationType2 = LocationType.None)
         {
             var locationsListBuilder = ImmutableList.CreateBuilder<AssetLocationData>();

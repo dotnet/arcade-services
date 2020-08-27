@@ -14,11 +14,7 @@ namespace Microsoft.DotNet.Darc.Options
         [RedactFromLogging]
         public int Id { get; set; }
 
-        [Option("uri", HelpText = "Uri of the build.")]
-        [RedactFromLogging]
-        public string BuildUri { get; set; }
-
-        [Option("repo", HelpText = "Full url of the repository that was built")]
+        [Option("repo", HelpText = "Full url of the repository that was built, or match on substring")]
         public string Repo { get; set; }
 
         [Option("commit", HelpText = "Full commit sha that was built")]

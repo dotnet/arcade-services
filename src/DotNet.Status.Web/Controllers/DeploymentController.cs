@@ -30,14 +30,17 @@ namespace DotNet.Status.Web.Controllers
     public class DeploymentController : ControllerBase
     {
         private readonly IHostEnvironment _env;
+        private readonly ExponentialRetry _retry;
         private readonly IOptionsMonitor<GrafanaOptions> _grafanaOptions;
         private readonly ILogger<DeploymentController> _logger;
 
         public DeploymentController(
+            ExponentialRetry retry,
             IOptionsMonitor<GrafanaOptions> grafanaOptions,
             ILogger<DeploymentController> logger,
             IHostEnvironment env)
         {
+            _retry = retry;
             _grafanaOptions = grafanaOptions;
             _logger = logger;
             _env = env;
@@ -57,7 +60,7 @@ namespace DotNet.Status.Web.Controllers
             NewGrafanaAnnotationResponse annotation;
             using (var client = new HttpClient())
             {
-                annotation = await ExponentialRetry.RetryAsync(async () =>
+                annotation = await _retry.RetryAsync(async () =>
                     {
                         GrafanaOptions grafanaOptions = _grafanaOptions.CurrentValue;
                         _logger.LogInformation("Creating annotation to {url}", grafanaOptions.BaseUrl);
@@ -120,7 +123,7 @@ namespace DotNet.Status.Web.Controllers
 
             using (var client = new HttpClient())
             {
-                await ExponentialRetry.RetryAsync(async () =>
+                await _retry.RetryAsync(async () =>
                     {
                         GrafanaOptions grafanaOptions = _grafanaOptions.CurrentValue;
                         _logger.LogInformation("Updating annotation {annotationId} to {url}", annotation.GrafanaAnnotationId, grafanaOptions.BaseUrl);

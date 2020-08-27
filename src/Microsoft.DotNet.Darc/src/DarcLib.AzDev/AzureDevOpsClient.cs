@@ -11,6 +11,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib.Models.AzureDevOps;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.SourceControl.WebApi;
 using Microsoft.VisualStudio.Services.Common;
@@ -121,8 +122,7 @@ namespace Microsoft.DotNet.DarcLib
                         $"_apis/git/repositories/{repoName}/items?path={filePath}&versionType={versionType}&version={branchOrCommit}&includeContent=true",
                         _logger,
                         // Don't log the failure so users don't get confused by 404 messages popping up in expected circumstances.
-                        logFailure: false,
-                        retryCount: 0);
+                        logFailure: false);
                     return content["content"].ToString();
                 }
                 catch (HttpRequestException reqEx) when (reqEx.Message.Contains("404 (Not Found)") || reqEx.Message.Contains("400 (Bad Request)"))
@@ -365,8 +365,8 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
-            VssConnection connection = CreateVssConnection(accountName);
-            GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+            using VssConnection connection = CreateVssConnection(accountName);
+            using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
             GitPullRequest pr = await client.GetPullRequestAsync(projectName, repoName, id);
             // Strip out the refs/heads prefix on BaseBranch and HeadBranch because almost
@@ -398,8 +398,8 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
 
-            VssConnection connection = CreateVssConnection(accountName);
-            GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+            using VssConnection connection = CreateVssConnection(accountName);
+            using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
             GitPullRequest createdPr = await client.CreatePullRequestAsync(
                 new GitPullRequest
@@ -425,8 +425,8 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUri);
 
-            VssConnection connection = CreateVssConnection(accountName);
-            GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+            using VssConnection connection = CreateVssConnection(accountName);
+            using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
             await client.UpdatePullRequestAsync(
                 new GitPullRequest
@@ -447,24 +447,20 @@ namespace Microsoft.DotNet.DarcLib
         public async Task<IList<Commit>> GetPullRequestCommitsAsync(string pullRequestUrl)
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
-            using (VssConnection connection = CreateVssConnection(accountName))
+            using VssConnection connection = CreateVssConnection(accountName);
+            using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+
+            var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
+            IList<Commit> commits = new List<Commit>(pullRequest.Commits.Length);
+            foreach (var commit in pullRequest.Commits)
             {
-                using (GitHttpClient client = await connection.GetClientAsync<GitHttpClient>())
-                {
-
-                    var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
-                    IList<Commit> commits = new List<Commit>(pullRequest.Commits.Length);
-                    foreach (var commit in pullRequest.Commits)
-                    {
-                        commits.Add(new Commit(
-                            commit.Author.Name == "DotNet-Bot" ? "dotnet-maestro[bot]" : commit.Author.Name,
-                            commit.CommitId,
-                            commit.Comment));
-                    }
-
-                    return commits;
-                }
+                commits.Add(new Commit(
+                    commit.Author.Name == "DotNet-Bot" ? "dotnet-maestro[bot]" : commit.Author.Name,
+                    commit.CommitId,
+                    commit.Comment));
             }
+
+            return commits;
         }
 
         public async Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters,
@@ -472,33 +468,28 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
-            using (VssConnection connection = CreateVssConnection(accountName))
-            {
-                using (GitHttpClient client = await connection.GetClientAsync<GitHttpClient>())
+            using VssConnection connection = CreateVssConnection(accountName);
+            using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+            var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
+
+            await client.UpdatePullRequestAsync(
+                new GitPullRequest
                 {
-
-                    var pullRequest = await client.GetPullRequestAsync(repoName, id, includeCommits: true);
-
-                    await client.UpdatePullRequestAsync(
-                        new GitPullRequest
-                        {
-                            Status = PullRequestStatus.Completed,
-                            CompletionOptions = new GitPullRequestCompletionOptions
-                            {
-                                MergeCommitMessage = mergeCommitMessage,
-                                BypassPolicy = true,
-                                BypassReason = "All required checks were successful",
-                                SquashMerge = parameters.SquashMerge,
-                                DeleteSourceBranch = parameters.DeleteSourceBranch
-                            },
-                            LastMergeSourceCommit = new GitCommitRef
-                                {CommitId = pullRequest.LastMergeSourceCommit.CommitId, Comment = mergeCommitMessage}
-                        },
-                        projectName,
-                        repoName,
-                        id);
-                }
-            }
+                    Status = PullRequestStatus.Completed,
+                    CompletionOptions = new GitPullRequestCompletionOptions
+                    {
+                        MergeCommitMessage = mergeCommitMessage,
+                        BypassPolicy = true,
+                        BypassReason = "All required checks were successful",
+                        SquashMerge = parameters.SquashMerge,
+                        DeleteSourceBranch = parameters.DeleteSourceBranch
+                    },
+                    LastMergeSourceCommit = new GitCommitRef
+                    { CommitId = pullRequest.LastMergeSourceCommit.CommitId, Comment = mergeCommitMessage }
+                },
+                projectName,
+                repoName,
+                id);
         }
 
         /// <summary>
@@ -517,8 +508,8 @@ namespace Microsoft.DotNet.DarcLib
         {
             (string accountName, string projectName, string repoName, int id) = ParsePullRequestUri(pullRequestUrl);
 
-            VssConnection connection = CreateVssConnection(accountName);
-            GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
+            using VssConnection connection = CreateVssConnection(accountName);
+            using GitHttpClient client = await connection.GetClientAsync<GitHttpClient>();
 
             Comment prComment = new Comment()
             {
@@ -1164,24 +1155,46 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="accountName">Account where the project is hosted.</param>
         /// <param name="projectName">Project where the build definition is.</param>
         /// <param name="azdoDefinitionId">ID of the build definition where a build should be queued.</param>
-        /// <param name="queueTimeVariables">A string in JSON format containing the queue time variables to be used.</param>
-        public async Task<int> StartNewBuildAsync(string accountName, string projectName, int azdoDefinitionId, string sourceBranch, string sourceVersion, string queueTimeVariables = null)
+        /// <param name="queueTimeVariables">Queue time variables as a Dictionary of (variable name, value).</param>
+        /// <param name="templateParameters">Template parameters as a Dictionary of (variable name, value).</param>
+        public async Task<int> StartNewBuildAsync(
+            string accountName,
+            string projectName,
+            int azdoDefinitionId,
+            string sourceBranch,
+            string sourceVersion,
+            Dictionary<string, string> queueTimeVariables = null,
+            Dictionary<string, string> templateParameters = null)
         {
-            var body = $"{{ \"definition\": " +
-                $"{{ \"id\": \"{azdoDefinitionId}\" }}, " +
-                $"\"sourceBranch\": \"{sourceBranch}\", " +
-                (sourceVersion != null ? $"\"sourceVersion\": \"{sourceVersion}\", " : string.Empty) +
-                $"\"parameters\": '{queueTimeVariables}' " +
-                $"}}";
+            var variables = new Dictionary<string, AzureDevOpsVariable>();
+            foreach ((string name, string value) in queueTimeVariables)
+            {
+                variables.Add(name, new AzureDevOpsVariable(value));
+            }
+
+            var body = new AzureDevOpsPipelineRunDefinition
+            {
+                Resources = new AzureDevOpsRunResourcesParameters
+                {
+                    Repositories = new Dictionary<string, AzureDevOpsRepositoryResourceParameter>
+                    {
+                        { "self", new AzureDevOpsRepositoryResourceParameter($"refs/heads/{sourceBranch}", sourceVersion) }
+                    }
+                },
+                TemplateParameters = templateParameters,
+                Variables = variables
+            };
+
+            string bodyAsString = JsonConvert.SerializeObject(body, Formatting.Indented);
 
             JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
                 HttpMethod.Post,
                 accountName,
                 projectName,
-                $"_apis/build/builds/",
+                $"_apis/pipelines/{azdoDefinitionId}/runs",
                 _logger,
-                body,
-                versionOverride: "5.1");
+                bodyAsString,
+                versionOverride: "6.0-preview.1");
 
             return content.GetValue("id").ToObject<int>();
         }
