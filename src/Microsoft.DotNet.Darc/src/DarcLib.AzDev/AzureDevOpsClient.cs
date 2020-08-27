@@ -821,7 +821,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="baseAddressSubpath">[baseAddressSubPath]dev.azure.com subdomain to make the request</param>
         /// <param name="retryCount">Maximum number of tries to attempt the API request</param>
         /// <returns>Http response</returns>
-        private async Task<JObject> ExecuteAzureDevOpsAPIRequestAsync(
+        public async Task<JObject> ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod method,
             string accountName,
             string projectName,

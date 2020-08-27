@@ -1,6 +1,8 @@
 using Maestro.ScenarioTests.ObjectHelpers;
+using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using Octokit;
 using System;
@@ -9,6 +11,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -90,7 +93,7 @@ namespace Maestro.ScenarioTests
                 TestContext.WriteLine($"Starting check for merge, attempts remaining {attempts}");
                 pr = await GitHubApi.PullRequest.Get(repo.Id, pr.Number);
 
-                if (pr.State == ItemState.Closed)
+                if (pr.Merged == true)
                 {
                     return true;
                 }
@@ -101,19 +104,18 @@ namespace Maestro.ScenarioTests
             throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
         }
 
-        internal async Task<int> GetAzDoPullRequestIdAsync(string targetRepoName, string targetBranch, bool isUpdated)
+        private async Task<int> GetAzDoPullRequestIdAsync(string targetRepoName, string targetBranch)
         {
             string searchBaseUrl = GetAzDoRepoUrl(targetRepoName);
             string apiBaseUrl = GetAzDoApiRepoUrl(targetRepoName);
-
             IEnumerable<int> prs = new List<int>();
-            int attempts = 10;
 
+            int attempts = 10;
             while (attempts-- > 0)
             {
                 try
                 {
-                    prs = await AzDoClient.SearchPullRequestsAsync(searchBaseUrl, Microsoft.DotNet.DarcLib.PrStatus.Open, targetPullRequestBranch: targetBranch).ConfigureAwait(false);
+                    prs = await SearchPullRequestsAsync(searchBaseUrl, targetBranch).ConfigureAwait(false);
                 }
                 catch (HttpRequestException ex)
                 {
@@ -134,13 +136,36 @@ namespace Maestro.ScenarioTests
 
                 if (prs.Count() > 1)
                 {
-                    throw new MaestroTestException($"More than one pull request found in {searchBaseUrl} targeting {targetBranch}");
+                    throw new MaestroTestException($"More than one pull request found in {targetRepoName} targeting {targetBranch}");
                 }
 
                 await Task.Delay(60 * 1000).ConfigureAwait(false);
             }
 
             throw new MaestroTestException($"No pull request was created in {searchBaseUrl} targeting {targetBranch}");
+        }
+
+        private async Task<IEnumerable<int>> SearchPullRequestsAsync(string repoUri, string targetPullRequestBranch)
+        {
+            (string accountName, string projectName, string repoName) = Microsoft.DotNet.DarcLib.AzureDevOpsClient.ParseRepoUri(repoUri);
+            var query = new StringBuilder();
+
+            Microsoft.DotNet.DarcLib.AzureDevOpsPrStatus prStatus = Microsoft.DotNet.DarcLib.AzureDevOpsPrStatus.Active;
+            query.Append($"searchCriteria.status={prStatus.ToString().ToLower()}");
+            query.Append($"&searchCriteria.targetRefName=refs/heads/{targetPullRequestBranch}");
+
+            JObject content = await _parameters.AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                projectName,
+                $"_apis/git/repositories/{repoName}/pullrequests?{query}",
+                new NUnitLogger()
+                );
+
+            JArray values = JArray.Parse(content["value"].ToString());
+            IEnumerable<int> prs = values.Select(r => r["pullRequestId"].ToObject<int>());
+
+            return prs;
         }
 
         internal async Task<Microsoft.DotNet.DarcLib.PullRequest> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string expectedPRTitle = null)
@@ -157,11 +182,9 @@ namespace Maestro.ScenarioTests
                 throw new ArgumentNullException(expectedPRTitle, "ExpectedPRTitle must be defined for AzDo PRs that require an update.");
             }
 
-            Microsoft.DotNet.DarcLib.PullRequest pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
-
-            for (int tries = 7; tries > 0; tries--)
+            for (int tries = 10; tries > 0; tries--)
             {
-                pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
+                Microsoft.DotNet.DarcLib.PullRequest pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
                 string trimmedTitle = Regex.Replace(pr.Title, @"\s+", " ");
 
                 if (trimmedTitle == expectedPRTitle)
@@ -233,7 +256,7 @@ namespace Maestro.ScenarioTests
         {
             string targetRepoUri = GetAzDoApiRepoUrl(targetRepoName);
             TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
-            int pullRequestId = await GetAzDoPullRequestIdAsync(targetRepoName, targetBranch, isUpdated);
+            int pullRequestId = await GetAzDoPullRequestIdAsync(targetRepoName, targetBranch);
             Microsoft.DotNet.DarcLib.PullRequest pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, expectedPRTitle);
 
             string trimmedTitle = Regex.Replace(pullRequest.Title, @"\s+", " ");
@@ -245,7 +268,7 @@ namespace Maestro.ScenarioTests
 
             using (ChangeDirectory(repoDirectory))
             {
-                await ValidatePullRequestDependencies(targetRepoName, pullRequest.BaseBranch, expectedDependencies);
+                await ValidatePullRequestDependencies(targetRepoName, pullRequest.HeadBranch, expectedDependencies);
             }
         }
 
@@ -283,8 +306,8 @@ namespace Maestro.ScenarioTests
                 }
                 catch
                 {
-                // If this throws it means that it was cleaned up by a different clean up method first
-            }
+                    // If this throws it means that it was cleaned up by a different clean up method first
+                }
             });
         }
 
@@ -380,12 +403,18 @@ namespace Maestro.ScenarioTests
                 }
                 catch (MaestroTestException)
                 {
-                // Ignore failures from delete-channel on cleanup, this delete is here to ensure that the channel is deleted
-                // even if the test does not do an explicit delete as part of the test. Other failures are typical that the channel has already been deleted.
-            }
+                    // Ignore failures from delete-channel on cleanup, this delete is here to ensure that the channel is deleted
+                    // even if the test does not do an explicit delete as part of the test. Other failures are typical that the channel has already been deleted.
+                }
             });
         }
-
+        public async Task AddDependenciesToLocalRepo(string repoPath, string name, string repoUri, bool isToolset = false)
+        {
+            using (ChangeDirectory(repoPath))
+            {
+                await RunDarcAsync(new string[] { "add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri });
+            }
+        }
         public async Task<string> GetTestChannelsAsync()
         {
             return await RunDarcAsync("get-channels").ConfigureAwait(false);
@@ -423,7 +452,7 @@ namespace Maestro.ScenarioTests
             bool targetIsAzDo = false,
             bool trigger = false)
         {
-            string sourceUrl = sourceIsAzDo ? GetAzDoRepoUrl(sourceRepo) : GetRepoUrl(sourceOrg, sourceRepo);
+            string sourceUrl = sourceIsAzDo ? GetAzDoRepoUrl(sourceRepo, azdoProject: sourceOrg) : GetRepoUrl(sourceOrg, sourceRepo);
             string targetUrl = targetIsAzDo ? GetAzDoRepoUrl(targetRepo) : GetRepoUrl(targetRepo);
 
             string[] command = {"add-subscription", "-q",
@@ -432,7 +461,7 @@ namespace Maestro.ScenarioTests
                 "--target-repo", targetUrl,
                 "--target-branch", targetBranch,
                 "--update-frequency", updateFrequency,
-                trigger?"--trigger":"--no-trigger"};
+                trigger? "--trigger" : "--no-trigger"};
 
             if (additionalOptions != null)
             {
@@ -457,8 +486,8 @@ namespace Maestro.ScenarioTests
                 }
                 catch (MaestroTestException)
                 {
-                // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
-            }
+                    // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
+                }
             });
         }
 
@@ -479,8 +508,8 @@ namespace Maestro.ScenarioTests
                     }
                     catch (MaestroTestException)
                     {
-                    // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
-                }
+                        // If this throws an exception the most likely cause is that the subscription was deleted as part of the test case
+                    }
                 });
             }
 
@@ -710,15 +739,14 @@ namespace Maestro.ScenarioTests
                 }
                 catch
                 {
-                // If this throws it means that it was cleaned up by a different clean up method first
-            }
+                    // If this throws it means that it was cleaned up by a different clean up method first
+                }
             });
         }
 
         public async Task DeleteBranchAsync(string branchName)
         {
             await RunGitAsync("push", "origin", "--delete", branchName);
-
         }
 
         internal IImmutableList<AssetData> GetAssetData(string asset1Name, string asset1Version, string asset2Name, string asset2Version)
@@ -733,9 +761,13 @@ namespace Maestro.ScenarioTests
             return ImmutableList.Create(asset1, asset2);
         }
 
-        internal AssetData GetAssetDataWithLocations(string assetName, string assetVersion,
-            string assetLocation1, LocationType assetLocationType1,
-            string assetLocation2 = null, LocationType assetLocationType2 = LocationType.None)
+        internal AssetData GetAssetDataWithLocations(
+            string assetName,
+            string assetVersion,
+            string assetLocation1,
+            LocationType assetLocationType1,
+            string assetLocation2 = null,
+            LocationType assetLocationType2 = LocationType.None)
         {
             var locationsListBuilder = ImmutableList.CreateBuilder<AssetLocationData>();
 
@@ -788,6 +820,24 @@ namespace Maestro.ScenarioTests
         public async Task<string> GetRepositoryPolicies(string repoUri, string branchName)
         {
             return await RunDarcAsync("get-repository-policies", "--all", "--repo", repoUri, "--branch", branchName);
+        }
+
+        public async Task WaitForMergedPullRequestAsync(string targetRepo, string targetBranch, PullRequest pr, Repository repo, int attempts = 7)
+        {
+            while (attempts-- > 0)
+            {
+                TestContext.WriteLine($"Starting check for merge, attempts remaining {attempts}");
+                pr = await GitHubApi.PullRequest.Get(repo.Id, pr.Number);
+
+                if (pr.State == ItemState.Closed)
+                {
+                    return;
+                }
+
+                await Task.Delay(60 * 1000).ConfigureAwait(false);
+            }
+
+            throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
         }
     }
 }

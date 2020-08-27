@@ -1,6 +1,7 @@
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -21,6 +22,9 @@ namespace Maestro.ScenarioTests
         private List<DependencyDetail> expectedDependenciesSource2;
         private List<DependencyDetail> expectedDependenciesSource1Updated;
         private List<DependencyDetail> expectedCoherencyDependencies;
+        private List<DependencyDetail> expectedAzDoDependenciesSource1;
+        private List<DependencyDetail> expectedAzDoDependenciesSource2;
+        private List<DependencyDetail> expectedAzDoDependenciesSource1Updated;
         private TestParameters _parameters;
 
         public EndToEndFlowLogic(TestParameters parameters)
@@ -140,6 +144,26 @@ namespace Maestro.ScenarioTests
             expectedCoherencyDependencies.Add(parentFoo);
             expectedCoherencyDependencies.Add(parentBar);
             expectedCoherencyDependencies.Add(baz);
+
+            expectedAzDoDependenciesSource1 = expectedDependenciesSource1;
+            expectedAzDoDependenciesSource2 = expectedDependenciesSource2;
+            expectedAzDoDependenciesSource1Updated = expectedDependenciesSource1Updated;
+
+            foreach(DependencyDetail dependency in expectedAzDoDependenciesSource1)
+            {
+                dependency.RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name);
+            }
+
+            foreach (DependencyDetail dependency in expectedAzDoDependenciesSource1Updated)
+            {
+                dependency.RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name);
+            }
+
+            foreach (DependencyDetail dependency in expectedAzDoDependenciesSource2)
+            {
+                dependency.RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo3Name);
+            }
+
         }
 
         public async Task DarcBatchedFlowTestBase(string targetBranch, string channelName, bool isAzDoTest)
@@ -193,16 +217,16 @@ namespace Maestro.ScenarioTests
                                     await TriggerSubscriptionAsync(subscription1Id.Value);
                                     await TriggerSubscriptionAsync(subscription2Id.Value);
 
-                                    List<DependencyDetail> expectedDependencies = expectedDependenciesSource1.Concat(expectedDependenciesSource2).ToList();
-
                                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
                                     if (isAzDoTest)
                                     {
-                                        await CheckBatchedAzDoPullRequest(source1RepoName, source2RepoName, targetRepoName, targetBranch, expectedDependencies, reposFolder.Directory);
+                                        List<DependencyDetail> expectedAzDoDependencies = expectedAzDoDependenciesSource1.Concat(expectedAzDoDependenciesSource2).ToList();
+                                        await CheckBatchedAzDoPullRequest(source1RepoName, source2RepoName, targetRepoName, targetBranch, expectedAzDoDependencies, reposFolder.Directory);
                                     }
                                     else
                                     {
+                                        List<DependencyDetail> expectedDependencies = expectedDependenciesSource1.Concat(expectedDependenciesSource2).ToList();
                                         await CheckBatchedGitHubPullRequest(targetBranch, source1RepoName, source2RepoName, targetRepoName, expectedDependencies, reposFolder.Directory);
                                     }
                                 }
@@ -235,123 +259,132 @@ namespace Maestro.ScenarioTests
             TestContext.WriteLine($"Creating test channel {testChannelName}");
             await using (AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false))
             {
-                await using (AsyncDisposableValue<string> subscription1Id = allChecks ? 
-                    await CreateSubscriptionAsync(
-                        testChannelName, 
-                        sourceRepoName, 
-                        targetRepoName, 
-                        targetBranch,
-                        UpdateFrequency.None.ToString(), 
-                        "maestro-auth-test", 
-                        additionalOptions: new List<string> { "--all-checks-passed", "--ignore-checks", "license/cla" }, 
-                        trigger: true)
-                    : await CreateSubscriptionAsync(
-                        testChannelName, 
-                        sourceRepoName, 
-                        targetRepoName, 
-                        targetBranch,
-                         UpdateFrequency.None.ToString(), 
-                         "maestro-auth-test"))
+                await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionForEndToEndTests(
+                    testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks);
+
+                TestContext.WriteLine("Set up build for intake into target repository");
+                Build build = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, sourceBuildNumber, source1Assets);
+                await AddBuildToChannelAsync(build.Id, testChannelName);
+
+                if (isCoherencyTest)
                 {
-                    TestContext.WriteLine("Set up build for intake into target repository");
-                    Build build = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, sourceBuildNumber, source1Assets);
-                    await AddBuildToChannelAsync(build.Id, testChannelName);
+                    Build build2 = await CreateBuildAsync(childSourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo2Commit,
+                        source2BuildNumber, childSourceBuildAssets);
+                    await AddBuildToChannelAsync(build2.Id, testChannelName);
+                }
 
-                    if (isCoherencyTest)
+                TestContext.WriteLine("Cloning target repo to prepare the target branch");
+                TemporaryDirectory reposFolder = await CloneRepositoryAsync(targetRepoName);
+                using (ChangeDirectory(reposFolder.Directory))
+                {
+                    await using (await CheckoutBranchAsync(targetBranch))
                     {
-                        Build build2 = await CreateBuildAsync(childSourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo2Commit,
-                            source2BuildNumber, childSourceBuildAssets);
-                        await AddBuildToChannelAsync(build2.Id, testChannelName);
-                    }
+                        TestContext.WriteLine("Adding dependencies to target repo");
+                        await AddDependenciesToLocalRepo(reposFolder.Directory, source1Assets.ToList(), sourceRepoUri);
 
-                    TestContext.WriteLine("Cloning target repo to prepare the target branch");
-                    TemporaryDirectory reposFolder = isAzDoTest ? await CloneAzDoRepositoryAsync(targetRepoName, targetBranch) : await CloneRepositoryAsync(targetRepoName);
-
-                    using (ChangeDirectory(reposFolder.Directory))
-                    {
-                        await using (await CheckoutBranchAsync(targetBranch))
+                        if (isCoherencyTest)
                         {
-                            TestContext.WriteLine("Adding dependencies to target repo");
-                            await AddDependenciesToLocalRepo(reposFolder.Directory, source1Assets.ToList(), sourceRepoUri);
+                            await AddDependenciesToLocalRepo(reposFolder.Directory, childSourceAssets.ToList(), childSourceRepoUri, "Foo");
+                        }
+
+                        TestContext.WriteLine("Pushing branch to remote");
+                        await GitCommitAsync("Add dependencies");
+
+                        await using (await PushGitBranchAsync("origin", targetBranch))
+                        {
+                            TestContext.WriteLine("Trigger the dependency update");
+                            await TriggerSubscriptionAsync(subscription1Id.Value);
+
+                            TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
+
+                            // AllChecks & Coherency don't take updates that it'll be merged after the first push, so no further updates will be run
+                            if (allChecks)
+                            {
+                                if (isAzDoTest)
+                                {
+                                    await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1, reposFolder.Directory, isCompleted: true, isUpdated: false);
+                                }
+                                else
+                                {
+                                    await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1, reposFolder.Directory, isCompleted: true, isUpdated: false);
+                                }
+                                return;
+                            }
 
                             if (isCoherencyTest)
                             {
-                                await AddDependenciesToLocalRepo(reposFolder.Directory, childSourceAssets.ToList(), childSourceRepoUri, "Foo");
+                                await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedCoherencyDependencies, reposFolder.Directory, isCompleted: false, isUpdated: false);
+                                return;
                             }
 
-                            TestContext.WriteLine("Pushing branch to remote");
-                            await GitCommitAsync("Add dependencies");
-
-                            await using (await PushGitBranchAsync("origin", targetBranch))
-                            {
-                                TestContext.WriteLine("Trigger the dependency update");
-                                await TriggerSubscriptionAsync(subscription1Id.Value);
-
-                                TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
-
-                                // AllChecks & Coherency don't take updates that it'll be merged after the first push, so no further updates will be run
-                                if (allChecks)
-                                {
-                                    if (isAzDoTest)
-                                    {
-                                        await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1, reposFolder.Directory, isCompleted: true, isUpdated: false);
-                                    }
-                                    else
-                                    {
-                                        await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1, reposFolder.Directory, isCompleted: true, isUpdated: false);
-                                    }
-                                    return;
-                                }
-
-                                if (isCoherencyTest)
-                                {
-                                    await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedCoherencyDependencies, reposFolder.Directory, isCompleted: false, isUpdated: false);
-                                    return;
-                                }
-
-                                // Non-Batched tests that don't use AllChecks continue to make sure updating works as expected
+                                // The remaining non-batched tests continue to make sure that updating works as expected
                                 await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1, reposFolder.Directory, false);
 
 
                                 TestContext.WriteLine("Set up another build for intake into target repository");
-
-
                                 Build build2 = await CreateBuildAsync(sourceRepoUri, sourceBranch, TestRepository.CoherencyTestRepo2Commit, source2BuildNumber, source1AssetsUpdated);
 
-                                TestContext.WriteLine("Trigger the dependency update");
-                                await TriggerSubscriptionAsync(subscription1Id.Value);
+                            TestContext.WriteLine("Trigger the dependency update");
+                            await TriggerSubscriptionAsync(subscription1Id.Value);
+
+                            TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
+                            if (isAzDoTest)
+                            {
+                                throw new NotImplementedException("AzDo Flow Tests are not part of the scope for this change.");
+                            }
+                            else
+                            {
+                                await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1Updated, reposFolder.Directory, false, true);
+                            }
+
+                            // Then remove the second build from the channel, trigger the sub again, and it should revert back to the original dependency set
+                            TestContext.Write("Remove the build from the channel and verify that the original dependencies are restored");
+                            await DeleteBuildFromChannelAsync(build2.Id.ToString(), testChannelName);
+
+                            TestContext.WriteLine("Trigger the dependency update");
+                            await TriggerSubscriptionAsync(subscription1Id.Value);
 
                                 TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
-                                if (isAzDoTest)
-                                {
-                                    await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1Updated, reposFolder.Directory);
-                                }
-                                else
-                                {
-                                    await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1Updated, reposFolder.Directory, false, true);
-                                }
 
-                                // Then remove the second build from the channel, trigger the sub again, and it should revert back to the original dependency set
-                                TestContext.Write("Remove the build from the channel and verify that the original dependencies are restored");
-                                await DeleteBuildFromChannelAsync(build2.Id.ToString(), testChannelName);
-
-                                TestContext.WriteLine("Trigger the dependency update");
-                                await TriggerSubscriptionAsync(subscription1Id.Value);
-
-                                TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
-
-                                if (isAzDoTest)
-                                {
-                                    await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1Updated, reposFolder.Directory);
-                                }
-                                else
-                                {
-                                    await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1, reposFolder.Directory, false, true);
-                                }
+                            if (isAzDoTest)
+                            {
+                                throw new NotImplementedException("AzDo Flow Tests are not part of the scope for this change.");
+                            }
+                            else
+                            {
+                                await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1, reposFolder.Directory, false, true);
                             }
                         }
                     }
                 }
+            }
+        }
+
+        private async Task<AsyncDisposableValue<string>> CreateSubscriptionForEndToEndTests(string testChannelName, string sourceRepoName, 
+            string targetRepoName, string targetBranch, bool allChecks)
+        {
+            if (allChecks)
+            {
+
+                return await CreateSubscriptionAsync(
+                    testChannelName,
+                    sourceRepoName,
+                    targetRepoName,
+                    targetBranch,
+                    UpdateFrequency.None.ToString(),
+                    "maestro-auth-test",
+                    additionalOptions: new List<string> { "--all-checks-passed", "--ignore-checks", "license/cla" },
+                    trigger: true);
+            }
+            else
+            {
+                return await CreateSubscriptionAsync(
+                testChannelName,
+                sourceRepoName,
+                targetRepoName,
+                targetBranch,
+                 UpdateFrequency.None.ToString(),
+                 "maestro-auth-test");
             }
         }
     }
