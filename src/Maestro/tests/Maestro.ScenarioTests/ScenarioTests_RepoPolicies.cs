@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using NUnit.Framework.Internal;
@@ -8,16 +9,11 @@ namespace Maestro.ScenarioTests
     [Category("PostDeployment")]
     public class ScenarioTests_RepoPolicies : MaestroScenarioTestBase
     {
-        private readonly string repoName = "maestro-test1";
-        private readonly string branchName = "RepoPoliciesTestBranch";
+        // The RepoPolicies logic does a partial string match for the branch name in the base,
+        // so it's important that this branch name not be a substring or superstring of another branch name
+        private readonly string branchName = $"MaestroRepoPoliciesTestBranch_{Environment.MachineName}";
+        private readonly string repoName = TestRepository.TestRepo1Name;
         private TestParameters _parameters;
-
-        [SetUp]
-        public async Task InitializeAsync()
-        {
-            _parameters = await TestParameters.GetAsync();
-            SetTestParameters(_parameters);
-        }
 
         [TearDown]
         public Task DisposeAsync()
@@ -31,6 +27,9 @@ namespace Maestro.ScenarioTests
         {
             TestContext.WriteLine("Repository merge policy handling");
             TestContext.WriteLine("Running tests...");
+
+            _parameters = await TestParameters.GetAsync();
+            SetTestParameters(_parameters);
 
             string repoUrl = GetRepoUrl(repoName);
 

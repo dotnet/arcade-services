@@ -3,8 +3,10 @@
 // See the LICENSE file in the project root for more information.
 
 using Maestro.Contracts;
+using Microsoft.DotNet.DarcLib;
 using NuGet.Versioning;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Maestro.MergePolicies
@@ -13,28 +15,25 @@ namespace Maestro.MergePolicies
     {
         public override string DisplayName => "Do not automerge downgrades";
 
-        public override async Task EvaluateAsync(IMergePolicyEvaluationContext context, MergePolicyProperties properties)
-        {
-            EvaluateDowngrades(context);
-            await Task.CompletedTask;
-        }
-
-        internal static void EvaluateDowngrades(IMergePolicyEvaluationContext context)
+        public override Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc)
         {
             try
             {
-                if (HasAnyDowngrade(context.PullRequest))
+                if (HasAnyDowngrade(pr))
                 {
-                    context.Fail("Some dependency updates are downgrades. Aborting auto-merge.");
+                    return Task.FromResult(
+                        Fail("Some dependency updates are downgrades. Aborting auto-merge."));
                 }
                 else
                 {
-                    context.Succeed("No version downgrade detected.");
+                    return Task.FromResult(
+                        Succeed("No version downgrade detected."));
                 }
             }
             catch (Exception e)
             {
-                context.Fail($"Failed to check version downgrades. Aborting auto-merge. {e.Message}");
+                return Task.FromResult(
+                    Fail($"Failed to check version downgrades. Aborting auto-merge. {e.Message}"));
             }
         }
 
@@ -59,6 +58,16 @@ namespace Maestro.MergePolicies
             }
 
             return false;
+        }
+    }
+
+    public class DontAutomergeDowngradesMergePolicyBuilder : IMergePolicyBuilder
+    {
+        public string Name => MergePolicyConstants.DontAutomergeDowngradesPolicyName;
+        public Task<IReadOnlyList<IMergePolicy>> BuildMergePoliciesAsync(MergePolicyProperties properties, IPullRequest pr)
+        {
+            IReadOnlyList<IMergePolicy> policies = new List<IMergePolicy> { new DontAutomergeDowngradesMergePolicy() };
+            return Task.FromResult(policies);
         }
     }
 }

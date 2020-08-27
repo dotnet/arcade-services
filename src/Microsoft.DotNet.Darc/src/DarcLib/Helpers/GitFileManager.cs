@@ -436,7 +436,9 @@ namespace Microsoft.DotNet.DarcLib
                     }
                     // while we traverse, we may as well remove all the existing entries for what we're updating.
                     if (disabledSourcesNode.ChildNodes[i].Name.Equals("add", StringComparison.InvariantCultureIgnoreCase) &&
-                        disabledSourcesNode.ChildNodes[i].Attributes["key"]?.Value.StartsWith(disableFeedKeyPrefix) == true)
+                        disabledSourcesNode.ChildNodes[i].Attributes["key"]?.Value.StartsWith(disableFeedKeyPrefix) == true &&
+                        // If there somehow is an unrelated 'disableFeedKeyPrefix' source entry in here, we'll leave it alone.
+                        managedSources.Any(ms => ms.key == disabledSourcesNode.ChildNodes[i].Attributes["key"]?.Value))
                     {
                         RemoveCurrentNode(disabledSourcesNode.ChildNodes[i]);
                     }

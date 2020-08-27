@@ -9,11 +9,14 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
+using Maestro.Contracts;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
+using Asset = Microsoft.DotNet.Maestro.Client.Models.Asset;
+using Subscription = Microsoft.DotNet.Maestro.Client.Models.Subscription;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -318,10 +321,10 @@ namespace Microsoft.DotNet.DarcLib
             return await _gitClient.SearchPullRequestsAsync(repoUri, pullRequestBranch, status, keyword, author);
         }
 
-        public Task CreateOrUpdatePullRequestStatusCommentAsync(string pullRequestUrl, string message)
+        public Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
         {
             CheckForValidGitClient();
-            return _gitClient.CreateOrUpdatePullRequestCommentAsync(pullRequestUrl, message);
+            return _gitClient.CreateOrUpdatePullRequestMergeStatusInfoAsync(pullRequestUrl, evaluations);
         }
 
         public async Task<PrStatus> GetPullRequestStatusAsync(string pullRequestUrl)

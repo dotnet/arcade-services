@@ -1,8 +1,8 @@
-using AutoFixture.NUnit3;
 using FluentAssertions;
 using Newtonsoft.Json;
 using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 
@@ -20,7 +20,7 @@ namespace DotNet.Status.Web.Tests
         [TestCase("Build\nIndex\nRecord\n")]
         public void ParseZeroBuildInfoFromNotTriageIssue(string body)
         {
-            var result = _sut.GetTriageItems(body);
+            IList<TriageItem> result = _sut.GetTriageItems(body);
             result.Should().BeEmpty();
         }
 
@@ -39,7 +39,7 @@ namespace DotNet.Status.Web.Tests
         [TestCase("a\n[BuildId=534863,RecordId=041c699a-ea24-59c7-817f-32bc9df73765,Index=0]\n[Category =Build]")]
         public void ParseZeroBuildInfoFromNotFullBuildInfosInTriageIssue(string body)
         {
-            var result = _sut.GetTriageItems(body);
+            IList<TriageItem> result = _sut.GetTriageItems(body);
             result.Should().BeEmpty();
         }
 
@@ -59,7 +59,7 @@ namespace DotNet.Status.Web.Tests
             534863, "041c699a-ea24-59c7-817f-32bc9df73765", 13, "")]
         public void ParseSingleBuildInfoFromTriageIssue(string body, int buildId, string recordId, int index, string category)
         {
-            var result = _sut.GetTriageItems(body);
+            IList<TriageItem> result = _sut.GetTriageItems(body);
             result.Should().HaveCount(1);
             var expected = new TriageItem { BuildId = buildId, RecordId = Guid.Parse(recordId), Index = index, UpdatedCategory = category };
             result.Should().Contain(expected);
@@ -70,9 +70,9 @@ namespace DotNet.Status.Web.Tests
         [TestCase("triage-items-with-invalid")]
         public void ParseMultipleBuildInfoFromTriageIssue(string fileName)
         {
-            var body = GetTestPayload($"{fileName}.body.txt");
-            var expected = JsonConvert.DeserializeObject<TriageItem[]>(GetTestPayload($"{fileName}.expected.json"));
-            var result = _sut.GetTriageItems(body);
+            string body = GetTestPayload($"{fileName}.body.txt");
+            TriageItem[] expected = JsonConvert.DeserializeObject<TriageItem[]>(GetTestPayload($"{fileName}.expected.json"));
+            IList<TriageItem> result = _sut.GetTriageItems(body);
             result.Should().Equal(expected, IsParsedTriageEqual);
         }
 
@@ -179,22 +179,27 @@ namespace DotNet.Status.Web.Tests
             _sut.GetTriageIssueProperty(key, body).Should().BeNull();
         }
 
-        [Test, AutoData]
-        public void TriageEquals_By_Build_Record_Index_Only(TriageItem a, TriageItem b)
+        [Test]
+        public void TriageEquals_By_Build_Record_Index_Only()
         {
-            a.Equals(b).Should().BeFalse();
+            var a = new TriageItem
+                {BuildId = 1, RecordId = Guid.Parse("00000000-0000-0000-0000-111111111111"), Index = 100};
+            var b = new TriageItem
+                {BuildId = 2, RecordId = Guid.Parse("00000000-0000-0000-0000-222222222222"), Index = 200};
+            
+            a.Should().NotBe(b);
 
             a.BuildId = b.BuildId;
-            a.Equals(b).Should().BeFalse();
+            a.Should().NotBe(b);
 
             a.RecordId = b.RecordId;
-            a.Equals(b).Should().BeFalse();
+            a.Should().NotBe(b);
 
             a.BuildId = b.BuildId;
-            a.Equals(b).Should().BeFalse();
+            a.Should().NotBe(b);
 
             a.Index = b.Index;
-            a.Equals(b).Should().BeTrue();
+            a.Should().Be(b);
         }
 
         private static string GetTestPayload(string name)

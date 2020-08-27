@@ -18,40 +18,59 @@ namespace SubscriptionActorService
     {
         private readonly OperationManager _operations;
 
-        public MergePolicyEvaluator(IEnumerable<MergePolicy> mergePolicies, OperationManager operations, ILogger<MergePolicyEvaluator> logger)
+        public MergePolicyEvaluator(IEnumerable<IMergePolicyBuilder> mergePolicies, OperationManager operations, ILogger<MergePolicyEvaluator> logger)
         {
-            MergePolicies = mergePolicies.ToImmutableDictionary(p => p.Name);
+            MergePolicyBuilders = mergePolicies.ToImmutableDictionary(p => p.Name);
             Logger = logger;
             _operations = operations;
         }
 
-        public IImmutableDictionary<string, MergePolicy> MergePolicies { get; }
+        public IImmutableDictionary<string, IMergePolicyBuilder> MergePolicyBuilders { get; }
         public ILogger<MergePolicyEvaluator> Logger { get; }
 
-        public async Task<MergePolicyEvaluationResult> EvaluateAsync(
+        public async Task<MergePolicyEvaluationResults> EvaluateAsync(
             IPullRequest pr,
             IRemote darc,
             IReadOnlyList<MergePolicyDefinition> policyDefinitions)
         {
-            var context = new MergePolicyEvaluationContext(pr, darc);
+            var results = new List<MergePolicyEvaluationResult>();
             foreach (MergePolicyDefinition definition in policyDefinitions)
             {
-                if (MergePolicies.TryGetValue(definition.Name, out MergePolicy policy))
+                if (MergePolicyBuilders.TryGetValue(definition.Name, out IMergePolicyBuilder policyBuilder))
                 {
-                    using (_operations.BeginOperation("Evaluating Merge Policy {policyName}", policy.Name))
+                    using var oDef = _operations.BeginOperation("Evaluating Merge Definition {policyName}", definition.Name);
+                    var policies = await policyBuilder.BuildMergePoliciesAsync(new MergePolicyProperties(definition.Properties), pr);
+                    foreach (var policy in policies)
                     {
-                        context.CurrentPolicy = policy;
-                        await policy.EvaluateAsync(context, new MergePolicyProperties(definition.Properties));
+                        using var oPol = _operations.BeginOperation("Evaluating Merge Policy {policyName}", policy.Name);
+                        results.Add(await policy.EvaluateAsync(pr, darc));
                     }
                 }
                 else
                 {
-                    context.CurrentPolicy = null;
-                    context.Fail($"Unknown Merge Policy: '{definition.Name}'");
+                    var notImplemented = new NotImplementedMergePolicy(definition.Name);
+                    results.Add(new MergePolicyEvaluationResult(MergePolicyEvaluationStatus.Failure, $"Unknown Merge Policy: '{definition.Name}'", notImplemented));
                 }
             }
 
-            return context.Result;
+            return new MergePolicyEvaluationResults(results);
+        }
+
+        private class NotImplementedMergePolicy : MergePolicy
+        {
+            private string _definitionName;
+
+            public NotImplementedMergePolicy(string definitionName)
+            {
+                _definitionName = definitionName;
+            }
+
+            public override string DisplayName => $"Not implemented merge policy '{_definitionName}'";
+
+            public override Task<MergePolicyEvaluationResult> EvaluateAsync(IPullRequest pr, IRemote darc)
+            {
+                throw new System.NotImplementedException();
+            }
         }
     }
 }
