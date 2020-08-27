@@ -145,23 +145,29 @@ namespace Maestro.ScenarioTests
             expectedCoherencyDependencies.Add(parentBar);
             expectedCoherencyDependencies.Add(baz);
 
-            expectedAzDoDependenciesSource1 = expectedDependenciesSource1;
-            expectedAzDoDependenciesSource2 = expectedDependenciesSource2;
-            expectedAzDoDependenciesSource1Updated = expectedDependenciesSource1Updated;
 
-            foreach(DependencyDetail dependency in expectedAzDoDependenciesSource1)
+            expectedAzDoDependenciesSource1 = new List<DependencyDetail>();
+            foreach (DependencyDetail dependency in expectedDependenciesSource1)
             {
-                dependency.RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name);
+                expectedAzDoDependenciesSource1.Add(
+                    new DependencyDetail(dependency)
+                    { RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name) });
             }
 
-            foreach (DependencyDetail dependency in expectedAzDoDependenciesSource1Updated)
+            expectedAzDoDependenciesSource1Updated = new List<DependencyDetail>();
+            foreach (DependencyDetail dependency in expectedDependenciesSource1Updated)
             {
-                dependency.RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name);
+                expectedAzDoDependenciesSource1Updated.Add(
+                    new DependencyDetail(dependency) 
+                    { RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name) });
             }
 
-            foreach (DependencyDetail dependency in expectedAzDoDependenciesSource2)
+            expectedAzDoDependenciesSource2 = new List<DependencyDetail>();
+            foreach (DependencyDetail dependency in expectedDependenciesSource2)
             {
-                dependency.RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo3Name);
+                expectedAzDoDependenciesSource2.Add(
+                    new DependencyDetail(dependency)
+                    { RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo3Name) });
             }
 
         }
