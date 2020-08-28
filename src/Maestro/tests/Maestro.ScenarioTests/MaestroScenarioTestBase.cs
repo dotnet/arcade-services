@@ -11,6 +11,7 @@ using Maestro.ScenarioTests.ObjectHelpers;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 using Octokit;
@@ -119,14 +120,9 @@ namespace Maestro.ScenarioTests
                 }
                 catch (HttpRequestException ex)
                 {
-                    if (ex.Message == "Response status code does not indicate success: 404 (Not Found).")
-                    {
-                        // This is expected before the PR has been created
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    // Returning a 404 is expected before the PR has been created
+                    NUnitLogger logger = new NUnitLogger();
+                    logger.LogInformation($"Searching for AzDo pull requests returned an error: {ex.Message}");
                 }
 
                 if (prs.Count() == 1)
@@ -162,8 +158,7 @@ namespace Maestro.ScenarioTests
                 new NUnitLogger()
                 );
 
-            JArray values = JArray.Parse(content["value"].ToString());
-            IEnumerable<int> prs = values.Select(r => r["pullRequestId"].ToObject<int>());
+            IEnumerable<int> prs = content.Value<JArray>("value").Select(r => r.Value<int>("pullRequestId"));
 
             return prs;
         }
