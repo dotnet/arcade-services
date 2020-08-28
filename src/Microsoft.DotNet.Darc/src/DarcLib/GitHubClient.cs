@@ -770,7 +770,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="owner">Owner of repo</param>
         /// <param name="repo">Repository name</param>
         /// <param name="branch">Branch to retrieve the latest sha for</param>
-        /// <returns>Latest sha.  Throws if no commits were found.</returns>
+        /// <returns>Latest sha.  Null if no commits were found.</returns>
         private async Task<string> GetLastCommitShaAsync(string owner, string repo, string branch)
         {
             try
@@ -786,7 +786,8 @@ namespace Microsoft.DotNet.DarcLib
 
                 return content["sha"].ToString();
             }
-            catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
+            catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString())
+                || exc.Message.Contains(((int)HttpStatusCode.UnprocessableEntity).ToString()))
             {
                 return null;
             }
