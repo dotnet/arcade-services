@@ -9,6 +9,7 @@ using Microsoft.DncEng.Configuration.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Rest.Azure;
 using Mono.Options;
 
 namespace Microsoft.DncEng.DeployServiceFabricCluster
@@ -17,49 +18,66 @@ namespace Microsoft.DncEng.DeployServiceFabricCluster
     {
         static async Task Main(string[] args)
         {
-            string? configFile = null;
-            string? environment = null;
-            string? deploy = null;
-            var options = new OptionSet
+            try
             {
-                {"c|config=", c => configFile = c},
-                {"e|environment=", e => environment = e},
-                {"d|deploy=", d => deploy = d}
-            };
+                string? configFile = null;
+                string? environment = null;
+                string? deploy = null;
+                var options = new OptionSet
+                {
+                    {"c|config=", c => configFile = c},
+                    {"e|environment=", e => environment = e},
+                    {"d|deploy=", d => deploy = d}
+                };
 
-            List<string> remaining = options.Parse(args);
-            if (remaining.Any())
-            {
-                Fatal(1, $"argument '{remaining[0]}' not recognized.");
+                List<string> remaining = options.Parse(args);
+                if (remaining.Any())
+                {
+                    Fatal(1, $"argument '{remaining[0]}' not recognized.");
+                }
+
+                RequireParameter(configFile, "--config");
+                RequireParameter(environment, "--environment");
+                RequireParameter(deploy, "--deploy");
+
+                if (!File.Exists(configFile))
+                {
+                    Fatal(3, $"config file '{configFile}' does not exist.");
+                }
+
+                string? configFileName = Path.GetFileNameWithoutExtension(configFile);
+                string? configExtension = Path.GetExtension(configFile);
+                string? configDir = Path.GetDirectoryName(configFile);
+
+                IConfigurationRoot configuration = new ConfigurationBuilder()
+                    .SetBasePath(Path.GetDirectoryName(configFile))
+                    .AddDefaultJsonConfiguration(new HostEnvironment(environment, configDir!),
+                        configFileName + "{0}" + configExtension)
+                    .Build();
+
+                switch (deploy.ToLowerInvariant())
+                {
+                    case "gateway":
+                        await RunDeploy<GatewayDeployer, GatewaySettings>(configuration);
+                        break;
+                    case "cluster":
+                        await RunDeploy<ClusterDeployer, ClusterSettings>(configuration);
+                        break;
+                }
             }
-
-            RequireParameter(configFile, "--config");
-            RequireParameter(environment, "--environment");
-            RequireParameter(deploy, "--deploy");
-
-            if (!File.Exists(configFile))
+            catch (CloudException ex)
             {
-                Fatal(3, $"config file '{configFile}' does not exist.");
+                PrintCloudError(ex.Body);
+                Fatal(-1, "Error deploying, see above for details.");
             }
+        }
 
-            string? configFileName = Path.GetFileNameWithoutExtension(configFile);
-            string? configExtension = Path.GetExtension(configFile);
-            string? configDir = Path.GetDirectoryName(configFile);
-
-            IConfigurationRoot configuration = new ConfigurationBuilder()
-                .SetBasePath(Path.GetDirectoryName(configFile))
-                .AddDefaultJsonConfiguration(new HostEnvironment(environment, configDir!),
-                    configFileName + "{0}" + configExtension)
-                .Build();
-
-            switch (deploy.ToLowerInvariant())
+        private static void PrintCloudError(CloudError error, string indent = "")
+        {
+            Console.Error.WriteLine(indent + error.Message);
+            foreach (var e in error.Details)
             {
-                case "gateway":
-                    await RunDeploy<GatewayDeployer, GatewaySettings>(configuration);
-                    break;
-                case "cluster":
-                    await RunDeploy<ClusterDeployer, ClusterSettings>(configuration);
-                    break;
+                PrintCloudError(e, indent + "  ");
             }
         }
 
