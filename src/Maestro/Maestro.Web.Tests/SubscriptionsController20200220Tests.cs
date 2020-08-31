@@ -290,20 +290,20 @@ namespace Maestro.Web.Tests
                 latestTriggerResult.StatusCode.Should().Be((int) HttpStatusCode.Accepted);
             }
 
-            // Failure: Trigger a subscription with non-existent build codepath.
+            // Failure: Trigger a subscription with non-existent build id.
             {
                 IActionResult triggerResult = await data.SubscriptionsController.TriggerSubscription(createdSubscription.Id, 123456);
-                triggerResult.Should().BeAssignableTo<NotFoundResult>();
-                var latestTriggerResult = (NotFoundResult) triggerResult;
-                latestTriggerResult.StatusCode.Should().Be((int) HttpStatusCode.NotFound);
+                triggerResult.Should().BeAssignableTo<BadRequestObjectResult>();
+                var latestTriggerResult = (BadRequestObjectResult) triggerResult;
+                latestTriggerResult.StatusCode.Should().Be((int) HttpStatusCode.BadRequest);
             }
 
             // Failure: Trigger a subscription with non-existent build codepath.
             {
                 IActionResult triggerResult = await data.SubscriptionsController.TriggerSubscription(createdSubscription.Id, build3.Id);
-                triggerResult.Should().BeAssignableTo<NotFoundResult>();
-                var latestTriggerResult = (NotFoundResult) triggerResult;
-                latestTriggerResult.StatusCode.Should().Be((int) HttpStatusCode.NotFound);
+                triggerResult.Should().BeAssignableTo<BadRequestObjectResult>();
+                var latestTriggerResult = (BadRequestObjectResult) triggerResult;
+                latestTriggerResult.StatusCode.Should().Be((int) HttpStatusCode.BadRequest);
             }
         }
 
