@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 namespace Maestro.ScenarioTests
 {
     [TestFixture]
+    [NonParallelizable]
     [Category("PostDeployment")]
     public class ScenarioTests_GitHubFlow
     {
