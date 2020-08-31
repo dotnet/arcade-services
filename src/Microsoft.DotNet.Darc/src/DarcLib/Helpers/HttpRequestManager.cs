@@ -46,6 +46,7 @@ namespace Microsoft.DotNet.DarcLib
 
             HttpStatusCode[] stopRetriesHttpStatusCodes = new HttpStatusCode[] {
                 HttpStatusCode.NotFound,
+                HttpStatusCode.UnprocessableEntity,
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.Unauthorized,
                 HttpStatusCode.Forbidden };

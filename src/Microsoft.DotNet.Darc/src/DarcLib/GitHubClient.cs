@@ -19,6 +19,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Services.Utility;
+using Maestro.Contracts;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -418,6 +419,152 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Returns the ID used to identify the maestro merge policies checks in a PR
+        /// </summary>
+        /// <param name="mergePolicyName">Name of the merge policy</param>
+        /// <param name="sha">Sha of the latest commit in the PR</param>
+        private string CheckRunId(MergePolicyEvaluationResult result, string sha)
+        {
+            return $"{MergePolicyConstants.MaestroMergePolicyCheckRunPrefix}{result.MergePolicyInfo.Name}-{sha}";
+        }
+
+        public async Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations)
+        {
+            (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
+            // Get the sha of the latest commit for the current PR
+            string prSha = (await Client.PullRequest.Get(owner, repo, id))?.Head?.Sha;
+            if (prSha == null) 
+            {
+                throw new InvalidOperationException("We cannot find the sha of the pull request");
+            }
+
+            // Get a list of all the merge policies checks runs for the current PR
+            List <CheckRun> existingChecksRuns = 
+                (await Client.Check.Run.GetAllForReference(owner, repo, prSha))
+                .CheckRuns.Where(e => e.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix)).ToList();
+
+            var toBeAdded = evaluations.Where(e => existingChecksRuns.All(c => c.ExternalId != CheckRunId(e, prSha)));
+            var toBeUpdated = existingChecksRuns.Where(c => evaluations.Any(e => c.ExternalId == CheckRunId(e, prSha)));
+            var toBeDeleted = existingChecksRuns.Where(c => evaluations.All(e => c.ExternalId != CheckRunId(e, prSha)));
+
+            foreach (var newCheckRunValidation in toBeAdded)
+            {
+                await Client.Check.Run.Create(owner, repo, CheckRunForAdd(newCheckRunValidation, prSha));
+            }
+            foreach (var updatedCheckRun in toBeUpdated)
+            {                
+                MergePolicyEvaluationResult eval = evaluations.Single(e => updatedCheckRun.ExternalId == CheckRunId(e, prSha));
+                CheckRunUpdate newCheckRunUpdateValidation = CheckRunForUpdate(eval);
+                await Client.Check.Run.Update(owner, repo, updatedCheckRun.Id, newCheckRunUpdateValidation);
+            }
+            foreach (var deletedCheckRun in toBeDeleted)
+            {
+                await Client.Check.Run.Update(owner, repo, deletedCheckRun.Id, CheckRunForDelete(deletedCheckRun));
+            }
+        }
+
+
+        /// <summary>
+        ///     Create a NewCheckRun based on the result of the merge policy
+        /// </summary>
+        /// <param name="result">The evaluation of the merge policy</param>
+        /// <param name="sha">Sha of the latest commit</param>
+        /// <returns>The new check run</returns>
+        private NewCheckRun CheckRunForAdd(MergePolicyEvaluationResult result, string sha)
+        {
+            var newCheckRun = new NewCheckRun($"{MergePolicyConstants.MaestroMergePolicyDisplayName} - {result.MergePolicyInfo.DisplayName}", sha);
+            newCheckRun.ExternalId = CheckRunId(result, sha);
+            UpdateCheckRun(newCheckRun, result);
+            return newCheckRun;
+        }
+
+        /// <summary>
+        ///     Update a check run based on a NewCheckRun and evaluation
+        /// </summary>
+        /// <param name="newCheckRun">The NewCheckRun that needs to be updated</param>
+        /// <param name="eval">The result of that updated check run</param>
+        /// <returns>The updated CheckRun</returns>
+        private CheckRunUpdate CheckRunForUpdate(MergePolicyEvaluationResult eval)
+        {
+            CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
+            UpdateCheckRun(updatedCheckRun, eval);
+            return updatedCheckRun;
+        }
+
+        /// <summary>
+        ///     Create a CheckRunUpdate based on a check run that needs to be deleted
+        /// </summary>
+        /// <param name="checkRun">The check run that needs to be deleted</param>
+        /// <returns>The deleted check run</returns>
+        private CheckRunUpdate CheckRunForDelete(CheckRun checkRun)
+        {
+            CheckRunUpdate updatedCheckRun = new CheckRunUpdate();
+            updatedCheckRun.CompletedAt = checkRun.CompletedAt;
+            updatedCheckRun.Status = "completed";
+            updatedCheckRun.Conclusion = "skipped";
+            return updatedCheckRun;
+        }
+
+        /// <summary>
+        ///     Create some properties of a NewCheckRun
+        /// </summary>
+        /// <param name="newCheckRun">The NewCheckRun that needs to be created</param>
+        /// <param name="result">The result of that new check run</param>
+        private void UpdateCheckRun(NewCheckRun newCheckRun, MergePolicyEvaluationResult result)
+        {
+            var output = FormatOutput(result);
+            newCheckRun.Output = output;
+            newCheckRun.Status = CheckStatus.Completed;
+
+            if (result.Status == MergePolicyEvaluationStatus.Pending)
+            {
+                newCheckRun.Status = CheckStatus.InProgress;
+            }
+            else if (result.Status == MergePolicyEvaluationStatus.Success)
+            {
+                newCheckRun.Conclusion = "success";
+                newCheckRun.CompletedAt = DateTime.Now;
+            }
+            else
+            {
+                newCheckRun.Conclusion = "failure";
+                newCheckRun.CompletedAt = DateTime.UtcNow;
+            }
+        }
+
+        private static NewCheckRunOutput FormatOutput(MergePolicyEvaluationResult result)
+        {
+            return new NewCheckRunOutput(result.Message ?? "no details", string.Empty);
+        }
+
+        /// <summary>
+        ///     Update some properties of a CheckRunUpdate
+        /// </summary>
+        /// <param name="newUpdateCheckRun">The CheckRunUpdate that needs to be updated</param>
+        /// <param name="result">The result of that new check run</param>
+        private void UpdateCheckRun(CheckRunUpdate newUpdateCheckRun, MergePolicyEvaluationResult result)
+        {
+            var output = FormatOutput(result);
+            newUpdateCheckRun.Output = output;
+            newUpdateCheckRun.Status = CheckStatus.Completed;
+
+            if (result.Status == MergePolicyEvaluationStatus.Pending)
+            {
+                newUpdateCheckRun.Status = CheckStatus.InProgress;
+            }
+            else if (result.Status == MergePolicyEvaluationStatus.Success)
+            {
+                newUpdateCheckRun.Conclusion = "success";
+                newUpdateCheckRun.CompletedAt = DateTime.Now;
+            }
+            else
+            {
+                newUpdateCheckRun.Conclusion = "failure";
+                newUpdateCheckRun.CompletedAt = DateTime.UtcNow;
+            }
+        }
+
+        /// <summary>
         ///     Retrieve a set of file under a specific path at a commit
         /// </summary>
         /// <param name="repoUri">Repository URI</param>
@@ -623,7 +770,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="owner">Owner of repo</param>
         /// <param name="repo">Repository name</param>
         /// <param name="branch">Branch to retrieve the latest sha for</param>
-        /// <returns>Latest sha.  Throws if no commits were found.</returns>
+        /// <returns>Latest sha.  Null if no commits were found.</returns>
         private async Task<string> GetLastCommitShaAsync(string owner, string repo, string branch)
         {
             try
@@ -639,7 +786,8 @@ namespace Microsoft.DotNet.DarcLib
 
                 return content["sha"].ToString();
             }
-            catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
+            catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString())
+                || exc.Message.Contains(((int)HttpStatusCode.UnprocessableEntity).ToString()))
             {
                 return null;
             }
@@ -724,7 +872,7 @@ namespace Microsoft.DotNet.DarcLib
                                 break;
                         }
 
-                        return new Check(state, name, url);
+                        return new Check(state, name, url, isMaestroMergePolicy: false);
                     })
                 .ToList();
         }
@@ -736,6 +884,7 @@ namespace Microsoft.DotNet.DarcLib
                 run =>
                 {
                     var name = run.Name;
+                    var externalID = run.ExternalId;
                     var url = run.HtmlUrl;
                     CheckState state;
                     switch (run.Status.Value)
@@ -768,7 +917,7 @@ namespace Microsoft.DotNet.DarcLib
                             break;
                     }
 
-                    return new Check(state, name, url);
+                    return new Check(state, name, url, isMaestroMergePolicy: run.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix));
                 })
                 .ToList();
         }

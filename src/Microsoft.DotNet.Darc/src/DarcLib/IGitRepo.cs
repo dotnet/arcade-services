@@ -2,8 +2,8 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using Maestro.Contracts;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib
@@ -112,12 +112,12 @@ namespace Microsoft.DotNet.DarcLib
         Task MergeDependencyPullRequestAsync(string pullRequestUrl, MergePullRequestParameters parameters, string mergeCommitMessage);
 
         /// <summary>
-        ///     Create a new comment, or update the last comment with an updated message,
-        ///     if that comment was created by Darc.
+        ///     Create new check(s), update them with a new status,
+        ///     or remove each merge policy check that isn't in evaluations
         /// </summary>
         /// <param name="pullRequestUrl">Url of pull request</param>
-        /// <param name="message">Message to post</param>
-        Task CreateOrUpdatePullRequestCommentAsync(string pullRequestUrl, string message);
+        /// <param name="evalutations">List of merge policies</param>
+        Task CreateOrUpdatePullRequestMergeStatusInfoAsync(string pullRequestUrl, IReadOnlyList<MergePolicyEvaluationResult> evaluations);
 
         /// <summary>
         ///     Retrieve a set of file under a specific path at a commit
