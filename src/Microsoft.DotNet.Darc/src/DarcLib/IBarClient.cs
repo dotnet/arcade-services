@@ -97,6 +97,13 @@ namespace Microsoft.DotNet.DarcLib
         Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId);
 
         /// <summary>
+        /// Trigger a subscription by ID and source build id.
+        /// </summary>
+        /// <param name="subscriptionId">ID of subscription to trigger</param>
+        /// <returns>Subscription just triggered.</returns>
+        Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId);
+
+        /// <summary>
         ///     Delete a subscription by ID.
         /// </summary>
         /// <param name="subscriptionId">Id of subscription to delete.</param>
@@ -247,7 +254,6 @@ namespace Microsoft.DotNet.DarcLib
 
         #endregion
 
-
         #region Goal Operations
         /// <summary>
         ///     Creates a new goal or updates the existing goal (in minutes) for a Defintion in a Channel.
@@ -275,6 +281,5 @@ namespace Microsoft.DotNet.DarcLib
         Task<BuildTime> GetBuildTimeAsync(int defaultChannelId, int days);
 
         #endregion
-
     }
 }

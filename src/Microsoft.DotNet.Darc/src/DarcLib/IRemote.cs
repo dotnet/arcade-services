@@ -122,6 +122,14 @@ namespace Microsoft.DotNet.DarcLib
         Task<Subscription> TriggerSubscriptionAsync(string subscriptionId);
 
         /// <summary>
+        /// Trigger a subscription by ID and source build id
+        /// </summary>
+        /// <param name="subscriptionId">ID of subscription to trigger</param>
+        /// <param name="sourceBuildId">Bar ID of build to use (instead of latest)</param>
+        /// <returns>Subscription just triggered.</returns>
+        Task<Subscription> TriggerSubscriptionAsync(string subscriptionId, int sourceBuildId);
+
+        /// <summary>
         ///     Create a new subscription.
         /// </summary>
         /// <param name="channelName">Name of source channel.</param>
@@ -472,7 +480,5 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Returns BuildTime in minutes</returns>
         Task<BuildTime> GetBuildTimeAsync(int defaultChannelId, int days);
         #endregion
-
-
     }
 }

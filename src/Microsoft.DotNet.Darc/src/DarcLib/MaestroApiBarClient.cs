@@ -223,6 +223,11 @@ namespace Microsoft.DotNet.DarcLib
             return _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionId);
         }
 
+        public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId)
+        {
+            return _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionId, sourceBuildId);
+        }
+
         /// <summary>
         ///     Retrieve a subscription by ID
         /// </summary>

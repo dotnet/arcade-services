@@ -102,6 +102,11 @@ namespace SubscriptionActorService
             throw new NotImplementedException();
         }
 
+        public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<Subscription> UpdateSubscriptionAsync(Guid subscriptionId, SubscriptionUpdate subscription)
         {
             throw new NotImplementedException();
