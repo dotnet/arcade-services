@@ -29,19 +29,7 @@ namespace Maestro.Web.Tests
     [TestFixture]
     public class SubscriptionsController20200220Tests
     {
-        const string testChannelName = "test-channel-sub-controller20200220";
-        const string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
-        const string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
-        const string defaultAzdoSourceRepo = "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-source-repo";
-        const string defaultAzdoTargetRepo = "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-target-repo";
-        const string deleteScenarioSourceRepo = "https://github.com/dotnet/sub-controller-delete-sub-source-repo";
-        const string deleteScenarioTargetRepo = "https://github.com/dotnet/sub-controller-delete-sub-target-repo";
-        const string triggerScenarioSourceRepo = "https://github.com/dotnet/sub-controller-trigger-sub-source-repo";
-        const string triggerScenarioTargetRepo = "https://github.com/dotnet/sub-controller-trigger-sub-target-repo";
-        const string defaultBranchName = "main";
-        const string defaultClassification = "classy-classification";
-        const uint defaultInstallationId = 1234;
-        TestData data;
+        private readonly TestData data;
 
         public SubscriptionsController20200220Tests()
         {
@@ -51,6 +39,13 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task CreateGetAndListSubscriptions()
         {
+            string testChannelName = "test-channel-sub-controller20200220";
+            string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
+            string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
+            string defaultAzdoSourceRepo = "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-source-repo";
+            string defaultAzdoTargetRepo = "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-target-repo";
+            string defaultBranchName = "main";
+
             // Create two subscriptions
             Api.v2018_07_16.Models.SubscriptionData subscription1 = new Api.v2018_07_16.Models.SubscriptionData()
             {
@@ -143,9 +138,11 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task GetAndListNonexistentSubscriptions()
         {
+            Guid shouldntExist = Guid.Parse("00000000-0000-0000-0000-000000000042");
+
             // No subs added, get a random Guid
             {
-                IActionResult result = await data.SubscriptionsController.GetSubscription(Guid.NewGuid());
+                IActionResult result = await data.SubscriptionsController.GetSubscription(shouldntExist);
                 result.Should().BeAssignableTo<NotFoundResult>();
                 var notFoundResult = (NotFoundResult) result;
                 notFoundResult.StatusCode.Should().Be((int) HttpStatusCode.NotFound);
@@ -168,6 +165,10 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task CreateSubscriptionForNonExistentChannelFails()
         {
+            string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
+            string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
+            string defaultBranchName = "main";
+
             // Create two subscriptions
             Api.v2018_07_16.Models.SubscriptionData subscription = new Api.v2018_07_16.Models.SubscriptionData()
             {
@@ -188,6 +189,11 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task DeleteSubscription()
         {
+            string testChannelName = "test-channel-sub-controller20200220";
+            string deleteScenarioSourceRepo = "https://github.com/dotnet/sub-controller-delete-sub-source-repo";
+            string deleteScenarioTargetRepo = "https://github.com/dotnet/sub-controller-delete-sub-target-repo";
+            string defaultBranchName = "main";
+
             // Create two subscriptions
             Api.v2018_07_16.Models.SubscriptionData subscriptionToDelete = new Api.v2018_07_16.Models.SubscriptionData()
             {
@@ -217,6 +223,11 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task TriggerSubscription()
         {
+            string testChannelName = "test-channel-sub-controller20200220";
+            string triggerScenarioSourceRepo = "https://github.com/dotnet/sub-controller-trigger-sub-source-repo";
+            string triggerScenarioTargetRepo = "https://github.com/dotnet/sub-controller-trigger-sub-target-repo";
+            string defaultBranchName = "main";
+
             // Create two subscriptions
             Api.v2018_07_16.Models.SubscriptionData subscriptionToTrigger = new Api.v2018_07_16.Models.SubscriptionData()
             {
@@ -310,6 +321,11 @@ namespace Maestro.Web.Tests
         [Test]
         public async Task UpdateSubscription()
         {
+            string testChannelName = "test-channel-sub-controller20200220";
+            string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
+            string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
+            string defaultBranchName = "main";
+
             // Create two subscriptions
             Api.v2018_07_16.Models.SubscriptionData subscription1 = new Api.v2018_07_16.Models.SubscriptionData()
             {
@@ -382,6 +398,17 @@ namespace Maestro.Web.Tests
             public async Task<TestData> BuildAsync()
             {
                 string connectionString = await SharedData.Database.GetConnectionString();
+                string testChannelName = "test-channel-sub-controller20200220";
+                string defaultGitHubSourceRepo = "https://github.com/dotnet/sub-controller-test-source-repo";
+                string defaultGitHubTargetRepo = "https://github.com/dotnet/sub-controller-test-target-repo";
+                string defaultAzdoSourceRepo = "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-source-repo";
+                string defaultAzdoTargetRepo = "https://dev.azure.com/dnceng/internal/_git/sub-controller-test-target-repo";
+                string deleteScenarioSourceRepo = "https://github.com/dotnet/sub-controller-delete-sub-source-repo";
+                string deleteScenarioTargetRepo = "https://github.com/dotnet/sub-controller-delete-sub-target-repo";
+                string triggerScenarioSourceRepo = "https://github.com/dotnet/sub-controller-trigger-sub-source-repo";
+                string triggerScenarioTargetRepo = "https://github.com/dotnet/sub-controller-trigger-sub-target-repo";
+                string defaultClassification = "classy-classification";
+                uint defaultInstallationId = 1234;
 
                 var collection = new ServiceCollection();
                 collection.AddLogging(l => l.AddProvider(new NUnitLogger()));

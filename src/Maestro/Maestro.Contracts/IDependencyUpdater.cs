@@ -15,7 +15,7 @@ namespace Maestro.Contracts
 
         Task StartSubscriptionUpdateAsync(Guid subscription);
 
-        Task StartSubscriptionUpdateAsync(Guid subscription, int buildId);
+        Task StartSubscriptionUpdateForSpecificBuildAsync(Guid subscription, int buildId);
 
         /// <summary>
         ///     Temporary method for debugging daily update issues

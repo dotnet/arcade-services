@@ -118,7 +118,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return await TriggerSubscriptionCore(id, buildId);
         }
 
-        protected async Task<IActionResult> TriggerSubscriptionCore(Guid id, int buildId = 0)
+        protected async Task<IActionResult> TriggerSubscriptionCore(Guid id, int buildId)
         {
             Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
                 .Include(sub => sub.Channel)
@@ -161,15 +161,15 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             public Task ProcessAsync(JToken argumentToken)
             {
-                int buildId = argumentToken["BuildId"].Value<int>();
+                int buildId = argumentToken.Value<int>("BuildId");
 
                 if (buildId != 0)
                 {
-                    return _dependencyUpdater.StartSubscriptionUpdateAsync(argumentToken["SubId"].Value<Guid>(), buildId);
+                    return _dependencyUpdater.StartSubscriptionUpdateForSpecificBuildAsync(argumentToken.Value<Guid>("SubId"), buildId);
                 }
                 else
                 {
-                    return _dependencyUpdater.StartSubscriptionUpdateAsync(argumentToken["SubId"].Value<Guid>());
+                    return _dependencyUpdater.StartSubscriptionUpdateAsync(argumentToken.Value<Guid>("SubId"));
                 }
             }
         }
