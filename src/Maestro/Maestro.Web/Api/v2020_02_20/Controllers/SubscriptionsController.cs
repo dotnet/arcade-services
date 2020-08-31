@@ -109,12 +109,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         [ValidateModelState]
         public override async Task<IActionResult> TriggerSubscription(Guid id, [FromQuery(Name = "bar-build-id")] int buildId = 0)
         {
-            Data.Models.Subscription subscription = await TriggerSubscriptionCore(id, buildId);
-
-            if (subscription == null)
-                return NotFound();
-
-            return Accepted(new Subscription(subscription));
+            return await TriggerSubscriptionCore(id, buildId);
         }
 
         /// <summary>

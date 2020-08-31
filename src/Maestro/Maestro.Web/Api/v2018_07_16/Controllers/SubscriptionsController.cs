@@ -115,15 +115,10 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         [ValidateModelState]
         public virtual async Task<IActionResult> TriggerSubscription(Guid id, [FromQuery(Name = "bar-build-id")] int buildId = 0)
         {
-            Data.Models.Subscription subscription = await TriggerSubscriptionCore(id, buildId);
-
-            if (subscription == null)
-                return NotFound();
-
-            return Accepted(new Subscription(subscription));
+            return await TriggerSubscriptionCore(id, buildId);
         }
 
-        protected async Task<Data.Models.Subscription> TriggerSubscriptionCore(Guid id, int buildId = 0)
+        protected async Task<IActionResult> TriggerSubscriptionCore(Guid id, int buildId = 0)
         {
             Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
                 .Include(sub => sub.Channel)
@@ -135,24 +130,24 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 // Non-existent build
                 if (build == null)
                 {
-                    return null;
+                    return BadRequest($"Build {buildId} was not found");
                 }
                 // Build doesn't match source repo
                 if (!(build.GitHubRepository?.Equals(subscription.SourceRepository, StringComparison.InvariantCultureIgnoreCase) == true ||
                       build.AzureDevOpsRepository?.Equals(subscription.SourceRepository, StringComparison.InvariantCultureIgnoreCase) == true))
                 {
-                    return null;
+                    return BadRequest($"Build {buildId} does not match source repo");
                 }
             }
 
             if (subscription == null)
             {
-                return null;
+                return NotFound();
             }
 
             var values = new { SubId = id, BuildId = buildId };
             _queue.Post<StartSubscriptionUpdateWorkItem>(JToken.FromObject(values));
-            return subscription;
+            return Accepted(new Subscription(subscription));
         }
 
         private class StartSubscriptionUpdateWorkItem : IBackgroundWorkItem
