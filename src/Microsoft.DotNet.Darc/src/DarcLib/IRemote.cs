@@ -122,7 +122,7 @@ namespace Microsoft.DotNet.DarcLib
         Task<Subscription> TriggerSubscriptionAsync(string subscriptionId);
 
         /// <summary>
-        /// Trigger a subscription by ID and sourde build id
+        /// Trigger a subscription by ID and source build id
         /// </summary>
         /// <param name="subscriptionId">ID of subscription to trigger</param>
         /// <param name="sourceBuildId">Bar ID of build to use (instead of latest)</param>

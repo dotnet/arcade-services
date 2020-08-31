@@ -97,7 +97,7 @@ namespace Microsoft.DotNet.DarcLib
         Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId);
 
         /// <summary>
-        /// Trigger a subscription by ID and source build identity.
+        /// Trigger a subscription by ID and source build id.
         /// </summary>
         /// <param name="subscriptionId">ID of subscription to trigger</param>
         /// <returns>Subscription just triggered.</returns>
