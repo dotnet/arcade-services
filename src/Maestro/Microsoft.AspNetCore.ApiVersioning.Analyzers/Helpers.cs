@@ -147,6 +147,16 @@ namespace Microsoft.AspNetCore.ApiVersioning.Analyzers
                         yield return tuple;
                     }
                 }
+                else if (type.syntax is ArrayTypeSyntax arrayTypeSyntax)
+                {
+                    foreach ((ITypeSymbol symbol, Location location) tuple in model.GetTypeUsages(new []
+                    {
+                        (symbol: model.GetTypeSymbol(arrayTypeSyntax.ElementType), syntax: arrayTypeSyntax.ElementType)
+                    }))
+                    {
+                        yield return tuple;
+                    }
+                }
                 else if (type.syntax is NullableTypeSyntax nullableTypeSyntax)
                 {
                     yield return (type.symbol, nullableTypeSyntax.QuestionToken.GetLocation());
