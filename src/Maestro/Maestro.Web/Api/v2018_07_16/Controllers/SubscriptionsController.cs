@@ -109,32 +109,45 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
         ///   Trigger a <see cref="Subscription"/> manually by id
         /// </summary>
         /// <param name="id">The id of the <see cref="Subscription"/> to trigger.</param>
+        /// <param name="buildId">'bar-build-id' if specified, a specific build is requested</param>
         [HttpPost("{id}/trigger")]
         [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription), Description = "Subscription update has been triggered")]
         [ValidateModelState]
-        public virtual async Task<IActionResult> TriggerSubscription(Guid id)
+        public virtual async Task<IActionResult> TriggerSubscription(Guid id, [FromQuery(Name = "bar-build-id")] int buildId = 0)
         {
-            Data.Models.Subscription subscription = await TriggerSubscriptionCore(id);
-
-            if (subscription == null)
-                return NotFound();
-
-            return Accepted(new Subscription(subscription));
+            return await TriggerSubscriptionCore(id, buildId);
         }
 
-        protected async Task<Data.Models.Subscription> TriggerSubscriptionCore(Guid id)
+        protected async Task<IActionResult> TriggerSubscriptionCore(Guid id, int buildId)
         {
             Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
                 .Include(sub => sub.Channel)
                 .FirstOrDefaultAsync(sub => sub.Id == id);
 
-            if (subscription == null)
+            if (buildId != 0)
             {
-                return null;
+                Data.Models.Build build = await _context.Builds.Where(b => b.Id == buildId).FirstOrDefaultAsync();
+                // Non-existent build
+                if (build == null)
+                {
+                    return BadRequest($"Build {buildId} was not found");
+                }
+                // Build doesn't match source repo
+                if (!(build.GitHubRepository?.Equals(subscription.SourceRepository, StringComparison.InvariantCultureIgnoreCase) == true ||
+                      build.AzureDevOpsRepository?.Equals(subscription.SourceRepository, StringComparison.InvariantCultureIgnoreCase) == true))
+                {
+                    return BadRequest($"Build {buildId} does not match source repo");
+                }
             }
 
-            _queue.Post<StartSubscriptionUpdateWorkItem>(JToken.FromObject(id));
-            return subscription;
+            if (subscription == null)
+            {
+                return NotFound();
+            }
+
+            var values = new { SubId = id, BuildId = buildId };
+            _queue.Post<StartSubscriptionUpdateWorkItem>(JToken.FromObject(values));
+            return Accepted(new Subscription(subscription));
         }
 
         private class StartSubscriptionUpdateWorkItem : IBackgroundWorkItem
@@ -148,7 +161,16 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
 
             public Task ProcessAsync(JToken argumentToken)
             {
-                return _dependencyUpdater.StartSubscriptionUpdateAsync(argumentToken.Value<Guid>());
+                int buildId = argumentToken.Value<int>("BuildId");
+
+                if (buildId != 0)
+                {
+                    return _dependencyUpdater.StartSubscriptionUpdateForSpecificBuildAsync(argumentToken.Value<Guid>("SubId"), buildId);
+                }
+                else
+                {
+                    return _dependencyUpdater.StartSubscriptionUpdateAsync(argumentToken.Value<Guid>("SubId"));
+                }
             }
         }
 
@@ -221,7 +243,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                     return BadRequest(
                         new ApiError(
                             "The request is invalid",
-                            new[] {$"The channel '{update.ChannelName}' could not be found."}));
+                            new[] { $"The channel '{update.ChannelName}' could not be found." }));
                 }
 
                 subscription.Channel = channel;
@@ -404,7 +426,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
                 return BadRequest(
                     new ApiError(
                         "the request is invalid",
-                        new[] {$"The channel '{subscription.ChannelName}' could not be found."}));
+                        new[] { $"The channel '{subscription.ChannelName}' could not be found." }));
             }
 
             Data.Models.Repository repo = await _context.Repositories.FindAsync(subscription.TargetRepository);

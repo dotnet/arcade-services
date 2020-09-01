@@ -13,10 +13,10 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         }
 
         [JsonProperty("flowRefs")]
-        public IImmutableList<Models.FlowRef> FlowRefs { get; }
+        public IImmutableList<Models.FlowRef> FlowRefs { get; set; }
 
         [JsonProperty("flowEdges")]
-        public IImmutableList<Models.FlowEdge> FlowEdges { get; }
+        public IImmutableList<Models.FlowEdge> FlowEdges { get; set; }
 
         [JsonIgnore]
         public bool IsValid

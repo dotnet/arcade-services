@@ -42,6 +42,8 @@ namespace Microsoft.DotNet.DarcLib
         public double BestCasePathTime { get; set; }
         public bool OnLongestBuildPath { get; set; }
 
+        public bool IsToolingOnly => OutgoingEdges.All(e => e.IsToolingOnly);
+
         public void CalculateLongestPathTime()
         {
             // If the node does not have any outgoing edges, then it is a root, and its official build time is
@@ -64,11 +66,22 @@ namespace Microsoft.DotNet.DarcLib
                     edgesOfInterest = OutgoingEdges;
                 }
 
-                double worstCasePathTime = edgesOfInterest.Max(e => e.To.WorstCasePathTime + e.To.PrBuildTime) + OfficialBuildTime;
-                WorstCasePathTime = worstCasePathTime > WorstCasePathTime ? worstCasePathTime : WorstCasePathTime;
+                // Tooling subscriptions should not be included in longest path calculation
+                edgesOfInterest = edgesOfInterest.Where(e => !e.IsToolingOnly).ToList();
 
-                double bestCasePathTime = edgesOfInterest.Max(e => e.To.BestCasePathTime) + OfficialBuildTime;
-                BestCasePathTime = bestCasePathTime > BestCasePathTime ? bestCasePathTime : bestCasePathTime;
+                var maxWorstCaseEdgeTime = edgesOfInterest
+                    .Select(e => e.To.WorstCasePathTime + e.To.PrBuildTime)
+                    .DefaultIfEmpty(0)
+                    .Max();
+
+                WorstCasePathTime = Math.Max(maxWorstCaseEdgeTime + OfficialBuildTime, WorstCasePathTime);
+
+                var maxBestCaseEdgeTime = edgesOfInterest
+                    .Select(e => e.To.BestCasePathTime)
+                    .DefaultIfEmpty(0)
+                    .Max();
+
+                BestCasePathTime = Math.Max(maxBestCaseEdgeTime + OfficialBuildTime, BestCasePathTime);
             }
         }
     }

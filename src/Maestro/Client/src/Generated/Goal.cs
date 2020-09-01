@@ -14,14 +14,14 @@ namespace Microsoft.DotNet.Maestro.Client
 {
     public partial interface IGoal
     {
-        Task<Models.Goal> GetGoalTimesAsync(
+        Task<Models.Goal> CreateAsync(
+            Models.GoalRequestJson body,
             string channelName,
             int definitionId,
             CancellationToken cancellationToken = default
         );
 
-        Task<Models.Goal> CreateAsync(
-            Models.GoalRequestJson body,
+        Task<Models.Goal> GetGoalTimesAsync(
             string channelName,
             int definitionId,
             CancellationToken cancellationToken = default
@@ -39,87 +39,6 @@ namespace Microsoft.DotNet.Maestro.Client
         public MaestroApi Client { get; }
 
         partial void HandleFailedRequest(RestApiException ex);
-
-        partial void HandleFailedGetGoalTimesRequest(RestApiException ex);
-
-        public async Task<Models.Goal> GetGoalTimesAsync(
-            string channelName,
-            int definitionId,
-            CancellationToken cancellationToken = default
-        )
-        {
-
-            if (string.IsNullOrEmpty(channelName))
-            {
-                throw new ArgumentNullException(nameof(channelName));
-            }
-
-            if (definitionId == default(int))
-            {
-                throw new ArgumentNullException(nameof(definitionId));
-            }
-
-            const string apiVersion = "2020-02-20";
-
-            var _baseUri = Client.Options.BaseUri;
-            var _url = new RequestUriBuilder();
-            _url.Reset(_baseUri);
-            _url.AppendPath(
-                "/api/goals/channelName/{channelName}/definitionId/{definitionId}".Replace("{definitionId}", Uri.EscapeDataString(Client.Serialize(definitionId))).Replace("{channelName}", Uri.EscapeDataString(Client.Serialize(channelName))),
-                false);
-
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
-
-
-            using (var _req = Client.Pipeline.CreateRequest())
-            {
-                _req.Uri = _url;
-                _req.Method = RequestMethod.Get;
-
-                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
-                {
-                    if (_res.Status < 200 || _res.Status >= 300)
-                    {
-                        await OnGetGoalTimesFailed(_req, _res).ConfigureAwait(false);
-                    }
-
-                    if (_res.ContentStream == null)
-                    {
-                        await OnGetGoalTimesFailed(_req, _res).ConfigureAwait(false);
-                    }
-
-                    using (var _reader = new StreamReader(_res.ContentStream))
-                    {
-                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Models.Goal>(_content);
-                        return _body;
-                    }
-                }
-            }
-        }
-
-        internal async Task OnGetGoalTimesFailed(Request req, Response res)
-        {
-            string content = null;
-            if (res.ContentStream != null)
-            {
-                using (var reader = new StreamReader(res.ContentStream))
-                {
-                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
-                }
-            }
-
-            var ex = new RestApiException<Models.ApiError>(
-                req,
-                res,
-                content,
-                Client.Deserialize<Models.ApiError>(content)
-                );
-            HandleFailedGetGoalTimesRequest(ex);
-            HandleFailedRequest(ex);
-            Client.OnFailedRequest(ex);
-            throw ex;
-        }
 
         partial void HandleFailedCreateRequest(RestApiException ex);
 
@@ -139,11 +58,6 @@ namespace Microsoft.DotNet.Maestro.Client
             if (string.IsNullOrEmpty(channelName))
             {
                 throw new ArgumentNullException(nameof(channelName));
-            }
-
-            if (definitionId == default(int))
-            {
-                throw new ArgumentNullException(nameof(definitionId));
             }
 
             const string apiVersion = "2020-02-20";
@@ -209,6 +123,82 @@ namespace Microsoft.DotNet.Maestro.Client
                 Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedCreateRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
+        }
+
+        partial void HandleFailedGetGoalTimesRequest(RestApiException ex);
+
+        public async Task<Models.Goal> GetGoalTimesAsync(
+            string channelName,
+            int definitionId,
+            CancellationToken cancellationToken = default
+        )
+        {
+
+            if (string.IsNullOrEmpty(channelName))
+            {
+                throw new ArgumentNullException(nameof(channelName));
+            }
+
+            const string apiVersion = "2020-02-20";
+
+            var _baseUri = Client.Options.BaseUri;
+            var _url = new RequestUriBuilder();
+            _url.Reset(_baseUri);
+            _url.AppendPath(
+                "/api/goals/channelName/{channelName}/definitionId/{definitionId}".Replace("{definitionId}", Uri.EscapeDataString(Client.Serialize(definitionId))).Replace("{channelName}", Uri.EscapeDataString(Client.Serialize(channelName))),
+                false);
+
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+
+
+            using (var _req = Client.Pipeline.CreateRequest())
+            {
+                _req.Uri = _url;
+                _req.Method = RequestMethod.Get;
+
+                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
+                {
+                    if (_res.Status < 200 || _res.Status >= 300)
+                    {
+                        await OnGetGoalTimesFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    if (_res.ContentStream == null)
+                    {
+                        await OnGetGoalTimesFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<Models.Goal>(_content);
+                        return _body;
+                    }
+                }
+            }
+        }
+
+        internal async Task OnGetGoalTimesFailed(Request req, Response res)
+        {
+            string content = null;
+            if (res.ContentStream != null)
+            {
+                using (var reader = new StreamReader(res.ContentStream))
+                {
+                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
+            }
+
+            var ex = new RestApiException<Models.ApiError>(
+                req,
+                res,
+                content,
+                Client.Deserialize<Models.ApiError>(content)
+                );
+            HandleFailedGetGoalTimesRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;
