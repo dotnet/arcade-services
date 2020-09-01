@@ -42,16 +42,6 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            if (days == default(int))
-            {
-                throw new ArgumentNullException(nameof(days));
-            }
-
-            if (id == default(int))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-
             const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;

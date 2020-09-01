@@ -381,6 +381,24 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         void Clone(string repoUri, string commit, string targetDirectory, string gitDirectory);
 
+        /// <summary>
+        ///   Gets dependency flow graph for given channel.
+        /// </summary>
+        /// <param name="channelId">Channel ID</param>
+        /// <param name="days">Number of days over which the build times will be summarized</param>
+        /// <param name="includeArcade">Should arcade be included in generated graph</param>
+        /// <param name="includeBuildTimes">Should build times be calculated for each node</param>
+        /// <param name="includeDisabledSubscriptions">Should disabled subscriptions be included in the graph</param>
+        /// <param name="includedFrequencies">Include only subscription with specified frequencies. Leave null or empty to include all</param>
+        /// <returns>Dependency flow graph for given channel</returns>
+        Task<DependencyFlowGraph> GetDependencyFlowGraph(
+            int channelId,
+            int days,
+            bool includeArcade,
+            bool includeBuildTimes,
+            bool includeDisabledSubscriptions,
+            IReadOnlyList<string> includedFrequencies = default);
+
         #endregion
 
         #region Build/Asset Operations

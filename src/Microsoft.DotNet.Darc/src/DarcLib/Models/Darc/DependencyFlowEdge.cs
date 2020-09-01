@@ -27,5 +27,9 @@ namespace Microsoft.DotNet.DarcLib
         public bool? PartOfCycle { get; set; }
         public bool BackEdge { get; set; }
         public bool OnLongestBuildPath { get; set; }
+        /// <summary>
+        ///   True if all assets that "To" node depends on are tooling dependencies.
+        /// </summary>
+        public bool IsToolingOnly { get; set; }
     }
 }

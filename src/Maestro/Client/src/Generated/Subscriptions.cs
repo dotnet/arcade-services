@@ -32,14 +32,14 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
-        Task<Models.Subscription> DeleteSubscriptionAsync(
-            Guid id,
-            CancellationToken cancellationToken = default
-        );
-
         Task<Models.Subscription> UpdateSubscriptionAsync(
             Guid id,
             Models.SubscriptionUpdate body = default,
+            CancellationToken cancellationToken = default
+        );
+
+        Task<Models.Subscription> DeleteSubscriptionAsync(
+            Guid id,
             CancellationToken cancellationToken = default
         );
 
@@ -70,7 +70,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
-        Task RetrySubscriptionActionAsyncAsync(
+        Task RetrySubscriptionActionAsync(
             Guid id,
             long timestamp,
             CancellationToken cancellationToken = default
@@ -272,11 +272,6 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            if (id == default(Guid))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-
             const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
@@ -339,81 +334,6 @@ namespace Microsoft.DotNet.Maestro.Client
             throw ex;
         }
 
-        partial void HandleFailedDeleteSubscriptionRequest(RestApiException ex);
-
-        public async Task<Models.Subscription> DeleteSubscriptionAsync(
-            Guid id,
-            CancellationToken cancellationToken = default
-        )
-        {
-
-            if (id == default(Guid))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-
-            const string apiVersion = "2020-02-20";
-
-            var _baseUri = Client.Options.BaseUri;
-            var _url = new RequestUriBuilder();
-            _url.Reset(_baseUri);
-            _url.AppendPath(
-                "/api/subscriptions/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
-                false);
-
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
-
-
-            using (var _req = Client.Pipeline.CreateRequest())
-            {
-                _req.Uri = _url;
-                _req.Method = RequestMethod.Delete;
-
-                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
-                {
-                    if (_res.Status < 200 || _res.Status >= 300)
-                    {
-                        await OnDeleteSubscriptionFailed(_req, _res).ConfigureAwait(false);
-                    }
-
-                    if (_res.ContentStream == null)
-                    {
-                        await OnDeleteSubscriptionFailed(_req, _res).ConfigureAwait(false);
-                    }
-
-                    using (var _reader = new StreamReader(_res.ContentStream))
-                    {
-                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Models.Subscription>(_content);
-                        return _body;
-                    }
-                }
-            }
-        }
-
-        internal async Task OnDeleteSubscriptionFailed(Request req, Response res)
-        {
-            string content = null;
-            if (res.ContentStream != null)
-            {
-                using (var reader = new StreamReader(res.ContentStream))
-                {
-                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
-                }
-            }
-
-            var ex = new RestApiException<Models.ApiError>(
-                req,
-                res,
-                content,
-                Client.Deserialize<Models.ApiError>(content)
-                );
-            HandleFailedDeleteSubscriptionRequest(ex);
-            HandleFailedRequest(ex);
-            Client.OnFailedRequest(ex);
-            throw ex;
-        }
-
         partial void HandleFailedUpdateSubscriptionRequest(RestApiException ex);
 
         public async Task<Models.Subscription> UpdateSubscriptionAsync(
@@ -422,11 +342,6 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-
-            if (id == default(Guid))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
 
             const string apiVersion = "2020-02-20";
 
@@ -496,6 +411,76 @@ namespace Microsoft.DotNet.Maestro.Client
             throw ex;
         }
 
+        partial void HandleFailedDeleteSubscriptionRequest(RestApiException ex);
+
+        public async Task<Models.Subscription> DeleteSubscriptionAsync(
+            Guid id,
+            CancellationToken cancellationToken = default
+        )
+        {
+
+            const string apiVersion = "2020-02-20";
+
+            var _baseUri = Client.Options.BaseUri;
+            var _url = new RequestUriBuilder();
+            _url.Reset(_baseUri);
+            _url.AppendPath(
+                "/api/subscriptions/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
+                false);
+
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+
+
+            using (var _req = Client.Pipeline.CreateRequest())
+            {
+                _req.Uri = _url;
+                _req.Method = RequestMethod.Delete;
+
+                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
+                {
+                    if (_res.Status < 200 || _res.Status >= 300)
+                    {
+                        await OnDeleteSubscriptionFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    if (_res.ContentStream == null)
+                    {
+                        await OnDeleteSubscriptionFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<Models.Subscription>(_content);
+                        return _body;
+                    }
+                }
+            }
+        }
+
+        internal async Task OnDeleteSubscriptionFailed(Request req, Response res)
+        {
+            string content = null;
+            if (res.ContentStream != null)
+            {
+                using (var reader = new StreamReader(res.ContentStream))
+                {
+                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
+            }
+
+            var ex = new RestApiException<Models.ApiError>(
+                req,
+                res,
+                content,
+                Client.Deserialize<Models.ApiError>(content)
+                );
+            HandleFailedDeleteSubscriptionRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
+        }
+
         partial void HandleFailedTriggerSubscriptionRequest(RestApiException ex);
 
         public async Task<Models.Subscription> TriggerSubscriptionAsync(
@@ -512,11 +497,6 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-
-            if (id == default(Guid))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
 
             const string apiVersion = "2020-02-20";
 
@@ -698,11 +678,6 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            if (id == default(Guid))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-
             const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
@@ -773,24 +748,14 @@ namespace Microsoft.DotNet.Maestro.Client
             throw ex;
         }
 
-        partial void HandleFailedRetrySubscriptionActionAsyncRequest(RestApiException ex);
+        partial void HandleFailedRetrySubscriptionActionRequest(RestApiException ex);
 
-        public async Task RetrySubscriptionActionAsyncAsync(
+        public async Task RetrySubscriptionActionAsync(
             Guid id,
             long timestamp,
             CancellationToken cancellationToken = default
         )
         {
-
-            if (id == default(Guid))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-
-            if (timestamp == default(long))
-            {
-                throw new ArgumentNullException(nameof(timestamp));
-            }
 
             const string apiVersion = "2020-02-20";
 
@@ -813,7 +778,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 {
                     if (_res.Status < 200 || _res.Status >= 300)
                     {
-                        await OnRetrySubscriptionActionAsyncFailed(_req, _res).ConfigureAwait(false);
+                        await OnRetrySubscriptionActionFailed(_req, _res).ConfigureAwait(false);
                     }
 
 
@@ -822,7 +787,7 @@ namespace Microsoft.DotNet.Maestro.Client
             }
         }
 
-        internal async Task OnRetrySubscriptionActionAsyncFailed(Request req, Response res)
+        internal async Task OnRetrySubscriptionActionFailed(Request req, Response res)
         {
             string content = null;
             if (res.ContentStream != null)
@@ -839,7 +804,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 content,
                 Client.Deserialize<Models.ApiError>(content)
                 );
-            HandleFailedRetrySubscriptionActionAsyncRequest(ex);
+            HandleFailedRetrySubscriptionActionRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;

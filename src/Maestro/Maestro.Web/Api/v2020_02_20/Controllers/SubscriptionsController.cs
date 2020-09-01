@@ -52,7 +52,9 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             int? channelId = null,
             bool? enabled = null)
         {
-            IQueryable<Data.Models.Subscription> query = _context.Subscriptions.Include(s => s.Channel);
+            IQueryable<Data.Models.Subscription> query = _context.Subscriptions
+                .Include(s => s.Channel)
+                .Include(s => s.LastAppliedBuild);
 
             if (!string.IsNullOrEmpty(sourceRepository))
             {
@@ -89,6 +91,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         {
             Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
                 .Include(sub => sub.Channel)
+                .Include(sub => sub.LastAppliedBuild)
                 .FirstOrDefaultAsync(sub => sub.Id == id);
 
             if (subscription == null)

@@ -12,7 +12,7 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         }
 
         [JsonProperty("builds")]
-        public IImmutableDictionary<string, Models.Build> Builds { get; }
+        public IImmutableDictionary<string, Models.Build> Builds { get; set; }
 
         [JsonIgnore]
         public bool IsValid
