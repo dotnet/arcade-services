@@ -48,6 +48,12 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
+        Task<Models.Subscription> TriggerSubscriptionAsync(
+            Guid id,
+            int barBuildId,
+            CancellationToken cancellationToken = default
+        );
+
         Task TriggerDailyUpdateAsync(
             CancellationToken cancellationToken = default
         );
@@ -482,6 +488,15 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
+            return await TriggerSubscriptionAsync(id, 0, cancellationToken);
+        }
+
+        public async Task<Models.Subscription> TriggerSubscriptionAsync(
+            Guid id,
+            int barBuildId,
+            CancellationToken cancellationToken = default
+        )
+        {
 
             const string apiVersion = "2020-02-20";
 
@@ -494,6 +509,11 @@ namespace Microsoft.DotNet.Maestro.Client
 
             _url.AppendQuery("api-version", Client.Serialize(apiVersion));
 
+            // If the user specifies a particular build id to trigger subscriptions for, we'll provide that as a query parameter.
+            if (barBuildId != 0)
+            {
+                _url.AppendQuery("bar-build-id", Client.Serialize(barBuildId));
+            }
 
             using (var _req = Client.Pipeline.CreateRequest())
             {

@@ -205,6 +205,18 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        /// Trigger a subscription by ID and source build id
+        /// </summary>
+        /// <param name="subscriptionId">ID of subscription to trigger</param>
+        /// <param name="sourceBuildId">Bar ID of build to use (instead of latest)</param>
+        /// <returns>Subscription just triggered.</returns>
+        public async Task<Subscription> TriggerSubscriptionAsync(string subscriptionId, int sourceBuildId)
+        {
+            CheckForValidBarClient();
+            return await _barClient.TriggerSubscriptionAsync(GetSubscriptionGuid(subscriptionId), sourceBuildId);
+        }
+
+        /// <summary>
         ///     Create a new subscription
         /// </summary>
         /// <param name="channelName">Name of source channel</param>
