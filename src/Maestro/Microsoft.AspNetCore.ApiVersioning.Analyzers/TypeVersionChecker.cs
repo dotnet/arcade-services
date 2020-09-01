@@ -15,15 +15,20 @@ namespace Microsoft.AspNetCore.ApiVersioning.Analyzers
         {
             "System.DateTimeOffset",
             "System.Guid",
+            "System.IO.Stream",
             "System.Nullable`1",
             "System.TimeSpan",
+            "System.Uri",
             "System.Threading.CancellationToken",
             "System.Threading.Tasks.Task",
             "System.Threading.Tasks.Task`1",
             "System.Collections.Generic.List`1",
+            "System.Collections.Generic.IList`1",
+            "System.Collections.Generic.IReadOnlyList`1",
             "System.Collections.Generic.IEnumerable`1",
+            "System.Collections.Generic.IDictionary`2",
             "Microsoft.AspNetCore.Mvc.IActionResult",
-            "Microsoft.AspNetCore.Mvc.ActionResult"
+            "Microsoft.AspNetCore.Mvc.ActionResult",
         };
 
         public TypeVersionChecker(Compilation compilation)
@@ -45,6 +50,11 @@ namespace Microsoft.AspNetCore.ApiVersioning.Analyzers
                 return true;
             }
 
+            if (IsSuppressed(symbol))
+            {
+                return true;
+            }
+
             if (IgnorableVersionedTypes.Any(symbol.Equals))
             {
                 return true;
@@ -56,6 +66,12 @@ namespace Microsoft.AspNetCore.ApiVersioning.Analyzers
             }
 
             return IsVersioned(symbol);
+        }
+
+        private bool IsSuppressed(ITypeSymbol symbol)
+        {
+            var attribute = symbol.GetAttributes().FirstOrDefault(a => a.AttributeClass.Name == "SuppressVersionErrorsAttribute");
+            return attribute != null;
         }
 
         private bool IsVersionableSpecialType(ITypeSymbol symbol)
