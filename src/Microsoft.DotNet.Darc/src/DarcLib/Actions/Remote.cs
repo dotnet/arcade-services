@@ -491,7 +491,7 @@ namespace Microsoft.DotNet.DarcLib
                 return toUpdate;
             }
 
-            List<CoherencyError> coherencyErrors = new List<CoherencyError>();
+            Dictionary<string, CoherencyError> coherencyErrors = new Dictionary<string, CoherencyError>();
 
             // Cache of dependencies. Key is "<repo>@<sha>".
             Dictionary<string, IEnumerable<DependencyDetail>> dependenciesCache =
@@ -564,16 +564,20 @@ namespace Microsoft.DotNet.DarcLib
                     if (cpdDependency == null)
                     {
                         // This is an invalid state. The dependency should be listed in the cpd parent's version details file.
-                        coherencyErrors.Add(new CoherencyError()
+                        string coherencyErrorKey = $"{parentCoherentDependency.RepoUri}{parentCoherentDependency.Commit}{dependencyToUpdate.Name}";
+                        if (!coherencyErrors.ContainsKey(coherencyErrorKey))
                         {
-                            Dependency = dependencyToUpdate,
-                            Error = $"{parentCoherentDependency.RepoUri} @ {parentCoherentDependency.Commit} does not contain dependency {dependencyToUpdate.Name}",
-                            PotentialSolutions = new List<string> {
+                            coherencyErrors.Add(coherencyErrorKey, new CoherencyError()
+                            {
+                                Dependency = dependencyToUpdate,
+                                Error = $"{parentCoherentDependency.RepoUri} @ {parentCoherentDependency.Commit} does not contain dependency {dependencyToUpdate.Name}",
+                                PotentialSolutions = new List<string> {
                                 $"Add the dependency to {parentCoherentDependency.RepoUri}.",
                                 $"Pin the dependenency.",
                                 "Remove the CoherentParentDependency attribute."
                             }
-                        });
+                            });
+                        }
 
                         // This invalidates any remaining chain we were attempting to update, since any updates
                         // up the chain would change results down the chain.
@@ -615,7 +619,7 @@ namespace Microsoft.DotNet.DarcLib
 
             if (coherencyErrors.Any())
             {
-                throw new DarcCoherencyException(coherencyErrors);
+                throw new DarcCoherencyException(coherencyErrors.Values);
             }
 
             return toUpdate;
