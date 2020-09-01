@@ -27,6 +27,12 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
+        Task<Models.DefaultChannel> UpdateAsync(
+            int id,
+            Models.DefaultChannelUpdateData body = default,
+            CancellationToken cancellationToken = default
+        );
+
         Task<Models.DefaultChannel> GetAsync(
             int id,
             CancellationToken cancellationToken = default
@@ -34,12 +40,6 @@ namespace Microsoft.DotNet.Maestro.Client
 
         Task DeleteAsync(
             int id,
-            CancellationToken cancellationToken = default
-        );
-
-        Task<Models.DefaultChannel> UpdateAsync(
-            int id,
-            Models.DefaultChannelUpdateData body = default,
             CancellationToken cancellationToken = default
         );
 
@@ -222,6 +222,83 @@ namespace Microsoft.DotNet.Maestro.Client
             throw ex;
         }
 
+        partial void HandleFailedUpdateRequest(RestApiException ex);
+
+        public async Task<Models.DefaultChannel> UpdateAsync(
+            int id,
+            Models.DefaultChannelUpdateData body = default,
+            CancellationToken cancellationToken = default
+        )
+        {
+
+            const string apiVersion = "2020-02-20";
+
+            var _baseUri = Client.Options.BaseUri;
+            var _url = new RequestUriBuilder();
+            _url.Reset(_baseUri);
+            _url.AppendPath(
+                "/api/default-channels/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
+                false);
+
+            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
+
+
+            using (var _req = Client.Pipeline.CreateRequest())
+            {
+                _req.Uri = _url;
+                _req.Method = RequestMethod.Patch;
+
+                if (body != default(Models.DefaultChannelUpdateData))
+                {
+                    _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
+                    _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
+                }
+
+                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
+                {
+                    if (_res.Status < 200 || _res.Status >= 300)
+                    {
+                        await OnUpdateFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    if (_res.ContentStream == null)
+                    {
+                        await OnUpdateFailed(_req, _res).ConfigureAwait(false);
+                    }
+
+                    using (var _reader = new StreamReader(_res.ContentStream))
+                    {
+                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
+                        var _body = Client.Deserialize<Models.DefaultChannel>(_content);
+                        return _body;
+                    }
+                }
+            }
+        }
+
+        internal async Task OnUpdateFailed(Request req, Response res)
+        {
+            string content = null;
+            if (res.ContentStream != null)
+            {
+                using (var reader = new StreamReader(res.ContentStream))
+                {
+                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
+            }
+
+            var ex = new RestApiException<Models.ApiError>(
+                req,
+                res,
+                content,
+                Client.Deserialize<Models.ApiError>(content)
+                );
+            HandleFailedUpdateRequest(ex);
+            HandleFailedRequest(ex);
+            Client.OnFailedRequest(ex);
+            throw ex;
+        }
+
         partial void HandleFailedGetRequest(RestApiException ex);
 
         public async Task<Models.DefaultChannel> GetAsync(
@@ -229,11 +306,6 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-
-            if (id == default(int))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
 
             const string apiVersion = "2020-02-20";
 
@@ -305,11 +377,6 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            if (id == default(int))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-
             const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
@@ -358,88 +425,6 @@ namespace Microsoft.DotNet.Maestro.Client
                 Client.Deserialize<Models.ApiError>(content)
                 );
             HandleFailedDeleteRequest(ex);
-            HandleFailedRequest(ex);
-            Client.OnFailedRequest(ex);
-            throw ex;
-        }
-
-        partial void HandleFailedUpdateRequest(RestApiException ex);
-
-        public async Task<Models.DefaultChannel> UpdateAsync(
-            int id,
-            Models.DefaultChannelUpdateData body = default,
-            CancellationToken cancellationToken = default
-        )
-        {
-
-            if (id == default(int))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-
-            const string apiVersion = "2020-02-20";
-
-            var _baseUri = Client.Options.BaseUri;
-            var _url = new RequestUriBuilder();
-            _url.Reset(_baseUri);
-            _url.AppendPath(
-                "/api/default-channels/{id}".Replace("{id}", Uri.EscapeDataString(Client.Serialize(id))),
-                false);
-
-            _url.AppendQuery("api-version", Client.Serialize(apiVersion));
-
-
-            using (var _req = Client.Pipeline.CreateRequest())
-            {
-                _req.Uri = _url;
-                _req.Method = RequestMethod.Patch;
-
-                if (body != default(Models.DefaultChannelUpdateData))
-                {
-                    _req.Content = RequestContent.Create(Encoding.UTF8.GetBytes(Client.Serialize(body)));
-                    _req.Headers.Add("Content-Type", "application/json; charset=utf-8");
-                }
-
-                using (var _res = await Client.SendAsync(_req, cancellationToken).ConfigureAwait(false))
-                {
-                    if (_res.Status < 200 || _res.Status >= 300)
-                    {
-                        await OnUpdateFailed(_req, _res).ConfigureAwait(false);
-                    }
-
-                    if (_res.ContentStream == null)
-                    {
-                        await OnUpdateFailed(_req, _res).ConfigureAwait(false);
-                    }
-
-                    using (var _reader = new StreamReader(_res.ContentStream))
-                    {
-                        var _content = await _reader.ReadToEndAsync().ConfigureAwait(false);
-                        var _body = Client.Deserialize<Models.DefaultChannel>(_content);
-                        return _body;
-                    }
-                }
-            }
-        }
-
-        internal async Task OnUpdateFailed(Request req, Response res)
-        {
-            string content = null;
-            if (res.ContentStream != null)
-            {
-                using (var reader = new StreamReader(res.ContentStream))
-                {
-                    content = await reader.ReadToEndAsync().ConfigureAwait(false);
-                }
-            }
-
-            var ex = new RestApiException<Models.ApiError>(
-                req,
-                res,
-                content,
-                Client.Deserialize<Models.ApiError>(content)
-                );
-            HandleFailedUpdateRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;

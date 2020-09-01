@@ -13,6 +13,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Maestro.Client;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace Microsoft.DotNet.Darc.Operations
 {
@@ -71,6 +72,25 @@ namespace Microsoft.DotNet.Darc.Operations
                     subscriptionsToTrigger.AddRange(subscriptions);
                 }
 
+                if (_options.Build != 0)
+                {
+                    var specificBuild = await remote.GetBuildAsync(_options.Build);
+                    if (specificBuild == null)
+                    {
+                        Console.WriteLine($"No build found in the BAR with id '{_options.Build}'");
+                        return Constants.ErrorCode;
+                    }
+
+                    // If the user specified repo and a build number, error out if anything doesn't match.
+                    if (!_options.SubscriptionParameterMatches(_options.SourceRepository, specificBuild.GitHubRepository))
+                    {
+                        Console.WriteLine($"Build #{_options.Build} was made with repo {specificBuild.GitHubRepository} and does not match provided value ({_options.SourceRepository})");
+                        return Constants.ErrorCode;
+                    }
+
+                    Console.WriteLine($"Subscription updates will use Build # {_options.Build} instead of latest available");
+                }
+
                 // Filter away subscriptions that are disabled
                 List<Subscription> disabledSubscriptions = subscriptionsToTrigger.Where(s => !s.Enabled).ToList();
                 subscriptionsToTrigger = subscriptionsToTrigger.Where(s => s.Enabled).ToList();
@@ -114,7 +134,14 @@ namespace Microsoft.DotNet.Darc.Operations
                     {
                         Console.WriteLine($"  {UxHelpers.GetSubscriptionDescription(subscription)}");
                     }
-                    await remote.TriggerSubscriptionAsync(subscription.Id.ToString());
+                    if (_options.Build > 0)
+                    {
+                        await remote.TriggerSubscriptionAsync(subscription.Id.ToString(), _options.Build);
+                    }
+                    else
+                    {
+                        await remote.TriggerSubscriptionAsync(subscription.Id.ToString());
+                    }
                 }
                 Console.WriteLine("done");
 

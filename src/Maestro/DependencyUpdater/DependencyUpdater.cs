@@ -79,27 +79,60 @@ namespace DependencyUpdater
         }
 
         /// <summary>
-        ///     Run a single subscription
+        ///     Run a single subscription, only accept the build Id specified 
         /// </summary>
         /// <param name="subscriptionId">Subscription to run the update for.</param>
+        /// <param name="buildId">BAR build id to run the update for</param>
+        public Task StartSubscriptionUpdateForSpecificBuildAsync(Guid subscriptionId, int buildId)
+        {
+            var subscriptionToUpdate = 
+                (from sub in Context.Subscriptions
+                 where sub.Id == subscriptionId
+                 where sub.Enabled
+                 let specificBuild =
+                     sub.Channel.BuildChannels.Select(bc => bc.Build)
+                         .Where(b => (sub.SourceRepository == b.GitHubRepository || sub.SourceRepository == b.AzureDevOpsRepository))
+                         .Where(b => b.Id == buildId)
+                         .FirstOrDefault()
+                 where specificBuild != null
+                 where sub.LastAppliedBuildId == null || sub.LastAppliedBuildId != specificBuild.Id
+                 select new
+                 {
+                     subscription = sub.Id,
+                     specificBuild = specificBuild.Id
+                 }).SingleOrDefault();
+
+            if (subscriptionToUpdate != null)
+            {
+                return UpdateSubscriptionAsync(subscriptionToUpdate.subscription, subscriptionToUpdate.specificBuild);
+            }
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        ///     Run a single subscription, adopting the latest build's id
+        /// </summary>
+        /// <param name="subscriptionId">Subscription to run the update for.</param>
+        /// 
         /// <returns></returns>
         public Task StartSubscriptionUpdateAsync(Guid subscriptionId)
         {
-            var subscriptionToUpdate = (from sub in Context.Subscriptions
-                                         where sub.Id == subscriptionId
-                                         where sub.Enabled
-                                         let latestBuild =
-                                             sub.Channel.BuildChannels.Select(bc => bc.Build)
-                                                 .Where(b => (sub.SourceRepository == b.GitHubRepository || sub.SourceRepository == b.AzureDevOpsRepository))
-                                                 .OrderByDescending(b => b.DateProduced)
-                                                 .FirstOrDefault()
-                                         where latestBuild != null
-                                         where sub.LastAppliedBuildId == null || sub.LastAppliedBuildId != latestBuild.Id
-                                         select new
-                                         {
-                                             subscription = sub.Id,
-                                             latestBuild = latestBuild.Id
-                                         }).SingleOrDefault();
+            var subscriptionToUpdate = 
+                (from sub in Context.Subscriptions
+                 where sub.Id == subscriptionId
+                 where sub.Enabled
+                 let latestBuild =
+                     sub.Channel.BuildChannels.Select(bc => bc.Build)
+                         .Where(b => (sub.SourceRepository == b.GitHubRepository || sub.SourceRepository == b.AzureDevOpsRepository))
+                         .OrderByDescending(b => b.DateProduced)
+                         .FirstOrDefault()
+                 where latestBuild != null
+                 where sub.LastAppliedBuildId == null || sub.LastAppliedBuildId != latestBuild.Id
+                 select new
+                 {
+                     subscription = sub.Id,
+                     latestBuild = latestBuild.Id
+                 }).SingleOrDefault();
 
             if (subscriptionToUpdate != null)
             {
@@ -240,6 +273,16 @@ namespace DependencyUpdater
 
                     if (flowGraph.Nodes.Count > 0)
                     {
+                        var edgesWithLastBuild = flowGraph.Edges
+                            .Where(e => e.Subscription.LastAppliedBuild != null);
+
+                        foreach (var edge in edgesWithLastBuild)
+                        {
+                            edge.IsToolingOnly = !Context.IsProductDependency(
+                                edge.Subscription.LastAppliedBuild.Id,
+                                edge.To.Repository,
+                                edge.To.Branch);
+                        }
 
                         flowGraph.MarkBackEdges();
                         flowGraph.CalculateLongestBuildPaths();

@@ -52,7 +52,9 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             int? channelId = null,
             bool? enabled = null)
         {
-            IQueryable<Data.Models.Subscription> query = _context.Subscriptions.Include(s => s.Channel);
+            IQueryable<Data.Models.Subscription> query = _context.Subscriptions
+                .Include(s => s.Channel)
+                .Include(s => s.LastAppliedBuild);
 
             if (!string.IsNullOrEmpty(sourceRepository))
             {
@@ -89,6 +91,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         {
             Data.Models.Subscription subscription = await _context.Subscriptions.Include(sub => sub.LastAppliedBuild)
                 .Include(sub => sub.Channel)
+                .Include(sub => sub.LastAppliedBuild)
                 .FirstOrDefaultAsync(sub => sub.Id == id);
 
             if (subscription == null)
@@ -103,17 +106,13 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         ///   Trigger a <see cref="Subscription"/> manually by id
         /// </summary>
         /// <param name="id">The id of the <see cref="Subscription"/> to trigger.</param>
+        /// <param name="buildId">'bar-build-id' if specified, a specific build is requested</param>
         [HttpPost("{id}/trigger")]
         [SwaggerApiResponse(HttpStatusCode.Accepted, Type = typeof(Subscription), Description = "Subscription update has been triggered")]
         [ValidateModelState]
-        public override async Task<IActionResult> TriggerSubscription(Guid id)
+        public override async Task<IActionResult> TriggerSubscription(Guid id, [FromQuery(Name = "bar-build-id")] int buildId = 0)
         {
-            Data.Models.Subscription subscription = await TriggerSubscriptionCore(id);
-
-            if (subscription == null)
-                return NotFound();
-
-            return Accepted(new Subscription(subscription));
+            return await TriggerSubscriptionCore(id, buildId);
         }
 
         /// <summary>
