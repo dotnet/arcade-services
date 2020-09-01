@@ -278,7 +278,7 @@ stages:
         -TsaRepositoryName "Arcade-Services"
         -TsaCodebaseName "Arcade-Services"
         -TsaPublish $True'
-- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest')) }}:
+- ${{ if and(ne(variables['System.TeamProject'], 'public'), notin(variables['Build.Reason'], 'PullRequest'), in(variables['Build.SourceBranch'], 'refs/heads/master', 'refs/heads/production'))}}:
   - template: eng\deploy.yaml
     parameters:
       ${{ if ne(variables['Build.SourceBranch'], 'refs/heads/production') }}:
