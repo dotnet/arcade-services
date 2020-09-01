@@ -14,6 +14,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Maestro.DataProviders
 {
@@ -130,6 +131,17 @@ namespace Maestro.DataProviders
                 other.Classification);
         }
 
+        public Task<DependencyFlowGraph> GetDependencyFlowGraph(
+            int channelId,
+            int days,
+            bool includeArcade,
+            bool includeBuildTimes,
+            bool includeDisabledSubscriptions,
+            IReadOnlyList<string> includedFrequencies)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<Build> GetLatestBuildAsync(string repoUri, int channelId)
         {
             throw new NotImplementedException();
@@ -150,11 +162,48 @@ namespace Maestro.DataProviders
                 other.TargetBranch)
                 {
                     Channel = ToClientModelChannel(other.Channel),
-                    Policy = ToClientModelSubscriptionPolicy(other.PolicyObject)
+                    Policy = ToClientModelSubscriptionPolicy(other.PolicyObject),
+                    LastAppliedBuild = other.LastAppliedBuild != null ? ToClientModelBuild(other.LastAppliedBuild) : null
                 };
         }
-        
-        private SubscriptionPolicy ToClientModelSubscriptionPolicy(Maestro.Data.Models.SubscriptionPolicy other)
+
+        private Build ToClientModelBuild(Data.Models.Build other)
+        {
+            var channels = other.BuildChannels?
+                .Select(bc => ToClientModelChannel(bc.Channel))
+                .ToImmutableList();
+
+            var assets = other.Assets?
+                .Select(a => new Asset(a.Id, a.BuildId, a.NonShipping, a.Name, a.Version, null))
+                .ToImmutableList();
+
+            var dependencies = other.DependentBuildIds?
+                .Select(ToClientModelBuildDependency)
+                .ToImmutableList();
+
+            var incoherences = other.Incoherencies?
+                .Select(ToClientModelBuildIncoherence)
+                .ToImmutableList();
+
+            return new Build(
+                other.Id,
+                other.DateProduced,
+                other.Staleness,
+                other.Released,
+                other.Stable,
+                other.Commit,
+                channels,
+                assets,
+                dependencies,
+                incoherences);
+        }
+
+        private BuildRef ToClientModelBuildDependency(Data.Models.BuildDependency other)
+        {
+            return new BuildRef(other.BuildId, other.IsProduct, other.TimeToInclusionInMinutes);
+        }
+
+        private SubscriptionPolicy ToClientModelSubscriptionPolicy(Data.Models.SubscriptionPolicy other)
         {
             return new SubscriptionPolicy(
                 other.Batchable,
@@ -162,9 +211,22 @@ namespace Maestro.DataProviders
             );
         }
 
+        private BuildIncoherence ToClientModelBuildIncoherence(Data.Models.BuildIncoherence other)
+        {
+            return new BuildIncoherence
+            {
+                Commit = other.Commit,
+                Name = other.Name,
+                Repository = other.Repository,
+                Version = other.Version
+            };
+        }
+
         public async Task<IEnumerable<Subscription>> GetSubscriptionsAsync(string sourceRepo = null, string targetRepo = null, int? channelId = null)
         {
-            IQueryable<Data.Models.Subscription> query = _context.Subscriptions.Include(s => s.Channel);
+            IQueryable<Data.Models.Subscription> query = _context.Subscriptions
+                .Include(s => s.Channel)
+                .Include(s => s.LastAppliedBuild);
 
             if (!string.IsNullOrEmpty(sourceRepo))
             {
@@ -187,6 +249,11 @@ namespace Maestro.DataProviders
         }
 
         public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId)
         {
             throw new NotImplementedException();
         }
@@ -218,9 +285,22 @@ namespace Maestro.DataProviders
 
         #endregion
 
-        public Task<Build> GetBuildAsync(int buildId)
+        public async Task<Build> GetBuildAsync(int buildId)
         {
-            throw new NotImplementedException();
+            var build = await _context.Builds.Where(b => b.Id == buildId)
+                .Include(b => b.BuildChannels)
+                .ThenInclude(bc => bc.Channel)
+                .Include(b => b.Assets)
+                .FirstOrDefaultAsync();
+
+            if (build != null)
+            {
+                return ToClientModelBuild(build);
+            }
+            else
+            {
+                return null;
+            }
         }
 
         public Task<Build> UpdateBuildAsync(int buildId, BuildUpdate buildUpdate)
@@ -278,7 +358,13 @@ namespace Maestro.DataProviders
 
             if (defaultChannel == null)
             {
-                return new BuildTime(0, 0, 0, 0);
+                return new BuildTime
+                {
+                    DefaultChannelId = 0,
+                    OfficialBuildTime = 0,
+                    PrBuildTime = 0,
+                    GoalTimeInMinutes = 0
+                };
             }
 
             MultiProjectKustoQuery queries = SharedKustoQueries.CreateBuildTimesQueries(defaultChannel.Repository, defaultChannel.Branch, days);
@@ -312,7 +398,13 @@ namespace Maestro.DataProviders
                 prTime = prBuildTime.TotalMinutes;
             }
 
-            return new BuildTime(defaultChannelId, officialTime, prTime, goalTime);
+            return new BuildTime
+            {
+                DefaultChannelId = defaultChannelId,
+                OfficialBuildTime = officialTime,
+                PrBuildTime = prTime,
+                GoalTimeInMinutes = goalTime
+            };
         }
     }
 }

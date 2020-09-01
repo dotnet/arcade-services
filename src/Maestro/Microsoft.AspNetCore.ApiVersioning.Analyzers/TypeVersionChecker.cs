@@ -21,6 +21,7 @@ namespace Microsoft.AspNetCore.ApiVersioning.Analyzers
             "System.Threading.Tasks.Task",
             "System.Threading.Tasks.Task`1",
             "System.Collections.Generic.List`1",
+            "System.Collections.Generic.IEnumerable`1",
             "Microsoft.AspNetCore.Mvc.IActionResult",
             "Microsoft.AspNetCore.Mvc.ActionResult"
         };

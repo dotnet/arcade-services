@@ -14,10 +14,10 @@ namespace Microsoft.DotNet.Maestro.Client.Models
         }
 
         [JsonProperty("buildId")]
-        public int BuildId { get; }
+        public int BuildId { get; set; }
 
         [JsonProperty("isProduct")]
-        public bool IsProduct { get; }
+        public bool IsProduct { get; set; }
 
         [JsonProperty("timeToInclusionInMinutes")]
         public double TimeToInclusionInMinutes { get; set; }

@@ -373,11 +373,6 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            if (id == default(int))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-
             const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
@@ -447,11 +442,6 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-
-            if (id == default(int))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
 
             const string apiVersion = "2020-02-20";
 
@@ -631,11 +621,6 @@ namespace Microsoft.DotNet.Maestro.Client
             if (body == default(Models.BuildUpdate))
             {
                 throw new ArgumentNullException(nameof(body));
-            }
-
-            if (buildId == default(int))
-            {
-                throw new ArgumentNullException(nameof(buildId));
             }
 
             const string apiVersion = "2020-02-20";

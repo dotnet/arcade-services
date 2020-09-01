@@ -834,8 +834,10 @@ namespace Microsoft.DotNet.DarcLib
                     return ReviewState.ChangesRequested;
                 case PullRequestReviewState.Commented:
                     return ReviewState.Commented;
+                // A PR comment could be dismissed by a new push, so this does not count as a rejection.
+                // Change to a comment
                 case PullRequestReviewState.Dismissed:
-                    return ReviewState.Rejected;
+                    return ReviewState.Commented;
                 case PullRequestReviewState.Pending:
                     return ReviewState.Pending;
                 default:
