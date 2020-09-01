@@ -6,12 +6,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection.Metadata;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using Maestro.Contracts;
 using Maestro.Data;
 using Maestro.Data.Models;
+using Maestro.MergePolicies;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.ServiceFabric.ServiceHost;
 using Microsoft.DotNet.ServiceFabric.ServiceHost.Actors;
@@ -242,11 +244,6 @@ namespace SubscriptionActorService
         protected abstract Task<(string repository, string branch)> GetTargetAsync();
 
         protected abstract Task<IReadOnlyList<MergePolicyDefinition>> GetMergePolicyDefinitions();
-
-        private class ReferenceLinksMap
-        {
-            public Dictionary<(string from, string to), int> ShaRangeToLinkId { get; } = new Dictionary<(string from, string to), int>();
-        }
 
         private async Task<string> GetSourceRepositoryAsync(Guid subscriptionId)
         {
@@ -718,7 +715,7 @@ namespace SubscriptionActorService
                 var description = new StringBuilder();
                 description.AppendLine("This pull request updates the following dependencies");
                 description.AppendLine();
-                
+
                 await CommitUpdatesAsync(requiredUpdates, description, DarcRemoteFactory, targetRepository, newBranchName);
 
                 var inProgressPr = new InProgressPullRequest
@@ -835,7 +832,6 @@ namespace SubscriptionActorService
                 var message = new StringBuilder();
                 List<DependencyUpdate> dependenciesToCommit = deps;
                 await CalculateCommitMessage(update, deps, message);
-               
 
                 if (combineCoherencyWithNonCoherency && coherencyUpdate.update != null)
                 {
@@ -982,35 +978,10 @@ namespace SubscriptionActorService
                 subscriptionSection.AppendLine();
                 subscriptionSection.AppendLine($"- **Updates**:");
 
-                ReferenceLinksMap dependencyMapObject = new ReferenceLinksMap();
-
-                int referenceLinkId = 1;
                 foreach (DependencyUpdate dep in deps)
                 {
-                    if (!dependencyMapObject.ShaRangeToLinkId.ContainsKey((dep.From.Commit, dep.To.Commit)))
-                    {
-                        dependencyMapObject.ShaRangeToLinkId.Add((dep.From.Commit, dep.To.Commit), referenceLinkId++);
-                    }
+                    subscriptionSection.AppendLine($"  - **{dep.To.Name}**: from {dep.From.Version} to {dep.To.Version}");
                 }
-
-                foreach (DependencyUpdate dep in deps)
-                {
-                    subscriptionSection.AppendLine($"  - **{dep.To.Name}**: [from {dep.From.Version} to {dep.To.Version}][{dependencyMapObject.ShaRangeToLinkId[(dep.From.Commit, dep.To.Commit)]}]");
-                }
-
-                subscriptionSection.AppendLine();
-                for (int i = 1; i <= referenceLinkId; i++)
-                {
-                    foreach (KeyValuePair<(string, string), int> entry in dependencyMapObject.ShaRangeToLinkId)
-                    {
-                        if (entry.Value == i) 
-                        {
-                            DependencyDetail to = deps.Find(d => d.To.Commit == entry.Key.Item1).To;
-                            subscriptionSection.AppendLine($"[{i}]: {GetChangesURI(to.RepoUri, entry.Key.Item1, entry.Key.Item2)}");
-                        }
-                    }
-                }
-
                 subscriptionSection.AppendLine();
                 subscriptionSection.AppendLine(DependencyUpdateEnd);
                 subscriptionSection.AppendLine();
@@ -1038,15 +1009,6 @@ namespace SubscriptionActorService
             // if either marker is missing, just append at end and don't remove anything
             // from the description
             return description.Length;
-        }
-
-        private string GetChangesURI(string repoURI, string from, string to)
-        {
-            if (repoURI.Contains("github.com"))
-            {
-                return $"{repoURI}/compare/{from.Substring(0, 7)}...{to.Substring(0, 7)}";
-            }
-            return $"{repoURI}/branches?baseVersion=GC{from.Substring(0, 7)}&targetVersion=GC{to.Substring(0, 7)}&_a=files";
         }
 
         private async Task UpdatePullRequestAsync(InProgressPullRequest pr, List<UpdateAssetsParameters> updates)
