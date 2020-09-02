@@ -154,6 +154,7 @@ namespace Maestro.ScenarioTests
         }
 
         [Test]
+        [Ignore("https://github.com/dotnet/core-eng/issues/10688")]
         public async Task Darc_AzDoFlow_FeedFlow()
         {
             TestContext.WriteLine("AzDo Dependency Feed Flow, non-batched");
@@ -257,7 +258,9 @@ namespace Maestro.ScenarioTests
                 $"AzDo_FeedFlowChannel_{Environment.MachineName}",
                 feedFlowSourceAssets,
                 expectedAzDoFeedFlowDependencies,
-                isFeedTest: true).ConfigureAwait(false);
+                isFeedTest: true,
+                expectedFeeds: expectedFeeds,
+                notExpectedFeeds: notExpectedFeeds).ConfigureAwait(false);
         }
     }
 }

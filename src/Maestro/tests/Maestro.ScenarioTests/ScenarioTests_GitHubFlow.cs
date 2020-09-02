@@ -207,7 +207,7 @@ namespace Maestro.ScenarioTests
                 $"GitHub_NonBatchedTestCoherencyBranch_{Environment.MachineName}", 
                 $"GitHub Non-Batched Coherency Channel {Environment.MachineName}", 
                 source1Assets, 
-                expectedDependenciesSource1,            
+                expectedCoherencyDependencies,            
                 isCoherencyTest: true,
                 childSourceAssets : childSourceAssets,
                 childSourceBuildAssets: childSourceBuildAssets).ConfigureAwait(false);
