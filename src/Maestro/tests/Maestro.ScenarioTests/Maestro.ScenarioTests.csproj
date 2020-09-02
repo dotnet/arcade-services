@@ -12,6 +12,7 @@
     <PackageReference Remove="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" />
+    <PackageReference Include="NuGet.Configuration" />
     <PackageReference Include="Octokit" />
   </ItemGroup>
   <ItemGroup>
