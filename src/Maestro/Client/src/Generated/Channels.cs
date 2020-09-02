@@ -52,7 +52,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
-        Task<Models.FlowGraph> GetFlowGraphAsyncAsync(
+        Task<Models.FlowGraph> GetFlowGraphAsync(
             int channelId,
             int days,
             bool includeArcade,
@@ -246,11 +246,6 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            if (id == default(int))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-
             const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
@@ -321,11 +316,6 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            if (id == default(int))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-
             const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
@@ -395,11 +385,6 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-
-            if (id == default(int))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
 
             const string apiVersion = "2020-02-20";
 
@@ -472,16 +457,6 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            if (buildId == default(int))
-            {
-                throw new ArgumentNullException(nameof(buildId));
-            }
-
-            if (channelId == default(int))
-            {
-                throw new ArgumentNullException(nameof(channelId));
-            }
-
             const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
@@ -544,16 +519,6 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            if (buildId == default(int))
-            {
-                throw new ArgumentNullException(nameof(buildId));
-            }
-
-            if (channelId == default(int))
-            {
-                throw new ArgumentNullException(nameof(channelId));
-            }
-
             const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
@@ -607,9 +572,9 @@ namespace Microsoft.DotNet.Maestro.Client
             throw ex;
         }
 
-        partial void HandleFailedGetFlowGraphAsyncRequest(RestApiException ex);
+        partial void HandleFailedGetFlowGraphRequest(RestApiException ex);
 
-        public async Task<Models.FlowGraph> GetFlowGraphAsyncAsync(
+        public async Task<Models.FlowGraph> GetFlowGraphAsync(
             int channelId,
             int days,
             bool includeArcade,
@@ -619,31 +584,6 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-
-            if (channelId == default(int))
-            {
-                throw new ArgumentNullException(nameof(channelId));
-            }
-
-            if (days == default(int))
-            {
-                throw new ArgumentNullException(nameof(days));
-            }
-
-            if (includeArcade == default(bool))
-            {
-                throw new ArgumentNullException(nameof(includeArcade));
-            }
-
-            if (includeBuildTimes == default(bool))
-            {
-                throw new ArgumentNullException(nameof(includeBuildTimes));
-            }
-
-            if (includeDisabledSubscriptions == default(bool))
-            {
-                throw new ArgumentNullException(nameof(includeDisabledSubscriptions));
-            }
 
             const string apiVersion = "2020-02-20";
 
@@ -689,12 +629,12 @@ namespace Microsoft.DotNet.Maestro.Client
                 {
                     if (_res.Status < 200 || _res.Status >= 300)
                     {
-                        await OnGetFlowGraphAsyncFailed(_req, _res).ConfigureAwait(false);
+                        await OnGetFlowGraphFailed(_req, _res).ConfigureAwait(false);
                     }
 
                     if (_res.ContentStream == null)
                     {
-                        await OnGetFlowGraphAsyncFailed(_req, _res).ConfigureAwait(false);
+                        await OnGetFlowGraphFailed(_req, _res).ConfigureAwait(false);
                     }
 
                     using (var _reader = new StreamReader(_res.ContentStream))
@@ -707,7 +647,7 @@ namespace Microsoft.DotNet.Maestro.Client
             }
         }
 
-        internal async Task OnGetFlowGraphAsyncFailed(Request req, Response res)
+        internal async Task OnGetFlowGraphFailed(Request req, Response res)
         {
             string content = null;
             if (res.ContentStream != null)
@@ -724,7 +664,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 content,
                 Client.Deserialize<Models.ApiError>(content)
                 );
-            HandleFailedGetFlowGraphAsyncRequest(ex);
+            HandleFailedGetFlowGraphRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;

@@ -6,16 +6,14 @@ namespace Microsoft.DotNet.Maestro.Client.Models
 {
     public partial class ApiError
     {
-        public ApiError(string message, IImmutableList<string> errors)
+        public ApiError()
         {
-            Message = message;
-            Errors = errors;
         }
 
         [JsonProperty("message")]
-        public string Message { get; }
+        public string Message { get; set; }
 
         [JsonProperty("errors")]
-        public IImmutableList<string> Errors { get; }
+        public IImmutableList<string> Errors { get; set; }
     }
 }
