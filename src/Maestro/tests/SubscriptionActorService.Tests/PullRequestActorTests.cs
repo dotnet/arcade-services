@@ -140,6 +140,8 @@ namespace SubscriptionActorService.Tests
                                 {
                                     Name = a.Name,
                                     Version = a.Version,
+                                    RepoUri = withUpdatesFromBuild.GitHubRepository,
+                                    Commit = "sha3"
                                 })
                             .ToList()
                     });
@@ -225,12 +227,16 @@ namespace SubscriptionActorService.Tests
                                     From = new DependencyDetail
                                     {
                                         Name = d.Name,
-                                        Version = d.Version
+                                        Version = d.Version,
+                                        RepoUri = sourceRepo,
+                                        Commit = sourceSha
                                     },
                                     To = new DependencyDetail
                                     {
                                         Name = d.Name,
-                                        Version = d.Version
+                                        Version = d.Version,
+                                        RepoUri = sourceRepo,
+                                        Commit = "sha3"
                                     },
                                 })
                             .ToList();

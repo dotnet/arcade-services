@@ -1005,7 +1005,7 @@ namespace SubscriptionActorService
                     {
                         if (entry.Value == i)
                         {
-                            DependencyDetail to = deps.Find(d => d.To.Commit == entry.Key.Item1).To;
+                            DependencyDetail to = deps.Find(d => d.To.Commit == entry.Key.Item2).To;
                             subscriptionSection.AppendLine($"[{i}]: {GetChangesURI(to.RepoUri, entry.Key.Item1, entry.Key.Item2)}");
                         }
                     }
@@ -1055,11 +1055,14 @@ namespace SubscriptionActorService
                 throw new ArgumentNullException(nameof(to));
             }
 
+            string fromSha = from.Length > 7 ? from.Substring(0, 7) : from;
+            string toSha = to.Length > 7 ? to.Substring(0, 7) : to;
+
             if (repoURI.Contains("github.com"))
             {
-                return $"{repoURI}/compare/{from.Substring(0, 7)}...{to.Substring(0, 7)}";
+                return $"{repoURI}/compare/{fromSha}...{toSha}";
             }
-            return $"{repoURI}/branches?baseVersion=GC{from.Substring(0, 7)}&targetVersion=GC{to.Substring(0, 7)}&_a=files";
+            return $"{repoURI}/branches?baseVersion=GC{fromSha}&targetVersion=GC{toSha}&_a=files";
         }
 
         private async Task UpdatePullRequestAsync(InProgressPullRequest pr, List<UpdateAssetsParameters> updates)
