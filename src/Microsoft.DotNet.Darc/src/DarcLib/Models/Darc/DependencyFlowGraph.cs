@@ -3,7 +3,6 @@
 // See the LICENSE file in the project root for more information.
 
 using Microsoft.DotNet.Maestro.Client.Models;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -252,7 +251,7 @@ namespace Microsoft.DotNet.DarcLib
                     }
                     else
                     {
-                        visitedNodes.Add(node, new HashSet<DependencyFlowNode>(){node});
+                        visitedNodes.Add(node, new HashSet<DependencyFlowNode>() { node });
                     }
 
                     foreach (DependencyFlowEdge edge in node.IncomingEdges)
@@ -269,7 +268,7 @@ namespace Microsoft.DotNet.DarcLib
                             {
                                 visitedNodes.Add(child, new HashSet<DependencyFlowNode>(visitedNodes[node]));
                             }
-                            
+
                             nodesToVisit.Enqueue(child);
                         }
                     }
@@ -283,26 +282,32 @@ namespace Microsoft.DotNet.DarcLib
         ///     Determine and mark the absolute longest build path in the flow graph, based on the Best Case time.
         /// </summary>
         public void MarkLongestBuildPath()
-        {            
+        {
             // Find the node with the worst best case time, we will treat it as the starting point and walk down the path
             // from this node to a product node
-            DependencyFlowNode startNode = Nodes.OrderByDescending(n => n.BestCasePathTime).FirstOrDefault();
+            DependencyFlowNode startNode = Nodes
+                .Where(n => !n.IsToolingOnly)
+                .OrderByDescending(n => n.BestCasePathTime)
+                .FirstOrDefault();
+
             if (startNode != null)
             {
                 startNode.OnLongestBuildPath = true;
                 MarkLongestPath(startNode);
-            } 
+            }
         }
 
         private void MarkLongestPath(DependencyFlowNode node)
         {
             // The edges we are interested in are those that haven't been marked as on the longest build path 
             // and aren't back edges, both of which indicate a cycle
-            var edgesOfInterest = node.OutgoingEdges.Where(e => !e.OnLongestBuildPath && !e.BackEdge).ToList();
+            var edgesOfInterest = node.OutgoingEdges
+                .Where(e => !e.OnLongestBuildPath && !e.BackEdge && !e.IsToolingOnly)
+                .ToList();
 
             if (edgesOfInterest.Count > 0)
             {
-                DependencyFlowEdge pathEdge = edgesOfInterest.Aggregate( (e1, e2) => e1.To.BestCasePathTime > e2.To.BestCasePathTime ? e1: e2);
+                DependencyFlowEdge pathEdge = edgesOfInterest.Aggregate((e1, e2) => e1.To.BestCasePathTime > e2.To.BestCasePathTime ? e1 : e2);
 
                 // Mark the edge and the node as on the longest build path
                 pathEdge.OnLongestBuildPath = true;
@@ -332,16 +337,16 @@ namespace Microsoft.DotNet.DarcLib
                 if (channel.Id != default(int))
                 {
                     BuildTime buildTime = await barOnlyRemote.GetBuildTimeAsync(channel.Id, days);
-                    flowNode.OfficialBuildTime = buildTime.OfficialBuildTime;
-                    flowNode.PrBuildTime = buildTime.PrBuildTime;
-                    flowNode.GoalTimeInMinutes = buildTime.GoalTimeInMinutes;
+                    flowNode.OfficialBuildTime = buildTime.OfficialBuildTime ?? 0;
+                    flowNode.PrBuildTime = buildTime.PrBuildTime ?? 0;
+                    flowNode.GoalTimeInMinutes = buildTime.GoalTimeInMinutes ?? 0;
                 }
                 else
                 {
                     flowNode.OfficialBuildTime = 0;
                     flowNode.PrBuildTime = 0;
                 }
-                
+
                 // Add a the output mapping.
                 flowNode.OutputChannels.Add(channel.Channel.Name);
             }

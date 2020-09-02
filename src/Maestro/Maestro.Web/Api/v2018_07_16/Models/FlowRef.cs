@@ -40,7 +40,9 @@ namespace Maestro.Web.Api.v2018_07_16.Models
             bool onLongestBuildPath,
             double bestCase,
             double worstCase,
-            int goalTime)
+            int goalTime,
+            HashSet<string> inputChannels,
+            HashSet<string> outputChannels)
         {
             Id = id;
             Repository = repository;
@@ -51,20 +53,24 @@ namespace Maestro.Web.Api.v2018_07_16.Models
             BestCasePathTime = bestCase;
             WorstCasePathTime = worstCase;
             GoalTimeInMinutes = goalTime;
+            InputChannels = inputChannels;
+            OutputChannels = outputChannels;
         }
 
         public static FlowRef Create(DependencyFlowNode other)
         {
             return new FlowRef(
-                other.Id, 
-                other.Repository, 
-                other.Branch, 
-                other.OfficialBuildTime, 
-                other.PrBuildTime, 
-                other.OnLongestBuildPath, 
-                other.BestCasePathTime, 
+                other.Id,
+                other.Repository,
+                other.Branch,
+                other.OfficialBuildTime,
+                other.PrBuildTime,
+                other.OnLongestBuildPath,
+                other.BestCasePathTime,
                 other.WorstCasePathTime,
-                other.GoalTimeInMinutes);
+                other.GoalTimeInMinutes,
+                other.InputChannels,
+                other.OutputChannels);
         }
 
         public string Repository { get; }
@@ -76,5 +82,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
         public double BestCasePathTime { get; set; }
         public double WorstCasePathTime { get; set; }
         public int GoalTimeInMinutes { get; set; }
+        public HashSet<string> InputChannels { get; set; }
+        public HashSet<string> OutputChannels { get; set; }
     }
 }

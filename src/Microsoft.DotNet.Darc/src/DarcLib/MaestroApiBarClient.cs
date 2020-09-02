@@ -150,6 +150,73 @@ namespace Microsoft.DotNet.DarcLib
             return _barClient.Channels.DeleteChannelAsync(id);
         }
 
+        public async Task<DependencyFlowGraph> GetDependencyFlowGraph(
+            int channelId,
+            int days,
+            bool includeArcade,
+            bool includeBuildTimes,
+            bool includeDisabledSubscriptions,
+            IReadOnlyList<string> includedFrequencies)
+        {
+            var flowGraph = await _barClient.Channels.GetFlowGraphAsync(
+                channelId: channelId,
+                days: days,
+                includeArcade: includeArcade,
+                includeBuildTimes: includeBuildTimes,
+                includeDisabledSubscriptions: includeDisabledSubscriptions,
+                includedFrequencies: includedFrequencies?.ToImmutableList());
+
+            var subscriptions = await _barClient.Subscriptions.ListSubscriptionsAsync();
+            var subscriptionsById = subscriptions.ToDictionary(s => s.Id);
+
+            var nodes = flowGraph.FlowRefs.Select(ToDependencyFlowNode).ToList();
+            var nodesById = nodes.ToImmutableDictionary(n => n.Id);
+
+            var edges = flowGraph.FlowEdges
+                .Select(edge => ToDependencyFlowEdge(edge, nodesById, subscriptionsById))
+                .ToList();
+
+            foreach (var edge in edges)
+            {
+                edge.From.OutgoingEdges.Add(edge);
+                edge.To.IncomingEdges.Add(edge);
+            }
+
+            return new DependencyFlowGraph(nodes, edges);
+        }
+
+        private static DependencyFlowNode ToDependencyFlowNode(FlowRef flowRef)
+        {
+            return new DependencyFlowNode(flowRef.Repository, flowRef.Branch, flowRef.Id)
+            {
+                BestCasePathTime = flowRef.BestCasePathTime,
+                GoalTimeInMinutes = flowRef.GoalTimeInMinutes,
+                InputChannels = flowRef.InputChannels.ToHashSet(),
+                OfficialBuildTime = flowRef.OfficialBuildTime,
+                OnLongestBuildPath = flowRef.OnLongestBuildPath,
+                OutputChannels = flowRef.OutputChannels.ToHashSet(),
+                PrBuildTime = flowRef.PrBuildTime,
+                WorstCasePathTime = flowRef.WorstCasePathTime
+            };
+        }
+
+        private DependencyFlowEdge ToDependencyFlowEdge(
+            FlowEdge flowEdge,
+            IReadOnlyDictionary<string, DependencyFlowNode> nodesById,
+            IReadOnlyDictionary<Guid, Subscription> subscriptionsById)
+        {
+            var fromNode = nodesById[flowEdge.FromId];
+            var toNode = nodesById[flowEdge.ToId];
+            var subscription = subscriptionsById[flowEdge.SubscriptionId];
+            return new DependencyFlowEdge(fromNode, toNode, subscription)
+            {
+                BackEdge = flowEdge.BackEdge,
+                IsToolingOnly = flowEdge.IsToolingOnly,
+                OnLongestBuildPath = flowEdge.OnLongestBuildPath,
+                PartOfCycle = flowEdge.PartOfCycle
+            };
+        }
+
         #endregion
 
         #region Subscription Operations
@@ -221,6 +288,11 @@ namespace Microsoft.DotNet.DarcLib
         public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId)
         {
             return _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionId);
+        }
+
+        public Task<Subscription> TriggerSubscriptionAsync(Guid subscriptionId, int sourceBuildId)
+        {
+            return _barClient.Subscriptions.TriggerSubscriptionAsync(subscriptionId, sourceBuildId);
         }
 
         /// <summary>

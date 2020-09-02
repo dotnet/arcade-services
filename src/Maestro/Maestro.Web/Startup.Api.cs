@@ -18,6 +18,7 @@ using Microsoft.OpenApi.Interfaces;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
 using Newtonsoft.Json.Linq;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace Maestro.Web
 {
@@ -50,7 +51,6 @@ namespace Maestro.Web
                     // even nested (e.g. you changed Build, and Subscription contains a Build object), must be updated to return the new type.
                     // It could also mean that you forgot to apply [ApiRemoved] to an inherited method that shouldn't be included in the new version
 
-                    var appJson = new[] {"application/json"}.ToList();
                     options.FilterOperations(
                         (op, ctx) =>
                         {
@@ -85,6 +85,8 @@ namespace Maestro.Web
                                 };
                             }
                         });
+
+                    options.RequestBodyFilter<NameRequestBodyFilter>();
 
                     options.FilterSchemas(
                         (schema, ctx) =>
@@ -174,6 +176,27 @@ namespace Maestro.Web
         private static string ToCamelCase(string value)
         {
             return value.Substring(0, 1).ToLowerInvariant() + value.Substring(1);
+        }
+    }
+
+    internal class NameRequestBodyFilter : IRequestBodyFilter
+    {
+        public void Apply(OpenApiRequestBody requestBody, RequestBodyFilterContext context)
+        {
+            requestBody.Extensions["x-name"] = new RequestBodyNameExtension
+            {
+                Name = context.BodyParameterDescription.Name,
+            };
+        }
+    }
+
+    internal class RequestBodyNameExtension : IOpenApiExtension
+    {
+        public string Name { get; set; }
+
+        public void Write(IOpenApiWriter writer, OpenApiSpecVersion specVersion)
+        {
+            writer.WriteValue(Name);
         }
     }
 

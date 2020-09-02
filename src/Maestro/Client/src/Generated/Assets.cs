@@ -50,7 +50,7 @@ namespace Microsoft.DotNet.Maestro.Client
 
         Task<Models.AssetLocation> AddAssetLocationToAssetAsync(
             int assetId,
-            Models.AddAssetLocationToAssetAssetLocationType assetLocationType,
+            Models.LocationType assetLocationType,
             string location,
             CancellationToken cancellationToken = default
         );
@@ -378,11 +378,6 @@ namespace Microsoft.DotNet.Maestro.Client
         )
         {
 
-            if (id == default(int))
-            {
-                throw new ArgumentNullException(nameof(id));
-            }
-
             const string apiVersion = "2020-02-20";
 
             var _baseUri = Client.Options.BaseUri;
@@ -449,18 +444,13 @@ namespace Microsoft.DotNet.Maestro.Client
 
         public async Task<Models.AssetLocation> AddAssetLocationToAssetAsync(
             int assetId,
-            Models.AddAssetLocationToAssetAssetLocationType assetLocationType,
+            Models.LocationType assetLocationType,
             string location,
             CancellationToken cancellationToken = default
         )
         {
 
-            if (assetId == default(int))
-            {
-                throw new ArgumentNullException(nameof(assetId));
-            }
-
-            if (assetLocationType == default(Models.AddAssetLocationToAssetAssetLocationType))
+            if (assetLocationType == default(Models.LocationType))
             {
                 throw new ArgumentNullException(nameof(assetLocationType));
             }
@@ -483,7 +473,7 @@ namespace Microsoft.DotNet.Maestro.Client
             {
                 _url.AppendQuery("location", Client.Serialize(location));
             }
-            if (assetLocationType != default(Models.AddAssetLocationToAssetAssetLocationType))
+            if (assetLocationType != default(Models.LocationType))
             {
                 _url.AppendQuery("assetLocationType", Client.Serialize(assetLocationType));
             }
@@ -548,16 +538,6 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         )
         {
-
-            if (assetId == default(int))
-            {
-                throw new ArgumentNullException(nameof(assetId));
-            }
-
-            if (assetLocationId == default(int))
-            {
-                throw new ArgumentNullException(nameof(assetLocationId));
-            }
 
             const string apiVersion = "2020-02-20";
 
