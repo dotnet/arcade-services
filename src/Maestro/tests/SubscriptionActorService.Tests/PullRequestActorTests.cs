@@ -163,6 +163,14 @@ namespace SubscriptionActorService.Tests
                     }
                 },
                 options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
+
+            ValidatePRDescriptionContainsLinks(pullRequests[0]);
+        }
+
+        private void ValidatePRDescriptionContainsLinks(PullRequest pr)
+        {
+            pr.Description.Should().Contain("][1]");
+            pr.Description.Should().Contain("[1]:");
         }
 
         private void CreatePullRequestShouldReturnAValidValue()
