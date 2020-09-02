@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using FluentAssertions;
 using Maestro.Contracts;
 using Maestro.ScenarioTests.ObjectHelpers;
 using Microsoft.DotNet.Internal.Testing.Utility;
@@ -292,21 +293,8 @@ namespace Maestro.ScenarioTests
                     PackageSourceProvider packageSourceProvider = new PackageSourceProvider(settings);
                     IEnumerable<string> sources = packageSourceProvider.LoadPackageSources().Select(p => p.Source);
 
-                    foreach (string feed in expectedFeeds)
-                    {
-                        if (!sources.Contains(feed))
-                        {
-                            throw new MaestroTestException($"Expected feed source {feed} was not found in the nuget.config.");
-                        }
-                    }
-
-                    foreach (string feed in notExpectedFeeds)
-                    {
-                        if (sources.Contains(feed))
-                        {
-                            throw new MaestroTestException($"Not-expected feed source {feed} was found in the nuget.config.");
-                        }
-                    }
+                    sources.Should().Contain(expectedFeeds);
+                    sources.Should().NotContain(notExpectedFeeds);
                 }
             }
         }
