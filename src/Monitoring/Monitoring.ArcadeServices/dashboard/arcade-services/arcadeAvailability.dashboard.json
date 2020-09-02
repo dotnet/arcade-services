@@ -3083,7 +3083,7 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "957b53ba073745919b47e1637eecd566"
+          "NotificationId": "733a0451120b477d87f73a551cbe91a1"
         },
         "conditions": [
           {
@@ -3286,7 +3286,7 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "49778644d5844e8b9b8a6f0f431ca644"
+          "NotificationId": "5732dcb30634428ca33fc56f811391b8"
         },
         "conditions": [
           {
@@ -3502,7 +3502,7 @@
     {
       "alert": {
         "alertRuleTags": {
-          "NotificationId": "cff707722d3c4606b9dd9f0496ad455a"
+          "NotificationId": "d2dd705a6c724ed68fcf6955561c06dd"
         },
         "conditions": [
           {
@@ -3587,7 +3587,7 @@
             "dimension": "none",
             "metricName": "select",
             "rawQuery": true,
-            "rawQueryString": "let r = requests | where $__timeFilter();\r\nlet fOrNull = toscalar(r | summarize min(timestamp));\r\nlet f = iif(isnull(fOrNull), ago(1d), fOrNull);\r\nlet tOrNull = toscalar(r | summarize max(timestamp));\r\nlet t = iif(isnull(tOrNull), now(), tOrNull);\nlet span=(t - f)/60;\r\nlet interval=case(span >= 1d, bin(span, 1d), span >= 1h, bin(span, 1h), 15m);\r\nlet intervalHours = interval / 1h;\r\nr\r\n| where success == false\n| make-series kind=nonempty valueCount=count() default=0 on timestamp in range(f, t, interval)\n| mv-expand timestamp, valueCount\r\n| project timestamp=todatetime(timestamp), failuresCount=todouble(valueCount)/intervalHours",
+            "rawQueryString": "let r = requests | where $__timeFilter();\r\nlet f = coalesce(toscalar(r | summarize min(timestamp)), ago(1d));\r\nlet t = coalesce(toscalar(r | summarize max(timestamp)), now());\nlet span=(t - f)/60;\r\nlet interval=case(span >= 1d, bin(span, 1d), span >= 1h, bin(span, 1h), 15m);\r\nlet intervalHours = interval / 1h;\r\nr\r\n| where success == false\n| make-series kind=nonempty valueCount=count() default=0 on timestamp in range(f, t, interval)\n| mv-expand timestamp, valueCount\r\n| project timestamp=todatetime(timestamp), failuresCount=todouble(valueCount)/intervalHours",
             "timeColumn": "timestamp",
             "timeGrain": "auto",
             "valueColumn": "failuresCount"
@@ -3618,8 +3618,7 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 20,
-          "yaxis": "left"
+          "value": 20
         }
       ],
       "timeFrom": null,
