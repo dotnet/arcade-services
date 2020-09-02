@@ -140,6 +140,8 @@ namespace SubscriptionActorService.Tests
                                 {
                                     Name = a.Name,
                                     Version = a.Version,
+                                    RepoUri = withUpdatesFromBuild.GitHubRepository,
+                                    Commit = "sha3"
                                 })
                             .ToList()
                     });
@@ -161,6 +163,14 @@ namespace SubscriptionActorService.Tests
                     }
                 },
                 options => options.Excluding(pr => pr.Title).Excluding(pr => pr.Description));
+
+            ValidatePRDescriptionContainsLinks(pullRequests[0]);
+        }
+
+        private void ValidatePRDescriptionContainsLinks(PullRequest pr)
+        {
+            pr.Description.Should().Contain("][1]");
+            pr.Description.Should().Contain("[1]:");
         }
 
         private void CreatePullRequestShouldReturnAValidValue()
@@ -225,12 +235,16 @@ namespace SubscriptionActorService.Tests
                                     From = new DependencyDetail
                                     {
                                         Name = d.Name,
-                                        Version = d.Version
+                                        Version = d.Version,
+                                        RepoUri = sourceRepo,
+                                        Commit = sourceSha
                                     },
                                     To = new DependencyDetail
                                     {
                                         Name = d.Name,
-                                        Version = d.Version
+                                        Version = d.Version,
+                                        RepoUri = sourceRepo,
+                                        Commit = "sha3"
                                     },
                                 })
                             .ToList();
