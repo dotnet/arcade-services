@@ -14,6 +14,7 @@ using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using NuGet.Configuration;
 using NUnit.Framework;
 using Octokit;
 
@@ -165,14 +166,11 @@ namespace Maestro.ScenarioTests
             return prs;
         }
 
-        internal async Task<Microsoft.DotNet.DarcLib.PullRequest> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string expectedPRTitle = null)
+        internal async Task<AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest>> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string expectedPRTitle = null)
         {
+            string repoUri = GetAzDoRepoUrl(targetRepoName);
+            (string accountName, string projectName, string repoName) = Microsoft.DotNet.DarcLib.AzureDevOpsClient.ParseRepoUri(repoUri);
             string apiBaseUrl = GetAzDoApiRepoUrl(targetRepoName);
-
-            if (!isUpdated)
-            {
-                return await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
-            }
 
             if (string.IsNullOrEmpty(expectedPRTitle))
             {
@@ -184,9 +182,28 @@ namespace Maestro.ScenarioTests
                 Microsoft.DotNet.DarcLib.PullRequest pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
                 string trimmedTitle = Regex.Replace(pr.Title, @"\s+", " ");
 
-                if (trimmedTitle == expectedPRTitle)
+                if (!isUpdated || trimmedTitle == expectedPRTitle)
                 {
-                    return pr;
+                    return AsyncDisposableValue.Create(pr, async () =>
+                    {
+                        TestContext.WriteLine($"Cleaning up pull request {pr.Title}");
+
+                        try
+                        {
+                            JObject content = await _parameters.AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
+                                    HttpMethod.Patch,
+                                    accountName,
+                                    projectName,
+                                    $"_apis/git/repositories/{targetRepoName}/pullrequests/{pullRequestId}",
+                                    new NUnitLogger(),
+                                    "{ \"status\" : \"abandoned\"}"
+                                    );
+                        }
+                        catch
+                        {
+                            // If this throws it means that it was cleaned up by a different clean up method first
+                        }
+                    });
                 }
 
                 await Task.Delay(60 * 1000).ConfigureAwait(false);
@@ -254,9 +271,9 @@ namespace Maestro.ScenarioTests
             string targetRepoUri = GetAzDoApiRepoUrl(targetRepoName);
             TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
             int pullRequestId = await GetAzDoPullRequestIdAsync(targetRepoName, targetBranch);
-            Microsoft.DotNet.DarcLib.PullRequest pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, expectedPRTitle);
+            await using AsyncDisposableValue<Microsoft.DotNet.DarcLib.PullRequest> pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, expectedPRTitle);
 
-            string trimmedTitle = Regex.Replace(pullRequest.Title, @"\s+", " ");
+            string trimmedTitle = Regex.Replace(pullRequest.Value.Title, @"\s+", " ");
             StringAssert.AreEqualIgnoringCase(expectedPRTitle, trimmedTitle);
 
             Microsoft.DotNet.DarcLib.PrStatus expectedPRState = isCompleted ? Microsoft.DotNet.DarcLib.PrStatus.Closed : Microsoft.DotNet.DarcLib.PrStatus.Open;
@@ -265,7 +282,32 @@ namespace Maestro.ScenarioTests
 
             using (ChangeDirectory(repoDirectory))
             {
-                await ValidatePullRequestDependencies(targetRepoName, pullRequest.HeadBranch, expectedDependencies);
+                await ValidatePullRequestDependencies(targetRepoName, pullRequest.Value.HeadBranch, expectedDependencies);
+
+                if (expectedFeeds != null && notExpectedFeeds != null)
+                {
+                    TestContext.WriteLine("Validating Nuget feeds in PR branch");
+
+                    ISettings settings = Settings.LoadSpecificSettings(@"./", "nuget.config");
+                    PackageSourceProvider packageSourceProvider = new PackageSourceProvider(settings);
+                    IEnumerable<string> sources = packageSourceProvider.LoadPackageSources().Select(p => p.Source);
+
+                    foreach (string feed in expectedFeeds)
+                    {
+                        if (!sources.Contains(feed))
+                        {
+                            throw new MaestroTestException($"Expected feed source {feed} was not found in the nuget.config.");
+                        }
+                    }
+
+                    foreach (string feed in notExpectedFeeds)
+                    {
+                        if (sources.Contains(feed))
+                        {
+                            throw new MaestroTestException($"Not-expected feed source {feed} was found in the nuget.config.");
+                        }
+                    }
+                }
             }
         }
 
@@ -409,7 +451,7 @@ namespace Maestro.ScenarioTests
         {
             using (ChangeDirectory(repoPath))
             {
-                await RunDarcAsync(new string[] { "add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri});
+                await RunDarcAsync(new string[] { "add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri });
             }
         }
         public async Task<string> GetTestChannelsAsync()
@@ -449,7 +491,7 @@ namespace Maestro.ScenarioTests
             bool targetIsAzDo = false,
             bool trigger = false)
         {
-            string sourceUrl = sourceIsAzDo ? GetAzDoRepoUrl(sourceRepo, azdoProject: sourceOrg) : GetRepoUrl(sourceOrg, sourceRepo);
+            string sourceUrl = sourceIsAzDo ? GetAzDoRepoUrl(sourceRepo) : GetRepoUrl(sourceOrg, sourceRepo);
             string targetUrl = targetIsAzDo ? GetAzDoRepoUrl(targetRepo) : GetRepoUrl(targetRepo);
 
             string[] command = {"add-subscription", "-q",

@@ -1,11 +1,10 @@
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client.Models;
-using NUnit.Framework;
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client.Models;
+using NUnit.Framework;
 
 namespace Maestro.ScenarioTests
 {
@@ -18,6 +17,7 @@ namespace Maestro.ScenarioTests
         private readonly IImmutableList<AssetData> source1AssetsUpdated;
         private readonly IImmutableList<AssetData> childSourceBuildAssets;
         private readonly IImmutableList<AssetData> childSourceAssets;
+        private readonly IImmutableList<AssetData> feedFlowSourceAssets;
         private readonly List<DependencyDetail> expectedDependenciesSource1;
         private readonly List<DependencyDetail> expectedDependenciesSource2;
         private readonly List<DependencyDetail> expectedDependenciesSource1Updated;
@@ -25,7 +25,18 @@ namespace Maestro.ScenarioTests
         private readonly List<DependencyDetail> expectedAzDoDependenciesSource1;
         private readonly List<DependencyDetail> expectedAzDoDependenciesSource2;
         private readonly List<DependencyDetail> expectedAzDoDependenciesSource1Updated;
+        private readonly List<DependencyDetail> expectedAzDoFeedFlowDependencies;
         private readonly TestParameters _parameters;
+
+        // Feed flow test strings
+        private static readonly string proxyFeed = "https://some-proxy.azurewebsites.net/container/some-container/sig/somesig/se/2020-02-02/darc-int-maestro-test1-bababababab-1/index.json";
+        private static readonly string azdoFeed1 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-efabaababababe-1/nuget/v3/index.json";
+        private static readonly string azdoFeed2 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-efabaababababd-1/nuget/v3/index.json";
+        private static readonly string azdoFeed3 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-efabaababababf-1/nuget/v3/index.json";
+        private static readonly string regularFeed = "https://dotnetfeed.blob.core.windows.net/maestro-test1/index.json";
+        private static readonly string buildContainer = "https://dev.azure.com/dnceng/internal/_apis/build/builds/9999999/artifacts";
+        private static readonly string[] expectedFeeds = { proxyFeed, azdoFeed1, azdoFeed3 };
+        private static readonly string[] notExpectedFeeds = { regularFeed, azdoFeed2, buildContainer };
 
         public EndToEndFlowLogic(TestParameters parameters)
         {
@@ -37,6 +48,35 @@ namespace Maestro.ScenarioTests
             source1AssetsUpdated = GetAssetData("Foo", "1.17.0", "Bar", "2.17.0");
             childSourceBuildAssets = GetAssetData("Baz", "1.3.0", "Bop", "1.0");
             childSourceAssets = GetSingleAssetData("Baz", "1.3.0");
+
+            feedFlowSourceAssets = ImmutableList.Create(
+                GetAssetDataWithLocations(
+                    "Foo",
+                    "1.1.0",
+                    proxyFeed,
+                    LocationType.NugetFeed
+                    ),
+                GetAssetDataWithLocations(
+                    "Bar",
+                    "2.1.0",
+                    azdoFeed1,
+                    LocationType.NugetFeed),
+                GetAssetDataWithLocations(
+                    "Pizza",
+                    "3.1.0",
+                    azdoFeed2,
+                    LocationType.NugetFeed,
+                    regularFeed,
+                    LocationType.NugetFeed
+                    ),
+                GetAssetDataWithLocations(
+                    "Hamburger",
+                    "4.1.0",
+                    azdoFeed3,
+                    LocationType.NugetFeed,
+                    buildContainer,
+                    LocationType.Container)
+                );
 
             expectedDependenciesSource1 = new List<DependencyDetail>();
             string sourceRepoUri = GetRepoUrl(TestRepository.TestRepo1Name);
@@ -170,6 +210,55 @@ namespace Maestro.ScenarioTests
                     { RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo3Name) });
             }
 
+            this.expectedAzDoFeedFlowDependencies = new List<DependencyDetail>();
+
+            DependencyDetail feedFoo = new DependencyDetail
+            {
+                Name = "Foo",
+                Version = "1.1.0",
+                RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name),
+                Commit = TestRepository.CoherencyTestRepo1Commit,
+                Type = DependencyType.Product,
+                Pinned = false,
+                Locations = new List<string> { proxyFeed }
+            };
+            expectedAzDoFeedFlowDependencies.Add(feedFoo);
+
+            DependencyDetail feedBar = new DependencyDetail
+            {
+                Name = "Bar",
+                Version = "2.1.0",
+                RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name),
+                Commit = TestRepository.CoherencyTestRepo1Commit,
+                Type = DependencyType.Product,
+                Pinned = false,
+                Locations = new List<string> { azdoFeed1 }
+            };
+            expectedAzDoFeedFlowDependencies.Add(feedBar);
+
+            DependencyDetail feedPizza = new DependencyDetail
+            {
+                Name = "Pizza",
+                Version = "3.1.0",
+                RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name),
+                Commit = TestRepository.CoherencyTestRepo1Commit,
+                Type = DependencyType.Product,
+                Pinned = false,
+                Locations = new List<string> { azdoFeed2, regularFeed }
+            };
+            expectedAzDoFeedFlowDependencies.Add(feedPizza);
+
+            DependencyDetail feedHamburger = new DependencyDetail
+            {
+                Name = "Hamburger",
+                Version = "4.1.0",
+                RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name),
+                Commit = TestRepository.CoherencyTestRepo1Commit,
+                Type = DependencyType.Product,
+                Pinned = false,
+                Locations = new List<string> { azdoFeed3, buildContainer }
+            };
+            expectedAzDoFeedFlowDependencies.Add(feedHamburger);
         }
 
         public async Task DarcBatchedFlowTestBase(string targetBranch, string channelName, bool isAzDoTest)
@@ -245,7 +334,7 @@ namespace Maestro.ScenarioTests
             }
         }
 
-        public async Task NonBatchedFlowTestBase(string targetBranch, string channelName, bool isAzDoTest, bool allChecks = false, bool isCoherencyTest = false)
+        public async Task NonBatchedFlowTestBase(string targetBranch, string channelName, bool isAzDoTest, bool allChecks = false, bool isCoherencyTest = false, bool isFeedTest = false)
         {
             string targetRepoName = TestRepository.TestRepo2Name;
             string sourceRepoName = TestRepository.TestRepo1Name;
@@ -268,10 +357,11 @@ namespace Maestro.ScenarioTests
             await using (AsyncDisposableValue<string> testChannel = await CreateTestChannelAsync(testChannelName).ConfigureAwait(false))
             {
                 await using AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionForEndToEndTests(
-                    testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks);
+                    testChannelName, sourceRepoName, targetRepoName, targetBranch, allChecks, isAzDoTest);
 
                 TestContext.WriteLine("Set up build for intake into target repository");
-                Build build = await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, sourceBuildNumber, source1Assets);
+                Build build = isFeedTest ? await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, sourceBuildNumber, feedFlowSourceAssets) :
+                    await CreateBuildAsync(sourceRepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, sourceBuildNumber, source1Assets);
                 await AddBuildToChannelAsync(build.Id, testChannelName);
 
                 if (isCoherencyTest)
@@ -282,17 +372,25 @@ namespace Maestro.ScenarioTests
                 }
 
                 TestContext.WriteLine("Cloning target repo to prepare the target branch");
-                TemporaryDirectory reposFolder = await CloneRepositoryAsync(targetRepoName);
+                TemporaryDirectory reposFolder = isAzDoTest ? await CloneAzDoRepositoryAsync(targetRepoName, targetBranch) : await CloneRepositoryAsync(targetRepoName);
+
                 using (ChangeDirectory(reposFolder.Directory))
                 {
                     await using (await CheckoutBranchAsync(targetBranch))
                     {
                         TestContext.WriteLine("Adding dependencies to target repo");
-                        await AddDependenciesToLocalRepo(reposFolder.Directory, source1Assets.ToList(), sourceRepoUri);
-
-                        if (isCoherencyTest)
+                        if (isFeedTest)
                         {
-                            await AddDependenciesToLocalRepo(reposFolder.Directory, childSourceAssets.ToList(), childSourceRepoUri, "Foo");
+                            await AddDependenciesToLocalRepo(reposFolder.Directory, feedFlowSourceAssets.ToList(), sourceRepoUri);
+                        }
+                        else
+                        {
+                            await AddDependenciesToLocalRepo(reposFolder.Directory, source1Assets.ToList(), sourceRepoUri);
+
+                            if (isCoherencyTest)
+                            {
+                                await AddDependenciesToLocalRepo(reposFolder.Directory, childSourceAssets.ToList(), childSourceRepoUri, "Foo");
+                            }
                         }
 
                         TestContext.WriteLine("Pushing branch to remote");
@@ -305,12 +403,12 @@ namespace Maestro.ScenarioTests
 
                             TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
-                            // AllChecks & Coherency don't take updates that it'll be merged after the first push, so no further updates will be run
+                            // AllChecks & Coherency don't take updates after the first push, so no further updates will be run
                             if (allChecks)
                             {
                                 if (isAzDoTest)
                                 {
-                                    await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1, reposFolder.Directory, isCompleted: true, isUpdated: false);
+                                    await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedAzDoDependenciesSource1, reposFolder.Directory, isCompleted: true, isUpdated: false);
                                 }
                                 else
                                 {
@@ -325,8 +423,24 @@ namespace Maestro.ScenarioTests
                                 return;
                             }
 
+                            if (isFeedTest)
+                            {
+                                await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedAzDoFeedFlowDependencies, reposFolder.Directory, isCompleted: false, isUpdated: false, expectedFeeds: expectedFeeds, notExpectedFeeds: notExpectedFeeds);
+                            }
+
                             // The remaining non-batched tests continue to make sure that updating works as expected
-                            await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1, reposFolder.Directory, false);
+                            if (isAzDoTest)
+                            {
+                                await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedAzDoDependenciesSource1, reposFolder.Directory, isCompleted: false, isUpdated: false);
+                            }
+                            else if (isFeedTest)
+                            {
+                                await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedAzDoFeedFlowDependencies, reposFolder.Directory, isCompleted: false, isUpdated: false);
+                            }
+                            else
+                            {
+                                await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1, reposFolder.Directory, false);
+                            }
 
                             TestContext.WriteLine("Set up another build for intake into target repository");
                             Build build2 = await CreateBuildAsync(sourceRepoUri, sourceBranch, TestRepository.CoherencyTestRepo2Commit, source2BuildNumber, source1AssetsUpdated);
@@ -337,7 +451,7 @@ namespace Maestro.ScenarioTests
                             TestContext.WriteLine($"Waiting for PR to be updated in {targetRepoUri}");
                             if (isAzDoTest)
                             {
-                                throw new NotImplementedException("AzDo Flow Tests are not part of the scope for this change.");
+                                await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedAzDoDependenciesSource1, reposFolder.Directory, isCompleted: false, isUpdated: true);
                             }
                             else
                             {
@@ -355,7 +469,7 @@ namespace Maestro.ScenarioTests
 
                             if (isAzDoTest)
                             {
-                                throw new NotImplementedException("AzDo Flow Tests are not part of the scope for this change.");
+                                await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedAzDoDependenciesSource1, reposFolder.Directory, isCompleted: false, isUpdated: true);
                             }
                             else
                             {
@@ -368,11 +482,10 @@ namespace Maestro.ScenarioTests
         }
 
         private async Task<AsyncDisposableValue<string>> CreateSubscriptionForEndToEndTests(string testChannelName, string sourceRepoName,
-            string targetRepoName, string targetBranch, bool allChecks)
+            string targetRepoName, string targetBranch, bool allChecks, bool isAzDoTest)
         {
             if (allChecks)
             {
-
                 return await CreateSubscriptionAsync(
                     testChannelName,
                     sourceRepoName,
@@ -381,17 +494,21 @@ namespace Maestro.ScenarioTests
                     UpdateFrequency.None.ToString(),
                     "maestro-auth-test",
                     additionalOptions: new List<string> { "--all-checks-passed", "--ignore-checks", "license/cla" },
-                    trigger: true);
+                    trigger: true,
+                    sourceIsAzDo: isAzDoTest,
+                    targetIsAzDo: isAzDoTest);
             }
             else
             {
                 return await CreateSubscriptionAsync(
-                testChannelName,
-                sourceRepoName,
-                targetRepoName,
-                targetBranch,
-                 UpdateFrequency.None.ToString(),
-                 "maestro-auth-test");
+                    testChannelName,
+                    sourceRepoName,
+                    targetRepoName,
+                    targetBranch,
+                    UpdateFrequency.None.ToString(),
+                    "maestro-auth-test",
+                    sourceIsAzDo: isAzDoTest,
+                    targetIsAzDo: isAzDoTest);
             }
         }
     }
