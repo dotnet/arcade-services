@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client.Models;
 using NUnit.Framework;
-
+using NUnit.Framework.Internal;
 
 namespace Maestro.ScenarioTests
 {
@@ -27,6 +27,9 @@ namespace Maestro.ScenarioTests
 
         public ScenarioTests_GitHubFlow()
         {
+            using TestParameters parameters = TestParameters.GetAsync().Result;
+            SetTestParameters(parameters);
+
             source1Assets = GetAssetData("Foo", "1.1.0", "Bar", "2.1.0");
             source2Assets = GetAssetData("Pizza", "3.1.0", "Hamburger", "4.1.0");
             source1AssetsUpdated = GetAssetData("Foo", "1.17.0", "Bar", "2.17.0");
@@ -140,6 +143,7 @@ namespace Maestro.ScenarioTests
             expectedCoherencyDependencies.Add(parentBar);
             expectedCoherencyDependencies.Add(baz);
         }
+
         [Test]
         public async Task Darc_GitHubFlow_Batched()
         {
