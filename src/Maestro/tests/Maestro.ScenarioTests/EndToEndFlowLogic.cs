@@ -22,6 +22,9 @@ namespace Maestro.ScenarioTests
         private readonly List<DependencyDetail> expectedDependenciesSource2;
         private readonly List<DependencyDetail> expectedDependenciesSource1Updated;
         private readonly List<DependencyDetail> expectedCoherencyDependencies;
+        private readonly List<DependencyDetail> expectedAzDoDependenciesSource1;
+        private readonly List<DependencyDetail> expectedAzDoDependenciesSource2;
+        private readonly List<DependencyDetail> expectedAzDoDependenciesSource1Updated;
         private readonly TestParameters _parameters;
 
         public EndToEndFlowLogic(TestParameters parameters)
@@ -141,6 +144,32 @@ namespace Maestro.ScenarioTests
             expectedCoherencyDependencies.Add(parentFoo);
             expectedCoherencyDependencies.Add(parentBar);
             expectedCoherencyDependencies.Add(baz);
+
+
+            expectedAzDoDependenciesSource1 = new List<DependencyDetail>();
+            foreach (DependencyDetail dependency in expectedDependenciesSource1)
+            {
+                expectedAzDoDependenciesSource1.Add(
+                    new DependencyDetail(dependency)
+                    { RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name) });
+            }
+
+            expectedAzDoDependenciesSource1Updated = new List<DependencyDetail>();
+            foreach (DependencyDetail dependency in expectedDependenciesSource1Updated)
+            {
+                expectedAzDoDependenciesSource1Updated.Add(
+                    new DependencyDetail(dependency)
+                    { RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo1Name) });
+            }
+
+            expectedAzDoDependenciesSource2 = new List<DependencyDetail>();
+            foreach (DependencyDetail dependency in expectedDependenciesSource2)
+            {
+                expectedAzDoDependenciesSource2.Add(
+                    new DependencyDetail(dependency)
+                    { RepoUri = GetAzDoRepoUrl(TestRepository.TestRepo3Name) });
+            }
+
         }
 
         public async Task DarcBatchedFlowTestBase(string targetBranch, string channelName, bool isAzDoTest)
@@ -159,13 +188,14 @@ namespace Maestro.ScenarioTests
             {
                 TestContext.WriteLine($"Adding a subscription from {source1RepoName} to {targetRepoName}");
                 await using (AsyncDisposableValue<string> subscription1Id = await CreateSubscriptionAsync(testChannelName, source1RepoName, targetRepoName, targetBranch,
-                    UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" }))
+                    UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" },
+                    sourceIsAzDo: isAzDoTest, targetIsAzDo: isAzDoTest))
                 {
                     TestContext.WriteLine($"Adding a subscription from {source2RepoName} to {targetRepoName}");
                     await using (AsyncDisposableValue<string> subscription2Id = await CreateSubscriptionAsync(testChannelName, source2RepoName, targetRepoName, targetBranch,
-                        UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" }))
+                        UpdateFrequency.None.ToString(), "maestro-auth-test", additionalOptions: new List<string> { "--batchable" },
+                        sourceIsAzDo: isAzDoTest, targetIsAzDo: isAzDoTest))
                     {
-
                         TestContext.WriteLine("Set up build1 for intake into target repository");
                         Build build1 = await CreateBuildAsync(source1RepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, sourceBuildNumber, source1Assets);
                         await AddBuildToChannelAsync(build1.Id, testChannelName);
@@ -176,7 +206,9 @@ namespace Maestro.ScenarioTests
 
 
                         TestContext.WriteLine("Cloning target repo to prepare the target branch");
-                        TemporaryDirectory reposFolder = await CloneRepositoryAsync(targetRepoName);
+
+                        TemporaryDirectory reposFolder = isAzDoTest ? await CloneAzDoRepositoryAsync(targetRepoName, targetBranch) : await CloneRepositoryAsync(targetRepoName);
+
                         using (ChangeDirectory(reposFolder.Directory))
                         {
                             await using (await CheckoutBranchAsync(targetBranch))
@@ -193,16 +225,16 @@ namespace Maestro.ScenarioTests
                                     await TriggerSubscriptionAsync(subscription1Id.Value);
                                     await TriggerSubscriptionAsync(subscription2Id.Value);
 
-                                    List<DependencyDetail> expectedDependencies = expectedDependenciesSource1.Concat(expectedDependenciesSource2).ToList();
-
                                     TestContext.WriteLine($"Waiting on PR to be opened in {targetRepoUri}");
 
                                     if (isAzDoTest)
                                     {
-                                        throw new NotImplementedException("AzDo Flow Tests are not part of the scope for this change.");
+                                        List<DependencyDetail> expectedAzDoDependencies = expectedAzDoDependenciesSource1.Concat(expectedAzDoDependenciesSource2).ToList();
+                                        await CheckBatchedAzDoPullRequest(source1RepoName, source2RepoName, targetRepoName, targetBranch, expectedAzDoDependencies, reposFolder.Directory);
                                     }
                                     else
                                     {
+                                        List<DependencyDetail> expectedDependencies = expectedDependenciesSource1.Concat(expectedDependenciesSource2).ToList();
                                         await CheckBatchedGitHubPullRequest(targetBranch, source1RepoName, source2RepoName, targetRepoName, expectedDependencies, reposFolder.Directory);
                                     }
                                 }
@@ -278,7 +310,7 @@ namespace Maestro.ScenarioTests
                             {
                                 if (isAzDoTest)
                                 {
-                                    throw new NotImplementedException("AzDo Flow Tests are not part of the scope for this change.");
+                                    await CheckNonBatchedAzDoPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1, reposFolder.Directory, isCompleted: true, isUpdated: false);
                                 }
                                 else
                                 {
@@ -293,13 +325,10 @@ namespace Maestro.ScenarioTests
                                 return;
                             }
 
-                            // Non-Batched tests that don't use AllChecks continue to make sure updating works as expected
+                            // The remaining non-batched tests continue to make sure that updating works as expected
                             await CheckNonBatchedGitHubPullRequest(sourceRepoName, targetRepoName, targetBranch, expectedDependenciesSource1, reposFolder.Directory, false);
 
-
                             TestContext.WriteLine("Set up another build for intake into target repository");
-
-
                             Build build2 = await CreateBuildAsync(sourceRepoUri, sourceBranch, TestRepository.CoherencyTestRepo2Commit, source2BuildNumber, source1AssetsUpdated);
 
                             TestContext.WriteLine("Trigger the dependency update");
@@ -338,7 +367,7 @@ namespace Maestro.ScenarioTests
             }
         }
 
-        private async Task<AsyncDisposableValue<string>> CreateSubscriptionForEndToEndTests(string testChannelName, string sourceRepoName, 
+        private async Task<AsyncDisposableValue<string>> CreateSubscriptionForEndToEndTests(string testChannelName, string sourceRepoName,
             string targetRepoName, string targetBranch, bool allChecks)
         {
             if (allChecks)

@@ -1,16 +1,21 @@
-using Maestro.Contracts;
-using Maestro.ScenarioTests.ObjectHelpers;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
-using NUnit.Framework;
-using Octokit;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Maestro.Contracts;
+using Maestro.ScenarioTests.ObjectHelpers;
+using Microsoft.DotNet.Internal.Testing.Utility;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
+using NUnit.Framework;
+using Octokit;
 
 
 namespace Maestro.ScenarioTests
@@ -102,25 +107,92 @@ namespace Maestro.ScenarioTests
             throw new MaestroTestException($"The created pull request for {targetRepo} targeting {targetBranch} was not merged within {attempts} minutes");
         }
 
-        private async Task<Microsoft.DotNet.DarcLib.PullRequest> WaitForAzDoPullRequestAsync(string targetRepoUri, string targetBranch)
+        private async Task<int> GetAzDoPullRequestIdAsync(string targetRepoName, string targetBranch)
         {
+            string searchBaseUrl = GetAzDoRepoUrl(targetRepoName);
+            string apiBaseUrl = GetAzDoApiRepoUrl(targetRepoName);
+            IEnumerable<int> prs = new List<int>();
+
             int attempts = 10;
             while (attempts-- > 0)
             {
-                var prs = await AzDoClient.SearchPullRequestsAsync(targetRepoUri, targetBranch, Microsoft.DotNet.DarcLib.PrStatus.Open).ConfigureAwait(false);
+                try
+                {
+                    prs = await SearchPullRequestsAsync(searchBaseUrl, targetBranch).ConfigureAwait(false);
+                }
+                catch (HttpRequestException ex)
+                {
+                    // Returning a 404 is expected before the PR has been created
+                    NUnitLogger logger = new NUnitLogger();
+                    logger.LogInformation($"Searching for AzDo pull requests returned an error: {ex.Message}");
+                }
+
                 if (prs.Count() == 1)
                 {
-                    return await AzDoClient.GetPullRequestAsync($"{targetRepoUri}/pullrequests/{prs.FirstOrDefault()}?api-version=5.0");
+                    return prs.FirstOrDefault();
                 }
+
                 if (prs.Count() > 1)
                 {
-                    throw new MaestroTestException($"More than one pull request found in {targetRepoUri} targeting {targetBranch}");
+                    throw new MaestroTestException($"More than one pull request found in {targetRepoName} targeting {targetBranch}");
                 }
 
                 await Task.Delay(60 * 1000).ConfigureAwait(false);
             }
 
-            throw new MaestroTestException($"No pull request was created in {targetRepoUri} targeting {targetBranch}");
+            throw new MaestroTestException($"No pull request was created in {searchBaseUrl} targeting {targetBranch}");
+        }
+
+        private async Task<IEnumerable<int>> SearchPullRequestsAsync(string repoUri, string targetPullRequestBranch)
+        {
+            (string accountName, string projectName, string repoName) = Microsoft.DotNet.DarcLib.AzureDevOpsClient.ParseRepoUri(repoUri);
+            var query = new StringBuilder();
+
+            Microsoft.DotNet.DarcLib.AzureDevOpsPrStatus prStatus = Microsoft.DotNet.DarcLib.AzureDevOpsPrStatus.Active;
+            query.Append($"searchCriteria.status={prStatus.ToString().ToLower()}");
+            query.Append($"&searchCriteria.targetRefName=refs/heads/{targetPullRequestBranch}");
+
+            JObject content = await _parameters.AzDoClient.ExecuteAzureDevOpsAPIRequestAsync(
+                HttpMethod.Get,
+                accountName,
+                projectName,
+                $"_apis/git/repositories/{repoName}/pullrequests?{query}",
+                new NUnitLogger()
+                );
+
+            IEnumerable<int> prs = content.Value<JArray>("value").Select(r => r.Value<int>("pullRequestId"));
+
+            return prs;
+        }
+
+        internal async Task<Microsoft.DotNet.DarcLib.PullRequest> GetAzDoPullRequestAsync(int pullRequestId, string targetRepoName, string targetBranch, bool isUpdated, string expectedPRTitle = null)
+        {
+            string apiBaseUrl = GetAzDoApiRepoUrl(targetRepoName);
+
+            if (!isUpdated)
+            {
+                return await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
+            }
+
+            if (string.IsNullOrEmpty(expectedPRTitle))
+            {
+                throw new ArgumentNullException(expectedPRTitle, "ExpectedPRTitle must be defined for AzDo PRs that require an update.");
+            }
+
+            for (int tries = 10; tries > 0; tries--)
+            {
+                Microsoft.DotNet.DarcLib.PullRequest pr = await AzDoClient.GetPullRequestAsync($"{apiBaseUrl}/pullRequests/{pullRequestId}");
+                string trimmedTitle = Regex.Replace(pr.Title, @"\s+", " ");
+
+                if (trimmedTitle == expectedPRTitle)
+                {
+                    return pr;
+                }
+
+                await Task.Delay(60 * 1000).ConfigureAwait(false);
+            }
+
+            throw new MaestroTestException($"The created pull request for {targetRepoName} targeting {targetBranch} was not updated with subsequent subscriptions after creation");
         }
 
         public async Task CheckBatchedGitHubPullRequest(string targetBranch, string source1RepoName, string source2RepoName,
@@ -157,6 +229,43 @@ namespace Maestro.ScenarioTests
 
                     await WaitForMergedPullRequestAsync(targetRepoName, targetBranch);
                 }
+            }
+        }
+
+        public async Task CheckBatchedAzDoPullRequest(string source1RepoName, string source2RepoName, string targetRepoName, string targetBranch,
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool complete = false)
+        {
+            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source1RepoName} {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{source2RepoName}";
+            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, complete, true, null, null);
+        }
+
+        public async Task CheckNonBatchedAzDoPullRequest(string sourceRepoName, string targetRepoName, string targetBranch,
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted = false, bool isUpdated = false,
+            string[] expectedFeeds = null, string[] notExpectedFeeds = null)
+        {
+            string expectedPRTitle = $"[{targetBranch}] Update dependencies from {_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/{sourceRepoName}";
+            await CheckAzDoPullRequest(expectedPRTitle, targetRepoName, targetBranch, expectedDependencies, repoDirectory, false, isUpdated, expectedFeeds, notExpectedFeeds);
+        }
+
+        public async Task CheckAzDoPullRequest(string expectedPRTitle, string targetRepoName, string targetBranch,
+            List<Microsoft.DotNet.DarcLib.DependencyDetail> expectedDependencies, string repoDirectory, bool isCompleted, bool isUpdated,
+            string[] expectedFeeds, string[] notExpectedFeeds)
+        {
+            string targetRepoUri = GetAzDoApiRepoUrl(targetRepoName);
+            TestContext.WriteLine($"Checking Opened PR in {targetBranch} {targetRepoUri} ...");
+            int pullRequestId = await GetAzDoPullRequestIdAsync(targetRepoName, targetBranch);
+            Microsoft.DotNet.DarcLib.PullRequest pullRequest = await GetAzDoPullRequestAsync(pullRequestId, targetRepoName, targetBranch, isUpdated, expectedPRTitle);
+
+            string trimmedTitle = Regex.Replace(pullRequest.Title, @"\s+", " ");
+            StringAssert.AreEqualIgnoringCase(expectedPRTitle, trimmedTitle);
+
+            Microsoft.DotNet.DarcLib.PrStatus expectedPRState = isCompleted ? Microsoft.DotNet.DarcLib.PrStatus.Closed : Microsoft.DotNet.DarcLib.PrStatus.Open;
+            var prStatus = await AzDoClient.GetPullRequestStatusAsync(GetAzDoApiRepoUrl(targetRepoName) + $"/pullRequests/{pullRequestId}");
+            Assert.AreEqual(expectedPRState, prStatus);
+
+            using (ChangeDirectory(repoDirectory))
+            {
+                await ValidatePullRequestDependencies(targetRepoName, pullRequest.HeadBranch, expectedDependencies);
             }
         }
 
@@ -222,6 +331,11 @@ namespace Maestro.ScenarioTests
         public string GetAzDoRepoUrl(string repoName, string azdoAccount = "dnceng", string azdoProject = "internal")
         {
             return $"https://dev.azure.com/{azdoAccount}/{azdoProject}/_git/{repoName}";
+        }
+
+        public string GetAzDoApiRepoUrl(string repoName, string azdoAccount = "dnceng", string azdoProject = "internal")
+        {
+            return $"https://dev.azure.com/{azdoAccount}/{azdoProject}/_apis/git/repositories/{repoName}";
         }
 
         public Task<string> RunDarcAsyncWithInput(string input, params string[] args)
@@ -568,6 +682,30 @@ namespace Maestro.ScenarioTests
             return shareable.TryTake()!;
         }
 
+        public string GetAzDoRepoAuthUrl(string repoName)
+        {
+            return $"https://{_parameters.GitHubUser}:{_parameters.AzDoToken}@dev.azure.com/{_parameters.AzureDevOpsAccount}/{_parameters.AzureDevOpsProject}/_git/{repoName}";
+        }
+
+        public async Task<TemporaryDirectory> CloneAzDoRepositoryAsync(string repoName, string targetBranch)
+        {
+            using var shareable = Shareable.Create(TemporaryDirectory.Get());
+            string directory = shareable.Peek()!.Directory;
+
+            string authUrl = GetAzDoRepoAuthUrl(repoName);
+            await RunGitAsync("clone", "--quiet", authUrl, directory).ConfigureAwait(false);
+
+            using (ChangeDirectory(directory))
+            {
+                // The GitHubUser and AzDoUser have the same user name so this uses the existing parameter
+                await RunGitAsync("config", "user.email", $"{_parameters.GitHubUser}@test.com").ConfigureAwait(false);
+                await RunGitAsync("config", "user.name", _parameters.GitHubUser).ConfigureAwait(false);
+            }
+
+
+            return shareable.TryTake()!;
+        }
+
         public async Task CheckoutRemoteRefAsync(string commit)
         {
             await RunGitAsync("fetch", "origin", commit);
@@ -617,11 +755,11 @@ namespace Maestro.ScenarioTests
         }
 
         internal AssetData GetAssetDataWithLocations(
-            string assetName, 
+            string assetName,
             string assetVersion,
-            string assetLocation1, 
+            string assetLocation1,
             LocationType assetLocationType1,
-            string assetLocation2 = null, 
+            string assetLocation2 = null,
             LocationType assetLocationType2 = LocationType.None)
         {
             var locationsListBuilder = ImmutableList.CreateBuilder<AssetLocationData>();
