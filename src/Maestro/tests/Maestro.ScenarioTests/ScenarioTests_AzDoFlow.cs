@@ -5,6 +5,7 @@ using NUnit.Framework;
 namespace Maestro.ScenarioTests
 {
     [TestFixture]
+    [NonParallelizable]
     [Category("PostDeployment")]
     class ScenarioTests_AzDoFlow : MaestroScenarioTestBase
     {
