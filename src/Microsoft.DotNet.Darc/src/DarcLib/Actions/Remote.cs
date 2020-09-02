@@ -205,6 +205,18 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        /// Trigger a subscription by ID and source build id
+        /// </summary>
+        /// <param name="subscriptionId">ID of subscription to trigger</param>
+        /// <param name="sourceBuildId">Bar ID of build to use (instead of latest)</param>
+        /// <returns>Subscription just triggered.</returns>
+        public async Task<Subscription> TriggerSubscriptionAsync(string subscriptionId, int sourceBuildId)
+        {
+            CheckForValidBarClient();
+            return await _barClient.TriggerSubscriptionAsync(GetSubscriptionGuid(subscriptionId), sourceBuildId);
+        }
+
+        /// <summary>
         ///     Create a new subscription
         /// </summary>
         /// <param name="channelName">Name of source channel</param>
@@ -1353,6 +1365,34 @@ namespace Microsoft.DotNet.DarcLib
         {
             CheckForValidGitClient();
             _gitClient.Clone(repoUri, commit, targetDirectory, gitDirectory);
+        }
+
+        /// <summary>
+        ///   Gets dependency flow graph for given channel.
+        /// </summary>
+        /// <param name="channelId">Channel ID</param>
+        /// <param name="days">Number of days over which the build times will be summarized</param>
+        /// <param name="includeArcade">Should arcade be included in generated graph</param>
+        /// <param name="includeBuildTimes">Should build times be calculated for each node</param>
+        /// <param name="includeDisabledSubscriptions">Should disabled subscriptions be included in the graph</param>
+        /// <param name="includedFrequencies">Include only subscription with specified frequencies. Leave null or empty to include all</param>
+        /// <returns>Dependency flow graph for given channel</returns>
+        public async Task<DependencyFlowGraph> GetDependencyFlowGraph(
+            int channelId,
+            int days,
+            bool includeArcade,
+            bool includeBuildTimes,
+            bool includeDisabledSubscriptions,
+            IReadOnlyList<string> includedFrequencies)
+        {
+            CheckForValidBarClient();
+            return await _barClient.GetDependencyFlowGraph(
+                channelId,
+                days,
+                includeArcade,
+                includeBuildTimes,
+                includeDisabledSubscriptions,
+                includedFrequencies);
         }
 
         /// <summary>

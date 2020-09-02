@@ -47,7 +47,7 @@ namespace Microsoft.DotNet.Maestro.Client
             CancellationToken cancellationToken = default
         );
 
-        Task RetryActionAsyncAsync(
+        Task RetryActionAsync(
             string branch,
             string repository,
             long timestamp,
@@ -456,9 +456,9 @@ namespace Microsoft.DotNet.Maestro.Client
             throw ex;
         }
 
-        partial void HandleFailedRetryActionAsyncRequest(RestApiException ex);
+        partial void HandleFailedRetryActionRequest(RestApiException ex);
 
-        public async Task RetryActionAsyncAsync(
+        public async Task RetryActionAsync(
             string branch,
             string repository,
             long timestamp,
@@ -474,11 +474,6 @@ namespace Microsoft.DotNet.Maestro.Client
             if (string.IsNullOrEmpty(repository))
             {
                 throw new ArgumentNullException(nameof(repository));
-            }
-
-            if (timestamp == default(long))
-            {
-                throw new ArgumentNullException(nameof(timestamp));
             }
 
             const string apiVersion = "2020-02-20";
@@ -510,7 +505,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 {
                     if (_res.Status < 200 || _res.Status >= 300)
                     {
-                        await OnRetryActionAsyncFailed(_req, _res).ConfigureAwait(false);
+                        await OnRetryActionFailed(_req, _res).ConfigureAwait(false);
                     }
 
 
@@ -519,7 +514,7 @@ namespace Microsoft.DotNet.Maestro.Client
             }
         }
 
-        internal async Task OnRetryActionAsyncFailed(Request req, Response res)
+        internal async Task OnRetryActionFailed(Request req, Response res)
         {
             string content = null;
             if (res.ContentStream != null)
@@ -536,7 +531,7 @@ namespace Microsoft.DotNet.Maestro.Client
                 content,
                 Client.Deserialize<Models.ApiError>(content)
                 );
-            HandleFailedRetryActionAsyncRequest(ex);
+            HandleFailedRetryActionRequest(ex);
             HandleFailedRequest(ex);
             Client.OnFailedRequest(ex);
             throw ex;

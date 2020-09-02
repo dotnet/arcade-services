@@ -87,7 +87,7 @@ namespace Microsoft.DotNet.DarcLib
             return GetFileContentsAsync(accountName, projectName, repoName, filePath, branch);
         }
 
-        private static readonly List<string> VersionTypes = new List<string>() {"branch", "commit", "tag"};
+        private static readonly List<string> VersionTypes = new List<string>() { "branch", "commit", "tag" };
         /// <summary>
         ///     Retrieve the contents of a text file in a repo on a specific branch
         /// </summary>
@@ -265,8 +265,7 @@ namespace Microsoft.DotNet.DarcLib
                     break;
             }
 
-            query.Append(
-                $"searchCriteria.sourceRefName=refs/heads/{pullRequestBranch}&searchCriteria.status={prStatus.ToString().ToLower()}");
+            query.Append($"searchCriteria.sourceRefName=refs/heads/{pullRequestBranch}&searchCriteria.status={prStatus.ToString().ToLower()}");
 
             if (!string.IsNullOrEmpty(keyword))
             {
@@ -283,7 +282,7 @@ namespace Microsoft.DotNet.DarcLib
                 HttpMethod.Get,
                 accountName,
                 projectName,
-                $"repositories/{repoName}/pullrequests?{query}",
+                $"_apis/git/repositories/{repoName}/pullrequests?{query}",
                 _logger);
 
             JArray values = JArray.Parse(content["value"].ToString());
@@ -808,7 +807,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         /// <param name="baseAddressSubpath">[baseAddressSubPath]dev.azure.com subdomain to make the request</param>
         /// <param name="retryCount">Maximum number of tries to attempt the API request</param>
         /// <returns>Http response</returns>
-        private async Task<JObject> ExecuteAzureDevOpsAPIRequestAsync(
+        public async Task<JObject> ExecuteAzureDevOpsAPIRequestAsync(
             HttpMethod method,
             string accountName,
             string projectName,
