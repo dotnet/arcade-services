@@ -62,6 +62,7 @@
         "x": 7,
         "y": 0
       },
+      "hiddenSeries": false,
       "id": 44,
       "legend": {
         "avg": false,
@@ -465,6 +466,7 @@
         "x": 19,
         "y": 0
       },
+      "hiddenSeries": false,
       "id": 48,
       "legend": {
         "alignAsTable": false,
@@ -885,6 +887,7 @@
         "x": 7,
         "y": 8
       },
+      "hiddenSeries": false,
       "id": 42,
       "legend": {
         "avg": false,
@@ -1289,6 +1292,7 @@
         "x": 19,
         "y": 8
       },
+      "hiddenSeries": false,
       "id": 49,
       "legend": {
         "alignAsTable": false,
@@ -1437,6 +1441,7 @@
         "x": 0,
         "y": 16
       },
+      "hiddenSeries": false,
       "id": 12,
       "legend": {
         "avg": false,
@@ -2078,6 +2083,7 @@
         "x": 19,
         "y": 16
       },
+      "hiddenSeries": false,
       "id": 50,
       "legend": {
         "alignAsTable": false,
@@ -2267,6 +2273,7 @@
         "x": 0,
         "y": 24
       },
+      "hiddenSeries": false,
       "id": 3,
       "legend": {
         "avg": false,
@@ -2922,6 +2929,7 @@
         "x": 19,
         "y": 24
       },
+      "hiddenSeries": false,
       "id": 52,
       "legend": {
         "alignAsTable": false,
@@ -3074,7 +3082,9 @@
     },
     {
       "alert": {
-        "alertRuleTags": {},
+        "alertRuleTags": {
+          "NotificationId": "957b53ba073745919b47e1637eecd566"
+        },
         "conditions": [
           {
             "evaluator": {
@@ -3221,8 +3231,7 @@
             "top": "10"
           },
           "queryType": "Application Insights",
-          "refId": "A",
-          "subscription": "68672ab8-de0c-40f1-8d1b-ffb20bd62c0f"
+          "refId": "A"
         }
       ],
       "thresholds": [
@@ -3276,7 +3285,9 @@
     },
     {
       "alert": {
-        "alertRuleTags": {},
+        "alertRuleTags": {
+          "NotificationId": "49778644d5844e8b9b8a6f0f431ca644"
+        },
         "conditions": [
           {
             "evaluator": {
@@ -3436,8 +3447,7 @@
             "top": "10"
           },
           "queryType": "Application Insights",
-          "refId": "A",
-          "subscription": "68672ab8-de0c-40f1-8d1b-ffb20bd62c0f"
+          "refId": "A"
         }
       ],
       "thresholds": [
@@ -3488,10 +3498,173 @@
         "align": false,
         "alignLevel": null
       }
+    },
+    {
+      "alert": {
+        "alertRuleTags": {
+          "NotificationId": "cff707722d3c4606b9dd9f0496ad455a"
+        },
+        "conditions": [
+          {
+            "evaluator": {
+              "params": [
+                20
+              ],
+              "type": "gt"
+            },
+            "operator": {
+              "type": "and"
+            },
+            "query": {
+              "params": [
+                "A",
+                "1h",
+                "now-10m"
+              ]
+            },
+            "reducer": {
+              "params": [],
+              "type": "avg"
+            },
+            "type": "query"
+          }
+        ],
+        "executionErrorState": "keep_state",
+        "for": "3h",
+        "frequency": "15m",
+        "handler": 1,
+        "message": "The number of failed DotNetEng Status requests per hour is above 20. This may indicate a systemic problem that needs to be investigated.",
+        "name": "DotNetEng Status Failed Requests/Hour alert",
+        "noDataState": "ok",
+        "notifications": [
+          {
+            "uid": "statusHook"
+          }
+        ]
+      },
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "AI-dotneteng-status",
+      "decimals": 0,
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 13,
+        "y": 32
+      },
+      "hiddenSeries": false,
+      "id": 58,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": false,
+      "linewidth": 1,
+      "nullPointMode": "null as zero",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "appInsights": {
+            "dimension": "none",
+            "metricName": "select",
+            "rawQuery": true,
+            "rawQueryString": "let r = requests | where $__timeFilter();\r\nlet fOrNull = toscalar(r | summarize min(timestamp));\r\nlet f = iif(isnull(fOrNull), ago(1d), fOrNull);\r\nlet tOrNull = toscalar(r | summarize max(timestamp));\r\nlet t = iif(isnull(tOrNull), now(), tOrNull);\nlet span=(t - f)/60;\r\nlet interval=case(span >= 1d, bin(span, 1d), span >= 1h, bin(span, 1h), 15m);\r\nlet intervalHours = interval / 1h;\r\nr\r\n| where success == false\n| make-series kind=nonempty valueCount=count() default=0 on timestamp in range(f, t, interval)\n| mv-expand timestamp, valueCount\r\n| project timestamp=todatetime(timestamp), failuresCount=todouble(valueCount)/intervalHours",
+            "timeColumn": "timestamp",
+            "timeGrain": "auto",
+            "valueColumn": "failuresCount"
+          },
+          "azureLogAnalytics": {
+            "query": "//change this example to create your own time series query\n<table name>                                                              //the table to query (e.g. Usage, Heartbeat, Perf)\n| where $__timeFilter(TimeGenerated)                                      //this is a macro used to show the full chart’s time range, choose the datetime column here\n| summarize count() by <group by column>, bin(TimeGenerated, $__interval) //change “group by column” to a column in your table, such as “Computer”. The $__interval macro is used to auto-select the time grain. Can also use 1h, 5m etc.\n| order by TimeGenerated asc",
+            "resultFormat": "time_series"
+          },
+          "azureMonitor": {
+            "aggOptions": [],
+            "dimensionFilter": "*",
+            "metricDefinition": "select",
+            "metricName": "select",
+            "metricNamespace": "select",
+            "resourceGroup": "select",
+            "resourceName": "select",
+            "timeGrain": "auto",
+            "timeGrains": [],
+            "top": "10"
+          },
+          "queryType": "Application Insights",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [
+        {
+          "colorMode": "critical",
+          "fill": true,
+          "line": true,
+          "op": "gt",
+          "value": 20,
+          "yaxis": "left"
+        }
+      ],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "DotNetEng Status Failed Requests/Hour",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 20,
+  "schemaVersion": 21,
   "style": "dark",
   "tags": [],
   "templating": {
