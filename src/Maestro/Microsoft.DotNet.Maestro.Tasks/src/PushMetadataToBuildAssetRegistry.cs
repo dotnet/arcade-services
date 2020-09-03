@@ -413,6 +413,11 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return GetEnv("BUILD_REPOSITORY_URI");
         }
 
+        private string GetAzDevRepositoryName()
+        {
+            return GetEnv("BUILD_REPOSITORY_NAME");
+        }
+
         private string GetAzDevBranch()
         {
             return GetEnv("BUILD_SOURCEBRANCH");
@@ -643,7 +648,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                         new BuildIdentity
                         {
                             Attributes = manifestBuildData.ToDictionary(),
-                            Name = GetAzDevRepository(),
+                            Name = GetAzDevRepositoryName(),
                             BuildId = GetAzDevBuildNumber(),
                             Branch = GetAzDevBranch(),
                             Commit = GetAzDevCommit(),
