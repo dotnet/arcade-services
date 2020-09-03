@@ -439,7 +439,7 @@ namespace Maestro.ScenarioTests
         {
             using (ChangeDirectory(repoPath))
             {
-                await RunDarcAsync(new string[] { "add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri });
+                await RunDarcAsync(new string[] { "add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri, "--version", "0.0.1" });
             }
         }
         public async Task<string> GetTestChannelsAsync()
@@ -884,7 +884,7 @@ namespace Maestro.ScenarioTests
                 if (checkRun.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix))
                 {
                     cnt++;
-                    if (checkRun.Status != "completed")
+                    if (checkRun.Status != "completed" && !checkRun.Output.Title.Contains("Waiting for checks."))
                     {
                         return false;
                     }
