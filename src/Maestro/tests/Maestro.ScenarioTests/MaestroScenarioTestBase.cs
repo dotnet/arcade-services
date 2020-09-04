@@ -741,7 +741,7 @@ namespace Maestro.ScenarioTests
             string sourceRepoUri = GetRepoUrl("dotnet", repoName);
 
             using var shareable = Shareable.Create(TemporaryDirectory.Get());
-            string directory = shareable.Peek()!.Directory;
+            string directory = shareable.Peek().Directory;
 
             string reposFolder = Path.Join(directory, "cloned-repos");
             string gitDirFolder = Path.Join(directory, "git-dirs");
