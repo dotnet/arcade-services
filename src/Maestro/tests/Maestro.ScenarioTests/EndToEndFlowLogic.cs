@@ -53,7 +53,6 @@ namespace Maestro.ScenarioTests
             Build build2 = await CreateBuildAsync(source2RepoUri, TestRepository.SourceBranch, TestRepository.CoherencyTestRepo1Commit, sourceBuildNumber, source2Assets);
             await AddBuildToChannelAsync(build2.Id, testChannelName);
 
-
             TestContext.WriteLine("Cloning target repo to prepare the target branch");
 
             TemporaryDirectory reposFolder = isAzDoTest ? await CloneAzDoRepositoryAsync(targetRepoName, targetBranch) : await CloneRepositoryAsync(targetRepoName);
