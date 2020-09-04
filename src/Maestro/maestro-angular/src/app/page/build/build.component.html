@@ -62,8 +62,11 @@
             </div>
           </div>
           <h4>{{getRepo(build)}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
-          <div><a class="btn btn-sm btn-info" [href]="build | commitLink" target="_blank">{{build.commit}} <fa-icon
-                icon="external-link-alt"></fa-icon></a></div>
+          <div>
+            <a class="btn btn-sm btn-primary" [href]="build | commitLink" target="_blank">{{build.commit}} <fa-icon
+                icon="external-link-alt"></fa-icon></a>
+              <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.commit)"><fa-icon icon="clipboard"></fa-icon></button>
+          </div>
           <div>
             <mc-relative-date [value]="build.dateProduced"></mc-relative-date>
           </div>

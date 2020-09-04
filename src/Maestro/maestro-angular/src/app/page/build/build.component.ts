@@ -84,6 +84,7 @@ export class BuildComponent implements OnInit, OnChanges {
               self.toastVisible = false;
               observer.next(buildId);
             };
+
           },
           error(err) {
             observer.error(err);
@@ -257,6 +258,20 @@ export class BuildComponent implements OnInit, OnChanges {
            !!build.azureDevOpsBranch;
   }
 
+  public copyToClipboard(item:string): void {
+    console.log("Copying ", item, " to clipboard");
+    let selBox = document.createElement('textarea');
+    selBox.style.position = 'fixed';
+    selBox.style.left = '0';
+    selBox.style.top = '0';
+    selBox.style.opacity = '0';
+    selBox.value = item;
+    document.body.appendChild(selBox);
+    selBox.focus();
+    selBox.select();
+    document.execCommand('copy');
+    document.body.removeChild(selBox);
+  };
 
   public getBuildInfo(build: Build): Observable<AzDevBuildInfo> {
     if (!build.azureDevOpsAccount) {
