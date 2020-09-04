@@ -142,7 +142,7 @@ namespace Maestro.ScenarioTests
 
                     using (FileStream stream = File.OpenRead(versionPath))
                     {
-                        SHA256 hashGenerator = SHA256.Create();
+                        using SHA256 hashGenerator = SHA256.Create();
                         byte[] fileHash = hashGenerator.ComputeHash(stream);
                         string fileHashInHex = BitConverter.ToString(fileHash).Replace("-", "");
                         Assert.AreEqual(expectedRepos[name], fileHashInHex, $"Expected {versionPath} to have hash '{expectedRepos[name]}', actual hash '{fileHash}'");
