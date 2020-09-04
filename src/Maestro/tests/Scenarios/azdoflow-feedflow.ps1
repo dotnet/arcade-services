@@ -15,9 +15,9 @@ $sourceBuildNumber = Get-Random
 $sourceCommit = Get-Random
 $sourceBranch = "master"
 $proxyFeed = "https://some-proxy.azurewebsites.net/container/some-container/sig/somesig/se/2020-02-02/darc-int-maestro-test1-bababababab-1/index.json"
-$azdoFeed1 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-efabaababababe-1/nuget/v3/index.json"
-$azdoFeed2 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-efabaababababd-1/nuget/v3/index.json"
-$azdoFeed3 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-efabaababababf-1/nuget/v3/index.json"
+$azdoFeed1 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-aaabaababababe-1/nuget/v3/index.json"
+$azdoFeed2 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-bbbbaababababd-1/nuget/v3/index.json"
+$azdoFeed3 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-cccbaababababf-1/nuget/v3/index.json"
 $regularFeed = "https://dotnetfeed.blob.core.windows.net/maestro-test1/index.json"
 $buildContainer = "https://dev.azure.com/dnceng/internal/_apis/build/builds/9999999/artifacts" 
 
