@@ -180,7 +180,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         public virtual async Task<IActionResult> Update(int buildId, [FromBody, Required] BuildUpdate buildUpdate)
         {
             Data.Models.Build build = await _context.Builds.Where(b => b.Id == buildId).FirstOrDefaultAsync();
-
+            
             if (build == null)
             {
                 return NotFound();
