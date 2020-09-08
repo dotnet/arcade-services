@@ -636,6 +636,48 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         }
 
         /// <summary>
+        ///     Get the commits in a repo
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <returns>Return all the commits. Null if no commits were found.</returns>
+        public Task<List<Commit>> GetCommitsAsync(string repoUri)
+        {
+            (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+            return GetCommitsAsync(accountName, projectName, repoName);
+        }
+
+        /// <summary>
+        ///     Get the commits in a repo 
+        /// </summary>
+        /// <param name="accountName">Azure DevOps account</param>
+        /// <param name="projectName">Azure DevOps project</param>
+        /// <param name="repoName">Azure DevOps repo</param>
+        /// <returns>Return all the commits. Null if no commits were found.</returns>
+        private async Task<List<Commit>> GetCommitsAsync(string accountName, string projectName, string repoName)
+        {
+            try
+            {
+                JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                    HttpMethod.Get,
+                    accountName,
+                    projectName,
+                    $"_apis/git/repositories/{repoName}/commits",
+                    _logger);
+                JArray values = JArray.Parse(content["value"].ToString());
+                List<Commit> commits = new List<Commit>();
+                foreach(JToken commit in values)
+                {
+                    commits.Add(new Commit(commit["commit"]["author"].Value<string>(), commit["sha"].Value<string>(), commit["commit"]["message"].Value<string>()));
+                }
+                return commits;
+            }
+            catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         ///     Diff two commits in a repository and return information about them.
         /// </summary>
         /// <param name="repoUri">Repository uri</param>

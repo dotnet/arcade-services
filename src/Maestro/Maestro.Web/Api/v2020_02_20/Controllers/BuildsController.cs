@@ -19,6 +19,8 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Internal;
 using Newtonsoft.Json.Linq;
+using Swashbuckle.AspNetCore.Annotations;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace Maestro.Web.Api.v2020_02_20.Controllers
 {
@@ -30,14 +32,20 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
     public class BuildsController : v2019_01_16.Controllers.BuildsController
     {
         private IBackgroundQueue Queue { get; }
+        private IRemoteFactory factory { get;  }
+        private readonly ILogger<BuildsController> _logger;
 
         public BuildsController(
             BuildAssetRegistryContext context,
             IBackgroundQueue queue,
-            ISystemClock clock)
+            ISystemClock clock,
+            IRemoteFactory factory,
+            ILogger<BuildsController> logger)
             : base(context, clock)
         {
             Queue = queue;
+            _logger = logger;
+
         }
 
         /// <summary>
@@ -166,6 +174,16 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             }
 
             return Ok(new Models.Build(build));
+        }
+
+        [HttpGet("{id}/external-info")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The external infos matching the criteria")]
+        [ValidateModelState]
+        public async Task<IActionResult> GetExternalInfos(string repository)
+        {
+            IRemote remote = await factory.GetRemoteAsync(repository, _logger);
+            List<Commit> commits = await remote.GetCommitsAsync(repository);
+            // return Ok();
         }
 
         [ApiRemoved]

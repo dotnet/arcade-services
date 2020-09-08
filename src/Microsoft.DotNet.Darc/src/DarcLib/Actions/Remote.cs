@@ -1206,6 +1206,17 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Get the commits in a repo on the specific branch 
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <returns>Return all the commits. Null if no commits were found.</returns>
+        public Task<List<Commit>> GetCommitsAsync(string repoUri)
+        {
+            CheckForValidGitClient();
+            return _gitClient.GetCommitsAsync(repoUri);
+        }
+
+        /// <summary>
         ///     Retrieve the list of channels from the build asset registry.
         /// </summary>
         /// <param name="classification">Optional classification to get</param>

@@ -363,6 +363,13 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Latest commit</returns>
         Task<string> GetLatestCommitAsync(string repoUri, string branch);
 
+        /// <summary>
+        ///     Get the commits in a repo on the specific branch 
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <returns>Return all the commits. Null if no commits were found.</returns>
+        public Task<List<Commit>> GetCommitsAsync(string repoUri)
+
 
         /// <summary>
         /// Checks that a repository exists
