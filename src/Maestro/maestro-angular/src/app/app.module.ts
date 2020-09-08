@@ -21,6 +21,7 @@ import {
   faLock,
   faRedo,
   faLockOpen,
+  faClipboard,
 } from "@fortawesome/free-solid-svg-icons";
 import {
   faQuestionCircle as farQuestionCircle,
@@ -119,6 +120,7 @@ library.add(
   faAngleRight,
   faAngleUp,
   faCheckCircle,
+  faClipboard,
   faEllipsisV,
   faExclamation,
   faExclamationTriangle,
