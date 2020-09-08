@@ -45,7 +45,6 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         {
             Queue = queue;
             _logger = logger;
-
         }
 
         /// <summary>
@@ -176,14 +175,14 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             return Ok(new Models.Build(build));
         }
 
-        [HttpGet("{id}/external-info")]
+        [HttpGet("{id}/external-info-commits")]
         [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The external infos matching the criteria")]
         [ValidateModelState]
         public async Task<IActionResult> GetExternalInfos(string repository)
         {
             IRemote remote = await factory.GetRemoteAsync(repository, _logger);
             List<Commit> commits = await remote.GetCommitsAsync(repository);
-            // return Ok();
+            return Ok(commits);
         }
 
         [ApiRemoved]

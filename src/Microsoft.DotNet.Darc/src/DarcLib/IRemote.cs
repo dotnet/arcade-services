@@ -368,7 +368,7 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="repoUri">Repository uri</param>
         /// <returns>Return all the commits. Null if no commits were found.</returns>
-        public Task<List<Commit>> GetCommitsAsync(string repoUri)
+        public Task<List<Commit>> GetCommitsAsync(string repoUri);
 
 
         /// <summary>

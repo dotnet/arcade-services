@@ -111,6 +111,11 @@ namespace Microsoft.DotNet.DarcLib
             throw new NotImplementedException();
         }
 
+        public Task<List<Commit>> GetCommitsAsync(string owner)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<string> GetPullRequestBaseBranch(string pullRequestUrl)
         {
             throw new NotImplementedException();
