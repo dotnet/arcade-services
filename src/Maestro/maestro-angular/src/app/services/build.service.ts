@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { BuildGraph, Build } from 'src/maestro-client/models';
+import { BuildGraph, Build, Commit } from 'src/maestro-client/models';
 import { StatefulResult, statefulSwitchMap } from 'src/stateful';
 import { Observable, of, timer } from 'rxjs';
 import { MaestroService } from 'src/maestro-client';
@@ -13,6 +13,7 @@ import { tapLog } from 'src/helpers';
 export class BuildService {
   static buildCache: Record<number, Build> = {};
   static graphCache: Record<number, BuildGraph> = {};
+  static commitsCache: Record<number, Array<Commit>> = {};
 
   static reloadInterval = 1000 * 60 * 5;
   // static reloadInterval = 1000 * 10;
@@ -41,6 +42,20 @@ export class BuildService {
         }
         return this.maestro.builds.getBuildGraphAsync({id}).pipe(
           tap(graph => BuildService.graphCache[id] = graph),
+        );
+      }),
+    );
+  }
+
+  public getCommits(buildId: number): Observable<StatefulResult<Array<Commit>>> {
+    return of(buildId).pipe(
+      statefulSwitchMap(id => {
+        if (id in BuildService.commitsCache) {
+          return of(BuildService.commitsCache[id]);
+        }
+        console.log("Getting commits")
+        return this.maestro.builds.getCommitsAsync({id}).pipe(
+          tap(commits => BuildService.commitsCache[id] = commits),
         );
       }),
     );
