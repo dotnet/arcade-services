@@ -26,7 +26,7 @@ function getNodeTitle(node:FlowRef): string {
          `Official Build: ${official}\n` +
          `Dep Flow: ${pr}\n` +
          `Best Case Path Time: ${node.bestCasePathTime.toFixed(2)} min\n` +
-         `Worst Case Path Time: ${node.bestCasePathTime.toFixed(2)} min\n` +
+         `Worst Case Path Time: ${node.worstCasePathTime.toFixed(2)} min\n` +
          `Goal Time: ${goal}`;
 }
 

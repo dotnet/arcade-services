@@ -255,7 +255,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 { "SigningValidationAdditionalParameters", _options.SigningValidationAdditionalParameters },
                 { "EnableNugetValidation", _options.DoNuGetValidation.ToString() },
                 { "EnableSourceLinkValidation", _options.DoSourcelinkValidation.ToString() },
-                { "PublishInstallersAndChecksums", _options.PublishInstallersAndChecksums.ToString() },
+                { "PublishInstallersAndChecksums", true.ToString() },
                 { "SymbolPublishingAdditionalParameters", _options.SymbolPublishingAdditionalParameters },
                 { "ArtifactsPublishingAdditionalParameters", _options.ArtifactPublishingAdditionalParameters }
             };
@@ -278,7 +278,7 @@ namespace Microsoft.DotNet.Darc.Operations
                 promotionPipelineVariables
                 ).ConfigureAwait(false);
 
-            string promotionBuildUrl = $"https://{build.AzureDevOpsAccount}.visualstudio.com/{promotionPipelineInformation.project}/_build/results?buildId={azdoBuildId}";
+            string promotionBuildUrl = $"https://dev.azure.com/{build.AzureDevOpsAccount}/{promotionPipelineInformation.project}/_build/results?buildId={azdoBuildId}";
 
             Console.WriteLine($"Build {build.Id} will be assigned to target channel(s) once this build finishes publishing assets: {promotionBuildUrl}");
 
