@@ -137,6 +137,12 @@
       <mc-asset-table [assets]="build.assets"></mc-asset-table>
     </div>
   </ng-container>
+  <ng-container *stateful="let commit from commit$; loadingTemplate: loadingData"><span>length : {{commit.length}}</span>
+  </ng-container>
+  <ng-template #loadingData>
+    <progress-ring [style]="{ 'width.px': 150, 'height.px': 150 }"></progress-ring>
+  </ng-template>
+  
   <div @toast class="toast show" *ngIf="toastVisible" role="alert" aria-live="assertive" aria-atomic="true"
     style="position: fixed; bottom: 0; right: 0; margin-bottom: 1rem; margin-right: 1.5rem;">
     <div class="toast-header">

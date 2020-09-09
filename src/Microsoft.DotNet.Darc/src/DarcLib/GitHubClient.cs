@@ -770,10 +770,10 @@ namespace Microsoft.DotNet.DarcLib
         /// </summary>
         /// <param name="repoUri">Repository uri</param>
         /// <returns>Return all the commits. Null if no commits were found.</returns>
-        public Task<List<Commit>> GetCommitsAsync(string repoUri)
+        public Task<Commit> GetCommitAsync(string repoUri, string sha)
         {
             (string owner, string repo) = ParseRepoUri(repoUri);
-            return GetCommitsAsync(owner, repo);
+            return GetCommitAsync(owner, repo, sha);
         }
 
         /// <summary>
@@ -782,22 +782,17 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="owner">Owner of repo</param>
         /// <param name="repo">Repository name</param>
         /// <param name="branch">Branch to retrieve the latest sha for</param>
-        /// <returns>Return all the commits. Null if no commits were found.</returns>
-        private async Task<List<Commit>> GetCommitsAsync(string owner, string repo)
+        /// <param name="sha">Sha of the commit</param>
+        /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
+        private async Task<Commit> GetCommitAsync(string owner, string repo, string sha)
         {
-
             Repository repository = await Client.Repository.Get(owner, repo);
-            IReadOnlyList<Octokit.GitHubCommit> commits = await Client.Repository.Commit.GetAll(repository.Id);
-            if (commits.Count > 1)
+            Octokit.GitHubCommit commit = await Client.Repository.Commit.Get(repository.Id, sha);
+            if (commit == null)
             {
-                List<Commit> returnCommits = new List<Commit>();
-                foreach(var commit in commits)
-                {
-                    returnCommits.Add(new Commit(commit.Author.Login, commit.Commit.Sha, commit.Commit.Message));
-                }
-                return returnCommits;
+                return null;
             }
-            return null;
+            return new Commit(commit.Author.Login, commit.Commit.Sha, commit.Commit.Message);
         }
 
         /// <summary>

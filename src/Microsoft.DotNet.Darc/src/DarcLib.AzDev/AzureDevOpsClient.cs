@@ -639,11 +639,12 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         ///     Get the commits in a repo
         /// </summary>
         /// <param name="repoUri">Repository uri</param>
-        /// <returns>Return all the commits. Null if no commits were found.</returns>
-        public Task<List<Commit>> GetCommitsAsync(string repoUri)
+        /// <param name="sha">Sha of the commit</param>
+        /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
+        public Task<Commit> GetCommitAsync(string repoUri, string sha)
         {
             (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
-            return GetCommitsAsync(accountName, projectName, repoName);
+            return GetCommitAsync(accountName, projectName, repoName, sha);
         }
 
         /// <summary>
@@ -652,8 +653,9 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         /// <param name="accountName">Azure DevOps account</param>
         /// <param name="projectName">Azure DevOps project</param>
         /// <param name="repoName">Azure DevOps repo</param>
-        /// <returns>Return all the commits. Null if no commits were found.</returns>
-        private async Task<List<Commit>> GetCommitsAsync(string accountName, string projectName, string repoName)
+        /// <param name="sha">Sha of the commit</param>
+        /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
+        private async Task<Commit> GetCommitAsync(string accountName, string projectName, string repoName, string sha)
         {
             try
             {
@@ -667,9 +669,12 @@ This pull request has not been merged because Maestro++ is waiting on the follow
                 List<Commit> commits = new List<Commit>();
                 foreach(JToken commit in values)
                 {
-                    commits.Add(new Commit(commit["commit"]["author"].Value<string>(), commit["sha"].Value<string>(), commit["commit"]["message"].Value<string>()));
+                    if (commit["sha"].Value<string>().CompareTo(sha) == 0)
+                    {
+                        return new Commit(commit["commit"]["author"].Value<string>(), commit["sha"].Value<string>(), commit["commit"]["message"].Value<string>());
+                    }
                 }
-                return commits;
+                return null;
             }
             catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
             {

@@ -175,14 +175,15 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             return Ok(new Models.Build(build));
         }
 
-        [HttpGet("{id}/external-info-commits")]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The external infos matching the criteria")]
+        [HttpGet("{buildId}/commit")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The commits found in the given repository")]
         [ValidateModelState]
-        public async Task<IActionResult> GetExternalInfos(string repository)
+        public async Task<IActionResult> GetCommit(int buildId)
         {
-            IRemote remote = await factory.GetRemoteAsync(repository, _logger);
-            List<Commit> commits = await remote.GetCommitsAsync(repository);
-            return Ok(commits);
+            Data.Models.Build build = await _context.Builds.Include(b => b.Incoherencies).FirstOrDefaultAsync(b => b.Id == buildId);
+            IRemote remote = await factory.GetRemoteAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, _logger);
+            Commit commit = await remote.GetCommitAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, build.Commit);
+            return Ok(commit);
         }
 
         [ApiRemoved]

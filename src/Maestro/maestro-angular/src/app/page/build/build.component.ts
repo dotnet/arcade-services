@@ -49,7 +49,7 @@ export class BuildComponent implements OnInit, OnChanges {
 
   public graph$!: Observable<StatefulResult<BuildGraph>>;
   public build$!: Observable<StatefulResult<Build>>;
-  public commits$!: Observable<StatefulResult<Array<Commit>>>;
+  public commit$!: Observable<StatefulResult<Commit>>;
   public azDevBuildInfo$!: Observable<StatefulResult<AzDevBuildInfo>>;
 
   public includeToolsets: boolean = false;
@@ -196,11 +196,10 @@ export class BuildComponent implements OnInit, OnChanges {
         }),
       ),
     );
-    this.commits$ = buildId$.pipe(
+    this.commit$ = buildId$.pipe(
       statefulPipe(
         statefulSwitchMap((id) => {
-          console.log("getting commits - BuilComponent.ts");
-          return this.buildService.getCommits(id);
+          return this.buildService.getCommit(id);
         }),
       ),
     );

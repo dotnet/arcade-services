@@ -482,11 +482,11 @@ export interface IBuildsApi {
         }
     ): Observable<models.BuildGraph>;
 
-    getCommitsAsync(
+    getCommitAsync(
         parameters: {
             id: number,
         }
-    ): Observable<Array<models.Commit>>;
+    ): Observable<models.Commit>;
 
     getLatestAsync(
         parameters: {
@@ -711,13 +711,13 @@ export class BuildsApiService implements IBuildsApi {
 
     }
 
-    public getCommitsAsync(
+    public getCommitAsync(
         {
             id,
         }: {
             id: number,
         }
-    ): Observable<Array<models.Commit>> {
+    ): Observable<models.Commit> {
         if (id === undefined) {
             throw new Error("Required parameter id is undefined.");
         }
@@ -728,8 +728,8 @@ export class BuildsApiService implements IBuildsApi {
         {
             _path = _path.slice(0, -1);
         }
-        _path = _path + "/api/builds/{id}/external-info-commits";
-        _path = _path.replace("{id}", id + "");
+        _path = _path + "/api/builds/{buildId}/commit";
+        _path = _path.replace("{buildId}", id + "");
 
         let queryParameters = new HttpParams();
         let headerParameters = new HttpHeaders(this.options.defaultHeaders);
@@ -746,7 +746,7 @@ export class BuildsApiService implements IBuildsApi {
                 responseType: "json",
             }
         ).pipe(
-            map((raw: models.Commit[]) => raw.map((commit: models.Commit) => models.Commit.fromRawObject(commit)))
+            map(raw => models.Commit.fromRawObject(raw))
         );
     }
 

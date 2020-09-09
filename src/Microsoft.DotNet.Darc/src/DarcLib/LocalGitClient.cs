@@ -111,7 +111,7 @@ namespace Microsoft.DotNet.DarcLib
             throw new NotImplementedException();
         }
 
-        public Task<List<Commit>> GetCommitsAsync(string owner)
+        public Task<Commit> GetCommitAsync(string owner, string sha)
         {
             throw new NotImplementedException();
         }
