@@ -175,19 +175,17 @@ namespace Microsoft.DotNet.Web.Authentication.AccessToken
         {
             string authorization = Request.Headers["Authorization"];
 
-            if (string.IsNullOrEmpty(authorization))
+            if (!string.IsNullOrEmpty(authorization))
             {
-                return null;
+                string authPrefix = Options.TokenName + " ";
+
+                if (authorization.StartsWith(authPrefix))
+                {
+                    return authorization.Substring(authPrefix.Length).Trim();
+                }
             }
 
-            string authPrefix = Options.TokenName + " ";
-
-            if (authorization.StartsWith(authPrefix))
-            {
-                return authorization.Substring(authPrefix.Length).Trim();
-            }
-
-            return null;
+            return Events.GetTokenFromRequest(Request);
         }
     }
 }

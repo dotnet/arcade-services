@@ -439,7 +439,7 @@ namespace Maestro.ScenarioTests
         {
             using (ChangeDirectory(repoPath))
             {
-                await RunDarcAsync(new string[] { "add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri });
+                await RunDarcAsync(new string[] { "add-dependency", "--name", name, "--type", isToolset ? "toolset" : "product", "--repo", repoUri, "--version", "0.0.1" });
             }
         }
         public async Task<string> GetTestChannelsAsync()
@@ -736,6 +736,22 @@ namespace Maestro.ScenarioTests
             return shareable.TryTake()!;
         }
 
+        public async Task<TemporaryDirectory> CloneRepositoryWithDarc(string repoName, string version, string reposToIgnore, bool includeToolset, int depth)
+        {
+            string sourceRepoUri = GetRepoUrl("dotnet", repoName);
+
+            using var shareable = Shareable.Create(TemporaryDirectory.Get());
+            string directory = shareable.Peek().Directory;
+
+            string reposFolder = Path.Join(directory, "cloned-repos");
+            string gitDirFolder = Path.Join(directory, "git-dirs");
+
+            // Clone repo
+            await RunDarcAsync("clone", "--repo", sourceRepoUri, "--version", version, "--git-dir-folder", gitDirFolder, "--ignore-repos", reposToIgnore, "--repos-folder", reposFolder, "--depth", depth.ToString(), includeToolset ? "--include-toolset" : "");
+
+            return shareable.TryTake()!;
+        }
+
         public async Task CheckoutRemoteRefAsync(string commit)
         {
             await RunGitAsync("fetch", "origin", commit);
@@ -884,7 +900,7 @@ namespace Maestro.ScenarioTests
                 if (checkRun.ExternalId.StartsWith(MergePolicyConstants.MaestroMergePolicyCheckRunPrefix))
                 {
                     cnt++;
-                    if (checkRun.Status != "completed")
+                    if (checkRun.Status != "completed" && !checkRun.Output.Title.Contains("Waiting for checks."))
                     {
                         return false;
                     }

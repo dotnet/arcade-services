@@ -10,7 +10,11 @@
         <fa-icon class="text-info" icon="question-circle"></fa-icon>
       </div>
       <div class="flex-grow-1">
-        <h4>{{getRepo(build)}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
+        <h4>
+          {{getRepo(build)}} 
+          <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small>
+          <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.azureDevOpsBuildId)">{{build.azureDevOpsBuildId}} <fa-icon icon="clipboard"></fa-icon></button>
+        </h4>
         <div>
           <span>Loading build information from Azure Pipelines</span>
           <div style="display:inline-block; vertical-align: middle;">
@@ -24,7 +28,11 @@
         <fa-icon class="text-warning" icon="exclamation-circle"></fa-icon>
       </div>
       <div class="flex-grow-1">
-        <h4>{{getRepo(build)}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>
+        <h4>
+          {{getRepo(build)}} 
+          <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small>
+          <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.azureDevOpsBuildId)">{{build.azureDevOpsBuildId}} <fa-icon icon="clipboard"></fa-icon></button>
+        </h4>
         <div>
           <span class="text-warning" *ngIf="!haveAzDevInfo(build)">
             Cannot lookup build in Azure Pipelines. Missing required data. Update to the latest Arcade SDK to collect
