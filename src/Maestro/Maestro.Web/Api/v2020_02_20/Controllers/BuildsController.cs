@@ -19,8 +19,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Internal;
 using Newtonsoft.Json.Linq;
-using Swashbuckle.AspNetCore.Annotations;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace Maestro.Web.Api.v2020_02_20.Controllers
 {
