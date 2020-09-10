@@ -824,7 +824,7 @@ export class Commit {
             let result: any = {};
             result["author"] = value._author;
             result["sha"] = value._sha;
-            result["message"] = value._message;
+            result["message"] = value._message.length > 20 ? value._message.slice(0,20) + "..." : value._message;
             return result;
         }
 }

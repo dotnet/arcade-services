@@ -32,7 +32,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
     public class BuildsController : v2019_01_16.Controllers.BuildsController
     {
         private IBackgroundQueue Queue { get; }
-        private IRemoteFactory factory { get;  }
+        private IRemoteFactory _factory { get;  }
         private readonly ILogger<BuildsController> _logger;
 
         public BuildsController(
@@ -45,6 +45,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         {
             Queue = queue;
             _logger = logger;
+            _factory = factory;
         }
 
         /// <summary>
@@ -176,12 +177,12 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         }
 
         [HttpGet("{buildId}/commit")]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The commits found in the given repository")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The commit matching specified criteria")]
         [ValidateModelState]
         public async Task<IActionResult> GetCommit(int buildId)
         {
             Data.Models.Build build = await _context.Builds.Include(b => b.Incoherencies).FirstOrDefaultAsync(b => b.Id == buildId);
-            IRemote remote = await factory.GetRemoteAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, _logger);
+            IRemote remote = await _factory.GetRemoteAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, null);
             Commit commit = await remote.GetCommitAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, build.Commit);
             return Ok(commit);
         }
