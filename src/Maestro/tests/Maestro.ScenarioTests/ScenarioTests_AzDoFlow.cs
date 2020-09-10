@@ -154,16 +154,15 @@ namespace Maestro.ScenarioTests
         }
 
         [Test]
-        [Ignore("https://github.com/dotnet/core-eng/issues/10688")]
         public async Task Darc_AzDoFlow_FeedFlow()
         {
             TestContext.WriteLine("AzDo Dependency Feed Flow, non-batched");
 
             // Feed flow test strings
             string proxyFeed = "https://some-proxy.azurewebsites.net/container/some-container/sig/somesig/se/2020-02-02/darc-int-maestro-test1-bababababab-1/index.json";
-            string azdoFeed1 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-efabaababababe-1/nuget/v3/index.json";
-            string azdoFeed2 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-efabaababababd-1/nuget/v3/index.json";
-            string azdoFeed3 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-efabaababababf-1/nuget/v3/index.json";
+            string azdoFeed1 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-aaabaababababe-1/nuget/v3/index.json";
+            string azdoFeed2 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-bbbbaababababd-1/nuget/v3/index.json";
+            string azdoFeed3 = "https://some_org.pkgs.visualstudio.com/_packaging/darc-int-maestro-test1-cccbaababababf-1/nuget/v3/index.json";
             string regularFeed = "https://dotnetfeed.blob.core.windows.net/maestro-test1/index.json";
             string buildContainer = "https://dev.azure.com/dnceng/internal/_apis/build/builds/9999999/artifacts";
             string[] expectedFeeds = { proxyFeed, azdoFeed1, azdoFeed3 };
