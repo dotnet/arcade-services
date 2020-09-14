@@ -369,7 +369,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="repoUri">Repository uri</param>
         /// <param name="sha">Sha of the commit</param>
         /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
-        public Task<Commit> GetCommitAsync(string repoUri, string sha);
+        Task<Commit> GetCommitAsync(string repoUri, string sha);
 
 
         /// <summary>
