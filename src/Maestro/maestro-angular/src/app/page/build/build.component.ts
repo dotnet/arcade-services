@@ -6,7 +6,7 @@ import { isAfter, compareAsc, parseISO } from "date-fns";
 import { BuildGraph, Build, Subscription } from 'src/maestro-client/models';
 import { Observable, of, timer, OperatorFunction } from 'rxjs';
 import { BuildStatusService } from 'src/app/services/build-status.service';
-import { BuildStatusCompleted, BuildStatusInProgress, BuildListResult } from 'src/app/model/build-status';
+import { BuildStatus } from 'src/app/model/build-status';
 import { statefulSwitchMap, StatefulResult, statefulPipe } from 'src/stateful';
 import { tapLog } from 'src/helpers';
 import { BuildService } from 'src/app/services/build.service';
@@ -297,20 +297,20 @@ export class BuildComponent implements OnInit, OnChanges {
     return this.buildStatusService.getBranchStatus(build.azureDevOpsAccount, build.azureDevOpsProject, build.azureDevOpsBuildDefinitionId, build.azureDevOpsBranch, 5, "completed")
       .pipe(
         map(builds => {
-          function isNewer(b: BuildStatusCompleted): boolean {
+          function isNewer(b: BuildStatus): boolean {
             if (b.status === "inProgress") {
               return false;
             }
             if (b.id === build.azureDevOpsBuildId) {
               return false;
             }
-            return isAfter(parseISO(b.finishTime), build.dateProduced);
+            return isAfter(parseISO(b.finishTime!), build.dateProduced);
           }
 
           let isMostRecent: boolean;
           let mostRecentFailureLink: string | undefined;
 
-          const newerBuilds = (builds.value as BuildStatusCompleted[]).filter(isNewer).sort((l, r) => compareAsc(parseISO(l.finishTime), parseISO(r.finishTime)));
+          const newerBuilds = builds.value.filter(isNewer).sort((l, r) => compareAsc(parseISO(l.finishTime!), parseISO(r.finishTime!)));
           if (!newerBuilds.length) {
             isMostRecent = true;
             mostRecentFailureLink = undefined;
@@ -351,7 +351,7 @@ export class BuildComponent implements OnInit, OnChanges {
     .pipe(
       map(builds => {
         if (builds.count > 0) {
-          return (builds.value[0] as BuildStatusInProgress)["_links"]["web"]["href"];
+          return builds.value[0]["_links"]["web"]["href"];
         }
         return null;
       }),

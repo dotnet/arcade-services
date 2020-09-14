@@ -3,23 +3,18 @@
 
 export interface BuildListResult {
   count: number;
-  value: BuildStatusCompleted[] | BuildStatusInProgress[];
+  value: BuildStatus[];
 }
 
-export interface BuildStatusCompleted {
+export interface BuildStatus {
   id: number;
-  finishTime: string;
+  finishTime?: string;
   status: "all" | "cancelling" | "completed" | "inProgress" | "none" | "notStarted" | "postponed";
-  result: "canceled" | "failed" | "none" | "partiallySucceeded" | "succeeded";
-  length: number;
-}
-
-export interface BuildStatusInProgress {
-  id: number;
-  status: "all" | "cancelling" | "completed" | "inProgress" | "none" | "notStarted" | "postponed";
+  result?: "canceled" | "failed" | "none" | "partiallySucceeded" | "succeeded";
+  length?: number;
   _links: {
     web: {
       href: string;
     }
-  };
+  }
 }

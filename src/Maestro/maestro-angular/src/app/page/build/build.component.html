@@ -61,7 +61,7 @@
                   Latest Failed Build <fa-icon icon="external-link-alt"></fa-icon>
                 </a>
               </span>
-              <ng-container *stateful="let azDevOnGoingInfo from azDevOnGoingBuildsInfo$; loadingTemplate: loadingBuildInfo; errorTemplate: errorBuildInfo;">
+              <ng-container *stateful="let azDevOnGoingInfo from azDevOnGoingBuildsInfo$;">
                 <span *ngIf="azDevOnGoingInfo">
                   <a class="btn btn-primary btn-sm float-right text-light" [href]="azDevOnGoingInfo"
                     target="_blank">
