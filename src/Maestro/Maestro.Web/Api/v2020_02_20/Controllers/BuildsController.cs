@@ -31,18 +31,15 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
     {
         private IBackgroundQueue Queue { get; }
         private IRemoteFactory _factory { get;  }
-        private readonly ILogger<BuildsController> _logger;
 
         public BuildsController(
             BuildAssetRegistryContext context,
             IBackgroundQueue queue,
             ISystemClock clock,
-            IRemoteFactory factory,
-            ILogger<BuildsController> logger)
+            IRemoteFactory factory)
             : base(context, clock)
         {
             Queue = queue;
-            _logger = logger;
             _factory = factory;
         }
 
