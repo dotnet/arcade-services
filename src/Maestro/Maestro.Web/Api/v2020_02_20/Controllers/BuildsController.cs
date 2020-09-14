@@ -183,8 +183,8 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             }
 
             IRemote remote = await _factory.GetRemoteAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, null);
-            Commit commit = await remote.GetCommitAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, build.Commit);
-            return Ok(commit);
+            Microsoft.DotNet.DarcLib.Commit commit = await remote.GetCommitAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, build.Commit);
+            return Ok(new Models.Commit(commit.Author, commit.Sha, commit.Message));
         }
 
         [ApiRemoved]
