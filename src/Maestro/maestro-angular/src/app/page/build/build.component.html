@@ -50,15 +50,25 @@
         <div class="flex-grow-1">
           <div class="float-right">
             <div>
-              <a class="btn btn-sm btn-primary" [href]="build | buildLink" target="_blank">
+              <a class="btn btn-sm btn-primary float-right mb-2" [href]="build | buildLink" target="_blank">
                 Go to build in Azure DevOps <fa-icon icon="external-link-alt"></fa-icon>
               </a>
             </div>
-            <div *ngIf="azDevInfo.mostRecentFailureLink">
-              <a class="btn btn-danger btn-sm float-right text-light" [href]="azDevInfo.mostRecentFailureLink"
-                target="_blank">
-                Latest Failed Build <fa-icon icon="external-link-alt"></fa-icon>
-              </a>
+            <div>
+              <span *ngIf="azDevInfo.mostRecentFailureLink">
+                <a class="btn btn-danger btn-sm float-right text-light ml-2" [href]="azDevInfo.mostRecentFailureLink"
+                  target="_blank">
+                  Latest Failed Build <fa-icon icon="external-link-alt"></fa-icon>
+                </a>
+              </span>
+              <ng-container *stateful="let azDevOnGoingInfo from azDevOnGoingBuildsInfo$; loadingTemplate: loadingBuildInfo; errorTemplate: errorBuildInfo;">
+                <span *ngIf="azDevOnGoingInfo">
+                  <a class="btn btn-primary btn-sm float-right text-light" [href]="azDevOnGoingInfo"
+                    target="_blank">
+                    Latest Ongoing Build <fa-icon icon="external-link-alt"></fa-icon>
+                  </a>
+                </span>
+              </ng-container>
             </div>
           </div>
           <h4>{{getRepo(build)}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small></h4>

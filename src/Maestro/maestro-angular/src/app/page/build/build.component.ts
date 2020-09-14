@@ -6,7 +6,7 @@ import { isAfter, compareAsc, parseISO } from "date-fns";
 import { BuildGraph, Build, Subscription } from 'src/maestro-client/models';
 import { Observable, of, timer, OperatorFunction } from 'rxjs';
 import { BuildStatusService } from 'src/app/services/build-status.service';
-import { BuildStatus } from 'src/app/model/build-status';
+import { BuildStatusCompleted, BuildStatusInProgress, BuildListResult } from 'src/app/model/build-status';
 import { statefulSwitchMap, StatefulResult, statefulPipe } from 'src/stateful';
 import { tapLog } from 'src/helpers';
 import { BuildService } from 'src/app/services/build.service';
@@ -50,7 +50,7 @@ export class BuildComponent implements OnInit, OnChanges {
   public graph$!: Observable<StatefulResult<BuildGraph>>;
   public build$!: Observable<StatefulResult<Build>>;
   public azDevBuildInfo$!: Observable<StatefulResult<AzDevBuildInfo>>;
-
+  public azDevOnGoingBuildsInfo$!: Observable<StatefulResult<string | null>>;
   public includeToolsets: boolean = false;
   public showAllDependencies: boolean = false;
 
@@ -222,6 +222,29 @@ export class BuildComponent implements OnInit, OnChanges {
       ),
     );
 
+    this.azDevOnGoingBuildsInfo$ = this.build$.pipe(
+      statefulPipe(
+        switchMap(b => {
+          return timer(0, reloadInterval).pipe(
+            map(() => b),
+          );
+        }),
+        tap(() => console.log("getting azdev info")),
+        statefulSwitchMap(b => this.getOngoingBuildInfo(b)),
+        filter(r => {
+          if (!(r instanceof Loading)) {
+            return true;
+          }
+          // emit only the first "Loading" instance so refreshes don't cause the loading spinner to show up
+          if (!emittedLoading)  {
+            emittedLoading = true;
+            return true;
+          }
+          return false;
+        }),
+      ),
+    )
+
     this.subscriptionsList$ = this.build$.pipe(
       statefulPipe(
         combineLatest(params$),
@@ -271,10 +294,10 @@ export class BuildComponent implements OnInit, OnChanges {
     if (!build.azureDevOpsBranch) {
       throw new Error("azureDevOpsBranch undefined");
     }
-    return this.buildStatusService.getBranchStatus(build.azureDevOpsAccount, build.azureDevOpsProject, build.azureDevOpsBuildDefinitionId, build.azureDevOpsBranch, 5)
+    return this.buildStatusService.getBranchStatus(build.azureDevOpsAccount, build.azureDevOpsProject, build.azureDevOpsBuildDefinitionId, build.azureDevOpsBranch, 5, "completed")
       .pipe(
         map(builds => {
-          function isNewer(b: BuildStatus): boolean {
+          function isNewer(b: BuildStatusCompleted): boolean {
             if (b.status === "inProgress") {
               return false;
             }
@@ -287,7 +310,7 @@ export class BuildComponent implements OnInit, OnChanges {
           let isMostRecent: boolean;
           let mostRecentFailureLink: string | undefined;
 
-          const newerBuilds = builds.value.filter(isNewer).sort((l, r) => compareAsc(parseISO(l.finishTime), parseISO(r.finishTime)));
+          const newerBuilds = (builds.value as BuildStatusCompleted[]).filter(isNewer).sort((l, r) => compareAsc(parseISO(l.finishTime), parseISO(r.finishTime)));
           if (!newerBuilds.length) {
             isMostRecent = true;
             mostRecentFailureLink = undefined;
@@ -309,6 +332,30 @@ export class BuildComponent implements OnInit, OnChanges {
           };
         }),
       );
+  }
+
+  public getOngoingBuildInfo(build: Build): Observable<string | null> {
+    if (!build.azureDevOpsAccount) {
+      throw new Error("azureDevOpsAccount undefined");
+    }
+    if (!build.azureDevOpsProject) {
+      throw new Error("azureDevOpsProject undefined");
+    }
+    if (!build.azureDevOpsBuildDefinitionId) {
+      throw new Error("azureDevOpsBuildDefinitionId undefined");
+    }
+    if (!build.azureDevOpsBranch) {
+      throw new Error("azureDevOpsBranch undefined");
+    }
+    return this.buildStatusService.getBranchStatus(build.azureDevOpsAccount, build.azureDevOpsProject, build.azureDevOpsBuildDefinitionId, build.azureDevOpsBranch, 1, "inProgress")
+    .pipe(
+      map(builds => {
+        if (builds.count > 0) {
+          return (builds.value[0] as BuildStatusInProgress)["_links"]["web"]["href"];
+        }
+        return null;
+      }),
+    );
   }
 
   public getRepo(build: Build) {

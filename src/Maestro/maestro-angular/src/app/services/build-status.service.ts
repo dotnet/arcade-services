@@ -10,8 +10,8 @@ export class BuildStatusService {
 
   public constructor(private http: HttpClient) { }
 
-  public getBranchStatus(account: string, project: string, definitionId: number, branch: string, count: number): Observable<BuildListResult> {
-    return this.http.get<BuildListResult>(`/_/AzDev/build/status/${account}/${project}/${definitionId}/${branch}?count=${count}`, {
+  public getBranchStatus(account: string, project: string, definitionId: number, branch: string, count: number, status: string): Observable<BuildListResult> {
+    return this.http.get<BuildListResult>(`/_/AzDev/build/status/${account}/${project}/${definitionId}/${branch}?count=${count}&status=${status}`, {
       responseType: "json",
     });
   }
