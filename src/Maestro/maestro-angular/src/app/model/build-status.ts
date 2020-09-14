@@ -12,11 +12,6 @@ export interface BuildStatusCompleted {
   status: "completed";
   result: "canceled" | "failed" | "none" | "partiallySucceeded" | "succeeded";
   length: number;
-  _links: {
-    web: {
-      href: string;
-    }
-  }
 }
 
 export interface BuildListResultInProgress{
