@@ -1,35 +1,21 @@
 // Result format of Azure DevOps api
 // https://docs.microsoft.com/en-us/rest/api/azure/devops/build/builds/list?view=azure-devops-rest-5.0
+export type BuildStatus = "all" | "cancelling" | "completed" | "inProgress" | "none" | "notStarted" | "postponed";
 
-export interface BuildListResultCompleted {
-  count: number;
-  value: BuildStatusCompleted[];
+export interface Build {
+  _links: { web: { href: string; } };
+  id: number;
+  status: BuildStatus;
 }
 
-export interface BuildStatusCompleted {
-  id: number;
-  finishTime: string;
+export interface CompletedBuild extends Build {
   status: "completed";
-  result: "canceled" | "failed" | "none" | "partiallySucceeded" | "succeeded";
+  finishTime: string;
   length: number;
-  _links: {
-    web: {
-      href: string;
-    }
-  }
+  result: "canceled" | "failed" | "none" | "partiallySucceeded" | "succeeded";
 }
 
-export interface BuildListResultInProgress{
+export interface BuildListResult<T extends Build> {
   count: number;
-  value: BuildStatusInProgress[];
-}
-
-export interface BuildStatusInProgress {
-  id: number;
-  status: "inProgress";
-  _links: {
-    web: {
-      href: string;
-    }
-  }
+  value: T[];
 }

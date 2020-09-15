@@ -6,7 +6,7 @@ import { isAfter, compareAsc, parseISO } from "date-fns";
 import { BuildGraph, Build, Subscription } from 'src/maestro-client/models';
 import { Observable, of, timer, OperatorFunction } from 'rxjs';
 import { BuildStatusService } from 'src/app/services/build-status.service';
-import { BuildStatusCompleted } from 'src/app/model/build-status';
+import { CompletedBuild } from 'src/app/model/build-status';
 import { statefulSwitchMap, StatefulResult, statefulPipe } from 'src/stateful';
 import { tapLog } from 'src/helpers';
 import { BuildService } from 'src/app/services/build.service';
@@ -50,7 +50,7 @@ export class BuildComponent implements OnInit, OnChanges {
   public graph$!: Observable<StatefulResult<BuildGraph>>;
   public build$!: Observable<StatefulResult<Build>>;
   public azDevBuildInfo$!: Observable<StatefulResult<AzDevBuildInfo>>;
-  public azDevOnGoingBuildsInfo$!: Observable<StatefulResult<string | null>>;
+  public azDevOnGoingBuildUrl$!: Observable<StatefulResult<string | null>>;
   public includeToolsets: boolean = false;
   public showAllDependencies: boolean = false;
 
@@ -222,7 +222,7 @@ export class BuildComponent implements OnInit, OnChanges {
       ),
     );
 
-    this.azDevOnGoingBuildsInfo$ = this.build$.pipe(
+    this.azDevOnGoingBuildUrl$ = this.build$.pipe(
       statefulPipe(
         switchMap(b => {
           return timer(0, reloadInterval).pipe(
@@ -230,7 +230,7 @@ export class BuildComponent implements OnInit, OnChanges {
           );
         }),
         tap(() => console.log("getting azdev info")),
-        statefulSwitchMap(b => this.getOngoingBuildInfo(b)),
+        statefulSwitchMap(b => this.getOngoingBuildUrl(b)),
         filter(r => {
           if (!(r instanceof Loading)) {
             return true;
@@ -297,7 +297,7 @@ export class BuildComponent implements OnInit, OnChanges {
     return this.buildStatusService.getBranchStatus(build.azureDevOpsAccount, build.azureDevOpsProject, build.azureDevOpsBuildDefinitionId, build.azureDevOpsBranch, 5, "completed")
       .pipe(
         map(builds => {
-          function isNewer(b: BuildStatusCompleted): boolean {
+          function isNewer(b: CompletedBuild): boolean {
             if (b.id === build.azureDevOpsBuildId) {
               return false;
             }
@@ -334,7 +334,7 @@ export class BuildComponent implements OnInit, OnChanges {
       );
   }
 
-  public getOngoingBuildInfo(build: Build): Observable<string | null> {
+  public getOngoingBuildUrl(build: Build): Observable<string | null> {
     if (!build.azureDevOpsAccount) {
       throw new Error("azureDevOpsAccount undefined");
     }
