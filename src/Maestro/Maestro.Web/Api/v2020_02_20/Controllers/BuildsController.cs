@@ -30,7 +30,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
     public class BuildsController : v2019_01_16.Controllers.BuildsController
     {
         private IBackgroundQueue Queue { get; }
-        private IRemoteFactory _factory { get;  }
+        private IRemoteFactory Factory { get; }
 
         public BuildsController(
             BuildAssetRegistryContext context,
@@ -40,7 +40,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             : base(context, clock)
         {
             Queue = queue;
-            _factory = factory;
+            Factory = factory;
         }
 
         /// <summary>
@@ -182,7 +182,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 return NotFound();
             }
 
-            IRemote remote = await _factory.GetRemoteAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, null);
+            IRemote remote = await Factory.GetRemoteAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, null);
             Microsoft.DotNet.DarcLib.Commit commit = await remote.GetCommitAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, build.Commit);
             return Ok(new Models.Commit(commit.Author, commit.Sha, commit.Message));
         }
