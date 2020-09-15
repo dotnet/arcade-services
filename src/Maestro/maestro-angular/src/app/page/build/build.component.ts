@@ -319,7 +319,7 @@ export class BuildComponent implements OnInit, OnChanges {
             // Yes, it's "canceled".
             const recentFailure = newerBuilds.find(b => (b.result == "failed" || b.result == "canceled") );
             if (recentFailure) {
-              mostRecentFailureLink = this.getBuildLinkFromAzdo(build.azureDevOpsAccount as string, build.azureDevOpsProject as string, recentFailure.id);
+              mostRecentFailureLink = recentFailure._links.web.href;
             } else {
               mostRecentFailureLink = undefined;
             }
@@ -351,7 +351,7 @@ export class BuildComponent implements OnInit, OnChanges {
     .pipe(
       map(builds => {
         if (builds.count > 0) {
-          return builds.value[0]["_links"]["web"]["href"];
+          return builds.value[0]._links.web.href;
         }
         return null;
       }),
@@ -360,13 +360,5 @@ export class BuildComponent implements OnInit, OnChanges {
 
   public getRepo(build: Build) {
     return build.gitHubRepository || build.azureDevOpsRepository;
-  }
-
-  public getBuildLinkFromAzdo(account: string, project: string, buildId: number): string {
-    return `https://dev.azure.com` +
-      `/${account}` +
-      `/${project}` +
-      `/_build/results` +
-      `?view=results&buildId=${buildId}`;
   }
 }
