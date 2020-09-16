@@ -82,7 +82,7 @@ namespace SubscriptionActorService
             throw new NotImplementedException();
         }
 
-        public Task<DependencyFlowGraph> GetDependencyFlowGraph(
+        public Task<DependencyFlowGraph> GetDependencyFlowGraphAsync(
             int channelId,
             int days,
             bool includeArcade,

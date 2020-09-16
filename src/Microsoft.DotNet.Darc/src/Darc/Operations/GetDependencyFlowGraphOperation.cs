@@ -47,7 +47,7 @@ namespace Microsoft.DotNet.Darc.Operations
                     }
                 }
 
-                var flowGraph = await barOnlyRemote.GetDependencyFlowGraph(
+                var flowGraph = await barOnlyRemote.GetDependencyFlowGraphAsync(
                     targetChannel?.Id ?? 0,
                     _options.Days,
                     includeArcade: true,

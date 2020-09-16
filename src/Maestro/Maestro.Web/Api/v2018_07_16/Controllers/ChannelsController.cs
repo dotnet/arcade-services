@@ -269,7 +269,7 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             bool includeArcade = true)
         {
             var barOnlyRemote = await _remoteFactory.GetBarOnlyRemoteAsync(Logger);
-            var flowGraph = await barOnlyRemote.GetDependencyFlowGraph(
+            var flowGraph = await barOnlyRemote.GetDependencyFlowGraphAsync(
                 channelId,
                 days,
                 includeArcade,

@@ -391,7 +391,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="includeDisabledSubscriptions">Should disabled subscriptions be included in the graph</param>
         /// <param name="includedFrequencies">Include only subscription with specified frequencies. Leave null or empty to include all</param>
         /// <returns>Dependency flow graph for given channel</returns>
-        Task<DependencyFlowGraph> GetDependencyFlowGraph(
+        Task<DependencyFlowGraph> GetDependencyFlowGraphAsync(
             int channelId,
             int days,
             bool includeArcade,

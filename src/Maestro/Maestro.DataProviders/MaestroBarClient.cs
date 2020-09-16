@@ -134,7 +134,7 @@ namespace Maestro.DataProviders
         private const int EngLatestChannelId = 2;
         private const int Eng3ChannelId = 344;
 
-        public async Task<DependencyFlowGraph> GetDependencyFlowGraph(
+        public async Task<DependencyFlowGraph> GetDependencyFlowGraphAsync(
             int channelId,
             int days,
             bool includeArcade,

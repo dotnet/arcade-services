@@ -258,7 +258,7 @@ namespace DependencyUpdater
 
                 foreach (var channel in channels)
                 {
-                    var flowGraph = await barOnlyRemote.GetDependencyFlowGraph(
+                    var flowGraph = await barOnlyRemote.GetDependencyFlowGraphAsync(
                         channel.Id,
                         days: 30,
                         includeArcade: false,
