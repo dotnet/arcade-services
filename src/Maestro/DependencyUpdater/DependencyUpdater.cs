@@ -250,44 +250,24 @@ namespace DependencyUpdater
         {
             using (_operations.BeginOperation($"Updating Longest Build Path table"))
             {
-                List<Channel> channels = Context.Channels.Select(c => new Channel() { Id = c.Id, Name = c.Name }).ToList();
-
-                // Get the flow graph
                 IRemote barOnlyRemote = await RemoteFactory.GetBarOnlyRemoteAsync(Logger);
-
-                List<Microsoft.DotNet.Maestro.Client.Models.DefaultChannel> defaultChannels = (await barOnlyRemote.GetDefaultChannelsAsync()).ToList();
-                List<Microsoft.DotNet.Maestro.Client.Models.Subscription> subscriptions = (await barOnlyRemote.GetSubscriptionsAsync()).ToList();
-
-                IEnumerable<string> frequencies = new[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", };
+                List<Channel> channels = Context.Channels.Select(c => new Channel() { Id = c.Id, Name = c.Name }).ToList();
+                IReadOnlyList<string> frequencies = new[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", };
 
                 Logger.LogInformation($"Will update '{channels.Count}' channels");
 
                 foreach (var channel in channels)
                 {
-                    // Build, then prune out what we don't want to see if the user specified channels.
-                    DependencyFlowGraph flowGraph = await DependencyFlowGraph.BuildAsync(defaultChannels, subscriptions, barOnlyRemote, 30);
-
-                    flowGraph.PruneGraph(
-                        node => DependencyFlowGraph.IsInterestingNode(channel.Name, node), 
-                        edge => DependencyFlowGraph.IsInterestingEdge(edge, false, frequencies));
+                    var flowGraph = await barOnlyRemote.GetDependencyFlowGraph(
+                        channel.Id,
+                        days: 30,
+                        includeArcade: false,
+                        includeBuildTimes: true,
+                        includeDisabledSubscriptions: false,
+                        includedFrequencies: frequencies);
 
                     if (flowGraph.Nodes.Count > 0)
                     {
-                        var edgesWithLastBuild = flowGraph.Edges
-                            .Where(e => e.Subscription.LastAppliedBuild != null);
-
-                        foreach (var edge in edgesWithLastBuild)
-                        {
-                            edge.IsToolingOnly = !Context.IsProductDependency(
-                                edge.Subscription.LastAppliedBuild.Id,
-                                edge.To.Repository,
-                                edge.To.Branch);
-                        }
-
-                        flowGraph.MarkBackEdges();
-                        flowGraph.CalculateLongestBuildPaths();
-                        flowGraph.MarkLongestBuildPath();
-
                         // Get the nodes on the longest path and order them by path time so that the
                         // contributing repos are in the right order
                         List<DependencyFlowNode> longestBuildPathNodes = flowGraph.Nodes
