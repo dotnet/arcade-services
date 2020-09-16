@@ -128,6 +128,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
         [XmlElement(ElementName = "FileSignInfo")]
         public List<FileSignInfo> FileSignInfos { get; set; }
 
+        [XmlElement(ElementName = "CertificatesSignInfo")]
+        public List<CertificatesSignInfo> CertificatesSignInfo { get; set; }
+
         [XmlElement(ElementName = "ItemsToSign")]
         public List<ItemsToSign> ItemsToSign { get; set; }
 
@@ -153,6 +156,16 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         [XmlAttribute(AttributeName = "CertificateName")]
         public string CertificateName { get; set; }
+    }
+
+    [XmlRoot(ElementName = "CertificatesSignInfo")]
+    public class CertificatesSignInfo
+    {
+        [XmlAttribute(AttributeName = "Include")]
+        public string Include { get; set; }
+
+        [XmlAttribute(AttributeName = "DualSigningAllowed")]
+        public bool DualSigningAllowed { get; set; }
     }
 
     [XmlRoot(ElementName = "ItemsToSign")]

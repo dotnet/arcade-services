@@ -4,6 +4,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 
 namespace Microsoft.DotNet.Web.Authentication.AccessToken
 {
@@ -14,6 +15,8 @@ namespace Microsoft.DotNet.Web.Authentication.AccessToken
 
         public Func<GetTokenHashContext<TUser>, Task> OnGetTokenHash { get; set; } = context =>
             throw new NotImplementedException("An implementation of GetTokenHash must be provided.");
+
+        public Func<HttpRequest, string> GetTokenFromRequest { get; set; } = req => null;
 
         public Func<PersonalAccessTokenValidatePrincipalContext<TUser>, Task> OnValidatePrincipal { get; set; } =
             context => Task.CompletedTask;
