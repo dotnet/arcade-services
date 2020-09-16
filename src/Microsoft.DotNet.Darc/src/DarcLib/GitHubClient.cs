@@ -129,7 +129,7 @@ namespace Microsoft.DotNet.DarcLib
         public async Task CreateBranchAsync(string repoUri, string newBranch, string baseBranch)
         {
             _logger.LogInformation(
-                $"Verifying if '{newBranch}' branch exist in repo '{repoUri}'. If not, we'll create it...");
+                $"Verifying if '{newBranch}' branch exists in repo '{repoUri}'. If not, we'll create it...");
 
             (string owner, string repo) = ParseRepoUri(repoUri);
             string latestSha = await GetLastCommitShaAsync(owner, repo, baseBranch);

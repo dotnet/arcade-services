@@ -16,6 +16,8 @@ namespace Microsoft.DotNet.DarcLib
 
         public GitFile NugetConfig { get; set; }
 
+        public GitFile DotNetToolsJson { get; set; }
+
         public List<GitFile> GetFilesToCommit()
         {
             var gitHubCommitsMap = new List<GitFile>
@@ -23,7 +25,8 @@ namespace Microsoft.DotNet.DarcLib
                 VersionDetailsXml,
                 VersionProps,
                 GlobalJson,
-                NugetConfig
+                NugetConfig,
+                DotNetToolsJson
             };
 
             return gitHubCommitsMap;

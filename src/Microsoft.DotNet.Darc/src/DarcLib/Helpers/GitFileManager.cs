@@ -6,7 +6,6 @@ using Microsoft.DotNet.DarcLib.Helpers;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using NuGet.Versioning;
-using Octokit;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -39,7 +38,8 @@ namespace Microsoft.DotNet.DarcLib
             {
                 VersionFiles.VersionDetailsXml,
                 VersionFiles.VersionProps,
-                VersionFiles.GlobalJson
+                VersionFiles.GlobalJson,
+                VersionFiles.DotnetToolsConfigJson
             };
 
         public async Task<XmlDocument> ReadVersionDetailsXmlAsync(string repoUri, string branch)
@@ -65,6 +65,23 @@ namespace Microsoft.DotNet.DarcLib
             string fileContent = await _gitClient.GetFileContentsAsync(VersionFiles.GlobalJson, repoUri, branch);
 
             return JObject.Parse(fileContent);
+        }
+
+        public async Task<JObject> ReadDotNetToolsConfigJsonAsync(string repoUri, string branch)
+        {
+            _logger.LogInformation(
+                $"Reading '{VersionFiles.DotnetToolsConfigJson}' in repo '{repoUri}' and branch '{branch}'...");
+
+            try
+            {
+                string fileContent = await _gitClient.GetFileContentsAsync(VersionFiles.DotnetToolsConfigJson, repoUri, branch);
+                return JObject.Parse(fileContent);
+            }
+            catch (DependencyFileNotFoundException)
+            {
+                // Not exceptional: just means this repo doesn't have a .config/dotnet-tools.json, we'll skip the update.
+                return null;
+            }
         }
 
         public XmlDocument ReadNugetConfigAsync(string fileContent)
@@ -184,6 +201,7 @@ namespace Microsoft.DotNet.DarcLib
             XmlDocument versionDetails = await ReadVersionDetailsXmlAsync(repoUri, branch);
             XmlDocument versionProps = await ReadVersionPropsAsync(repoUri, branch);
             JObject globalJson = await ReadGlobalJsonAsync(repoUri, branch);
+            JObject toolsConfigurationJson = await ReadDotNetToolsConfigJsonAsync(repoUri, branch);
             XmlDocument nugetConfig = await ReadNugetConfigAsync(repoUri, branch);
 
             foreach (DependencyDetail itemToUpdate in itemsToUpdate)
@@ -193,7 +211,7 @@ namespace Microsoft.DotNet.DarcLib
                     string.IsNullOrEmpty(itemToUpdate.Commit) ||
                     string.IsNullOrEmpty(itemToUpdate.RepoUri))
                 {
-                    throw new DarcException("Either the name, version, commit or repo uri of a dependency in " +
+                    throw new DarcException($"Either the name, version, commit or repo uri of dependency '{itemToUpdate.Name}' in " +
                         $"repo '{repoUri}' and branch '{branch}' was empty.");
                 }
 
@@ -226,7 +244,7 @@ namespace Microsoft.DotNet.DarcLib
                 SetAttribute(versionDetails, nodeToUpdate, VersionFiles.NameAttributeName, itemToUpdate.Name);
                 SetElement(versionDetails, nodeToUpdate, VersionFiles.ShaElementName, itemToUpdate.Commit);
                 SetElement(versionDetails, nodeToUpdate, VersionFiles.UriElementName, itemToUpdate.RepoUri);
-                UpdateVersionFiles(versionProps, globalJson, itemToUpdate);
+                UpdateVersionFiles(versionProps, globalJson, toolsConfigurationJson, itemToUpdate);
             }
 
             // Combine the two sets of dependencies. If an asset is present in the itemsToUpdate,
@@ -264,6 +282,12 @@ namespace Microsoft.DotNet.DarcLib
                 VersionProps = new GitFile(VersionFiles.VersionProps, versionProps),
                 NugetConfig = new GitFile(VersionFiles.NugetConfig, updatedNugetConfig)
             };
+
+            // dotnet-tools.json is optional, so only include it if it was found.
+            if (toolsConfigurationJson != null)
+            {
+                fileContainer.DotNetToolsJson = new GitFile(VersionFiles.DotnetToolsConfigJson, toolsConfigurationJson);
+            }
 
             return fileContainer;
         }
@@ -727,12 +751,13 @@ namespace Microsoft.DotNet.DarcLib
         ///     Update well-known version files.
         /// </summary>
         /// <param name="versionProps">Versions.props xml document</param>
-        /// <param name="token">Global.json document</param>
+        /// <param name="globalJsonToken">Global.json document</param>
+        /// <param name="dotNetToolJsonToken">.config/dotnet-tools.json document</param>
         /// <param name="itemToUpdate">Item that needs an update.</param>
         /// <remarks>
         ///     TODO: https://github.com/dotnet/arcade/issues/1095
         /// </remarks>
-        private void UpdateVersionFiles(XmlDocument versionProps, JToken token, DependencyDetail itemToUpdate)
+        private void UpdateVersionFiles(XmlDocument versionProps, JToken globalJsonToken, JToken dotNetToolJsonToken, DependencyDetail itemToUpdate)
         {
             string versionElementName = VersionFiles.GetVersionPropsPackageVersionElementName(itemToUpdate.Name);
             string alternateVersionElementName = VersionFiles.GetVersionPropsAlternatePackageVersionElementName(itemToUpdate.Name);
@@ -772,7 +797,13 @@ namespace Microsoft.DotNet.DarcLib
 
             // Update the global json too, even if there was an element in the props file, in case
             // it was listed in both
-            UpdateVersionGlobalJson(itemToUpdate, token);
+            UpdateVersionGlobalJson(itemToUpdate, globalJsonToken);
+
+            // If there is a .config/dotnet-tools.json file and this dependency exists there, update it too
+            if (dotNetToolJsonToken != null)
+            {
+                UpdateDotNetToolsManifest(itemToUpdate, dotNetToolJsonToken);
+            }
         }
 
         private void UpdateVersionGlobalJson(DependencyDetail itemToUpdate, JToken token)
@@ -791,6 +822,31 @@ namespace Microsoft.DotNet.DarcLib
             }
         }
 
+        private void UpdateDotNetToolsManifest(DependencyDetail itemToUpdate, JToken token)
+        {
+            string versionElementName = itemToUpdate.Name;
+
+            JObject toolsNode = (JObject) token["tools"];
+
+            foreach (JProperty property in toolsNode?.Children<JProperty>())
+            {
+                if (property.Name.Equals(versionElementName, StringComparison.OrdinalIgnoreCase))
+                {
+                    JValue versionEntry = (JValue) property.Value.SelectToken("version", false);
+
+                    if (versionEntry != null)
+                    {
+                        versionEntry.Value = itemToUpdate.Version;
+                    }
+                    else
+                    {
+                        _logger.LogError($"Entry found, but no version property to update, for dependency '{itemToUpdate.Name}'");
+                    }
+                    break;
+                }
+            }
+        }
+
         /// <summary>
         ///     Verify the local repository has correct and consistent dependency information.
         ///     Currently, this implementation checks:
@@ -806,6 +862,7 @@ namespace Microsoft.DotNet.DarcLib
             Task<IEnumerable<DependencyDetail>> dependencyDetails;
             Task<XmlDocument> versionProps;
             Task<JObject> globalJson;
+            Task<JObject> dotnetToolsJson;
 
             try
             {
@@ -837,6 +894,16 @@ namespace Microsoft.DotNet.DarcLib
                 return false;
             }
 
+            try
+            {
+                dotnetToolsJson = ReadDotNetToolsConfigJsonAsync(repo, branch);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, $"Failed to read {VersionFiles.DotnetToolsConfigJson}");
+                return false;
+            }
+
             List<Task<bool>> verificationTasks = new List<Task<bool>>()
             {
                 VerifyNoDuplicatedProperties(await versionProps),
@@ -855,7 +922,10 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         await utilizedVersionPropsDependencies,
                         await utilizedGlobalJsonDependencies
-                    })
+                    }),
+                VerifyMatchingDotNetToolsJson(
+                    await dependencyDetails,
+                    await dotnetToolsJson)
             };
 
             var results = await Task.WhenAll<bool>(verificationTasks);
@@ -1039,6 +1109,58 @@ namespace Microsoft.DotNet.DarcLib
                 }
             }
             utilizedDependencies = Task.FromResult(utilizedSet);
+            return Task.FromResult(result);
+        }
+
+        /// <summary>
+        ///     Verify that any dependency that exists in global.json and Version.Details.xml (e.g. Arcade SDK) 
+        ///     has matching version numbers.
+        /// </summary>
+        /// <param name="dependencies">Parsed dependencies in the repository.</param>
+        /// <param name="rootToken">Root global.json token.</param>
+        /// <returns></returns>
+        private Task<bool> VerifyMatchingDotNetToolsJson(
+            IEnumerable<DependencyDetail> dependencies,
+            JObject rootToken)
+        {
+            bool result = true;
+            // If there isn't a .config/dotnet-tools.json, skip checking
+            if (rootToken != null)
+            {
+                foreach (var dependency in dependencies)
+                {
+                    string versionedName = VersionFiles.CalculateDotnetToolsJsonElementName(dependency.Name);
+                    JToken dependencyNode = FindDependency(rootToken, versionedName);
+                    if (dependencyNode != null)
+                    {
+                        var specifiedVersion = dependencyNode.Children().FirstOrDefault()?["version"];
+
+                        if (specifiedVersion == null)
+                        {
+                            _logger.LogError($"The element 'version' in '{VersionFiles.DotnetToolsConfigJson}' was not found.'");
+                            result = false;
+                            continue;
+                        }
+
+                        JProperty property = (JProperty) dependencyNode;
+                        // Validate that the casing matches for consistency
+                        if (property.Name != versionedName)
+                        {
+                            _logger.LogError($"The dependency '{dependency.Name}' has a case mismatch between " +
+                                $"'{VersionFiles.GlobalJson}' and '{VersionFiles.VersionDetailsXml}' " +
+                                $"('{property.Name}' vs. '{versionedName}')");
+                            result = false;
+                        }
+                        // Validate version
+                        if (specifiedVersion.Value<string>() != dependency.Version)
+                        {
+                            _logger.LogError($"The dependency '{dependency.Name}' has a version mismatch between " +
+                                $"'{VersionFiles.GlobalJson}' and '{VersionFiles.VersionDetailsXml}' " +
+                                $"('{specifiedVersion.Value<string>()}' vs. '{dependency.Version}')");
+                        }
+                    }
+                }
+            }
             return Task.FromResult(result);
         }
 

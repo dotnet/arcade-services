@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "isRoot": true,
+  "tools": {
+    "Existing.Dependency": {
+      "version": "4.5.6",
+      "commands": [
+        "pizza",
+        "banana"
+      ]
+    },
+    "Another.DependencyToNotUpdate": {
+      "version": "0.1.2",
+      "commands": [
+        "frenchfries",
+        "milkshake"
+      ]
+    }
+  }
+}

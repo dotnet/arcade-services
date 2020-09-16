@@ -62,13 +62,14 @@ namespace Microsoft.DotNet.DarcLib
             string fullPath = Path.Combine(repoUri, relativeFilePath);
             if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
             {
-                if (Directory.Exists(Path.GetDirectoryName(Path.GetDirectoryName(fullPath))))
+                string parentTwoDirectoriesUp = Path.GetDirectoryName(Path.GetDirectoryName(fullPath));
+                if (Directory.Exists(parentTwoDirectoriesUp))
                 {
-                    throw new Exception("Pizza");
+                    throw new DependencyFileNotFoundException("Found parent-directory path ('{parentTwoDirectoriesUp}') but unable to find specified file ('{relativeFilePath}')");
                 }
                 else
                 {
-                    throw new Exception("Banana");
+                    throw new InvalidOperationException("Neither parent-directory path ('{parentTwoDirectoriesUp}') nor specified file ('{relativeFilePath}') found.");
                 }
             }
 
@@ -183,44 +184,47 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     foreach (GitFile file in filesToCommit)
                     {
-                        switch (file.Operation)
+                        if (file != null)
                         {
-                            case GitFileOperation.Add:
-                                string parentDirectory = Directory.GetParent(file.FilePath).FullName;
+                            switch (file.Operation)
+                            {
+                                case GitFileOperation.Add:
+                                    string parentDirectory = Directory.GetParent(file.FilePath).FullName;
 
-                                if (!Directory.Exists(parentDirectory))
-                                {
-                                    Directory.CreateDirectory(parentDirectory);
-                                }
-
-                                string fullPath = Path.Combine(repoUri, file.FilePath);
-                                using (var streamWriter = new StreamWriter(fullPath))
-                                {
-                                    string finalContent;
-                                    switch (file.ContentEncoding)
+                                    if (!Directory.Exists(parentDirectory))
                                     {
-                                        case ContentEncoding.Utf8:
-                                            finalContent = file.Content;
-                                            break;
-                                        case ContentEncoding.Base64:
-                                            byte[] bytes = Convert.FromBase64String(file.Content);
-                                            finalContent = Encoding.UTF8.GetString(bytes);
-                                            break;
-                                        default:
-                                            throw new DarcException($"Unknown file content encoding {file.ContentEncoding}");
+                                        Directory.CreateDirectory(parentDirectory);
                                     }
-                                    finalContent = NormalizeLineEndings(fullPath, finalContent);
-                                    await streamWriter.WriteAsync(finalContent);
 
-                                    LibGit2SharpHelpers.AddFileToIndex(localRepo, file, fullPath, _logger);
-                                }
-                                break;
-                            case GitFileOperation.Delete:
-                                if (File.Exists(file.FilePath))
-                                {
-                                    File.Delete(file.FilePath);
-                                }
-                                break;
+                                    string fullPath = Path.Combine(repoUri, file.FilePath);
+                                    using (var streamWriter = new StreamWriter(fullPath))
+                                    {
+                                        string finalContent;
+                                        switch (file.ContentEncoding)
+                                        {
+                                            case ContentEncoding.Utf8:
+                                                finalContent = file.Content;
+                                                break;
+                                            case ContentEncoding.Base64:
+                                                byte[] bytes = Convert.FromBase64String(file.Content);
+                                                finalContent = Encoding.UTF8.GetString(bytes);
+                                                break;
+                                            default:
+                                                throw new DarcException($"Unknown file content encoding {file.ContentEncoding}");
+                                        }
+                                        finalContent = NormalizeLineEndings(fullPath, finalContent);
+                                        await streamWriter.WriteAsync(finalContent);
+
+                                        LibGit2SharpHelpers.AddFileToIndex(localRepo, file, fullPath, _logger);
+                                    }
+                                    break;
+                                case GitFileOperation.Delete:
+                                    if (File.Exists(file.FilePath))
+                                    {
+                                        File.Delete(file.FilePath);
+                                    }
+                                    break;
+                            }
                         }
                     }
                 }
