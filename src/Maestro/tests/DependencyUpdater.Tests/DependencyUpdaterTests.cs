@@ -58,7 +58,6 @@ namespace DependencyUpdater.Tests
             services.AddOperationTracking(o => { });
             Provider = services.BuildServiceProvider();
             Scope = Provider.CreateScope();
-
             _context = new Lazy<BuildAssetRegistryContext>(GetContext);
         }
 

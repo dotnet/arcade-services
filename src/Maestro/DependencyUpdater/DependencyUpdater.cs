@@ -266,15 +266,15 @@ namespace DependencyUpdater
                         includeDisabledSubscriptions: false,
                         includedFrequencies: frequencies);
 
-                    if (flowGraph.Nodes.Count > 0)
-                    {
-                        // Get the nodes on the longest path and order them by path time so that the
-                        // contributing repos are in the right order
-                        List<DependencyFlowNode> longestBuildPathNodes = flowGraph.Nodes
-                            .Where(n => n.OnLongestBuildPath)
-                            .OrderByDescending(n => n.BestCasePathTime)
-                            .ToList();
+                    // Get the nodes on the longest path and order them by path time so that the
+                    // contributing repos are in the right order
+                    List<DependencyFlowNode> longestBuildPathNodes = flowGraph.Nodes
+                        .Where(n => n.OnLongestBuildPath)
+                        .OrderByDescending(n => n.BestCasePathTime)
+                        .ToList();
 
+                    if (longestBuildPathNodes.Any())
+                    {
                         LongestBuildPath lbp = new LongestBuildPath()
                         {
                             ChannelId = channel.Id,
@@ -286,6 +286,10 @@ namespace DependencyUpdater
 
                         Logger.LogInformation($"Will update {channel.Name} to best case time {lbp.BestCaseTimeInMinutes} and worst case time {lbp.WorstCaseTimeInMinutes}");
                         await Context.LongestBuildPaths.AddAsync(lbp);
+                    }
+                    else
+                    {
+                        Logger.LogInformation($"Will not update {channel.Name} longest build path because no nodes have {nameof(DependencyFlowNode.OnLongestBuildPath)} flag set. Total node count = {flowGraph.Nodes.Count}");
                     }
                 }
 
