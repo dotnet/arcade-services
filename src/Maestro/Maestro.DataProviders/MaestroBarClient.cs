@@ -131,7 +131,10 @@ namespace Maestro.DataProviders
                 other.Classification);
         }
 
-        public Task<DependencyFlowGraph> GetDependencyFlowGraph(
+        private const int EngLatestChannelId = 2;
+        private const int Eng3ChannelId = 344;
+
+        public async Task<DependencyFlowGraph> GetDependencyFlowGraphAsync(
             int channelId,
             int days,
             bool includeArcade,
@@ -139,7 +142,83 @@ namespace Maestro.DataProviders
             bool includeDisabledSubscriptions,
             IReadOnlyList<string> includedFrequencies)
         {
-            throw new NotImplementedException();
+            var engLatestChannel = await GetChannelAsync(EngLatestChannelId);
+            var eng3Channel = await GetChannelAsync(Eng3ChannelId);
+            var defaultChannels = (await GetDefaultChannelsAsync()).ToList();
+
+            if (includeArcade)
+            {
+                if (engLatestChannel != null)
+                {
+                    defaultChannels.Add(
+                        new DefaultChannel(0, "https://github.com/dotnet/arcade", true)
+                        {
+                            Branch = "master",
+                            Channel = engLatestChannel
+                        }
+                    );
+                }
+
+                if (eng3Channel != null)
+                {
+                    defaultChannels.Add(
+                        new DefaultChannel(0, "https://github.com/dotnet/arcade", true)
+                        {
+                            Branch = "release/3.x",
+                            Channel = eng3Channel
+                        }
+                    );
+                }
+            }
+
+            var subscriptions = (await GetSubscriptionsAsync()).ToList();
+
+            // Build, then prune out what we don't want to see if the user specified
+            // channels.
+            DependencyFlowGraph flowGraph = await DependencyFlowGraph.BuildAsync(
+                defaultChannels, 
+                subscriptions,
+                this,
+                days);
+
+            IEnumerable<string> frequencies
+                = includedFrequencies == default || includedFrequencies.Count() == 0
+                ? new string[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", }
+                : includedFrequencies;
+
+            Channel targetChannel = null;
+
+            if (channelId != 0)
+            {
+                targetChannel = await GetChannelAsync(channelId);
+            }
+
+            if (targetChannel != null)
+            {
+                flowGraph.PruneGraph(
+                    node => DependencyFlowGraph.IsInterestingNode(targetChannel.Name, node),
+                    edge => DependencyFlowGraph.IsInterestingEdge(edge, includeDisabledSubscriptions, frequencies));
+            }
+
+            if (includeBuildTimes)
+            {
+                var edgesWithLastBuild = flowGraph.Edges
+                    .Where(e => e.Subscription.LastAppliedBuild != null);
+
+                foreach (var edge in edgesWithLastBuild)
+                {
+                    edge.IsToolingOnly = !_context.IsProductDependency(
+                        edge.Subscription.LastAppliedBuild.Id,
+                        edge.To.Repository,
+                        edge.To.Branch);
+                }
+
+                flowGraph.MarkBackEdges();
+                flowGraph.CalculateLongestBuildPaths();
+                flowGraph.MarkLongestBuildPath();
+            }
+
+            return flowGraph;
         }
 
         public Task<Build> GetLatestBuildAsync(string repoUri, int channelId)

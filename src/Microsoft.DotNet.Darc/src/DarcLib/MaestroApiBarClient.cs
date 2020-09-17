@@ -150,7 +150,7 @@ namespace Microsoft.DotNet.DarcLib
             return _barClient.Channels.DeleteChannelAsync(id);
         }
 
-        public async Task<DependencyFlowGraph> GetDependencyFlowGraph(
+        public async Task<DependencyFlowGraph> GetDependencyFlowGraphAsync(
             int channelId,
             int days,
             bool includeArcade,

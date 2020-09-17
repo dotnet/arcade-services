@@ -189,7 +189,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         Task<IEnumerable<Channel>> GetChannelsAsync(string classification = null);
 
-        Task<DependencyFlowGraph> GetDependencyFlowGraph(
+        Task<DependencyFlowGraph> GetDependencyFlowGraphAsync(
             int channelId,
             int days,
             bool includeArcade,
