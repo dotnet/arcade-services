@@ -27,7 +27,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
         /// <param name="commit">Commit, tag, or branch to checkout the files at</param>
         /// <param name="options">Checkout options - mostly whether to force</param>
         /// <param name="log">Logger</param>
-        internal static void SafeCheckout(Repository repo, string commit, CheckoutOptions options, ILogger log)
+        public static void SafeCheckout(Repository repo, string commit, CheckoutOptions options, ILogger log)
         {
             try
             {
