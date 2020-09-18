@@ -14,7 +14,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Hosting.Internal;
 using Microsoft.Extensions.Internal;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.Services.Account;
 using Moq;
 using NUnit.Framework;
 using Commit = Maestro.Web.Api.v2020_02_20.Models.Commit;
