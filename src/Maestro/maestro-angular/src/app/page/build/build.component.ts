@@ -3,10 +3,10 @@ import { ActivatedRoute } from "@angular/router";
 import { map, shareReplay, switchMap, filter, distinctUntilChanged, tap, combineLatest } from 'rxjs/operators';
 import { isAfter, compareAsc, parseISO } from "date-fns";
 
-import { BuildGraph, Build, Subscription } from 'src/maestro-client/models';
+import { BuildGraph, Build, Subscription, Commit } from 'src/maestro-client/models';
 import { Observable, of, timer, OperatorFunction } from 'rxjs';
 import { BuildStatusService } from 'src/app/services/build-status.service';
-import { BuildStatus } from 'src/app/model/build-status';
+import { CompletedBuild } from 'src/app/model/build-status';
 import { statefulSwitchMap, StatefulResult, statefulPipe } from 'src/stateful';
 import { tapLog } from 'src/helpers';
 import { BuildService } from 'src/app/services/build.service';
@@ -49,8 +49,9 @@ export class BuildComponent implements OnInit, OnChanges {
 
   public graph$!: Observable<StatefulResult<BuildGraph>>;
   public build$!: Observable<StatefulResult<Build>>;
+  public commit$!: Observable<StatefulResult<Commit>>;
   public azDevBuildInfo$!: Observable<StatefulResult<AzDevBuildInfo>>;
-
+  public azDevOnGoingBuildUrl$!: Observable<StatefulResult<string | null>>;
   public includeToolsets: boolean = false;
   public showAllDependencies: boolean = false;
 
@@ -196,6 +197,13 @@ export class BuildComponent implements OnInit, OnChanges {
         }),
       ),
     );
+    this.commit$ = buildId$.pipe(
+      statefulPipe(
+        statefulSwitchMap((id) => {
+          return this.buildService.getCommit(id);
+        }),
+      ),
+    );
 
 
     const reloadInterval = 1000 * 60 * 5;
@@ -222,6 +230,29 @@ export class BuildComponent implements OnInit, OnChanges {
         }),
       ),
     );
+
+    this.azDevOnGoingBuildUrl$ = this.build$.pipe(
+      statefulPipe(
+        switchMap(b => {
+          return timer(0, reloadInterval).pipe(
+            map(() => b),
+          );
+        }),
+        tap(() => console.log("getting azdev info")),
+        statefulSwitchMap(b => this.getOngoingBuildUrl(b)),
+        filter(r => {
+          if (!(r instanceof Loading)) {
+            return true;
+          }
+          // emit only the first "Loading" instance so refreshes don't cause the loading spinner to show up
+          if (!emittedLoading)  {
+            emittedLoading = true;
+            return true;
+          }
+          return false;
+        }),
+      ),
+    )
 
     this.subscriptionsList$ = this.build$.pipe(
       statefulPipe(
@@ -286,17 +317,17 @@ export class BuildComponent implements OnInit, OnChanges {
     if (!build.azureDevOpsBranch) {
       throw new Error("azureDevOpsBranch undefined");
     }
-    return this.buildStatusService.getBranchStatus(build.azureDevOpsAccount, build.azureDevOpsProject, build.azureDevOpsBuildDefinitionId, build.azureDevOpsBranch, 5)
+    return this.buildStatusService.getBranchStatus(build.azureDevOpsAccount, build.azureDevOpsProject, build.azureDevOpsBuildDefinitionId, build.azureDevOpsBranch, 5, "completed")
       .pipe(
         map(builds => {
-          function isNewer(b: BuildStatus): boolean {
-            if (b.status === "inProgress") {
-              return false;
-            }
+          function isNewer(b: CompletedBuild): boolean {
             if (b.id === build.azureDevOpsBuildId) {
               return false;
             }
-            return isAfter(parseISO(b.finishTime), build.dateProduced);
+            return isAfter(parseISO(b.finishTime!), build.dateProduced);
+          }
+          if (!build.azureDevOpsAccount) {
+            throw new Error("azureDevOpsAccount undefined");
           }
 
           let isMostRecent: boolean;
@@ -311,7 +342,7 @@ export class BuildComponent implements OnInit, OnChanges {
             // Yes, it's "canceled".
             const recentFailure = newerBuilds.find(b => (b.result == "failed" || b.result == "canceled") );
             if (recentFailure) {
-              mostRecentFailureLink = this.getBuildLinkFromAzdo(build.azureDevOpsAccount as string, build.azureDevOpsProject as string, recentFailure.id);
+              mostRecentFailureLink = recentFailure._links.web.href;
             } else {
               mostRecentFailureLink = undefined;
             }
@@ -326,15 +357,31 @@ export class BuildComponent implements OnInit, OnChanges {
       );
   }
 
-  public getRepo(build: Build) {
-    return build.gitHubRepository || build.azureDevOpsRepository;
+  public getOngoingBuildUrl(build: Build): Observable<string | null> {
+    if (!build.azureDevOpsAccount) {
+      throw new Error("azureDevOpsAccount undefined");
+    }
+    if (!build.azureDevOpsProject) {
+      throw new Error("azureDevOpsProject undefined");
+    }
+    if (!build.azureDevOpsBuildDefinitionId) {
+      throw new Error("azureDevOpsBuildDefinitionId undefined");
+    }
+    if (!build.azureDevOpsBranch) {
+      throw new Error("azureDevOpsBranch undefined");
+    }
+    return this.buildStatusService.getBranchStatus(build.azureDevOpsAccount, build.azureDevOpsProject, build.azureDevOpsBuildDefinitionId, build.azureDevOpsBranch, 1, "inProgress")
+    .pipe(
+      map(builds => {
+        if (builds.count > 0) {
+          return builds.value[0]._links.web.href;
+        }
+        return null;
+      }),
+    );
   }
 
-  public getBuildLinkFromAzdo(account: string, project: string, buildId: number): string {
-    return `https://dev.azure.com` +
-      `/${account}` +
-      `/${project}` +
-      `/_build/results` +
-      `?view=results&buildId=${buildId}`;
+  public getRepo(build: Build) {
+    return build.gitHubRepository || build.azureDevOpsRepository;
   }
 }

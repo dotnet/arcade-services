@@ -33,12 +33,13 @@ namespace Maestro.Web.Controllers
         }
 
         [HttpGet("build/status/{account}/{project}/{definitionId}/{*branch}")]
-        public async Task<IActionResult> GetBuildStatus(string account, string project, int definitionId, string branch, int count)
+        public async Task<IActionResult> GetBuildStatus(string account, string project, int definitionId, string branch, int count, string status)
         {
             string token = await TokenProvider.GetTokenForAccount(account);
+            
             return await HttpContext.ProxyRequestAsync(
                 s_lazyClient.Value,
-                $"https://dev.azure.com/{account}/{project}/_apis/build/builds?api-version=5.0&definitions={definitionId}&branchName={branch}&statusFilter=completed&$top={count}",
+                $"https://dev.azure.com/{account}/{project}/_apis/build/builds?api-version=5.0&definitions={definitionId}&branchName={branch}&statusFilter={status}&$top={count}",
                 req =>
                 {
                     req.Headers.Authorization = new AuthenticationHeaderValue(

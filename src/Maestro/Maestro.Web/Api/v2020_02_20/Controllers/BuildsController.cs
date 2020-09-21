@@ -30,14 +30,17 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
     public class BuildsController : v2019_01_16.Controllers.BuildsController
     {
         private IBackgroundQueue Queue { get; }
+        private IRemoteFactory Factory { get; }
 
         public BuildsController(
             BuildAssetRegistryContext context,
             IBackgroundQueue queue,
-            ISystemClock clock)
+            ISystemClock clock,
+            IRemoteFactory factory)
             : base(context, clock)
         {
             Queue = queue;
+            Factory = factory;
         }
 
         /// <summary>
@@ -168,6 +171,22 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
             return Ok(new Models.Build(build));
         }
 
+        [HttpGet("{buildId}/commit")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The commit matching specified criteria")]
+        [ValidateModelState]
+        public async Task<IActionResult> GetCommit(int buildId)
+        {
+            Data.Models.Build build = await _context.Builds.Include(b => b.Incoherencies).FirstOrDefaultAsync(b => b.Id == buildId);
+            if (build == null)
+            {
+                return NotFound();
+            }
+
+            IRemote remote = await Factory.GetRemoteAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, null);
+            Microsoft.DotNet.DarcLib.Commit commit = await remote.GetCommitAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, build.Commit);
+            return Ok(new Models.Commit(commit.Author, commit.Sha, commit.Message));
+        }
+
         [ApiRemoved]
         public sealed override Task<IActionResult> Update(int buildId, [FromBody, Required] v2019_01_16.Models.BuildUpdate buildUpdate)
         {
@@ -180,7 +199,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         public virtual async Task<IActionResult> Update(int buildId, [FromBody, Required] BuildUpdate buildUpdate)
         {
             Data.Models.Build build = await _context.Builds.Where(b => b.Id == buildId).FirstOrDefaultAsync();
-
+            
             if (build == null)
             {
                 return NotFound();

@@ -765,6 +765,36 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Get the commits in a repo
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <returns>Return all the commits. Null if no commits were found.</returns>
+        public Task<Commit> GetCommitAsync(string repoUri, string sha)
+        {
+            (string owner, string repo) = ParseRepoUri(repoUri);
+            return GetCommitAsync(owner, repo, sha);
+        }
+
+        /// <summary>
+        ///     Get the commits in a repo 
+        /// </summary>
+        /// <param name="owner">Owner of repo</param>
+        /// <param name="repo">Repository name</param>
+        /// <param name="branch">Branch to retrieve the latest sha for</param>
+        /// <param name="sha">Sha of the commit</param>
+        /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
+        private async Task<Commit> GetCommitAsync(string owner, string repo, string sha)
+        {
+            Repository repository = await Client.Repository.Get(owner, repo);
+            Octokit.GitHubCommit commit = await Client.Repository.Commit.Get(repository.Id, sha);
+            if (commit == null)
+            {
+                return null;
+            }
+            return new Commit(commit.Author.Login, commit.Commit.Sha, commit.Commit.Message);
+        }
+
+        /// <summary>
         ///     Get the latest commit in a repo on the specific branch 
         /// </summary>
         /// <param name="owner">Owner of repo</param>
@@ -848,7 +878,7 @@ namespace Microsoft.DotNet.DarcLib
         private async Task<IList<Check>> GetChecksFromStatusApiAsync(string owner, string repo, string @ref)
         {
             var status = await Client.Repository.Status.GetCombined(owner, repo, @ref);
-
+            
             return status.Statuses.Select(
                     s =>
                     {
