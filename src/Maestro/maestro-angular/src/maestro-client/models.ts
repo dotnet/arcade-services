@@ -756,6 +756,79 @@ export class Build {
     }
 }
 
+export class Commit {
+    public constructor(
+        {
+            author,
+            sha,
+            message
+        } : {
+            author: string,
+            sha: string,
+            message: string
+        }
+        ) {
+            this._author = author;
+            this._sha = sha;
+            this._message = message;
+        }
+
+        private _author: string;
+
+        public get author(): string {
+            return this._author;
+        }
+    
+        public set author(__value: string) {
+            this._author = __value;
+        }
+
+        private _sha: string;
+
+        public get sha(): string {
+            return this._sha;
+        }
+    
+        public set sha(__value: string) {
+            this._sha = __value;
+        }
+
+        private _message: string;
+
+        public get message(): string {
+            return this._message;
+        }
+    
+        public set message(__value: string) {
+            this._message = __value;
+        }
+
+        public isValid(): boolean {
+            return (
+                this._author !== undefined &&
+                this._sha !== undefined &&
+                this._message !== undefined
+            );
+        }
+    
+        public static fromRawObject(value: any): Commit {
+            let result = new Commit({
+                author: value["author"] == null ? undefined : value["author"] as any,
+                sha: value["sha"] == null ? undefined : value["sha"] as any,
+                message: value["message"] == null ? undefined : value["message"] as any,
+            });
+            return result;
+        }
+    
+        public static toRawObject(value: Commit): any {
+            let result: any = {};
+            result["author"] = value._author;
+            result["sha"] = value._sha;
+            result["message"] = value._message.length > 20 ? value._message.slice(0,20) + "..." : value._message;
+            return result;
+        }
+}
+
 export class BuildData {
     public constructor(
         {

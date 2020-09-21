@@ -3,7 +3,7 @@ import { ActivatedRoute } from "@angular/router";
 import { map, shareReplay, switchMap, filter, distinctUntilChanged, tap, combineLatest } from 'rxjs/operators';
 import { isAfter, compareAsc, parseISO } from "date-fns";
 
-import { BuildGraph, Build, Subscription } from 'src/maestro-client/models';
+import { BuildGraph, Build, Subscription, Commit } from 'src/maestro-client/models';
 import { Observable, of, timer, OperatorFunction } from 'rxjs';
 import { BuildStatusService } from 'src/app/services/build-status.service';
 import { BuildStatus } from 'src/app/model/build-status';
@@ -49,6 +49,7 @@ export class BuildComponent implements OnInit, OnChanges {
 
   public graph$!: Observable<StatefulResult<BuildGraph>>;
   public build$!: Observable<StatefulResult<Build>>;
+  public commit$!: Observable<StatefulResult<Commit>>;
   public azDevBuildInfo$!: Observable<StatefulResult<AzDevBuildInfo>>;
 
   public includeToolsets: boolean = false;
@@ -193,6 +194,13 @@ export class BuildComponent implements OnInit, OnChanges {
       statefulPipe(
         statefulSwitchMap((id) => {
           return this.buildService.getBuildGraph(id);
+        }),
+      ),
+    );
+    this.commit$ = buildId$.pipe(
+      statefulPipe(
+        statefulSwitchMap((id) => {
+          return this.buildService.getCommit(id);
         }),
       ),
     );

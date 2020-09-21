@@ -69,16 +69,18 @@
               </a>
             </div>
           </div>
-          <h4>
-            {{getRepo(build)}} 
-            <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small>
-            <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.azureDevOpsBuildId)">{{build.azureDevOpsBuildId}} <fa-icon icon="clipboard"></fa-icon></button>
-          </h4>
-          <div>
-            <a class="btn btn-sm btn-primary" [href]="build | commitLink" target="_blank">{{build.commit}} <fa-icon
-                icon="external-link-alt"></fa-icon></a>
+          <ng-container *stateful="let commit from commit$; loadingTemplate: loadingData">
+            <h4>
+              {{getRepo(build)}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small>
+              <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.azureDevOpsBuildId)">{{build.azureDevOpsBuildId}} <fa-icon icon="clipboard"></fa-icon></button>
+            </h4>
+            <div>
+              <a class="btn btn-sm btn-primary" [href]="build | commitLink" target="_blank">
+              {{commit.message}} - {{build.commit.slice(0,7)}}
+              <fa-icon icon="external-link-alt"></fa-icon></a>
               <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.commit)"><fa-icon icon="clipboard"></fa-icon></button>
-          </div>
+            </div>
+         </ng-container>
           <div>
             <mc-relative-date [value]="build.dateProduced"></mc-relative-date>
           </div>
@@ -152,6 +154,7 @@
       <mc-asset-table [assets]="build.assets"></mc-asset-table>
     </div>
   </ng-container>
+  
   <div @toast class="toast show" *ngIf="toastVisible" role="alert" aria-live="assertive" aria-atomic="true"
     style="position: fixed; bottom: 0; right: 0; margin-bottom: 1rem; margin-right: 1.5rem;">
     <div class="toast-header">
