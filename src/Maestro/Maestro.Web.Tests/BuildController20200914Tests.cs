@@ -20,7 +20,7 @@ using Commit = Maestro.Web.Api.v2020_02_20.Models.Commit;
 
 namespace Maestro.Web.Tests
 {
-    [TestFixture, NonParallelizable]
+    [TestFixture]
     public class BuildController20200914Tests
     {
         static string repository = "FAKE-REPOSITORY";
@@ -113,22 +113,19 @@ namespace Maestro.Web.Tests
                 ServiceProvider provider = collection.BuildServiceProvider();
 
                 var controller = provider.GetRequiredService<BuildsController>();
-                var clock = (TestClock)provider.GetRequiredService<ISystemClock>();
 
-                return new TestData(provider, controller, clock);
+                return new TestData(provider, controller);
             }
         }
         private sealed class TestData : IDisposable
         {
             private readonly ServiceProvider _provider;
             public BuildsController Controller { get; }
-            public TestClock Clock { get; }
 
-            public TestData(ServiceProvider provider, BuildsController controller, TestClock clock)
+            public TestData(ServiceProvider provider, BuildsController controller)
             {
                 _provider = provider;
                 Controller = controller;
-                Clock = clock;
             }
 
             public void Dispose()

@@ -765,10 +765,11 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Get the commits in a repo
+        ///     Get the commit in a repo 
         /// </summary>
-        /// <param name="repoUri">Repository uri</param>
-        /// <returns>Return all the commits. Null if no commits were found.</returns>
+        /// <param name="repoUri">Repository URI</param>
+        /// <param name="sha">Sha of the commit</param>
+        /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
         public Task<Commit> GetCommitAsync(string repoUri, string sha)
         {
             (string owner, string repo) = ParseRepoUri(repoUri);
@@ -776,7 +777,7 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Get the commits in a repo 
+        ///     Get the commit in a repo 
         /// </summary>
         /// <param name="owner">Owner of repo</param>
         /// <param name="repo">Repository name</param>
