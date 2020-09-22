@@ -662,8 +662,9 @@ This pull request has not been merged because Maestro++ is waiting on the follow
                     HttpMethod.Get,
                     accountName,
                     projectName,
-                    $"_apis/git/repositories/{repoName}/commits/{sha}?api-version=6.0",
-                    _logger);
+                    $"_apis/git/repositories/{repoName}/commits/{sha}",
+                    _logger,
+                    versionOverride: "6.0");
                 JObject values = JObject.Parse(content.ToString());
                
                 return new Commit(values["author"]["name"].ToString(), sha, values["comment"].ToString());
