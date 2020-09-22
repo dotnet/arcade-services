@@ -219,7 +219,7 @@ export class ChannelGraphComponent implements OnChanges {
   @Input() public graph?: FlowGraph;
   @Input() public includeArcade?: boolean;
 
-  constructor(private ai: ApplicationInsightsService, private maestro: MaestroService) { }
+  constructor(private ai: ApplicationInsightsService) { }
 
   ngOnChanges(changes: SimpleChanges) {
     if(changes.includeArcade && (changes.includeArcade.previousValue != changes.includeArcade.currentValue))
@@ -233,7 +233,7 @@ export class ChannelGraphComponent implements OnChanges {
 
     var includeArcade: boolean = this.includeArcade ? this.includeArcade : false;
     if (this.graph) {
-      drawFlowGraph(this.graph, includeArcade, this.maestro);
+      drawFlowGraph(this.graph, includeArcade);
     }
   }
 }
