@@ -3,10 +3,8 @@ import { ApplicationInsightsService } from 'src/app/services/application-insight
 import { graphlib, render, layout } from 'dagre-d3';
 import { select } from 'd3';
 
-import { FlowGraph, FlowRef, FlowEdge, Subscription } from 'src/maestro-client/models';
+import { FlowGraph, FlowRef, FlowEdge } from 'src/maestro-client/models';
 import { RepoNamePipe } from 'src/app/pipes/repo-name.pipe';
-import { MaestroService } from 'src/maestro-client';
-import { map, tap } from 'rxjs/operators';
 
 function getRepositoryShortName(repo?: string): string {
   return repo && RepoNamePipe.prototype.transform(repo) || "unknown repository";
@@ -75,7 +73,7 @@ function getEdgeDescription(edge:FlowEdge, graph:FlowGraph): string {
   return description;
 }
 
-function drawFlowGraph(graph: FlowGraph, includeArcade: boolean, maestro: MaestroService) {
+function drawFlowGraph(graph: FlowGraph, includeArcade: boolean) {
   var g = new graphlib.Graph().setGraph({
     ranksep: 25,
     ranker: 'tight-tree'

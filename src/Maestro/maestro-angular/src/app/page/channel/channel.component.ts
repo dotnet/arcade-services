@@ -15,7 +15,7 @@ import { MaestroService } from 'src/maestro-client/maestro';
 })
 export class ChannelComponent implements OnInit {
 
-  constructor(private route: ActivatedRoute, private channelService: ChannelService, private maestroService: MaestroService) { }
+  constructor(private route: ActivatedRoute, private channelService: ChannelService) { }
 
   public graph$!: Observable<StatefulResult<FlowGraph>>;
   public channel$?: Observable<StatefulResult<Channel>>;
