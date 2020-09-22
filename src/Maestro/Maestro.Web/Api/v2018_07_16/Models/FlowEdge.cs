@@ -15,10 +15,11 @@ namespace Maestro.Web.Api.v2018_07_16.Models
             FromId = from;
         }
 
-        public FlowEdge (
+        public FlowEdge(
             string to,
             string from,
             Guid subscriptionId,
+            string channelName,
             bool onLongestBuildPath,
             bool isToolingOnly,
             bool? partOfCycle,
@@ -27,6 +28,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
             ToId = to;
             FromId = from;
             SubscriptionId = subscriptionId;
+            ChannelName = channelName;
             OnLongestBuildPath = onLongestBuildPath;
             IsToolingOnly = isToolingOnly;
             PartOfCycle = partOfCycle;
@@ -39,6 +41,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
                 other.To.Id, 
                 other.From.Id,
                 other.Subscription.Id,
+                other.Subscription.Channel.Name,
                 other.OnLongestBuildPath, 
                 other.IsToolingOnly,
                 other.PartOfCycle,
@@ -48,6 +51,7 @@ namespace Maestro.Web.Api.v2018_07_16.Models
         public string ToId { get; }
         public string FromId { get; }
         public Guid SubscriptionId { get; }
+        public string ChannelName { get; }
         public bool OnLongestBuildPath { get; }
         public bool IsToolingOnly { get; }
         public bool? PartOfCycle { get; }

@@ -1769,15 +1769,18 @@ export class FlowEdge {
             toId,
             fromId,
             onLongestBuildPath,
+            channelName
         }: {
             toId?: string,
             fromId?: string,
             onLongestBuildPath: boolean,
+            channelName?: string,
         }
     ) {
         this._toId = toId;
         this._fromId = fromId;
         this._onLongestBuildPath = onLongestBuildPath;
+        this._channelName = channelName;
     }
 
     private _toId?: string;
@@ -1802,6 +1805,12 @@ export class FlowEdge {
         this._onLongestBuildPath = __value;
     }
     
+    private _channelName?: string;
+
+    public get channelName(): string | undefined {
+        return this._channelName;
+    }
+
     public isValid(): boolean {
         return (
             this._onLongestBuildPath !== undefined
@@ -1809,10 +1818,12 @@ export class FlowEdge {
     }
 
     public static fromRawObject(value: any): FlowEdge {
+        console.log("value ", value);
         let result = new FlowEdge({
             toId: value["toId"] == null ? undefined : value["toId"] as any,
             fromId: value["fromId"] == null ? undefined : value["fromId"] as any,
             onLongestBuildPath: value["onLongestBuildPath"] == null ? undefined : value["onLongestBuildPath"] as any,
+            channelName: value["channelName"] == null ? undefined : value["channelName"] as any,
         });
         return result;
     }
@@ -1824,6 +1835,9 @@ export class FlowEdge {
         }
         if (value._fromId) {
             result["fromId"] = value._fromId;
+        }
+        if (value._channelName) {
+            result["channelName"] = value._channelName;
         }
         result["onLongestBuildPath"] = value._onLongestBuildPath;
         return result;
@@ -1873,6 +1887,7 @@ export class FlowGraph {
 
     public static toRawObject(value: FlowGraph): any {
         let result: any = {};
+        console.log("GRAPH RESULT: " + result);
         result["flowRefs"] = value._flowRefs.map((e: any) => FlowRef.toRawObject(e));
         result["flowEdges"] = value._flowEdges.map((e: any) => FlowEdge.toRawObject(e));
         return result;
