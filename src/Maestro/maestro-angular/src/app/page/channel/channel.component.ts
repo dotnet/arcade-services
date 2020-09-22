@@ -6,7 +6,6 @@ import { FlowGraph, Channel} from 'src/maestro-client/models';
 import { Observable, of, timer, OperatorFunction } from 'rxjs';
 import { statefulSwitchMap, StatefulResult, statefulPipe } from 'src/stateful';
 import { ChannelService} from 'src/app/services/channel.service';
-import { MaestroService } from 'src/maestro-client/maestro';
 
 @Component({
   selector: 'mc-channel',
