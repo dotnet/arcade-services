@@ -1818,7 +1818,6 @@ export class FlowEdge {
     }
 
     public static fromRawObject(value: any): FlowEdge {
-        console.log("value ", value);
         let result = new FlowEdge({
             toId: value["toId"] == null ? undefined : value["toId"] as any,
             fromId: value["fromId"] == null ? undefined : value["fromId"] as any,
@@ -1887,7 +1886,6 @@ export class FlowGraph {
 
     public static toRawObject(value: FlowGraph): any {
         let result: any = {};
-        console.log("GRAPH RESULT: " + result);
         result["flowRefs"] = value._flowRefs.map((e: any) => FlowRef.toRawObject(e));
         result["flowEdges"] = value._flowEdges.map((e: any) => FlowEdge.toRawObject(e));
         return result;
