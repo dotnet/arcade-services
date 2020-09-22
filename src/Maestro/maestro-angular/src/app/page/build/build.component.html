@@ -13,7 +13,7 @@
         <h4>
           {{getRepo(build)}} 
           <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small>
-          <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.azureDevOpsBuildId)">{{build.azureDevOpsBuildId}} <fa-icon icon="clipboard"></fa-icon></button>
+          <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.id)">{{build.id}} <fa-icon icon="clipboard"></fa-icon></button>
         </h4>
         <div>
           <span>Loading build information from Azure Pipelines</span>
@@ -31,7 +31,7 @@
         <h4>
           {{getRepo(build)}} 
           <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small>
-          <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.azureDevOpsBuildId)">{{build.azureDevOpsBuildId}} <fa-icon icon="clipboard"></fa-icon></button>
+          <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.id)">{{build.id}} <fa-icon icon="clipboard"></fa-icon></button>
         </h4>
         <div>
           <span class="text-warning" *ngIf="!haveAzDevInfo(build)">
@@ -82,7 +82,7 @@
           <ng-container *stateful="let commit from commit$; loadingTemplate: loadingData">
             <h4>
               {{getRepo(build)}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small>
-              <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.azureDevOpsBuildId)">{{build.azureDevOpsBuildId}} <fa-icon icon="clipboard"></fa-icon></button>
+              <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.id)">{{build.id}} <fa-icon icon="clipboard"></fa-icon></button>
             </h4>
             <div>
               <a class="btn btn-sm btn-primary" [href]="build | commitLink" target="_blank">

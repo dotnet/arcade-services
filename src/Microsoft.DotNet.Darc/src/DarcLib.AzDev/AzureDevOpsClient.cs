@@ -662,18 +662,12 @@ This pull request has not been merged because Maestro++ is waiting on the follow
                     HttpMethod.Get,
                     accountName,
                     projectName,
-                    $"_apis/git/repositories/{repoName}/commits",
-                    _logger);
-                JArray values = JArray.Parse(content["value"].ToString());
-                List<Commit> commits = new List<Commit>();
-                foreach(JToken commit in values)
-                {
-                    if (commit["sha"].Value<string>().CompareTo(sha) == 0)
-                    {
-                        return new Commit(commit["commit"]["author"].Value<string>(), commit["sha"].Value<string>(), commit["commit"]["message"].Value<string>());
-                    }
-                }
-                return null;
+                    $"_apis/git/repositories/{repoName}/commits/{sha}",
+                    _logger,
+                    versionOverride: "6.0");
+                JObject values = JObject.Parse(content.ToString());
+               
+                return new Commit(values["author"]["name"].ToString(), sha, values["comment"].ToString());
             }
             catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
             {
