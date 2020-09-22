@@ -636,9 +636,9 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         }
 
         /// <summary>
-        ///     Get the commits in a repo
+        ///     Get a commit in a repo 
         /// </summary>
-        /// <param name="repoUri">Repository uri</param>
+        /// <param name="repoUri">Repository URI</param>
         /// <param name="sha">Sha of the commit</param>
         /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
         public Task<Commit> GetCommitAsync(string repoUri, string sha)
@@ -648,11 +648,10 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         }
 
         /// <summary>
-        ///     Get the commits in a repo 
+        ///     Get a commit in a repo 
         /// </summary>
-        /// <param name="accountName">Azure DevOps account</param>
-        /// <param name="projectName">Azure DevOps project</param>
-        /// <param name="repoName">Azure DevOps repo</param>
+        /// <param name="owner">Owner of repo</param>
+        /// <param name="repo">Repository name</param>
         /// <param name="sha">Sha of the commit</param>
         /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
         private async Task<Commit> GetCommitAsync(string accountName, string projectName, string repoName, string sha)

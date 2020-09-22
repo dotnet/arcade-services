@@ -765,7 +765,7 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Get the commit in a repo 
+        ///     Get a commit in a repo 
         /// </summary>
         /// <param name="repoUri">Repository URI</param>
         /// <param name="sha">Sha of the commit</param>
@@ -777,11 +777,10 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Get the commit in a repo 
+        ///     Get a commit in a repo 
         /// </summary>
         /// <param name="owner">Owner of repo</param>
         /// <param name="repo">Repository name</param>
-        /// <param name="branch">Branch to retrieve the latest sha for</param>
         /// <param name="sha">Sha of the commit</param>
         /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
         private async Task<Commit> GetCommitAsync(string owner, string repo, string sha)
