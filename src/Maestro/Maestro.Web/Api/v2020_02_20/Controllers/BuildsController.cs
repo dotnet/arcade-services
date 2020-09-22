@@ -172,7 +172,7 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         }
 
         [HttpGet("{buildId}/commit")]
-        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Build), Description = "The commit matching specified criteria")]
+        [SwaggerApiResponse(HttpStatusCode.OK, Type = typeof(Models.Commit), Description = "The commit matching specified criteria")]
         [ValidateModelState]
         public async Task<IActionResult> GetCommit(int buildId)
         {
