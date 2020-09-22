@@ -182,6 +182,14 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 return NotFound();
             }
 
+            build = new Data.Models.Build();
+            build.GitHubRepository = "";
+            build.AzureDevOpsRepository = "https://dev.azure.com/dnceng/internal/_git/dotnet-wpf-int";
+            build.AzureDevOpsBuildNumber = "20200920.1";
+            build.AzureDevOpsBranch = "refs/heads/release/5.0-rc2";
+            build.AzureDevOpsBuildDefinitionId = 280;
+            build.Commit = "1045306aa2ccc7a08f14b71cbcaa49f40427913f";
+            build.Id = 19617;
             IRemote remote = await Factory.GetRemoteAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, null);
             Microsoft.DotNet.DarcLib.Commit commit = await remote.GetCommitAsync(build.AzureDevOpsRepository ?? build.GitHubRepository, build.Commit);
             return Ok(new Models.Commit(commit.Author, commit.Sha, commit.Message));
