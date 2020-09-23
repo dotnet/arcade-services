@@ -482,5 +482,29 @@ namespace Microsoft.DotNet.Darc.Tests
             VersionFiles.VersionPropsAlternateVersionElementSuffix.EndsWith(
                          VersionFiles.VersionPropsVersionElementSuffix).Should().BeFalse();
         }
+
+        /// <summary>
+        /// Update a dependency which also has an entry in .config/dotnet-tools.json
+        /// This is case-insensitive and note that all previous dependency update tests here 
+        /// comprise the "if there's no dotnet-tools.json" test case.
+        /// </summary>
+        [Test]
+        public async Task UpdateToolsJsonFile1()
+        {
+            await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateToolsJsonFile1), async driver =>
+            {
+                await driver.UpdateDependenciesAsync(
+                    new List<DependencyDetail> {
+                        new DependencyDetail
+                        {
+                            Commit = "4",
+                            Name = "Existing.Dependency",
+                            RepoUri = "https://foo.com/foo/bar",
+                            Version = "4.5.6"
+                        }
+                    });
+                await driver.VerifyAsync();
+            });
+        }
     }
 }

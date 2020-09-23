@@ -7,6 +7,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -73,6 +74,7 @@ namespace Microsoft.DotNet.DarcLib
 
                 foreach (GitFile file in filesToCommit)
                 {
+                    Debug.Assert(file != null, "Passed in a null GitFile in filesToCommit");
                     string filePath = Path.Combine(clonedRepo, file.FilePath);
 
                     if (file.Operation == GitFileOperation.Add)
