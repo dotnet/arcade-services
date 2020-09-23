@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -184,47 +185,45 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     foreach (GitFile file in filesToCommit)
                     {
-                        if (file != null)
+                        Debug.Assert(file != null, "Passed in a null GitFile in filesToCommit");
+                        switch (file.Operation)
                         {
-                            switch (file.Operation)
-                            {
-                                case GitFileOperation.Add:
-                                    string parentDirectory = Directory.GetParent(file.FilePath).FullName;
+                            case GitFileOperation.Add:
+                                string parentDirectory = Directory.GetParent(file.FilePath).FullName;
 
-                                    if (!Directory.Exists(parentDirectory))
-                                    {
-                                        Directory.CreateDirectory(parentDirectory);
-                                    }
+                                if (!Directory.Exists(parentDirectory))
+                                {
+                                    Directory.CreateDirectory(parentDirectory);
+                                }
 
-                                    string fullPath = Path.Combine(repoUri, file.FilePath);
-                                    using (var streamWriter = new StreamWriter(fullPath))
+                                string fullPath = Path.Combine(repoUri, file.FilePath);
+                                using (var streamWriter = new StreamWriter(fullPath))
+                                {
+                                    string finalContent;
+                                    switch (file.ContentEncoding)
                                     {
-                                        string finalContent;
-                                        switch (file.ContentEncoding)
-                                        {
-                                            case ContentEncoding.Utf8:
-                                                finalContent = file.Content;
-                                                break;
-                                            case ContentEncoding.Base64:
-                                                byte[] bytes = Convert.FromBase64String(file.Content);
-                                                finalContent = Encoding.UTF8.GetString(bytes);
-                                                break;
-                                            default:
-                                                throw new DarcException($"Unknown file content encoding {file.ContentEncoding}");
-                                        }
-                                        finalContent = NormalizeLineEndings(fullPath, finalContent);
-                                        await streamWriter.WriteAsync(finalContent);
+                                        case ContentEncoding.Utf8:
+                                            finalContent = file.Content;
+                                            break;
+                                        case ContentEncoding.Base64:
+                                            byte[] bytes = Convert.FromBase64String(file.Content);
+                                            finalContent = Encoding.UTF8.GetString(bytes);
+                                            break;
+                                        default:
+                                            throw new DarcException($"Unknown file content encoding {file.ContentEncoding}");
+                                    }
+                                    finalContent = NormalizeLineEndings(fullPath, finalContent);
+                                    await streamWriter.WriteAsync(finalContent);
 
-                                        LibGit2SharpHelpers.AddFileToIndex(localRepo, file, fullPath, _logger);
-                                    }
-                                    break;
-                                case GitFileOperation.Delete:
-                                    if (File.Exists(file.FilePath))
-                                    {
-                                        File.Delete(file.FilePath);
-                                    }
-                                    break;
-                            }
+                                    LibGit2SharpHelpers.AddFileToIndex(localRepo, file, fullPath, _logger);
+                                }
+                                break;
+                            case GitFileOperation.Delete:
+                                if (File.Exists(file.FilePath))
+                                {
+                                    File.Delete(file.FilePath);
+                                }
+                                break;
                         }
                     }
                 }

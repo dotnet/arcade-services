@@ -25,9 +25,13 @@ namespace Microsoft.DotNet.DarcLib
                 VersionDetailsXml,
                 VersionProps,
                 GlobalJson,
-                NugetConfig,
-                DotNetToolsJson
+                NugetConfig
             };
+
+            if (DotNetToolsJson != null)
+            {
+                gitHubCommitsMap.Add(DotNetToolsJson);
+            }
 
             return gitHubCommitsMap;
         }

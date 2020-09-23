@@ -842,7 +842,7 @@ namespace Microsoft.DotNet.DarcLib
                     {
                         _logger.LogError($"Entry found, but no version property to update, for dependency '{itemToUpdate.Name}'");
                     }
-                    break;
+                    return;
                 }
             }
         }
@@ -1113,8 +1113,8 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Verify that any dependency that exists in global.json and Version.Details.xml (e.g. Arcade SDK) 
-        ///     has matching version numbers.
+        ///     Verify that any dependency details we're flowing have a matching version number 
+        ///     in the .config/dotnet-tools.json file (but only if it exists)
         /// </summary>
         /// <param name="dependencies">Parsed dependencies in the repository.</param>
         /// <param name="rootToken">Root global.json token.</param>

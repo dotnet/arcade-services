@@ -1105,7 +1105,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
-            return this.CommitFilesAsync(
+            return CommitFilesAsync(
                 filesToCommit, 
                 repoUri, 
                 branch, 
