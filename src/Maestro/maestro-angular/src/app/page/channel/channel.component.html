@@ -12,7 +12,9 @@
   </span>
   <div class="container-fluid" style="height: 100%;">
     <ng-container *stateful="let graph from graph$">
-      <mc-channel-graph [graph]="graph" [includeArcade]="includeArcade"></mc-channel-graph>
+      <ng-container *stateful="let channel from channel$">
+        <mc-channel-graph [graph]="graph" [includeArcade]="includeArcade" [channel]="channel"></mc-channel-graph>
+      </ng-container>
     </ng-container>
   </div>
 </div>
