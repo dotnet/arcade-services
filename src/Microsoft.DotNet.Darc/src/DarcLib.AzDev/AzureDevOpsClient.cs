@@ -782,7 +782,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         /// </summary>
         /// <param name="pullRequestUrl">Uri of pull request</param>
         /// <returns>List of reviews.</returns>
-        public async Task<IList<Review>> GetPullRequestReviewsAsync(string pullRequestUrl)
+        public async Task<IList<Review>> GetLatestPullRequestReviewsAsync(string pullRequestUrl)
         {
             (string accountName, string projectName, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
