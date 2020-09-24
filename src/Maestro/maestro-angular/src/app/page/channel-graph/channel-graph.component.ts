@@ -126,7 +126,8 @@ function drawFlowGraph(graph: FlowGraph, includeArcade: boolean, channel: Channe
       }
 
       let edgeProperties:any = { arrowheadClass: 'arrowhead',
-                    description: getEdgeDescription(edge, graph), label: channel.name != edge.channelName ? edge.channelName : ""};
+                    description: getEdgeDescription(edge, graph),
+                    label: channel.name != edge.channelName ? edge.channelName : ""};
 
       if (edge.onLongestBuildPath) {
         edgeProperties.style = "stroke: #FD625E; stroke-width: 3px; stroke-dasharray: 5,5;";
