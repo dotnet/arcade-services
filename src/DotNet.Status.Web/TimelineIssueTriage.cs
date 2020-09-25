@@ -21,7 +21,8 @@ namespace DotNet.Status.Web
     public class TimelineIssueTriage : ITimelineIssueTriage
     {
         private static readonly string _docLink = "[Documentation](https://github.com/dotnet/arcade-services/blob/master/docs/BuildFailuresIssueTriage.md)";
-        private static readonly string _labelName = "darcbot";
+        private static readonly string _markingLabelName = "darcbot";
+        private static readonly IList<string> _issueLabels = new[] { "Detected By - Customer", "First Responder", "Build Failed" };
 
         private readonly ILogger<TimelineIssueTriage> _logger;
         private readonly IGitHubApplicationClientFactory _gitHubApplicationClientFactory;
@@ -71,8 +72,6 @@ namespace DotNet.Status.Web
 
             IGitHubClient gitHubClient = await _gitHubApplicationClientFactory.CreateGitHubClientAsync(issuePayload.Repository.Owner.Login, issuePayload.Repository.Name);
 
-            string updatedCategory = null;
-
             if (issuePayload.Action == "opened" || issuePayload.Action == "reopened")
             {
                 // First, look for duplicate issues that are open
@@ -83,11 +82,11 @@ namespace DotNet.Status.Web
                     SortProperty = IssueSort.Created,
                     SortDirection = SortDirection.Ascending,
                 };
-                openIssues.Labels.Add(_labelName);
+                openIssues.Labels.Add(_markingLabelName);
 
                 _logger.LogInformation("Getting open issues");
                 var existingTriageIssues = await gitHubClient.Issue.GetAllForRepository(issuePayload.Repository.Id, openIssues);
-                _logger.LogInformation($"There are {existingTriageIssues.Count} open issues with the '{_labelName}' label");
+                _logger.LogInformation($"There are {existingTriageIssues.Count} open issues with the '{_markingLabelName}' label");
                 foreach (var existingIssue in existingTriageIssues)
                 {
                     if (existingIssue.Number != issuePayload.Issue.Number)
@@ -109,29 +108,42 @@ namespace DotNet.Status.Web
 
                 // No duplicates, add label and move issue to triage
                 var issue = await gitHubClient.Issue.Get(issuePayload.Repository.Id, issuePayload.Issue.Number);
-                if (!issue.Labels.Any(l => l.Name == _labelName))
+                if (!issue.Labels.Any(l => l.Name == _markingLabelName))
                 {
                     var update = issue.ToUpdate();
-                    update.AddLabel(_labelName);
+                    update.AddLabel(_markingLabelName);
+                    foreach(var label in _issueLabels)
+                    {
+                        if (issue.Labels.All(l => l.Name != label))
+                        {
+                            update.AddLabel(label);
+                        }
+                    }
                     await gitHubClient.Issue.Update(issuePayload.Repository.Id, issuePayload.Issue.Number, update);
 
                     await AddToZenHubTopic(issuePayload, gitHubClient, issue);
                 }
-
-                updatedCategory = "InTriage";
             }
 
             if (issuePayload.Action == "closed")
             {
                 IReadOnlyList<IssueComment> comments = gitHubClient.Issue.Comment.GetAllForIssue(issuePayload.Repository.Id, issuePayload.Issue.Number).Result;
 
+                // find the latest comment with category command
+                string updatedCategory = null;
                 foreach (var comment in comments)
                 {
-                    // Look for category information in comment
                     string category = GetTriageIssueProperty("category", comment.Body);
                     if (!string.IsNullOrEmpty(category))
                     {
                         updatedCategory = category;
+                    }
+                }
+                if (updatedCategory != null)
+                {
+                    foreach (var triageItem in triageItems)
+                    {
+                        triageItem.UpdatedCategory = updatedCategory;
                     }
                 }
             }
@@ -139,11 +151,6 @@ namespace DotNet.Status.Web
             foreach (var triageItem in triageItems)
             {
                 triageItem.Url = issuePayload.Issue.HtmlUrl;
-                if (updatedCategory != null)
-                {
-                    triageItem.UpdatedCategory = updatedCategory;
-                    triageItem.Url = issuePayload.Issue.HtmlUrl;
-                }
                 _logger.LogInformation($"buildId: {triageItem.BuildId}, recordId: {triageItem.RecordId}, index: {triageItem.Index}, category: {triageItem.UpdatedCategory}, url: {triageItem.Url}");
             }
 
