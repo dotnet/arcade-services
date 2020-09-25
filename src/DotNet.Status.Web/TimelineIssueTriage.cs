@@ -114,7 +114,10 @@ namespace DotNet.Status.Web
                     update.AddLabel(_markingLabelName);
                     foreach(var label in _issueLabels)
                     {
-                        update.AddLabel(label);
+                        if (issue.Labels.All(l => l.Name != label))
+                        {
+                            update.AddLabel(label);
+                        }
                     }
                     await gitHubClient.Issue.Update(issuePayload.Repository.Id, issuePayload.Issue.Number, update);
 
