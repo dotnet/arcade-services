@@ -13,6 +13,34 @@ namespace DotNet.Status.Web.Tests
     {
         private TimelineIssueTriage.TimelineIssueTriageInternal _sut => new TimelineIssueTriage.TimelineIssueTriageInternal();
 
+        [TestCase("triage-items-with-multi-builds", "triage-items-with-multi-builds-intersects", "triage-items-with-multi-builds-updated")]
+        [TestCase("triage-items-with-multi-builds", "triage-items-with-multi-builds-subset", "triage-items-with-multi-builds")]
+        [TestCase("triage-items-with-multi-builds", "triage-items-with-multi-builds", "triage-items-with-multi-builds")]
+        [TestCase("triage-items-with-multi-builds-mangled", "triage-items-with-multi-builds-intersects", "triage-items-with-multi-builds-mangled-updated")]
+        public void UpdateExistingWithAdditionalBuildsFromOpened(string existing, string opened, string expected)
+        {
+            string bodyExisting = GetTestPayload($"{existing}.body.txt");
+            string bodyOpened = GetTestPayload($"{opened}.body.txt");
+            string bodyExpected = GetTestPayload($"{expected}.body.txt");
+
+            var updatedBody = _sut.UpdateExistingIssueBody(_sut.GetTriageItems(bodyOpened), bodyOpened, _sut.GetTriageItems(bodyExisting), bodyExisting);
+
+            updatedBody.Should().NotBeNullOrEmpty();
+            updatedBody.Should().Be(bodyExpected);
+        }
+
+        [TestCase("triage-items-with-multi-builds", "triage-items-with-multi-builds-intersects", true)]
+        [TestCase("triage-items-with-multi-builds", "triage-items-with-multi-builds-not-intersects", false)]
+        public void CheckIfExistingShallBeUpdated(string fileNameExisting, string fileNameOpened, bool expected)
+        {
+            string bodyExisting = GetTestPayload($"{fileNameExisting}.body.txt");
+            string bodyOpened = GetTestPayload($"{fileNameOpened}.body.txt");
+
+            var shallBeUpdated = _sut.ShallExistingIssueBeUpdated(_sut.GetTriageItems(bodyOpened), _sut.GetTriageItems(bodyExisting));
+
+            shallBeUpdated.Should().Be(expected);
+        }
+
         [TestCase("")]
         [TestCase("[]")]
         [TestCase("[Movies=aha]")]

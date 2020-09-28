@@ -94,7 +94,8 @@ namespace DotNet.Status.Web
                         var existingIssueItems = GetTriageItems(existingIssue.Body);
                         if (IsDuplicate(triageItems, existingIssueItems))
                         {
-                            await gitHubClient.Issue.Comment.Create(issuePayload.Repository.Id, issuePayload.Issue.Number, $"Duplicate issue was detected.\n\nClosing as duplicate of {existingIssue.HtmlUrl}\n\nFor more information see {_docLink}");
+                            await gitHubClient.Issue.Comment.Create(issuePayload.Repository.Id, issuePayload.Issue.Number, 
+                                $"Duplicate issue was detected.\n\nClosing as duplicate of {existingIssue.HtmlUrl}\n\nFor more information see {_docLink}");
                             var issueUpdate = new IssueUpdate
                             {
                                 State = ItemState.Closed,
@@ -103,10 +104,42 @@ namespace DotNet.Status.Web
 
                             return;
                         }
+                        else if (ShallExistingIssueBeUpdated(triageItems, existingIssueItems))
+                        {
+                            // update existing issue body
+                            var existintIssueUpdate = new IssueUpdate
+                            {
+                                Body = UpdateExistingIssueBody(issuePayload, triageItems, existingIssue, existingIssueItems),
+                            };
+                            await gitHubClient.Issue.Update(issuePayload.Repository.Id, existingIssue.Number, existintIssueUpdate);
+
+                            // insert TimelineIssuesTriage with existing issue URL
+                            var toBeUpdatedTriageItems = triageItems.Except(existingIssueItems).ToList();
+                            foreach (var triageItem in toBeUpdatedTriageItems)
+                            {
+                                triageItem.Url = existingIssue.HtmlUrl;
+                                _logger.LogInformation($"buildId: {triageItem.BuildId}, recordId: {triageItem.RecordId}, index: {triageItem.Index}, category: {triageItem.UpdatedCategory}, url: {triageItem.Url}");
+                            }
+                            await IngestTriageItemsIntoKusto(toBeUpdatedTriageItems);
+
+                            await gitHubClient.Issue.Comment.Create(issuePayload.Repository.Id, existingIssue.Number,
+                                $"Bot has updated the issue and 'TimelineIssuesTriage' database by data from issue {issuePayload.Issue.HtmlUrl}.\n**PowerBI reports may take up to 24 hours to refresh**\n\nSee {_docLink} for more information.");
+
+                            // add comment to opened issue and close it
+                            await gitHubClient.Issue.Comment.Create(issuePayload.Repository.Id, issuePayload.Issue.Number,
+                                $"Existing issue was detected and updated with this issue builds.\n\nClosing as moved into {existingIssue.HtmlUrl}\n\nFor more information see {_docLink}");
+                            var issueUpdate = new IssueUpdate
+                            {
+                                State = ItemState.Closed,
+                            };
+                            await gitHubClient.Issue.Update(issuePayload.Repository.Id, issuePayload.Issue.Number, existintIssueUpdate);
+
+                            return;
+                        }
                     }
                 }
 
-                // No duplicates, add label and move issue to triage
+                // No duplicates, or existing issue; add label and move issue to triage
                 var issue = await gitHubClient.Issue.Get(issuePayload.Repository.Id, issuePayload.Issue.Number);
                 if (!issue.Labels.Any(l => l.Name == _markingLabelName))
                 {
@@ -161,6 +194,11 @@ namespace DotNet.Status.Web
             return;
         }
 
+        private string UpdateExistingIssueBody(IssuesHookData issuePayload, IList<TriageItem> triageItems, Issue existingIssue, IList<TriageItem> existingIssueItems)
+        {
+            return _internal.UpdateExistingIssueBody(triageItems, issuePayload.Issue.Body, existingIssueItems, existingIssue.Body);
+        }
+
         private async Task AddToZenHubTopic(IssuesHookData issuePayload, IGitHubClient gitHubClient, Issue issue)
         {
             // add into notification epic -> currently 8/2020 it's First Response epic
@@ -205,6 +243,11 @@ namespace DotNet.Status.Web
         private bool IsDuplicate(IList<TriageItem> triageItems, IList<TriageItem> existingIssueItems)
         {
             return _internal.IsDuplicate(triageItems, existingIssueItems);
+        }
+
+        private bool ShallExistingIssueBeUpdated(IList<TriageItem> triageItems, IList<TriageItem> existingIssueItems)
+        {
+            return _internal.ShallExistingIssueBeUpdated(triageItems, existingIssueItems);
         }
 
         private string GetTriageIssueProperty(string propertyName, string body)
@@ -267,9 +310,53 @@ namespace DotNet.Status.Web
                 return null;
             }
 
-            public bool IsDuplicate(IList<TriageItem> triageItems, IList<TriageItem> existingIssueItems)
+            public bool IsDuplicate(IList<TriageItem> openedIssueItems, IList<TriageItem> existingIssueItems)
             {
-                return existingIssueItems.Count == triageItems.Count && !existingIssueItems.Except(triageItems).Any();
+                return existingIssueItems.Count == openedIssueItems.Count && !existingIssueItems.Except(openedIssueItems).Any();
+            }
+
+            public bool ShallExistingIssueBeUpdated(IList<TriageItem> openedIssueItems, IList<TriageItem> existingIssueItems)
+            {
+                return existingIssueItems.Intersect(openedIssueItems).Any();
+            }
+
+            public string UpdateExistingIssueBody(IList<TriageItem> openedIssueItems, string openedIssueBody, IList<TriageItem> existingIssueItems, string existingIssueBody)
+            {
+                var addMissing = openedIssueItems.Except(existingIssueItems).ToList();
+
+                // if opened issue is subset of existing issue, let the existing issue kept intact
+                if (!addMissing.Any())
+                {
+                    return existingIssueBody;
+                }
+
+                // add missing builds from opened at the end of the existing build lists
+                Regex _triagePropertyRegex = new Regex(@"\[.*?]\(.*?\)\s*=>\s*\[Log\]\(.*?\)", RegexOptions.Singleline | RegexOptions.IgnoreCase | RegexOptions.IgnorePatternWhitespace);
+                var matchesOpened = _triagePropertyRegex.Matches(openedIssueBody);
+                var buildsLinksToBeAdded = string.Join("\n",
+                    matchesOpened.Select(m => m.Value).Where(b => addMissing.Any(i => b.Contains(i.BuildId.ToString()))));
+
+                if (!string.IsNullOrEmpty(buildsLinksToBeAdded))
+                {
+                    var matchesExisting = _triagePropertyRegex.Matches(existingIssueBody);
+                    int indexOfEndOfBuilds = matchesExisting.Any() ?
+                        matchesExisting.Last().Index + matchesExisting.Last().Length :
+                        0; // have not found build links in existing issue, maybe have been damaged by hand, lets past it at the start of body
+                    existingIssueBody = existingIssueBody.Insert(indexOfEndOfBuilds, "\n" + buildsLinksToBeAdded);
+                }
+
+                // add missing at the end of references
+                int indexOfDetails = existingIssueBody.LastIndexOf("</details>");
+                if (indexOfDetails < 0)
+                {
+                    // have not found it, maybe have been damaged by hand, lets past it at the end of body
+                    indexOfDetails = existingIssueBody.Length;
+                }
+                string newReferences = string.Join("\n", 
+                    addMissing.Select(i => $"[BuildId={i.BuildId},RecordId={i.RecordId},Index={i.Index}]\n[Category={i.UpdatedCategory}]\n"));
+                existingIssueBody = existingIssueBody.Insert(indexOfDetails, newReferences + "\n");
+
+                return existingIssueBody;
             }
         }
     }

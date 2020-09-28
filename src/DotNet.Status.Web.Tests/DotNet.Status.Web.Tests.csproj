@@ -10,6 +10,12 @@
     <None Remove="Files\triage-items-with-diff-cat.expected.json" />
     <None Remove="Files\triage-items-with-invalid.body.txt" />
     <None Remove="Files\triage-items-with-invalid.expected.json" />
+    <None Remove="Files\triage-items-with-multi-builds-intersects.body.txt" />
+    <None Remove="Files\triage-items-with-multi-builds-mangled-updated.body.txt" />
+    <None Remove="Files\triage-items-with-multi-builds-mangled.body.txt" />
+    <None Remove="Files\triage-items-with-multi-builds-not-intersects.body.txt" />
+    <None Remove="Files\triage-items-with-multi-builds-subset.body.txt" />
+    <None Remove="Files\triage-items-with-multi-builds-updated.body.txt" />
     <None Remove="Files\triage-items-with-multi-builds.body.txt" />
     <None Remove="Files\triage-items-with-multi-builds.expected.json" />
   </ItemGroup>
@@ -19,6 +25,12 @@
     <EmbeddedResource Include="Files\triage-items-with-invalid.expected.json" />
     <EmbeddedResource Include="Files\triage-items-with-diff-cat.body.txt" />
     <EmbeddedResource Include="Files\triage-items-with-diff-cat.expected.json" />
+    <EmbeddedResource Include="Files\triage-items-with-multi-builds-mangled-updated.body.txt" />
+    <EmbeddedResource Include="Files\triage-items-with-multi-builds-mangled.body.txt" />
+    <EmbeddedResource Include="Files\triage-items-with-multi-builds-subset.body.txt" />
+    <EmbeddedResource Include="Files\triage-items-with-multi-builds-updated.body.txt" />
+    <EmbeddedResource Include="Files\triage-items-with-multi-builds-intersects.body.txt" />
+    <EmbeddedResource Include="Files\triage-items-with-multi-builds-not-intersects.body.txt" />
     <EmbeddedResource Include="Files\triage-items-with-multi-builds.expected.json" />
     <EmbeddedResource Include="Files\triage-items-with-multi-builds.body.txt" />
   </ItemGroup>

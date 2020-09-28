@@ -1,3 +1,21 @@
+Error message
+```
+Artifact libraries_test_assets_Linux_x64_Release not found for build 798130. Please ensure you have published artifacts in any previous phases of the current build.
+```
+Builds effected
+
+[20200901.129](https://dev.azure.com/dnceng/public/_build/results?buildId=798130) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/798130/logs/957)
+[20200903.1](https://dev.azure.com/dnceng/public/_build/results?buildId=799866) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/799866/logs/844)
+[20200910.23](https://dev.azure.com/dnceng/public/_build/results?buildId=809216) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/809216/logs/1862)
+
+---
+
+- [ ] Is this an infrastructure related issue?
+- [ ] If it is an infrastructure related issue, is there something we can modify/update in our infrastructure to harden against issues of this type?
+- [ ] Does this error fit into one of the existing infrastructure related categories or do we need to create a new one?
+
+---
+
 <details><summary>*Please do not modify this auto-generated section*</summary>
 
 [BuildId=666778,RecordId=,Index=0]
@@ -11,32 +29,4 @@
 
 </details>
 
-See [documentation](https://github.com/dotnet/arcade-services/blob/master/src/GitHubApps/src/DarcBot/ReadMe.md) for more information
-
----
-
-Failure Message - 20200601.42
->We stopped hearing from agent Azure Pipelines 11. Verify the agent machine is running and has a healthy network connection. Anything that terminates an agent process, starves it for CPU, or blocks its network access can cause this error. For more information, see: https://go.microsoft.com/fwlink/?li
-
-[Build Url](https://dev.azure.com/dnceng/public/_build/results?buildId=666778)
-[Log Url]()
-
----
-
-Failure Message - 20200606.1
->We stopped hearing from agent Azure Pipelines 32. Verify the agent machine is running and has a healthy network connection. Anything that terminates an agent process, starves it for CPU, or blocks its network access can cause this error. For more information, see: https://go.microsoft.com/fwlink/?li
-
-[Build Url](https://dev.azure.com/dnceng/public/_build/results?buildId=674578)
-[Log Url]()
-
----
-
-Failure Message - 20200615.71
->We stopped hearing from agent NetCorePublic-Pool 211. Verify the agent machine is running and has a healthy network connection. Anything that terminates an agent process, starves it for CPU, or blocks its network access can cause this error. For more information, see: https://go.microsoft.com/fwlink
-
-[Build Url](https://dev.azure.com/dnceng/public/_build/results?buildId=688348)
-[Log Url]()
-
----
-
-[Add additional comments here]
+See [documentation](https://github.com/dotnet/arcade-services/blob/master/docs/BuildFailuresIssueTriage.md) for more information

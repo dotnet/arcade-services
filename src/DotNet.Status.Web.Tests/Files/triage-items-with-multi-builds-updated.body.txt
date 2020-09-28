@@ -7,6 +7,8 @@ Builds effected
 [20200601.42](https://dev.azure.com/dnceng/public/_build/results?buildId=666778) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/666778/logs/957)
 [20200606.1](https://dev.azure.com/dnceng/public/_build/results?buildId=799866) => [Log]()
 [20200615.71](https://dev.azure.com/dnceng/public/_build/results?buildId=809216) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/809216/logs/1862)
+[20200915.5](https://dev.azure.com/dnceng/public/_build/results?buildId=815555) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/815555/logs/1497)
+[20200921.45](https://dev.azure.com/dnceng/public/_build/results?buildId=823805) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/823805/logs/1915)
 
 ---
 
@@ -26,6 +28,12 @@ Builds effected
 
 [BuildId=688348,RecordId=3b5945b0-87a7-52cf-843a-406c21a8e27e,Index=0]
 [Category=Pool provider]
+
+[BuildId=815555,RecordId=1db2d2b1-dafb-5351-4caf-2dcd2154665f,Index=0]
+[Category=Test]
+
+[BuildId=823805,RecordId=8e14a3aa-fa02-558a-6865-a3e129dae68b,Index=0]
+[Category=Test]
 
 </details>
 
