@@ -129,7 +129,7 @@ namespace Microsoft.DotNet.DarcLib
         public async Task CreateBranchAsync(string repoUri, string newBranch, string baseBranch)
         {
             _logger.LogInformation(
-                $"Verifying if '{newBranch}' branch exist in repo '{repoUri}'. If not, we'll create it...");
+                $"Verifying if '{newBranch}' branch exists in repo '{repoUri}'. If not, we'll create it...");
 
             (string owner, string repo) = ParseRepoUri(repoUri);
             string latestSha = await GetLastCommitShaAsync(owner, repo, baseBranch);
@@ -765,10 +765,11 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Get the commits in a repo
+        ///     Get a commit in a repo 
         /// </summary>
-        /// <param name="repoUri">Repository uri</param>
-        /// <returns>Return all the commits. Null if no commits were found.</returns>
+        /// <param name="repoUri">Repository URI</param>
+        /// <param name="sha">Sha of the commit</param>
+        /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
         public Task<Commit> GetCommitAsync(string repoUri, string sha)
         {
             (string owner, string repo) = ParseRepoUri(repoUri);
@@ -776,11 +777,10 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Get the commits in a repo 
+        ///     Get a commit in a repo 
         /// </summary>
         /// <param name="owner">Owner of repo</param>
         /// <param name="repo">Repository name</param>
-        /// <param name="branch">Branch to retrieve the latest sha for</param>
         /// <param name="sha">Sha of the commit</param>
         /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
         private async Task<Commit> GetCommitAsync(string owner, string repo, string sha)
@@ -1105,7 +1105,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
-            return this.CommitFilesAsync(
+            return CommitFilesAsync(
                 filesToCommit, 
                 repoUri, 
                 branch, 

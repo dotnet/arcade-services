@@ -636,9 +636,9 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         }
 
         /// <summary>
-        ///     Get the commits in a repo
+        ///     Get a commit in a repo 
         /// </summary>
-        /// <param name="repoUri">Repository uri</param>
+        /// <param name="repoUri">Repository URI</param>
         /// <param name="sha">Sha of the commit</param>
         /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
         public Task<Commit> GetCommitAsync(string repoUri, string sha)
@@ -648,11 +648,10 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         }
 
         /// <summary>
-        ///     Get the commits in a repo 
+        ///     Get a commit in a repo 
         /// </summary>
-        /// <param name="accountName">Azure DevOps account</param>
-        /// <param name="projectName">Azure DevOps project</param>
-        /// <param name="repoName">Azure DevOps repo</param>
+        /// <param name="owner">Owner of repo</param>
+        /// <param name="repo">Repository name</param>
         /// <param name="sha">Sha of the commit</param>
         /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
         private async Task<Commit> GetCommitAsync(string accountName, string projectName, string repoName, string sha)
@@ -663,18 +662,12 @@ This pull request has not been merged because Maestro++ is waiting on the follow
                     HttpMethod.Get,
                     accountName,
                     projectName,
-                    $"_apis/git/repositories/{repoName}/commits",
-                    _logger);
-                JArray values = JArray.Parse(content["value"].ToString());
-                List<Commit> commits = new List<Commit>();
-                foreach(JToken commit in values)
-                {
-                    if (commit["sha"].Value<string>().CompareTo(sha) == 0)
-                    {
-                        return new Commit(commit["commit"]["author"].Value<string>(), commit["sha"].Value<string>(), commit["commit"]["message"].Value<string>());
-                    }
-                }
-                return null;
+                    $"_apis/git/repositories/{repoName}/commits/{sha}",
+                    _logger,
+                    versionOverride: "6.0");
+                JObject values = JObject.Parse(content.ToString());
+               
+                return new Commit(values["author"]["name"].ToString(), sha, values["comment"].ToString());
             }
             catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
             {
@@ -1042,7 +1035,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         /// <returns></returns>
         public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
-            return this.CommitFilesAsync(
+            return CommitFilesAsync(
                 filesToCommit,
                 repoUri,
                 branch,
