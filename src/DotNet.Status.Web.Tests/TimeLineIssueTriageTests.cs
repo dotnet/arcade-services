@@ -238,7 +238,7 @@ namespace DotNet.Status.Web.Tests
             using var stream = asm.GetManifestResourceStream(resource);
             using var reader = new StreamReader(stream);
 
-            return reader.ReadToEnd();
+            return reader.ReadToEnd().Replace("\r\n", "\n");
         }
     }
 }
