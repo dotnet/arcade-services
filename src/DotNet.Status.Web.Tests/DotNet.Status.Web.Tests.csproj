@@ -5,34 +5,34 @@
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="Files\IssueEventPayload.json" />
-    <None Remove="Files\triage-items-with-diff-cat.body.txt" />
-    <None Remove="Files\triage-items-with-diff-cat.expected.json" />
-    <None Remove="Files\triage-items-with-invalid.body.txt" />
-    <None Remove="Files\triage-items-with-invalid.expected.json" />
-    <None Remove="Files\triage-items-with-multi-builds-intersects.body.txt" />
-    <None Remove="Files\triage-items-with-multi-builds-mangled-updated.body.txt" />
-    <None Remove="Files\triage-items-with-multi-builds-mangled.body.txt" />
-    <None Remove="Files\triage-items-with-multi-builds-not-intersects.body.txt" />
-    <None Remove="Files\triage-items-with-multi-builds-subset.body.txt" />
-    <None Remove="Files\triage-items-with-multi-builds-updated.body.txt" />
-    <None Remove="Files\triage-items-with-multi-builds.body.txt" />
-    <None Remove="Files\triage-items-with-multi-builds.expected.json" />
+    <None Remove="TestCasesData\IssueEventPayload.json" />
+    <None Remove="TestCasesData\triage-items-with-diff-cat.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-diff-cat.expected.json" />
+    <None Remove="TestCasesData\triage-items-with-invalid.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-invalid.expected.json" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds-intersects.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds-mangled-updated.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds-mangled.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds-not-intersects.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds-subset.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds-updated.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds.body.txt" />
+    <None Remove="TestCasesData\triage-items-with-multi-builds.expected.json" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Files\IssueEventPayload.json" />
-    <EmbeddedResource Include="Files\triage-items-with-invalid.body.txt" />
-    <EmbeddedResource Include="Files\triage-items-with-invalid.expected.json" />
-    <EmbeddedResource Include="Files\triage-items-with-diff-cat.body.txt" />
-    <EmbeddedResource Include="Files\triage-items-with-diff-cat.expected.json" />
-    <EmbeddedResource Include="Files\triage-items-with-multi-builds-mangled-updated.body.txt" />
-    <EmbeddedResource Include="Files\triage-items-with-multi-builds-mangled.body.txt" />
-    <EmbeddedResource Include="Files\triage-items-with-multi-builds-subset.body.txt" />
-    <EmbeddedResource Include="Files\triage-items-with-multi-builds-updated.body.txt" />
-    <EmbeddedResource Include="Files\triage-items-with-multi-builds-intersects.body.txt" />
-    <EmbeddedResource Include="Files\triage-items-with-multi-builds-not-intersects.body.txt" />
-    <EmbeddedResource Include="Files\triage-items-with-multi-builds.expected.json" />
-    <EmbeddedResource Include="Files\triage-items-with-multi-builds.body.txt" />
+    <EmbeddedResource Include="TestCasesData\IssueEventPayload.json" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-invalid.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-invalid.expected.json" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-diff-cat.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-diff-cat.expected.json" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds-mangled-updated.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds-mangled.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds-subset.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds-updated.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds-intersects.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds-not-intersects.body.txt" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds.expected.json" />
+    <EmbeddedResource Include="TestCasesData\triage-items-with-multi-builds.body.txt" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Moq" />

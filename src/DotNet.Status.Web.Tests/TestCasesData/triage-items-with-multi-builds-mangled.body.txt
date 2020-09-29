@@ -2,7 +2,7 @@ Error message
 ```
 Artifact libraries_test_assets_Linux_x64_Release not found for build 798130. Please ensure you have published artifacts in any previous phases of the current build.
 ```
-Builds effected
+Builds affected
 
 ---
 

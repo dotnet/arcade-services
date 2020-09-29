@@ -2,7 +2,7 @@ Error message
 ```
 We stopped hearing from agent Azure Pipelines 11. Verify the agent machine is running and has a healthy network connection. Anything that terminates an agent process, starves it for CPU, or blocks its network access can cause this error. For more information, see: https://go.microsoft.com/fwlink/?li
 ```
-Builds effected
+Builds affected
 
 [20200901.129](https://dev.azure.com/dnceng/public/_build/results?buildId=798130) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/798130/logs/957)
 [20200903.1](https://dev.azure.com/dnceng/public/_build/results?buildId=799866) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/799866/logs/844)

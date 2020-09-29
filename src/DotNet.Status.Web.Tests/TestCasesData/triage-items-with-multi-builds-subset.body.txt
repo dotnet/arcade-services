@@ -2,7 +2,7 @@ Error message
 ```
 Artifact libraries_test_assets_Linux_x64_Release not found for build 798130. Please ensure you have published artifacts in any previous phases of the current build.
 ```
-Builds effected
+Builds affected
 
 [20200601.42](https://dev.azure.com/dnceng/public/_build/results?buildId=666778) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/666778/logs/957)
 [20200606.1](https://dev.azure.com/dnceng/public/_build/results?buildId=799866) => [Log]()

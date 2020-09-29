@@ -1,32 +1,23 @@
 Error message
 ```
-Artifact libraries_test_assets_Linux_x64_Release not found for build 798130. Please ensure you have published artifacts in any previous phases of the current build.
+.packages\microsoft.dotnet.helix.sdk\5.0.0-beta.20459.8\tools\Microsoft.DotNet.Helix.Sdk.MultiQueue.targets(76,5): error : (NETCORE_ENGINEERING_TELEMETRY=Test) Work item 7c820821-a3a3-4a00-9917-541de87a7ee6/Microsoft.Extensions.DependencyInjection.ExternalContainers.Tests in job 7c820821-a3a3-4a00-9
 ```
-Builds effected
+Builds affected
 
 [20200601.42](https://dev.azure.com/dnceng/public/_build/results?buildId=666778) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/666778/logs/957)
-[20200606.1](https://dev.azure.com/dnceng/public/_build/results?buildId=799866) => [Log]()
-[20200615.71](https://dev.azure.com/dnceng/public/_build/results?buildId=809216) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/809216/logs/1862)
 [20200915.5](https://dev.azure.com/dnceng/public/_build/results?buildId=815555) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/815555/logs/1497)
 [20200921.45](https://dev.azure.com/dnceng/public/_build/results?buildId=823805) => [Log](https://dev.azure.com/dnceng/9ee6d478-d288-47f7-aacc-f6e6d082ae6d/_apis/build/builds/823805/logs/1915)
 
 ---
 
-- [ ] Is this an infrastructure related issue?
-- [ ] If it is an infrastructure related issue, is there something we can modify/update in our infrastructure to harden against issues of this type?
-- [ ] Does this error fit into one of the existing infrastructure related categories or do we need to create a new one?
+- [ ] What was the cause of the issue?
+- [ ] What can we do to harden our environment to prevent issues of this type from occurring in the future?
 
 ---
 
 <details><summary>*Please do not modify this auto-generated section*</summary>
 
 [BuildId=666778,RecordId=6c5bbe10-d41c-5008-b9b3-09c7d6d8c0b3,Index=0]
-[Category=Pool provider]
-
-[BuildId=674578,RecordId=4ec48297-f0d4-5d6c-7d7c-174fafbbae1c,Index=0]
-[Category=Pool provider]
-
-[BuildId=688348,RecordId=3b5945b0-87a7-52cf-843a-406c21a8e27e,Index=0]
 [Category=Pool provider]
 
 [BuildId=815555,RecordId=1db2d2b1-dafb-5351-4caf-2dcd2154665f,Index=0]

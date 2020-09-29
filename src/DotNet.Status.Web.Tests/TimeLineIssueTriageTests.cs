@@ -234,7 +234,7 @@ namespace DotNet.Status.Web.Tests
         {
             Type thisClass = typeof(TimeLineIssueTriageTests);
             Assembly asm = thisClass.Assembly;
-            var resource = string.Format($"{thisClass.Namespace}.Files.{name}");
+            var resource = string.Format($"{thisClass.Namespace}.TestCasesData.{name}");
             using var stream = asm.GetManifestResourceStream(resource);
             using var reader = new StreamReader(stream);
 
