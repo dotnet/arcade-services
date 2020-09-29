@@ -30,7 +30,7 @@ namespace DotNet.Status.Web.Tests
         {
             Type thisClass = typeof(GitHubDeserializationTests);
             Assembly asm = thisClass.Assembly;
-            var resource = string.Format($"{thisClass.Namespace}.Files.IssueEventPayload.json");
+            var resource = string.Format($"{thisClass.Namespace}.EventPayloads.IssueEventPayload.json");
             using var stream = asm.GetManifestResourceStream(resource);
             using var reader = new StreamReader(stream);
 
