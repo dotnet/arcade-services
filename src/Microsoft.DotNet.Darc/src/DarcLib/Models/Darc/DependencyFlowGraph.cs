@@ -319,7 +319,7 @@ namespace Microsoft.DotNet.DarcLib
         public static async Task<DependencyFlowGraph> BuildAsync(
             List<DefaultChannel> defaultChannels,
             List<Subscription> subscriptions,
-            IRemote barOnlyRemote,
+            IBarClient barClient,
             int days)
         {
             // Dictionary of nodes. Key is the repo+branch
@@ -336,7 +336,7 @@ namespace Microsoft.DotNet.DarcLib
                 // Add the build times
                 if (channel.Id != default(int))
                 {
-                    BuildTime buildTime = await barOnlyRemote.GetBuildTimeAsync(channel.Id, days);
+                    BuildTime buildTime = await barClient.GetBuildTimeAsync(channel.Id, days);
                     flowNode.OfficialBuildTime = buildTime.OfficialBuildTime ?? 0;
                     flowNode.PrBuildTime = buildTime.PrBuildTime ?? 0;
                     flowNode.GoalTimeInMinutes = buildTime.GoalTimeInMinutes ?? 0;

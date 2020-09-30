@@ -18,7 +18,11 @@
 
   <ItemGroup>
     <None Update="inputs\**\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <!-- Workaround default exclude behavior that prevents any dot-named folder from being included in None globbing -->
+    <None Include="inputs\**\.config\*">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   

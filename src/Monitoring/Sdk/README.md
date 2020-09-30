@@ -18,7 +18,7 @@ e.g.
 
 ```bash
   dotnet build \
-    -t:PublishGrafana -p:GrafanaHost=https://dotnet-eng-grafana.azurewebsites.net \
+    -t:PublishGrafana -p:GrafanaHost=https://dotnet-eng-grafana.westus2.cloudapp.azure.com/ \
     -p:GrafanaAccessToken=GRAFANA_ADMIN_API_KEY \
     -p:GrafanaKeyVaultName=dotnet-grafana \
     -p:GrafanaKeyVaultAppId=2bdfceef-194a-4775-99d9-b5575c77bc6b \
@@ -43,7 +43,7 @@ To run the publish, run:
 To import a dashboard, run:
 
 ```bash
-  dotnet build MyMonitoring.proj -t:ImportGrafana -p:GrafanaHost=https://dotnet-eng-grafana-staging.azurewebsites.net -p:GrafanaAccessToken=MY_ACCESS_TOKEN -p:DashBoardId=MyDashboardUid
+  dotnet build MyMonitoring.proj -t:ImportGrafana -p:GrafanaHost=https://dotnet-eng-grafana-staging.westus2.cloudapp.azure.com/ -p:GrafanaAccessToken=MY_ACCESS_TOKEN -p:DashBoardId=MyDashboardUid
 ```
 
 where 999 is the ID from grafana of the dashboard you wish to import.

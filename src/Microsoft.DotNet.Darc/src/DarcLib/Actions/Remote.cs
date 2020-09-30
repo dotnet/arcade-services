@@ -1210,6 +1210,18 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Get a commit in a repo 
+        /// </summary>
+        /// <param name="repoUri">Repository URI</param>
+        /// <param name="sha">Sha of the commit</param>
+        /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
+        public Task<Commit> GetCommitAsync(string repoUri, string sha)
+        {
+            CheckForValidGitClient();
+            return _gitClient.GetCommitAsync(repoUri, sha);
+        }
+
+        /// <summary>
         ///     Retrieve the list of channels from the build asset registry.
         /// </summary>
         /// <param name="classification">Optional classification to get</param>
@@ -1381,7 +1393,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="includeDisabledSubscriptions">Should disabled subscriptions be included in the graph</param>
         /// <param name="includedFrequencies">Include only subscription with specified frequencies. Leave null or empty to include all</param>
         /// <returns>Dependency flow graph for given channel</returns>
-        public async Task<DependencyFlowGraph> GetDependencyFlowGraph(
+        public async Task<DependencyFlowGraph> GetDependencyFlowGraphAsync(
             int channelId,
             int days,
             bool includeArcade,
@@ -1390,7 +1402,7 @@ namespace Microsoft.DotNet.DarcLib
             IReadOnlyList<string> includedFrequencies)
         {
             CheckForValidBarClient();
-            return await _barClient.GetDependencyFlowGraph(
+            return await _barClient.GetDependencyFlowGraphAsync(
                 channelId,
                 days,
                 includeArcade,

@@ -756,6 +756,79 @@ export class Build {
     }
 }
 
+export class Commit {
+    public constructor(
+        {
+            author,
+            sha,
+            message
+        } : {
+            author: string,
+            sha: string,
+            message: string
+        }
+        ) {
+            this._author = author;
+            this._sha = sha;
+            this._message = message;
+        }
+
+        private _author: string;
+
+        public get author(): string {
+            return this._author;
+        }
+    
+        public set author(__value: string) {
+            this._author = __value;
+        }
+
+        private _sha: string;
+
+        public get sha(): string {
+            return this._sha;
+        }
+    
+        public set sha(__value: string) {
+            this._sha = __value;
+        }
+
+        private _message: string;
+
+        public get message(): string {
+            return this._message;
+        }
+    
+        public set message(__value: string) {
+            this._message = __value;
+        }
+
+        public isValid(): boolean {
+            return (
+                this._author !== undefined &&
+                this._sha !== undefined &&
+                this._message !== undefined
+            );
+        }
+    
+        public static fromRawObject(value: any): Commit {
+            let result = new Commit({
+                author: value["author"] == null ? undefined : value["author"] as any,
+                sha: value["sha"] == null ? undefined : value["sha"] as any,
+                message: value["message"] == null ? undefined : value["message"] as any,
+            });
+            return result;
+        }
+    
+        public static toRawObject(value: Commit): any {
+            let result: any = {};
+            result["author"] = value._author;
+            result["sha"] = value._sha;
+            result["message"] = value._message.length > 20 ? value._message.slice(0,20) + "..." : value._message;
+            return result;
+        }
+}
+
 export class BuildData {
     public constructor(
         {
@@ -1696,15 +1769,18 @@ export class FlowEdge {
             toId,
             fromId,
             onLongestBuildPath,
+            channelName
         }: {
             toId?: string,
             fromId?: string,
             onLongestBuildPath: boolean,
+            channelName?: string,
         }
     ) {
         this._toId = toId;
         this._fromId = fromId;
         this._onLongestBuildPath = onLongestBuildPath;
+        this._channelName = channelName;
     }
 
     private _toId?: string;
@@ -1729,6 +1805,12 @@ export class FlowEdge {
         this._onLongestBuildPath = __value;
     }
     
+    private _channelName?: string;
+
+    public get channelName(): string | undefined {
+        return this._channelName;
+    }
+
     public isValid(): boolean {
         return (
             this._onLongestBuildPath !== undefined
@@ -1740,6 +1822,7 @@ export class FlowEdge {
             toId: value["toId"] == null ? undefined : value["toId"] as any,
             fromId: value["fromId"] == null ? undefined : value["fromId"] as any,
             onLongestBuildPath: value["onLongestBuildPath"] == null ? undefined : value["onLongestBuildPath"] as any,
+            channelName: value["channelName"] == null ? undefined : value["channelName"] as any,
         });
         return result;
     }
@@ -1751,6 +1834,9 @@ export class FlowEdge {
         }
         if (value._fromId) {
             result["fromId"] = value._fromId;
+        }
+        if (value._channelName) {
+            result["channelName"] = value._channelName;
         }
         result["onLongestBuildPath"] = value._onLongestBuildPath;
         return result;

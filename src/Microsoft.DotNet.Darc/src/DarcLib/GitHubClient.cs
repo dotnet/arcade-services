@@ -129,7 +129,7 @@ namespace Microsoft.DotNet.DarcLib
         public async Task CreateBranchAsync(string repoUri, string newBranch, string baseBranch)
         {
             _logger.LogInformation(
-                $"Verifying if '{newBranch}' branch exist in repo '{repoUri}'. If not, we'll create it...");
+                $"Verifying if '{newBranch}' branch exists in repo '{repoUri}'. If not, we'll create it...");
 
             (string owner, string repo) = ParseRepoUri(repoUri);
             string latestSha = await GetLastCommitShaAsync(owner, repo, baseBranch);
@@ -765,6 +765,36 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
+        ///     Get a commit in a repo 
+        /// </summary>
+        /// <param name="repoUri">Repository URI</param>
+        /// <param name="sha">Sha of the commit</param>
+        /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
+        public Task<Commit> GetCommitAsync(string repoUri, string sha)
+        {
+            (string owner, string repo) = ParseRepoUri(repoUri);
+            return GetCommitAsync(owner, repo, sha);
+        }
+
+        /// <summary>
+        ///     Get a commit in a repo 
+        /// </summary>
+        /// <param name="owner">Owner of repo</param>
+        /// <param name="repo">Repository name</param>
+        /// <param name="sha">Sha of the commit</param>
+        /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
+        private async Task<Commit> GetCommitAsync(string owner, string repo, string sha)
+        {
+            Repository repository = await Client.Repository.Get(owner, repo);
+            Octokit.GitHubCommit commit = await Client.Repository.Commit.Get(repository.Id, sha);
+            if (commit == null)
+            {
+                return null;
+            }
+            return new Commit(commit.Author.Login, commit.Commit.Sha, commit.Commit.Message);
+        }
+
+        /// <summary>
         ///     Get the latest commit in a repo on the specific branch 
         /// </summary>
         /// <param name="owner">Owner of repo</param>
@@ -848,7 +878,7 @@ namespace Microsoft.DotNet.DarcLib
         private async Task<IList<Check>> GetChecksFromStatusApiAsync(string owner, string repo, string @ref)
         {
             var status = await Client.Repository.Status.GetCombined(owner, repo, @ref);
-
+            
             return status.Statuses.Select(
                     s =>
                     {
@@ -1075,7 +1105,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
-            return this.CommitFilesAsync(
+            return CommitFilesAsync(
                 filesToCommit, 
                 repoUri, 
                 branch, 

@@ -146,6 +146,15 @@ namespace Microsoft.DotNet.DarcLib
         Task<string> GetLastCommitShaAsync(string repoUri, string branch);
 
         /// <summary>
+        ///     Get a commit in a repo 
+        /// </summary>
+        /// <param name="repoUri">Repository URI</param>
+        /// <param name="sha">Sha of the commit</param>
+        /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
+        Task<Commit> GetCommitAsync(string repoUri, string sha);
+
+
+        /// <summary>
         /// Retrieve the list of status checks on a PR.
         /// </summary>
         /// <param name="pullRequestUrl">Uri of pull request</param>

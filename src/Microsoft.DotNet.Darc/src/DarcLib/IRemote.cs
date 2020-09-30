@@ -363,6 +363,14 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Latest commit</returns>
         Task<string> GetLatestCommitAsync(string repoUri, string branch);
 
+        /// <summary>
+        ///     Get the commits in a repo on the specific branch 
+        /// </summary>
+        /// <param name="repoUri">Repository uri</param>
+        /// <param name="sha">Sha of the commit</param>
+        /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
+        Task<Commit> GetCommitAsync(string repoUri, string sha);
+
 
         /// <summary>
         /// Checks that a repository exists
@@ -391,7 +399,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <param name="includeDisabledSubscriptions">Should disabled subscriptions be included in the graph</param>
         /// <param name="includedFrequencies">Include only subscription with specified frequencies. Leave null or empty to include all</param>
         /// <returns>Dependency flow graph for given channel</returns>
-        Task<DependencyFlowGraph> GetDependencyFlowGraph(
+        Task<DependencyFlowGraph> GetDependencyFlowGraphAsync(
             int channelId,
             int days,
             bool includeArcade,

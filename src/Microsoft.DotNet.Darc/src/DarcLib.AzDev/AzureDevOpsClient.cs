@@ -636,6 +636,46 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         }
 
         /// <summary>
+        ///     Get a commit in a repo 
+        /// </summary>
+        /// <param name="repoUri">Repository URI</param>
+        /// <param name="sha">Sha of the commit</param>
+        /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
+        public Task<Commit> GetCommitAsync(string repoUri, string sha)
+        {
+            (string accountName, string projectName, string repoName) = ParseRepoUri(repoUri);
+            return GetCommitAsync(accountName, projectName, repoName, sha);
+        }
+
+        /// <summary>
+        ///     Get a commit in a repo 
+        /// </summary>
+        /// <param name="owner">Owner of repo</param>
+        /// <param name="repo">Repository name</param>
+        /// <param name="sha">Sha of the commit</param>
+        /// <returns>Return the commit matching the specified sha. Null if no commit were found.</returns>
+        private async Task<Commit> GetCommitAsync(string accountName, string projectName, string repoName, string sha)
+        {
+            try
+            {
+                JObject content = await this.ExecuteAzureDevOpsAPIRequestAsync(
+                    HttpMethod.Get,
+                    accountName,
+                    projectName,
+                    $"_apis/git/repositories/{repoName}/commits/{sha}",
+                    _logger,
+                    versionOverride: "6.0");
+                JObject values = JObject.Parse(content.ToString());
+               
+                return new Commit(values["author"]["name"].ToString(), sha, values["comment"].ToString());
+            }
+            catch (HttpRequestException exc) when (exc.Message.Contains(((int)HttpStatusCode.NotFound).ToString()))
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
         ///     Diff two commits in a repository and return information about them.
         /// </summary>
         /// <param name="repoUri">Repository uri</param>
@@ -995,7 +1035,7 @@ This pull request has not been merged because Maestro++ is waiting on the follow
         /// <returns></returns>
         public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
-            return this.CommitFilesAsync(
+            return CommitFilesAsync(
                 filesToCommit,
                 repoUri,
                 branch,

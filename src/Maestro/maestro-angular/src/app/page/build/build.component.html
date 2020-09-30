@@ -13,7 +13,7 @@
         <h4>
           {{getRepo(build)}} 
           <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small>
-          <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.azureDevOpsBuildId)">{{build.azureDevOpsBuildId}} <fa-icon icon="clipboard"></fa-icon></button>
+          <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.id)">{{build.id}} <fa-icon icon="clipboard"></fa-icon></button>
         </h4>
         <div>
           <span>Loading build information from Azure Pipelines</span>
@@ -31,7 +31,7 @@
         <h4>
           {{getRepo(build)}} 
           <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small>
-          <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.azureDevOpsBuildId)">{{build.azureDevOpsBuildId}} <fa-icon icon="clipboard"></fa-icon></button>
+          <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.id)">{{build.id}} <fa-icon icon="clipboard"></fa-icon></button>
         </h4>
         <div>
           <span class="text-warning" *ngIf="!haveAzDevInfo(build)">
@@ -58,27 +58,39 @@
         <div class="flex-grow-1">
           <div class="float-right">
             <div>
-              <a class="btn btn-sm btn-primary" [href]="build | buildLink" target="_blank">
+              <a class="btn btn-sm btn-primary float-right mb-2" [href]="build | buildLink" target="_blank">
                 Go to build in Azure DevOps <fa-icon icon="external-link-alt"></fa-icon>
               </a>
             </div>
-            <div *ngIf="azDevInfo.mostRecentFailureLink">
-              <a class="btn btn-danger btn-sm float-right text-light" [href]="azDevInfo.mostRecentFailureLink"
-                target="_blank">
-                Latest Failed Build <fa-icon icon="external-link-alt"></fa-icon>
-              </a>
+            <div>
+              <span *ngIf="azDevInfo.mostRecentFailureLink">
+                <a class="btn btn-danger btn-sm float-right text-light ml-2" [href]="azDevInfo.mostRecentFailureLink"
+                  target="_blank">
+                  Latest Failed Build <fa-icon icon="external-link-alt"></fa-icon>
+                </a>
+              </span>
+              <ng-container *stateful="let onGoingBuildUrl from azDevOnGoingBuildUrl$;">
+                <span *ngIf="onGoingBuildUrl">
+                  <a class="btn btn-primary btn-sm float-right text-light" [href]="onGoingBuildUrl"
+                    target="_blank">
+                    Latest Ongoing Build <fa-icon icon="external-link-alt"></fa-icon>
+                  </a>
+                </span>
+              </ng-container>
             </div>
           </div>
-          <h4>
-            {{getRepo(build)}} 
-            <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small>
-            <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.azureDevOpsBuildId)">{{build.azureDevOpsBuildId}} <fa-icon icon="clipboard"></fa-icon></button>
-          </h4>
-          <div>
-            <a class="btn btn-sm btn-primary" [href]="build | commitLink" target="_blank">{{build.commit}} <fa-icon
-                icon="external-link-alt"></fa-icon></a>
+          <ng-container *stateful="let commit from commit$; loadingTemplate: loadingData">
+            <h4>
+              {{getRepo(build)}} <small class="text-muted">{{build.azureDevOpsBuildNumber}}</small>
+              <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.id)">{{build.id}} <fa-icon icon="clipboard"></fa-icon></button>
+            </h4>
+            <div>
+              <a class="btn btn-sm btn-primary" [href]="build | commitLink" target="_blank">
+              {{commit.message}} - {{build.commit.slice(0,7)}}
+              <fa-icon icon="external-link-alt"></fa-icon></a>
               <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.commit)"><fa-icon icon="clipboard"></fa-icon></button>
-          </div>
+            </div>
+         </ng-container>
           <div>
             <mc-relative-date [value]="build.dateProduced"></mc-relative-date>
           </div>
@@ -152,6 +164,7 @@
       <mc-asset-table [assets]="build.assets"></mc-asset-table>
     </div>
   </ng-container>
+  
   <div @toast class="toast show" *ngIf="toastVisible" role="alert" aria-live="assertive" aria-atomic="true"
     style="position: fixed; bottom: 0; right: 0; margin-bottom: 1rem; margin-right: 1.5rem;">
     <div class="toast-header">

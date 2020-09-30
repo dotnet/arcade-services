@@ -246,9 +246,6 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             return await Task.FromResult(StatusCode((int)HttpStatusCode.NotModified));
         }
 
-        private const int EngLatestChannelId = 2;
-        private const int Eng3ChannelId = 344;
-
         /// <summary>
         ///   Get the dependency flow graph for the specified <see cref="Channel"/>
         /// </summary>
@@ -272,78 +269,13 @@ namespace Maestro.Web.Api.v2018_07_16.Controllers
             bool includeArcade = true)
         {
             var barOnlyRemote = await _remoteFactory.GetBarOnlyRemoteAsync(Logger);
-
-            Microsoft.DotNet.Maestro.Client.Models.Channel engLatestChannel = await barOnlyRemote.GetChannelAsync(EngLatestChannelId);
-            Microsoft.DotNet.Maestro.Client.Models.Channel eng3Channel = await barOnlyRemote.GetChannelAsync(Eng3ChannelId);
-
-            List<Microsoft.DotNet.Maestro.Client.Models.DefaultChannel> defaultChannels = (await barOnlyRemote.GetDefaultChannelsAsync()).ToList();
-
-            if (includeArcade)
-            {
-                if (engLatestChannel != null)
-                {
-                    defaultChannels.Add(
-                        new Microsoft.DotNet.Maestro.Client.Models.DefaultChannel(0, "https://github.com/dotnet/arcade", true)
-                        {
-                            Branch = "master",
-                            Channel = engLatestChannel
-                        }
-                    );
-                }
-
-                if (eng3Channel != null)
-                {
-                    defaultChannels.Add(
-                        new Microsoft.DotNet.Maestro.Client.Models.DefaultChannel(0, "https://github.com/dotnet/arcade", true)
-                        {
-                            Branch = "release/3.x",
-                            Channel = eng3Channel
-                        }
-                    );
-                }
-            }
-
-            List<Microsoft.DotNet.Maestro.Client.Models.Subscription> subscriptions = (await barOnlyRemote.GetSubscriptionsAsync()).ToList();
-
-            // Build, then prune out what we don't want to see if the user specified
-            // channels.
-            DependencyFlowGraph flowGraph = await DependencyFlowGraph.BuildAsync(defaultChannels, subscriptions, barOnlyRemote, days);
-
-           IEnumerable<string> frequencies = includedFrequencies == default || includedFrequencies.Count() == 0 ? 
-                new string[] { "everyWeek", "twiceDaily", "everyDay", "everyBuild", "none", } : 
-                includedFrequencies;
-
-            Microsoft.DotNet.Maestro.Client.Models.Channel targetChannel = null;
-
-            if (channelId != 0)
-            {
-                targetChannel = await barOnlyRemote.GetChannelAsync((int) channelId);
-            }
-
-            if (targetChannel != null)
-            {
-                flowGraph.PruneGraph(
-                    node => DependencyFlowGraph.IsInterestingNode(targetChannel.Name, node), 
-                    edge => DependencyFlowGraph.IsInterestingEdge(edge, includeDisabledSubscriptions, frequencies));
-            }
-
-            if (includeBuildTimes)
-            {
-                var edgesWithLastBuild = flowGraph.Edges
-                    .Where(e => e.Subscription.LastAppliedBuild != null);
-
-                foreach (var edge in edgesWithLastBuild)
-                {
-                    edge.IsToolingOnly = !_context.IsProductDependency(
-                        edge.Subscription.LastAppliedBuild.Id,
-                        edge.To.Repository,
-                        edge.To.Branch);
-                }
-
-                flowGraph.MarkBackEdges();
-                flowGraph.CalculateLongestBuildPaths();
-                flowGraph.MarkLongestBuildPath();
-            }
+            var flowGraph = await barOnlyRemote.GetDependencyFlowGraphAsync(
+                channelId,
+                days,
+                includeArcade,
+                includeBuildTimes,
+                includeDisabledSubscriptions,
+                includedFrequencies.ToList());
 
             // Convert flow graph to correct return type
             return Ok(FlowGraph.Create(flowGraph));

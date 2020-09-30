@@ -3,7 +3,7 @@ import { ApplicationInsightsService } from 'src/app/services/application-insight
 import { graphlib, render, layout } from 'dagre-d3';
 import { select } from 'd3';
 
-import { FlowGraph, FlowRef, FlowEdge } from 'src/maestro-client/models';
+import { FlowGraph, FlowRef, FlowEdge, Channel } from 'src/maestro-client/models';
 import { RepoNamePipe } from 'src/app/pipes/repo-name.pipe';
 
 function getRepositoryShortName(repo?: string): string {
@@ -73,7 +73,7 @@ function getEdgeDescription(edge:FlowEdge, graph:FlowGraph): string {
   return description;
 }
 
-function drawFlowGraph(graph: FlowGraph, includeArcade: boolean) {
+function drawFlowGraph(graph: FlowGraph, includeArcade: boolean, channel: Channel) {
   var g = new graphlib.Graph().setGraph({
     ranksep: 25,
     ranker: 'tight-tree'
@@ -121,12 +121,13 @@ function drawFlowGraph(graph: FlowGraph, includeArcade: boolean) {
     }
 
     for (var edge of graph.flowEdges) {
-      if (!edge.fromId || !edge.toId) {
+      if (!edge.fromId || !edge.toId || !edge.channelName) {
         continue;
       }
-      
+
       let edgeProperties:any = { arrowheadClass: 'arrowhead',
-                    description: getEdgeDescription(edge, graph)};
+                    description: getEdgeDescription(edge, graph),
+                    label: channel.name != edge.channelName ? edge.channelName : ""};
 
       if (edge.onLongestBuildPath) {
         edgeProperties.style = "stroke: #FD625E; stroke-width: 3px; stroke-dasharray: 5,5;";
@@ -218,6 +219,7 @@ export class ChannelGraphComponent implements OnChanges {
 
   @Input() public graph?: FlowGraph;
   @Input() public includeArcade?: boolean;
+  @Input() public channel?: Channel;
 
   constructor(private ai: ApplicationInsightsService) { }
 
@@ -232,8 +234,8 @@ export class ChannelGraphComponent implements OnChanges {
     }
 
     var includeArcade: boolean = this.includeArcade ? this.includeArcade : false;
-    if (this.graph) {
-      drawFlowGraph(this.graph, includeArcade);
+    if (this.graph && this.channel) {
+      drawFlowGraph(this.graph, includeArcade, this.channel);
     }
   }
 }
