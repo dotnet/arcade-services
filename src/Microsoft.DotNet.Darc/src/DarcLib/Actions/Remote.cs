@@ -319,7 +319,7 @@ namespace Microsoft.DotNet.DarcLib
         {
             CheckForValidGitClient();
             _logger.LogInformation($"Getting reviews for pull request '{pullRequestUrl}'...");
-            return await _gitClient.GetPullRequestReviewsAsync(pullRequestUrl);
+            return await _gitClient.GetLatestPullRequestReviewsAsync(pullRequestUrl);
         }
 
         public async Task<IEnumerable<int>> SearchPullRequestsAsync(
