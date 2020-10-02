@@ -348,6 +348,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                     // For now we aren't persisting this property, so we just record this info in the task scope
                     IsStableBuild = bool.Parse(manifest.IsStable.ToLower());
 
+                    UsesReleaseOnlyPackageVersion = bool.Parse(manifest.UsesReleaseOnlyPackageVersion.ToLower());
+
                     // The AzureDevOps properties can be null in the Manifest, but maestro needs them. Read them from the environment if they are null in the manifest.
                     var buildInfo = new BuildData(
                         commit: manifest.Commit,
