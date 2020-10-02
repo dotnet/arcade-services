@@ -36,6 +36,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private bool IsStableBuild { get; set; } = false;
 
+        private bool UsesReleaseOnlyPackageVersion { get; set; } = false;
+
         public string RepoRoot { get; set; }
 
         public string AssetVersion { get; set; }
@@ -655,6 +657,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             Branch = GetAzDevBranch(),
                             Commit = GetAzDevCommit(),
                             IsStable = IsStableBuild.ToString(),
+                            UsesReleaseOnlyPackageVersion = UsesReleaseOnlyPackageVersion.ToString(),
                             PublishingVersion = manifestBuildData.PublishingVersion.ToString()
                         });
 
