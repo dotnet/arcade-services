@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
@@ -14,6 +14,7 @@ namespace Microsoft.DotNet.Internal.DependencyInjection.Testing
             "System.Fabric.ServiceContext",
             "System.Fabric.StatelessServiceContext",
             "System.Fabric.StatefulServiceContext",
+            "Microsoft.DotNet.ServiceFabric.ServiceHost.IServiceLoadReporter",
             "Microsoft.Extensions.Options.IConfigureOptions`1",
             "Microsoft.Extensions.Caching.Memory.MemoryCacheOptions",
             "Microsoft.Extensions.Caching.Memory.MemoryDistributedCacheOptions",
