@@ -54,6 +54,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                                         {
                                             services.AddSingleton<ServiceContext>(context);
                                             services.AddSingleton(context);
+                                            services.AddSingleton<IServiceLoadReporter>(new StatelessServiceLoadReporter(Partition));
                                             services.AddSingleton<IStartup>(
                                                 provider =>
                                                 {

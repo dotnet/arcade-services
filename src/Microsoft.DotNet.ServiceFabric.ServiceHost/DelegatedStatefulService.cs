@@ -35,6 +35,7 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
             var services = new ServiceCollection();
             services.AddSingleton<ServiceContext>(Context);
             services.AddSingleton(Context);
+            services.AddSingleton<IServiceLoadReporter>(new StatefulServiceLoadReporter(Partition));
             _configureServices(services);
 
             services.AddSingleton(StateManager);
