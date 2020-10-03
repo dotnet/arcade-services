@@ -38,6 +38,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
         [XmlAttribute(AttributeName = "PublishingVersion")]
         public int PublishingVersion { get; set; }
 
+        [XmlAttribute(AttributeName = "UsesReleaseOnlyPackageVersion")]
+        public string UsesReleaseOnlyPackageVersion { get; set; } = "false";
+
         #region Properties to be used in new publishing flow
 
         [XmlAttribute(AttributeName = "InitialAssetsLocation")]
