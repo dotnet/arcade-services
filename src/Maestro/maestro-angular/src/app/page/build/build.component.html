@@ -86,7 +86,7 @@
             </h4>
             <div>
               <a class="btn btn-sm btn-primary" [href]="build | commitLink" target="_blank">
-              {{(commit.message.length>77)?(commit.message.slice(0,77))+' ...':(commit.message)}} - {{build.commit.slice(0,7)}}
+                {{(commit.message.split('\n')[0])}} - {{build.commit.slice(0,7)}}              
               <fa-icon icon="external-link-alt"></fa-icon></a>
               <button class="btn btn-sm btn-primary ml-2" aria-label="Copy" (click)="copyToClipboard(build.commit)"><fa-icon icon="clipboard"></fa-icon></button>
             </div>
