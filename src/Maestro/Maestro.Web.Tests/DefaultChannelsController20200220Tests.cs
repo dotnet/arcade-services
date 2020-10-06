@@ -313,11 +313,7 @@ namespace Maestro.Web.Tests
             }
 
             // Adding the same thing twice should succeed, as well as provide the correct object in return.
-            defaultChannelDuplicateAdd.Should().NotBeNull();
-            defaultChannelDuplicateAdd.Id.Should().Be(defaultChannel.Id);
-            defaultChannelDuplicateAdd.Branch.Should().Be(defaultChannel.Branch);
-            defaultChannelDuplicateAdd.Channel.Id.Should().Be(defaultChannel.Channel.Id);
-            defaultChannelDuplicateAdd.Repository.Should().Be(defaultChannel.Repository);
+            defaultChannelDuplicateAdd.Should().BeEquivalentTo(defaultChannel);
         }
 
         private Task<TestData> BuildDefaultAsync()
