@@ -2,12 +2,11 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Data.SqlClient;
-using System.Net;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
+using System.Threading.Tasks;
 
 namespace Maestro.Web
 {
@@ -24,8 +23,11 @@ namespace Maestro.Web
         {
             var executedContext = await next();
             if (executedContext.Exception is DbUpdateException dbEx &&
-                dbEx.InnerException is SqlException sqlEx &&
-                sqlEx.Message.Contains("Cannot insert duplicate key"))
+                // Note: From inspection this will throw Microsoft.Data.SqlClient.SqlException,
+                //       not System.Data.SqlClient.SqlException; we will explicitly handle both.
+                (dbEx.InnerException is Microsoft.Data.SqlClient.SqlException ||
+                 dbEx.InnerException is System.Data.SqlClient.SqlException) &&
+                dbEx.InnerException.Message.Contains("Cannot insert duplicate key"))
             {
                 executedContext.Exception = null;
 
