@@ -205,9 +205,15 @@ namespace RolloutScorer
             return (numHotfixes, numRollbacks);
         }
 
-        public bool DetermineFailure()
+        public bool DetermineFailure(List<Issue> githubIssues)
         {
             Utilities.WriteDebug($"Determining failure for {Repo}...", Log, LogLevel);
+            if (githubIssues.Any(i => Utilities.IssueContainsRelevantLabels(i, GithubLabelNames.FailureLabel, RepoConfig.GithubIssueLabel, Log, LogLevel)))
+            {
+                Utilities.WriteDebug($"Issue with failure tag found for {Repo}; rollout marked as FAILED", Log, LogLevel);
+                return true;
+            }
+
             if (BuildBreakdowns.Count == 0)
             {
                 Utilities.WriteDebug($"No builds found for {Repo} this rollout; rollout marked as FAILED.", Log, LogLevel);
@@ -373,7 +379,8 @@ namespace RolloutScorer
                 Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.IssueLabel, RepoConfig.GithubIssueLabel, Log) ||
                 Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.HotfixLabel, RepoConfig.GithubIssueLabel, Log, LogLevel) ||
                 Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.RollbackLabel, RepoConfig.GithubIssueLabel, Log, LogLevel) ||
-                Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.DowntimeLabel, RepoConfig.GithubIssueLabel, Log, LogLevel)
+                Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.DowntimeLabel, RepoConfig.GithubIssueLabel, Log, LogLevel) ||
+                Utilities.IssueContainsRelevantLabels(issue, GithubLabelNames.FailureLabel, RepoConfig.GithubIssueLabel, Log, LogLevel)
                 ).ToList();
         }
 
