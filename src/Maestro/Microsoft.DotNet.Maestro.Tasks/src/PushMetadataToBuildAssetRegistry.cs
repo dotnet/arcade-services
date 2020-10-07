@@ -36,6 +36,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private bool IsStableBuild { get; set; } = false;
 
+        private bool IsReleaseOnlyPackageVersion { get; set; } = false;
+
         public string RepoRoot { get; set; }
 
         public string AssetVersion { get; set; }
@@ -655,7 +657,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             Branch = GetAzDevBranch(),
                             Commit = GetAzDevCommit(),
                             IsStable = IsStableBuild.ToString(),
-                            PublishingVersion = manifestBuildData.PublishingVersion.ToString()
+                            IsReleaseOnlyPackageVersion = IsReleaseOnlyPackageVersion.ToString()
                         });
 
             foreach (AssetData data in assets)

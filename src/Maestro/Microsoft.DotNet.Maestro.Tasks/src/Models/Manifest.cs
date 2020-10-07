@@ -69,6 +69,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
         [XmlAttribute(AttributeName = "IsStable")]
         public string IsStable { get; set; } = "false";
 
+        [XmlAttribute(AttributeName = "IsReleaseOnlyPackageVersion")]
+        public string IsReleaseOnlyPackageVersion { get; set; } = "false";
+
         [XmlAttribute(AttributeName = "AzureDevOpsAccount")]
         public string AzureDevOpsAccount { get; set; }
 
