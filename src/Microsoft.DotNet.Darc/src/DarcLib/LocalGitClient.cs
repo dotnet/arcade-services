@@ -128,7 +128,7 @@ namespace Microsoft.DotNet.DarcLib
             throw new NotImplementedException();
         }
 
-        public Task<IList<Review>> GetPullRequestReviewsAsync(string pullRequestUrl)
+        public Task<IList<Review>> GetLatestPullRequestReviewsAsync(string pullRequestUrl)
         {
             throw new NotImplementedException();
         }
