@@ -658,7 +658,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
                             Commit = GetAzDevCommit(),
                             IsStable = IsStableBuild.ToString(),
                             PublishingVersion = (PublishingInfraVersion)manifestBuildData.PublishingVersion,
-                            IsReleaseOnlyPackageVersion = IsReleaseOnlyPackageVersion.ToString()
+                            IsReleaseOnlyPackageVersion =manifestBuildData.IsReleaseOnlyPackageVersion
 
                         });
 
