@@ -506,5 +506,30 @@ namespace Microsoft.DotNet.Darc.Tests
                 await driver.VerifyAsync();
             });
         }
+
+        /// <summary>
+        /// Update a dependency on a repo with a .config folder, but no dotnet-tools.json.
+        /// This may be a slightly artificial scenario but, 
+        /// prevents regressing https://github.com/dotnet/arcade/issues/6391
+        /// </summary>
+        [Test]
+        public async Task UpdateToolsJsonNotPresent()
+        {
+            await DependencyTestDriver.TestAndCompareOutput(nameof(UpdateToolsJsonNotPresent), async driver =>
+            {
+                await driver.UpdateDependenciesAsync(
+                    new List<DependencyDetail> {
+                        new DependencyDetail
+                        {
+                            Commit = "4",
+                            Name = "Existing.Dependency",
+                            RepoUri = "https://foo.com/foo/bar",
+                            Version = "4.5.6"
+                        }
+                    });
+                await driver.VerifyAsync();
+            });
+        }
+
     }
 }
