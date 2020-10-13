@@ -20,6 +20,7 @@ using MSBuild = Microsoft.Build.Utilities;
 using Microsoft.DotNet.VersionTools.BuildManifest;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
 using System.Xml.Linq;
+using System.Runtime.CompilerServices;
 
 namespace Microsoft.DotNet.Maestro.Tasks
 {
@@ -78,8 +79,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
                 else
                 {
-                    (List<BuildData> buildsManifestMetadata, 
-                     List<SigningInformation> signingInformation, 
+                    (List<BuildData> buildsManifestMetadata,
+                     List<SigningInformation> signingInformation,
                      ManifestBuildData manifestBuildData) = GetBuildManifestsMetadata(ManifestsPath, cancellationToken);
 
                     if (buildsManifestMetadata.Count == 0)
@@ -452,7 +453,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <param name="location">Location of asset</param>
         /// <param name="locationType">Type of location</param>
         /// <param name="nonShipping">If true, the asset is not intended for end customers</param>
-        private void AddAsset(List<AssetData> assets, string assetName, string version, string location, LocationType locationType, bool nonShipping)
+        internal void AddAsset(List<AssetData> assets, string assetName, string version, string location, LocationType locationType, bool nonShipping)
         {
             assets.Add(new AssetData(nonShipping)
             {
@@ -640,7 +641,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         }
 
         private void CreateAndPushMergedManifest(
-            IImmutableList<AssetData> assets, 
+            IImmutableList<AssetData> assets,
             SigningInformation finalSigningInfo,
             ManifestBuildData manifestBuildData)
         {
