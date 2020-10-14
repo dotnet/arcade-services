@@ -1,19 +1,18 @@
 using FluentAssertions;
 using Microsoft.DotNet.Internal.Testing.Utility;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Primitives;
 using Moq;
 using NUnit.Framework;
 using Octokit;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using System.Collections.Concurrent;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Primitives;
 using System.Net;
+using System.Threading.Tasks;
 
 namespace Microsoft.DotNet.DarcLib.Tests
 {
