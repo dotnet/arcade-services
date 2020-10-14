@@ -621,7 +621,7 @@ namespace Microsoft.DotNet.DarcLib
 
             if (Cache != null)
             {
-                return await Cache.GetOrCreateAsync((treeItem.Path, treeItem.Sha), async (entry) =>
+                return await Cache.GetOrCreate((treeItem.Path, treeItem.Sha), async (entry) =>
                 {
                     GitFile file = await GetGitItemImpl(path, treeItem, owner, repo);
 
@@ -650,8 +650,33 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Git file with tree item contents.</returns>
         private async Task<GitFile> GetGitItemImpl(string path, TreeItem treeItem, string owner, string repo)
         {
-            Octokit.Blob blob = await ExponentialRetry.Default.RetryAsync(
-                                async () => await Client.Git.Blob.Get(owner, repo, treeItem.Sha),
+            Blob blob = await ExponentialRetry.Default.RetryAsync(
+                                async () =>
+                                {
+                                    int attempts = 0;
+                                    int maxAttempts = 5;
+                                    Blob blob;
+
+                                    while (true)
+                                    {
+                                        try
+                                        {
+                                            blob = await Client.Git.Blob.Get(owner, repo, treeItem.Sha);
+                                            break;
+                                        }
+                                        catch (AbuseException e) when (attempts < maxAttempts)
+                                        {
+                                            int retryAfterSeconds = e.RetryAfterSeconds ?? 60;
+
+                                            _logger.LogInformation($"Triggered GitHub abuse mechanism. Retrying after {retryAfterSeconds} seconds..");
+                                            await Task.Delay(retryAfterSeconds * 1000);
+                                            attempts++;
+                                        }
+                                    }
+
+                                    return blob;
+                                    
+                                    },
                                 ex => _logger.LogError(ex, $"Failed to get blob at sha {treeItem.Sha}"),
                                 ex => ex is ApiException apiex && apiex.StatusCode >= HttpStatusCode.InternalServerError);
 
