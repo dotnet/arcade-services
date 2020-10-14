@@ -58,7 +58,6 @@ namespace Microsoft.DotNet.DarcLib.Tests
             return cache.AddOrUpdate(key, new SimpleCacheEntry(key), (existingKey, existingValue) => newEntry);
         }
 
-        [TearDown]
         public void Dispose()
         {
 
@@ -104,7 +103,7 @@ namespace Microsoft.DotNet.DarcLib.Tests
         { 
             get
             {   
-                return "\"message\": \"You have triggered an abuse detection mechanism and have been temporarily blocked from content creation. Please retry your request again later.\", \"documentation_url\": \"https://developer.github.com/v3/#abuse-rate-limits\"";
+                return "{\"message\": \"You have triggered an abuse detection mechanism and have been temporarily blocked from content creation. Please retry your request again later.\", \"documentation_url\": \"https://developer.github.com/v3/#abuse-rate-limits\"}";
             }
         }
 
@@ -277,7 +276,7 @@ namespace Microsoft.DotNet.DarcLib.Tests
             // Request an item with the same SHA but different path
             var renamedTreeItem = treeItemsToGet[0];
             var renamedTreeItemBlob = renamedTreeItem.Item3;
-            renamedTreeItem.Item3 = new Octokit.TreeItem("anotherPath",
+            renamedTreeItem.Item3 = new TreeItem("anotherPath",
                 renamedTreeItemBlob.Mode,
                 TreeType.Blob,
                 renamedTreeItemBlob.Size,
