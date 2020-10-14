@@ -132,6 +132,6 @@
     <DefaultRunAsPolicy UserRef="MaestroUser" />
   </Policies>
   <Certificates>
-    <EndpointCertificate X509FindValue="[WebCertName]" Name="WebSslCert" />
+    <EndpointCertificate X509FindType="FindBySubjectName" X509FindValue="[WebCertName]" Name="WebSslCert" />
   </Certificates>
 </ApplicationManifest>
