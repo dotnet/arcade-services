@@ -74,6 +74,11 @@ namespace Microsoft.DotNet.DarcLib
                 }
             }
 
+            if (!File.Exists(fullPath))
+            {
+                throw new DependencyFileNotFoundException($"Could not find {fullPath}");
+            }
+
             using (var streamReader = new StreamReader(fullPath))
             {
                 return await streamReader.ReadToEndAsync();

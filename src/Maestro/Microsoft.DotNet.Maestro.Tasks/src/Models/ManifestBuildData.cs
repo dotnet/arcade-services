@@ -26,6 +26,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         public int PublishingVersion { get; set; }
 
+        public string  IsReleaseOnlyPackageVersion { get; set; }
+
         public ManifestBuildData(Manifest manifest)
         {
             InitialAssetsLocation = manifest.InitialAssetsLocation;
@@ -37,6 +39,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             AzureDevOpsRepository = manifest.AzureDevOpsRepository;
             AzureDevOpsBranch = manifest.AzureDevOpsBranch;
             PublishingVersion = manifest.PublishingVersion;
+            IsReleaseOnlyPackageVersion = manifest.IsReleaseOnlyPackageVersion;
         }
 
         public bool Equals(ManifestBuildData manifestBuildData)
