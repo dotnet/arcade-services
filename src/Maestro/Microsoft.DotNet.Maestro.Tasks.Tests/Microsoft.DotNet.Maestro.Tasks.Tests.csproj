@@ -3,6 +3,7 @@
   <PropertyGroup>
     <DebugType>Full</DebugType>
     <IsPackable>false</IsPackable>
+    <SignAssembly>false</SignAssembly>
   </PropertyGroup>
 
   <ItemGroup>
