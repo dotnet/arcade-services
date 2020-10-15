@@ -179,7 +179,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Internal.H
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CoreHealthMonitor", "src\Maestro\CoreHealthMonitor\CoreHealthMonitor.csproj", "{46B34C5F-FA4E-4D6C-B94E-C31F6A158302}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CoreHealthMonitor.Tests", "src\Maestro\CoreHealthMonitor.Tests\CoreHealthMonitor.Tests.csproj", "{024A6AFE-FC96-4527-AA77-15BC7CDCD809}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CoreHealthMonitor.Tests", "src\Maestro\CoreHealthMonitor.Tests\CoreHealthMonitor.Tests.csproj", "{024A6AFE-FC96-4527-AA77-15BC7CDCD809}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.DotNet.Maestro.Tasks.Tests", "src\Maestro\Microsoft.DotNet.Maestro.Tasks.Tests\Microsoft.DotNet.Maestro.Tasks.Tests.csproj", "{C817E57B-319A-42A0-B5B8-C65E4A777861}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -959,6 +961,18 @@ Global
 		{024A6AFE-FC96-4527-AA77-15BC7CDCD809}.Release|x64.Build.0 = Release|Any CPU
 		{024A6AFE-FC96-4527-AA77-15BC7CDCD809}.Release|x86.ActiveCfg = Release|Any CPU
 		{024A6AFE-FC96-4527-AA77-15BC7CDCD809}.Release|x86.Build.0 = Release|Any CPU
+		{C817E57B-319A-42A0-B5B8-C65E4A777861}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C817E57B-319A-42A0-B5B8-C65E4A777861}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C817E57B-319A-42A0-B5B8-C65E4A777861}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{C817E57B-319A-42A0-B5B8-C65E4A777861}.Debug|x64.Build.0 = Debug|Any CPU
+		{C817E57B-319A-42A0-B5B8-C65E4A777861}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C817E57B-319A-42A0-B5B8-C65E4A777861}.Debug|x86.Build.0 = Debug|Any CPU
+		{C817E57B-319A-42A0-B5B8-C65E4A777861}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C817E57B-319A-42A0-B5B8-C65E4A777861}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C817E57B-319A-42A0-B5B8-C65E4A777861}.Release|x64.ActiveCfg = Release|Any CPU
+		{C817E57B-319A-42A0-B5B8-C65E4A777861}.Release|x64.Build.0 = Release|Any CPU
+		{C817E57B-319A-42A0-B5B8-C65E4A777861}.Release|x86.ActiveCfg = Release|Any CPU
+		{C817E57B-319A-42A0-B5B8-C65E4A777861}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -25,7 +25,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         [Test]
         public void AssetsAddedToList_NewAndPreviousAssetsInList()
         {
-            AssetData existingAssetData = new AssetData(false)
+            AssetData existingAssetData = new AssetData(true)
             {
                 Name = "ExistingAssetName",
                 Version = "56789",
@@ -37,7 +37,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
 
             AssetData newAssetData = new AssetData(true) { Name = "testName", Version = "12345", Locations = ImmutableList<AssetLocationData>.Empty.Add(new AssetLocationData(LocationType.None) { Location = "testLocation" }) };
 
-            pushMetadata.AddAsset(assetData, newAssetData.Name, newAssetData.Version, "testLocation", LocationType.None, true);
+            pushMetadata.AddAsset(assetData, newAssetData.Name, newAssetData.Version, "testLocation", LocationType.None, false);
             assetData.Count.Should().Be(2);
             CompareAssetData(assetData[0], existingAssetData);
             CompareAssetData(assetData[1], newAssetData);
