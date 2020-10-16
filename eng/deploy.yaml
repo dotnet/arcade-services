@@ -111,22 +111,30 @@ stages:
       artifact: MaestroApplication
     - download: current
       artifact: ReleaseUtilities
-    - task: ServiceFabricPowerShell@1
-      displayName: Refresh Service Fabric Services (Maestro)
+    - task: AzureCLI@2
+      displayName: Deploy Service Fabric Application
       inputs:
-        clusterConnection: ${{ parameters.ServiceFabricConnection }}
-        scriptType: filePath
-        scriptPath: $(Pipeline.Workspace)/ReleaseUtilities/refresh-service-fabric-services.ps1
-        scriptArguments: -ApplicationName fabric:/MaestroApplication 
-          -ApplicationManifestPath $(Pipeline.Workspace)/MaestroApplication/projectartifacts/ApplicationPackageRoot/ApplicationManifest.xml 
-          -ServicesSourceFolder $(Build.SourcesDirectory)/src/Maestro/
-    - task: ServiceFabricDeploy@1
-      displayName: Deploy Service Fabric Application (Maestro)
-      inputs:
-        applicationPackagePath: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
-        serviceConnectionName: ${{ parameters.ServiceFabricConnection }}
-        publishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
-        applicationParameterPath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/ApplicationParameters/$(PublishProfile).xml
+        azureSubscription: ${{ parameters.Subscription }}
+        scriptType: ps
+        scriptLocation: inlineScript
+        inlineScript: |
+          $parameters = @{
+            "PublishProfile" = $env:PublishProfile;
+            "ApplicationPackage" = $env:ApplicationPackage;
+            "ForceUpgrade" = $false;
+            "ApplicationName" = "fabric:/MaestroApplication";
+            "ApplicationManifestPath" = $env:ApplicationManifestPath;
+            "ServicesSourceFolder" = $env:ServicesSourceFolder;
+          }
+          if ($env:DisableAutoRollBack -eq 'true') {
+            $parameters["ForceUpgrade"] = $true;
+          }
+          eng/deployment/deploy.ps1 @parameters
+      env:
+        PublishProfile: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
+        ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
+        ApplicationManifestPath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/ApplicationPackageRoot/ApplicationManifest.xml
+        ServicesSourceFolder: $(Build.SourcesDirectory)/src/Maestro/
 
   - job: deployTelemetry
     displayName: Deploy telemetry service fabric application
