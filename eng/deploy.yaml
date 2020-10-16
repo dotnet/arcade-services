@@ -119,7 +119,7 @@ stages:
         scriptLocation: inlineScript
         inlineScript: |
           $parameters = @{
-            "PublishProfile" = $env:PublishProfile;
+            "PublishProfile" = $env:PublishProfilePath;
             "ApplicationPackage" = $env:ApplicationPackage;
             "ForceUpgrade" = $false;
             "ApplicationName" = "fabric:/MaestroApplication";
@@ -131,7 +131,7 @@ stages:
           }
           eng/deployment/deploy.ps1 @parameters
       env:
-        PublishProfile: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
+        PublishProfilePath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/PublishProfiles/$(PublishProfile).xml
         ApplicationPackage: $(Pipeline.Workspace)/MaestroApplication/applicationpackage
         ApplicationManifestPath: $(Pipeline.Workspace)/MaestroApplication/projectartifacts/ApplicationPackageRoot/ApplicationManifest.xml
         ServicesSourceFolder: $(Build.SourcesDirectory)/src/Maestro/
