@@ -112,7 +112,7 @@ stages:
     - download: current
       artifact: ReleaseUtilities
     - task: AzureCLI@2
-      displayName: Deploy Service Fabric Application
+      displayName: Deploy Service Fabric Application (Maestro)
       inputs:
         azureSubscription: ${{ parameters.Subscription }}
         scriptType: ps
