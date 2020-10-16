@@ -2,10 +2,6 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Microsoft.Build.Framework;
-using Microsoft.DotNet.DarcLib;
-using Microsoft.DotNet.Maestro.Client;
-using Microsoft.DotNet.Maestro.Client.Models;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -15,11 +11,15 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using System.Xml.Serialization;
-using MSBuild = Microsoft.Build.Utilities;
+using Microsoft.Build.Framework;
+using Microsoft.DotNet.DarcLib;
+using Microsoft.DotNet.Maestro.Client;
+using Microsoft.DotNet.Maestro.Client.Models;
 using Microsoft.DotNet.VersionTools.BuildManifest;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
-using System.Xml.Linq;
+using MSBuild = Microsoft.Build.Utilities;
 
 namespace Microsoft.DotNet.Maestro.Tasks
 {
@@ -80,8 +80,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
                 }
                 else
                 {
-                    (List<BuildData> buildsManifestMetadata, 
-                     List<SigningInformation> signingInformation, 
+                    (List<BuildData> buildsManifestMetadata,
+                     List<SigningInformation> signingInformation,
                      ManifestBuildData manifestBuildData) = GetBuildManifestsMetadata(ManifestsPath, cancellationToken);
 
                     if (buildsManifestMetadata.Count == 0)
@@ -454,7 +454,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <param name="location">Location of asset</param>
         /// <param name="locationType">Type of location</param>
         /// <param name="nonShipping">If true, the asset is not intended for end customers</param>
-        private void AddAsset(List<AssetData> assets, string assetName, string version, string location, LocationType locationType, bool nonShipping)
+        internal void AddAsset(List<AssetData> assets, string assetName, string version, string location, LocationType locationType, bool nonShipping)
         {
             assets.Add(new AssetData(nonShipping)
             {
@@ -642,7 +642,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         }
 
         private void CreateAndPushMergedManifest(
-            IImmutableList<AssetData> assets, 
+            IImmutableList<AssetData> assets,
             SigningInformation finalSigningInfo,
             ManifestBuildData manifestBuildData)
         {
