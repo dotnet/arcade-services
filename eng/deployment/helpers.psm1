@@ -13,6 +13,7 @@ function Import-KeyVaultCertificate {
     $store = New-Object System.Security.Cryptography.X509Certificates.X509Store -ArgumentList $X509StoreName,CurrentUser
     try {
       $store.Open("ReadWrite");
+      Write-Verbose "Saving certificate into CurrentUser's $X509StoreName store"
       $cert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @([byte[]]$pfxBytes,"",[System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]"Exportable, PersistKeySet, UserKeySet")
       $store.Add($cert)
       return $cert

@@ -7,6 +7,8 @@ param(
   [switch]$ForceUpgrade = $false
 )
 
+$VerbosePreference = "Continue"
+
 Import-Module $PSScriptRoot\helpers.psm1 -Force
 
 $publishProfileXml = [Xml] (Get-Content $PublishProfile)
