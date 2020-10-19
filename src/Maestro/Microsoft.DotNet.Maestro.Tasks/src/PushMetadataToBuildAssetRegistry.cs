@@ -47,6 +47,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         private const string MergedManifestFileName = "MergedManifest.xml";
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
         private readonly HashSet<string> blobSet = new HashSet<string>();
+        private readonly IDirectoryProxy _directoryProxy = new DirectoryProxy();
 
         public void Cancel()
         {
@@ -72,7 +73,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
                 Log.LogMessage(MessageImportance.High, "Starting build metadata push to the Build Asset Registry...");
 
-                if (!Directory.Exists(ManifestsPath))
+                if (!_directoryProxy.Exists(ManifestsPath))
                 {
                     Log.LogError($"Required folder '{ManifestsPath}' does not exist.");
                 }
@@ -280,7 +281,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return VersionIdentifier.GetVersion(assetId);
         }
 
-        private (List<BuildData>, List<SigningInformation>, ManifestBuildData) GetBuildManifestsMetadata(
+        internal (List<BuildData>, List<SigningInformation>, ManifestBuildData) GetBuildManifestsMetadata(
             string manifestsFolderPath,
             CancellationToken cancellationToken)
         {
@@ -288,7 +289,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             var signingInfo = new List<SigningInformation>();
             ManifestBuildData manifestBuildData = null;
 
-            foreach (string manifestPath in Directory.GetFiles(manifestsFolderPath, SearchPattern, SearchOption.AllDirectories))
+            foreach (string manifestPath in _directoryProxy.GetFiles(manifestsFolderPath, SearchPattern, SearchOption.AllDirectories))
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
