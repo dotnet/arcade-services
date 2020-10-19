@@ -506,7 +506,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             return mergedBuild;
         }
 
-        private SigningInformation MergeSigningInfo(List<SigningInformation> signingInformation)
+        internal SigningInformation MergeSigningInfo(List<SigningInformation> signingInformation)
         {
             SigningInformation mergedInfo = null;
 

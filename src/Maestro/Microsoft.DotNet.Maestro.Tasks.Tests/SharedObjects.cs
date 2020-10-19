@@ -1,0 +1,362 @@
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using FluentAssertions;
+using Microsoft.DotNet.Maestro.Client.Models;
+
+namespace Microsoft.DotNet.Maestro.Tasks.Tests
+{
+    public class SharedObjects
+    {
+        public const string Commit = "e7a79ce64f0703c231e6da88b5279dd0bf681b3d";
+        public const string AzureDevOpsAccount1 = "dnceng";
+        public const int AzureDevOpsBuildDefinitionId1 = 6;
+        public const int AzureDevOpsBuildId1 = 856354;
+        public const string AzureDevOpsBranch1 = "refs/heads/master";
+        public const string AzureDevOpsBuildNumber1 = "20201016.5";
+        public const string AzureDevOpsProject1 = "internal";
+        public const string AzureDevOpsRepository1 = "https://dnceng@dev.azure.com/dnceng/internal/_git/dotnet-arcade";
+
+        #region SigningInformation
+        // TODO: Why is this a list? Shouldn't things just get merged into the object? Or is this intended to be before merging & I'm mixed up?
+        public static readonly List<SigningInformation> ExpectedSigningInfo = new List<SigningInformation>()
+            {
+                new SigningInformation()
+                {
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
+                    AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
+                    AzureDevOpsProject = AzureDevOpsProject1,
+                    CertificatesSignInfo = new List<CertificatesSignInfo>()
+                    {
+                        new CertificatesSignInfo()
+                        {
+                            DualSigningAllowed = true,
+                            Include = "ThisIsACert"
+                        }
+                    },
+
+                    FileExtensionSignInfos = new List<FileExtensionSignInfo>()
+                    {
+                        new FileExtensionSignInfo()
+                        {
+                            CertificateName = "ThisIsACert",
+                            Include = ".dll"
+                        }
+                    },
+
+                    FileSignInfos = new List<FileSignInfo>()
+                    {
+                        new FileSignInfo()
+                        {
+                            CertificateName = "ThisIsACert",
+                             Include = "ALibrary.dll"
+                        }
+                    },
+
+                    StrongNameSignInfos = new List<StrongNameSignInfo>()
+                    {
+                        new StrongNameSignInfo()
+                        {
+                            CertificateName = "ThisIsACert",
+                            Include = "IncludeMe",
+                            PublicKeyToken = "123456789abcde12"
+                        }
+                    },
+                    ItemsToSign = new List<ItemsToSign>()
+                }
+            };
+
+        public static readonly SigningInformation PartialSigningInfo1 = new SigningInformation()
+        {
+            AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
+            AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/"
+        };
+
+        public static readonly SigningInformation PartialSigningInfo2 = new SigningInformation()
+        {
+            AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
+            AzureDevOpsProject = AzureDevOpsProject1
+        };
+
+        public static readonly SigningInformation PartialSigningInfo3 = new SigningInformation()
+        {
+            AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
+            AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
+            AzureDevOpsProject = AzureDevOpsProject1,
+            CertificatesSignInfo = new List<CertificatesSignInfo>()
+                    {
+                        new CertificatesSignInfo()
+                        {
+                            DualSigningAllowed = true,
+                            Include = "ThisIsACert"
+                        }
+                    },
+        };
+
+        public static readonly SigningInformation PartialSigningInfo4 = new SigningInformation()
+        {
+            AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
+            AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
+            AzureDevOpsProject = AzureDevOpsProject1,
+            FileExtensionSignInfos = new List<FileExtensionSignInfo>()
+                    {
+                        new FileExtensionSignInfo()
+                        {
+                            CertificateName = "ThisIsACert",
+                            Include = ".dll"
+                        }
+                    },
+        };
+
+        public static readonly SigningInformation MergedPartialMetadataSigningInfos = new SigningInformation()
+        {
+            AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
+            AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
+            AzureDevOpsProject = AzureDevOpsProject1
+        };
+
+        public static readonly SigningInformation MergedPartialSigningInfos = new SigningInformation()
+        {
+            AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
+            AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
+            AzureDevOpsProject = AzureDevOpsProject1,
+            CertificatesSignInfo = new List<CertificatesSignInfo>()
+                    {
+                        new CertificatesSignInfo()
+                        {
+                            DualSigningAllowed = true,
+                            Include = "ThisIsACert"
+                        }
+                    },
+            FileExtensionSignInfos = new List<FileExtensionSignInfo>()
+                    {
+                        new FileExtensionSignInfo()
+                        {
+                            CertificateName = "ThisIsACert",
+                            Include = ".dll"
+                        }
+                    }
+        };
+
+        public static readonly SigningInformation IncompatibleSigningInfo = new SigningInformation()
+        {
+            AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
+            AzureDevOpsCollectionUri = "https://dev.azure.com/newProject",
+            AzureDevOpsProject = AzureDevOpsProject1,
+        };
+
+        public static readonly List<SigningInformation> ExpectedSigningInfo2 = new List<SigningInformation>()
+            {
+                new SigningInformation()
+                {
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
+                    AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
+                    AzureDevOpsProject = AzureDevOpsProject1,
+                    CertificatesSignInfo = new List<CertificatesSignInfo>()
+                    {
+                        new CertificatesSignInfo()
+                        {
+                            DualSigningAllowed = true,
+                            Include = "AnotherCert"
+                        }
+                    },
+
+                    FileExtensionSignInfos = new List<FileExtensionSignInfo>()
+                    {
+                        new FileExtensionSignInfo()
+                        {
+                            CertificateName = "None",
+                            Include = ".zip"
+                        }
+                    },
+
+                    FileSignInfos = new List<FileSignInfo>()
+                    {
+                        new FileSignInfo()
+                        {
+                            CertificateName = "AnotherCert",
+                             Include = "AnotherLibrary.dll"
+                        }
+                    },
+
+                    StrongNameSignInfos = new List<StrongNameSignInfo>()
+                    {
+                        new StrongNameSignInfo()
+                        {
+                            CertificateName = "AnotherCert",
+                            Include = "StrongName",
+                            PublicKeyToken = "123456789abcde12"
+                        }
+                    },
+                    ItemsToSign = new List<ItemsToSign>()
+                }
+            };
+
+        public static readonly SigningInformation ExpectedMergedSigningInfo =
+                new SigningInformation()
+                {
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
+                    AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
+                    AzureDevOpsProject = AzureDevOpsProject1,
+                    CertificatesSignInfo = new List<CertificatesSignInfo>()
+                    {
+                        new CertificatesSignInfo()
+                        {
+                            DualSigningAllowed = true,
+                            Include = "ThisIsACert"
+                        },
+                        new CertificatesSignInfo()
+                        {
+                            DualSigningAllowed = true,
+                            Include = "AnotherCert"
+                        }
+                    },
+
+                    FileExtensionSignInfos = new List<FileExtensionSignInfo>()
+                    {
+                        new FileExtensionSignInfo()
+                        {
+                            CertificateName = "ThisIsACert",
+                            Include = ".dll"
+                        },
+                        new FileExtensionSignInfo()
+                        {
+                            CertificateName = "None",
+                            Include = ".zip"
+                        }
+                    },
+
+                    FileSignInfos = new List<FileSignInfo>()
+                    {
+                        new FileSignInfo()
+                        {
+                            CertificateName = "ThisIsACert",
+                             Include = "ALibrary.dll"
+                        },
+                        new FileSignInfo()
+                        {
+                            CertificateName = "AnotherCert",
+                             Include = "AnotherLibrary.dll"
+                        }
+                    },
+
+                    StrongNameSignInfos = new List<StrongNameSignInfo>()
+                    {
+                        new StrongNameSignInfo()
+                        {
+                            CertificateName = "ThisIsACert",
+                            Include = "IncludeMe",
+                            PublicKeyToken = "123456789abcde12"
+                        },
+                        new StrongNameSignInfo()
+                        {
+                            CertificateName = "AnotherCert",
+                            Include = "StrongName",
+                            PublicKeyToken = "123456789abcde12"
+                        }
+                    },
+                    ItemsToSign = new List<ItemsToSign>()
+                };
+        #endregion
+        #region AsssetData
+        public static readonly IImmutableList<AssetData> ExpectedAssets1 =
+            ImmutableList.Create(
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "Microsoft.Cci.Extensions",
+                    Version = "6.0.0-beta.20516.5"
+                },
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml",
+                    Version = "6.0.0-beta.20516.5"
+                });
+
+        public static readonly IImmutableList<AssetData> ExpectedAssets2 =
+             ImmutableList.Create(
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+               new AssetLocationData(LocationType.Container)
+               { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "Microsoft.DotNet.ApiCompat",
+                    Version = "6.0.0-beta.20516.5"
+                },
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg",
+                    Version = "6.0.0-beta.20516.5"
+                });
+        #endregion
+
+        #region Manifests
+        public static readonly Manifest ExpectedManifest = new Manifest()
+        {
+            AzureDevOpsAccount = AzureDevOpsAccount1,
+            AzureDevOpsBranch = AzureDevOpsBranch1,
+            AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1,
+            AzureDevOpsBuildId = AzureDevOpsBuildId1,
+            AzureDevOpsBuildNumber = AzureDevOpsBuildNumber1,
+            AzureDevOpsProject = AzureDevOpsProject1,
+            AzureDevOpsRepository = AzureDevOpsRepository1,
+            InitialAssetsLocation = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts",
+            PublishingVersion = 3
+        };
+
+        public static readonly ManifestBuildData ExpectedManifestBuildData = new ManifestBuildData(ExpectedManifest);
+
+        public static readonly List<BuildData> ExpectedManifestMetadata2 = new List<BuildData>()
+            {
+                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+                {
+                    GitHubBranch = AzureDevOpsBranch1,
+                    GitHubRepository = "dotnet-arcade",
+                    Assets = ExpectedAssets2,
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+                }
+            };
+
+        public static readonly List<BuildData> ExpectedManifestMetadata = new List<BuildData>()
+            {
+                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+                {
+                    GitHubBranch = AzureDevOpsBranch1,
+                    GitHubRepository = "dotnet-arcade",
+                    Assets = ExpectedAssets1,
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+                }
+            };
+        #endregion
+
+        public static void CompareManifestBuildData(ManifestBuildData actual, ManifestBuildData expected)
+        {
+            actual.AzureDevOpsAccount.Should().Be(expected.AzureDevOpsAccount);
+            actual.AzureDevOpsBranch.Should().Be(expected.AzureDevOpsBranch);
+            actual.AzureDevOpsBuildDefinitionId.Should().Be(expected.AzureDevOpsBuildDefinitionId);
+            actual.AzureDevOpsBuildId.Should().Be(expected.AzureDevOpsBuildId);
+            actual.AzureDevOpsBuildNumber.Should().Be(expected.AzureDevOpsBuildNumber);
+            actual.AzureDevOpsProject.Should().Be(expected.AzureDevOpsProject);
+            actual.AzureDevOpsRepository.Should().Be(expected.AzureDevOpsRepository);
+            actual.InitialAssetsLocation.Should().Be(expected.InitialAssetsLocation);
+            actual.PublishingVersion.Should().Be(expected.PublishingVersion);
+        }
+
+        public static void CompareSigningInformation(SigningInformation actualSigningInfo, SigningInformation expectedSigningInfo)
+        {
+            actualSigningInfo.CertificatesSignInfo.Count.Should().Be(expectedSigningInfo.CertificatesSignInfo.Count);
+            actualSigningInfo.FileExtensionSignInfos.Count.Should().Be(expectedSigningInfo.FileSignInfos.Count);
+            actualSigningInfo.FileSignInfos.Count.Should().Be(expectedSigningInfo.FileSignInfos.Count);
+            actualSigningInfo.ItemsToSign.Count.Should().Be(expectedSigningInfo.ItemsToSign.Count);
+        }
+    }
+}
