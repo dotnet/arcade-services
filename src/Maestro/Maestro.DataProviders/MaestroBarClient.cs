@@ -208,7 +208,8 @@ namespace Maestro.DataProviders
                 foreach (var edge in edgesWithLastBuild)
                 {
                     edge.IsToolingOnly = !_context.IsProductDependency(
-                        edge.Subscription.LastAppliedBuild.Id,
+                        edge.From.Repository,
+                        edge.From.Branch,
                         edge.To.Repository,
                         edge.To.Branch);
                 }

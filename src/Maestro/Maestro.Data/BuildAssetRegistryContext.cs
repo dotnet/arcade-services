@@ -353,15 +353,32 @@ FROM traverse;",
             return dict.Values.ToList();
         }
 
-        public bool IsProductDependency(int buildId, string repositoryName, string branchName)
+        public bool IsProductDependency(
+            string sourceRepositoryName,
+            string sourceBranchName,
+            string targetRepositoryName,
+            string targetBranchName)
         {
-            return BuildDependencies
-                .Any(d => d.IsProduct
-                    && d.DependentBuildId == buildId
-                    && ((d.Build.GitHubRepository == repositoryName
-                            && d.Build.GitHubBranch == branchName)
-                        || (d.Build.AzureDevOpsRepository == repositoryName
-                            && d.Build.AzureDevOpsBranch == branchName)));
+            var lastBuild = Builds
+                .Where(b =>
+                    (b.GitHubRepository == targetRepositoryName && b.GitHubBranch == targetBranchName)
+                    || (b.AzureDevOpsRepository == targetRepositoryName && b.AzureDevOpsBranch == targetBranchName))
+                .OrderByDescending(b => b.DateProduced)
+                .Select(b => new
+                {
+                    Id = b.Id,
+                    HasProductDependencies = BuildDependencies
+                        .Any(d =>
+                            ((d.DependentBuild.GitHubRepository == sourceRepositoryName
+                                    && d.DependentBuild.GitHubBranch == sourceBranchName)
+                                || (d.DependentBuild.AzureDevOpsRepository == sourceRepositoryName
+                                    && d.DependentBuild.AzureDevOpsBranch == sourceBranchName))
+                            && d.Build == b
+                            && d.IsProduct)
+                })
+                .FirstOrDefault();
+
+            return lastBuild?.HasProductDependencies ?? false;
         }
     }
 
