@@ -144,7 +144,7 @@ namespace Microsoft.DotNet.DarcLib.Helpers
             ExecuteGitCommand(gitLocation, $"config user.name {user}", logger, workingDirectory);
             ExecuteGitCommand(gitLocation, $"config user.email {email}", logger, workingDirectory);
 
-            File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), new[] { "eng/", $"/{VersionFiles.NugetConfig}", $"/{VersionFiles.GlobalJson}" });
+            File.WriteAllLines(Path.Combine(workingDirectory, ".git/info/sparse-checkout"), new[] { "eng/", ".config/", $"/{VersionFiles.NugetConfig}", $"/{VersionFiles.GlobalJson}" });
 
             ExecuteGitCommand(gitLocation, $"-c core.askpass= -c credential.helper= pull --depth=1 {remote} {branch}", logger, workingDirectory, secretToMask: pat);
             ExecuteGitCommand(gitLocation, $"checkout {branch}", logger, workingDirectory);
