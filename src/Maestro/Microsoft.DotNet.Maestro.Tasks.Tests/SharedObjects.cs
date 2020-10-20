@@ -15,9 +15,9 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         public const string AzureDevOpsBuildNumber1 = "20201016.5";
         public const string AzureDevOpsProject1 = "internal";
         public const string AzureDevOpsRepository1 = "https://dnceng@dev.azure.com/dnceng/internal/_git/dotnet-arcade";
+        public const string LocationString = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts";
 
         #region SigningInformation
-        // TODO: Why is this a list? Shouldn't things just get merged into the object? Or is this intended to be before merging & I'm mixed up?
         public static readonly List<SigningInformation> ExpectedSigningInfo = new List<SigningInformation>()
             {
                 new SigningInformation()
@@ -83,13 +83,13 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
             AzureDevOpsProject = AzureDevOpsProject1,
             CertificatesSignInfo = new List<CertificatesSignInfo>()
+                {
+                    new CertificatesSignInfo()
                     {
-                        new CertificatesSignInfo()
-                        {
-                            DualSigningAllowed = true,
-                            Include = "ThisIsACert"
-                        }
-                    },
+                        DualSigningAllowed = true,
+                        Include = "ThisIsACert"
+                    }
+                },
 
             FileExtensionSignInfos = new List<FileExtensionSignInfo>(),
             FileSignInfos = new List<FileSignInfo>(),
@@ -104,13 +104,13 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             AzureDevOpsProject = AzureDevOpsProject1,
             CertificatesSignInfo = new List<CertificatesSignInfo>(),
             FileExtensionSignInfos = new List<FileExtensionSignInfo>()
+                {
+                    new FileExtensionSignInfo()
                     {
-                        new FileExtensionSignInfo()
-                        {
-                            CertificateName = "ThisIsACert",
-                            Include = ".dll"
-                        }
-                    },
+                        CertificateName = "ThisIsACert",
+                        Include = ".dll"
+                    }
+                },
             FileSignInfos = new List<FileSignInfo>(),
             StrongNameSignInfos = new List<StrongNameSignInfo>(),
             ItemsToSign = new List<ItemsToSign>()
@@ -129,21 +129,21 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
             AzureDevOpsProject = AzureDevOpsProject1,
             CertificatesSignInfo = new List<CertificatesSignInfo>()
+                {
+                    new CertificatesSignInfo()
                     {
-                        new CertificatesSignInfo()
-                        {
-                            DualSigningAllowed = true,
-                            Include = "ThisIsACert"
-                        }
-                    },
+                        DualSigningAllowed = true,
+                        Include = "ThisIsACert"
+                    }
+                },
             FileExtensionSignInfos = new List<FileExtensionSignInfo>()
+                {
+                    new FileExtensionSignInfo()
                     {
-                        new FileExtensionSignInfo()
-                        {
-                            CertificateName = "ThisIsACert",
-                            Include = ".dll"
-                        }
-                    },
+                        CertificateName = "ThisIsACert",
+                        Include = ".dll"
+                    }
+                },
             FileSignInfos = new List<FileSignInfo>(),
             StrongNameSignInfos = new List<StrongNameSignInfo>(),
             ItemsToSign = new List<ItemsToSign>()
@@ -271,189 +271,90 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         #endregion
 
         #region AsssetData
+
+        internal static readonly AssetData PackageAsset1 =
+            new AssetData(true)
+            {
+                Locations = ImmutableList.Create(
+                    new AssetLocationData(LocationType.Container)
+                    { Location = LocationString }),
+                Name = "Microsoft.Cci.Extensions",
+                Version = "6.0.0-beta.20516.5"
+            };
+
+        internal static readonly AssetData BlobAsset1 =
+            new AssetData(true)
+            {
+                Locations = ImmutableList.Create(
+                    new AssetLocationData(LocationType.Container)
+                    { Location = LocationString }),
+                Name = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml",
+                Version = "6.0.0-beta.20516.5"
+            };
+
+        internal static readonly AssetData PackageAsset2 =
+            new AssetData(true)
+            {
+                Locations = ImmutableList.Create(
+                    new AssetLocationData(LocationType.Container)
+                    { Location = LocationString }),
+                Name = "Microsoft.DotNet.ApiCompat",
+                Version = "6.0.0-beta.20516.5"
+            };
+
+        internal static readonly AssetData BlobAsset2 =
+            new AssetData(true)
+            {
+                Locations = ImmutableList.Create(
+                    new AssetLocationData(LocationType.Container)
+                    { Location = LocationString }),
+                Name = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg",
+                Version = "6.0.0-beta.20516.5"
+            };
+
+        internal static readonly AssetData PackageAsset3 =
+            new AssetData(true)
+            {
+                Locations = ImmutableList.Create(
+                    new AssetLocationData(LocationType.Container)
+                    { Location = LocationString }),
+                Name = "Microsoft.DotNet.Arcade.Sdk",
+                Version = "6.0.0-beta.20516.5"
+            };
+
+        internal static readonly AssetData BlobAsset3 =
+            new AssetData(true)
+            {
+                Locations = ImmutableList.Create(
+                    new AssetLocationData(LocationType.Container)
+                    { Location = LocationString }),
+                Name = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg",
+                Version = "6.0.0-beta.20516.5"
+            };
+
         public static readonly IImmutableList<AssetData> ExpectedAssets1 =
-            ImmutableList.Create(
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "Microsoft.Cci.Extensions",
-                    Version = "6.0.0-beta.20516.5"
-                },
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml",
-                    Version = "6.0.0-beta.20516.5"
-                });
+            ImmutableList.Create(PackageAsset1, BlobAsset1);
 
         public static readonly IImmutableList<AssetData> ExpectedAssets2 =
-             ImmutableList.Create(
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-               new AssetLocationData(LocationType.Container)
-               { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "Microsoft.DotNet.ApiCompat",
-                    Version = "6.0.0-beta.20516.5"
-                },
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg",
-                    Version = "6.0.0-beta.20516.5"
-                });
+             ImmutableList.Create(PackageAsset2, BlobAsset2);
 
         public static readonly IImmutableList<AssetData> ExpectedAssets3 =
-             ImmutableList.Create(
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "Microsoft.DotNet.Arcade.Sdk",
-                    Version = "6.0.0-beta.20516.5"
-                },
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg",
-                    Version = "6.0.0-beta.20516.5"
-                });
+             ImmutableList.Create(PackageAsset3, BlobAsset3);
 
         public static readonly IImmutableList<AssetData> ExpectedAssets1And2 =
-            ImmutableList.Create(
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "Microsoft.Cci.Extensions",
-                    Version = "6.0.0-beta.20516.5"
-                },
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml",
-                    Version = "6.0.0-beta.20516.5"
-                },
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-               new AssetLocationData(LocationType.Container)
-               { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "Microsoft.DotNet.ApiCompat",
-                    Version = "6.0.0-beta.20516.5"
-                },
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg",
-                    Version = "6.0.0-beta.20516.5"
-                });
+            ImmutableList.Create(PackageAsset1, BlobAsset1, PackageAsset2, BlobAsset2);
 
         public static readonly IImmutableList<AssetData> ThreeExpectedAssets =
-            ImmutableList.Create(
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "Microsoft.Cci.Extensions",
-                    Version = "6.0.0-beta.20516.5"
-                },
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml",
-                    Version = "6.0.0-beta.20516.5"
-                },
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "Microsoft.DotNet.ApiCompat",
-                    Version = "6.0.0-beta.20516.5"
-                },
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg",
-                    Version = "6.0.0-beta.20516.5"
-                },
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "Microsoft.DotNet.Arcade.Sdk",
-                    Version = "6.0.0-beta.20516.5"
-                },
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg",
-                    Version = "6.0.0-beta.20516.5"
-                });
+            ImmutableList.Create(PackageAsset1, BlobAsset1, PackageAsset2, BlobAsset2, PackageAsset3, BlobAsset3);
 
         public static readonly IImmutableList<AssetData> NoBlobExpectedAssets =
-            ImmutableList.Create(
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "Microsoft.Cci.Extensions",
-                    Version = "6.0.0-beta.20516.5"
-                });
+            ImmutableList.Create(PackageAsset1);
 
         public static readonly IImmutableList<AssetData> NoPackageExpectedAssets =
-                        ImmutableList.Create(
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml",
-                    Version = "6.0.0-beta.20516.5"
-                });
+            ImmutableList.Create(BlobAsset1);
 
         public static readonly IImmutableList<AssetData> ExpectedPartialAssets =
-            ImmutableList.Create(
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "Microsoft.Cci.Extensions",
-                    Version = "6.0.0-beta.20516.5"
-                },
-                new AssetData(true)
-                {
-                    Locations = ImmutableList.Create(
-                new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
-                    Name = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml",
-                    Version = "6.0.0-beta.20516.5"
-                });
+            ImmutableList.Create(PackageAsset1, BlobAsset1);
 
         public static readonly IImmutableList<AssetData> UnversionedPackageExpectedAssets =
             ImmutableList.Create(
@@ -461,7 +362,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 {
                     Locations = ImmutableList.Create(
                 new AssetLocationData(LocationType.Container)
-                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                { Location = LocationString }),
                     Name = "Microsoft.Cci.Extensions"
                 });
         #endregion
@@ -476,7 +377,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             AzureDevOpsBuildNumber = AzureDevOpsBuildNumber1,
             AzureDevOpsProject = AzureDevOpsProject1,
             AzureDevOpsRepository = AzureDevOpsRepository1,
-            InitialAssetsLocation = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts",
+            InitialAssetsLocation = LocationString,
             PublishingVersion = 3
         };
 
@@ -544,53 +445,42 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         #endregion
 
         #region BuildData
-        public static readonly List<BuildData> ExpectedBuildDataList1 = new List<BuildData>()
+
+        internal static readonly BuildData Asset1BuildData =
+            new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
             {
-                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
-                {
-                    GitHubBranch = AzureDevOpsBranch1,
-                    GitHubRepository = "dotnet-arcade",
-                    Assets = ExpectedAssets1,
-                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
-                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
-                },
-                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
-                {
-                    GitHubBranch = AzureDevOpsBranch1,
-                    GitHubRepository = "dotnet-arcade",
-                    Assets = ExpectedAssets2,
-                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
-                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
-                }
+                GitHubBranch = AzureDevOpsBranch1,
+                GitHubRepository = "dotnet-arcade",
+                Assets = ExpectedAssets1,
+                AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
             };
 
-        public static readonly List<BuildData> ExpectedThreeBuildDataList = new List<BuildData>()
+        internal static readonly BuildData Asset2BuildData =
+            new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
             {
-                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
-                {
-                    GitHubBranch = AzureDevOpsBranch1,
-                    GitHubRepository = "dotnet-arcade",
-                    Assets = ExpectedAssets1,
-                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
-                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
-                },
-                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
-                {
-                    GitHubBranch = AzureDevOpsBranch1,
-                    GitHubRepository = "dotnet-arcade",
-                    Assets = ExpectedAssets2,
-                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
-                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
-                },
-                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
-                {
-                    GitHubBranch = AzureDevOpsBranch1,
-                    GitHubRepository = "dotnet-arcade",
-                    Assets = ExpectedAssets3,
-                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
-                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
-                }
+                GitHubBranch = AzureDevOpsBranch1,
+                GitHubRepository = "dotnet-arcade",
+                Assets = ExpectedAssets2,
+                AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
             };
+
+        internal static readonly BuildData Asset3BuildData =
+            new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+            {
+                GitHubBranch = AzureDevOpsBranch1,
+                GitHubRepository = "dotnet-arcade",
+                Assets = ExpectedAssets3,
+                AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+            };
+
+        public static readonly List<BuildData> ExpectedTwoBuildDataList =
+            new List<BuildData>() { Asset1BuildData, Asset2BuildData };
+
+        public static readonly List<BuildData> ExpectedThreeBuildDataList =
+            new List<BuildData>() { Asset1BuildData, Asset2BuildData, Asset3BuildData };
 
         public static readonly List<BuildData> BuildDataWithoutAssetsList = new List<BuildData>()
             {

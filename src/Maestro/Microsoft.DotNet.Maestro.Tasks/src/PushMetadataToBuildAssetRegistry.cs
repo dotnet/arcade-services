@@ -611,7 +611,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <param name="location">Initial location for the merged manifest entry</param>
         /// <param name="manifestFileName">Merged manifest file name</param>
         /// <returns>An AssetData with data about the merge manifest</returns>
-        private AssetData GetManifestAsAsset(IImmutableList<AssetData> assets, string location, string manifestFileName)
+        internal AssetData GetManifestAsAsset(IImmutableList<AssetData> assets, string location, string manifestFileName)
         {
             (string accountName, string projectName, string azDORepoName) = AzureDevOpsClient.ParseRepoUri(GetAzDevRepository());
 
