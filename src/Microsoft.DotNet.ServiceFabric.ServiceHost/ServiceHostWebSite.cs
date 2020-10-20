@@ -2,6 +2,7 @@ using System;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.DncEng.Configuration.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Microsoft.DotNet.ServiceFabric.ServiceHost
@@ -34,6 +35,10 @@ namespace Microsoft.DotNet.ServiceFabric.ServiceHost
                     builder.AddDefaultJsonConfiguration(context.HostingEnvironment);
                 })
                 .ConfigureServices(ServiceHost.ConfigureDefaultServices)
+                .ConfigureServices(services =>
+                {
+                    services.AddSingleton<IServiceLoadReporter>(new EmptyServiceLoadReporter());
+                })
                 .ConfigureLogging(
                     builder =>
                     {

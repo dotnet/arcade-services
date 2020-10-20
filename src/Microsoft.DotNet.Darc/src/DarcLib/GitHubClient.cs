@@ -20,6 +20,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.DotNet.Services.Utility;
 using Maestro.Contracts;
+using System.Collections.Immutable;
 
 namespace Microsoft.DotNet.DarcLib
 {
@@ -61,10 +62,10 @@ namespace Microsoft.DotNet.DarcLib
                 ContractResolver = new CamelCasePropertyNamesContractResolver(),
                 NullValueHandling = NullValueHandling.Ignore
             };
-            _lazyClient = new Lazy<Octokit.IGitHubClient>(CreateGitHubClientClient);
+            _lazyClient = new Lazy<IGitHubClient>(CreateGitHubClient);
         }
 
-        public virtual Octokit.IGitHubClient Client => _lazyClient.Value;
+        public virtual IGitHubClient Client => _lazyClient.Value;
 
         public bool AllowRetries { get; set; } = true;
 
@@ -129,7 +130,7 @@ namespace Microsoft.DotNet.DarcLib
         public async Task CreateBranchAsync(string repoUri, string newBranch, string baseBranch)
         {
             _logger.LogInformation(
-                $"Verifying if '{newBranch}' branch exist in repo '{repoUri}'. If not, we'll create it...");
+                $"Verifying if '{newBranch}' branch exists in repo '{repoUri}'. If not, we'll create it...");
 
             (string owner, string repo) = ParseRepoUri(repoUri);
             string latestSha = await GetLastCommitShaAsync(owner, repo, baseBranch);
@@ -620,7 +621,7 @@ namespace Microsoft.DotNet.DarcLib
 
             if (Cache != null)
             {
-                return await Cache.GetOrCreateAsync((treeItem.Path, treeItem.Sha), async (entry) =>
+                return await Cache.GetOrCreate((treeItem.Path, treeItem.Sha), async (entry) =>
                 {
                     GitFile file = await GetGitItemImpl(path, treeItem, owner, repo);
 
@@ -649,8 +650,33 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns>Git file with tree item contents.</returns>
         private async Task<GitFile> GetGitItemImpl(string path, TreeItem treeItem, string owner, string repo)
         {
-            Octokit.Blob blob = await ExponentialRetry.Default.RetryAsync(
-                                async () => await Client.Git.Blob.Get(owner, repo, treeItem.Sha),
+            Blob blob = await ExponentialRetry.Default.RetryAsync(
+                                async () =>
+                                {
+                                    int attempts = 0;
+                                    int maxAttempts = 5;
+                                    Blob blob;
+
+                                    while (true)
+                                    {
+                                        try
+                                        {
+                                            blob = await Client.Git.Blob.Get(owner, repo, treeItem.Sha);
+                                            break;
+                                        }
+                                        catch (AbuseException e) when (attempts < maxAttempts)
+                                        {
+                                            int retryAfterSeconds = e.RetryAfterSeconds ?? 60;
+
+                                            _logger.LogInformation($"Triggered GitHub abuse mechanism. Retrying after {retryAfterSeconds} seconds..");
+                                            await Task.Delay(retryAfterSeconds * 1000);
+                                            attempts++;
+                                        }
+                                    }
+
+                                    return blob;
+                                    
+                                    },
                                 ex => _logger.LogError(ex, $"Failed to get blob at sha {treeItem.Sha}"),
                                 ex => ex is ApiException apiex && apiex.StatusCode >= HttpStatusCode.InternalServerError);
 
@@ -841,16 +867,33 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         /// <summary>
-        ///     Retrieve the list of reviews on a PR
+        ///  Retrieve the list of all relevant reviews on a PR. This is defined as
+        ///   - Not a comment; comments are not reviews, may be created after an approval / rejection, and may be created by the author
+        ///   - Latest response by that user; all other responses are considered valid and we'll inspect the most recent one.
+        ///     (this allows users to reject, then later approve, a PR)
         /// </summary>
         /// <param name="pullRequestUrl">Uri of pull request</param>
         /// <returns>List of reviews.</returns>
-        public async Task<IList<Review>> GetPullRequestReviewsAsync(string pullRequestUrl)
+        public async Task<IList<Review>> GetLatestPullRequestReviewsAsync(string pullRequestUrl)
         {
             (string owner, string repo, int id) = ParsePullRequestUri(pullRequestUrl);
 
             var reviews = await Client.Repository.PullRequest.Review.GetAll(owner, repo, id);
-            return reviews.Select(review =>
+
+            // Filter out comments because they could come after Approved/ChangedRequested, and they don't change the decision.
+            reviews = reviews.Where(r => r.State != PullRequestReviewState.Commented).ToImmutableList();
+
+            // Grab the top review by SubmittedAt from what remains
+            var newestActionableReviews = reviews.GroupBy(r => r.User.Login)
+                                                 .ToDictionary(g => g.Key,
+                                                               g => (from r in reviews
+                                                                     where r.User.Login == g.Key
+                                                                     select r)
+                                                 .OrderByDescending(r => r.SubmittedAt)
+                                                 .First())
+                                                 .Values;
+
+            return newestActionableReviews.Select(review =>
                 new Review(TranslateReviewState(review.State.Value), pullRequestUrl)).ToList();
         }
 
@@ -954,7 +997,7 @@ namespace Microsoft.DotNet.DarcLib
                 .ToList();
         }
 
-        private Octokit.GitHubClient CreateGitHubClientClient()
+        private Octokit.GitHubClient CreateGitHubClient()
         {
             return new Octokit.GitHubClient(_product) {Credentials = new Octokit.Credentials(_personalAccessToken)};
         }
@@ -1105,7 +1148,7 @@ namespace Microsoft.DotNet.DarcLib
         /// <returns></returns>
         public Task CommitFilesAsync(List<GitFile> filesToCommit, string repoUri, string branch, string commitMessage)
         {
-            return this.CommitFilesAsync(
+            return CommitFilesAsync(
                 filesToCommit, 
                 repoUri, 
                 branch, 

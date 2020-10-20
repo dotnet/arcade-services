@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -62,14 +63,20 @@ namespace Microsoft.DotNet.DarcLib
             string fullPath = Path.Combine(repoUri, relativeFilePath);
             if (!Directory.Exists(Path.GetDirectoryName(fullPath)))
             {
-                if (Directory.Exists(Path.GetDirectoryName(Path.GetDirectoryName(fullPath))))
+                string parentTwoDirectoriesUp = Path.GetDirectoryName(Path.GetDirectoryName(fullPath));
+                if (Directory.Exists(parentTwoDirectoriesUp))
                 {
-                    throw new Exception("Pizza");
+                    throw new DependencyFileNotFoundException("Found parent-directory path ('{parentTwoDirectoriesUp}') but unable to find specified file ('{relativeFilePath}')");
                 }
                 else
                 {
-                    throw new Exception("Banana");
+                    throw new InvalidOperationException("Neither parent-directory path ('{parentTwoDirectoriesUp}') nor specified file ('{relativeFilePath}') found.");
                 }
+            }
+
+            if (!File.Exists(fullPath))
+            {
+                throw new DependencyFileNotFoundException($"Could not find {fullPath}");
             }
 
             using (var streamReader = new StreamReader(fullPath))
@@ -126,7 +133,7 @@ namespace Microsoft.DotNet.DarcLib
             throw new NotImplementedException();
         }
 
-        public Task<IList<Review>> GetPullRequestReviewsAsync(string pullRequestUrl)
+        public Task<IList<Review>> GetLatestPullRequestReviewsAsync(string pullRequestUrl)
         {
             throw new NotImplementedException();
         }
@@ -183,6 +190,7 @@ namespace Microsoft.DotNet.DarcLib
                 {
                     foreach (GitFile file in filesToCommit)
                     {
+                        Debug.Assert(file != null, "Passed in a null GitFile in filesToCommit");
                         switch (file.Operation)
                         {
                             case GitFileOperation.Add:

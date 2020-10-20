@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using FluentAssertions;
+using FluentAssertions.Common;
 using Maestro.Data;
 using Maestro.Web.Api.v2020_02_20.Controllers;
 using Maestro.Web.Api.v2020_02_20.Models;
@@ -272,6 +273,47 @@ namespace Maestro.Web.Tests
             // Try to get a default channel that just doesn't exist at all.
             var thirdExpectedFailResult = await data.DefaultChannelsController.Get(404);
             thirdExpectedFailResult.Should().BeOfType<NotFoundResult>("Getting a default channel for a non-existent default channel should give a not-found type result");
+        }
+
+        [Test]
+        public async Task AddDuplicateDefaultChannels()
+        {
+            using TestData data = await BuildDefaultAsync();
+            string channelName = "TEST-CHANNEL-DUPLICATE-ENTRY-SCENARIO";
+            string classification = "TEST-CLASSIFICATION";
+            string repository = "FAKE-REPOSITORY";
+            string branch = "FAKE-BRANCH";
+
+            Channel channel;
+            {
+                var result = await data.ChannelsController.CreateChannel(channelName, classification);
+                channel = (Channel) ((ObjectResult) result).Value;
+            }
+
+            DefaultChannelCreateData testDefaultChannelData = new DefaultChannelCreateData()
+            {
+                Branch = branch,
+                ChannelId = channel.Id,
+                Enabled = true,
+                Repository = repository
+            };
+
+            DefaultChannel defaultChannel;
+            {
+                var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
+                defaultChannel = (DefaultChannel) ((ObjectResult) result).Value;
+            }
+
+            defaultChannel.Should().NotBeNull();
+
+            DefaultChannel defaultChannelDuplicateAdd;
+            {
+                var result = await data.DefaultChannelsController.Create(testDefaultChannelData);
+                defaultChannelDuplicateAdd = (DefaultChannel) ((ObjectResult) result).Value;
+            }
+
+            // Adding the same thing twice should succeed, as well as provide the correct object in return.
+            defaultChannelDuplicateAdd.Should().BeEquivalentTo(defaultChannel);
         }
 
         private Task<TestData> BuildDefaultAsync()

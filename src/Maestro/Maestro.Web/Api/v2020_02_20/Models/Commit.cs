@@ -11,7 +11,7 @@ namespace Maestro.Web.Api.v2020_02_20.Models
         {
             Author = author;
             Sha = sha;
-            Message = message;
+            Message = message ?? string.Empty;
         }
 
         public string Author { get; }
