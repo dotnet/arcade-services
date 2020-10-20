@@ -16,5 +16,47 @@
     <ProjectReference Include="..\Microsoft.DotNet.Maestro.Tasks\Microsoft.DotNet.Maestro.Tasks.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="TestManifests\BadXml\BadXml.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestManifests\ManifestWithoutBlobs\ManifestWithoutBlobs.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestManifests\ManifestWithoutPackages\ManifestNoPackages.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestManifests\DifferentAttributes\MergedManifest1.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestManifests\DifferentAttributes\MergedManifest2.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestManifests\EmptyManifest\EmptyManifest.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestManifests\ManifestWithoutAssets\ManifestWithoutAssets.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestManifests\NonManifest\NotAManifest.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestManifests\OneManifest\OneManifest.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestManifests\TwoManifests\Manifest1.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestManifests\TwoManifests\Manifest2.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestManifests\UnversionedBlob\UnversionedBlob.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestManifests\UnversionedPackage\UnversionedPackage.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
  

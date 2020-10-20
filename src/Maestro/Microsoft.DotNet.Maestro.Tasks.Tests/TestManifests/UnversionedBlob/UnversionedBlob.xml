@@ -1,0 +1,111 @@
+<Build PublishingVersion="3" Name="dotnet-arcade" BuildId="20201016.5" Branch="refs/heads/master" Commit="e7a79ce64f0703c231e6da88b5279dd0bf681b3d" AzureDevOpsAccount="dnceng" AzureDevOpsBranch="refs/heads/master" AzureDevOpsBuildDefinitionId="6" AzureDevOpsBuildId="856354" AzureDevOpsBuildNumber="20201016.5" AzureDevOpsProject="internal" AzureDevOpsRepository="https://dnceng@dev.azure.com/dnceng/internal/_git/dotnet-arcade" InitialAssetsLocation="https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" IsReleaseOnlyPackageVersion="False" IsStable="False">
+  <Package Id="Microsoft.Cci.Extensions" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.ApiCompat" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.Arcade.Sdk" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.AsmDiff" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.Build.Tasks.Archives" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.Build.Tasks.Feed" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.Build.Tasks.Installers" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.Build.Tasks.Packaging" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.Build.Tasks.SharedFramework.Sdk" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.Build.Tasks.TargetFramework.Sdk" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.Build.Tasks.VisualStudio" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.CMake.Sdk" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.CodeAnalysis" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.Deployment.Tasks.Links" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.GenAPI" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.GenFacades" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.Git.IssueManager" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.Helix.Client" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.Helix.JobSender" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.Helix.Sdk" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.NuGetRepack.Tasks" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.RemoteExecutor" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.SharedFramework.Sdk" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.SignCheck" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.SignTool" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.SourceBuild.Tasks" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.SwaggerGenerator.CmdLine" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.SwaggerGenerator.CodeGenerator" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.SwaggerGenerator.MSBuild" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.VersionTools" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.VersionTools.Tasks" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.XUnitConsoleRunner" Version="2.5.1-beta.20516.5" NonShipping="true" />
+  <Package Id="Microsoft.DotNet.XUnitExtensions" Version="6.0.0-beta.20516.5" NonShipping="true" />
+  <Blob Id="assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.ApiCompat.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.AsmDiff.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.Build.Tasks.Archives.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.Build.Tasks.Feed.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.Build.Tasks.Installers.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.Build.Tasks.Packaging.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.Build.Tasks.SharedFramework.Sdk.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.Build.Tasks.TargetFramework.Sdk.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.Build.Tasks.VisualStudio.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.CMake.Sdk.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.CodeAnalysis.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.Deployment.Tasks.Links.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.GenAPI.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.GenFacades.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.Git.IssueManager.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.Helix.Client.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.Helix.JobSender.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.Helix.Sdk.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.NuGetRepack.Tasks.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.RemoteExecutor.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.SharedFramework.Sdk.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.SignCheck.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.SignTool.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.SourceBuild.Tasks.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.SwaggerGenerator.CmdLine.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.SwaggerGenerator.CodeGenerator.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.SwaggerGenerator.MSBuild.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.VersionTools.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.VersionTools.Tasks.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.XUnitConsoleRunner.2.5.1-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <Blob Id="assets/symbols/Microsoft.DotNet.XUnitExtensions.6.0.0-beta.20516.5.symbols.nupkg" NonShipping="true" />
+  <SigningInformation AzureDevOpsCollectionUri="https://dev.azure.com/dnceng/" AzureDevOpsProject="internal" AzureDevOpsBuildId="856354">
+    <FileExtensionSignInfo Include=".dll" CertificateName="Microsoft400" />
+    <FileExtensionSignInfo Include=".exe" CertificateName="Microsoft400" />
+    <FileExtensionSignInfo Include=".jar" CertificateName="MicrosoftJARSHA2" />
+    <FileExtensionSignInfo Include=".js" CertificateName="Microsoft400" />
+    <FileExtensionSignInfo Include=".nupkg" CertificateName="NuGet" />
+    <FileExtensionSignInfo Include=".ps1" CertificateName="Microsoft400" />
+    <FileExtensionSignInfo Include=".psc1" CertificateName="Microsoft400" />
+    <FileExtensionSignInfo Include=".psd1" CertificateName="Microsoft400" />
+    <FileExtensionSignInfo Include=".psm1" CertificateName="Microsoft400" />
+    <FileExtensionSignInfo Include=".py" CertificateName="Microsoft400" />
+    <FileExtensionSignInfo Include=".vsix" CertificateName="VsixSHA2" />
+    <FileExtensionSignInfo Include=".zip" CertificateName="None" />
+    <FileSignInfo Include="AWSSDK.Core.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="AWSSDK.S3.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="CommandLine.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="Handlebars.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="LibGit2Sharp.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="Microsoft.Deployment.Compression.Cab.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="Microsoft.Deployment.Compression.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="Microsoft.Deployment.Resources.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="Microsoft.Deployment.WindowsInstaller.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="Microsoft.Deployment.WindowsInstaller.Package.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="Mono.Options.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="Newtonsoft.Json.Bson.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="Newtonsoft.Json.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="Octokit.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="SevenZip.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="SharpYaml.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="SleetLib.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="Swashbuckle.AspNetCore.Swagger.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="winterop.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="wix.dll" CertificateName="3PartySHA2" />
+    <FileSignInfo Include="YamlDotNet.dll" CertificateName="3PartySHA2" />
+    <CertificatesSignInfo Include="3PartyDual" DualSigningAllowed="true" />
+    <CertificatesSignInfo Include="3PartySHA2" DualSigningAllowed="true" />
+    <StrongNameSignInfo Include="MsSharedLib72" PublicKeyToken="31bf3856ad364e35" CertificateName="Microsoft400" />
+    <StrongNameSignInfo Include="Open.snk" PublicKeyToken="cc7b13ffcd2ddd51" CertificateName="Microsoft400" />
+    <StrongNameSignInfo Include="SilverlightCert121" PublicKeyToken="7cec85d7bea7798e" CertificateName="Microsoft400" />
+    <StrongNameSignInfo Include="StrongName" PublicKeyToken="b03f5f7f11d50a3a" CertificateName="Microsoft400" />
+    <StrongNameSignInfo Include="StrongName" PublicKeyToken="b77a5c561934e089" CertificateName="Microsoft400" />
+  </SigningInformation>
+</Build>

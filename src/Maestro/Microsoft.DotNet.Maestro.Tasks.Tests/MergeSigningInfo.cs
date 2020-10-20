@@ -37,9 +37,8 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             act.Should().Throw<Exception>().WithMessage("Can't merge if one or more manifests have different build id, collection URI or project.");    
         }
 
-        // TODO: Should this be working or will every manifest have the same set of categories & they'll just be empty?
         [Test]
-        public void GivenTwoPartialSigningInfos()
+        public void GivenTwoPartialSigningInfosWithEmptySections()
         {
             SigningInformation actualMerged = pushMetadata.MergeSigningInfo(new List<SigningInformation> { SharedObjects.PartialSigningInfo3, SharedObjects.PartialSigningInfo4 });
             SharedObjects.CompareSigningInformation(actualMerged, SharedObjects.MergedPartialSigningInfos);

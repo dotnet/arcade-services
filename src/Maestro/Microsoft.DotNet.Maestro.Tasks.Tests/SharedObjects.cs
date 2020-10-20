@@ -90,6 +90,11 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                             Include = "ThisIsACert"
                         }
                     },
+
+            FileExtensionSignInfos = new List<FileExtensionSignInfo>(),
+            FileSignInfos = new List<FileSignInfo>(),
+            StrongNameSignInfos = new List<StrongNameSignInfo>(),
+            ItemsToSign = new List<ItemsToSign>()
         };
 
         public static readonly SigningInformation PartialSigningInfo4 = new SigningInformation()
@@ -97,6 +102,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             AzureDevOpsBuildId = AzureDevOpsBuildId1.ToString(),
             AzureDevOpsCollectionUri = "https://dev.azure.com/dnceng/",
             AzureDevOpsProject = AzureDevOpsProject1,
+            CertificatesSignInfo = new List<CertificatesSignInfo>(),
             FileExtensionSignInfos = new List<FileExtensionSignInfo>()
                     {
                         new FileExtensionSignInfo()
@@ -105,6 +111,9 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                             Include = ".dll"
                         }
                     },
+            FileSignInfos = new List<FileSignInfo>(),
+            StrongNameSignInfos = new List<StrongNameSignInfo>(),
+            ItemsToSign = new List<ItemsToSign>()
         };
 
         public static readonly SigningInformation MergedPartialMetadataSigningInfos = new SigningInformation()
@@ -134,7 +143,10 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                             CertificateName = "ThisIsACert",
                             Include = ".dll"
                         }
-                    }
+                    },
+            FileSignInfos = new List<FileSignInfo>(),
+            StrongNameSignInfos = new List<StrongNameSignInfo>(),
+            ItemsToSign = new List<ItemsToSign>()
         };
 
         public static readonly SigningInformation IncompatibleSigningInfo = new SigningInformation()
@@ -257,6 +269,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                     ItemsToSign = new List<ItemsToSign>()
                 };
         #endregion
+
         #region AsssetData
         public static readonly IImmutableList<AssetData> ExpectedAssets1 =
             ImmutableList.Create(
@@ -294,6 +307,38 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
                     Name = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg",
                     Version = "6.0.0-beta.20516.5"
+                });
+
+        public static readonly IImmutableList<AssetData> NoBlobExpectedAssets =
+            ImmutableList.Create(
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "Microsoft.Cci.Extensions",
+                    Version = "6.0.0-beta.20516.5"
+                });
+
+        public static readonly IImmutableList<AssetData> NoPackageExpectedAssets =
+                        ImmutableList.Create(
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml",
+                    Version = "6.0.0-beta.20516.5"
+                });
+
+        public static readonly IImmutableList<AssetData> UnversionedPackageExpectedAssets =
+            ImmutableList.Create(
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "Microsoft.Cci.Extensions"
                 });
         #endregion
 
@@ -336,6 +381,42 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                     AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
                 }
             };
+
+        public static readonly List<BuildData> ExpectedNoBlobManifestMetadata = new List<BuildData>()
+            {
+                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+                {
+                    GitHubBranch = AzureDevOpsBranch1,
+                    GitHubRepository = "dotnet-arcade",
+                    Assets = NoBlobExpectedAssets,
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+                }
+            };
+
+        public static readonly List<BuildData> ExpectedNoPackagesManifestMetadata = new List<BuildData>()
+            {
+                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+                {
+                    GitHubBranch = AzureDevOpsBranch1,
+                    GitHubRepository = "dotnet-arcade",
+                    Assets = NoPackageExpectedAssets,
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+                }
+            };
+
+        public static readonly List<BuildData> ExpectedUnversionedPackagedManifestMetadata = new List<BuildData>()
+            {
+                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+                {
+                    GitHubBranch = AzureDevOpsBranch1,
+                    GitHubRepository = "dotnet-arcade",
+                    Assets = UnversionedPackageExpectedAssets,
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+                }
+            };
         #endregion
 
         public static void CompareManifestBuildData(ManifestBuildData actual, ManifestBuildData expected)
@@ -353,10 +434,10 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
 
         public static void CompareSigningInformation(SigningInformation actualSigningInfo, SigningInformation expectedSigningInfo)
         {
-            actualSigningInfo.CertificatesSignInfo.Count.Should().Be(expectedSigningInfo.CertificatesSignInfo.Count);
-            actualSigningInfo.FileExtensionSignInfos.Count.Should().Be(expectedSigningInfo.FileSignInfos.Count);
-            actualSigningInfo.FileSignInfos.Count.Should().Be(expectedSigningInfo.FileSignInfos.Count);
-            actualSigningInfo.ItemsToSign.Count.Should().Be(expectedSigningInfo.ItemsToSign.Count);
+            actualSigningInfo.CertificatesSignInfo.Should().BeEquivalentTo(expectedSigningInfo.CertificatesSignInfo);
+            actualSigningInfo.FileExtensionSignInfos.Should().BeEquivalentTo(expectedSigningInfo.FileExtensionSignInfos);
+            actualSigningInfo.FileSignInfos.Should().BeEquivalentTo(expectedSigningInfo.FileSignInfos);
+            actualSigningInfo.ItemsToSign.Should().BeEquivalentTo(expectedSigningInfo.ItemsToSign);
         }
     }
 }

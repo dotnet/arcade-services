@@ -1,0 +1,11 @@
+<Build>
+  <Package/>
+  <Blob />
+  <Blob />
+  <SigningInformation>
+    <FileExtensionSignInfo />
+    <FileSignInfo />
+    <CertificatesSignInfo />
+    <StrongNameSignInfo />
+  </SigningInformation>
+</Build>
