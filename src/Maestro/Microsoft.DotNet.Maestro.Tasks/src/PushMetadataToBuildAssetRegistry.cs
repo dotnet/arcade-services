@@ -465,7 +465,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
             });
         }
 
-        private BuildData MergeBuildManifests(List<BuildData> buildsMetadata)
+        internal BuildData MergeBuildManifests(List<BuildData> buildsMetadata)
         {
             BuildData mergedBuild = buildsMetadata[0];
 

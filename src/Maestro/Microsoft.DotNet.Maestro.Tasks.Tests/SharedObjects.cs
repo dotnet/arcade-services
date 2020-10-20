@@ -309,6 +309,111 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                     Version = "6.0.0-beta.20516.5"
                 });
 
+        public static readonly IImmutableList<AssetData> ExpectedAssets3 =
+             ImmutableList.Create(
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "Microsoft.DotNet.Arcade.Sdk",
+                    Version = "6.0.0-beta.20516.5"
+                },
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg",
+                    Version = "6.0.0-beta.20516.5"
+                });
+
+        public static readonly IImmutableList<AssetData> ExpectedAssets1And2 =
+            ImmutableList.Create(
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "Microsoft.Cci.Extensions",
+                    Version = "6.0.0-beta.20516.5"
+                },
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml",
+                    Version = "6.0.0-beta.20516.5"
+                },
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+               new AssetLocationData(LocationType.Container)
+               { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "Microsoft.DotNet.ApiCompat",
+                    Version = "6.0.0-beta.20516.5"
+                },
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg",
+                    Version = "6.0.0-beta.20516.5"
+                });
+
+        public static readonly IImmutableList<AssetData> ThreeExpectedAssets =
+            ImmutableList.Create(
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "Microsoft.Cci.Extensions",
+                    Version = "6.0.0-beta.20516.5"
+                },
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml",
+                    Version = "6.0.0-beta.20516.5"
+                },
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "Microsoft.DotNet.ApiCompat",
+                    Version = "6.0.0-beta.20516.5"
+                },
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg",
+                    Version = "6.0.0-beta.20516.5"
+                },
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "Microsoft.DotNet.Arcade.Sdk",
+                    Version = "6.0.0-beta.20516.5"
+                },
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg",
+                    Version = "6.0.0-beta.20516.5"
+                });
+
         public static readonly IImmutableList<AssetData> NoBlobExpectedAssets =
             ImmutableList.Create(
                 new AssetData(true)
@@ -322,6 +427,25 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
 
         public static readonly IImmutableList<AssetData> NoPackageExpectedAssets =
                         ImmutableList.Create(
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml",
+                    Version = "6.0.0-beta.20516.5"
+                });
+
+        public static readonly IImmutableList<AssetData> ExpectedPartialAssets =
+            ImmutableList.Create(
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                new AssetLocationData(LocationType.Container)
+                { Location = "https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" }),
+                    Name = "Microsoft.Cci.Extensions",
+                    Version = "6.0.0-beta.20516.5"
+                },
                 new AssetData(true)
                 {
                     Locations = ImmutableList.Create(
@@ -358,18 +482,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
 
         public static readonly ManifestBuildData ExpectedManifestBuildData = new ManifestBuildData(ExpectedManifest);
 
-        public static readonly List<BuildData> ExpectedManifestMetadata2 = new List<BuildData>()
-            {
-                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
-                {
-                    GitHubBranch = AzureDevOpsBranch1,
-                    GitHubRepository = "dotnet-arcade",
-                    Assets = ExpectedAssets2,
-                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
-                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
-                }
-            };
-
         public static readonly List<BuildData> ExpectedManifestMetadata = new List<BuildData>()
             {
                 new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
@@ -377,6 +489,18 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                     GitHubBranch = AzureDevOpsBranch1,
                     GitHubRepository = "dotnet-arcade",
                     Assets = ExpectedAssets1,
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+                }
+            };
+
+        public static readonly List<BuildData> ExpectedManifestMetadata2 = new List<BuildData>()
+            {
+                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+                {
+                    GitHubBranch = AzureDevOpsBranch1,
+                    GitHubRepository = "dotnet-arcade",
+                    Assets = ExpectedAssets2,
                     AzureDevOpsBuildId = AzureDevOpsBuildId1,
                     AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
                 }
@@ -419,6 +543,156 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             };
         #endregion
 
+        #region BuildData
+        public static readonly List<BuildData> ExpectedBuildDataList1 = new List<BuildData>()
+            {
+                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+                {
+                    GitHubBranch = AzureDevOpsBranch1,
+                    GitHubRepository = "dotnet-arcade",
+                    Assets = ExpectedAssets1,
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+                },
+                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+                {
+                    GitHubBranch = AzureDevOpsBranch1,
+                    GitHubRepository = "dotnet-arcade",
+                    Assets = ExpectedAssets2,
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+                }
+            };
+
+        public static readonly List<BuildData> ExpectedThreeBuildDataList = new List<BuildData>()
+            {
+                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+                {
+                    GitHubBranch = AzureDevOpsBranch1,
+                    GitHubRepository = "dotnet-arcade",
+                    Assets = ExpectedAssets1,
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+                },
+                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+                {
+                    GitHubBranch = AzureDevOpsBranch1,
+                    GitHubRepository = "dotnet-arcade",
+                    Assets = ExpectedAssets2,
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+                },
+                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+                {
+                    GitHubBranch = AzureDevOpsBranch1,
+                    GitHubRepository = "dotnet-arcade",
+                    Assets = ExpectedAssets3,
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+                }
+            };
+
+        public static readonly List<BuildData> BuildDataWithoutAssetsList = new List<BuildData>()
+            {
+                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+                {
+                    GitHubBranch = AzureDevOpsBranch1,
+                    GitHubRepository = "dotnet-arcade",
+                    Assets = ImmutableList<AssetData>.Empty,
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+                },
+                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+                {
+                    GitHubBranch = AzureDevOpsBranch1,
+                    GitHubRepository = "dotnet-arcade",
+                    Assets = null,
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+                }
+            };
+
+        public static readonly BuildData ExpectedMergedBuildDataWithoutAssets =
+            new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+            {
+                GitHubBranch = AzureDevOpsBranch1,
+                GitHubRepository = "https://github.com/dotnet/arcade",
+                Assets = ImmutableList<AssetData>.Empty,
+                AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+            };
+
+        public static readonly BuildData ExpectedMergedBuildData =
+            new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+            {
+                GitHubBranch = AzureDevOpsBranch1,
+                GitHubRepository = "https://github.com/dotnet/arcade",
+                Assets = ExpectedAssets1And2,
+                AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+            };
+
+        public static readonly BuildData ExpectedThreeAssetsBuildData =
+            new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+            {
+                GitHubBranch = AzureDevOpsBranch1,
+                GitHubRepository = "https://github.com/dotnet/arcade",
+                Assets = ThreeExpectedAssets,
+                AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+            };
+
+        public static readonly BuildData ExpectedPartialAssetsBuildData =
+            new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+            {
+                GitHubBranch = AzureDevOpsBranch1,
+                GitHubRepository = "https://github.com/dotnet/arcade",
+                Assets = ExpectedPartialAssets,
+                AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+            };
+
+        public static readonly List<BuildData> ExpectedBuildDataIncompatibleList = new List<BuildData>()
+            {
+                new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+                {
+                    GitHubBranch = AzureDevOpsBranch1,
+                    GitHubRepository = "https://github.com/dotnet/arcade",
+                    Assets = ExpectedAssets1,
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+                },
+                new BuildData("1234567", "newAccount", "newProject", "12345", "repositoryBranch", "azureDevOpsBranch", false, false)
+                {
+                    GitHubBranch = AzureDevOpsBranch1,
+                    GitHubRepository = "dotnet-arcade",
+                    Assets = ExpectedAssets2,
+                    AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                    AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+                }
+            };
+
+        public static readonly List<BuildData> ExpectedDuplicatedAssetsBuildData = new List<BuildData>()
+        {
+            new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+            {
+                GitHubBranch = AzureDevOpsBranch1,
+                GitHubRepository = "https://github.com/dotnet/arcade",
+                Assets = ExpectedAssets1,
+                AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+            },
+            new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
+            {
+                GitHubBranch = AzureDevOpsBranch1,
+                GitHubRepository = "https://github.com/dotnet/arcade",
+                Assets = ExpectedAssets1,
+                AzureDevOpsBuildId = AzureDevOpsBuildId1,
+                AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
+            }
+        };
+        #endregion
+
         public static void CompareManifestBuildData(ManifestBuildData actual, ManifestBuildData expected)
         {
             actual.AzureDevOpsAccount.Should().Be(expected.AzureDevOpsAccount);
@@ -438,6 +712,26 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             actualSigningInfo.FileExtensionSignInfos.Should().BeEquivalentTo(expectedSigningInfo.FileExtensionSignInfos);
             actualSigningInfo.FileSignInfos.Should().BeEquivalentTo(expectedSigningInfo.FileSignInfos);
             actualSigningInfo.ItemsToSign.Should().BeEquivalentTo(expectedSigningInfo.ItemsToSign);
+        }
+
+        public static void CompareBuildDataInformation(BuildData actualBuildData, BuildData expectedBuildData)
+        {
+            actualBuildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
+            actualBuildData.AzureDevOpsAccount.Should().Be(expectedBuildData.AzureDevOpsAccount);
+            actualBuildData.AzureDevOpsBranch.Should().Be(expectedBuildData.AzureDevOpsBranch);
+            actualBuildData.AzureDevOpsBuildDefinitionId.Should().Be(expectedBuildData.AzureDevOpsBuildDefinitionId);
+            actualBuildData.AzureDevOpsBuildId.Should().Be(expectedBuildData.AzureDevOpsBuildId);
+            actualBuildData.AzureDevOpsBuildNumber.Should().Be(expectedBuildData.AzureDevOpsBuildNumber);
+            actualBuildData.AzureDevOpsProject.Should().Be(expectedBuildData.AzureDevOpsProject);
+            actualBuildData.AzureDevOpsRepository.Should().Be(expectedBuildData.AzureDevOpsRepository);
+            actualBuildData.Commit.Should().Be(expectedBuildData.Commit);
+            actualBuildData.Dependencies.Should().BeEquivalentTo(expectedBuildData.Dependencies);
+            actualBuildData.GitHubBranch.Should().Be(expectedBuildData.GitHubBranch);
+            actualBuildData.GitHubRepository.Should().Be(expectedBuildData.GitHubRepository);
+            actualBuildData.Incoherencies.Should().BeEquivalentTo(expectedBuildData.Incoherencies);
+            actualBuildData.IsValid.Should().Be(actualBuildData.IsValid);
+            actualBuildData.Released.Should().Be(expectedBuildData.Released);
+            actualBuildData.Stable.Should().Be(expectedBuildData.Stable);
         }
     }
 }
