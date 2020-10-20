@@ -31,7 +31,10 @@ namespace RolloutScorer
             if (issueLabel == GithubLabelNames.IssueLabel)
             {
                 isIssueLabel = issue.Labels.Any(l => l.Name == repoLabel)
-                    && !issue.Labels.Any(l => l.Name == GithubLabelNames.HotfixLabel || l.Name == GithubLabelNames.RollbackLabel || l.Name == GithubLabelNames.DowntimeLabel);
+                    && !issue.Labels.Any(l => l.Name == GithubLabelNames.HotfixLabel ||
+                    l.Name == GithubLabelNames.RollbackLabel ||
+                    l.Name == GithubLabelNames.DowntimeLabel ||
+                    l.Name == GithubLabelNames.FailureLabel);
             }
             else
             {
@@ -190,6 +193,7 @@ namespace RolloutScorer
         public const string HotfixLabel = "Rollout Manual Hotfix";
         public const string RollbackLabel = "Rollout Manual Rollback";
         public const string DowntimeLabel = "Rollout Downtime";
+        public const string FailureLabel = "Rollout Failure";
     }
 
     public static class ScorecardsStorageAccount

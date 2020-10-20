@@ -37,6 +37,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         [XmlAttribute(AttributeName = "PublishingVersion")]
         public int PublishingVersion { get; set; }
+        
+        [XmlAttribute(AttributeName = "IsReleaseOnlyPackageVersion")]
+        public string IsReleaseOnlyPackageVersion { get; set; } = "false";
 
         #region Properties to be used in new publishing flow
 

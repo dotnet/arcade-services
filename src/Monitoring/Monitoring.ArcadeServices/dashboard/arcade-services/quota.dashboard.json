@@ -20,7 +20,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1596758519061,
+  "iteration": 1601664880256,
   "links": [
     {
       "icon": "external link",
@@ -197,7 +197,7 @@
             "dimension": "none",
             "metricName": "select",
             "rawQuery": true,
-            "rawQueryString": "customEvents\r\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\r\n| project\r\n    timestamp,\r\n    resource = tostring(customDimensions.name),\r\n    location = tostring(customDimensions.location),\r\n    current = toreal(customMeasurements.current),\r\n    ['limit'] = toreal(customMeasurements.['limit'])\r\n| where resource != 'NetworkWatchers'\n| where location == 'westus'\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, current/['limit'] * 100)\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), resource\r\n| order by timestamp asc, resource",
+            "rawQueryString": "customEvents\r\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\r\n| project\r\n    timestamp,\r\n    resource = tostring(customDimensions.name),\r\n    location = tostring(customDimensions.location),\r\n    current = toreal(customMeasurements.current),\r\n    ['limit'] = toreal(customMeasurements.['limit']),\n    subscription = tostring(customDimensions.subscription)\r\n| where resource != 'NetworkWatchers'\n| where location == 'westus'\n| where subscription in (\"cab65fc3-d077-467d-931f-3932eabf36d3\", \"68672ab8-de0c-40f1-8d1b-ffb20bd62c0f\")\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, current/['limit'] * 100)\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), resource\r\n| order by timestamp asc, resource",
             "segmentColumn": "resource",
             "timeColumn": "timestamp",
             "timeGrain": "auto",
@@ -216,7 +216,8 @@
             "resourceGroup": "select",
             "resourceName": "select",
             "timeGrain": "auto",
-            "timeGrains": []
+            "timeGrains": [],
+            "top": "10"
           },
           "hide": false,
           "queryType": "Application Insights",
@@ -229,14 +230,14 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 80,
+          "value": 95,
           "yaxis": "left"
         }
       ],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "westus",
+      "title": "Helix - westus",
       "tooltip": {
         "shared": true,
         "sort": 2,
@@ -364,7 +365,7 @@
             "dimension": "none",
             "metricName": "select",
             "rawQuery": true,
-            "rawQueryString": "customEvents\r\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\r\n| project\r\n    timestamp,\r\n    resource = tostring(customDimensions.name),\r\n    location = tostring(customDimensions.location),\r\n    current = toreal(customMeasurements.current),\r\n    ['limit'] = toreal(customMeasurements.['limit'])\r\n| where resource != 'NetworkWatchers'\n| where location == 'westus2'\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, current/['limit'] * 100)\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), resource\r\n| order by timestamp asc, resource",
+            "rawQueryString": "customEvents\r\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\r\n| project\r\n    timestamp,\r\n    resource = tostring(customDimensions.name),\r\n    location = tostring(customDimensions.location),\r\n    current = toreal(customMeasurements.current),\r\n    ['limit'] = toreal(customMeasurements.['limit']),\n    subscription = tostring(customDimensions.subscription)\r\n| where resource != 'NetworkWatchers'\n| where location == 'westus2'\n| where subscription in (\"cab65fc3-d077-467d-931f-3932eabf36d3\", \"68672ab8-de0c-40f1-8d1b-ffb20bd62c0f\")\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, current/['limit'] * 100)\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), resource\r\n| order by timestamp asc, resource",
             "segmentColumn": "resource",
             "timeColumn": "timestamp",
             "timeGrain": "auto",
@@ -383,7 +384,8 @@
             "resourceGroup": "select",
             "resourceName": "select",
             "timeGrain": "auto",
-            "timeGrains": []
+            "timeGrains": [],
+            "top": "10"
           },
           "hide": false,
           "queryType": "Application Insights",
@@ -396,14 +398,13 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 80,
-          "yaxis": "left"
+          "value": 95
         }
       ],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "westus2",
+      "title": "Helix - westus2",
       "tooltip": {
         "shared": true,
         "sort": 2,
@@ -531,7 +532,7 @@
             "dimension": "none",
             "metricName": "select",
             "rawQuery": true,
-            "rawQueryString": "customEvents\r\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\r\n| project\r\n    timestamp,\r\n    resource = tostring(customDimensions.name),\r\n    location = tostring(customDimensions.location),\r\n    current = toreal(customMeasurements.current),\r\n    ['limit'] = toreal(customMeasurements.['limit'])\r\n| where resource != 'NetworkWatchers'\n| where location == 'eastus'\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, current/['limit'] * 100)\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), resource\r\n| order by timestamp asc, resource",
+            "rawQueryString": "customEvents\r\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\r\n| project\r\n    timestamp,\r\n    resource = tostring(customDimensions.name),\r\n    location = tostring(customDimensions.location),\r\n    current = toreal(customMeasurements.current),\r\n    ['limit'] = toreal(customMeasurements.['limit']),\n    subscription = tostring(customDimensions.subscription)\r\n| where resource != 'NetworkWatchers'\n| where location == 'eastus'\n| where subscription in (\"cab65fc3-d077-467d-931f-3932eabf36d3\", \"68672ab8-de0c-40f1-8d1b-ffb20bd62c0f\")\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, current/['limit'] * 100)\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), resource\r\n| order by timestamp asc, resource",
             "segmentColumn": "resource",
             "timeColumn": "timestamp",
             "timeGrain": "auto",
@@ -550,7 +551,8 @@
             "resourceGroup": "select",
             "resourceName": "select",
             "timeGrain": "auto",
-            "timeGrains": []
+            "timeGrains": [],
+            "top": "10"
           },
           "hide": false,
           "queryType": "Application Insights",
@@ -563,14 +565,13 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 80,
-          "yaxis": "left"
+          "value": 95
         }
       ],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "eastus",
+      "title": "Helix - eastus",
       "tooltip": {
         "shared": true,
         "sort": 2,
@@ -722,7 +723,7 @@
             ],
             "metricName": "customEvents/custom/current",
             "rawQuery": true,
-            "rawQueryString": "customEvents \n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\n| where tostring(customDimensions.name) == '$Resource'\n| project timestamp, location = tostring(customDimensions.location), resource = toreal(customMeasurements.current), ['limit'] = toreal(customMeasurements.['limit'])\n//| summarize resource = max(toreal(resource / ['limit'])) by bin(timestamp, $__interval), locationtimestamp \n| summarize (max_resource, resource) = arg_max(resource, resource / ['limit'] * 100) by bin(timestamp, $__interval), location\n| project-away max_resource\n| order by timestamp asc, location asc",
+            "rawQueryString": "customEvents \n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\n| where tostring(customDimensions.name) == '$Resource'\n| project timestamp, location = tostring(customDimensions.location), resource = toreal(customMeasurements.current), ['limit'] = toreal(customMeasurements.['limit']), subscription = tostring(customDimensions.subscription)\n| where subscription in (\"cab65fc3-d077-467d-931f-3932eabf36d3\", \"68672ab8-de0c-40f1-8d1b-ffb20bd62c0f\")\n//| summarize resource = max(toreal(resource / ['limit'])) by bin(timestamp, $__interval), locationtimestamp \n| summarize (max_resource, resource) = arg_max(resource, resource / ['limit'] * 100) by bin(timestamp, $__interval), location\n| project-away max_resource\n| order by timestamp asc, location asc",
             "segmentColumn": "location",
             "timeColumn": "timestamp",
             "timeGrain": "auto",
@@ -797,7 +798,8 @@
                 "text": "1 day",
                 "value": "P1D"
               }
-            ]
+            ],
+            "top": "10"
           },
           "hide": false,
           "queryType": "Application Insights",
@@ -808,7 +810,7 @@
             "dimension": "none",
             "metricName": "select",
             "rawQuery": true,
-            "rawQueryString": "customEvents\r\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\r\n| project\r\n    timestamp,\r\n    resource = tostring(customDimensions.name),\r\n    location = tostring(customDimensions.location),\r\n    current = toreal(customMeasurements.current),\r\n    ['limit'] = toreal(customMeasurements.['limit'])\r\n| where resource != 'NetworkWatchers'\n| where location == 'westus'\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, current/['limit'])\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), location, resource\r\n| order by timestamp asc, location asc, resource",
+            "rawQueryString": "customEvents\r\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\r\n| project\r\n    timestamp,\r\n    resource = tostring(customDimensions.name),\r\n    location = tostring(customDimensions.location),\r\n    current = toreal(customMeasurements.current),\r\n    ['limit'] = toreal(customMeasurements.['limit']),\n    subscription = tostring(customDimensions.subscription)\r\n| where resource != 'NetworkWatchers'\n| where location == 'westus'\n| where subscription in (\"cab65fc3-d077-467d-931f-3932eabf36d3\", \"68672ab8-de0c-40f1-8d1b-ffb20bd62c0f\")\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, current/['limit'])\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), location, resource\r\n| order by timestamp asc, location asc, resource",
             "segmentColumn": "resource",
             "timeColumn": "timestamp",
             "timeGrain": "auto",
@@ -827,7 +829,8 @@
             "resourceGroup": "select",
             "resourceName": "select",
             "timeGrain": "auto",
-            "timeGrains": []
+            "timeGrains": [],
+            "top": "10"
           },
           "hide": true,
           "queryType": "Application Insights",
@@ -838,7 +841,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "$Resource",
+      "title": "Helix - $Resource",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -884,7 +887,7 @@
           {
             "evaluator": {
               "params": [
-                4800
+                95
               ],
               "type": "gt"
             },
@@ -900,7 +903,7 @@
             },
             "reducer": {
               "params": [],
-              "type": "max"
+              "type": "avg"
             },
             "type": "query"
           }
@@ -922,6 +925,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "AI-dnc-eng",
+      "description": "",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -936,7 +940,7 @@
         "alignAsTable": true,
         "avg": true,
         "current": true,
-        "max": false,
+        "max": true,
         "min": false,
         "show": true,
         "total": false,
@@ -944,6 +948,12 @@
       },
       "lines": true,
       "linewidth": 1,
+      "links": [
+        {
+          "title": "Subscriptions",
+          "url": "https://ms.portal.azure.com/#blade/Microsoft_Azure_Billing/SubscriptionsBlade"
+        }
+      ],
       "nullPointMode": "null",
       "options": {
         "dataLinks": []
@@ -969,10 +979,11 @@
             "dimension": "none",
             "metricName": "select",
             "rawQuery": true,
-            "rawQueryString": "customEvents\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\n| where customDimensions.localizedName == \"Total Regional vCPUs\"\n| summarize cores = toint(max(toint(customMeasurements.current))) by bin(timestamp, $__interval)\n| order by timestamp desc",
+            "rawQueryString": "let quotaPerSubscription = customEvents \n| where $__timeFilter(timestamp)\n| where name == \"AzureSubscriptionQuotaLimit\"\n| project \n    quota = toint(customMeasurements.quota),\n    subscription = tostring(customDimensions.subscriptionId),\n    timestamp\n| summarize arg_max(timestamp, quota) by subscription\n| project quota, subscription;\ncustomEvents\n| where $__timeFilter(timestamp)\n| where name == 'AzureResourceUsage'\n| where customDimensions.localizedName == \"Total Regional vCPUs\"\n| project \n    cores = toreal(customMeasurements.current),\n    subscription = tostring(customDimensions.subscription),\n    timestamp\n| join kind=inner quotaPerSubscription on subscription\n| project ['limit'] = quota, cores, timestamp, subscription\n| extend ['percent of limit'] = iff(['limit'] == 0, 0.0, cores/['limit'] * 100)\n| summarize ['percent of limit'] = max(['percent of limit']) by bin(timestamp, $__interval), subscription\n| order by timestamp desc",
+            "segmentColumn": "subscription",
             "timeColumn": "timestamp",
             "timeGrain": "auto",
-            "valueColumn": "cores"
+            "valueColumn": "percent of limit"
           },
           "azureLogAnalytics": {
             "query": "//change this example to create your own time series query\n<table name>                                                              //the table to query (e.g. Usage, Heartbeat, Perf)\n| where $__timeFilter(TimeGenerated)                                      //this is a macro used to show the full chart’s time range, choose the datetime column here\n| summarize count() by <group by column>, bin(TimeGenerated, $__interval) //change “group by column” to a column in your table, such as “Computer”. The $__interval macro is used to auto-select the time grain. Can also use 1h, 5m etc.\n| order by TimeGenerated asc",
@@ -1001,7 +1012,8 @@
           "fill": true,
           "line": true,
           "op": "gt",
-          "value": 4800
+          "value": 95,
+          "yaxis": "left"
         }
       ],
       "timeFrom": null,
@@ -1023,7 +1035,7 @@
       },
       "yaxes": [
         {
-          "format": "none",
+          "format": "percent",
           "label": null,
           "logBase": 1,
           "max": null,

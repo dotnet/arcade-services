@@ -15,6 +15,7 @@ namespace Microsoft.DotNet.DarcLib
         public const string VersionDetailsXml = "eng/Version.Details.xml";
         public const string VersionProps = "eng/Versions.props";
         public const string GlobalJson = "global.json";
+        public const string DotnetToolsConfigJson = ".config/dotnet-tools.json";
         public const string VersionPropsVersionElementSuffix = "PackageVersion";
         public const string VersionPropsAlternateVersionElementSuffix = "Version";
         public const string ShaElementName = "Sha";
@@ -60,6 +61,11 @@ namespace Microsoft.DotNet.DarcLib
         }
 
         public static string CalculateGlobalJsonElementName(string dependencyName)
+        {
+            return dependencyName;
+        }
+
+        public static string CalculateDotnetToolsJsonElementName(string dependencyName)
         {
             return dependencyName;
         }

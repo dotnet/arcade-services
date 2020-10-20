@@ -4,7 +4,7 @@
              Name="fabric:/MaestroApplication" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="Environment" Value="Production" />
-    <Parameter Name="WebCertThumbprint" Value="79565a771a2fcec8e266f18b7507ae5b81d4c012" />
+    <Parameter Name="WebCertName" Value="maestro-prod.westus2.cloudapp.azure.com" />
     <Parameter Name="WebProtocol" Value="https" />
     <Parameter Name="WebPort" Value="4430" />
   </Parameters>

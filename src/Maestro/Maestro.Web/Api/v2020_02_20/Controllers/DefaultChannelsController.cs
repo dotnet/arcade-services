@@ -107,7 +107,6 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
         [SwaggerApiResponse(HttpStatusCode.Created, Description = "DefaultChannel successfully created")]
         [SwaggerApiResponse(HttpStatusCode.Conflict, Description = "A DefaultChannel matching the data already exists")]
         [ValidateModelState]
-        [HandleDuplicateKeyRows("A default channel with the same (repository, branch, channel) already exists.")]
         public async Task<IActionResult> Create([FromBody, Required] DefaultChannel.DefaultChannelCreateData data)
         {
             int channelId = data.ChannelId;
@@ -117,15 +116,32 @@ namespace Maestro.Web.Api.v2020_02_20.Controllers
                 return NotFound(new ApiError($"The channel with id '{channelId}' was not found."));
             }
 
-            var defaultChannel = new Data.Models.DefaultChannel
+            Data.Models.DefaultChannel defaultChannel;
+
+            // Due to abundant retry logic, we'll return a normal response even if this is creating a duplicate, by simply
+            // returning the one that already exists vs. HTTP 409 / 500
+            var existingInstance = _context.DefaultChannels
+                .Where(d => d.Channel == channel &&
+                            d.Repository == data.Repository &&
+                            d.Branch == data.Branch)
+                .FirstOrDefault();
+
+            if (existingInstance != null)
             {
-                Channel = channel,
-                Repository = data.Repository,
-                Branch = data.Branch,
-                Enabled = data.Enabled ?? true
-            };
-            await _context.DefaultChannels.AddAsync(defaultChannel);
-            await _context.SaveChangesAsync();
+                defaultChannel = existingInstance;
+            }
+            else
+            {
+                defaultChannel = new Data.Models.DefaultChannel
+                {
+                    Channel = channel,
+                    Repository = data.Repository,
+                    Branch = data.Branch,
+                    Enabled = data.Enabled ?? true
+                };
+                await _context.DefaultChannels.AddAsync(defaultChannel);
+                await _context.SaveChangesAsync();
+            }
             return CreatedAtRoute(
                 new
                 {
