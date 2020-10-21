@@ -359,11 +359,17 @@ FROM traverse;",
             string targetRepositoryName,
             string targetBranchName)
         {
-            var lastBuild = Builds
+            // Take latest target builds ordered by DateProduced
+            var latestTargetBuildsQuery = Builds
                 .Where(b =>
                     (b.GitHubRepository == targetRepositoryName && b.GitHubBranch == targetBranchName)
                     || (b.AzureDevOpsRepository == targetRepositoryName && b.AzureDevOpsBranch == targetBranchName))
-                .OrderByDescending(b => b.DateProduced)
+                .OrderByDescending(b => b.DateProduced);
+
+            // For each build return its Id and HasProductDependencies flag saying
+            // if there are any build dependencies in this build that come from source
+            // and have IsProduct flag set.
+            var buildDependenciesQuery = latestTargetBuildsQuery
                 .Select(b => new
                 {
                     Id = b.Id,
@@ -375,10 +381,12 @@ FROM traverse;",
                                     && d.DependentBuild.AzureDevOpsBranch == sourceBranchName))
                             && d.Build == b
                             && d.IsProduct)
-                })
-                .FirstOrDefault();
+                });
 
-            return lastBuild?.HasProductDependencies ?? false;
+            // Take the most recent build. Can be null if there are no target builds yet.
+            var latestBuild = buildDependenciesQuery.FirstOrDefault();
+
+            return latestBuild?.HasProductDependencies ?? false;
         }
     }
 
