@@ -238,7 +238,7 @@ namespace DependencyUpdater
 
                     if (isThereAnUnappliedBuildInTargetChannel)
                     {
-                        Logger.LogInformation($"Will update {subscription.Id} to build {latestBuildInTargetChannel}");
+                        Logger.LogInformation($"Will update {subscription.Id} to build {latestBuildInTargetChannel.Id}");
                         await UpdateSubscriptionAsync(subscription.Id, latestBuildInTargetChannel.Id);
                         subscriptionsUpdated++;
                     }
