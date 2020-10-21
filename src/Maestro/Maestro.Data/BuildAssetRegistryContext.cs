@@ -353,15 +353,40 @@ FROM traverse;",
             return dict.Values.ToList();
         }
 
-        public bool IsProductDependency(int buildId, string repositoryName, string branchName)
+        public bool IsProductDependency(
+            string sourceRepositoryName,
+            string sourceBranchName,
+            string targetRepositoryName,
+            string targetBranchName)
         {
-            return BuildDependencies
-                .Any(d => d.IsProduct
-                    && d.DependentBuildId == buildId
-                    && ((d.Build.GitHubRepository == repositoryName
-                            && d.Build.GitHubBranch == branchName)
-                        || (d.Build.AzureDevOpsRepository == repositoryName
-                            && d.Build.AzureDevOpsBranch == branchName)));
+            // Take latest target builds ordered by DateProduced
+            var latestTargetBuildsQuery = Builds
+                .Where(b =>
+                    (b.GitHubRepository == targetRepositoryName && b.GitHubBranch == targetBranchName)
+                    || (b.AzureDevOpsRepository == targetRepositoryName && b.AzureDevOpsBranch == targetBranchName))
+                .OrderByDescending(b => b.DateProduced);
+
+            // For each build return its Id and HasProductDependencies flag saying
+            // if there are any build dependencies in this build that come from source
+            // and have IsProduct flag set.
+            var buildDependenciesQuery = latestTargetBuildsQuery
+                .Select(b => new
+                {
+                    Id = b.Id,
+                    HasProductDependencies = BuildDependencies
+                        .Any(d =>
+                            ((d.DependentBuild.GitHubRepository == sourceRepositoryName
+                                    && d.DependentBuild.GitHubBranch == sourceBranchName)
+                                || (d.DependentBuild.AzureDevOpsRepository == sourceRepositoryName
+                                    && d.DependentBuild.AzureDevOpsBranch == sourceBranchName))
+                            && d.Build == b
+                            && d.IsProduct)
+                });
+
+            // Take the most recent build. Can be null if there are no target builds yet.
+            var latestBuild = buildDependenciesQuery.FirstOrDefault();
+
+            return latestBuild?.HasProductDependencies ?? false;
         }
     }
 
