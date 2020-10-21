@@ -233,10 +233,10 @@ namespace DependencyUpdater
                                     .OrderByDescending(b => b.DateProduced)
                                     .FirstOrDefault();
 
-                    bool isThereUnappliedBuildInTargetChannel = latestBuildInTargetChannel != null &&
+                    bool isThereAnUnappliedBuildInTargetChannel = latestBuildInTargetChannel != null &&
                         (subscription.LastAppliedBuild == null || subscription.LastAppliedBuildId != latestBuildInTargetChannel.Id);
 
-                    if (isThereUnappliedBuildInTargetChannel)
+                    if (isThereAnUnappliedBuildInTargetChannel)
                     {
                         Logger.LogInformation($"Will update {subscription.Id} to build {latestBuildInTargetChannel}");
                         await UpdateSubscriptionAsync(subscription.Id, latestBuildInTargetChannel.Id);
