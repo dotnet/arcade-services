@@ -1204,10 +1204,28 @@ namespace SubscriptionActorService
                 requiredUpdates.Add((update, dependenciesToUpdate));
             }
 
-            // Once we have applied all of non coherent updates, then we need to run a coherency check on the
-            // dependencies.
-            List<DependencyUpdate> coherencyUpdates =
-                await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory, CoherencyMode.Legacy);
+            // Once we have applied all of non coherent updates, then we need to run a coherency check on the dependencies.
+            // First, we'll try it with strict mode; failing that an attempt with legacy mode.
+            List<DependencyUpdate> coherencyUpdates = new List<DependencyUpdate>();
+            bool strictCheckFailed = false;
+            try
+            {
+                coherencyUpdates = await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory, CoherencyMode.Strict);
+            }
+            catch (DarcCoherencyException)
+            {
+                Logger.LogInformation("Failed attempting strict coherency update on branch '{strictCoherencyFailedBranch}' of repo '{strictCoherencyFailedRepo}'.  Will now retry in Legacy mode.",
+                     branch, targetRepository);
+                strictCheckFailed = true;
+            }
+            if (strictCheckFailed)
+            {
+                coherencyUpdates = await darc.GetRequiredCoherencyUpdatesAsync(existingDependencies, remoteFactory, CoherencyMode.Legacy);
+                // If the above call didn't throw, that means legacy worked while strict did not.
+                // Send a special trace that can be easily queried later from App Insights, to gauge when everything can handle Strict mode.
+                Logger.LogInformation("Strict coherency update failed, but Legacy update worked for branch '{strictCoherencyFailedBranch}' of repo '{strictCoherencyFailedRepo}'.",
+                     branch, targetRepository);
+            }
 
             if (coherencyUpdates.Any())
             {
