@@ -13,8 +13,8 @@ namespace RolloutScorer
                 "usage: RolloutScorer COMMAND [OPTIONS]",
                 "",
                 "Available commands:",
-                new ScoreCommand(),
-                new UploadCommand(),
+                new ScoreCommand(), 
+                new UploadCommand()
             };
 
             return commands.Run(args);

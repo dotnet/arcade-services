@@ -8,7 +8,9 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.KeyVault" />
     <PackageReference Include="Microsoft.Azure.Services.AppAuthentication" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />    
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" />
     <PackageReference Include="Mono.Options" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Octokit" />

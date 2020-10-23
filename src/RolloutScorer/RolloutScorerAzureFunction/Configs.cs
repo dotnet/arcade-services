@@ -7,45 +7,57 @@ namespace RolloutScorerAzureFunction
     {
         public static readonly Config DefaultConfig = new Config
         {
-            RepoConfigs = new List<RepoConfig>()
+            RepoConfigs = new Dictionary<string, RepoConfig>()
             {
-                new RepoConfig
                 {
-                    Repo = "dotnet-helix-service",
-                    BuildDefinitionIds = new List<string> { "620", "697" },
-                    AzdoInstance = "dnceng",
-                    GithubIssueLabel = "Rollout Helix",
-                    ExpectedTime = 30,
-                    ExcludeStages = new List<string>() { "Post_Deployment_Tests" },
+                    "dotnet-helix-service",
+                    new RepoConfig
+                    {
+                        Repo = "dotnet-helix-service",
+                        BuildDefinitionIds = new List<string> { "620", "697" },
+                        AzdoInstance = "dnceng",
+                        GithubIssueLabel = "Rollout Helix",
+                        ExpectedTime = 30,
+                        ExcludeStages = new List<string>() { "Post_Deployment_Tests" },
+                    }
                 },
-                new RepoConfig
                 {
-                    Repo = "dotnet-helix-machines",
-                    BuildDefinitionIds = new List<string> { "596" },
-                    AzdoInstance = "dnceng",
-                    GithubIssueLabel = "Rollout OSOB",
-                    ExpectedTime = 60,
-                    ExcludeStages = new List<string> { "Validate", "Cleanup", "Validate_OnPrem" },
+                    "dotnet-helix-machines",
+                    new RepoConfig
+                    {
+                        Repo = "dotnet-helix-machines",
+                        BuildDefinitionIds = new List<string> { "596" },
+                        AzdoInstance = "dnceng",
+                        GithubIssueLabel = "Rollout OSOB",
+                        ExpectedTime = 60,
+                        ExcludeStages = new List<string> { "Validate", "Cleanup", "Validate_OnPrem" },
+                    }
                 },
-                new RepoConfig
                 {
-                    Repo = "arcade-services",
-                    BuildDefinitionIds = new List<string> { "252", "728" },
-                    AzdoInstance = "dnceng",
-                    GithubIssueLabel = "Rollout Arcade-Services",
-                    ExpectedTime = 30,
-                    ExcludeStages = new List<string> { "Post-Deployment", "Validate deployment" },
-                },
+                    "arcade-services",
+                    new RepoConfig
+                    {
+                        Repo = "arcade-services",
+                        BuildDefinitionIds = new List<string> { "252", "728" },
+                        AzdoInstance = "dnceng",
+                        GithubIssueLabel = "Rollout Arcade-Services",
+                        ExpectedTime = 30,
+                        ExcludeStages = new List<string> { "Post-Deployment", "Validate deployment" },
+                    }
+                }
             },
-            AzdoInstanceConfigs = new List<AzdoInstanceConfig>()
-            { 
-                new AzdoInstanceConfig
+            AzdoInstanceConfigs = new Dictionary<string, AzdoInstanceConfig>()
+            {
                 {
-                    Name = "dnceng",
-                    Project = "internal",
-                    PatSecretName = "dn-bot-dnceng-build-r-code-r-release-r-pat",
-                    KeyVaultUri = "https://engkeyvault.vault.azure.net",
-                } 
+                    "dnceng",
+                    new AzdoInstanceConfig
+                    {
+                        Name = "dnceng",
+                        Project = "internal",
+                        PatSecretName = "dn-bot-dnceng-build-r-code-r-release-r-pat",
+                        KeyVaultUri = "https://engkeyvault.vault.azure.net",
+                    }
+                }
             },
             RolloutWeightConfig = new RolloutWeightConfig
             {

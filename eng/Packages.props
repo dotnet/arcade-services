@@ -35,6 +35,7 @@
     <PackageReference Update="Microsoft.AspNetCore.WebHooks.Receivers" Version="1.0.0-preview2-final" />
     <PackageReference Update="Microsoft.AspNetCore.WebHooks.Receivers.GitHub" Version="1.0.0-preview2-final" />
     <PackageReference Update="Microsoft.Azure.Cosmos.Table" Version="1.0.7" />
+    <PackageReference Update="Microsoft.Azure.Functions.Extensions" Version="1.1.0" />
     <PackageReference Update="Microsoft.Azure.KeyVault" Version="3.0.4" />
     <PackageReference Update="Microsoft.Azure.Kusto.Ingest" Version="8.1.0" />
     <PackageReference Update="Microsoft.Azure.Management.Fluent" Version="1.31.0" />

@@ -4,8 +4,8 @@ namespace RolloutScorer
 {
     public class Config
     {
-        public List<RepoConfig> RepoConfigs { get; set; }
-        public List<AzdoInstanceConfig> AzdoInstanceConfigs { get; set; }
+        public Dictionary<string, RepoConfig> RepoConfigs { get; set; }
+        public Dictionary<string, AzdoInstanceConfig> AzdoInstanceConfigs { get; set; }
         public RolloutWeightConfig RolloutWeightConfig { get; set; }
         public GithubConfig GithubConfig { get; set; }
     }

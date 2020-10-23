@@ -1,6 +1,7 @@
 using Microsoft.Azure.KeyVault;
 using Microsoft.Azure.KeyVault.Models;
 using Microsoft.Azure.Services.AppAuthentication;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Mono.Options;
 using System;
@@ -80,14 +81,14 @@ namespace RolloutScorer
                 return 1;
             }
 
-            _rolloutScorer.RepoConfig = config.RepoConfigs.Find(r => r.Repo == _rolloutScorer.Repo);
+            _rolloutScorer.RepoConfig = config.RepoConfigs[_rolloutScorer.Repo];
             if (_rolloutScorer.RepoConfig == null)
             {
                 Utilities.WriteError($"ERROR: Provided repo '{_rolloutScorer.Repo}' does not exist in config file");
                 return 1;
             }
 
-            _rolloutScorer.AzdoConfig = config.AzdoInstanceConfigs.Find(a => a.Name == _rolloutScorer.RepoConfig.AzdoInstance);
+            _rolloutScorer.AzdoConfig = config.AzdoInstanceConfigs[_rolloutScorer.RepoConfig.AzdoInstance];
             if (_rolloutScorer.AzdoConfig == null)
             {
                 Utilities.WriteError($"ERROR: Configuration file is invalid; repo '{_rolloutScorer.RepoConfig.Repo}' " +

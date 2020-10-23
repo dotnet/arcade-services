@@ -1,6 +1,6 @@
 {
-  "RepoConfigs": [
-    {
+  "RepoConfigs": {
+    "dotnet-helix-service": {
       "Repo": "dotnet-helix-service",
       "BuildDefinitionIds": [ "620", "697" ],
       "AzdoInstance": "dnceng",
@@ -8,7 +8,8 @@
       "ExpectedTime": 30,
       "ExcludeStages": []
     },
-    {
+
+    "dotnet-helix-machines": {
       "Repo": "dotnet-helix-machines",
       "BuildDefinitionIds": [ "596" ],
       "AzdoInstance": "dnceng",
@@ -16,7 +17,8 @@
       "ExpectedTime": 60,
       "ExcludeStages": [ "Validate", "Cleanup", "Validate_OnPrem" ]
     },
-    {
+
+    "arcade-services": {
       "Repo": "arcade-services",
       "BuildDefinitionIds": [ "252", "728" ],
       "AzdoInstance": "dnceng",
@@ -24,16 +26,17 @@
       "ExpectedTime": 30,
       "ExcludeStages": [ "Post-Deployment", "Validate deployment" ]
     }
-  ],
+  },
 
-  "AzdoInstanceConfigs": [
-    {
+  "AzdoInstanceConfigs": {
+    "dnceng": {
       "Name": "dnceng",
       "Project": "internal",
       "PatSecretName": "dn-bot-dnceng-build-r-code-r-release-r-pat",
       "KeyVaultUri": "https://engkeyvault.vault.azure.net"
+
     }
-  ],
+  },
 
   "RolloutWeightConfig": {
     "RolloutMinutesPerPoint": 15,

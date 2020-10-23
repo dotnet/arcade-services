@@ -1,7 +1,13 @@
 {
-    "IsEncrypted": false,
-    "Values": {
-        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
-        "FUNCTIONS_WORKER_RUNTIME": "dotnet"
-    }
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet"
+  },
+  "KeyVault": {
+    "Uri": "https://engkeyvault.vault.azure.net"
+  },
+  "GitHub": {
+    "PatSecretName": "BotAccount-dotnet-bot-repo-PAT"
+  }
 }

@@ -97,7 +97,7 @@ namespace RolloutScorer
                 };
 
                 string[] rolloutInfo = (await file.ReadLineAsync()).Split(',');
-                scorecard.Repo = config.RepoConfigs.Find(r => r.Repo == rolloutInfo[0]);
+                scorecard.Repo = config.RepoConfigs[rolloutInfo[0]];
                 scorecard.Date = DateTimeOffset.Parse(rolloutInfo[1]);
                 await file.ReadLineAsync();
 

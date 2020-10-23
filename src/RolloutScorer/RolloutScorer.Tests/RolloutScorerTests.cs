@@ -1,13 +1,10 @@
+using FluentAssertions;
+using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using FluentAssertions;
-using Microsoft.Azure.KeyVault;
-using Microsoft.Azure.Services.AppAuthentication;
-using NUnit.Framework;
-using Octokit;
 
 namespace RolloutScorer.Tests
 {
@@ -38,14 +35,19 @@ namespace RolloutScorer.Tests
         [SetUp]
         public void RolloutScorerTests_SetUp()
         {
-            _rolloutScorer = new RolloutScorer();
             Config config = Utilities.ParseConfig();
-            _rolloutScorer.RolloutWeightConfig = config.RolloutWeightConfig;
-            _rolloutScorer.RepoConfig = config.RepoConfigs.First();
-            _rolloutScorer.AzdoConfig = config.AzdoInstanceConfigs.Find(a => a.Name == _rolloutScorer.RepoConfig.AzdoInstance);
-            _rolloutScorer.Repo = _rolloutScorer.RepoConfig.Repo;
-            _rolloutScorer.RolloutStartDate = DateTimeOffset.Now.AddDays(-1);
-
+            var repoConfig = config.RepoConfigs.First().Value;
+            var azdoConfig = config.AzdoInstanceConfigs[repoConfig.AzdoInstance];
+            var repo = repoConfig.Repo;
+            _rolloutScorer = new RolloutScorer()
+            {
+                RolloutWeightConfig = config.RolloutWeightConfig,
+                RepoConfig = repoConfig,
+                AzdoConfig = azdoConfig,
+                Repo = repo,
+                RolloutStartDate = DateTimeOffset.Now.AddDays(-1)
+            };
+            
             _rolloutScorer.SetupHttpClient("fakePat");
         }
 
@@ -56,8 +58,8 @@ namespace RolloutScorer.Tests
             HttpResponseMessage sameHostRedirectResponse = new HttpResponseMessage();
             sameHostRedirectResponse.Headers.Location = new Uri(responseUri);
 
-            HttpRequestException exception = (await (((Func<Task>)(                async () => await _rolloutScorer.GetAzdoApiResponseAsync(
-                    Utilities.HandleApiRedirect(sameHostRedirectResponse, sameHostRedirectUri))))).Should().ThrowAsync<HttpRequestException>()).Which;
+            HttpRequestException exception = (await ((Func<Task>)(                async () => await _rolloutScorer.GetAzdoApiResponseAsync(
+                    Utilities.HandleApiRedirect(sameHostRedirectResponse, sameHostRedirectUri)))).Should().ThrowAsync<HttpRequestException>()).Which;
             exception.Message.Should().Contain(expectedMessage);
         }
     }

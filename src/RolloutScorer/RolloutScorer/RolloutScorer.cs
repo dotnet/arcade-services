@@ -1,3 +1,4 @@
+using Microsoft.Azure.KeyVault;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using Octokit;
@@ -36,10 +37,12 @@ namespace RolloutScorer
         public GithubConfig GithubConfig { get; set; }
 
         public List<ScorecardBuildBreakdown> BuildBreakdowns { get; set; } = new List<ScorecardBuildBreakdown>();
-
+        
         // The AzDO API has some 302s in it that break auth so we have to handle those ourselves
         private readonly HttpClient _httpClient = new HttpClient(new HttpClientHandler { AllowAutoRedirect = false });
         private GitHubClient _githubClient;
+
+        public IKeyVaultClient KeyVaultClient; // TODO: dependency inject this
 
         public ILogger Log { get; set; }
         public LogLevel LogLevel { get; set; } = LogLevel.Information;
