@@ -106,18 +106,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         public static readonly IImmutableList<AssetData> ExpectedPartialAssets =
             ImmutableList.Create(PackageAsset1, BlobAsset1);
 
-        // Whichever BuildData is passed into the method as the first one in the array is modified, so there's one copy per test case
-        private static readonly BuildData Asset1BuildData_TwoManifests =
-            new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
-            {
-                GitHubBranch = AzureDevOpsBranch1,
-                GitHubRepository = "dotnet-arcade",
-                Assets = ExpectedAssets1,
-                AzureDevOpsBuildId = AzureDevOpsBuildId1,
-                AzureDevOpsBuildDefinitionId = AzureDevOpsBuildDefinitionId1
-            };
-
-        private static readonly BuildData Asset1BuildData_ThreeManifests =
+        private static readonly BuildData Asset1BuildData =
             new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)
             {
                 GitHubBranch = AzureDevOpsBranch1,
@@ -149,10 +138,10 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             };
 
         private static readonly List<BuildData> twoBuildDataList =
-            new List<BuildData>() { Asset1BuildData_TwoManifests, Asset2BuildData };
+            new List<BuildData>() { Asset1BuildData, Asset2BuildData };
 
         private static readonly List<BuildData> threeBuildDataList =
-            new List<BuildData>() { Asset1BuildData_ThreeManifests, Asset2BuildData, Asset3BuildData };
+            new List<BuildData>() { Asset1BuildData, Asset2BuildData, Asset3BuildData };
 
         private static readonly BuildData ExpectedMergedBuildData =
             new BuildData(Commit, AzureDevOpsAccount1, AzureDevOpsProject1, AzureDevOpsBuildNumber1, AzureDevOpsRepository1, AzureDevOpsBranch1, false, false)

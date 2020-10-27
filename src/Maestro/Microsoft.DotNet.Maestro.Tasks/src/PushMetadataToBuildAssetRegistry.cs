@@ -482,7 +482,8 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         internal BuildData MergeBuildManifests(List<BuildData> buildsMetadata)
         {
-            BuildData mergedBuild = buildsMetadata[0];
+            // Use a deep copy constructor to avoid modifying the argument objects
+            BuildData mergedBuild = new BuildData(buildsMetadata[0]);
 
             for (int i = 1; i < buildsMetadata.Count; i++)
             {
