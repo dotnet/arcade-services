@@ -615,7 +615,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
         /// <returns>An AssetData with data about the merge manifest</returns>
         private AssetData GetManifestAsAsset(IImmutableList<AssetData> assets, string location, string manifestFileName)
         {
-            string repoName = GetAzDevRepositoryName();
+            string repoName = GetAzDevRepositoryName().Replace('/','-'); 
 
             if (string.IsNullOrEmpty(AssetVersion))
             {
