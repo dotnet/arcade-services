@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using System.Linq;
 using FluentAssertions;
 using Microsoft.DotNet.Maestro.Client.Models;
 
@@ -26,9 +28,21 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             actualSigningInfo.ItemsToSign.Should().BeEquivalentTo(expectedSigningInfo.ItemsToSign);
         }
 
+        public static void CompareAssets(IImmutableList<AssetData> actualAssets, IImmutableList<AssetData> expectedAssets)
+        {
+            actualAssets.Count.Should().Be(expectedAssets.Count);
+
+            for(int i = 0; i < actualAssets.Count(); i++)
+            {
+                actualAssets[i].Locations.Should().BeEquivalentTo(expectedAssets[i].Locations);
+                actualAssets[i].Name.Should().Be(expectedAssets[i].Name);
+                actualAssets[i].NonShipping.Should().Be(expectedAssets[i].NonShipping);
+                actualAssets[i].Version.Should().Be(expectedAssets[i].Version);
+            }
+        }
+
         public static void CompareBuildDataInformation(BuildData actualBuildData, BuildData expectedBuildData)
         {
-            actualBuildData.Assets.Should().BeEquivalentTo(expectedBuildData.Assets);
             actualBuildData.AzureDevOpsAccount.Should().Be(expectedBuildData.AzureDevOpsAccount);
             actualBuildData.AzureDevOpsBranch.Should().Be(expectedBuildData.AzureDevOpsBranch);
             actualBuildData.AzureDevOpsBuildDefinitionId.Should().Be(expectedBuildData.AzureDevOpsBuildDefinitionId);
@@ -37,13 +51,15 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
             actualBuildData.AzureDevOpsProject.Should().Be(expectedBuildData.AzureDevOpsProject);
             actualBuildData.AzureDevOpsRepository.Should().Be(expectedBuildData.AzureDevOpsRepository);
             actualBuildData.Commit.Should().Be(expectedBuildData.Commit);
-            actualBuildData.Dependencies.Should().BeEquivalentTo(expectedBuildData.Dependencies);
             actualBuildData.GitHubBranch.Should().Be(expectedBuildData.GitHubBranch);
             actualBuildData.GitHubRepository.Should().Be(expectedBuildData.GitHubRepository);
-            actualBuildData.Incoherencies.Should().BeEquivalentTo(expectedBuildData.Incoherencies);
             actualBuildData.IsValid.Should().Be(actualBuildData.IsValid);
             actualBuildData.Released.Should().Be(expectedBuildData.Released);
             actualBuildData.Stable.Should().Be(expectedBuildData.Stable);
+
+            CompareAssets(actualBuildData.Assets, expectedBuildData.Assets);
+            actualBuildData.Dependencies.Should().BeEquivalentTo(expectedBuildData.Dependencies);
+            actualBuildData.Incoherencies.Should().BeEquivalentTo(expectedBuildData.Incoherencies);
         }
 
         public static Manifest GetCopyOfManifest(Manifest manifest)
@@ -59,7 +75,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 AzureDevOpsBuildNumber = manifest.AzureDevOpsBuildNumber,
                 AzureDevOpsProject = manifest.AzureDevOpsProject,
                 AzureDevOpsRepository = manifest.AzureDevOpsRepository,
-                Blobs = manifest.Blobs,
                 Branch = manifest.Branch,
                 BuildId = manifest.BuildId,
                 Commit = manifest.Commit,
@@ -70,6 +85,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 Name = manifest.Name,
 
                 // Note that these are shallow copies for the moment, since deep copy isn't needed for the current tests
+                Blobs = manifest.Blobs,
                 Packages = manifest.Packages,
                 PublishingVersion = manifest.PublishingVersion,
                 SigningInformation = manifest.SigningInformation

@@ -1,8 +1,0 @@
-<Build PublishingVersion="3" Name="dotnet-arcade" BuildId="20201016.5" Branch="refs/heads/master" Commit="e7a79ce64f0703c231e6da88b5279dd0bf681b3d" AzureDevOpsAccount="dnceng" AzureDevOpsBranch="refs/heads/master" AzureDevOpsBuildDefinitionId="6" AzureDevOpsBuildId="856354" AzureDevOpsBuildNumber="20201016.5" AzureDevOpsProject="internal" AzureDevOpsRepository="https://dnceng@dev.azure.com/dnceng/internal/_git/dotnet-arcade" InitialAssetsLocation="https://dev.azure.com/dnceng/internal/_apis/build/builds/856354/artifacts" IsReleaseOnlyPackageVersion="False" IsStable="False">
-  <SigningInformation AzureDevOpsCollectionUri="https://dev.azure.com/dnceng/" AzureDevOpsProject="internal" AzureDevOpsBuildId="842312">
-    <FileExtensionSignInfo Include=".dll" CertificateName="CertForDlls" />
-    <FileSignInfo Include="SignThisFile.dll" CertificateName="CertForFileSign" />
-    <CertificatesSignInfo Include="UseThisCertificate" DualSigningAllowed="true" />
-    <StrongNameSignInfo Include="StrongName" PublicKeyToken="b77a5c561934e089" CertificateName="CertForStrongSigning" />
-  </SigningInformation>
-</Build>

@@ -17,6 +17,7 @@ using Microsoft.Build.Framework;
 using Microsoft.DotNet.DarcLib;
 using Microsoft.DotNet.Maestro.Client;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.Maestro.Tasks.Proxies;
 using Microsoft.DotNet.VersionTools.BuildManifest;
 using Microsoft.DotNet.VersionTools.BuildManifest.Model;
 using MSBuild = Microsoft.Build.Utilities;
@@ -49,6 +50,9 @@ namespace Microsoft.DotNet.Maestro.Tasks
         private const string MergedManifestFileName = "MergedManifest.xml";
         private readonly CancellationTokenSource _tokenSource = new CancellationTokenSource();
         private readonly HashSet<string> blobSet = new HashSet<string>();
+
+        // Set up proxy objects to allow unit test mocking
+        internal IVersionIdentifierProxy versionIdentifier = new VersionIdentifierProxy();
 
         public void Cancel()
         {
@@ -279,7 +283,7 @@ namespace Microsoft.DotNet.Maestro.Tasks
 
         private string GetVersion(string assetId)
         {
-            return VersionIdentifier.GetVersion(assetId);
+            return versionIdentifier.GetVersion(assetId);
         }
 
         internal (List<BuildData>, List<SigningInformation>, ManifestBuildData) GetBuildManifestsMetadata(

@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
-using Castle.DynamicProxy.Contributors;
 using FluentAssertions;
 using Microsoft.DotNet.Maestro.Client.Models;
+using Microsoft.DotNet.Maestro.Tasks.Tests.Mocks;
 using NUnit.Framework;
 
 namespace Microsoft.DotNet.Maestro.Tasks.Tests
@@ -14,7 +14,6 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
     public class ParseBuildManifestMetadataTests
     {
         private PushMetadataToBuildAssetRegistry pushMetadata;
-        private string testManifestFolderPath = @".\TestManifests\";
 
         public const string Commit = "e7a79ce64f0703c231e6da88b5279dd0bf681b3d";
         public const string AzureDevOpsAccount1 = "dnceng";
@@ -36,7 +35,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                    new AssetLocationData(LocationType.Container)
                    { Location = LocationString }),
                Name = "Microsoft.Cci.Extensions",
-               Version = "6.0.0-beta.20516.5"
+               Version = "12345"
            };
 
         internal static readonly AssetData BlobAsset1 =
@@ -46,7 +45,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                     new AssetLocationData(LocationType.Container)
                     { Location = LocationString }),
                 Name = "assets/manifests/dotnet-arcade/6.0.0-beta.20516.5/MergedManifest.xml",
-                Version = "6.0.0-beta.20516.5"
+                Version = "12345"
             };
 
         internal static readonly AssetData PackageAsset2 =
@@ -56,7 +55,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                     new AssetLocationData(LocationType.Container)
                     { Location = LocationString }),
                 Name = "Microsoft.DotNet.ApiCompat",
-                Version = "6.0.0-beta.20516.5"
+                Version = "12345"
             };
 
         internal static readonly AssetData BlobAsset2 =
@@ -66,7 +65,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                     new AssetLocationData(LocationType.Container)
                     { Location = LocationString }),
                 Name = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg",
-                Version = "6.0.0-beta.20516.5"
+                Version = "12345"
             };
 
         internal static readonly AssetData PackageAsset3 =
@@ -76,7 +75,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                     new AssetLocationData(LocationType.Container)
                     { Location = LocationString }),
                 Name = "Microsoft.DotNet.Arcade.Sdk",
-                Version = "6.0.0-beta.20516.5"
+                Version = "12345"
             };
 
         internal static readonly AssetData BlobAsset3 =
@@ -86,7 +85,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                     new AssetLocationData(LocationType.Container)
                     { Location = LocationString }),
                 Name = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg",
-                Version = "6.0.0-beta.20516.5"
+                Version = "12345"
             };
 
         public static readonly IImmutableList<AssetData> ExpectedAssets1 =
@@ -113,6 +112,16 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
                 { Location = LocationString }),
                     Name = "Microsoft.Cci.Extensions"
                 });
+
+        public static readonly IImmutableList<AssetData> UnversionedBlobExpectedAssets =
+            ImmutableList.Create(
+                new AssetData(true)
+                {
+                    Locations = ImmutableList.Create(
+                    new AssetLocationData(LocationType.Container)
+                    { Location = LocationString }),
+                    Name = "assets/symbols/Microsoft.DotNet.Arcade.Sdk.6.0.0-beta.20516.5.symbols.nupkg"
+                });
         #endregion
 
         #region IndividualAssets
@@ -120,14 +129,14 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         {
             Id = "Microsoft.Cci.Extensions",
             NonShipping = true,
-            Version = "6.0.0-beta.20516.5"
+            Version = "12345"
         };
 
         private static readonly Package package2 = new Package()
         {
             Id = "Microsoft.DotNet.ApiCompat",
             NonShipping = true,
-            Version = "6.0.0-beta.20516.5"
+            Version = "12345"
         };
 
         private static readonly Package unversionedPackage = new Package()
@@ -145,6 +154,12 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         private static readonly Blob blob2 = new Blob()
         {
             Id = "assets/symbols/Microsoft.Cci.Extensions.6.0.0-beta.20516.5.symbols.nupkg",
+            NonShipping = true
+        };
+
+        private static readonly Blob unversionedBlob = new Blob()
+        {
+            Id = "noVersionForThisBlob",
             NonShipping = true
         };
 
@@ -376,6 +391,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         public void SetupGetBuildManifestMetadataTests()
         {
             pushMetadata = new PushMetadataToBuildAssetRegistry();
+            pushMetadata.versionIdentifier = new VersionIdentifierMock();
         }
 
         [Test]
@@ -429,7 +445,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         {
             Manifest manifestWithUnversionedPackage = SharedMethods.GetCopyOfManifest(baseManifest);
             manifestWithUnversionedPackage.Packages = new List<Package> { unversionedPackage };
-            var (actualBuildData, actualSigningInformation, actualManifestBuildData) = pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> { manifestWithUnversionedPackage}, CancellationToken.None);
+            var (actualBuildData, actualSigningInformation, actualManifestBuildData) = pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> { manifestWithUnversionedPackage }, CancellationToken.None);
             actualBuildData.Should().BeEquivalentTo(unversionedPackagedManifestBuildData);
             SharedMethods.CompareManifestBuildData(actualManifestBuildData, baseManifestBuildData);
         }
@@ -439,18 +455,18 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         {
             Manifest manifestWithoutBlobs = SharedMethods.GetCopyOfManifest(baseManifest);
             manifestWithoutBlobs.Packages = new List<Package> { package1 };
-            var (buildData, signingInformation, manifestBuildData) = pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> { manifestWithoutBlobs }, new CancellationToken());
-            buildData.Should().BeEquivalentTo(noBlobManifestBuildData);
-            SharedMethods.CompareManifestBuildData(manifestBuildData, baseManifestBuildData);
+            var (actualBuildData, actualSigningInformation, actualManifestBuildData) = pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> { manifestWithoutBlobs }, CancellationToken.None);
+            actualBuildData.Should().BeEquivalentTo(noBlobManifestBuildData);
+            SharedMethods.CompareManifestBuildData(actualManifestBuildData, baseManifestBuildData);
         }
 
-        // TODO: This gets a versionId from another method, which needs to be overwritten with DI. Turning it off while I get DI set up for the project.
         [Test]
-        [Ignore("Requires DI that isn't set up for the project yet.")]
-        public void GivenUnversionedBlob_ExceptionExpected()
+        public void GivenUnversionedBlob()
         {
-            Action act = () => pushMetadata.GetBuildManifestsMetadata(testManifestFolderPath + "UnversionedBlob", new CancellationToken());
-            act.Should().Throw<NullReferenceException>();
+            Manifest manifestWithUnversionedBlob = SharedMethods.GetCopyOfManifest(baseManifest);
+            manifestWithUnversionedBlob.Blobs = new List<Blob> { unversionedBlob };
+            Action act = () => pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> { manifestWithUnversionedBlob }, CancellationToken.None);
+            act.Should().Throw<InvalidOperationException>();
         }
 
         [Test]
@@ -458,7 +474,7 @@ namespace Microsoft.DotNet.Maestro.Tasks.Tests
         {
             Manifest differentAttributes = SharedMethods.GetCopyOfManifest(baseManifest);
             differentAttributes.AzureDevOpsAccount = "newAccount";
-            Action act = () => pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> {baseManifest, differentAttributes }, CancellationToken.None);
+            Action act = () => pushMetadata.ParseBuildManifestsMetadata(new List<Manifest> { baseManifest, differentAttributes }, CancellationToken.None);
             act.Should().Throw<Exception>().WithMessage("Attributes should be the same in all manifests.");
         }
     }
